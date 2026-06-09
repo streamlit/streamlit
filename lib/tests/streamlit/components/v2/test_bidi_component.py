@@ -311,7 +311,7 @@ class BidiComponentMixinTest(DeltaGeneratorTestCase):
         # Compute expected aggregator trigger id
         base_id = next(
             wid
-            for wid in ctx.widget_ids_this_run.snapshot()
+            for wid in ctx.shared.widget_ids_this_run.snapshot()
             if wid.startswith("$$ID") and EVENT_DELIM not in wid
         )
         aggregator_id = _make_trigger_id(base_id, "events")
@@ -1031,8 +1031,8 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
         """Allow re-registering the same id within the same run for testing keyed stability."""
         ctx = get_script_run_ctx()
         assert ctx is not None
-        ctx.widget_user_keys_this_run.clear()
-        ctx.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
 
     def _render_and_get_id(self) -> str:
         delta = self.get_delta_from_queue()

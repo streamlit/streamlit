@@ -451,14 +451,14 @@ class ScriptRunnerTest(unittest.TestCase):
         def run_inner() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
 
         inner = MagicMock(side_effect=run_inner)
 
         def rerender_outer() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
             scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )
@@ -486,7 +486,7 @@ class ScriptRunnerTest(unittest.TestCase):
         def rerender_middle() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("grandchild")
+            ctx.shared.new_fragment_ids.check_and_add("grandchild")
             scriptrunner._fragment_storage.register(
                 "grandchild", grandchild, parent_fragment_id="middle"
             )
@@ -497,7 +497,7 @@ class ScriptRunnerTest(unittest.TestCase):
         def rerender_outer() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("middle")
+            ctx.shared.new_fragment_ids.check_and_add("middle")
             scriptrunner._fragment_storage.register(
                 "middle", middle, parent_fragment_id="outer"
             )
@@ -540,7 +540,7 @@ class ScriptRunnerTest(unittest.TestCase):
         def rerender_outer() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
             scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )
@@ -567,7 +567,7 @@ class ScriptRunnerTest(unittest.TestCase):
         def rerun_outer() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
             scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )

@@ -49,7 +49,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
-from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
+from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
@@ -525,7 +525,7 @@ class FragmentTest(unittest.TestCase):
         ctx = MagicMock()
         ctx.cursors = {}
         ctx.fragment_ids_this_run = []
-        ctx.new_fragment_ids = ThreadSafeSet()
+        ctx.shared = SharedRunState()
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
@@ -634,7 +634,7 @@ class FragmentTest(unittest.TestCase):
         ctx = MagicMock()
         ctx.cursors = {}
         ctx.fragment_ids_this_run = []
-        ctx.new_fragment_ids = ThreadSafeSet()
+        ctx.shared = SharedRunState()
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
@@ -649,11 +649,11 @@ class FragmentTest(unittest.TestCase):
             curr_dg_stack = context_dg_stack.get()
             curr_dg_stack[0].my_random_field += 1
 
-        assert len(ctx.new_fragment_ids.snapshot()) == 0
+        assert len(ctx.shared.new_fragment_ids.snapshot()) == 0
         my_fragment()
 
         # Verify that `my_fragment`'s id was added to the `new_fragment_id`s set.
-        assert len(ctx.new_fragment_ids.snapshot()) == 1
+        assert len(ctx.shared.new_fragment_ids.snapshot()) == 1
 
         # Reach inside our MemoryFragmentStorage internals to pull out our saved
         # fragment.
@@ -1234,7 +1234,7 @@ def test_parallel_fragment_dispatches_to_coordinator(
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
     ctx.fragment_ids_this_run = None
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     mock_coordinator = MagicMock()
     ctx.parallel_coordinator = mock_coordinator
@@ -1261,7 +1261,7 @@ def test_parallel_fragment_returns_none(
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
     ctx.fragment_ids_this_run = None
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     ctx.parallel_coordinator = MagicMock()
     patched_get_script_run_ctx.return_value = ctx
@@ -1292,7 +1292,7 @@ def test_parallel_fragment_sequential_during_fragment_rerun(
     ctx.fragment_storage = MagicMock()
     # Non-empty ⇒ fragment rerun path; mocked stand-in ID is irrelevant to the assertion.
     ctx.fragment_ids_this_run = ["some_fragment_id"]
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     mock_coordinator = MagicMock()
     ctx.parallel_coordinator = mock_coordinator
@@ -1324,7 +1324,7 @@ def test_wrapped_fragment_skips_container_when_pre_allocated(
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
     ctx.fragment_ids_this_run = None
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     patched_get_script_run_ctx.return_value = ctx
 
@@ -1362,7 +1362,7 @@ def test_wrapped_fragment_clears_skip_signal_after_use(
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
     ctx.fragment_ids_this_run = None
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     patched_get_script_run_ctx.return_value = ctx
 
@@ -1396,7 +1396,7 @@ def test_nested_sequential_fragment_creates_own_container(
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
     ctx.fragment_ids_this_run = None
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     patched_get_script_run_ctx.return_value = ctx
 
@@ -1497,7 +1497,7 @@ def test_nested_parallel_fragment_dispatches_from_worker() -> None:
     mock_ctx = MagicMock()
     mock_ctx.fragment_storage = MemoryFragmentStorage()
     mock_ctx.fragment_ids_this_run = None
-    mock_ctx.new_fragment_ids = ThreadSafeSet()
+    mock_ctx.shared = SharedRunState()
     mock_ctx.cursors = {}
     mock_ctx.parallel_coordinator = mock_coordinator
 
@@ -1531,7 +1531,7 @@ def test_dispatch_restores_calling_thread_dg_stack(
     """After dispatch, calling thread's dg_stack doesn't contain the pre-allocated container."""
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.parallel_coordinator = MagicMock()
     patched_get_script_run_ctx.return_value = ctx
 
@@ -1559,7 +1559,7 @@ def test_worker_dg_stack_points_at_pre_allocated_container(
     """
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     mock_coordinator = MagicMock()
     ctx.parallel_coordinator = mock_coordinator
     patched_get_script_run_ctx.return_value = ctx
@@ -1591,7 +1591,7 @@ def test_run_every_parallel_fragment_reruns_sequentially(
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
     ctx.fragment_ids_this_run = None
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     mock_coordinator = MagicMock()
     ctx.parallel_coordinator = mock_coordinator
@@ -1632,7 +1632,7 @@ def test_sequential_fragment_inside_parallel_worker_creates_own_container() -> N
     mock_ctx = MagicMock()
     mock_ctx.fragment_storage = MemoryFragmentStorage()
     mock_ctx.fragment_ids_this_run = None
-    mock_ctx.new_fragment_ids = ThreadSafeSet()
+    mock_ctx.shared = SharedRunState()
     mock_ctx.cursors = {}
     mock_ctx.parallel_coordinator = mock_coordinator
 
@@ -1676,7 +1676,7 @@ def test_skip_signal_isolation_inner_fragment_sees_none_after_outer_consumes(
     mock_ctx = MagicMock()
     mock_ctx.fragment_storage = MemoryFragmentStorage()
     mock_ctx.fragment_ids_this_run = None
-    mock_ctx.new_fragment_ids = ThreadSafeSet()
+    mock_ctx.shared = SharedRunState()
     mock_ctx.cursors = {}
     patched_get_script_run_ctx.return_value = mock_ctx
 
@@ -1727,7 +1727,7 @@ def test_parallel_fragment_nested_inside_rerun_executes_sequentially() -> None:
     mock_ctx = MagicMock()
     mock_ctx.fragment_storage = MemoryFragmentStorage()
     mock_ctx.fragment_ids_this_run = ["outer_id"]
-    mock_ctx.new_fragment_ids = ThreadSafeSet()
+    mock_ctx.shared = SharedRunState()
     mock_ctx.cursors = {}
     mock_coordinator = MagicMock()
     mock_ctx.parallel_coordinator = mock_coordinator
@@ -1763,7 +1763,7 @@ def test_rerun_exception_propagates_from_nested_fragment_inside_worker() -> None
     mock_ctx = MagicMock()
     mock_ctx.fragment_storage = MemoryFragmentStorage()
     mock_ctx.fragment_ids_this_run = None
-    mock_ctx.new_fragment_ids = ThreadSafeSet()
+    mock_ctx.shared = SharedRunState()
     mock_ctx.cursors = {}
     mock_ctx.parallel_coordinator = mock_coordinator
 

@@ -88,8 +88,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         # errors on subsequent runs.
         ctx = script_run_context.get_script_run_ctx()
         if ctx is not None:
-            ctx.widget_ids_this_run.clear()
-            ctx.widget_user_keys_this_run.clear()
+            ctx.shared.widget_ids_this_run.clear()
+            ctx.shared.widget_user_keys_this_run.clear()
 
         super().tearDown()
 
@@ -1001,8 +1001,8 @@ class CommonCacheThreadingTest(unittest.TestCase):
         # errors on subsequent runs.
         ctx = script_run_context.get_script_run_ctx()
         if ctx is not None:
-            ctx.widget_ids_this_run.clear()
-            ctx.widget_user_keys_this_run.clear()
+            ctx.shared.widget_ids_this_run.clear()
+            ctx.shared.widget_user_keys_this_run.clear()
 
         super().tearDown()
 

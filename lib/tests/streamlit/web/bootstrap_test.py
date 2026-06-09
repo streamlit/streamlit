@@ -369,6 +369,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
     def test_maybe_print_static_folder_warning_called_once_on_server_start(
         self, mock_maybe_print_static_folder_warning
@@ -415,6 +416,53 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             )
             mock_set_option.assert_called_once_with("server.enableStaticServing", False)
 
+    @patch("streamlit.web.skills.are_skills_installed", Mock(return_value=False))
+    def test_skills_recommendation_shown_when_not_installed(self):
+        """Recommend installing skills when they are not yet installed."""
+        with patch_config_options(
+            {"server.headless": False, "logger.hideWelcomeMessage": False}
+        ):
+            bootstrap._maybe_print_skills_recommendation()
+
+        out = sys.stdout.getvalue()
+        assert "Help agents write better Streamlit apps?" in out
+        assert "streamlit skills" in out
+        assert "Install the official Streamlit skills" in out
+
+    @patch("streamlit.web.skills.are_skills_installed", Mock(return_value=True))
+    def test_skills_recommendation_hidden_when_installed(self):
+        """Don't recommend installing skills when they are already installed."""
+        with patch_config_options(
+            {"server.headless": False, "logger.hideWelcomeMessage": False}
+        ):
+            bootstrap._maybe_print_skills_recommendation()
+
+        assert sys.stdout.getvalue() == ""
+
+    @patch("streamlit.web.skills.are_skills_installed", Mock(return_value=False))
+    def test_skills_recommendation_hidden_in_headless_mode(self):
+        """Don't recommend installing skills in headless mode."""
+        with patch_config_options(
+            {"server.headless": True, "logger.hideWelcomeMessage": False}
+        ):
+            bootstrap._maybe_print_skills_recommendation()
+
+        assert sys.stdout.getvalue() == ""
+
+    @patch("streamlit.web.skills.are_skills_installed")
+    def test_skills_recommendation_hidden_when_welcome_message_hidden(
+        self, mock_are_skills_installed
+    ):
+        """Don't recommend skills when the welcome message is hidden."""
+        with patch_config_options(
+            {"server.headless": False, "logger.hideWelcomeMessage": True}
+        ):
+            bootstrap._maybe_print_skills_recommendation()
+
+        assert sys.stdout.getvalue() == ""
+        # Should short-circuit before checking installation status.
+        mock_are_skills_installed.assert_not_called()
+
     @patch("streamlit.config.get_config_options")
     def test_load_config_options(self, patched_get_config_options):
         """Test that bootstrap.load_config_options parses the keys properly and
@@ -444,6 +492,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
@@ -452,6 +501,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap._LOGGER.exception")
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_exception):

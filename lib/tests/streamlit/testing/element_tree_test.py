@@ -15,13 +15,19 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
+from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 import pytest
 
+from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.v1.app_test import AppTest
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_alert():
@@ -46,6 +52,49 @@ def test_alert():
     repr(at.info[0])
     repr(at.success[0])
     repr(at.warning[0])
+
+
+def test_app_test_discovers_installed_v2_components_with_file_backed_assets(
+    tmp_path: Path,
+):
+    """Installed CCv2 components with file-backed assets resolve under AppTest."""
+    package_root = tmp_path / "apptest_pkg"
+    asset_dir = package_root / "assets"
+    asset_dir.mkdir(parents=True)
+    (asset_dir / "style.css").write_text("#demo { color: purple; }")
+    (asset_dir / "script.js").write_text("console.log('loaded');")
+
+    manifest = ComponentManifest(
+        name="apptest_pkg",
+        version="0.0.1",
+        components=[ComponentConfig(name="demo", asset_dir="assets")],
+    )
+
+    def script():
+        import streamlit as st
+        from streamlit.components.v2 import component
+
+        component(
+            "apptest_pkg.demo",
+            html='<div id="demo">hi</div>',
+            css="style.css",
+            js="script.js",
+        )
+        st.success("Done")
+
+    with patch(
+        "streamlit.components.v2.manifest_scanner.scan_component_manifests",
+        return_value=[(manifest, package_root)],
+    ) as scan_mock:
+        at = AppTest.from_function(script)
+        at.run()
+        # Rerun to ensure the discovered component manager is cached on the
+        # AppTest instance and components are not rescanned on every rerun.
+        at.run()
+
+    assert at.success[0].value == "Done"
+    assert not at.exception
+    assert scan_mock.call_count == 1
 
 
 def test_button():
