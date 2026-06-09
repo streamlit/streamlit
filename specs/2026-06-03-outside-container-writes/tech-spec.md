@@ -253,17 +253,42 @@ means every write inside the wrapper replaces the previous one, matching `st.emp
 documented "single-element container" contract. On fragment rerun, there is nothing to
 reset — a `LockedCursor` always points to index 0.
 
-**Dynamic container selection.** Wrappers are keyed by container identity (`dg._id`).
-A fragment that conditionally writes to different outside containers must write to *all* of
-them during the initial full app run so their wrappers are established. On subsequent
-standalone reruns, the fragment can choose which wrappers to populate — unused wrappers
-have their stale children cleared by `ClearStaleNodeVisitor` and remain invisible via
-`allow_empty=True`. Attempting to write to an outside container whose wrapper was never
-established will raise `StreamlitAPIException` per the restriction above.
-
 **Full app rerun.** Clears `_outside_wrappers` entirely. All wrappers are
 recreated fresh because the main script re-executes and creates new outside containers
 with fresh cursors.
+
+## Behavior Decisions
+
+### Dynamic container selection
+
+Wrappers are keyed by container identity (`dg._id`). A fragment that conditionally writes
+to different outside containers must write to *all* of them during the initial full app run
+so their wrappers are established. On subsequent standalone reruns, the fragment can choose
+which wrappers to populate — unused wrappers have their stale children cleared by
+`ClearStaleNodeVisitor` and remain invisible via `allow_empty=True`. Attempting to write to
+an outside container whose wrapper was never established will raise
+`StreamlitAPIException` per the restriction above.
+
+### Widget interactions trigger the writing fragment's rerun
+
+When a fragment writes a widget to an outside container, the widget's delta is stamped with
+the writing fragment's `fragment_id` (via `ThreadState.fragment_id` in `enqueue_message`).
+When the user interacts with the widget, the frontend sends this `fragment_id` with the
+rerun request, so **only the writing fragment reruns — not a full app rerun, even though
+the widget visually appears outside the fragment's scope**.
+
+This is consistent with standard fragment behavior: all widgets created inside a fragment
+trigger that fragment's rerun regardless of where they render. The wrapper does not change
+this — `fragment_id` stamping is based on which thread is executing, not on the delta path.
+
+Widget identity is also unaffected by the wrapper. Widget IDs are computed from logical
+inputs (element type, key, label, `active_script_hash`, `form_id`, `root_container`) and
+do not include `delta_path`. The wrapper adds nesting depth to the render tree but does not
+alter any widget ID input. Stale cleanup via `_is_stale_widget` is scoped by
+`WidgetMetadata.fragment_id`, which remains correct.
+
+If an app needs a widget click in an outside container to update main-script content, the
+fragment can call `st.rerun()` to trigger a full app rerun from the callback.
 
 ## Alternatives Considered
 
@@ -303,6 +328,7 @@ write during rerun.
 - **Widgets in outside containers**: The `@st.fragment` docstring warns that "Fragments
   can't render widgets to externally created containers," but there is no enforcement in
   the code today — users can and do write widgets to outside containers. The implicit
-  wrapper solves the cursor problem for widgets too. However, widget state management
-  across fragment reruns in outside containers may have additional edge cases (e.g., widget
-  identity stability) that deserve separate investigation.
+  wrapper solves the cursor problem for widgets too. Widget identity and state management
+  are unaffected (see "Behavior Decisions" above). The `check_fragment_path_policy()`
+  function exists in the codebase but is not wired up; if it were ever enforced, it would
+  block all outside-container widgets regardless of the wrapper.
