@@ -96,7 +96,9 @@ def _is_outside_container_write(dg: DeltaGenerator) -> bool:
     ts = ThreadState.get()
     if not ts.fragment_id or not ts.delta_path:
         return False
-    cursor_path = tuple(dg._cursor.delta_path) if dg._cursor else ()
+    if dg._cursor is None:
+        return False
+    cursor_path = tuple(dg._cursor.delta_path)
     return not _is_inside_fragment_path(cursor_path, ts.delta_path)
 ```
 
@@ -151,7 +153,10 @@ is reusable for any future case that needs an invisible grouping node.
 ### Wrapper creation and retrieval
 
 `_get_or_create_outside_wrapper` returns a cached wrapper if one exists, or creates a new
-one by calling `dg._block()` with a `Transparent` block proto. The creation delta path is
+one by calling `dg._block()` with a `Transparent` block proto. The wrapper's cursor type
+is inherited from the outside container: if the container uses a `LockedCursor` (e.g.
+`st.empty()`), the wrapper gets a `LockedCursor(index=0)` to preserve replace semantics;
+otherwise it gets a `RunningCursor` for normal append behavior. The creation delta path is
 stored on the wrapper for re-emission during reruns.
 
 Crucially, the wrapper is created only once — during the initial full app run — which is
@@ -161,11 +166,14 @@ entirely. This is what avoids reintroducing the same stale-cursor problem the wr
 designed to solve.
 
 **Restriction: no new outside writes during fragment reruns.** If a fragment attempts to
-write to an outside container during a fragment rerun (`ctx.fragment_ids_this_run` is set)
-and no cached wrapper exists for that container, we raise `StreamlitAPIException`. Creating
-a wrapper would advance the outside container's stale cursor — exactly the bug this spec
-fixes. Fragments must establish their outside container slots during the initial full app
-run. To conditionally populate a slot later, use a placeholder:
+write to an outside container during a fragment rerun and no cached wrapper exists for that
+container, we raise `StreamlitAPIException`. The check uses the current thread's own
+`ThreadState.fragment_id` (not `ctx.fragment_ids_this_run`) to determine whether we are
+in a fragment rerun — this distinguishes fragment reruns from full app reruns regardless of
+nesting depth. Creating a wrapper during a fragment rerun would advance the outside
+container's stale cursor — exactly the bug this spec fixes. Fragments must establish their
+outside container slots during the initial full app run. To conditionally populate a slot
+later, use a placeholder:
 
 ```python
 outside = st.container()
@@ -184,18 +192,30 @@ to this fragment:
 
 ```python
 def _reset_outside_wrappers(fragment_storage: FragmentStorage, fragment_id: str) -> None:
-    for key, wrapper in fragment_storage.outside_wrappers_for(fragment_id):
+    for key, wrapper in fragment_storage._outside_wrappers.items():
+        if key[0] != fragment_id:
+            continue
+        if wrapper._cursor.is_locked:
+            continue  # LockedCursor (st.empty wrappers) — always at index 0, no reset needed
         wrapper._cursor._index = 0
         wrapper._cursor._transient_index = None
         wrapper._cursor._transient_elements = SparseList()
 ```
 
+The reset enumerates all `RunningCursor` fields to mirror `RunningCursor.__init__`. The
+`_root_container` and `_parent_path` fields are immutable after creation and do not need
+resetting. Wrappers with a `LockedCursor` (created for `st.empty()` parents) are skipped —
+they are stateless and always point to index 0.
+
 ### Wrapper re-emission
 
 On fragment rerun, the wrapper's `add_block` delta must be re-emitted so the frontend
 updates its `scriptRunId` — otherwise `ClearStaleNodeVisitor` would garbage-collect the
-wrapper itself. The wrapper's creation delta path is stored at creation time and replayed
-during `_reset_outside_wrappers`.
+wrapper itself. Re-emission happens at the start of `_reset_outside_wrappers`, before the
+cursor reset and before the fragment body executes. For each wrapper, we enqueue a new
+`add_block` delta using the stored creation delta path and the same `Transparent` block
+proto. This ensures the frontend sees the wrapper block before any of its child elements
+arrive in the same forward message batch.
 
 ### Frontend changes
 
@@ -203,7 +223,9 @@ None required. The wrapper is a standard `BlockNode` with the fragment's `fragme
 (stamped by the existing `enqueue_message` logic). `ClearStaleNodeVisitor` handles it
 correctly: children from previous runs are cleared as stale; the wrapper persists because
 it was re-emitted. Delta paths are valid because each wrapper has its own index space
-starting at 0.
+starting at 0. The `allow_empty` field is an existing proto field on `Block` (already
+handled by `BlockNodeRenderer` on the frontend) — it is set on the wrapper's `Block` proto
+at creation time so that empty wrappers render as invisible rather than being hidden.
 
 ### Interaction with `parallel=True`
 
@@ -224,16 +246,20 @@ outside container, which is redirected through the wrapper. The nested container
 inside the wrapper — no special handling needed.
 
 **`st.empty()` as outside container.** `st.empty()` uses a `LockedCursor` that always
-points to the same position. The wrapper still works: it occupies the empty's single slot,
-and writes go into it. Since `empty()` semantics are replace-not-append, only one element
-exists at a time.
+points to the same position. The wrapper occupies the empty's single slot. To preserve
+`empty()`'s replace semantics, the wrapper inherits the cursor type from its parent
+container: when the outside container's cursor `is_locked` (as with `st.empty()`), the
+wrapper is created with a `LockedCursor(index=0)` instead of a `RunningCursor`. This
+means every write inside the wrapper replaces the previous one, matching `st.empty()`'s
+documented "single-element container" contract. On fragment rerun, there is nothing to
+reset — a `LockedCursor` always points to index 0.
 
 **Dynamic container selection.** Wrappers are keyed by container identity (`dg._id`),
 so switching which container a fragment writes to across reruns creates separate wrappers.
 Stale children in unused wrappers are cleared by `ClearStaleNodeVisitor`; the empty
 wrapper persists (invisible via `allow_empty=True`) until the next full app rerun.
 
-**Full app rerun.** Clears `_fragment_outside_wrappers` entirely. All wrappers are
+**Full app rerun.** Clears `_outside_wrappers` entirely. All wrappers are
 recreated fresh because the main script re-executes and creates new outside containers
 with fresh cursors.
 
