@@ -57,6 +57,7 @@ def test_alert():
 def test_app_test_discovers_installed_v2_components_with_file_backed_assets(
     tmp_path: Path,
 ):
+    """Installed CCv2 components with file-backed assets resolve under AppTest."""
     package_root = tmp_path / "apptest_pkg"
     asset_dir = package_root / "assets"
     asset_dir.mkdir(parents=True)
@@ -84,11 +85,16 @@ def test_app_test_discovers_installed_v2_components_with_file_backed_assets(
     with patch(
         "streamlit.components.v2.manifest_scanner.scan_component_manifests",
         return_value=[(manifest, package_root)],
-    ):
-        at = AppTest.from_function(script).run()
+    ) as scan_mock:
+        at = AppTest.from_function(script)
+        at.run()
+        # Rerun to ensure the discovered component manager is cached on the
+        # AppTest instance and components are not rescanned on every rerun.
+        at.run()
 
     assert at.success[0].value == "Done"
     assert not at.exception
+    assert scan_mock.call_count == 1
 
 
 def test_button():
