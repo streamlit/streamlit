@@ -311,8 +311,8 @@ function StatisticsChart({
 
   // Don't render if there's no data to show
   if (
-    (statistics.type === "numeric" && statistics.histogram.length === 0) ||
-    (statistics.type === "datetime" && statistics.histogram.length === 0) ||
+    ((statistics.type === "numeric" || statistics.type === "datetime") &&
+      statistics.histogram.length === 0) ||
     (statistics.type === "text" && statistics.topValues.length === 0) ||
     (statistics.type === "boolean" && statistics.count === 0)
   ) {

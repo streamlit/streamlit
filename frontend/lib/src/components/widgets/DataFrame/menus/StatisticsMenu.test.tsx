@@ -24,6 +24,46 @@ import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
 
 import StatisticsMenu, { StatisticsMenuProps } from "./StatisticsMenu"
+import {
+  BooleanStatistics,
+  computeStatistics,
+  DateTimeStatistics,
+  NumericStatistics,
+  TextStatistics,
+} from "./statisticsUtils"
+
+// Mock only the computeStatistics dispatcher so we can drive the component's
+// rendering branches (per-type metrics, empty/no-data states) without building
+// real Arrow columns for every type. The pure compute functions are covered
+// directly in statisticsUtils.test.ts.
+vi.mock("./statisticsUtils", async importOriginal => {
+  const actual = await importOriginal<typeof import("./statisticsUtils")>()
+  return {
+    ...actual,
+    computeStatistics: vi.fn(),
+  }
+})
+
+const NUMERIC_STATS: NumericStatistics = {
+  type: "numeric",
+  count: 10,
+  nullCount: 0,
+  unique: 10,
+  sum: 55,
+  mean: 5.5,
+  q25: 3.25,
+  median: 5.5,
+  q75: 7.75,
+  stdDev: 2.87,
+  variance: 8.25,
+  min: 1,
+  max: 10,
+  histogram: [
+    { binStart: 1, binEnd: 5.5, count: 5 },
+    { binStart: 5.5, binEnd: 10, count: 5 },
+  ],
+  isSampled: false,
+}
 
 describe("StatisticsMenu", () => {
   const mockQuiver = new Quiver({ data: TEN_BY_TEN })
@@ -61,6 +101,8 @@ describe("StatisticsMenu", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default to numeric stats; individual tests override as needed.
+    vi.mocked(computeStatistics).mockReturnValue(NUMERIC_STATS)
   })
 
   it("renders the trigger element", () => {
@@ -144,6 +186,179 @@ describe("StatisticsMenu", () => {
     // When closed, the statistics content should not be rendered
     expect(
       screen.queryByTestId("stDataFrameStatisticsContent")
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders text statistics metrics", async () => {
+    const textStats: TextStatistics = {
+      type: "text",
+      count: 6,
+      empty: 1,
+      unique: 3,
+      minLength: 3,
+      maxLength: 8,
+      avgLength: 5.5,
+      topValues: [
+        { value: "apple", count: 3, percentage: 50 },
+        { value: "banana", count: 2, percentage: 33.3 },
+      ],
+      isSampled: false,
+    }
+    vi.mocked(computeStatistics).mockReturnValue(textStats)
+
+    render(
+      <StatisticsMenu {...defaultProps} isOpen={true}>
+        <div data-testid="trigger">Trigger</div>
+      </StatisticsMenu>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stDataFrameStatisticsContent")).toBeVisible()
+    })
+
+    expect(screen.getByText("Minimum length")).toBeVisible()
+    expect(screen.getByText("Maximum length")).toBeVisible()
+    expect(screen.getByText("Average length")).toBeVisible()
+    // Numeric-only metrics must not appear for text columns.
+    expect(screen.queryByText("Sum")).not.toBeInTheDocument()
+    expect(screen.queryByText("Variance")).not.toBeInTheDocument()
+  })
+
+  it("renders datetime statistics metrics", async () => {
+    const ts = new Date("2023-01-01T00:00:00Z").getTime()
+    const ts2 = new Date("2023-01-05T00:00:00Z").getTime()
+    const datetimeStats: DateTimeStatistics = {
+      type: "datetime",
+      isDateOnly: false,
+      count: 5,
+      nullCount: 1,
+      mean: ts,
+      q25: ts,
+      median: ts,
+      q75: ts2,
+      min: ts,
+      max: ts2,
+      range: "4 days",
+      histogram: [{ binStart: ts, binEnd: ts2, count: 5 }],
+      isSampled: false,
+    }
+    vi.mocked(computeStatistics).mockReturnValue(datetimeStats)
+
+    render(
+      <StatisticsMenu {...defaultProps} isOpen={true}>
+        <div data-testid="trigger">Trigger</div>
+      </StatisticsMenu>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stDataFrameStatisticsContent")).toBeVisible()
+    })
+
+    expect(screen.getByText("Range")).toBeVisible()
+    expect(screen.getByText("4 days")).toBeVisible()
+    // Numeric-only metrics must not appear for datetime columns.
+    expect(screen.queryByText("Sum")).not.toBeInTheDocument()
+    expect(screen.queryByText("Variance")).not.toBeInTheDocument()
+  })
+
+  it("renders boolean statistics metrics", async () => {
+    const booleanStats: BooleanStatistics = {
+      type: "boolean",
+      count: 5,
+      nullCount: 0,
+      trueCount: 3,
+      falseCount: 2,
+      truePercentage: 60,
+      falsePercentage: 40,
+      isSampled: false,
+    }
+    vi.mocked(computeStatistics).mockReturnValue(booleanStats)
+
+    render(
+      <StatisticsMenu {...defaultProps} isOpen={true}>
+        <div data-testid="trigger">Trigger</div>
+      </StatisticsMenu>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stDataFrameStatisticsContent")).toBeVisible()
+    })
+
+    expect(screen.getByText("True")).toBeVisible()
+    expect(screen.getByText("False")).toBeVisible()
+    // Numeric-only metrics must not appear for boolean columns.
+    expect(screen.queryByText("Sum")).not.toBeInTheDocument()
+  })
+
+  it("shows a sample note when statistics are sampled", async () => {
+    vi.mocked(computeStatistics).mockReturnValue({
+      ...NUMERIC_STATS,
+      isSampled: true,
+    })
+
+    render(
+      <StatisticsMenu {...defaultProps} isOpen={true}>
+        <div data-testid="trigger">Trigger</div>
+      </StatisticsMenu>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Based on sample")).toBeVisible()
+    })
+  })
+
+  it("shows the 'No data' state when statistics cannot be computed", async () => {
+    vi.mocked(computeStatistics).mockReturnValue(null)
+
+    render(
+      <StatisticsMenu {...defaultProps} isOpen={true}>
+        <div data-testid="trigger">Trigger</div>
+      </StatisticsMenu>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("No data")).toBeVisible()
+    })
+    // No metrics or chart should be rendered for the empty state.
+    expect(
+      screen.queryByTestId("stDataFrameStatisticsContent")
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows reduced metrics for all-empty columns", async () => {
+    vi.mocked(computeStatistics).mockReturnValue({
+      ...NUMERIC_STATS,
+      count: 0,
+      nullCount: 5,
+      unique: 0,
+      sum: 0,
+      mean: 0,
+      q25: 0,
+      median: 0,
+      q75: 0,
+      stdDev: 0,
+      variance: 0,
+      min: 0,
+      max: 0,
+      histogram: [],
+    })
+
+    render(
+      <StatisticsMenu {...defaultProps} isOpen={true}>
+        <div data-testid="trigger">Trigger</div>
+      </StatisticsMenu>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stDataFrameStatisticsContent")).toBeVisible()
+    })
+
+    // Reduced view only shows Values and Empty (no distribution metrics/chart).
+    expect(screen.getByText("Values")).toBeVisible()
+    expect(screen.getByText("Empty")).toBeVisible()
+    expect(screen.queryByText("Sum")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stDataFrameStatisticsChart")
     ).not.toBeInTheDocument()
   })
 

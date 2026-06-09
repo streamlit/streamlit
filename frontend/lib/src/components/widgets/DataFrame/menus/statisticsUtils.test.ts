@@ -16,14 +16,38 @@
 
 import { describe, expect, it } from "vitest"
 
+import { Quiver } from "~lib/dataframes/Quiver"
+
 import {
   computeBooleanStatistics,
   computeDateTimeStatistics,
   computeNumericStatistics,
+  computeStatistics,
   computeTextStatistics,
+  DateTimeStatistics,
   getStatisticsType,
   supportsStatistics,
 } from "./statisticsUtils"
+
+/**
+ * Builds a minimal Quiver-like mock for `computeStatistics`, which only relies
+ * on `dimensions.numDataRows` and `getCell(row, col).content`.
+ */
+function makeMockQuiver(
+  contentFn: (row: number) => unknown,
+  numDataRows = 5,
+  throwOnGetCell = false
+): Quiver {
+  return {
+    dimensions: { numDataRows },
+    getCell: (row: number) => {
+      if (throwOnGetCell) {
+        throw new Error("malformed Arrow buffer")
+      }
+      return { content: contentFn(row) }
+    },
+  } as unknown as Quiver
+}
 
 describe("statisticsUtils", () => {
   describe("supportsStatistics", () => {
@@ -345,6 +369,68 @@ describe("statisticsUtils", () => {
       expect(stats.count).toBe(0)
       expect(stats.truePercentage).toBe(0)
       expect(stats.falsePercentage).toBe(0)
+    })
+  })
+
+  describe("computeStatistics", () => {
+    it.each([
+      ["number", "numeric", (row: number) => row],
+      ["progress", "numeric", (row: number) => row],
+      ["text", "text", (row: number) => `value-${row}`],
+      ["datetime", "datetime", (row: number) => new Date(2023, 0, row + 1)],
+      ["date", "datetime", (row: number) => new Date(2023, 0, row + 1)],
+      ["checkbox", "boolean", (row: number) => row % 2 === 0],
+    ])(
+      "dispatches %s column kind to %s statistics",
+      (kind, expectedType, contentFn) => {
+        const data = makeMockQuiver(contentFn)
+        const stats = computeStatistics(kind, data, 0)
+
+        expect(stats?.type).toBe(expectedType)
+        expect(stats?.count).toBe(5)
+      }
+    )
+
+    it("passes isDateOnly=true for date columns and false for datetime", () => {
+      const data = makeMockQuiver(row => new Date(2023, 0, row + 1))
+
+      const dateOnly = computeStatistics("date", data, 0) as DateTimeStatistics
+      expect(dateOnly.isDateOnly).toBe(true)
+
+      const datetime = computeStatistics(
+        "datetime",
+        data,
+        0
+      ) as DateTimeStatistics
+      expect(datetime.isDateOnly).toBe(false)
+    })
+
+    it("returns null for unsupported column kinds", () => {
+      const data = makeMockQuiver(row => row)
+      expect(computeStatistics("image", data, 0)).toBeNull()
+    })
+
+    it("samples large datasets and marks results as sampled", () => {
+      // 200k rows exceeds SAMPLE_THRESHOLD (100k), so values are capped at
+      // SAMPLE_SIZE (10k) via systematic sampling.
+      const data = makeMockQuiver(row => row, 200_000)
+      const stats = computeStatistics("number", data, 0)
+
+      expect(stats?.isSampled).toBe(true)
+      expect(stats?.count).toBe(10_000)
+    })
+
+    it("does not sample datasets below the threshold", () => {
+      const data = makeMockQuiver(row => row, 10)
+      const stats = computeStatistics("number", data, 0)
+
+      expect(stats?.isSampled).toBe(false)
+      expect(stats?.count).toBe(10)
+    })
+
+    it("returns null when cell extraction fails", () => {
+      const data = makeMockQuiver(row => row, 5, true)
+      expect(computeStatistics("number", data, 0)).toBeNull()
     })
   })
 })

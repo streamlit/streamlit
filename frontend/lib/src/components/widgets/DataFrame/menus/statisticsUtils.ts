@@ -158,18 +158,6 @@ const DATETIME_KINDS = new Set(["datetime", "date"])
 const BOOLEAN_KINDS = new Set(["checkbox"])
 
 /**
- * Check if a column kind supports statistics.
- */
-export function supportsStatistics(columnKind: string): boolean {
-  return (
-    NUMERIC_KINDS.has(columnKind) ||
-    TEXT_KINDS.has(columnKind) ||
-    DATETIME_KINDS.has(columnKind) ||
-    BOOLEAN_KINDS.has(columnKind)
-  )
-}
-
-/**
  * Get the statistics type for a column kind.
  */
 export function getStatisticsType(
@@ -180,6 +168,13 @@ export function getStatisticsType(
   if (DATETIME_KINDS.has(columnKind)) return "datetime"
   if (BOOLEAN_KINDS.has(columnKind)) return "boolean"
   return null
+}
+
+/**
+ * Check if a column kind supports statistics.
+ */
+export function supportsStatistics(columnKind: string): boolean {
+  return getStatisticsType(columnKind) !== null
 }
 
 /**

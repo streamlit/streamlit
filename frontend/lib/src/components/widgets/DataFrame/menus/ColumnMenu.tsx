@@ -195,7 +195,10 @@ function ColumnMenu({
                 isActive={statsMenuOpen}
                 hasSubmenu={true}
                 role="menuitem"
-                aria-haspopup="dialog"
+                // The statistics popover is a read-only informational panel
+                // (no focus management/focus lock), so "true" is more accurate
+                // than "dialog", which implies a focusable dialog widget.
+                aria-haspopup="true"
                 aria-expanded={statsMenuOpen}
                 tabIndex={0}
               >
