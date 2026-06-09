@@ -273,9 +273,11 @@ class App:
     secrets : Mapping[str, SecretsValue] | None
         A dictionary of secrets to make available via ``st.secrets``. Supported
         value types are: ``str``, ``int``, ``float``, ``bool``, ``list``, and nested
-        ``dict``. When provided, these secrets are shallow-merged with file-based
-        secrets (programmatic secrets override file-based secrets at the top level).
-        Unsupported types raise ``TypeError`` at construction.
+        ``dict``. Lists and dicts are validated recursively, so their elements
+        must themselves be supported secrets types. When provided, these secrets
+        are shallow-merged with file-based secrets (programmatic secrets override
+        file-based secrets at the top level). Unsupported types raise
+        ``TypeError`` at construction.
     lifespan : Callable[[App], AbstractAsyncContextManager[dict[str, Any] | None]] | None
         Async context manager for startup/shutdown logic. The context manager
         receives the App instance and can yield a dictionary of state that will

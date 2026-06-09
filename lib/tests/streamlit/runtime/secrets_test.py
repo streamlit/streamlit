@@ -732,6 +732,7 @@ class TestValidateSecretsValue:
             pytest.param(True, id="bool_true"),
             pytest.param(False, id="bool_false"),
             pytest.param(["id", "access"], id="list"),
+            pytest.param([], id="empty_list"),
             pytest.param(
                 {"auth": {"expose_tokens": ["id", "access"]}}, id="nested_list"
             ),

@@ -51,7 +51,9 @@ def _validate_secrets_value(value: Any, path: str = "") -> None:
     value
         The value to validate.
     path
-        The dotted path to this value (for error messages).
+        The path to this value (for error messages). Dict keys use dotted
+        notation (e.g. ``outer.inner``) and list elements use bracket indexing
+        (e.g. ``outer.inner[2]``).
 
     Raises
     ------
@@ -447,6 +449,8 @@ class Secrets(Mapping[str, Any]):
         programmatic_secrets
             A dictionary of secrets to merge. Supported value types are:
             ``str``, ``int``, ``float``, ``bool``, ``list``, and nested ``dict``.
+            Lists and dicts are validated recursively, so their elements must
+            themselves be supported secrets types.
 
         Raises
         ------
