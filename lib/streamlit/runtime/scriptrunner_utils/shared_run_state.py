@@ -65,7 +65,7 @@ class SharedRunState:
 
     @property
     def tracked_commands_count(self) -> int:
-        """Return the total number of tracked commands."""
+        """Return the number of commands stored in the tracked list (capped)."""
         with self._telemetry_lock:
             return len(self._tracked_commands)
 
