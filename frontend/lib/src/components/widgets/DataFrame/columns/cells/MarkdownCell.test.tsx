@@ -309,6 +309,44 @@ describe("MarkdownCellEditor", () => {
     expect(screen.getByRole("textbox")).toHaveValue("a")
   })
 
+  it("propagates the keyboard-seeded character to glide on mount", () => {
+    const onChange = vi.fn()
+    const emptyCell = createMockCellValue(null, false)
+
+    render(
+      <MarkdownCellEditor
+        value={emptyCell}
+        initialValue="a"
+        onChange={onChange}
+        onFinishedEditing={vi.fn()}
+      />
+    )
+
+    // The seeded character must be pushed to glide so that dismissing the
+    // overlay (which commits glide's last onChange payload) keeps the typed
+    // character instead of discarding it.
+    expect(onChange).toHaveBeenCalledTimes(1)
+    const draftCell = onChange.mock.calls[0][0] as MarkdownCell
+    expect(draftCell.data.value).toBe("a")
+    expect(draftCell.data.displayValue).toBe("a")
+  })
+
+  it("does not propagate to glide on mount when the edit is not started by typing", () => {
+    const onChange = vi.fn()
+    const nonEmptyCell = createMockCellValue("# Existing content", false)
+
+    render(
+      <MarkdownCellEditor
+        value={nonEmptyCell}
+        onChange={onChange}
+        onFinishedEditing={vi.fn()}
+      />
+    )
+
+    // Opening the overlay in viewer mode must not produce a spurious draft.
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it("preserves existing content when a keyboard edit starts on a non-empty cell", () => {
     const nonEmptyCell = createMockCellValue("# Existing content", false)
 

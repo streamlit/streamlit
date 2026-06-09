@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 import styled from "@emotion/styled"
 import { Check, Close, Edit } from "@emotion-icons/material-outlined"
@@ -169,6 +169,29 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   const [editValue, setEditValue] = useState(
     startedByTyping && existingValue === "" ? initialValue : existingValue
   )
+
+  // When a keyboard edit is started on an empty cell we seed the editor with
+  // the typed character (see `editValue` above). That character initially only
+  // lives in local React state, so glide-data-grid is unaware of it. Propagate
+  // it once on mount via `onChange` so that dismissing the overlay (e.g. by
+  // clicking outside) commits the typed character instead of dropping it.
+  useEffect(() => {
+    if (startedByTyping && existingValue === "" && initialValue) {
+      const seededValue = initialValue
+      onChange({
+        ...cell,
+        copyData: seededValue,
+        data: {
+          ...cell.data,
+          value: seededValue,
+          displayValue: removeLineBreaks(seededValue),
+        },
+      })
+    }
+    // Only run on mount to sync the keyboard-seeded value to glide-data-grid;
+    // re-running would clobber subsequent user edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const modifierLabel = isFromMac() ? "⌘" : "Ctrl"
 
