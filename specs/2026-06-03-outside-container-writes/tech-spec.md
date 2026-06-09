@@ -192,9 +192,7 @@ to this fragment:
 
 ```python
 def _reset_outside_wrappers(fragment_storage: FragmentStorage, fragment_id: str) -> None:
-    for key, wrapper in fragment_storage._outside_wrappers.items():
-        if key[0] != fragment_id:
-            continue
+    for key, wrapper in fragment_storage.outside_wrappers_for(fragment_id):
         if wrapper._cursor.is_locked:
             continue  # LockedCursor (st.empty wrappers) — always at index 0, no reset needed
         wrapper._cursor._index = 0
