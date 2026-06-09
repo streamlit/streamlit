@@ -102,6 +102,50 @@ describe("LazyDataframeCache", () => {
       expect(rowData?.localRow).toBe(5)
       expect(requestDataframeChunk).not.toHaveBeenCalled()
     })
+
+    it("is not clobbered by a late-rejecting in-flight fetch for the same offset", async () => {
+      // Reproduces the initial-chunk fetch race: getCellContent can start a
+      // network fetch for offset 0 before the proto initialChunk is seeded.
+      let rejectFetch: (error: Error) => void = () => {}
+      requestDataframeChunk.mockImplementation(
+        () =>
+          new Promise((_resolve, reject) => {
+            rejectFetch = reject
+          })
+      )
+      const cache = createCache({ pageSize: 100 })
+
+      // A render triggers a fetch for offset 0 while it is still in flight.
+      void cache.ensureRowLoaded(0).catch(() => {})
+
+      // The server-provided initial chunk is seeded before the fetch settles.
+      const initialQuiver = new Quiver({ data: new Uint8Array() })
+      cache.loadInitialChunk(initialQuiver, 0)
+      expect(cache.getRowData(0)?.quiver).toBe(initialQuiver)
+
+      // The stale in-flight request now fails - it must not surface an error
+      // over the already-loaded initial chunk.
+      rejectFetch(new Error("late failure"))
+      await flushPromises()
+
+      expect(cache.getRowData(0)?.quiver).toBe(initialQuiver)
+      expect(cache.getRowError(0)).toBeNull()
+    })
+  })
+
+  describe("page size validation", () => {
+    it("falls back to the default page size when given a non-positive value", async () => {
+      const cache = createCache({ pageSize: 0 })
+
+      // A zero page size would make chunk-offset math produce NaN; the
+      // fallback (500) keeps offsets well-defined.
+      expect(cache.getChunkOffset(750)).toBe(500)
+
+      await cache.ensureRowLoaded(750)
+      expect(requestDataframeChunk).toHaveBeenCalledWith(
+        expect.objectContaining({ offset: 500, limit: 500 })
+      )
+    })
   })
 
   describe("getRowData", () => {

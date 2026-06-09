@@ -35,6 +35,14 @@ const LOG = getLogger("LazyDataframeCache")
  */
 const MAX_CHUNK_RETRIES = 3
 
+/**
+ * Fallback page size used when the configured page size is missing or invalid
+ * (e.g. malformed proto data). Mirrors the backend `DEFAULT_PAGE_SIZE` and
+ * guards against a zero page size, which would make chunk-offset math produce
+ * `NaN`.
+ */
+const FALLBACK_PAGE_SIZE = 500
+
 /** Status of a chunk in the cache. */
 type ChunkStatus = "pending" | "loaded" | "error"
 
@@ -115,7 +123,7 @@ export class LazyDataframeCache {
     this.sourceId = config.sourceId
     this.generation = config.generation
     this.rowCount = config.rowCount
-    this.pageSize = config.pageSize
+    this.pageSize = config.pageSize > 0 ? config.pageSize : FALLBACK_PAGE_SIZE
     this.client = config.client
     this.onUpdate = config.onUpdate
   }
@@ -279,15 +287,23 @@ export class LazyDataframeCache {
     // Start fetching the chunk
     const promise = this.fetchChunk(offset, sort)
 
-    sortCache.set(offset, {
+    const pendingChunk: CachedChunk = {
       quiver: null,
       status: "pending",
       promise,
       retryCount: previousRetryCount,
-    })
+    }
+    sortCache.set(offset, pendingChunk)
 
     promise
       .then(quiver => {
+        // Only commit the result if this request is still the active entry for
+        // this offset. A server-seeded initial chunk (via loadInitialChunk) or
+        // a newer request may have replaced it while this fetch was in flight,
+        // and we must not clobber that newer/loaded state.
+        if (sortCache.get(offset) !== pendingChunk) {
+          return
+        }
         sortCache.set(offset, {
           quiver,
           status: "loaded",
@@ -298,6 +314,12 @@ export class LazyDataframeCache {
       })
       .catch((error: Error) => {
         LOG.error(`Failed to load chunk at offset ${offset}:`, error)
+        // Don't overwrite an entry that was replaced while this request was in
+        // flight (e.g. the server-provided initial chunk was seeded). Otherwise
+        // a late rejection would surface a load error over valid data.
+        if (sortCache.get(offset) !== pendingChunk) {
+          return
+        }
         sortCache.set(offset, {
           quiver: null,
           status: "error",

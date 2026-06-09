@@ -155,6 +155,25 @@ class TestPandasDataframeSource:
         values = table.column("a").to_pylist()
         assert values == [20, 30, 10]
 
+    def test_load_rows_sort_with_non_string_column_name(self):
+        """Test sorting works for DataFrames with non-string (integer) columns."""
+        import pandas as pd
+
+        # Columns are an integer RangeIndex (0, 1). Arrow stringifies them to
+        # "0"/"1", which is what the frontend sends back as the sort column.
+        df = pd.DataFrame([[3, 30], [1, 10], [2, 20]])
+        source = PandasDataframeSource(df)
+
+        chunk_bytes = source.load_rows(
+            offset=0, limit=3, sort=SortConfig(column="0", ascending=True)
+        )
+
+        reader = pa.ipc.open_stream(chunk_bytes)
+        table = reader.read_all()
+        # Sorted ascending by the first column -> [1, 2, 3], second follows.
+        assert table.column("0").to_pylist() == [1, 2, 3]
+        assert table.column("1").to_pylist() == [10, 20, 30]
+
     def test_load_rows_sort_unknown_column_ignored(self):
         """Test that sorting by an unknown column is silently ignored."""
         import pandas as pd

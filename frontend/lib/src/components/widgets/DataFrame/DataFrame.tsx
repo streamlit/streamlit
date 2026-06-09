@@ -47,7 +47,11 @@ import {
 import { Resizable } from "re-resizable"
 import { createPortal } from "react-dom"
 
-import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
+import {
+  Dataframe as DataframeProto,
+  ILazyDataframe,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
@@ -104,6 +108,19 @@ import "@glideapps/glide-data-grid-cells/dist/index.css"
 // a scrollbar size of ~8px to prevent clicks on the scrollbar to be applied
 // in the data grid.
 const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
+
+/**
+ * Stable placeholder passed to `useLazyDataLoader` when the dataframe is not in
+ * lazy mode. The hook is always called (to keep hook order stable) but its
+ * result is only used when `isLazy` is true. Defined at module scope so it
+ * keeps a stable reference across renders (see "Static Data Structures").
+ */
+const INACTIVE_LAZY_DATA: ILazyDataframe = {
+  sourceId: "",
+  generation: "",
+  rowCount: 0,
+  pageSize: 500,
+}
 
 export interface DataFrameProps {
   element: DataframeProto
@@ -319,12 +336,7 @@ function DataFrame({
   // Lazy data loading - always call to maintain hook order, but only use when isLazy
   // We've verified backendOperationClient exists for lazy mode above
   const lazyDataLoaderResult = useLazyDataLoader({
-    lazyData: lazyData ?? {
-      sourceId: "",
-      generation: "",
-      rowCount: 0,
-      pageSize: 500,
-    },
+    lazyData: lazyData ?? INACTIVE_LAZY_DATA,
     columns: originalColumns,
     numRows: originalNumRows,
     // We use a type assertion here since we've validated the client exists for lazy mode

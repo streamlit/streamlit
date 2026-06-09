@@ -54,6 +54,7 @@ from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
+from streamlit.logger import get_logger
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -71,6 +72,9 @@ if TYPE_CHECKING:
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
+
+
+_LOGGER: Final = get_logger(__name__)
 
 
 SelectionMode: TypeAlias = Literal[
@@ -1109,6 +1113,10 @@ class ArrowMixin:
                 )
 
                 if session_info is None or session_info.session is None:
+                    _LOGGER.debug(
+                        "Lazy mode unavailable: no active session; "
+                        "falling back to eager loading."
+                    )
                     use_lazy_mode = False
                 else:
                     source_mgr = session_info.session.dataframe_source_manager

@@ -135,6 +135,18 @@ class PandasDataframeSource:
 
         self._df = df
         self._schema = pa.Schema.from_pandas(df)
+        # Arrow field names are always strings, but pandas column labels may
+        # not be (e.g. an integer RangeIndex from ``pd.DataFrame([[1, 2]])``).
+        # The frontend sends the sort column back as the Arrow field name, so
+        # we build a mapping from stringified Arrow field name -> original
+        # pandas column label to resolve the right column at sort time. Arrow
+        # places data columns before any index fields, so zipping against
+        # ``df.columns`` (which excludes the index) aligns the data columns
+        # correctly; ``strict=False`` ignores any trailing index field.
+        self._arrow_name_to_col: dict[str, Any] = {
+            field.name: col
+            for field, col in zip(self._schema, df.columns, strict=False)
+        }
 
     @property
     def row_count(self) -> int:
@@ -176,12 +188,14 @@ class PandasDataframeSource:
         """
         df = self._df
 
-        # Apply sorting if requested
-        if sort is not None and sort.column in df.columns:
+        # Apply sorting if requested. The frontend sends the sort column as the
+        # Arrow field name (a string); resolve it back to the original pandas
+        # column label so sorting works for non-string column names too.
+        if sort is not None and sort.column in self._arrow_name_to_col:
             # Use stable sort to preserve relative order of equal elements
             # Note: We don't use ignore_index=True to preserve original index labels
             df = df.sort_values(
-                by=sort.column,
+                by=self._arrow_name_to_col[sort.column],
                 ascending=sort.ascending,
                 kind="stable",
             )
