@@ -196,6 +196,10 @@ to this fragment:
 ```python
 def _reset_outside_wrappers(fragment_storage: FragmentStorage, fragment_id: str) -> None:
     for key, wrapper in fragment_storage.outside_wrappers_for(fragment_id):
+        # Re-emit the wrapper's add_block delta so the frontend updates its
+        # scriptRunId — without this, ClearStaleNodeVisitor would GC the wrapper.
+        enqueue_add_block(wrapper._creation_delta_path, wrapper._block_proto)
+
         if wrapper._cursor.is_locked:
             continue  # LockedCursor (st.empty wrappers) — always at index 0, no reset needed
         wrapper._cursor._index = 0
@@ -203,20 +207,14 @@ def _reset_outside_wrappers(fragment_storage: FragmentStorage, fragment_id: str)
         wrapper._cursor._transient_elements = SparseList()
 ```
 
-The reset enumerates all `RunningCursor` fields to mirror `RunningCursor.__init__`. The
-`_root_container` and `_parent_path` fields are immutable after creation and do not need
-resetting. Wrappers with a `LockedCursor` (created for `st.empty()` parents) are skipped —
-they are stateless and always point to index 0.
+Re-emission applies to all wrappers (including `LockedCursor` ones) — only the cursor
+reset is skipped for locked cursors. The cursor reset enumerates all `RunningCursor`
+mutable fields to mirror `RunningCursor.__init__`. The `_root_container` and `_parent_path`
+fields are immutable after creation and do not need resetting.
 
-### Wrapper re-emission
-
-On fragment rerun, the wrapper's `add_block` delta must be re-emitted so the frontend
-updates its `scriptRunId` — otherwise `ClearStaleNodeVisitor` would garbage-collect the
-wrapper itself. Re-emission happens at the start of `_reset_outside_wrappers`, before the
-cursor reset and before the fragment body executes. For each wrapper, we enqueue a new
-`add_block` delta using the stored creation delta path and the same `Transparent` block
-proto. This ensures the frontend sees the wrapper block before any of its child elements
-arrive in the same forward message batch.
+This function is called in `wrapped_fragment()` after the existing snapshot restore,
+before the fragment body executes. Re-emitting first ensures the frontend sees the wrapper
+block before any child elements arrive in the same forward message batch.
 
 ### Frontend changes
 
@@ -255,10 +253,13 @@ means every write inside the wrapper replaces the previous one, matching `st.emp
 documented "single-element container" contract. On fragment rerun, there is nothing to
 reset — a `LockedCursor` always points to index 0.
 
-**Dynamic container selection.** Wrappers are keyed by container identity (`dg._id`),
-so switching which container a fragment writes to across reruns creates separate wrappers.
-Stale children in unused wrappers are cleared by `ClearStaleNodeVisitor`; the empty
-wrapper persists (invisible via `allow_empty=True`) until the next full app rerun.
+**Dynamic container selection.** Wrappers are keyed by container identity (`dg._id`).
+A fragment that conditionally writes to different outside containers must write to *all* of
+them during the initial full app run so their wrappers are established. On subsequent
+standalone reruns, the fragment can choose which wrappers to populate — unused wrappers
+have their stale children cleared by `ClearStaleNodeVisitor` and remain invisible via
+`allow_empty=True`. Attempting to write to an outside container whose wrapper was never
+established will raise `StreamlitAPIException` per the restriction above.
 
 **Full app rerun.** Clears `_outside_wrappers` entirely. All wrappers are
 recreated fresh because the main script re-executes and creates new outside containers
