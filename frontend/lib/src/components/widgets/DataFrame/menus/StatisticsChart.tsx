@@ -29,10 +29,17 @@ import type { EmotionTheme } from "~lib/theme/types"
 import { ColumnStatistics, HistogramBin } from "./statisticsUtils"
 import { StyledStatisticsChart } from "./styled-components"
 
-/** Chart width in pixels. */
+/**
+ * Chart width in pixels. Passed directly to Vega-Lite, which requires absolute
+ * pixel dimensions for its SVG viewport. This matches the rem-based width of the
+ * surrounding statistics panel container at the default 16px root font-size.
+ */
 const CHART_WIDTH = 180
 
-/** Chart height in pixels. */
+/**
+ * Chart height in pixels. Passed directly to Vega-Lite (see CHART_WIDTH); kept in
+ * sync with the container height defined in styled-components.
+ */
 const CHART_HEIGHT = 56
 
 /** Accessible labels for each chart type. */

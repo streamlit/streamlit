@@ -126,6 +126,17 @@ describe("statisticsUtils", () => {
       expect(stats.mean).toBe(2)
     })
 
+    it("treats empty and whitespace strings as null, not zero", () => {
+      const values = [10, "", "   ", 20]
+      const stats = computeNumericStatistics(values, false)
+
+      // Blank strings must not be coerced to 0 (which would skew the metrics).
+      expect(stats.count).toBe(2)
+      expect(stats.nullCount).toBe(2)
+      expect(stats.min).toBe(10)
+      expect(stats.mean).toBe(15)
+    })
+
     it("handles empty array", () => {
       const stats = computeNumericStatistics([], false)
 
@@ -246,6 +257,16 @@ describe("statisticsUtils", () => {
 
       expect(stats.count).toBe(2)
       expect(stats.nullCount).toBe(1)
+    })
+
+    it("counts empty and unparseable values as null", () => {
+      const values = [new Date("2023-01-01"), null, "", "not-a-date"]
+      const stats = computeDateTimeStatistics(values, false)
+
+      // Empty strings and unparseable values must increment nullCount so that
+      // count + nullCount reflects the total number of rows.
+      expect(stats.count).toBe(1)
+      expect(stats.nullCount).toBe(3)
     })
 
     it("handles timestamp numbers", () => {

@@ -19,6 +19,7 @@ import { getLogger } from "loglevel"
 import {
   toSafeBoolean,
   toSafeDate,
+  toSafeNumber,
 } from "~lib/components/widgets/DataFrame/columns/utils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
@@ -238,14 +239,16 @@ export function computeNumericStatistics(
   let nullCount = 0
 
   for (const v of rawValues) {
-    if (isNullOrUndefined(v)) {
+    // Use toSafeNumber so cell values are interpreted the same way NumberColumn
+    // displays them: empty/whitespace strings become null (not 0), and formatted
+    // numeric strings are parsed. Plain Number() would coerce "" and "  " to 0.
+    const num = toSafeNumber(v)
+    if (isNullOrUndefined(num)) {
+      // null/undefined inputs and blank strings count as empty values.
       nullCount++
-    } else {
-      const num = Number(v)
-      // Number.isFinite already excludes NaN and ±Infinity
-      if (Number.isFinite(num)) {
-        values.push(num)
-      }
+    } else if (Number.isFinite(num)) {
+      // Number.isFinite already excludes NaN and ±Infinity (unparseable values).
+      values.push(num)
     }
   }
 
@@ -453,17 +456,16 @@ export function computeDateTimeStatistics(
   let nullCount = 0
 
   for (const v of rawValues) {
-    if (isNullOrUndefined(v)) {
-      nullCount++
+    // toSafeDate handles Date objects, bigints, numbers, and strings. It returns
+    // null/undefined for empty or unparseable values.
+    const date = isNullOrUndefined(v) ? null : toSafeDate(v)
+    const timestamp = notNullOrUndefined(date) ? date.getTime() : NaN
+    if (Number.isFinite(timestamp)) {
+      timestamps.push(timestamp)
     } else {
-      // toSafeDate handles Date objects, bigints, numbers, and strings
-      const date = toSafeDate(v)
-      if (notNullOrUndefined(date)) {
-        const timestamp = date.getTime()
-        if (Number.isFinite(timestamp)) {
-          timestamps.push(timestamp)
-        }
-      }
+      // null/undefined inputs, empty strings, and unparseable values all count as
+      // empty so that count + nullCount reflects the total number of rows.
+      nullCount++
     }
   }
 
@@ -489,8 +491,13 @@ export function computeDateTimeStatistics(
   }
 
   const sorted = [...timestamps].sort((a, b) => a - b)
-  const sum = timestamps.reduce((acc, v) => acc + v, 0)
-  const mean = sum / count
+  // Compute the mean incrementally to avoid summing into values above
+  // Number.MAX_SAFE_INTEGER. Millisecond timestamps (~1.7e12) summed over the
+  // sample cap (10k) reach ~1.7e16, which would lose integer precision.
+  let mean = 0
+  timestamps.forEach((v, i) => {
+    mean += (v - mean) / (i + 1)
+  })
   const min = sorted[0]
   const max = sorted[count - 1]
 
