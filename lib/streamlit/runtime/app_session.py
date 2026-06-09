@@ -862,10 +862,13 @@ class AppSession:
 
         # Recommend installing the bundled agent skills when running locally
         # with an AI agent present but no skills installed yet. Computed here
-        # so the frontend can surface a one-click "install skills" nudge.
+        # so the frontend can surface a one-click "install skills" nudge. Pass
+        # the app dir the page-profile telemetry uses so both share the cached
+        # skill-detection result.
         from streamlit.web import skills
 
-        imsg.recommend_skills_install = skills.should_show_skills_nudge()
+        app_dir = os.path.dirname(self._script_data.main_script_path)
+        imsg.recommend_skills_install = skills.should_show_skills_nudge(app_dir)
 
         return msg
 

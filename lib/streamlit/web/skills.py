@@ -773,7 +773,9 @@ def install_skills(*, global_mode: bool = False, yes: bool = False) -> None:
 
 def _nudge_dismissed_marker_path() -> Path:
     """Return the path to the marker file that suppresses the skills nudge."""
-    return Path.home() / ".streamlit" / "skills_nudge_dismissed"
+    from streamlit import file_util
+
+    return Path(file_util.get_streamlit_file_path("skills_nudge_dismissed"))
 
 
 def write_nudge_dismissed_marker() -> None:
@@ -788,13 +790,22 @@ def write_nudge_dismissed_marker() -> None:
     marker.touch(exist_ok=True)
 
 
-def should_show_skills_nudge() -> bool:
+def should_show_skills_nudge(app_dir: str | None = None) -> bool:
     """Return whether the in-app "install skills" nudge should be shown.
 
     The nudge is recommended only for interactive local development where an
     AI agent harness is present but the bundled Streamlit skills are not yet
     installed, and the user has not permanently dismissed it. This mirrors the
     gating of the CLI recommendation printed on app startup.
+
+    Parameters
+    ----------
+    app_dir
+        Directory of the running app's main script, used to detect
+        project-local skills. Pass the same value the page-profile telemetry
+        uses (``dirname(main_script_path)``) so both share the cached
+        detection result. Falls back to the current working directory when
+        ``None``.
 
     Best-effort: returns ``False`` on any error so a detection failure never
     blocks app startup or surfaces a spurious nudge.
@@ -816,6 +827,6 @@ def should_show_skills_nudge() -> bool:
         if not metrics_util.detect_installed_agents():
             return False
         # An agent is present; recommend installing only if our skills aren't.
-        return not metrics_util.detect_installed_skills(os.getcwd())
+        return not metrics_util.detect_installed_skills(app_dir)
     except Exception:  # pragma: no cover - defensive
         return False
