@@ -223,11 +223,11 @@ function Slider({
     (prev, curr) => arrayComparator(prev[0], curr[0])
   )
 
-  // RA passes the new value directly (not wrapped in an object like BaseUI did).
-  // RA types onChange/onChangeEnd as (value: number | number[]) to support both
+  // onChange/onChangeEnd both receive (value: number | number[]) supporting both
   // single-value and range sliders; we always use an array internally.
-  // Note: on keyboard interactions, RA fires onChange and onChangeEnd synchronously
-  // in the same event, so isDragging may be true→false within the same React batch.
+  // Note: on keyboard interactions, React Aria fires onChange and onChangeEnd
+  // synchronously in the same event, so isDragging may be true→false within
+  // the same React batch.
   const handleFinalChange = useCallback(
     (newValue: number | number[]): void => {
       setValueWithSource({ value: toArray(newValue), fromUi: true })
@@ -245,7 +245,7 @@ function Slider({
     // React Aria's getThumbValueLabel always uses the Intl NumberFormatter, which
     // cannot produce arbitrary strings (e.g. option names for select_slider or
     // datetime labels). We update aria-valuetext on the hidden <input type="range">
-    // inside each thumb via DOM mutation after render, matching the original BaseUI approach.
+    // inside each thumb via DOM mutation after render.
     thumbsRef.current.forEach((thumbEl, i) => {
       if (!thumbEl) return
       const input = thumbEl.querySelector<HTMLInputElement>(

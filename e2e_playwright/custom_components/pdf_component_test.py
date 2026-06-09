@@ -303,8 +303,8 @@ def test_st_pdf_widget_interactions(app: Page):
     # Wait for slider to be ready for interaction
     _wait_for_slider_to_be_ready(app)
 
+    expect(height_slider.get_by_test_id("stSliderThumbValue")).to_be_visible()
     slider_thumb = height_slider.get_by_role("slider")
-    expect(slider_thumb).to_be_attached()
     expect(slider_thumb).to_have_attribute("value", re.compile(r".*"))
 
     # Verify that the PDF renders with the current slider value
@@ -338,9 +338,7 @@ def test_st_pdf_different_heights_snapshots(
     initial_height = initial_box["height"]
     assert_snapshot(pdf_container, name="st_pdf-height_default")
 
-    # Confirm the slider input is in the DOM (it is visually hidden by React Aria)
-    slider_element = height_slider.get_by_role("slider")
-    expect(slider_element).to_be_attached()
+    expect(height_slider.get_by_test_id("stSliderThumbValue")).to_be_visible()
 
     # Move slider to minimum (200px) — hover the visible stSlider container, then drag left
     height_slider.hover()

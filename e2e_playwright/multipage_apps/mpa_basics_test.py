@@ -77,7 +77,7 @@ def test_can_switch_between_pages_and_edit_widgets(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 3")
     expect(app.get_by_test_id("stMarkdown")).to_contain_text("x is 0")
 
-    expect(slider).to_be_attached()
+    expect(app.get_by_test_id("stSlider")).to_be_visible()
 
     slider.press("ArrowRight")
     wait_for_app_run(app)
