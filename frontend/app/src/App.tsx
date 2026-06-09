@@ -1585,9 +1585,12 @@ export class App extends PureComponent<Props, State> {
   private readonly handleSkillsNudgeDontShowAgain = (): void => {
     this.setSkillsNudgeDismissed()
     // Best-effort durable suppression: hide immediately and persist the
-    // server-side marker. Swallow failures (e.g. socket down) — the
-    // localStorage flag already suppresses the nudge in this browser.
-    this.backendOperationClient.requestDismissSkillsNudge().catch(() => {})
+    // server-side marker. The localStorage flag already suppresses the nudge
+    // in this browser, so a failed marker write only means a fresh browser
+    // could see it again — log it rather than failing the dismissal.
+    this.backendOperationClient.requestDismissSkillsNudge().catch(error => {
+      LOG.warn("Failed to persist skills nudge dismissal", error)
+    })
     this.trackSkillsNudge("skillsNudgeDontShowAgain")
     this.hideSkillsNudge()
   }
