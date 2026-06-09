@@ -46,9 +46,11 @@ from streamlit.elements.lib.column_config_utils import (
     DataframeSchema,
     apply_data_specific_configs,
     determine_dataframe_schema,
+    extract_button_column_configs,
     is_type_compatible,
     marshall_column_config,
     process_config_mapping,
+    register_button_column_widgets,
     update_column_config,
 )
 from streamlit.elements.lib.form_utils import current_form_id
@@ -1033,8 +1035,12 @@ class DataEditorMixin:
         # Check if the column names are valid and unique.
         _check_column_names(data_df)
 
+        processed_column_config, button_columns = extract_button_column_configs(
+            column_config
+        )
+
         # Convert the user provided column config into the frontend compatible format:
-        column_config_mapping = process_config_mapping(column_config)
+        column_config_mapping = process_config_mapping(processed_column_config)
 
         # Deactivate editing for columns that are not compatible with arrow
         for column_name, column_data in data_df.items():
@@ -1166,6 +1172,16 @@ class DataEditorMixin:
         proto.arrow_data.data = arrow_bytes
 
         marshall_column_config(proto, column_config_mapping)
+
+        # Skip registration when the entire data_editor is disabled (disabled=True)
+        # since button-column clicks should not fire in that case.
+        if disabled is not True:
+            register_button_column_widgets(
+                dg=self.dg,
+                proto=proto,
+                button_columns=button_columns,
+                ctx=ctx,
+            )
 
         # Create layout configuration
         # For height, only include it in LayoutConfig if it's not "auto"

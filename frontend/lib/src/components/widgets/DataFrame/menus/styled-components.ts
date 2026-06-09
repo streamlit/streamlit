@@ -53,6 +53,13 @@ export const StyledMenuListItem = styled.div<StyledMenuListItemProps>(
     "&:hover": {
       backgroundColor: theme.colors.darkenedBgMix15,
     },
+    // Focus styling: remove default outline, use theme focus ring for keyboard navigation
+    "&:focus": {
+      outline: "none",
+    },
+    "&:focus-visible": {
+      boxShadow: theme.shadows.focusRing,
+    },
     minWidth: theme.sizes.minMenuWidth,
     // If the submenu is activated, we need to place the menu icon & label to the left
     // and the submenu indicator to the right:

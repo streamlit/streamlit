@@ -29,6 +29,7 @@ from typing import (
 
 from typing_extensions import Unpack
 
+from streamlit import config
 from streamlit.errors import (
     NoSessionContext,
 )
@@ -36,6 +37,10 @@ from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import (
     create_reference_msg,
     populate_hash_if_needed,
+)
+from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
+from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
+    SCRIPT_RUN_CONTEXT_ATTR_NAME,
 )
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 
@@ -48,7 +53,6 @@ if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
-    from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
     from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
     from streamlit.runtime.state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
@@ -263,11 +267,6 @@ class ScriptRunContext:
         ThreadState.initialize(
             active_script_hash=self.pages_manager.main_script_hash,
         )
-        # Deferred to avoid circular import: parallel_coordinator imports
-        # ScriptRunContext and get_script_run_ctx from this module.
-        from streamlit import config
-        from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
-
         self.parallel_coordinator = ParallelFragmentCoordinator(
             yield_check=yield_check,
             max_workers=config.get_option("runner.parallelMaxWorkers"),
@@ -316,7 +315,6 @@ class ScriptRunContext:
         self._enqueue(msg_to_send)
 
 
-SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"
 # Thread-attached storage used by add_script_run_ctx:
 # - Fields slot: parent FragmentThreadState snapshot, applied at run() time.
 # - Install slot: sentinel that prevents thread.run from being wrapped

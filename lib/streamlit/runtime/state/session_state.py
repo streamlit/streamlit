@@ -1281,9 +1281,16 @@ class SessionState:
     def get_stats(
         self, _family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
-        from streamlit.runtime.stats import safe_sizeof
+        if config.get_option("server.enableExpensiveMemoryStats"):
+            from streamlit.runtime.stats import safe_sizeof
 
-        stat = CacheStat("st_session_state", "", safe_sizeof(self))
+            byte_length = safe_sizeof(self)
+        else:
+            # Use a cheap item-count proxy instead of traversing the session
+            # state values, which can be very expensive.
+            byte_length = len(self)
+
+        stat = CacheStat("st_session_state", "", byte_length)
         # In general, get_stats methods need to be able to return only requested stat
         # families, but this method only returns a single family, and we're guaranteed
         # that it was one of those requested if we make it here.

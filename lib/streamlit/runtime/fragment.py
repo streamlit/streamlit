@@ -687,9 +687,9 @@ def _dispatch_parallel_fragment(
     sees the container delta immediately), then submits the fragment body to
     run on a worker thread.
 
-    The coordinator's submit() handles context propagation: it captures
-    copy_context() and get_script_run_ctx() at submit time, and the worker
-    runs inside captured.run() with _scoped_ctx_attach().
+    The coordinator's submit() handles context propagation: the caller passes
+    ctx explicitly and submit() captures copy_context() at submit time, and the
+    worker runs inside captured.run() with _scoped_ctx_attach().
     """
     import streamlit as st
     from streamlit.delta_generator_singletons import context_dg_stack
@@ -707,6 +707,7 @@ def _dispatch_parallel_fragment(
 
     coordinator.submit(
         _run_parallel_fragment,
+        ctx,
         fragment_id,
         wrapped_fragment,
         dg_stack_with_container,
