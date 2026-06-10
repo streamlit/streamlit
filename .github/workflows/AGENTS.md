@@ -139,6 +139,7 @@ steps:
 | `ai-qa-testing.yml` | `ai-qa-test` label or manual | AI-powered QA testing on PR branches |
 | `ai-issue-triage.yml` | `ai-review` label on issue or manual | AI-powered issue triage (duplicates, labels) |
 | `ai-update-docs.yml` | Weekly (Tuesdays) or manual | AI-powered documentation review and updates |
+| `ai-update-streamlit-skill.yml` | Weekly (Fridays) or manual | AI-powered updates for the bundled `developing-with-streamlit` skill references based on recently merged feature PRs |
 | `ai-fix-flaky-e2e-tests.yml` | Weekly (Fridays) or manual | AI-powered flaky E2E test diagnosis and fixing |
 | `ai-test-coverage.yml` | Weekly (Wednesdays) or manual | AI-powered test coverage improvement for frontend and Python |
 
