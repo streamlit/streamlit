@@ -473,8 +473,8 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
 
         # Clear some ScriptRunCtx data so that we can re-register the same component
         # without getting a DuplicateWidgetID error
-        self.script_run_ctx.widget_user_keys_this_run.clear()
-        self.script_run_ctx.widget_ids_this_run.clear()
+        self.script_run_ctx.shared.widget_user_keys_this_run.clear()
+        self.script_run_ctx.shared.widget_ids_this_run.clear()
 
         # Create a second component instance with the same key, and different custom data
         self.test_component(key="key", some_data=678, more_data="foo")

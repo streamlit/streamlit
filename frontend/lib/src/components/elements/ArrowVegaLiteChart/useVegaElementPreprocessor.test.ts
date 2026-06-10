@@ -595,6 +595,161 @@ describe("useVegaElementPreprocessor", () => {
     })
   })
 
+  describe("baseSpecKey", () => {
+    const renderWithDimensions = (
+      element: VegaLiteChartElement,
+      useWidth: boolean,
+      useHeight: boolean
+    ): ReturnType<
+      typeof renderHook<
+        { containerWidth: number; containerHeight: number },
+        ReturnType<typeof useVegaElementPreprocessor>
+      >
+    > =>
+      renderHook(
+        ({
+          containerWidth,
+          containerHeight,
+        }: {
+          containerWidth: number
+          containerHeight: number
+        }) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useWidth,
+            useHeight
+          ),
+        {
+          initialProps: { containerWidth: 100, containerHeight: 100 },
+        }
+      )
+
+    it("stays stable across container dimension changes for a single-view chart", () => {
+      const { result, rerender } = renderWithDimensions(
+        getElement({
+          useContainerWidth: true,
+          spec: JSON.stringify({
+            mark: "bar",
+            encoding: { x: { field: "a" } },
+          }),
+        }),
+        true,
+        true
+      )
+
+      const initialKey = result.current.baseSpecKey
+      rerender({ containerWidth: 800, containerHeight: 600 })
+
+      // The native resize path handles dimension changes, so the structural key
+      // must not change (otherwise the view would be recreated unnecessarily).
+      expect(result.current.baseSpecKey).toBe(initialKey)
+    })
+
+    it("changes when the structural spec changes", () => {
+      const { result, rerender } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(element, 100, 100, false, false),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              mark: "bar",
+              encoding: { x: { field: "a" } },
+            }),
+          }),
+        }
+      )
+
+      const initialKey = result.current.baseSpecKey
+      rerender(
+        getElement({
+          spec: JSON.stringify({
+            mark: "line",
+            encoding: { x: { field: "a" } },
+          }),
+        })
+      )
+
+      expect(result.current.baseSpecKey).not.toBe(initialKey)
+    })
+
+    it("changes when a fixed (non-container) dimension changes", () => {
+      const { result, rerender } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(element, 100, 100, false, false),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({ mark: "bar", width: 200 }),
+          }),
+        }
+      )
+
+      const initialKey = result.current.baseSpecKey
+      rerender(
+        getElement({ spec: JSON.stringify({ mark: "bar", width: 400 }) })
+      )
+
+      expect(result.current.baseSpecKey).not.toBe(initialKey)
+    })
+
+    it("changes when the container sizing mode toggles", () => {
+      const element = getElement({
+        spec: JSON.stringify({ mark: "bar", encoding: { x: { field: "a" } } }),
+      })
+      const { result, rerender } = renderHook(
+        ({ useWidth }: { useWidth: boolean }) =>
+          useVegaElementPreprocessor(element, 100, 100, useWidth, false),
+        {
+          initialProps: { useWidth: false },
+        }
+      )
+
+      const initialKey = result.current.baseSpecKey
+      rerender({ useWidth: true })
+
+      expect(result.current.baseSpecKey).not.toBe(initialKey)
+    })
+
+    it("changes on container width change for a concat chart (forces recreation)", () => {
+      const { result, rerender } = renderWithDimensions(
+        getElement({
+          useContainerWidth: true,
+          spec: JSON.stringify({
+            vconcat: [{ mark: "bar" }, { mark: "point" }],
+          }),
+        }),
+        true,
+        false
+      )
+
+      const initialKey = result.current.baseSpecKey
+      rerender({ containerWidth: 800, containerHeight: 100 })
+
+      // Concat charts bake per-child widths, so a width change must recreate the
+      // view (the native resize API cannot update them).
+      expect(result.current.baseSpecKey).not.toBe(initialKey)
+    })
+
+    it("stays stable for a concat chart that does not use container width", () => {
+      const { result, rerender } = renderWithDimensions(
+        getElement({
+          useContainerWidth: false,
+          spec: JSON.stringify({
+            vconcat: [{ mark: "bar" }, { mark: "point" }],
+          }),
+        }),
+        false,
+        false
+      )
+
+      const initialKey = result.current.baseSpecKey
+      rerender({ containerWidth: 800, containerHeight: 600 })
+
+      expect(result.current.baseSpecKey).toBe(initialKey)
+    })
+  })
+
   describe("builtin color name resolution", () => {
     const themeColors = lightTheme.emotion.colors
 

@@ -601,8 +601,8 @@ class SessionState:
 
         if ctx is not None:
             widget_id = self._key_id_mapper.get_id_from_key(user_key, None)
-            widget_ids = ctx.widget_ids_this_run
-            form_ids = ctx.form_ids_this_run
+            widget_ids = ctx.shared.widget_ids_this_run
+            form_ids = ctx.shared.form_ids_this_run
 
             if widget_id in widget_ids or user_key in form_ids:
                 raise StreamlitAPIException(
