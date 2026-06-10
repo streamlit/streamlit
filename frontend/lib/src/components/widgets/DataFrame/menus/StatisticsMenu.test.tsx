@@ -150,7 +150,8 @@ describe("StatisticsMenu", () => {
     expect(screen.getByText("Maximum")).toBeVisible()
     expect(screen.getByText("Average")).toBeVisible()
     expect(screen.getByText("Standard deviation")).toBeVisible()
-    expect(screen.getByText("Variance")).toBeVisible()
+    // Variance is intentionally omitted (redundant with standard deviation).
+    expect(screen.queryByText("Variance")).not.toBeInTheDocument()
   })
 
   it("uses semantic markup for statistics metrics", async () => {
@@ -284,8 +285,17 @@ describe("StatisticsMenu", () => {
       expect(screen.getByTestId("stDataFrameStatisticsContent")).toBeVisible()
     })
 
-    expect(screen.getByText("True")).toBeVisible()
-    expect(screen.getByText("False")).toBeVisible()
+    // The metrics list shows only the totals...
+    const metrics = screen.getByTestId("stDataFrameStatisticsMetrics")
+    expect(within(metrics).getByText("Values")).toBeVisible()
+    expect(within(metrics).getByText("Empty")).toBeVisible()
+    // ...while the true/false split is delegated to the chart and not
+    // duplicated in the metrics list.
+    expect(within(metrics).queryByText("True")).not.toBeInTheDocument()
+    expect(within(metrics).queryByText("False")).not.toBeInTheDocument()
+    const chart = screen.getByTestId("stDataFrameStatisticsChart")
+    expect(within(chart).getByText("True")).toBeVisible()
+    expect(within(chart).getByText("False")).toBeVisible()
     // Numeric-only metrics must not appear for boolean columns.
     expect(screen.queryByText("Sum")).not.toBeInTheDocument()
   })

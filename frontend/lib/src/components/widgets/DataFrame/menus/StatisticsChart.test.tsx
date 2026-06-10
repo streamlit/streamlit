@@ -145,6 +145,49 @@ describe("StatisticsChart", () => {
     )
   })
 
+  it("encodes histogram bars across the bin width down to a zero baseline", async () => {
+    render(<StatisticsChart statistics={numericStats} />)
+
+    await waitFor(() => {
+      expect(mockEmbed).toHaveBeenCalledTimes(1)
+    })
+
+    const spec = mockEmbed.mock.calls[0][1] as {
+      encoding: {
+        x: { field: string }
+        x2: { field: string }
+        y: { field: string }
+        y2: { datum: number }
+      }
+    }
+    expect(spec.encoding.x.field).toBe("binStart")
+    expect(spec.encoding.x2.field).toBe("binEnd")
+    expect(spec.encoding.y.field).toBe("count")
+    expect(spec.encoding.y2).toEqual({ datum: 0 })
+  })
+
+  it("pads the bin range for a single-value histogram so the bar stays visible", async () => {
+    const singleValueStats: NumericStatistics = {
+      ...numericStats,
+      histogram: [{ binStart: 5, binEnd: 5, count: 100 }],
+    }
+    render(<StatisticsChart statistics={singleValueStats} />)
+
+    await waitFor(() => {
+      expect(mockEmbed).toHaveBeenCalledTimes(1)
+    })
+
+    const spec = mockEmbed.mock.calls[0][1] as {
+      data: { values: { binStart: number; binEnd: number; range: string }[] }
+    }
+    const datum = spec.data.values[0]
+    // Zero-width bin is padded ±0.5 so the lone bar renders...
+    expect(datum.binStart).toBe(4.5)
+    expect(datum.binEnd).toBe(5.5)
+    // ...but the tooltip range still reflects the unpadded value.
+    expect(datum.range).toContain("5")
+  })
+
   it("renders histogram for datetime statistics", async () => {
     render(<StatisticsChart statistics={datetimeStats} />)
 
@@ -159,32 +202,36 @@ describe("StatisticsChart", () => {
     )
   })
 
-  it("renders bar chart for text statistics", async () => {
+  it("renders labeled bar chart for text statistics", () => {
     render(<StatisticsChart statistics={textStats} />)
 
-    await waitFor(() => {
-      expect(mockEmbed).toHaveBeenCalledTimes(1)
-    })
-
     expect(screen.getByTestId("stDataFrameStatisticsChart")).toBeVisible()
-    expect(screen.getByRole("img")).toHaveAttribute(
-      "aria-label",
-      "Top values frequency chart"
-    )
+    // The aria-label enumerates each bar (label, count, percentage) so the
+    // breakdown is announced despite role="img" making descendants presentational.
+    const textAriaLabel = screen.getByRole("img").getAttribute("aria-label")
+    expect(textAriaLabel).toContain("Top values frequency chart")
+    expect(textAriaLabel).toContain("apple: 30 (30%)")
+    expect(screen.getByText("apple")).toBeVisible()
+    expect(screen.getByText("banana")).toBeVisible()
+    // Bars are labeled with each value's share of the total (not the raw count).
+    expect(screen.getByText("30%")).toBeVisible()
+    expect(mockEmbed).not.toHaveBeenCalled()
   })
 
-  it("renders bar chart for boolean statistics", async () => {
+  it("renders labeled bar chart for boolean statistics", () => {
     render(<StatisticsChart statistics={booleanStats} />)
 
-    await waitFor(() => {
-      expect(mockEmbed).toHaveBeenCalledTimes(1)
-    })
-
     expect(screen.getByTestId("stDataFrameStatisticsChart")).toBeVisible()
-    expect(screen.getByRole("img")).toHaveAttribute(
-      "aria-label",
-      "True/false distribution chart"
-    )
+    // The True/false split is exposed to assistive tech via the aria-label.
+    const boolAriaLabel = screen.getByRole("img").getAttribute("aria-label")
+    expect(boolAriaLabel).toContain("True/false distribution chart")
+    expect(boolAriaLabel).toContain("True: 60 (60%)")
+    expect(boolAriaLabel).toContain("False: 40 (40%)")
+    expect(screen.getByText("True")).toBeVisible()
+    expect(screen.getByText("False")).toBeVisible()
+    expect(screen.getByText("60%")).toBeVisible()
+    expect(screen.getByText("40%")).toBeVisible()
+    expect(mockEmbed).not.toHaveBeenCalled()
   })
 
   it("returns null for numeric stats with empty histogram", () => {
@@ -245,7 +292,7 @@ describe("StatisticsChart", () => {
     })
   })
 
-  it("preserves full text labels for tooltip display", async () => {
+  it("preserves full text labels in row title", () => {
     const longTextStats: TextStatistics = {
       ...textStats,
       topValues: [
@@ -259,18 +306,32 @@ describe("StatisticsChart", () => {
 
     render(<StatisticsChart statistics={longTextStats} />)
 
-    await waitFor(() => {
-      expect(mockEmbed).toHaveBeenCalledTimes(1)
-    })
+    expect(
+      screen.getByTitle(
+        "this is a very long value that should be preserved: 50 (50%)"
+      )
+    ).toBeVisible()
+    expect(
+      screen.getByText("this is a very long value that should be preserved")
+    ).toBeVisible()
+    expect(mockEmbed).not.toHaveBeenCalled()
+  })
 
-    const [, spec] = mockEmbed.mock.calls[0] as [
-      unknown,
-      { data: { values: { fullLabel: string; value: number }[] } },
-    ]
-    const chartData = spec.data.values
-    // Full label is preserved for accurate tooltips (y-axis is hidden)
-    expect(chartData[0].fullLabel).toBe(
-      "this is a very long value that should be preserved"
+  it("does not render a visible bar for zero values", () => {
+    render(
+      <StatisticsChart
+        statistics={{
+          ...booleanStats,
+          trueCount: 0,
+          falseCount: 100,
+          truePercentage: 0,
+          falsePercentage: 100,
+        }}
+      />
     )
+
+    const trueRow = screen.getByTitle("True: 0 (0%)")
+    const trueBar = trueRow.querySelector("div[style]")
+    expect(trueBar).toHaveStyle({ width: "0%" })
   })
 })

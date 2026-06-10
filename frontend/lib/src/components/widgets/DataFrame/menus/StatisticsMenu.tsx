@@ -32,6 +32,7 @@ import {
 } from "./statisticsUtils"
 import {
   StyledStatisticsContainer,
+  StyledStatisticsDivider,
   StyledStatisticsEmpty,
   StyledStatisticsLabel,
   StyledStatisticsMetrics,
@@ -153,8 +154,10 @@ function getMetricRows(statistics: ColumnStatistics): MetricRow[] {
         statistics.count,
         statistics.nullCount
       )
-      const distinctPct =
-        statistics.count > 0 ? (statistics.unique / statistics.count) * 100 : 0
+      // Ordered to mirror the familiar pandas df.describe() layout: counts
+      // first, then central tendency/spread (average + std dev), then the
+      // five-number summary, with the aggregate sum last. Variance is omitted
+      // since it is redundant with the standard deviation in a compact panel.
       return [
         { label: "Values", value: formatNumber(statistics.count, 0) },
         {
@@ -163,20 +166,19 @@ function getMetricRows(statistics: ColumnStatistics): MetricRow[] {
         },
         {
           label: "Distinct",
-          value: formatCountWithPercent(statistics.unique, distinctPct),
+          value: formatNumber(statistics.unique, 0),
         },
-        { label: "Sum", value: formatNumber(statistics.sum) },
-        { label: "Minimum", value: formatNumber(statistics.min) },
-        { label: "25th percentile", value: formatNumber(statistics.q25) },
-        { label: "Median", value: formatNumber(statistics.median) },
-        { label: "75th percentile", value: formatNumber(statistics.q75) },
-        { label: "Maximum", value: formatNumber(statistics.max) },
         { label: "Average", value: formatNumber(statistics.mean) },
         {
           label: "Standard deviation",
           value: formatNumber(statistics.stdDev),
         },
-        { label: "Variance", value: formatNumber(statistics.variance) },
+        { label: "Minimum", value: formatNumber(statistics.min) },
+        { label: "25th percentile", value: formatNumber(statistics.q25) },
+        { label: "Median", value: formatNumber(statistics.median) },
+        { label: "75th percentile", value: formatNumber(statistics.q75) },
+        { label: "Maximum", value: formatNumber(statistics.max) },
+        { label: "Sum", value: formatNumber(statistics.sum) },
       ]
     }
     case "text": {
@@ -184,8 +186,6 @@ function getMetricRows(statistics: ColumnStatistics): MetricRow[] {
         statistics.count,
         statistics.empty
       )
-      const distinctPct =
-        statistics.count > 0 ? (statistics.unique / statistics.count) * 100 : 0
       return [
         { label: "Values", value: formatNumber(statistics.count, 0) },
         {
@@ -194,7 +194,7 @@ function getMetricRows(statistics: ColumnStatistics): MetricRow[] {
         },
         {
           label: "Distinct",
-          value: formatCountWithPercent(statistics.unique, distinctPct),
+          value: formatNumber(statistics.unique, 0),
         },
         {
           label: "Minimum length",
@@ -237,25 +237,14 @@ function getMetricRows(statistics: ColumnStatistics): MetricRow[] {
         statistics.count,
         statistics.nullCount
       )
+      // The true/false split (counts + percentages) is already shown by the
+      // chart above, so the metrics list only adds the totals to avoid
+      // duplicating the same numbers twice.
       return [
         { label: "Values", value: formatNumber(statistics.count, 0) },
         {
           label: "Empty",
           value: formatCountWithPercent(statistics.nullCount, emptyPct),
-        },
-        {
-          label: "True",
-          value: formatCountWithPercent(
-            statistics.trueCount,
-            statistics.truePercentage
-          ),
-        },
-        {
-          label: "False",
-          value: formatCountWithPercent(
-            statistics.falseCount,
-            statistics.falsePercentage
-          ),
         },
       ]
     }
@@ -333,6 +322,9 @@ function StatisticsContent({
   return (
     <StyledStatisticsContainer data-testid="stDataFrameStatisticsContent">
       <StatisticsChart statistics={statistics} />
+      {/* The chart always renders in this branch (count > 0), so the divider
+          always separates a visible chart from the metrics below it. */}
+      <StyledStatisticsDivider />
       <MetricsDisplay rows={getMetricRows(statistics)} />
       {statistics.isSampled && (
         <StyledStatisticsNote>Based on sample</StyledStatisticsNote>

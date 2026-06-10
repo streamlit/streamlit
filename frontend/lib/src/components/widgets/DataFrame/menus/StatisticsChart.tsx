@@ -27,7 +27,15 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import type { EmotionTheme } from "~lib/theme/types"
 
 import { ColumnStatistics, HistogramBin } from "./statisticsUtils"
-import { StyledStatisticsChart } from "./styled-components"
+import {
+  StyledStatisticsBarChart,
+  StyledStatisticsBarFill,
+  StyledStatisticsBarLabel,
+  StyledStatisticsBarRow,
+  StyledStatisticsBarTrack,
+  StyledStatisticsBarValue,
+  StyledStatisticsChart,
+} from "./styled-components"
 
 /**
  * Chart width in pixels. Passed directly to Vega-Lite, which requires absolute
@@ -40,7 +48,7 @@ const CHART_WIDTH = 180
  * Chart height in pixels. Passed directly to Vega-Lite (see CHART_WIDTH); kept in
  * sync with the container height defined in styled-components.
  */
-const CHART_HEIGHT = 56
+const CHART_HEIGHT = 64
 
 /** Accessible labels for each chart type. */
 const CHART_LABELS: Record<string, string> = {
@@ -77,6 +85,22 @@ function formatTooltipNumber(value: number): string {
   }
   // For decimals, show up to 2 significant decimal places
   return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+}
+
+/**
+ * Formats a compact count for visible chart labels.
+ */
+function formatChartCount(value: number): string {
+  return value.toLocaleString(undefined, { maximumFractionDigits: 0 })
+}
+
+/**
+ * Formats a compact percentage for visible chart labels.
+ */
+function formatChartPercent(value: number): string {
+  return `${value.toLocaleString(undefined, {
+    maximumFractionDigits: 1,
+  })}%`
 }
 
 /**
@@ -123,8 +147,15 @@ function createHistogramSpec(
   theme: ReturnType<typeof useEmotionTheme>,
   formatRange: (start: number, end: number) => string
 ): TopLevelSpec {
+  // Encode each bar across its full bin width (binStart -> binEnd) so adjacent
+  // bars touch and read as a continuous histogram instead of thin ticks. For a
+  // single-value column the bin has zero width (binStart === binEnd), so we pad
+  // it symmetrically to keep the lone bar visible.
+  const isSinglePoint =
+    bins.length === 1 && bins[0].binStart === bins[0].binEnd
   const data = bins.map(bin => ({
-    x: (bin.binStart + bin.binEnd) / 2,
+    binStart: isSinglePoint ? bin.binStart - 0.5 : bin.binStart,
+    binEnd: isSinglePoint ? bin.binEnd + 0.5 : bin.binEnd,
     count: bin.count,
     range: formatRange(bin.binStart, bin.binEnd),
   }))
@@ -136,22 +167,36 @@ function createHistogramSpec(
     data: { values: data },
     mark: {
       type: "bar",
+      // A 1px hairline in the panel background color separates adjacent bars so
+      // the histogram reads as distinct columns instead of a solid block. The
+      // gap also lets us round the tops without the scalloped seam that appears
+      // when rounded bars touch, keeping the columns consistent with the
+      // rounded categorical bars.
+      stroke: theme.colors.bgColor,
+      strokeWidth: 1,
       cornerRadiusTopLeft: 2,
       cornerRadiusTopRight: 2,
     },
     encoding: {
+      // Encode each bar as a full rectangle: horizontally across its bin
+      // (binStart -> binEnd) and vertically from the count down to a zero
+      // baseline (y2). This renders a proper filled histogram with touching
+      // bars, instead of the fixed-width "ranged" bands Vega-Lite would draw if
+      // only x/x2 were provided.
       x: {
-        field: "x",
+        field: "binStart",
         type: "quantitative",
         axis: null,
-        scale: { nice: false },
+        scale: { nice: false, zero: false },
       },
+      x2: { field: "binEnd" },
       y: {
         field: "count",
         type: "quantitative",
         axis: null,
         scale: { nice: false },
       },
+      y2: { datum: 0 },
       tooltip: [
         { field: "range", type: "nominal", title: "Range" },
         { field: "count", type: "quantitative", title: "Count" },
@@ -167,55 +212,85 @@ function createHistogramSpec(
   return spec
 }
 
-/**
- * Creates a Vega-Lite spec for a horizontal bar chart (text/boolean statistics).
- * Uses fullLabel for data binding and tooltip. The y-axis is hidden (axis: null)
- * so no label truncation is needed - full values are preserved for accurate tooltips.
- */
-function createBarChartSpec(
-  data: { fullLabel: string; value: number }[],
-  theme: ReturnType<typeof useEmotionTheme>
-): TopLevelSpec {
-  const spec: TopLevelSpec = {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    width: CHART_WIDTH,
-    height: CHART_HEIGHT,
-    data: { values: data },
-    mark: {
-      type: "bar",
-      cornerRadiusEnd: 2,
-    },
-    encoding: {
-      y: {
-        field: "fullLabel",
-        type: "nominal",
-        axis: null,
-        sort: "-x",
-      },
-      x: {
-        field: "value",
-        type: "quantitative",
-        axis: null,
-        scale: { nice: false },
-      },
-      tooltip: [
-        { field: "fullLabel", type: "nominal", title: "Value" },
-        { field: "value", type: "quantitative", title: "Count" },
-      ],
-    },
-    config: {
-      view: { stroke: null },
-      padding: { left: 0, right: 0, top: 2, bottom: 2 },
-    },
-  }
+interface LabeledBarDatum {
+  label: string
+  /**
+   * Share of the column's total values (0–100). Drives the bar width so the
+   * bar length directly represents the proportion the value takes on, with the
+   * track behind it standing for 100%.
+   */
+  percent: number
+  valueLabel: string
+  title: string
+}
 
-  spec.config = applyStreamlitTheme(spec.config, theme)
-  return spec
+/**
+ * Builds a labeled bar datum for categorical statistics. The visible value
+ * label shows the percentage, while the row title (hover) carries both the raw
+ * count and the percentage.
+ */
+function createLabeledBarDatum(
+  label: string,
+  count: number,
+  percentage: number
+): LabeledBarDatum {
+  const countLabel = formatChartCount(count)
+  const percentLabel = formatChartPercent(percentage)
+  return {
+    label,
+    percent: percentage,
+    valueLabel: percentLabel,
+    title: `${label}: ${countLabel} (${percentLabel})`,
+  }
+}
+
+/**
+ * Renders compact labeled bars for categorical statistics. Each bar is filled
+ * to the value's percentage of the column total (track = 100%).
+ */
+function LabeledBarChart({
+  ariaLabel,
+  data,
+}: {
+  ariaLabel: string
+  data: LabeledBarDatum[]
+}): ReactElement {
+  // role="img" makes descendants presentational, so the per-bar label/value
+  // text isn't announced. Enumerate the bars (label, count, percentage) in the
+  // aria-label so screen-reader users get the full breakdown, not just the
+  // chart type.
+  const descriptiveLabel = `${ariaLabel}: ${data
+    .map(item => item.title)
+    .join("; ")}`
+
+  return (
+    <StyledStatisticsBarChart
+      data-testid="stDataFrameStatisticsChart"
+      aria-label={descriptiveLabel}
+      role="img"
+    >
+      {data.map(item => {
+        const barWidth = Math.min(100, Math.max(0, item.percent))
+        return (
+          <StyledStatisticsBarRow key={item.label} title={item.title}>
+            <StyledStatisticsBarLabel>{item.label}</StyledStatisticsBarLabel>
+            <StyledStatisticsBarTrack>
+              <StyledStatisticsBarFill style={{ width: `${barWidth}%` }} />
+            </StyledStatisticsBarTrack>
+            <StyledStatisticsBarValue>
+              {item.valueLabel}
+            </StyledStatisticsBarValue>
+          </StyledStatisticsBarRow>
+        )
+      })}
+    </StyledStatisticsBarChart>
+  )
 }
 
 /**
  * StatisticsChart renders a Vega-Lite chart for column statistics.
- * Supports histograms for numeric/datetime and bar charts for text/boolean.
+ * Supports Vega-Lite histograms for numeric/datetime columns and labeled bars
+ * for text/boolean columns.
  */
 function StatisticsChart({
   statistics,
@@ -263,29 +338,9 @@ function StatisticsChart({
         break
 
       case "text":
-        if (statistics.topValues.length > 0) {
-          const data = statistics.topValues.map(v => ({
-            fullLabel: v.value,
-            value: v.count,
-          }))
-          spec = createBarChartSpec(data, theme)
-        }
         break
 
       case "boolean":
-        spec = createBarChartSpec(
-          [
-            {
-              fullLabel: "True",
-              value: statistics.trueCount,
-            },
-            {
-              fullLabel: "False",
-              value: statistics.falseCount,
-            },
-          ],
-          theme
-        )
         break
     }
 
@@ -327,6 +382,31 @@ function StatisticsChart({
   }
 
   const chartLabel = CHART_LABELS[statistics.type]
+
+  if (statistics.type === "text") {
+    const data = statistics.topValues.map(item =>
+      createLabeledBarDatum(item.value, item.count, item.percentage)
+    )
+
+    return <LabeledBarChart ariaLabel={chartLabel} data={data} />
+  }
+
+  if (statistics.type === "boolean") {
+    const data = [
+      createLabeledBarDatum(
+        "True",
+        statistics.trueCount,
+        statistics.truePercentage
+      ),
+      createLabeledBarDatum(
+        "False",
+        statistics.falseCount,
+        statistics.falsePercentage
+      ),
+    ]
+
+    return <LabeledBarChart ariaLabel={chartLabel} data={data} />
+  }
 
   return (
     <>

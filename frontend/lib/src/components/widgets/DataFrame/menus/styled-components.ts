@@ -163,9 +163,9 @@ export const StyledStatisticsContainer = styled.div(({ theme }) => ({
 
 /**
  * Height of the statistics chart in rem.
- * Corresponds to CHART_HEIGHT (56px) in StatisticsChart.tsx.
+ * Corresponds to CHART_HEIGHT (64px) in StatisticsChart.tsx.
  */
-const STATISTICS_CHART_HEIGHT = "3.5rem"
+const STATISTICS_CHART_HEIGHT = "4rem"
 
 /**
  * Container for the statistics chart.
@@ -181,6 +181,86 @@ export const StyledStatisticsChart = styled.div(({ theme }) => ({
   "& svg": {
     width: "100%",
   },
+}))
+
+/**
+ * Container for compact labeled bar charts used by categorical statistics.
+ */
+export const StyledStatisticsBarChart = styled.div(({ theme }) => ({
+  width: "100%",
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing.twoXS,
+  fontSize: theme.fontSizes.twoSm,
+  lineHeight: theme.lineHeights.base,
+}))
+
+/**
+ * A labeled row in a compact statistics bar chart.
+ *
+ * The label and value columns use fixed widths (not `auto`) so every row shares
+ * the same track geometry. Otherwise each row is an independent grid and a
+ * shorter value (e.g. "6.4%" vs "40.2%") would widen its track, making the bars
+ * non-comparable across rows.
+ */
+export const StyledStatisticsBarRow = styled.div(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "6rem minmax(2.5rem, 1fr) 2.75rem",
+  alignItems: "center",
+  gap: theme.spacing.twoXS,
+  minWidth: 0,
+}))
+
+/**
+ * Text label for a compact statistics bar row.
+ */
+export const StyledStatisticsBarLabel = styled.span(({ theme }) => ({
+  color: theme.colors.fadedText60,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+}))
+
+/**
+ * Track behind a compact statistics bar.
+ */
+export const StyledStatisticsBarTrack = styled.div(({ theme }) => ({
+  height: theme.spacing.sm,
+  backgroundColor: theme.colors.fadedText10,
+  borderRadius: theme.radii.sm,
+  overflow: "hidden",
+}))
+
+/**
+ * Filled bar in a compact statistics bar row.
+ */
+export const StyledStatisticsBarFill = styled.div(({ theme }) => ({
+  height: "100%",
+  backgroundColor:
+    theme.colors.chartCategoricalColors[0] ?? theme.colors.primary,
+  borderRadius: "inherit",
+}))
+
+/**
+ * Numeric value for a compact statistics bar row.
+ */
+export const StyledStatisticsBarValue = styled.span(({ theme }) => ({
+  color: theme.colors.bodyText,
+  fontWeight: theme.fontWeights.normal,
+  textAlign: "right",
+  whiteSpace: "nowrap",
+}))
+
+/**
+ * A subtle full-bleed divider separating the distribution chart from the
+ * metrics list. Negative horizontal margins cancel the container padding so the
+ * rule spans the full panel width.
+ */
+export const StyledStatisticsDivider = styled.div(({ theme }) => ({
+  height: theme.sizes.borderWidth,
+  backgroundColor: theme.colors.borderColor,
+  marginLeft: `-${theme.spacing.sm}`,
+  marginRight: `-${theme.spacing.sm}`,
 }))
 
 /**

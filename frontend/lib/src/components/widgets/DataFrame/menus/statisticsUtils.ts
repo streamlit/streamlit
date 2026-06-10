@@ -54,6 +54,17 @@ function getPercentile(sortedValues: number[], p: number): number {
   )
 }
 
+/**
+ * Pick a compact histogram bin count based on the available value count.
+ * This avoids sparse tick-like charts for small columns while preserving detail
+ * for larger columns.
+ */
+function getHistogramBinCount(valueCount: number): number {
+  if (valueCount <= 1) return 1
+
+  return Math.min(HISTOGRAM_BINS, Math.ceil(Math.sqrt(valueCount)))
+}
+
 /** Histogram bin data. */
 export interface HistogramBin {
   binStart: number
@@ -332,12 +343,13 @@ function computeHistogram(
       : []
   }
 
-  const binWidth = (max - min) / HISTOGRAM_BINS
+  const binCount = getHistogramBinCount(sortedValues.length)
+  const binWidth = (max - min) / binCount
   const bins: HistogramBin[] = []
 
-  for (let i = 0; i < HISTOGRAM_BINS; i++) {
+  for (let i = 0; i < binCount; i++) {
     const binStart = min + i * binWidth
-    const binEnd = i === HISTOGRAM_BINS - 1 ? max : min + (i + 1) * binWidth
+    const binEnd = i === binCount - 1 ? max : min + (i + 1) * binWidth
     bins.push({ binStart, binEnd, count: 0 })
   }
 
@@ -345,7 +357,7 @@ function computeHistogram(
   for (const value of sortedValues) {
     const binIndex = Math.min(
       Math.floor((value - min) / binWidth),
-      HISTOGRAM_BINS - 1
+      binCount - 1
     )
     bins[binIndex].count++
   }

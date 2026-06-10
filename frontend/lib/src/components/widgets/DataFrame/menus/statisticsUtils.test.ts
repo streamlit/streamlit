@@ -156,6 +156,25 @@ describe("statisticsUtils", () => {
       expect(stats.max).toBe(42)
     })
 
+    it("uses fewer histogram bins for small datasets", () => {
+      const stats = computeNumericStatistics([1, 2, 3, 4, 5, 6, 7, 8], false)
+
+      expect(stats.histogram).toHaveLength(3)
+      expect(
+        stats.histogram.reduce((total, bin) => total + bin.count, 0)
+      ).toBe(8)
+    })
+
+    it("caps histogram bins for larger datasets", () => {
+      const values = Array.from({ length: 400 }, (_, index) => index)
+      const stats = computeNumericStatistics(values, false)
+
+      expect(stats.histogram).toHaveLength(15)
+      expect(
+        stats.histogram.reduce((total, bin) => total + bin.count, 0)
+      ).toBe(400)
+    })
+
     it("calculates standard deviation and variance correctly", () => {
       const values = [2, 4, 4, 4, 5, 5, 7, 9]
       const stats = computeNumericStatistics(values, false)
