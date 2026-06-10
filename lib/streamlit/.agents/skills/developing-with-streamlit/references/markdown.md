@@ -25,6 +25,7 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 | Streamlit logo | `:streamlit:` | `:streamlit:` | ✓ |
 | Material icon | `:material/icon_name:` | `:material/check_circle:` | ✓ |
 | Colored text | `:color[text]` | `:red[Error]` | ✓ |
+| Custom hex/CSS color | `:color[text]{foreground="..."}` | `:color[Important]{foreground="#E03131"}` | ✓ |
 | Colored background | `:color-background[text]` | `:blue-background[Info]` | ✓ |
 | Badge | `:color-badge[text]` | `:green-badge[Success]` | ✓ |
 | Small text | `:small[text]` | `:small[footnote]` | ✓ |
@@ -82,6 +83,25 @@ st.markdown(":green-badge[Active] :red-badge[Inactive]")  # Inline badges
 **Available colors:** `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `gray`/`grey`, `rainbow`, `primary`
 
 Note: `rainbow` is not supported for backgrounds or badges. Standalone badges also available via `st.badge()`.
+
+### Arbitrary hex / CSS colors
+
+The named palette (`:red[...]`, etc.) only maps to preset, theme-dependent colors — it **cannot** produce a specific hex. To apply an *exact* hex (or any CSS color) to inline text, use the `{foreground="..."}` modifier on the `:color[...]` directive. This is the only native way to set an arbitrary inline text color **without** `unsafe_allow_html=True` — never fall back to raw HTML for coloring text.
+
+```python
+# GOOD: exact hex via the :color[...]{foreground=...} directive, no raw HTML.
+# Renders an inline <span style="color:#E03131"> -> computed rgb(224, 49, 49).
+st.markdown(':color[Important]{foreground="#E03131"}')
+st.markdown(':color[Note]{foreground="rgb(0,100,200)" background="hsl(60,100%,90%)"}')
+
+# BAD: named palette can't express a specific hex (theme-dependent red, not #E03131).
+st.markdown(":red[Important]")
+
+# BAD: raw HTML is unsanitized, breaks theming, and drops material-icon styling.
+st.markdown("<span style='color:#E03131'>Important</span>", unsafe_allow_html=True)
+```
+
+Both `foreground` and `background` are optional. Supported formats: named CSS colors, HEX, RGB(A), HSL(A). Two gotchas: (1) RGB/HSL **must use comma-separated** values inside `{...}` — the space-separated syntax isn't supported; (2) a name like `"red"` inside `{...}` means the *standard CSS* red, not the Streamlit palette red. Use the exact hex the design calls for — Streamlit applies it verbatim as an inline `color` style, so the computed color matches the hex you pass.
 
 ## Material icons
 
