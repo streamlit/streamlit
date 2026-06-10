@@ -176,6 +176,28 @@ with st.expander("Settings", icon=":material/settings:"):
 
 Other elements like `st.button` and `st.tabs` also support icons—worth considering when it adds clarity.
 
+## Titles on callouts
+
+Give a callout a bold headline above its body with the `title=` keyword. `title=` renders a dedicated bold title element *inside* the alert box, above the body. Don't fake it by bolding the first line of the body, putting a Markdown heading inside the body, or placing a separate `st.markdown`/`st.subheader`/`st.header` above the alert—those don't produce a real title and look wrong.
+
+```python
+# GOOD: real bold title rendered above the body, inside the alert box
+st.error("Retrying in 5 seconds.", title="Connection lost")
+st.warning("Disk almost full.", title="Low storage")
+st.success("Changes saved.", title="Done")
+st.info("New version available.", title="Update")
+
+# BAD: bolds the first line of the body (no dedicated title node)
+st.error("**Connection lost**\n\nRetrying in 5 seconds.")
+# BAD: Markdown heading inside the body
+st.error("### Connection lost\nRetrying in 5 seconds.")
+# BAD: separate heading sits OUTSIDE the alert box
+st.markdown("**Connection lost**")
+st.error("Retrying in 5 seconds.")
+```
+
+`title=` is a keyword-only argument available on all four callouts—`st.error`, `st.warning`, `st.info`, `st.success`. The body still takes the detail text (don't lead the body with `**` or `#`—put the heading in `title=`, the detail in the body). The title accepts inline GitHub-flavored Markdown (italics, strikethrough, inline code, links, images).
+
 ## References
 
 - [st.set_page_config](https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config)
