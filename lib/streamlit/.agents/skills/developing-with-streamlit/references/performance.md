@@ -142,7 +142,6 @@ def orders():
 **When to use `parallel=True`:**
 - Independent, slow operations (DB queries, API calls, model inference)
 - Multiple fragments that don't depend on each other's output
-- Dashboards with several data sources that each take 1s+
 
 **When NOT to use:**
 - Fragments that depend on each other's Session State writes
