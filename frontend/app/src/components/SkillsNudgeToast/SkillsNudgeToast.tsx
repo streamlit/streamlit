@@ -43,10 +43,11 @@ type NudgeStatus = "idle" | "installing" | "success" | "error"
 
 export interface SkillsNudgeToastProps {
   /**
-   * Perform the one-click install. Resolves on success and rejects with an
+   * Perform the one-click install. Resolves with an optional detail message
+   * (e.g. where the skills were installed) on success, and rejects with an
    * Error (carrying a user-facing message) on failure.
    */
-  onInstall: () => Promise<void>
+  onInstall: () => Promise<string | undefined>
   /** Close (✕): snooze the nudge (reappears on a later server start). */
   onSnooze: () => void
   /** Permanently dismiss the nudge (localStorage + server-side marker). */
@@ -70,12 +71,16 @@ function SkillsNudgeToast({
   const theme = useEmotionTheme()
   const [status, setStatus] = useState<NudgeStatus>("idle")
   const [errorMessage, setErrorMessage] = useState("")
+  const [successDetail, setSuccessDetail] = useState("")
 
   const handleInstall = useCallback(() => {
     setStatus("installing")
     setErrorMessage("")
     onInstall()
-      .then(() => setStatus("success"))
+      .then(detail => {
+        setSuccessDetail(detail ?? "")
+        setStatus("success")
+      })
       .catch((error: unknown) => {
         setStatus("error")
         setErrorMessage(
@@ -118,7 +123,14 @@ function SkillsNudgeToast({
 
       <StyledSkillsNudgeContent>
         {isSuccess ? (
-          <StyledSkillsNudgeHeading>Skills installed</StyledSkillsNudgeHeading>
+          <>
+            <StyledSkillsNudgeHeading>
+              Skills installed
+            </StyledSkillsNudgeHeading>
+            {successDetail && (
+              <StyledSkillsNudgeBody>{successDetail}</StyledSkillsNudgeBody>
+            )}
+          </>
         ) : (
           <>
             <StyledSkillsNudgeHeading>

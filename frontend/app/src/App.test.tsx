@@ -41,6 +41,7 @@ import {
   mockEndpoints,
 } from "@streamlit/connection"
 import {
+  BackendOperationClient,
   CachedTheme,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
@@ -6833,6 +6834,11 @@ describe("Skills install nudge", () => {
     window.sessionStorage.clear()
   })
 
+  afterEach(() => {
+    // Restore any prototype spies (clearAllMocks does not undo spyOn).
+    vi.restoreAllMocks()
+  })
+
   const sendRecommendingNewSession = (recommend = true): void => {
     sendForwardMessage("newSession", {
       ...NEW_SESSION_JSON,
@@ -6904,6 +6910,53 @@ describe("Skills install nudge", () => {
 
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstall",
+    })
+  })
+
+  it("tracks a successful install and shows where skills landed", async () => {
+    const user = userEvent.setup()
+    const installSpy = vi
+      .spyOn(BackendOperationClient.prototype, "requestInstallSkills")
+      .mockResolvedValue({ detail: "Installed to .agents/skills" })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+
+    expect(await screen.findByText("Skills installed")).toBeVisible()
+    expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded",
+    })
+    // The failure outcome must not be reported on success.
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+    })
+    expect(installSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("tracks a failed install and surfaces the error", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(new Error("install blew up"))
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+
+    expect(await screen.findByText("install blew up")).toBeVisible()
+    // The actions remain so the user can retry; no success confirmation shows.
+    expect(screen.getByRole("button", { name: "Install" })).toBeVisible()
+    expect(screen.queryByText("Skills installed")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded",
     })
   })
 

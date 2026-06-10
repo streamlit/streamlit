@@ -1548,15 +1548,18 @@ export class App extends PureComponent<Props, State> {
   }
 
   /** Install the bundled skills via a backend operation (no script rerun). */
-  private readonly handleSkillsNudgeInstall = (): Promise<void> => {
+  private readonly handleSkillsNudgeInstall = (): Promise<
+    string | undefined
+  > => {
     this.trackSkillsNudge("skillsNudgeInstall")
     return this.backendOperationClient
       .requestInstallSkills()
-      .then(() => {
+      .then(result => {
         // Mark dismissed so the nudge doesn't reappear after a successful
         // install. The toast shows its own success confirmation.
         this.setSkillsNudgeDismissed()
         this.trackSkillsNudge("skillsNudgeInstallSucceeded")
+        return result.detail ?? undefined
       })
       .catch((error: unknown) => {
         this.trackSkillsNudge("skillsNudgeInstallFailed")

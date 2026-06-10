@@ -165,7 +165,9 @@ class InstallSkillsHandler(BackendOperationHandler):
         try:
             # Run off the event loop: installing does filesystem I/O (and,
             # in the global fallback, a network download).
-            await asyncio.to_thread(skills.install_skills, global_mode=False, yes=True)
+            result = await asyncio.to_thread(
+                skills.install_skills, global_mode=False, yes=True
+            )
         except Exception as ex:
             _LOGGER.warning("One-click skills install failed", exc_info=ex)
             # click.ClickException carries a clean, user-facing message.
@@ -182,7 +184,9 @@ class InstallSkillsHandler(BackendOperationHandler):
 
         return BackendOperationResponse(
             request_id=request.request_id,
-            install_skills=InstallSkillsResponsePayload(detail=""),
+            install_skills=InstallSkillsResponsePayload(
+                detail=skills.summarize_install(result)
+            ),
         )
 
 

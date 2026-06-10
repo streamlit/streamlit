@@ -1596,3 +1596,75 @@ def test_nudge_dismissed_marker_path_under_streamlit_dir() -> None:
     path = skills._nudge_dismissed_marker_path()
     assert path.name == "skills_nudge_dismissed"
     assert path.parent.name == ".streamlit"
+
+
+class TestSummarizeInstall:
+    """Tests for summarize_install (the user-facing in-app nudge summary)."""
+
+    def test_reports_distinct_install_locations(self) -> None:
+        """Newly installed skills are summarized by their parent directories."""
+        result = skills._InstallResult(
+            installed=[
+                ".agents/skills/developing-with-streamlit",
+                ".claude/skills/developing-with-streamlit",
+            ]
+        )
+        assert (
+            skills.summarize_install(result)
+            == "Installed to .agents/skills, .claude/skills"
+        )
+
+    def test_deduplicates_and_sorts_locations(self) -> None:
+        """Multiple skills under one directory collapse to a single location."""
+        result = skills._InstallResult(
+            installed=[
+                ".claude/skills/b",
+                ".agents/skills/a",
+                ".agents/skills/b",
+            ]
+        )
+        assert (
+            skills.summarize_install(result)
+            == "Installed to .agents/skills, .claude/skills"
+        )
+
+    def test_reports_already_up_to_date(self) -> None:
+        """When nothing new was installed, report the up-to-date state."""
+        result = skills._InstallResult(up_to_date=[".agents/skills/foo"])
+        assert skills.summarize_install(result) == "Skills are already up to date."
+
+    def test_installed_takes_precedence_over_up_to_date(self) -> None:
+        """A mixed result leads with what was newly installed, not up-to-date."""
+        result = skills._InstallResult(
+            installed=[".agents/skills/foo"], up_to_date=[".claude/skills/foo"]
+        )
+        assert skills.summarize_install(result) == "Installed to .agents/skills"
+
+    def test_empty_result_has_no_summary(self) -> None:
+        """An empty result yields no summary text (nothing to report)."""
+        assert skills.summarize_install(skills._InstallResult()) == ""
+
+
+class TestInstallSkillsReturnsResult:
+    """install_skills returns the structured result for callers (e.g. the nudge)."""
+
+    def test_project_install_returns_installed_paths(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A project-mode install returns the newly created skill paths."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            result = skills.install_skills(yes=True)
+
+        assert any("developing-with-streamlit" in path for path in result.installed)
+        # A fresh install into an empty project skips nothing.
+        assert result.skipped == []
