@@ -125,6 +125,10 @@ def users():
 def orders():
     st.metric("Orders", query_orders())  # ~3s
 
+revenue()
+users()
+orders()
+
 # GOOD: Three slow queries run concurrently (~3s total)
 @st.fragment(parallel=True)
 def revenue():
@@ -137,6 +141,10 @@ def users():
 @st.fragment(parallel=True)
 def orders():
     st.metric("Orders", query_orders())
+
+revenue()
+users()
+orders()
 ```
 
 **When to use `parallel=True`:**
