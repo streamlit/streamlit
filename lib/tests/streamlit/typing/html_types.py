@@ -26,6 +26,10 @@ if TYPE_CHECKING:
 
     html = HtmlMixin().html
 
+    class _HtmlRepr:
+        def _repr_html_(self) -> str:
+            return "<p>repr</p>"
+
     # =====================================================================
     # st.html return type tests
     # =====================================================================
@@ -38,6 +42,9 @@ if TYPE_CHECKING:
 
     # body is SupportsStr, so non-str values should work
     assert_type(html(42), DeltaGenerator)
+
+    # body accepts a SupportsReprHtml object (defines _repr_html_)
+    assert_type(html(_HtmlRepr()), DeltaGenerator)
 
     # body accepts SupportsReprHtml (objects with a `_repr_html_` method)
     class _HtmlObj:
