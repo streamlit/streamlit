@@ -176,6 +176,13 @@ export const StyledVegaLiteChartContainer =
           },
         },
         ".chart-wrapper": {
+          // Clip the rendered chart to the wrapper bounds. Vega-Lite's `width`
+          // only controls the plotting area, so charts that size via
+          // `autosize: pad` (e.g. facet and nested-composition charts) can
+          // render an SVG wider than the wrapper. Without clipping, that SVG
+          // spills out of narrow columns and overlaps neighboring elements.
+          maxWidth: "100%",
+          overflow: "hidden",
           "&.fit-x": {
             width: "100%",
           },
