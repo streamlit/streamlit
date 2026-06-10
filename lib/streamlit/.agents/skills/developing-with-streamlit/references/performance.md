@@ -158,14 +158,7 @@ These restrictions only apply during the concurrent initial run. After a widget 
 - Avoid unsynchronized mutations of shared mutable objects across fragments
 - `@st.cache_data` and `@st.cache_resource` are thread-safe and work normally
 
-**Combining with `run_every`:**
-```python
-@st.fragment(parallel=True, run_every="30s")
-def live_revenue():
-    st.metric("Revenue", query_revenue())
-```
-
-The initial run executes in parallel; subsequent `run_every` reruns are sequential (single fragment at a time).
+Note: with `run_every`, only the initial full-app run uses parallel execution; subsequent timer-triggered reruns execute sequentially.
 
 ## Forms to batch interactions
 
