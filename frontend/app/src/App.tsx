@@ -1489,9 +1489,13 @@ export class App extends PureComponent<Props, State> {
     // Show the framework "install skills" nudge when the server recommends it
     // (agent present, skills not installed, not headless, no server-side marker)
     // and we're on localhost, not permanently dismissed, and not snoozed.
+    // Require localStorage: it's where a snooze / "don't show again" is
+    // remembered browser-side, so if it's unavailable we fail closed and skip
+    // the nudge rather than show one the user can't make stick.
     if (
       initialize.recommendSkillsInstall &&
       isLocalhost() &&
+      localStorageAvailable() &&
       !this.isSkillsNudgeDismissed() &&
       !this.isSkillsNudgeSnoozed()
     ) {
