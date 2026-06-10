@@ -23,7 +23,6 @@ import {
   useState,
 } from "react"
 
-import EventContainer from "@streamlit/app/src/components/EventContainer/EventContainer"
 import Header from "@streamlit/app/src/components/Header/Header"
 import LogoComponent from "@streamlit/app/src/components/Logo/LogoComponent"
 import TopNav from "@streamlit/app/src/components/Navigation/TopNav"
@@ -48,7 +47,10 @@ import {
   NavigationContext,
   Profiler,
   SidebarConfigContext,
+  StreamlitToastItem,
+  StyledToastRegion,
   ThemeContext,
+  toastQueue,
   TransientNode,
   useExecuteWhenChanged,
   useWindowDimensionsContext,
@@ -441,16 +443,19 @@ function AppView(props: AppViewProps): ReactElement {
           )}
         </Component>
       </StyledMainContent>
+      <StyledToastRegion
+        queue={toastQueue}
+        aria-label="Notifications"
+        data-testid="stToastContainer"
+        className="stToastContainer"
+      >
+        {({ toast }) => <StreamlitToastItem toast={toast} />}
+      </StyledToastRegion>
       {hasEventElements && (
         <Profiler id="Event">
-          <EventContainer>
-            <StyledEventBlockContainer
-              className="stEvent"
-              data-testid="stEvent"
-            >
-              {renderBlock(elements.event)}
-            </StyledEventBlockContainer>
-          </EventContainer>
+          <StyledEventBlockContainer className="stEvent" data-testid="stEvent">
+            {renderBlock(elements.event)}
+          </StyledEventBlockContainer>
         </Profiler>
       )}
     </StyledAppViewContainer>

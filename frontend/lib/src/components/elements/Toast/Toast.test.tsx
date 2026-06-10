@@ -16,15 +16,9 @@
 
 import { ReactElement } from "react"
 
-import {
-  act,
-  RenderResult,
-  screen,
-  waitForElementToBeRemoved,
-  within,
-} from "@testing-library/react"
+import { act, RenderResult, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { PLACEMENT, toaster, ToasterContainer } from "baseui/toast"
+import { UNSTABLE_ToastRegion as ToastRegion } from "react-aria-components/Toast"
 import { vi } from "vitest"
 
 import { Toast as ToastProto } from "@streamlit/protobuf"
@@ -33,23 +27,19 @@ import ThemeProvider from "~lib/components/core/ThemeProvider"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 
-import Toast, { shortenMessage, ToastProps } from "./Toast"
+import { StreamlitToastItem } from "./StreamlitToastItem"
+import Toast, { ToastProps } from "./Toast"
+import { toastQueue } from "./toastQueue"
+import { shortenMessage } from "./utils"
 
-// A Toaster Container is required to render Toasts
-// Don't import the actual one from EventContainer as that lives on app side
 const createContainer = (): ReactElement => (
-  <ToasterContainer
-    placement={PLACEMENT.bottomRight}
-    // increasing autoHideDuration to 10s to avoid test flakiness
-    autoHideDuration={10000}
-    overrides={{
-      Root: {
-        props: {
-          "data-testid": "stToastContainer",
-        },
-      },
-    }}
-  />
+  <ToastRegion
+    queue={toastQueue}
+    aria-label="Notifications"
+    data-testid="stToastContainer"
+  >
+    {({ toast }) => <StreamlitToastItem toast={toast} />}
+  </ToastRegion>
 )
 
 const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
@@ -72,18 +62,17 @@ const renderComponent = (props: ToastProps): RenderResult =>
 
 describe("Toast Component", () => {
   beforeEach(() => {
-    // Use fake timers across tests to control and flush BaseWeb internal timeouts
+    // Use fake timers across tests to control and flush internal timeouts
     vi.useFakeTimers()
   })
 
-  afterEach(async () => {
+  afterEach(() => {
     // Clear all toasts and flush timers to avoid updates after test teardown
-    // eslint-disable-next-line @typescript-eslint/require-await
-    await act(async () => {
-      toaster.clear()
+    act(() => {
+      toastQueue.visibleToasts.forEach(t => toastQueue.close(t.key))
     })
 
-    // Ensure any pending BaseWeb toast timers are executed and then cleared
+    // Ensure any pending toast timers are executed and then cleared
     act(() => {
       vi.runOnlyPendingTimers()
     })
@@ -95,7 +84,7 @@ describe("Toast Component", () => {
     const props = getProps()
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
+    const toast = screen.getByRole("alertdialog")
     const closeButton = screen.getByRole("button", { name: "Close" })
     const expandButton = screen.queryByRole("button", { name: "view more" })
 
@@ -117,7 +106,7 @@ describe("Toast Component", () => {
     })
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
+    const toast = screen.getByRole("alertdialog")
     const toastText = within(toast).getByTestId("stMarkdownContainer")
 
     const expandButton = screen.getByRole("button", { name: "view more" })
@@ -136,7 +125,7 @@ describe("Toast Component", () => {
     })
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
+    const toast = screen.getByRole("alertdialog")
     const toastText = within(toast).getByTestId("stMarkdownContainer")
     const expandButton = screen.getByRole("button", { name: "view more" })
     // Initial state
@@ -173,7 +162,7 @@ describe("Toast Component", () => {
     const props = getProps()
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
+    const toast = screen.getByRole("alertdialog")
     const closeButton = screen.getByRole("button", { name: "Close" })
     expect(toast).toBeInTheDocument()
     expect(closeButton).toBeInTheDocument()
@@ -182,29 +171,30 @@ describe("Toast Component", () => {
     act(() => {
       vi.runOnlyPendingTimers()
     })
-    // Toast may be removed synchronously when timers are flushed
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    // Toast is removed synchronously after timer flush
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
   })
 
-  it("auto hides based on duration seconds", async () => {
+  it("auto hides based on duration seconds", () => {
     const props = getProps({ duration: 1 })
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
+    const toast = screen.getByRole("alertdialog")
     expect(toast).toBeVisible()
 
     // Advance time just before auto hide
     act(() => {
       vi.advanceTimersByTime(900)
     })
-    expect(screen.getByRole("alert")).toBeVisible()
+    expect(screen.getByRole("alertdialog")).toBeVisible()
 
     // Cross the 1s threshold (Toast multiplies seconds by 1000)
     act(() => {
       vi.advanceTimersByTime(200)
     })
 
-    await waitForElementToBeRemoved(toast)
+    // Toast is removed synchronously after timer flush
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
   })
 
   it("throws an error when called via st.sidebar.toast", () => {
@@ -222,6 +212,8 @@ describe("Toast Component", () => {
     const toastError = screen.getByRole("alert")
     expect(toastError).toBeInTheDocument()
     expect(toastError).toHaveTextContent("Streamlit API Error")
+    // Should not add toast to queue when in sidebar
+    expect(toastQueue.visibleToasts).toHaveLength(0)
   })
 
   it("shortenMessage does not truncate messages under the character limit", () => {
@@ -229,7 +221,7 @@ describe("Toast Component", () => {
     const props = getProps({ body: shortMessage })
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
+    const toast = screen.getByRole("alertdialog")
     expect(toast).toHaveTextContent(shortMessage)
   })
 
@@ -240,10 +232,10 @@ describe("Toast Component", () => {
     const props = getProps({ icon: "", body: longMessage })
     renderComponent(props)
 
-    // Get the text content of the toast, excluding the "view more" and "Close" buttons
+    // Get the text content of the toast, excluding the "view more" button
     const toastText = screen
-      .getByRole("alert")
-      ?.textContent?.replace("view moreClose", "")
+      .getByRole("alertdialog")
+      ?.textContent?.replace("view more", "")
 
     expect(toastText).toEqual(expectedTruncatedMessage)
     expect(toastText).toHaveLength(expectedTruncatedMessage.length)
@@ -257,8 +249,8 @@ describe("Toast Component", () => {
     renderComponent(props)
 
     const toastText = screen
-      .getByRole("alert")
-      ?.textContent?.replace("view moreClose", "")
+      .getByRole("alertdialog")
+      ?.textContent?.replace("view more", "")
     expect(toastText).toEqual(expectedTruncatedMessage)
     expect(toastText).toHaveLength(expectedTruncatedMessage.length)
   })
@@ -278,8 +270,8 @@ describe("Toast Component", () => {
     })
 
     const toastExpanded = screen
-      .getByRole("alert")
-      ?.textContent?.replace("view lessClose", "")
+      .getByRole("alertdialog")
+      ?.textContent?.replace("view less", "")
     expect(toastExpanded).toEqual(messageWithBreaks) // Check full message is displayed
 
     const collapseButton = screen.getByRole("button", { name: "view less" })
@@ -289,8 +281,8 @@ describe("Toast Component", () => {
     })
 
     const toastCollapsed = screen
-      .getByRole("alert")
-      ?.textContent?.replace("view moreClose", "")
+      .getByRole("alertdialog")
+      ?.textContent?.replace("view more", "")
     expect(toastCollapsed).toEqual(expectedTruncatedMessage) // Check message is truncated again
   })
 })

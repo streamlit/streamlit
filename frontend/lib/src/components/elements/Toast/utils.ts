@@ -14,18 +14,26 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+/**
+ * Truncates toast messages that are longer than three lines.
+ * Attempts to break at word boundaries to avoid cutting words.
+ */
+export function shortenMessage(fullMessage: string): string {
+  const characterLimit = 104
 
-import { render } from "@streamlit/lib/testing"
+  if (fullMessage.length > characterLimit) {
+    let message = fullMessage.replace(/^(.{104}[^\s]*).*/, "$1")
 
-import EventContainer from "./EventContainer"
+    if (message.length > characterLimit) {
+      message = message
+        .substring(0, characterLimit)
+        .split(" ")
+        .slice(0, -1)
+        .join(" ")
+    }
 
-describe("EventContainer Component", () => {
-  it("renders Toast Container", () => {
-    render(<EventContainer />)
+    return message.trim()
+  }
 
-    const toastContainer = screen.getByTestId("stToastContainer")
-    expect(toastContainer).toBeInTheDocument()
-    expect(toastContainer).toHaveClass("stToastContainer")
-  })
-})
+  return fullMessage
+}
