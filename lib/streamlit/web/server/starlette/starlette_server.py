@@ -225,6 +225,14 @@ def _set_websocket_handshake_header_limit() -> None:
     """
     header_size: int = config.get_option("server.maxWebsocketHeaderSize")
 
+    if header_size <= 0:
+        _LOGGER.warning(
+            "server.maxWebsocketHeaderSize=%s is not a positive byte count; "
+            "ignoring it and keeping the existing websockets handshake limit.",
+            header_size,
+        )
+        return
+
     try:
         import websockets.http11 as websockets_http11
     except ImportError:  # pragma: no cover - websockets is a hard dependency

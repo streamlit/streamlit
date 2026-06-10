@@ -249,20 +249,49 @@ class TestGetWebsocketSettings:
         assert timeout == 10
 
 
+def _ws_header_limit() -> tuple[Any, str]:
+    """Return the websockets http11 module and the name of its header-size limit.
+
+    The constant is ``MAX_LINE_LENGTH`` in websockets >= 14 and ``MAX_LINE`` in
+    earlier supported versions (Streamlit pins ``websockets>=12``), so resolve
+    whichever is present rather than hard-coding one name.
+    """
+    import websockets.http11 as websockets_http11
+
+    for attr_name in ("MAX_LINE_LENGTH", "MAX_LINE"):
+        if hasattr(websockets_http11, attr_name):
+            return websockets_http11, attr_name
+    raise AssertionError("websockets.http11 exposes no known header-size constant")
+
+
 class TestWebsocketHandshakeHeaderLimit:
     """Tests for _set_websocket_handshake_header_limit function."""
 
     @patch_config_options({"server.maxWebsocketHeaderSize": 70000})
     def test_applies_configured_limit(self) -> None:
         """The configured size is written to the websockets handshake limit."""
-        import websockets.http11 as websockets_http11
+        module, attr = _ws_header_limit()
 
-        original = websockets_http11.MAX_LINE_LENGTH
+        original = getattr(module, attr)
         try:
             _set_websocket_handshake_header_limit()
-            assert websockets_http11.MAX_LINE_LENGTH == 70000
+            assert getattr(module, attr) == 70000
         finally:
-            websockets_http11.MAX_LINE_LENGTH = original
+            setattr(module, attr, original)
+
+    @patch_config_options({"server.maxWebsocketHeaderSize": 0})
+    def test_non_positive_limit_is_ignored(self) -> None:
+        """A non-positive value is rejected and the existing limit is preserved."""
+        # Regression guard: a misconfigured 0/negative byte count must NOT be
+        # written through, which would make websockets reject every handshake.
+        module, attr = _ws_header_limit()
+
+        original = getattr(module, attr)
+        try:
+            _set_websocket_handshake_header_limit()
+            assert getattr(module, attr) == original
+        finally:
+            setattr(module, attr, original)
 
     def test_default_restores_tornado_parity(self) -> None:
         """The default keeps the limit above the 8 KB that broke auth proxies."""
@@ -280,14 +309,14 @@ class TestWebsocketHandshakeHeaderLimit:
     )
     def test_applied_when_building_uvicorn_kwargs(self) -> None:
         """Building the uvicorn kwargs applies the limit (both entry points use it)."""
-        import websockets.http11 as websockets_http11
+        module, attr = _ws_header_limit()
 
-        original = websockets_http11.MAX_LINE_LENGTH
+        original = getattr(module, attr)
         try:
             _get_uvicorn_config_kwargs()
-            assert websockets_http11.MAX_LINE_LENGTH == 80000
+            assert getattr(module, attr) == 80000
         finally:
-            websockets_http11.MAX_LINE_LENGTH = original
+            setattr(module, attr, original)
 
 
 class TestGetUvicornConfigKwargs:
