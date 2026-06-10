@@ -1068,6 +1068,28 @@ _create_option(
 )
 
 _create_option(
+    "server.maxWebsocketHeaderSize",
+    description="""
+        Max size, in bytes, of any single HTTP header line on the WebSocket
+        connection's opening handshake (the `/_stcore/stream` upgrade request).
+
+        Streamlit's server (Starlette/uvicorn, default since 1.57) parses the
+        WebSocket handshake with the `websockets` library, which rejects any
+        single header line larger than this value. Deployments behind an
+        authenticating reverse proxy (e.g. oauth2-proxy) can produce large
+        `Cookie` or `X-Forwarded-*` header lines from OIDC/JWT tokens; if a line
+        exceeds this limit the handshake fails and the app loads indefinitely.
+
+        The default (65536) matches the header tolerance of the legacy Tornado
+        server used in Streamlit <= 1.56. Increase it only if your proxy forwards
+        unusually large tokens or group lists. Larger values allow a client to
+        buffer correspondingly larger header lines.
+    """,
+    default_val=65536,
+    type_=int,
+)
+
+_create_option(
     "server.enableStaticServing",
     description="""
         Enable serving files from a `static` directory in the running app's

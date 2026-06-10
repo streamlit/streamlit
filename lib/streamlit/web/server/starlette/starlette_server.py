@@ -209,12 +209,57 @@ def _get_websocket_protocol() -> str:
     return "websockets-sansio"
 
 
+def _set_websocket_handshake_header_limit() -> None:
+    """Apply the configured size limit for header lines on the WebSocket handshake.
+
+    The Starlette/uvicorn server (default since 1.57) parses the
+    ``/_stcore/stream`` WebSocket opening handshake with the ``websockets``
+    library, which rejects any single header line larger than its
+    ``MAX_LINE_LENGTH`` (8 KB by default). That is smaller than the legacy
+    Tornado server tolerated, so deployments behind an authenticating reverse
+    proxy that forwards large ``Cookie`` / ``X-Forwarded-*`` header lines (OIDC
+    or JWT tokens) fail the handshake and the app loads indefinitely with no log.
+
+    We override the module-level limit, which the handshake parser reads on every
+    request, from the ``server.maxWebsocketHeaderSize`` option.
+    """
+    header_size: int = config.get_option("server.maxWebsocketHeaderSize")
+
+    try:
+        import websockets.http11 as websockets_http11
+    except ImportError:  # pragma: no cover - websockets is a hard dependency
+        return
+
+    # The constant is named ``MAX_LINE_LENGTH`` in websockets >= 14 and ``MAX_LINE``
+    # in earlier supported versions. Set whichever is present so the limit applies
+    # across the supported websockets range.
+    if not any(
+        hasattr(websockets_http11, attr) for attr in ("MAX_LINE_LENGTH", "MAX_LINE")
+    ):  # pragma: no cover - guards against a future websockets rename
+        _LOGGER.warning(
+            "Could not apply server.maxWebsocketHeaderSize=%s: the installed "
+            "websockets version exposes no known header-size limit constant.",
+            header_size,
+        )
+        return
+
+    for attr_name in ("MAX_LINE_LENGTH", "MAX_LINE"):
+        if hasattr(websockets_http11, attr_name):
+            setattr(websockets_http11, attr_name, header_size)
+
+
 def _get_uvicorn_config_kwargs() -> dict[str, Any]:
     """Get common uvicorn configuration kwargs.
 
     Returns a dict of kwargs that can be passed to uvicorn.Config.
     Does NOT include app, host, or port - those must be provided separately.
+
+    As a side effect, applies the configured WebSocket handshake header-line
+    limit (see ``_set_websocket_handshake_header_limit``); both server entry
+    points build their kwargs here, so this is the single place that runs before
+    either server starts serving.
     """
+    _set_websocket_handshake_header_limit()
     cert_file, key_file = _validate_ssl_config()
     ws_ping_interval, ws_ping_timeout = _get_websocket_settings()
     ws_max_size = get_max_message_size_bytes()

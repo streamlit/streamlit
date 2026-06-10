@@ -44,6 +44,7 @@ from streamlit.web.server.starlette.starlette_server import (
     _get_websocket_settings,
     _is_port_manually_set,
     _server_address_is_unix_socket,
+    _set_websocket_handshake_header_limit,
 )
 from tests.testutil import patch_config_options
 
@@ -246,6 +247,47 @@ class TestGetWebsocketSettings:
 
         assert interval == 10
         assert timeout == 10
+
+
+class TestWebsocketHandshakeHeaderLimit:
+    """Tests for _set_websocket_handshake_header_limit function."""
+
+    @patch_config_options({"server.maxWebsocketHeaderSize": 70000})
+    def test_applies_configured_limit(self) -> None:
+        """The configured size is written to the websockets handshake limit."""
+        import websockets.http11 as websockets_http11
+
+        original = websockets_http11.MAX_LINE_LENGTH
+        try:
+            _set_websocket_handshake_header_limit()
+            assert websockets_http11.MAX_LINE_LENGTH == 70000
+        finally:
+            websockets_http11.MAX_LINE_LENGTH = original
+
+    def test_default_restores_tornado_parity(self) -> None:
+        """The default keeps the limit above the 8 KB that broke auth proxies."""
+        # Regression guard: the pre-1.57 Tornado server tolerated ~64 KB header
+        # lines; the default must not fall back to the websockets 8192 default
+        # that breaks oauth2-proxy deployments.
+        assert config.get_option("server.maxWebsocketHeaderSize") == 65536
+
+    @patch_config_options(
+        {
+            "server.sslCertFile": None,
+            "server.sslKeyFile": None,
+            "server.maxWebsocketHeaderSize": 80000,
+        }
+    )
+    def test_applied_when_building_uvicorn_kwargs(self) -> None:
+        """Building the uvicorn kwargs applies the limit (both entry points use it)."""
+        import websockets.http11 as websockets_http11
+
+        original = websockets_http11.MAX_LINE_LENGTH
+        try:
+            _get_uvicorn_config_kwargs()
+            assert websockets_http11.MAX_LINE_LENGTH == 80000
+        finally:
+            websockets_http11.MAX_LINE_LENGTH = original
 
 
 class TestGetUvicornConfigKwargs:
