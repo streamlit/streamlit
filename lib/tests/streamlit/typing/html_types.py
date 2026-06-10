@@ -39,6 +39,12 @@ if TYPE_CHECKING:
     # body is SupportsStr, so non-str values should work
     assert_type(html(42), DeltaGenerator)
 
+    # body accepts SupportsReprHtml (objects with a `_repr_html_` method)
+    class _HtmlObj:
+        def _repr_html_(self) -> str: ...
+
+    assert_type(html(_HtmlObj()), DeltaGenerator)
+
     # html with width parameter (keyword-only)
     assert_type(html("<p>Text</p>", width="stretch"), DeltaGenerator)
     assert_type(html("<p>Text</p>", width="content"), DeltaGenerator)
