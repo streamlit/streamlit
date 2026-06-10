@@ -42,6 +42,9 @@ const nudgeButtonBase = (theme: EmotionTheme): CSSObject => ({
     outline: "none",
     boxShadow: theme.shadows.focusRingMuted,
   },
+  "&:disabled": {
+    cursor: "not-allowed",
+  },
 })
 
 /**
@@ -81,6 +84,9 @@ export const StyledSkillsNudgeToast = styled.div(({ theme }) => {
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.base,
     animation: `${slideIn} 0.2s ease-out`,
+    "@media (prefers-reduced-motion: reduce)": {
+      animation: "none",
+    },
   }
 })
 

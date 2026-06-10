@@ -2427,3 +2427,29 @@ class GetShowErrorLinksTest(unittest.TestCase):
 
         with pytest.raises(ValueError, match="auto, true, false"):
             _get_show_error_links()
+
+
+def test_create_new_session_message_recommends_skills_install() -> None:
+    """The new-session Initialize carries the skills-nudge recommendation,
+    computed from the directory of the app's main script (the same key the
+    page-profile telemetry uses, so both share the cached detection)."""
+    session = _create_test_session()
+
+    with patch(
+        "streamlit.web.skills.should_show_skills_nudge", return_value=True
+    ) as mock_should_show:
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is True
+    mock_should_show.assert_called_once_with("/fake")
+
+
+def test_create_new_session_message_skips_skills_install_when_not_recommended() -> None:
+    """When detection declines, the recommendation flag stays False so the
+    frontend does not show the nudge."""
+    session = _create_test_session()
+
+    with patch("streamlit.web.skills.should_show_skills_nudge", return_value=False):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False

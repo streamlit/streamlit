@@ -6900,6 +6900,20 @@ describe("Skills install nudge", () => {
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
   })
 
+  it("shows the nudge again once the snooze window has lapsed", () => {
+    // A snooze timestamp older than the 24h window must no longer suppress it.
+    const thirtySixHoursMs = 36 * 60 * 60 * 1000
+    window.localStorage.setItem(
+      "stSkillsNudgeSnoozedAt",
+      String(Date.now() - thirtySixHoursMs)
+    )
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+  })
+
   it("tracks install clicks", async () => {
     const user = userEvent.setup()
     renderApp(getProps())
