@@ -58,7 +58,7 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.43",
+  "ty==0.0.44",
   # We fix ruff to a version to be in sync with the pre-commit hook:
   "ruff==0.15.15",
   # We fix mypy to a version to avoid breaking our CI on updates,
