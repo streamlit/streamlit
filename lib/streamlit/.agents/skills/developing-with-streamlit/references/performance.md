@@ -145,9 +145,7 @@ def orders():
 - Dashboards with several data sources that each take 1s+
 
 **When NOT to use:**
-- Fast fragments (overhead of threading outweighs benefit)
 - Fragments that depend on each other's Session State writes
-- Fragments that need `st.dialog`, `st.switch_page`, or writing to external containers
 
 **Restrictions during parallel execution (initial page load only):**
 - `st.dialog` — raises error
