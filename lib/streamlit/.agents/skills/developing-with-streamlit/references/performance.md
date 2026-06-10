@@ -158,7 +158,7 @@ orders()
 - Each parallel fragment should write to its own Session State keys
 - Avoid unsynchronized mutations of shared mutable objects across fragments
 
-Note: with `run_every`, only the initial full-app run uses parallel execution; subsequent timer-triggered reruns execute sequentially.
+Note: `parallel=True` applies to full-app reruns; `run_every` triggers fragment-scoped reruns, which execute sequentially.
 
 ## Forms to batch interactions
 
