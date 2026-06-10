@@ -6882,6 +6882,20 @@ describe("Skills install nudge", () => {
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
   })
 
+  it("does not show the nudge when localStorage is unavailable", () => {
+    // Fail closed: if we can't remember a snooze / "don't show again", don't
+    // nudge at all. Simulate a locked-down browser (private mode / storage
+    // disabled) by making the probe that localStorageAvailable() uses throw.
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("storage disabled")
+    })
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+  })
+
   it("does not show the nudge once permanently dismissed", () => {
     window.localStorage.setItem("stSkillsNudgeDismissed", "true")
     renderApp(getProps())
