@@ -149,7 +149,6 @@ def orders():
 **Thread safety rules:**
 - Each parallel fragment should write to its own Session State keys
 - Avoid unsynchronized mutations of shared mutable objects across fragments
-- `@st.cache_data` and `@st.cache_resource` are thread-safe and work normally
 
 Note: with `run_every`, only the initial full-app run uses parallel execution; subsequent timer-triggered reruns execute sequentially.
 
