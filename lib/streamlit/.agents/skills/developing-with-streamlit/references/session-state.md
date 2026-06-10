@@ -37,6 +37,40 @@ name = st.text_input("Name", key="user_name")
 # st.session_state.user_name contains the same value as `name`
 ```
 
+## Syncing a widget to the URL (shareable links)
+
+To make a widget's value shareable through the page URL, pass `bind="query-params"` together with `key=`. Streamlit writes the value to the URL query string when it changes and restores it from the URL on load — **don't hand-roll `st.query_params`** for this. The `key=` becomes the query-parameter name.
+
+```python
+# GOOD: one widget, automatic URL sync. Picking Marketing -> ?category=Marketing;
+# loading ?category=Engineering reopens with Engineering selected.
+cat = st.radio(
+    "Category",
+    ["Sales", "Marketing", "Engineering"],
+    key="category",        # REQUIRED with bind=; becomes the URL param name (?category=...)
+    bind="query-params",   # exact string, with a hyphen
+)
+st.write(f"Selected: {cat}")
+```
+
+```python
+# BAD: hand-rolled plumbing. More code, an extra rerun to guard, it conflicts
+# with bind= (a bound param can't be set/deleted via st.query_params), and it
+# crashes on an unexpected URL value — .index(default) raises ValueError if a
+# user opens ?category=Foo. bind="query-params" tolerates unknown values for you.
+default = st.query_params.get("category", "Sales")
+cat = st.radio("Category", ["Sales", "Marketing", "Engineering"],
+               index=["Sales", "Marketing", "Engineering"].index(default))
+st.query_params["category"] = cat   # don't do this when bind= handles sync
+```
+
+Notes:
+- `bind="query-params"` requires `key=`. The only valid value is the exact string `"query-params"` (hyphen, not `"query_params"`); anything else is invalid.
+- When the value equals the default, the param is dropped from the URL to keep it clean.
+- A bound param can't be set or deleted through `st.query_params` — change it programmatically via `st.session_state[key]` instead. Do not mix `bind=` with manual `st.query_params` reads/writes.
+- Still render the value (e.g. `st.write(f"Selected: {cat}")`) if the app needs to show the current selection.
+- Supported on `st.radio`, `st.selectbox`, `st.multiselect`, `st.segmented_control`, `st.pills`, `st.slider`, `st.select_slider`, `st.checkbox`, `st.toggle`, `st.number_input`, `st.color_picker`, and the text/date/time inputs.
+
 ## Widget input constraints are mostly client-side
 
 Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` (`st.text_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
