@@ -107,6 +107,69 @@ auto_refresh_metrics()
 
 Use for: live metrics, refresh buttons, interactive charts that don't affect global state.
 
+### Parallel fragments
+
+Use `parallel=True` to run independent fragments concurrently during full app reruns. Each parallel fragment is dispatched to a thread pool, so multiple slow operations overlap instead of running sequentially.
+
+```python
+# BAD: Three slow queries run sequentially (~9s total)
+@st.fragment
+def revenue():
+    st.metric("Revenue", query_revenue())  # ~3s
+
+@st.fragment
+def users():
+    st.metric("Users", query_users())  # ~3s
+
+@st.fragment
+def orders():
+    st.metric("Orders", query_orders())  # ~3s
+
+# GOOD: Three slow queries run concurrently (~3s total)
+@st.fragment(parallel=True)
+def revenue():
+    st.metric("Revenue", query_revenue())
+
+@st.fragment(parallel=True)
+def users():
+    st.metric("Users", query_users())
+
+@st.fragment(parallel=True)
+def orders():
+    st.metric("Orders", query_orders())
+```
+
+**When to use `parallel=True`:**
+- Independent, slow operations (DB queries, API calls, model inference)
+- Multiple fragments that don't depend on each other's output
+- Dashboards with several data sources that each take 1s+
+
+**When NOT to use:**
+- Fast fragments (overhead of threading outweighs benefit)
+- Fragments that depend on each other's Session State writes
+- Fragments that need `st.dialog`, `st.switch_page`, or writing to external containers
+
+**Restrictions during parallel execution (initial page load only):**
+- `st.dialog` — raises error
+- `st.switch_page` — raises error
+- Writing to containers created outside the fragment — raises error
+
+These restrictions only apply during the concurrent initial run. After a widget interaction triggers a fragment rerun, the fragment runs sequentially and all APIs work normally.
+
+**Thread safety rules:**
+- Each parallel fragment should write to its own Session State keys
+- Avoid unsynchronized mutations of shared mutable objects across fragments
+- `@st.cache_data` and `@st.cache_resource` are thread-safe and work normally
+
+**Combining with `run_every`:**
+```python
+@st.fragment(parallel=True, run_every="30s")
+def live_revenue():
+    st.metric("Revenue", query_revenue())
+```
+
+The initial run executes in parallel; subsequent `run_every` reruns are sequential (single fragment at a time).
+
 ## Forms to batch interactions
 
 By default, every widget interaction triggers a full rerun. Use `st.form` to batch multiple inputs and only rerun on submit.
