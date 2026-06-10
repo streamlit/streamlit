@@ -93,6 +93,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Making an app look polished** — icons (Material Symbols), spacing, color accents, visual hierarchy, and small design touches that elevate quality | read `references/design.md` |
 | **Adding a bold title/headline to a callout (error/warning/info/success)** — the `title=` keyword that renders a heading above the alert body | read `references/design.md` |
 | **Choosing the right selection widget** — when to use `st.selectbox` vs `st.radio` vs `st.pills` vs `st.segmented_control` vs `st.multiselect`, including modern replacements for deprecated patterns | read `references/selection-widgets.md` |
+| **Date and time input** — picking a date, a time, or a combined date+time in ONE widget (`st.datetime_input`, `st.date_input`, `st.time_input`) | read `references/selection-widgets.md` |
 | **Custom themes, colors, and CSS styling** — configuring colors in `.streamlit/config.toml`, reading the active theme at runtime via `st.context.theme`, and targeting widgets with `st.markdown` CSS injection | read `references/theme.md` |
 | **Page structure and layout** — `st.columns`, `st.tabs`, `st.sidebar`, `st.container`, `st.expander`, responsive layout patterns, and when to use each container type | read `references/layouts.md` |
 | **Displaying or editing tabular data** — `st.dataframe` column configuration, `st.data_editor` for editable tables, chart selection, and best practices for large datasets | read `references/data-display.md` |
@@ -111,7 +112,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 
 **Fallback — "this widget doesn't exist in Streamlit":**
 
-If the user asks for a UI element or interaction that **has never been part of Streamlit's API** and cannot be built with any combination of native widgets (e.g., drag-and-drop, canvas drawing, custom interactive visualizations), **route to the CCv2 reference** (`references/custom-components-v2.md`). **Do not** route to CCv2 for features that exist in newer Streamlit versions (e.g., `st.connection`, `st.segmented_control`) — suggest upgrading instead.
+If the user asks for a UI element or interaction that **has never been part of Streamlit's API** and cannot be built with any combination of native widgets (e.g., drag-and-drop, canvas drawing, custom interactive visualizations), **route to the CCv2 reference** (`references/custom-components-v2.md`). **Do not** route to CCv2 for features that exist in newer Streamlit versions (e.g., `st.connection`, `st.segmented_control`, `st.datetime_input`) — suggest upgrading instead. When unsure whether a native widget exists, check the routing table above before assuming it's missing; Streamlit's native widget set has grown since your training cutoff.
 
 **Common combinations:**
 

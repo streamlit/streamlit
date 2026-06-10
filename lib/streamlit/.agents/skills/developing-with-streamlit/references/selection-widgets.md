@@ -123,12 +123,36 @@ country = st.selectbox(
 )
 ```
 
+## Date and time inputs
+
+Use `st.datetime_input` to collect a date AND time together in a SINGLE widget. It returns a `datetime.datetime` directly, so you never need to glue a `st.date_input` and `st.time_input` together.
+
+```python
+# GOOD — one combined widget, returns a datetime.datetime
+import streamlit as st
+
+dt = st.datetime_input("Appointment")
+st.write(dt)
+
+# BAD (stale workaround) — two widgets glued with datetime.combine
+import datetime
+
+d = st.date_input("Date")
+t = st.time_input("Time")
+dt = datetime.datetime.combine(d, t)
+```
+
+Use `st.date_input` for a date only, `st.time_input` for a time only, and `st.datetime_input` whenever you need both in one input. This native widget exists — don't reach for a custom component or an `st.components.v2` HTML5 `datetime-local` input for a combined date+time picker.
+
+**Gotcha — `format` is DATE-ONLY.** It accepts exactly `"YYYY/MM/DD"` (default), `"DD/MM/YYYY"`, or `"MM/DD/YYYY"`, optionally using `.` or `-` as the separator. It does NOT take a time component: `format="YYYY-MM-DD HH:mm"` raises `StreamlitAPIException` and crashes the app on render. To change the time granularity, use `step=` (a `datetime.timedelta` or an int number of seconds, between 60s and 23h), not `format`. If you don't need a custom date display, omit `format` entirely.
+
 ## References
 
 - [st.segmented_control](https://docs.streamlit.io/develop/api-reference/widgets/st.segmented_control)
 - [st.pills](https://docs.streamlit.io/develop/api-reference/widgets/st.pills)
 - [st.selectbox](https://docs.streamlit.io/develop/api-reference/widgets/st.selectbox)
 - [st.multiselect](https://docs.streamlit.io/develop/api-reference/widgets/st.multiselect)
+- [st.datetime_input](https://docs.streamlit.io/develop/api-reference/widgets/st.datetime_input)
 - [st.toggle](https://docs.streamlit.io/develop/api-reference/widgets/st.toggle)
 - [st.checkbox](https://docs.streamlit.io/develop/api-reference/widgets/st.checkbox)
 - [st.form](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form)
