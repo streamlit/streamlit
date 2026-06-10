@@ -146,13 +146,6 @@ def orders():
 **When NOT to use:**
 - Fragments that depend on each other's Session State writes
 
-**Restrictions during parallel execution (initial page load only):**
-- `st.dialog` — raises error
-- `st.switch_page` — raises error
-- Writing to containers created outside the fragment — raises error
-
-These restrictions only apply during the concurrent initial run. After a widget interaction triggers a fragment rerun, the fragment runs sequentially and all APIs work normally.
-
 **Thread safety rules:**
 - Each parallel fragment should write to its own Session State keys
 - Avoid unsynchronized mutations of shared mutable objects across fragments
