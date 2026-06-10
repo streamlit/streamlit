@@ -64,6 +64,17 @@ describe("SkillsNudgeToast", () => {
     await waitFor(() => expect(onDismiss).toHaveBeenCalledTimes(1))
   })
 
+  it("shows the install location detail returned by onInstall", async () => {
+    const user = userEvent.setup()
+    const onInstall = vi.fn().mockResolvedValue("Installed to .agents/skills")
+    render(<SkillsNudgeToast {...getProps({ onInstall })} />)
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+
+    expect(await screen.findByText("Skills installed")).toBeVisible()
+    expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
+  })
+
   it("shows an error and keeps the actions when the install fails", async () => {
     const user = userEvent.setup()
     const onInstall = vi.fn().mockRejectedValue(new Error("network down"))

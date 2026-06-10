@@ -559,7 +559,7 @@ def _install_project_skills(
     *,
     yes: bool = False,
     fallback_to_global: bool = True,
-) -> None:
+) -> _InstallResult:
     """Install bundled skills to the current project via symlinks."""
     # Discover bundled skills
     source_skills_dir = _get_source_skills_dir()
@@ -592,8 +592,7 @@ def _install_project_skills(
                 "Developer Mode to use project installs."
             )
             click.echo()
-            _install_global_skills(yes=yes)
-            return
+            return _install_global_skills(yes=yes)
 
         raise click.ClickException(
             "Symlinks not supported. Use --global for global installation."
@@ -633,7 +632,7 @@ def _install_project_skills(
         click.echo("Falling back to global installation mode...")
         click.echo()
         try:
-            _install_global_skills(yes=yes)
+            return _install_global_skills(yes=yes)
         except click.ClickException:
             # Global install failed - partial project symlinks remain as fallback
             raise
@@ -643,7 +642,6 @@ def _install_project_skills(
                 "Installation incomplete. Project symlinks failed and global install "
                 "was cancelled."
             )
-        return
 
     if symlink_failed:
         raise click.ClickException(
@@ -681,8 +679,10 @@ def _install_project_skills(
             "Remove conflicting files and try again."
         )
 
+    return result
 
-def _install_global_skills(*, yes: bool = False) -> None:
+
+def _install_global_skills(*, yes: bool = False) -> _InstallResult:
     """Install skills globally by downloading from GitHub."""
     target_dirs = _get_global_target_dirs()
 
@@ -735,6 +735,8 @@ def _install_global_skills(*, yes: bool = False) -> None:
                 "No skills were installed due to conflicts. "
                 "Remove conflicting files and try again."
             )
+
+        return result
     finally:
         # Clean up temp directory
         temp_root = skill_path.parent.parent
@@ -742,7 +744,7 @@ def _install_global_skills(*, yes: bool = False) -> None:
             shutil.rmtree(temp_root, ignore_errors=True)
 
 
-def install_skills(*, global_mode: bool = False, yes: bool = False) -> None:
+def install_skills(*, global_mode: bool = False, yes: bool = False) -> _InstallResult:
     """Install Streamlit AI-agent skills.
 
     Parameters
@@ -752,6 +754,11 @@ def install_skills(*, global_mode: bool = False, yes: bool = False) -> None:
         If False (default), install to project directories via symlinks.
     yes
         If True, skip all confirmation prompts.
+
+    Returns
+    -------
+    _InstallResult
+        The skills that were newly installed, already up to date, or skipped.
     """
     # Check if running interactively
     if not yes and not sys.stdin.isatty():
@@ -766,9 +773,26 @@ def install_skills(*, global_mode: bool = False, yes: bool = False) -> None:
             global_mode = True
 
     if global_mode:
-        _install_global_skills(yes=yes)
-    else:
-        _install_project_skills(yes=yes)
+        return _install_global_skills(yes=yes)
+    return _install_project_skills(yes=yes)
+
+
+def summarize_install(result: _InstallResult) -> str:
+    """Return a short, user-facing summary of an install for the in-app nudge.
+
+    Reports where skills were newly installed, or that they were already up to
+    date. Used to give the one-click "install skills" toast concrete feedback
+    instead of a generic confirmation. Returns an empty string when there is
+    nothing meaningful to report.
+    """
+    if result.installed:
+        # Collapse the per-skill target paths to their distinct parent dirs
+        # (e.g. ".agents/skills", ".claude/skills") for a concise message.
+        locations = sorted({str(Path(path).parent) for path in result.installed})
+        return "Installed to " + ", ".join(locations)
+    if result.up_to_date:
+        return "Skills are already up to date."
+    return ""
 
 
 def _nudge_dismissed_marker_path() -> Path:

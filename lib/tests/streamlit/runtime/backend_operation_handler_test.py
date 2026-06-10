@@ -15,9 +15,11 @@
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import click
+import pytest
 
 from streamlit.proto.BackMsg_pb2 import BackendOperationRequest
 from streamlit.proto.ForwardMsg_pb2 import (
@@ -31,6 +33,10 @@ from streamlit.runtime.backend_operation_handler import (
     DismissSkillsNudgeHandler,
     InstallSkillsHandler,
 )
+from streamlit.web import skills
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _create_deferred_file_request(
@@ -171,10 +177,15 @@ def _dismiss_nudge_request(
 
 
 def test_install_skills_handler_installs_in_project_mode() -> None:
-    """A successful install returns a payload and clears the detection cache."""
+    """A successful install returns a payload, a summary, and clears the cache."""
+    install_result = skills._InstallResult(
+        installed=[".agents/skills/foo", ".claude/skills/foo"]
+    )
     with (
         patch("streamlit.config.get_option", return_value=False),
-        patch("streamlit.web.skills.install_skills") as mock_install,
+        patch(
+            "streamlit.web.skills.install_skills", return_value=install_result
+        ) as mock_install,
         patch.object(metrics_util, "clear_installed_skills_cache") as mock_clear,
     ):
         response = asyncio.run(
@@ -186,6 +197,10 @@ def test_install_skills_handler_installs_in_project_mode() -> None:
     mock_clear.assert_called_once()
     assert response.request_id == "request-id"
     assert response.HasField("install_skills")
+    # The result is summarized into a user-facing detail message for the toast.
+    assert (
+        response.install_skills.detail == "Installed to .agents/skills, .claude/skills"
+    )
     assert response.error_msg == ""
 
 
@@ -219,6 +234,45 @@ def test_install_skills_handler_refuses_in_headless_mode() -> None:
     mock_install.assert_not_called()
     assert "headless" in response.error_msg
     assert not response.HasField("install_skills")
+
+
+def test_install_skills_handler_runs_real_installer(tmp_path: Path) -> None:
+    """End-to-end: the handler runs the real installer and reports where skills
+    landed, so a click on the nudge actually creates the symlinks.
+    """
+    # Skip on systems without symlink support (e.g. Windows without Dev Mode).
+    try:
+        (tmp_path / ".symlink_probe").symlink_to(tmp_path)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported on this platform")
+
+    source_dir = tmp_path / "streamlit" / ".agents" / "skills"
+    skill_dir = source_dir / "developing-with-streamlit"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text("# Test Skill\n", encoding="utf-8")
+
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
+        patch("pathlib.Path.cwd", return_value=project_dir),
+        # No ~/.claude, so only .agents/skills is targeted.
+        patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        patch.object(metrics_util, "clear_installed_skills_cache"),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler().handle(_install_skills_request(), "session-id")
+        )
+
+    # The symlink was actually created in the project directory...
+    installed = project_dir / ".agents" / "skills" / "developing-with-streamlit"
+    assert installed.is_symlink()
+    # ...and the response reports it back to the nudge for display.
+    assert response.error_msg == ""
+    assert response.HasField("install_skills")
+    assert response.install_skills.detail == "Installed to .agents/skills"
 
 
 def test_dismiss_skills_nudge_handler_writes_marker() -> None:
