@@ -88,7 +88,7 @@ message Initialize {
   // nudge. Only set in local development when an agent harness is detected,
   // the bundled Streamlit skills are not yet installed, and the user has not
   // dismissed the nudge permanently. Frontend treats an unset value as false.
-  bool recommend_skills_install = 2;
+  bool recommend_skills_install = 8;
 
   reserved 5;
 }
