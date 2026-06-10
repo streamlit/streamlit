@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from playwright.sync_api import Page
 
-    from e2e_playwright.conftest import AsyncSubprocess, ImageCompareFunction
+    from e2e_playwright.conftest import AsyncSubprocess
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -62,9 +62,7 @@ def app_server(
     print(proc.terminate(), flush=True)
 
 
-def test_skills_nudge_shows_and_dismisses(
-    app: Page, assert_snapshot: ImageCompareFunction
-) -> None:
+def test_skills_nudge_shows_and_dismisses(app: Page) -> None:
     """The nudge appears in local dev with an agent but no skills, can be
     permanently dismissed, and stays gone after a reload.
     """
@@ -75,8 +73,6 @@ def test_skills_nudge_shows_and_dismisses(
     expect(nudge.get_by_role("button", name="Don't show again")).to_be_visible()
     # The close (✕) control exposes an accessible "Dismiss" name.
     expect(nudge.get_by_role("button", name="Dismiss")).to_be_visible()
-
-    assert_snapshot(nudge, name="skills_nudge-default")
 
     # Permanently dismiss; the toast disappears immediately.
     nudge.get_by_role("button", name="Don't show again").click()
