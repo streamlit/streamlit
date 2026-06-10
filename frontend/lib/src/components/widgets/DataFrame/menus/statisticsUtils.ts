@@ -376,6 +376,10 @@ export function computeTextStatistics(
   const valueCounts = new Map<string, number>()
   const lengths: number[] = []
   let empty = 0
+  // Running total of counted (non-empty, primitive) values. Maintained here to
+  // avoid allocating an intermediate array from valueCounts afterwards. This
+  // correctly excludes non-primitive values that were skipped.
+  let count = 0
 
   for (const v of rawValues) {
     if (isNullOrUndefined(v)) {
@@ -386,6 +390,7 @@ export function computeTextStatistics(
       } else {
         valueCounts.set(v, (valueCounts.get(v) || 0) + 1)
         lengths.push(v.length)
+        count++
       }
     } else if (
       typeof v === "number" ||
@@ -395,13 +400,11 @@ export function computeTextStatistics(
       const str = v.toString()
       valueCounts.set(str, (valueCounts.get(str) || 0) + 1)
       lengths.push(str.length)
+      count++
     }
     // Skip objects and other non-primitive types
   }
 
-  // Count is the sum of all value counts (not rawValues.length - empty)
-  // This correctly excludes non-primitive values that were skipped
-  const count = [...valueCounts.values()].reduce((acc, c) => acc + c, 0)
   const unique = valueCounts.size
 
   // Sort by count to get top values

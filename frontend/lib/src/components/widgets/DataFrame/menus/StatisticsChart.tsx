@@ -17,6 +17,7 @@
 import { memo, ReactElement, useEffect, useMemo, useRef } from "react"
 
 import { CSSObject, Global } from "@emotion/react"
+import { getLogger } from "loglevel"
 import embed from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 import { TopLevelSpec } from "vega-lite"
@@ -36,6 +37,8 @@ import {
   StyledStatisticsBarValue,
   StyledStatisticsChart,
 } from "./styled-components"
+
+const LOG = getLogger("StatisticsChart")
 
 /**
  * Chart width in pixels. Passed directly to Vega-Lite, which requires absolute
@@ -359,8 +362,11 @@ function StatisticsChart({
             embedResult = result
           }
         })
-        .catch(() => {
-          // Ignore embed errors (e.g., component unmounted during async operation)
+        .catch((error: unknown) => {
+          // Embed errors are expected when the component unmounts mid-render, so
+          // we don't surface them to the user. Log at debug level to keep genuine
+          // spec errors discoverable during development without adding noise.
+          LOG.debug("Failed to embed statistics chart:", error)
         })
     }
 
