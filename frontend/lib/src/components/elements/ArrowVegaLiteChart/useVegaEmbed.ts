@@ -48,6 +48,8 @@ interface UseVegaEmbedOutput {
     datasets: WrappedNamedDataset[]
   ) => Promise<VegaView | null>
   finalizeView: () => void
+  resizeView: (width: number, height: number) => Promise<boolean>
+  isViewReady: boolean
 }
 
 /**
@@ -270,5 +272,34 @@ export function useVegaEmbed(
     [updateData, isCreatingView]
   )
 
-  return { createView, updateView, finalizeView }
+  const resizeView = useCallback(
+    async (width: number, height: number): Promise<boolean> => {
+      if (vegaViewRef.current === null || isCreatingView) {
+        return false
+      }
+      try {
+        if (width > 0) {
+          vegaViewRef.current.width(width)
+        }
+        if (height > 0) {
+          vegaViewRef.current.height(height)
+        }
+        await vegaViewRef.current.resize().runAsync()
+        return true
+      } catch (error) {
+        LOG.warn("Failed to resize Vega view:", error)
+        return false
+      }
+    },
+    [isCreatingView]
+  )
+
+  // Whether the view exists and is not mid-creation, so it's safe to resize.
+  // This is derived from a ref (`vegaViewRef`) rather than state, so it only
+  // reflects the latest value on re-render. That's sufficient here because
+  // `setIsCreatingView` toggles around view creation and forces the re-render
+  // that recomputes this flag once the view becomes ready.
+  const isViewReady = vegaViewRef.current !== null && !isCreatingView
+
+  return { createView, updateView, finalizeView, resizeView, isViewReady }
 }
