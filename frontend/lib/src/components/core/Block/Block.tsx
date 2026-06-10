@@ -20,7 +20,7 @@ import classNames from "classnames"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { BlockNode } from "~lib/AppNode"
+import { BlockNode, ElementNode } from "~lib/AppNode"
 import {
   FlexContext,
   FlexContextProvider,
@@ -232,12 +232,56 @@ export interface BlockPropsWithoutWidth extends BaseBlockProps {
 const LARGE_STRETCH_BEHAVIOR = ["tabContainer"]
 const MEDIUM_STRETCH_BEHAVIOR = ["chatInput"]
 
+/**
+ * Element types that render charts. These use a `LARGE` (14rem) min-stretch
+ * width so they don't render illegibly small (see `ElementNodeRenderer`).
+ */
+const CHART_ELEMENT_TYPES: ReadonlySet<string> = new Set([
+  "vegaLiteChart",
+  "arrowVegaLiteChart",
+  "plotlyChart",
+  "deckGlJsonChart",
+  "graphvizChart",
+  "bokehChart",
+])
+
+/**
+ * Whether a block's subtree contains a chart element.
+ *
+ * Charts hold a larger min-width floor than most elements. A container that
+ * holds a chart must adopt the same floor; otherwise the container can shrink
+ * to its smaller children's min-width (e.g. a metric) while the chart keeps its
+ * floor and overflows the container — for example a metric + trend-line card in
+ * a narrow column.
+ */
+// Exported for testing
+export const blockContainsChart = (node: BlockNode): boolean =>
+  node.children.some(child =>
+    child instanceof BlockNode
+      ? blockContainsChart(child)
+      : child instanceof ElementNode &&
+        CHART_ELEMENT_TYPES.has(child.element.type ?? "")
+  )
+
 export const BlockNodeRenderer = (
   props: BlockPropsWithoutWidth
 ): ReactElement => {
   const { node } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
+
+  // Containers (cards, columns, expanders) holding a chart adopt the chart's
+  // larger min-width so the container stays in sync with the chart and wraps as
+  // a unit instead of letting the chart overflow when the container is squeezed.
+  const isContainerWithChart = useMemo(
+    () =>
+      (node.deltaBlock.type === "flexContainer" ||
+        Boolean(node.deltaBlock.column) ||
+        Boolean(node.deltaBlock.expandable)) &&
+      !node.isEmpty &&
+      blockContainsChart(node),
+    [node]
+  )
 
   let minStretchBehavior: MinFlexElementWidth
   if (LARGE_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
@@ -254,7 +298,7 @@ export const BlockNodeRenderer = (
     node.deltaBlock.expandable
   ) {
     if (!node.isEmpty) {
-      minStretchBehavior = "8rem"
+      minStretchBehavior = isContainerWithChart ? "14rem" : "8rem"
     }
   }
 
