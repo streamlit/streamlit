@@ -307,7 +307,8 @@ password = st.text_input(
   regexes are detected on the frontend after render rather than raised as normal Python exceptions
   during script execution. If the regex pattern is invalid, a visible error is surfaced in the
   input (consistent with `st.column_config.TextColumn`, which displays an "Invalid validate regex"
-  error) and a warning is logged on the backend. Validation is not silently skipped, so developers
+  error) and the issue is logged to the browser console/frontend log. The MVP does not report
+  invalid regex diagnostics back to the backend. Validation is not silently skipped, so developers
   are notified of the broken pattern instead of unintentionally accepting unvalidated input.
 - **Callable exception**: If the callable raises an exception, the value is rejected and the widget
   uses the normal validation error UI with a generic error message. The exception message and
