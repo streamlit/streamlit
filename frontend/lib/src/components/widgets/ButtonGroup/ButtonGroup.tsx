@@ -184,6 +184,22 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     }
   }, [required])
 
+  // When options change and the currently stored value no longer matches any
+  // option (e.g. because format_func changed dynamically due to a language
+  // switch, making the stored formatted strings stale), reset to the proto
+  // default so the widget stays visually consistent. An explicit user
+  // deselection always produces value=[], which short-circuits this guard
+  // immediately, so we never auto-select over a deliberate empty selection.
+  useEffect(() => {
+    if (value.length === 0) return
+    const validIndices = contentStringsToIndices(options, value)
+    if (validIndices.length > 0) return
+    setValueWithSource({
+      value: getDefaultStateFromProto(element),
+      fromUi: false,
+    })
+  }, [options, value, setValueWithSource, element])
+
   const selectionMode =
     clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
       ? "multiple"

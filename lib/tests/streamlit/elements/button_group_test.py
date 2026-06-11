@@ -139,7 +139,13 @@ class TestButtonGroupSerde:
         assert res is None
 
     def test_single_select_deserialize_unknown_value(self):
-        """Test single-select deserialization of unknown value returns string as-is."""
+        """Test single-select deserialization of an unrecognised value returns None.
+
+        When the options mapping doesn't contain the received wire value (e.g.
+        a stale formatted string left over from a previous format_func), the
+        deserializer must not pass that raw string to session_state or callbacks.
+        Without a configured default, the correct fallback is None.
+        """
         options = ["apple", "banana", "cherry"]
         formatted_options = ["Apple", "Banana", "Cherry"]
         formatted_option_to_option_index = {
@@ -152,7 +158,7 @@ class TestButtonGroupSerde:
             format_func=lambda x: x.capitalize(),
         )
         res = serde.deserialize(["Unknown"])
-        assert res == "Unknown"
+        assert res is None
 
     def test_multi_select_serialize(self):
         """Test multi-select serialization returns list of formatted strings."""
@@ -220,7 +226,13 @@ class TestButtonGroupSerde:
         assert res == ["apple", "cherry"]
 
     def test_multi_select_deserialize_unknown_value(self):
-        """Test multi-select deserialization with unknown value includes it as-is."""
+        """Test multi-select deserialization with unknown value silently drops it.
+
+        Stale wire values that don't exist in the current options mapping (e.g.
+        formatted strings from a previous format_func) must be dropped rather
+        than passed through to session_state or callbacks. Known valid values in
+        the same list are still resolved correctly.
+        """
         options = ["apple", "banana", "cherry"]
         formatted_options = ["Apple", "Banana", "Cherry"]
         formatted_option_to_option_index = {
@@ -233,7 +245,94 @@ class TestButtonGroupSerde:
             format_func=lambda x: x.capitalize(),
         )
         res = serde.deserialize(["Apple", "Unknown"])
-        assert res == ["apple", "Unknown"]
+        assert res == ["apple"]
+
+    def test_single_select_deserialize_stale_value_returns_default(self):
+        """Stale wire value with a configured default returns the default option.
+
+        When format_func changes dynamically (e.g. language switch from EN to ES),
+        the frontend may still send the old EN-formatted string such as "apple".
+        With ES options the mapping has no "apple" entry, so the deserializer must
+        fall back to the configured default option to prevent _widget_changed from
+        seeing a spurious change and invoking on_change with the formatted string.
+        """
+        # Simulate ES-mode options: raw keys "A", "B" with ES display strings
+        options = ["A", "B", "C"]
+        formatted_options = ["manzana", "naranja", "cereza"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_index=0,  # "A" / "manzana" is the default
+            format_func=lambda x: {"A": "manzana", "B": "naranja", "C": "cereza"}[x],
+        )
+        # Frontend sends "apple" - a stale EN-formatted string
+        res = serde.deserialize(["apple"])
+        assert res == "A"  # The default option, not the raw "apple" string
+
+    def test_single_select_deserialize_stale_value_no_default_returns_none(self):
+        """Stale wire value without a configured default returns None."""
+        options = ["A", "B", "C"]
+        formatted_options = ["manzana", "naranja", "cereza"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            # No default_option_index configured
+            format_func=lambda x: {"A": "manzana", "B": "naranja", "C": "cereza"}[x],
+        )
+        res = serde.deserialize(["apple"])
+        assert res is None
+
+    def test_multi_select_deserialize_stale_values_are_dropped(self):
+        """Stale multi-select wire values are dropped; valid values are resolved.
+
+        When format_func changes dynamically, the frontend may send a mix of
+        stale formatted strings from the old mapping and strings that happen to
+        match the new mapping. Only the valid ones should survive.
+        """
+        options = ["A", "B", "C"]
+        formatted_options = ["manzana", "naranja", "cereza"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: {"A": "manzana", "B": "naranja", "C": "cereza"}[x],
+        )
+        # "apple" is a stale EN string; "naranja" is valid in the ES mapping
+        res = serde.deserialize(["apple", "naranja"])
+        assert res == ["B"]  # Only the valid ES option is returned
+
+    def test_multi_select_deserialize_all_stale_values_returns_empty(self):
+        """Multi-select with all stale values returns an empty list.
+
+        If every value in the wire payload is stale (none match the current
+        options mapping), the result must be an empty list, not a list of raw
+        formatted strings.
+        """
+        options = ["A", "B", "C"]
+        formatted_options = ["manzana", "naranja", "cereza"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: {"A": "manzana", "B": "naranja", "C": "cereza"}[x],
+        )
+        # Both values are stale EN strings; none match the ES mapping
+        res = serde.deserialize(["apple", "orange"])
+        assert res == []
 
 
 def get_command_matrix(
@@ -1200,6 +1299,99 @@ class TestButtonGroupAppTest:
         at.button_group("sc").select("y").run()
         assert at.button_group("sc").value == "y"
         assert not at.exception
+
+
+class TestDynamicFormatFuncCallback:
+    """Integration tests for on_change callback correctness with dynamic format_func.
+
+    Covers GitHub issue #15493: callbacks should receive the original option value,
+    not the formatted string, even when format_func changes between reruns.
+    """
+
+    def test_callback_not_invoked_after_format_func_change_same_selection(self):
+        """on_change must not fire when format_func changes but selection is unchanged.
+
+        When a language switch changes format_func so that the same underlying
+        option ("A") is now displayed as "manzana" instead of "apple", the widget
+        value hasn't actually changed. The on_change callback must therefore NOT
+        be invoked on the rerun that follows the language switch.
+        """
+
+        def script():
+            import streamlit as st
+
+            lang = st.session_state.get("lang", "en")
+            fmt_en = {"A": "apple", "B": "orange"}
+            fmt_es = {"A": "manzana", "B": "naranja"}
+            fmt = fmt_en if lang == "en" else fmt_es
+
+            if "callback_count" not in st.session_state:
+                st.session_state["callback_count"] = 0
+
+            def on_change() -> None:
+                st.session_state["callback_count"] += 1
+                st.session_state["last_callback_value"] = st.session_state["fruit"]
+
+            st.pills(
+                "Fruit",
+                ["A", "B"],
+                format_func=lambda x: fmt[x],
+                default="A",
+                key="fruit",
+                on_change=on_change,
+            )
+
+        # Initial EN run - widget shows "apple" selected, callback never called
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+        assert at.button_group("fruit").value == "A"
+        assert at.session_state["callback_count"] == 0
+
+        # Switch language to ES without changing the selection
+        at.session_state["lang"] = "es"
+        at = at.run()
+        assert not at.exception
+
+        # The on_change callback must not have fired - only the format changed
+        assert at.session_state["callback_count"] == 0, (
+            "on_change fired unexpectedly after a format_func change with no "
+            f"selection change (callback_count={at.session_state['callback_count']})"
+        )
+        assert at.button_group("fruit").value == "A"
+
+    def test_callback_invoked_with_original_option_when_user_changes_selection(self):
+        """on_change receives the original option value, not the formatted string."""
+
+        def script():
+            import streamlit as st
+
+            lang = st.session_state.get("lang", "es")
+            fmt_es = {"A": "manzana", "B": "naranja"}
+            fmt = fmt_es if lang == "es" else {"A": "apple", "B": "orange"}
+
+            if "last_callback_value" not in st.session_state:
+                st.session_state["last_callback_value"] = None
+
+            def on_change() -> None:
+                st.session_state["last_callback_value"] = st.session_state["fruit"]
+
+            st.pills(
+                "Fruit",
+                ["A", "B"],
+                format_func=lambda x: fmt[x],
+                default="A",
+                key="fruit",
+                on_change=on_change,
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        # User clicks "naranja" (B) - callback should receive "B", not "naranja"
+        at.button_group("fruit").select("B").run()
+        assert not at.exception
+        assert at.session_state["last_callback_value"] == "B"
+        assert at.button_group("fruit").value == "B"
 
 
 class PillsBindQueryParamsTest(DeltaGeneratorTestCase):

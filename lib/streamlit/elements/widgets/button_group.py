@@ -127,7 +127,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
 
         return [formatted_value]
 
-    def deserialize(self, ui_value: list[str] | None) -> T | str | None:
+    def deserialize(self, ui_value: list[str] | None) -> T | None:
         """Deserialize from a list of strings to a single value."""
         if len(self.options) == 0:
             return None
@@ -149,8 +149,15 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         if option_index is not None:
             return self.options[option_index]
 
-        # Value not found in options - return as-is
-        return string_value
+        # Value not found in the current options mapping. This happens when options
+        # or format_func changes dynamically (e.g. a language switch): the frontend
+        # sends a stale wire value from the previous mapping that can't be resolved.
+        # Return the configured default so _widget_changed does not detect a spurious
+        # difference and fire an on_change callback with the formatted string instead
+        # of the original option value.
+        if self.default_option_index is not None:
+            return self.options[self.default_option_index]
+        return None
 
 
 class _MultiSelectButtonGroupSerde(Generic[T]):
@@ -219,9 +226,10 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
             option_index = self.formatted_option_to_option_index.get(v)
             if option_index is not None:
                 values.append(self.options[option_index])
-            else:
-                # Value not found in options - append as-is
-                values.append(v)
+            # Silently drop values not found in the current options mapping.
+            # These are stale wire values from a previous format_func mapping
+            # (e.g. a language switch). validate_and_sync_multiselect_value_with_options
+            # applies the same filter for invalid canonical values.
         return values
 
 
