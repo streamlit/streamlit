@@ -191,6 +191,13 @@ way and the simpler alternatives that were weighed.
 - **Error before the block is entered:** if the script errors after `st.skeleton()` is called
   but before the `with` block starts, the initially-shown skeleton is cleared on the next
   rerun like any other element that is no longer rendered.
+- **Unreserved-space tradeoff:** because `__enter__` clears the skeleton and the transient
+  re-show is delayed by 0.5s (to match `st.spinner()` and avoid flicker on fast blocks),
+  context-manager mode does **not** reserve layout space during that first half second. This
+  is an inherent tension with the anti–layout-shift goal and a key input to the open
+  dual-mode decision in [Alternatives Considered](#alternatives-considered): dropping the
+  0.5s delay (or making it configurable) would reserve space immediately at the cost of
+  flicker on sub-0.5s blocks. Standalone mode is unaffected—it reserves space immediately.
 
 **Dimension behavior:**
 
