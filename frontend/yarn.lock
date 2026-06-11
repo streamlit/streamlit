@@ -3768,7 +3768,7 @@ __metadata:
     numbro: "npm:^2.5.0"
     plotly.js: "npm:^3.6.0"
     postinstall-postinstall: "npm:^2.1.0"
-    protobufjs: "npm:^8.5.0"
+    protobufjs: "npm:^8.6.0"
     query-string: "npm:^9.4.0"
     re-resizable: "npm:^6.11.2"
     react-aria-components: "npm:^1.18.0"
@@ -3822,8 +3822,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@streamlit/protobuf@workspace:protobuf"
   dependencies:
-    protobufjs: "npm:^8.5.0"
-    protobufjs-cli: "npm:^2.5.0"
+    protobufjs: "npm:^8.6.0"
+    protobufjs-cli: "npm:^2.5.1"
     typesync: "npm:^0.14.3"
   languageName: unknown
   linkType: soft
@@ -9568,7 +9568,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"espree@npm:^9.0.0":
+"espree@npm:^9.6.1":
   version: 9.6.1
   resolution: "espree@npm:9.6.1"
   dependencies:
@@ -10460,7 +10460,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"glob@npm:^8.0.0":
+"glob@npm:^8.1.0":
   version: 8.1.0
   resolution: "glob@npm:8.1.0"
   dependencies:
@@ -11945,9 +11945,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jsdoc@npm:^4.0.0":
-  version: 4.0.3
-  resolution: "jsdoc@npm:4.0.3"
+"jsdoc@npm:^4.0.5":
+  version: 4.0.5
+  resolution: "jsdoc@npm:4.0.5"
   dependencies:
     "@babel/parser": "npm:^7.20.15"
     "@jsdoc/salty": "npm:^0.2.1"
@@ -11965,8 +11965,8 @@ __metadata:
     strip-json-comments: "npm:^3.1.0"
     underscore: "npm:~1.13.2"
   bin:
-    jsdoc: ./jsdoc.js
-  checksum: 10c0/0ad7b1fad0c55627809080e3195649c215c5f711d4b718c4cf907d2ac390c571b524077a02d928a2f56fd73dbe439ca2c09fdea6d8af9ca325e0e6c5801fd7cb
+    jsdoc: jsdoc.js
+  checksum: 10c0/8192c234f60c58ee67342eb0532f66118849a921df9486fe15132c9228badb5e1bc7d10233b0821e661ab02e94c045f4cb8c110f6264620aae9b73bee84e1cc5
   languageName: node
   linkType: hard
 
@@ -15155,36 +15155,34 @@ __metadata:
   languageName: node
   linkType: hard
 
-"protobufjs-cli@npm:^2.5.0":
-  version: 2.5.0
-  resolution: "protobufjs-cli@npm:2.5.0"
+"protobufjs-cli@npm:^2.5.1":
+  version: 2.5.1
+  resolution: "protobufjs-cli@npm:2.5.1"
   dependencies:
     chalk: "npm:^4.0.0"
     escodegen: "npm:^1.13.0"
-    espree: "npm:^9.0.0"
+    espree: "npm:^9.6.1"
     estraverse: "npm:^5.1.0"
-    glob: "npm:^8.0.0"
-    jsdoc: "npm:^4.0.0"
+    glob: "npm:^8.1.0"
+    jsdoc: "npm:^4.0.5"
     minimist: "npm:^1.2.8"
-    semver: "npm:^7.1.2"
-    tmp: "npm:^0.2.1"
-    uglify-js: "npm:^3.7.7"
+    tmp: "npm:^0.2.7"
   peerDependencies:
-    protobufjs: ^8.5.0
+    protobufjs: ^8.6.0
   bin:
     pbjs: bin/pbjs
     pbts: bin/pbts
     protoc-gen-pbjs: bin/protoc-gen-pbjs
-  checksum: 10c0/d571d4634ccbf89db0f54cae7e5d739a450fe9be224eeb5ec2167e1552e0d254700868c248581e678c2276a588218ceeff549dbcfe523c5282b84bd3fba05ebf
+  checksum: 10c0/ff0e221ef617c82d6d2c80216fbfdf277c5aacdf6260bbc50a389220d052c2bd5ee13024c2360d3161b34ca6125cf46582a8c4e43529fed57cbdf4404baf6fb6
   languageName: node
   linkType: hard
 
-"protobufjs@npm:^8.5.0":
-  version: 8.5.0
-  resolution: "protobufjs@npm:8.5.0"
+"protobufjs@npm:^8.6.0":
+  version: 8.6.0
+  resolution: "protobufjs@npm:8.6.0"
   dependencies:
     long: "npm:^5.3.2"
-  checksum: 10c0/c35041380624401dd27bb97e056e4d9170184738108c786047791a673305746451361268ec5367def8c88ecd655667b4acf2f4c45f049646dc976dc0169b3fd0
+  checksum: 10c0/7be50ad9ae4f2899b4c93cdf4d032787ba8f84557bd703e504cc13c351d7d4a8c92c9ef7d9e9973d318a8d5a23ece5e3cdd99b9ec2dd0ea275eb41bc1475ee6c
   languageName: node
   linkType: hard
 
@@ -16543,7 +16541,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"semver@npm:^7.1.2, semver@npm:^7.3.5, semver@npm:^7.5.2, semver@npm:^7.5.3, semver@npm:^7.7.0, semver@npm:^7.7.1, semver@npm:^7.7.2, semver@npm:^7.7.3, semver@npm:^7.7.4":
+"semver@npm:^7.3.5, semver@npm:^7.5.2, semver@npm:^7.5.3, semver@npm:^7.7.0, semver@npm:^7.7.1, semver@npm:^7.7.2, semver@npm:^7.7.3, semver@npm:^7.7.4":
   version: 7.7.4
   resolution: "semver@npm:7.7.4"
   bin:
@@ -17625,10 +17623,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tmp@npm:^0.2.1":
-  version: 0.2.5
-  resolution: "tmp@npm:0.2.5"
-  checksum: 10c0/cee5bb7d674bb4ba3ab3f3841c2ca7e46daeb2109eec395c1ec7329a91d52fcb21032b79ac25161a37b2565c4858fefab927af9735926a113ef7bac9091a6e0e
+"tmp@npm:^0.2.7":
+  version: 0.2.7
+  resolution: "tmp@npm:0.2.7"
+  checksum: 10c0/59eb55584f2f07210d3231b6a1f6b5c2b9794d8a7b509c8ee867ed2acad6d2245ee2448b7937b676ffbff3155a70077edde8a69f9d7cf0f90c86a62e8910c357
   languageName: node
   linkType: hard
 
@@ -18006,15 +18004,6 @@ __metadata:
   version: 1.6.3
   resolution: "ufo@npm:1.6.3"
   checksum: 10c0/bf0e4ebff99e54da1b9c7182ac2f40475988b41faa881d579bc97bc2a0509672107b0a0e94c4b8d31a0ab8c4bf07f4aa0b469ac6da8536d56bda5b085ea2e953
-  languageName: node
-  linkType: hard
-
-"uglify-js@npm:^3.7.7":
-  version: 3.19.3
-  resolution: "uglify-js@npm:3.19.3"
-  bin:
-    uglifyjs: bin/uglifyjs
-  checksum: 10c0/83b0a90eca35f778e07cad9622b80c448b6aad457c9ff8e568afed978212b42930a95f9e1be943a1ffa4258a3340fbb899f41461131c05bb1d0a9c303aed8479
   languageName: node
   linkType: hard
 
