@@ -273,6 +273,33 @@ class TestButtonGroupSerde:
         res = serde.deserialize(["apple"])
         assert res == "A"  # The default option, not the raw "apple" string
 
+    def test_single_select_deserialize_stale_value_session_fallback_beats_default(self):
+        """Session-state fallback takes priority over configured default for stale values.
+
+        When the user has selected a non-default option (e.g. "B" while default="A")
+        and format_func changes, the serde must return the user's live selection ("B"),
+        not the configured default ("A"). Returning the default would cause
+        _widget_changed("B", "A") to fire the spurious on_change callback.
+        """
+        options = ["A", "B"]
+        formatted_options = ["manzana", "naranja"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_index=0,  # default is "A"
+            format_func=lambda x: {"A": "manzana", "B": "naranja"}[x],
+            session_state_fallback="B",  # user had "B" selected (non-default)
+        )
+        # Frontend sends stale EN string "orange" (for "B"); should return "B", not "A"
+        res = serde.deserialize(["orange"])
+        assert res == "B", (
+            "Expected session_state_fallback ('B') to take priority over default ('A')"
+        )
+
     def test_single_select_deserialize_stale_value_no_default_returns_none(self):
         """Stale wire value without a configured default returns None."""
         options = ["A", "B", "C"]
@@ -311,6 +338,33 @@ class TestButtonGroupSerde:
         # "apple" is a stale EN string; "naranja" is valid in the ES mapping
         res = serde.deserialize(["apple", "naranja"])
         assert res == ["B"]  # Only the valid ES option is returned
+
+    def test_multi_select_deserialize_all_stale_session_fallback_beats_default(self):
+        """Session-state fallback takes priority over configured default for multi-select.
+
+        When the user has ["A","B"] selected (default is only ["A"]) and format_func
+        changes so all wire values go stale, the serde must return ["A","B"] (the live
+        selection), not ["A"] (the configured default). Returning the default would
+        cause _widget_changed(["A","B"], ["A"]) to fire a spurious on_change callback.
+        """
+        options = ["A", "B", "C"]
+        formatted_options = ["manzana", "naranja", "cereza"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: {"A": "manzana", "B": "naranja", "C": "cereza"}[x],
+            default_option_indices=[0],  # default is ["A"]
+            session_state_fallback=["A", "B"],  # user had A+B selected
+        )
+        # Both wire values are stale EN strings; should return ["A","B"], not ["A"]
+        res = serde.deserialize(["apple", "orange"])
+        assert res == ["A", "B"], (
+            "Expected session_state_fallback (['A','B']) to take priority over default (['A'])"
+        )
 
     def test_multi_select_deserialize_all_stale_values_returns_default(self):
         """Multi-select with all stale values falls back to the configured default.

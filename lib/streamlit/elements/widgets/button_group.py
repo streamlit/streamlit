@@ -155,13 +155,15 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         # Value not found in the current options mapping. This happens when options
         # or format_func changes dynamically (e.g. a language switch): the frontend
         # sends a stale wire value from the previous mapping that can't be resolved.
-        # Return the configured default (or, when no default, the last known
-        # session-state value) so _widget_changed does not detect a spurious
-        # difference and fire an on_change callback.
-        if self.default_option_index is not None:
-            return self.options[self.default_option_index]
+        # Prefer the last known session-state value (the user's live selection) over
+        # the configured default so _widget_changed does not detect a spurious
+        # difference and fire an on_change callback. The session-state value is
+        # always more accurate than the default because it reflects what the user
+        # actually had selected (e.g. user clicked "B" while default was "A").
         if self.session_state_fallback is not None:
             return self.session_state_fallback
+        if self.default_option_index is not None:
+            return self.options[self.default_option_index]
         return None
 
 
@@ -240,15 +242,18 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
             # applies the same filter for invalid canonical values.
 
         # If ui_value was non-empty but every entry was stale (all dropped),
-        # fall back to the configured default (or, when no default, the last
-        # known session-state value) so that _widget_changed sees no difference
-        # and suppresses the spurious on_change callback. This mirrors the
+        # fall back to the last known session-state value (the user's live
+        # selection) or, if none, to the configured default so that
+        # _widget_changed sees no difference and suppresses the spurious
+        # on_change callback. Session-state takes priority over the default
+        # because it reflects what the user actually had selected (e.g. user
+        # had ["A","B"] while default was only ["A"]). This mirrors the
         # single-select behaviour in _SingleSelectButtonGroupSerde.deserialize.
         if not values and ui_value:
-            if self.default_option_indices:
-                return [self.options[i] for i in self.default_option_indices]
             if self.session_state_fallback is not None:
                 return self.session_state_fallback
+            if self.default_option_indices:
+                return [self.options[i] for i in self.default_option_indices]
         return values
 
 
