@@ -56,7 +56,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import BindOption, register_widget
+from streamlit.runtime.state import BindOption, get_session_state, register_widget
 from streamlit.string_util import extract_leading_icon
 
 if TYPE_CHECKING:
@@ -91,6 +91,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_option_index: int | None
     format_func: Callable[[Any], str]
+    session_state_fallback: T | None
 
     def __init__(
         self,
@@ -100,12 +101,14 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
+        session_state_fallback: T | None = None,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
         self.format_func = format_func
+        self.session_state_fallback = session_state_fallback
 
     def serialize(self, v: T | str | None) -> list[str]:
         """Serialize single-select value to a list of strings for wire format."""
@@ -152,11 +155,13 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         # Value not found in the current options mapping. This happens when options
         # or format_func changes dynamically (e.g. a language switch): the frontend
         # sends a stale wire value from the previous mapping that can't be resolved.
-        # Return the configured default so _widget_changed does not detect a spurious
-        # difference and fire an on_change callback with the formatted string instead
-        # of the original option value.
+        # Return the configured default (or, when no default, the last known
+        # session-state value) so _widget_changed does not detect a spurious
+        # difference and fire an on_change callback.
         if self.default_option_index is not None:
             return self.options[self.default_option_index]
+        if self.session_state_fallback is not None:
+            return self.session_state_fallback
         return None
 
 
@@ -172,6 +177,7 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_option_indices: list[int]
     format_func: Callable[[Any], str]
+    session_state_fallback: list[T] | None
 
     def __init__(
         self,
@@ -181,12 +187,14 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_indices: list[int] | None = None,
         format_func: Callable[[Any], str] = str,
+        session_state_fallback: list[T] | None = None,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_indices = default_option_indices or []
         self.format_func = format_func
+        self.session_state_fallback = session_state_fallback
 
     def serialize(self, value: list[T | str] | list[T] | None) -> list[str]:
         """Serialize multi-select values to list of strings for wire format."""
@@ -232,14 +240,15 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
             # applies the same filter for invalid canonical values.
 
         # If ui_value was non-empty but every entry was stale (all dropped),
-        # fall back to the configured default so that _widget_changed sees no
-        # difference and suppresses the spurious on_change callback. This mirrors
-        # the single-select behaviour in _SingleSelectButtonGroupSerde.deserialize.
-        # When no default is configured, default_option_indices is [], which
-        # returns [] - matching the initial stored value and still suppressing
-        # the callback.
+        # fall back to the configured default (or, when no default, the last
+        # known session-state value) so that _widget_changed sees no difference
+        # and suppresses the spurious on_change callback. This mirrors the
+        # single-select behaviour in _SingleSelectButtonGroupSerde.deserialize.
         if not values and ui_value:
-            return [self.options[i] for i in self.default_option_indices]
+            if self.default_option_indices:
+                return [self.options[i] for i in self.default_option_indices]
+            if self.session_state_fallback is not None:
+                return self.session_state_fallback
         return values
 
 
@@ -1014,6 +1023,31 @@ class ButtonGroupMixin:
             # behavior to mirror radio/selectbox/multiselect.
             formatted_option_to_option_index[formatted] = index
 
+        # Look up the currently-stored session-state value to use as a stale-wire
+        # fallback in the serde. When format_func changes dynamically and no default
+        # is configured, deserialize would otherwise return None/[] for stale wire
+        # values, causing _widget_changed to fire a spurious on_change callback.
+        # Using the last known valid value as a fallback keeps the comparison equal.
+        _ss_fallback_single: V | None = None
+        _ss_fallback_multi: list[V] | None = None
+        if key is not None:
+            try:
+                _ss = get_session_state()
+                if key in _ss:
+                    _ss_val = _ss[key]
+                    if selection_mode == "single":
+                        if _ss_val is not None and _ss_val in indexable_options:
+                            _ss_fallback_single = cast("V", _ss_val)
+                    elif isinstance(_ss_val, list):
+                        _valid = cast(
+                            "list[V]",
+                            [v for v in _ss_val if v in indexable_options],
+                        )
+                        if _valid:
+                            _ss_fallback_multi = _valid
+            except Exception:  # noqa: S110
+                pass  # Defensive: never let SS lookup break widget rendering
+
         # Create appropriate serde based on selection mode
         serializer: WidgetSerializer[Any]
         deserializer: WidgetDeserializer[Any]
@@ -1024,6 +1058,7 @@ class ButtonGroupMixin:
                 formatted_option_to_option_index=formatted_option_to_option_index,
                 default_option_indices=default_values,
                 format_func=actual_format_func,
+                session_state_fallback=_ss_fallback_multi,
             )
             serializer = multi_serde.serialize
             deserializer = multi_serde.deserialize
@@ -1034,6 +1069,7 @@ class ButtonGroupMixin:
                 formatted_option_to_option_index=formatted_option_to_option_index,
                 default_option_index=default_values[0] if default_values else None,
                 format_func=actual_format_func,
+                session_state_fallback=_ss_fallback_single,
             )
             serializer = single_serde.serialize
             deserializer = single_serde.deserialize
