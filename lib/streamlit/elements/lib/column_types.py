@@ -19,17 +19,20 @@ from __future__ import annotations
 
 import datetime
 import itertools
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict, overload
 
 from typing_extensions import NotRequired
 
 from streamlit.elements.lib.color_util import is_css_color_like
-from streamlit.errors import StreamlitValueError
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_material_icon
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
+
+    from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
 
 NumberFormat: TypeAlias = Literal[
     "plain",
@@ -69,6 +72,7 @@ ColumnType: TypeAlias = Literal[
     "date",
     "time",
     "link",
+    "button",
     "line_chart",
     "bar_chart",
     "area_chart",
@@ -79,6 +83,8 @@ ColumnType: TypeAlias = Literal[
     "multiselect",
     "json",
 ]
+
+ButtonType: TypeAlias = Literal["primary", "secondary", "tertiary"]
 
 # Themeable colors supported in the theme config:
 ThemeColor: TypeAlias = Literal[
@@ -249,6 +255,27 @@ class JsonColumnConfig(TypedDict):
     type: Literal["json"]
 
 
+class ButtonColumnConfig(TypedDict):
+    type: Literal["button"]
+    button_type: NotRequired[ButtonType | None]
+
+
+@dataclass(frozen=True)
+class ButtonColumnResult:
+    """Wrapper holding serializable config and callback references for ButtonColumn.
+
+    ButtonColumn returns this when ``key`` is provided, allowing the caller to
+    extract both the JSON-serializable column config and the Python callback
+    references that need separate handling.
+    """
+
+    config: ColumnConfig
+    on_click: WidgetCallback | None = None
+    args: WidgetArgs | None = None
+    kwargs: WidgetKwargs | None = None
+    key: str | None = None
+
+
 class ColumnConfig(TypedDict, total=False):
     """Configuration options for columns in ``st.dataframe`` and ``st.data_editor``.
 
@@ -351,6 +378,7 @@ class ColumnConfig(TypedDict, total=False):
         | VideoColumnConfig
         | MultiselectColumnConfig
         | JsonColumnConfig
+        | ButtonColumnConfig
         | None
     )
 
@@ -3091,3 +3119,230 @@ def JsonColumn(
         alignment=alignment,
         type_config=JsonColumnConfig(type="json"),
     )
+
+
+@overload
+def ButtonColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
+    type: ButtonType = "secondary",
+    on_click: WidgetCallback | None = None,
+    args: WidgetArgs | None = None,
+    kwargs: WidgetKwargs | None = None,
+    key: str,
+) -> ButtonColumnResult: ...
+
+
+@overload
+def ButtonColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
+    type: ButtonType = "secondary",
+    on_click: None = None,
+    args: None = None,
+    kwargs: None = None,
+    key: None = None,
+) -> ColumnConfig: ...
+
+
+@gather_metrics("column_config.ButtonColumn")
+def ButtonColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
+    type: ButtonType = "secondary",
+    on_click: WidgetCallback | None = None,
+    args: WidgetArgs | None = None,
+    kwargs: WidgetKwargs | None = None,
+    key: str | None = None,
+) -> ButtonColumnResult | ColumnConfig:
+    """Configure a button column in ``st.dataframe`` or ``st.data_editor``.
+
+    Button columns display clickable buttons in each cell, enabling row-level
+    actions with Python callbacks. The cell values determine the button labels.
+    This command needs to be used in the ``column_config`` parameter of
+    ``st.dataframe`` or ``st.data_editor``. Button columns are always read-only—
+    in ``st.data_editor``, the underlying cell values cannot be edited, but
+    button clicks still trigger callbacks.
+
+    Parameters
+    ----------
+    label : str or None
+        The label shown at the top of the column. If this is ``None``
+        (default), the column name is used.
+
+    width : "small", "medium", "large", int, or None
+        The display width of the column. If this is ``None`` (default), the
+        column will be sized to fit the cell contents. Otherwise, this can be
+        one of the following:
+
+        - ``"small"``: 75px wide
+        - ``"medium"``: 200px wide
+        - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
+
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
+
+    pinned : bool or None
+        Whether the column is pinned. A pinned column will stay visible on the
+        left side no matter where the user scrolls. If this is ``None``
+        (default), Streamlit will decide: index columns are pinned, and data
+        columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of the button within the cell. If this is
+        ``None`` (default), buttons are centered.
+
+    type : "primary", "secondary", or "tertiary"
+        An optional string that specifies the button type. This can be one of
+        the following:
+
+        - ``"primary"``: The button's background is the app's primary color
+          for additional emphasis.
+        - ``"secondary"`` (default): The button's background coordinates
+          with the app's background color for normal emphasis.
+        - ``"tertiary"``: The button is plain text without a border or
+          background for subtlety.
+
+    on_click : callable or None
+        An optional callback invoked when a button is clicked. By default, the
+        callback receives no arguments. Use ``args`` and ``kwargs`` to pass
+        extra arguments. The click information is also available in
+        ``st.session_state[key]`` during the callback.
+
+    args : tuple or None
+        An optional tuple of args to pass to the callback.
+
+    kwargs : dict or None
+        An optional dict of kwargs to pass to the callback.
+
+    key : str or None
+        A session state key for the click trigger value. When a button is
+        clicked, the click information is stored under this key in Session
+        State as a dictionary-like object with ``row`` (int) and ``label``
+        (str) entries that support both key and attribute notation. For
+        example, if ``key="my_click"``, you can access the clicked row with
+        ``st.session_state.my_click.row`` or
+        ``st.session_state["my_click"]["row"]``. The value is only present
+        during the rerun triggered by the click; it resets to ``None`` on
+        subsequent reruns.
+
+        ``key`` is required to enable button clicks and callbacks.
+
+    Examples
+    --------
+    **Example 1: Basic button column with callback**
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> df = pd.DataFrame(
+    ...     {
+    ...         "name": ["Alice", "Bob", "Charlie"],
+    ...         "view": [":material/visibility: View"] * 3,
+    ...     }
+    ... )
+    >>>
+    >>> def handle_view():
+    ...     click = st.session_state.view_click
+    ...     st.toast(f"Viewing row {click['row']}: {df.iloc[click['row']]['name']}")
+    >>>
+    >>> st.dataframe(
+    ...     df,
+    ...     column_config={
+    ...         "view": st.column_config.ButtonColumn(
+    ...             "", type="tertiary", on_click=handle_view, key="view_click"
+    ...         ),
+    ...     },
+    ...     hide_index=True,
+    ... )
+
+    **Example 2: Multi-action dropdown**
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> df = pd.DataFrame(
+    ...     {
+    ...         "name": ["Alice", "Bob", "Charlie"],
+    ...         "actions": [
+    ...             [":material/edit: Edit", ":material/delete: Delete"],
+    ...             [":material/edit: Edit", ":material/delete: Delete"],
+    ...             [":material/edit: Edit"],
+    ...         ],
+    ...     }
+    ... )
+    >>>
+    >>> def handle_action():
+    ...     click = st.session_state.action_click
+    ...     if "Delete" in click["label"]:
+    ...         st.warning(f"Deleting row {click['row']}")
+    ...     elif "Edit" in click["label"]:
+    ...         st.info(f"Editing row {click['row']}")
+    >>>
+    >>> st.dataframe(
+    ...     df,
+    ...     column_config={
+    ...         "actions": st.column_config.ButtonColumn(
+    ...             "Actions", on_click=handle_action, key="action_click"
+    ...         ),
+    ...     },
+    ... )
+
+    .. note::
+        Button columns are always read-only. In ``st.data_editor``, the underlying
+        cell values cannot be edited, but button clicks still trigger callbacks.
+    """
+    config: ColumnConfig = ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        pinned=pinned,
+        alignment=alignment,
+        disabled=True,  # Button columns are always read-only
+        type_config=ButtonColumnConfig(
+            type="button",
+            button_type=type,
+        ),
+    )
+
+    # If key is specified, return wrapper with callback refs for widget registration
+    if key is not None:
+        return ButtonColumnResult(
+            config=config,
+            on_click=on_click,
+            args=args,
+            kwargs=kwargs,
+            key=key,
+        )
+
+    # Raise an error if callbacks are provided without a key
+    if on_click is not None or args is not None or kwargs is not None:
+        raise StreamlitAPIException(
+            "The `key` parameter is required when using `on_click`, `args`, or `kwargs` "
+            "with `ButtonColumn`. Please provide a unique `key` for the button column "
+            "to enable callback functionality."
+        )
+
+    return config

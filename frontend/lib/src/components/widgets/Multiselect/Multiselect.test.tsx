@@ -933,6 +933,49 @@ describe("Multiselect widget", () => {
       expect(screen.getByText("Select all")).toBeInTheDocument()
       expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
     })
+
+    it("does not show Select all when there are >= 1000 options", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 1000 }, (_, i) => `option_${i}`)
+      const props = getProps({ default: [], options })
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+      // Options should still be visible
+      expect(screen.getByText("option_0")).toBeVisible()
+    })
+
+    it("does not show Select X matches when there are >= 1000 options", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 1000 }, (_, i) => `option_${i}`)
+      const props = getProps({ default: [], options })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.click(multiSelect)
+      // Search for options matching "option_1" (this will match option_1, option_10-19, option_100-199, etc.)
+      await user.type(multiSelect, "option_1")
+
+      // "Select X matches" should NOT be shown for >= 1000 total options
+      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
+      // But matching options should still be visible (use queryAllBy since multiple match)
+      expect(screen.queryAllByText(/option_1/).length).toBeGreaterThan(0)
+    })
+
+    it("shows Select all when there are less than 1000 options", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 999 }, (_, i) => `option_${i}`)
+      const props = getProps({ default: [], options })
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      expect(screen.getByText("Select all")).toBeVisible()
+    })
   })
 })
 

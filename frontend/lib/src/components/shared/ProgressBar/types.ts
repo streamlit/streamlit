@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
-
-export const StyledTextInput = styled.div`
-  position: relative;
-`
+export enum Size {
+  EXTRASMALL = "xs",
+  SMALL = "sm",
+}

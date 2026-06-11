@@ -14,6 +14,7 @@
 
 import time
 
+import altair as alt
 import numpy as np
 import pandas as pd
 
@@ -207,6 +208,33 @@ def dialog_with_chart() -> None:
 
 if st.button("Open Chart Dialog"):
     dialog_with_chart()
+
+
+@st.dialog("Dialog with layered chart")
+def dialog_with_layered_chart() -> None:
+    df = pd.DataFrame(
+        {
+            "x": list(range(1, 11)),
+            "y": list(range(5, 15)),
+            "y2": list(range(1, 11)),
+            "kpi": ["kpi1"] * 10,
+        }
+    )
+    chart1 = (
+        alt.Chart(df)
+        .mark_area()
+        .encode(x="x", y="y2", color="kpi", tooltip=["x", "y2"])
+    )
+    chart2 = (
+        alt.Chart(df)
+        .mark_line(point=alt.OverlayMarkDef(size=80))
+        .encode(x="x", y="y", color="kpi", tooltip=["x", "y"])
+    )
+    st.altair_chart(alt.layer(chart1, chart2).interactive())
+
+
+if st.button("Open Layered Chart Dialog"):
+    dialog_with_layered_chart()
 
 
 @st.dialog("Dialog with dataframe")

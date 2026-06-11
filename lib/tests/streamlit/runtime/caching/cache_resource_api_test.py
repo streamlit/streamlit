@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import threading
 import unittest
-from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -33,24 +32,13 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
-from streamlit.vendor.pympler.asizeof import asizeof
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
     ELEMENT_PRODUCER,
     NON_WIDGET_ELEMENTS,
     WIDGET_ELEMENTS,
 )
-from tests.streamlit.runtime.caching.common_cache_test import (
-    as_cached_result as _as_cached_result,
-)
-from tests.testutil import create_mock_script_run_ctx
-
-if TYPE_CHECKING:
-    from streamlit.runtime.caching.cached_message_replay import CachedResult
-
-
-def as_cached_result(value: Any) -> CachedResult:
-    return _as_cached_result(value)
+from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 
 class CacheResourceTest(unittest.TestCase):
@@ -348,7 +336,7 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
     def test_no_stats(self):
         assert get_resource_cache_stats_provider().get_stats() == {}
 
-    def test_multiple_stats(self):
+    def test_multiple_stats_use_fast_proxy_by_default(self):
         @st.cache_resource(show_spinner=False)
         def foo(count):
             return [3.14] * count
@@ -369,23 +357,62 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
             CacheStat(
                 category_name="st_cache_resource",
                 cache_name=foo_cache_name,
-                byte_length=(
-                    get_byte_length(as_cached_result([3.14]))
-                    + get_byte_length(as_cached_result([3.14] * 53))
-                ),
+                byte_length=2,
             ),
             CacheStat(
                 category_name="st_cache_resource",
                 cache_name=bar_cache_name,
-                byte_length=get_byte_length(as_cached_result(bar())),
+                byte_length=1,
             ),
         ]
 
-        # The order of these is non-deterministic, so check Set equality
-        # instead of List equality
-        stats_dict = get_resource_cache_stats_provider().get_stats()
+        with patch(
+            "streamlit.runtime.stats.safe_sizeof",
+            side_effect=AssertionError("safe_sizeof should not be called"),
+        ):
+            stats_dict = get_resource_cache_stats_provider().get_stats()
+
         assert CACHE_MEMORY_FAMILY in stats_dict
         assert set(expected) == set(stats_dict[CACHE_MEMORY_FAMILY])
+
+    def test_multiple_stats(self):
+        with patch_config_options({"server.enableExpensiveMemoryStats": True}):
+
+            @st.cache_resource(show_spinner=False)
+            def foo(count):
+                return [3.14] * count
+
+            @st.cache_resource(show_spinner=False)
+            def bar():
+                return threading.Lock()
+
+            foo(1)
+            foo(53)
+            bar()
+            bar()
+
+            foo_cache_name = f"{foo.__module__}.{foo.__qualname__}"
+            bar_cache_name = f"{bar.__module__}.{bar.__qualname__}"
+
+            expected = [
+                CacheStat(
+                    category_name="st_cache_resource",
+                    cache_name=foo_cache_name,
+                    byte_length=84,
+                ),
+                CacheStat(
+                    category_name="st_cache_resource",
+                    cache_name=bar_cache_name,
+                    byte_length=42,
+                ),
+            ]
+
+            # The order of these is non-deterministic, so check Set equality
+            # instead of List equality
+            with patch("streamlit.runtime.stats.safe_sizeof", return_value=42):
+                stats_dict = get_resource_cache_stats_provider().get_stats()
+            assert CACHE_MEMORY_FAMILY in stats_dict
+            assert set(expected) == set(stats_dict[CACHE_MEMORY_FAMILY])
 
 
 class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
@@ -536,8 +563,3 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
             first_element.height_config.pixel_height
             == second_element.height_config.pixel_height
         ), "Height config should be identical between original and replayed elements"
-
-
-def get_byte_length(value: Any) -> int:
-    """Return the byte length of the pickled value."""
-    return asizeof(value)

@@ -19,12 +19,16 @@ SHELL=/bin/bash
 INSTALL_DEV_REQS ?= true
 INSTALL_TEST_REQS ?= true
 INSTALL_PLAYWRIGHT ?= true
+INSTALL_PLAYWRIGHT_DEPS ?= auto
 # Flags:
 #  - INSTALL_DEV_REQS: install dev requirements (default: true)
 #  - INSTALL_TEST_REQS: install test requirements (default: true)
 #  - INSTALL_PLAYWRIGHT: install Playwright browsers during python-init (default: true)
 #    CI uses a dedicated action to install browsers and typically sets this to false.
 #    Local dev can opt out when not needed: `INSTALL_PLAYWRIGHT=false make init`
+#  - INSTALL_PLAYWRIGHT_DEPS: install Playwright OS-level system deps (default: auto)
+#    `auto` runs --with-deps on Debian, Ubuntu, and macOS only. Use `true` to force
+#    it everywhere, or `false` to skip it (browsers still install in either case).
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 MIN_PROTOC_VERSION = 3.20
 
@@ -121,6 +125,10 @@ protobuf:
 		proto/streamlit/proto/*.proto
 
 	@# JS/TS protobuf generation
+	@if [ ! -d "frontend/node_modules" ]; then \
+		echo "frontend/node_modules not found. Running 'make frontend-init' first..."; \
+		$(MAKE) frontend-init; \
+	fi
 	cd frontend/ ; yarn workspace @streamlit/protobuf run generate-protobuf
 
 .PHONY: protobuf-lint
@@ -158,7 +166,15 @@ python-init:
 	fi
 	@# Install playwright if requested
 	@if [ "${INSTALL_TEST_REQS}" = "true" ] && [ "${INSTALL_PLAYWRIGHT}" = "true" ]; then \
-		uv run python -m playwright install --with-deps; \
+		if [ "${INSTALL_PLAYWRIGHT_DEPS}" = "false" ]; then \
+			uv run python -m playwright install; \
+		elif [ "${INSTALL_PLAYWRIGHT_DEPS}" = "true" ] || [ -f /etc/debian_version ] || [ "$$(uname)" = "Darwin" ]; then \
+			uv run python -m playwright install --with-deps; \
+		else \
+			echo "Skipping 'playwright install --with-deps': not officially supported on this OS."; \
+			echo "Browsers will be downloaded. Install browser system libraries through your distro's package manager (see CONTRIBUTING.md)."; \
+			uv run python -m playwright install; \
+		fi; \
 	fi
 
 .PHONY: python-lint

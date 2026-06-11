@@ -18,6 +18,7 @@ import { MouseEvent, ReactNode } from "react"
 
 import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
+import { ToggleButton, ToggleButtonGroup } from "react-aria-components"
 
 import type { EmotionTheme } from "~lib/theme/types"
 
@@ -589,4 +590,201 @@ export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   fontFamily: "inherit",
   lineHeight: theme.lineHeights.tight,
   letterSpacing: "0.01em",
+}))
+
+// --- React Aria ToggleButtonGroup styled components ---
+// Used by ButtonGroup.tsx (st.pills and st.segmented_control).
+// State is driven by React Aria data attributes ([data-selected], [data-hovered],
+// [data-focus-visible], [data-disabled]) rather than swapping BaseButtonKind variants.
+
+export const StyledToggleButtonGroup = styled(ToggleButtonGroup)<{
+  $isPills: boolean
+  $containerWidth: boolean
+}>(({ theme, $isPills, $containerWidth }) => {
+  const baseStyle = {
+    display: "flex",
+    flexWrap: "wrap" as const,
+    maxWidth: $containerWidth ? "100%" : "fit-content",
+    margin: 0,
+  }
+  const width = $containerWidth ? "100%" : "auto"
+  if ($isPills) {
+    return {
+      ...baseStyle,
+      columnGap: theme.spacing.twoXS,
+      rowGap: theme.spacing.twoXS,
+      width,
+    }
+  }
+  return {
+    ...baseStyle,
+    columnGap: theme.spacing.none,
+    rowGap: theme.spacing.twoXS,
+    width,
+  }
+})
+
+const StyledBaseToggleButton = styled(ToggleButton)(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontWeight: theme.fontWeights.normal,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  background: theme.colors.bgColor,
+  fontSize: theme.fontSizes.sm,
+  lineHeight: theme.lineHeights.base,
+  height: theme.sizes.largeLogoHeight,
+  minHeight: theme.sizes.largeLogoHeight,
+  maxWidth: theme.sizes.contentMaxWidth,
+  cursor: "pointer",
+  userSelect: "none" as const,
+  whiteSpace: "nowrap" as const,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  "&:focus": {
+    outline: "none",
+  },
+  "&[data-focus-visible]": {
+    boxShadow: theme.shadows.focusRing,
+  },
+  "&:is([data-hovered],[data-focus-visible]):not([data-disabled])": {
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+  "&[data-disabled]": {
+    borderColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.transparent,
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
+  },
+  "& div": {
+    textOverflow: "ellipsis",
+    overflow: "hidden",
+  },
+  "& p": {
+    textOverflow: "ellipsis",
+    overflow: "hidden",
+  },
+}))
+
+export const StyledPillsToggleButton = styled(StyledBaseToggleButton)<{
+  $containerWidth: boolean
+}>(({ theme, $containerWidth }) => ({
+  borderRadius: theme.radii.full,
+  padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
+  flex: $containerWidth ? "1 1 fit-content" : undefined,
+  "&[data-selected]:not([data-disabled])": {
+    backgroundColor: transparentize(theme.colors.primary, 0.9),
+    borderColor: theme.colors.primary,
+    color: theme.colors.primary,
+  },
+  "&[data-selected]:is([data-hovered],[data-focus-visible]):not([data-disabled])":
+    {
+      backgroundColor: transparentize(theme.colors.primary, 0.8),
+      borderColor: theme.colors.primary,
+      color: theme.colors.primary,
+    },
+  "&[data-selected][data-disabled]": {
+    borderColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.fadedText05,
+    color: theme.colors.fadedText40,
+  },
+}))
+
+// Segmented control border model: neighboring buttons overlap by 1 border width.
+// Active/interactive buttons are "raised" and own shared borders to avoid double seams.
+//
+// Two sets of selectors are defined:
+//   SC_SIBLING_*  — used on the sibling (right) side of `+` and `:has()` rules, where
+//                   the full `button[data-variant='segmented_control']` type prefix is
+//                   required to scope the rule to segmented-control buttons.
+//   SC_SELF_*     — used on the current-element (&) side of rules. Emotion replaces `&`
+//                   with the generated class, so `&button[...]` would produce an invalid
+//                   compound selector like `.css-abcbutton[...]`. Omit the button-type
+//                   prefix here; the data-variant attribute is on the element itself.
+const SC_SIBLING_BTN = "button[data-variant='segmented_control']"
+const SC_SIBLING_ACTIVE = `${SC_SIBLING_BTN}[data-selected]:not([data-disabled])`
+const SC_SIBLING_INACTIVE = `${SC_SIBLING_BTN}:not([data-disabled])`
+const SC_SIBLING_INTERACTIVE = `${SC_SIBLING_BTN}:not([data-disabled]):is([data-hovered],[data-focus-visible])`
+// SC_SIBLING_NEUTRAL excludes selected buttons so the hover rule never
+// hides the primary border of a selected neighbor (active+hover adjacency).
+const SC_SIBLING_NEUTRAL = `${SC_SIBLING_BTN}:not([data-selected]):not([data-disabled]):not([data-hovered]):not([data-focus-visible])`
+
+const SC_SELF_ACTIVE = "[data-selected]:not([data-disabled])"
+// SC_SELF_INACTIVE and SC_SELF_NEUTRAL are used on the self (&) side of :has()
+// rules, which determine when a button should *defer* its border to an
+// adjacent neighbor. Active/selected buttons own all their own borders, so
+// they must be excluded — otherwise the :has() rule would make a selected
+// button hide its right border when its right neighbor is also selected,
+// causing the inner border between two adjacent selected segments to vanish.
+const SC_SELF_INACTIVE = ":not([data-selected]):not([data-disabled])"
+const SC_SELF_INTERACTIVE =
+  ":not([data-disabled]):is([data-hovered],[data-focus-visible])"
+const SC_SELF_NEUTRAL =
+  ":not([data-selected]):not([data-disabled]):not([data-hovered]):not([data-focus-visible])"
+
+export const StyledSegmentedControlToggleButton = styled(
+  StyledBaseToggleButton
+)<{
+  $containerWidth: boolean
+}>(({ theme, $containerWidth }) => ({
+  padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
+  borderRadius: "0",
+  flex: $containerWidth ? "1 1 fit-content" : undefined,
+  maxWidth: "100%",
+  marginRight: `-${theme.sizes.borderWidth}`,
+
+  "&:first-child": {
+    borderTopLeftRadius: theme.radii.button,
+    borderBottomLeftRadius: theme.radii.button,
+  },
+  "&:last-child": {
+    borderTopRightRadius: theme.radii.button,
+    borderBottomRightRadius: theme.radii.button,
+    marginRight: theme.spacing.none,
+  },
+
+  // Raised segments render above neutral neighbors.
+  [`&[data-selected]:not([data-disabled]), &:not([data-disabled]):is([data-hovered],[data-focus-visible])`]:
+    {
+      zIndex: theme.zIndices.priority,
+    },
+
+  // Active has strongest precedence: keep its border visible against both neutral and interactive neighbors.
+  [`&${SC_SELF_ACTIVE} + ${SC_SIBLING_INACTIVE}`]: {
+    borderLeftColor: theme.colors.transparent,
+  },
+  [`&${SC_SELF_INACTIVE}:has(+ ${SC_SIBLING_ACTIVE})`]: {
+    borderRightColor: theme.colors.transparent,
+  },
+
+  // Hover/focus ownership is only applied between neutral neighbors so we
+  // never hide the active border in active+hover adjacency.
+  [`&${SC_SELF_INTERACTIVE} + ${SC_SIBLING_NEUTRAL}`]: {
+    borderLeftColor: theme.colors.transparent,
+  },
+  [`&${SC_SELF_NEUTRAL}:has(+ ${SC_SIBLING_INTERACTIVE})`]: {
+    borderRightColor: theme.colors.transparent,
+  },
+
+  "&[data-focus-visible]": {
+    zIndex: theme.zIndices.priority,
+  },
+
+  "&[data-selected]:not([data-disabled])": {
+    backgroundColor: transparentize(theme.colors.primary, 0.9),
+    borderColor: theme.colors.primary,
+    color: theme.colors.primary,
+    zIndex: theme.zIndices.priority,
+  },
+  "&[data-selected]:is([data-hovered],[data-focus-visible]):not([data-disabled])":
+    {
+      backgroundColor: transparentize(theme.colors.primary, 0.8),
+      borderColor: theme.colors.primary,
+      color: theme.colors.primary,
+    },
+  "&[data-selected][data-disabled]": {
+    borderColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.fadedText05,
+    color: theme.colors.fadedText40,
+  },
 }))

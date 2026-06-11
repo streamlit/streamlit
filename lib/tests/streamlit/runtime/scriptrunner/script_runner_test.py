@@ -33,11 +33,15 @@ from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
-from streamlit.runtime.fragment import MemoryFragmentStorage, _fragment
+from streamlit.runtime.fragment import (
+    MemoryFragmentStorage,
+    _fragment,
+)
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
+from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
 from streamlit.runtime.scriptrunner import (
     RerunData,
     RerunException,
@@ -45,7 +49,12 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunnerEvent,
     StopException,
 )
+from streamlit.runtime.scriptrunner import script_runner as script_runner_module
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+from streamlit.runtime.scriptrunner.script_runner import (
+    _clean_problem_modules,
+    _log_if_error,
+)
 from streamlit.runtime.scriptrunner_utils.script_requests import (
     ScriptRequest,
     ScriptRequests,
@@ -59,6 +68,8 @@ from streamlit.runtime.state.session_state import SessionState
 from tests import testutil
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.proto.Delta_pb2 import Delta
     from streamlit.proto.Element_pb2 import Element
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -440,14 +451,14 @@ class ScriptRunnerTest(unittest.TestCase):
         def run_inner() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
 
         inner = MagicMock(side_effect=run_inner)
 
         def rerender_outer() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
             scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )
@@ -475,7 +486,7 @@ class ScriptRunnerTest(unittest.TestCase):
         def rerender_middle() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("grandchild")
+            ctx.shared.new_fragment_ids.check_and_add("grandchild")
             scriptrunner._fragment_storage.register(
                 "grandchild", grandchild, parent_fragment_id="middle"
             )
@@ -486,7 +497,7 @@ class ScriptRunnerTest(unittest.TestCase):
         def rerender_outer() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("middle")
+            ctx.shared.new_fragment_ids.check_and_add("middle")
             scriptrunner._fragment_storage.register(
                 "middle", middle, parent_fragment_id="outer"
             )
@@ -529,7 +540,7 @@ class ScriptRunnerTest(unittest.TestCase):
         def rerender_outer() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
             scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )
@@ -556,7 +567,7 @@ class ScriptRunnerTest(unittest.TestCase):
         def rerun_outer() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
             scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )
@@ -609,6 +620,9 @@ class ScriptRunnerTest(unittest.TestCase):
         """
 
         ctx = MagicMock()
+        # Set to None to prevent MagicMock being returned, which would
+        # cause the test to fail with TypeError instead of KeyError.
+        ctx.parallel_coordinator.worker_exception = None
         patched_get_script_run_ctx.return_value = ctx
 
         def non_optional_func():
@@ -1237,6 +1251,102 @@ class ScriptRunnerTest(unittest.TestCase):
                 ],
             )
 
+    def test_parallel_coordinator_is_fresh_per_run(self):
+        """Each script run constructs a brand new
+        ParallelFragmentCoordinator. A leaked instance would carry the
+        previous run's stop event / worker exception into the next run.
+
+        ``coordinator_id_capture.py`` calls ``st.rerun()`` once so the
+        runner does two full runs in a single start/join cycle —
+        back-to-back ``request_rerun`` calls coalesce.
+        """
+        scriptrunner = TestScriptRunner("coordinator_id_capture.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        ids = scriptrunner._session_state["coordinator_ids"]
+        assert len(ids) == 2
+        assert ids[0] != ids[1]
+
+    def test_parallel_coordinator_join_called_after_exec(self):
+        """The script runner must call ``coordinator.join()`` exactly once
+        after a successful full-app run, before clearing fragment storage."""
+        join_calls: list[int] = []
+        original_join = ParallelFragmentCoordinator.join
+
+        def recording_join(self):
+            join_calls.append(1)
+            return original_join(self)
+
+        with patch.object(ParallelFragmentCoordinator, "join", recording_join):
+            scriptrunner = TestScriptRunner("good_script.py")
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        assert len(join_calls) == 1
+
+    def test_parallel_coordinator_drain_on_rerun_exception(self):
+        """When ``exec()`` raises RerunException (e.g. user code calls
+        ``st.rerun()``), the script runner's try/except must call
+        ``coordinator.drain()`` and re-raise so the rerun loop sees the
+        exception and runs the script again."""
+        drain_calls: list[int] = []
+        original_drain = ParallelFragmentCoordinator.drain
+
+        def recording_drain(self):
+            drain_calls.append(1)
+            return original_drain(self)
+
+        with patch.object(ParallelFragmentCoordinator, "drain", recording_drain):
+            scriptrunner = TestScriptRunner("rerun_once_then_finish.py")
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        # The first run's st.rerun() raises RerunException -> drain() runs once.
+        # The second run completes normally -> no drain call.
+        assert len(drain_calls) == 1
+        # Two SCRIPT_STARTED events confirm the rerun was honored.
+        started_events = [
+            e for e in scriptrunner.events if e == ScriptRunnerEvent.SCRIPT_STARTED
+        ]
+        assert len(started_events) == 2
+
+    @patch("streamlit.runtime.scriptrunner.script_runner.get_script_run_ctx")
+    def test_script_thread_yield_check_worker_exception_wins_over_request(
+        self, patched_get_script_run_ctx
+    ):
+        """On the script-thread branch, a stored worker exception is
+        re-raised before any external RERUN/STOP request from
+        ``ScriptRequests`` is dequeued. The worker's RerunData is preserved
+        so the rerun loop honors the worker's intent, not the external
+        request that arrived concurrently.
+        """
+        worker_rerun_data = RerunData(query_string="from_worker")
+        worker_exc = RerunException(worker_rerun_data)
+
+        ctx = MagicMock()
+        ctx.parallel_coordinator.worker_exception = worker_exc
+        patched_get_script_run_ctx.return_value = ctx
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        # Queue an external rerun request that should NOT win over the
+        # worker's stored exception.
+        external_rerun_data = RerunData(query_string="external")
+        scriptrunner._requests.request_rerun(external_rerun_data)
+
+        with patch.object(scriptrunner, "_is_in_script_thread", return_value=True):
+            scriptrunner._execing = True
+            with pytest.raises(RerunException) as excinfo:
+                scriptrunner._maybe_handle_execution_control_request()
+
+        assert excinfo.value.rerun_data is worker_rerun_data
+
     def test_page_script_hash_to_script_path(self):
         scriptrunner = TestScriptRunner("good_navigation_script.py")
         scriptrunner.request_rerun(RerunData(page_name="good_script2"))
@@ -1477,3 +1587,79 @@ def require_widgets_deltas(
         runner.join()
 
     raise RuntimeError(err_string)
+
+
+def test_scriptrunner_repr_uses_util_repr_format() -> None:
+    """ScriptRunner.__repr__ delegates to util.repr_ and exposes its concrete class name."""
+    runner = TestScriptRunner("not_a_script.py")
+    rendered = repr(runner)
+    # util.repr_ formats instances as "<ClassName(field=value, ...)>".
+    assert rendered.startswith(f"{type(runner).__name__}(")
+
+
+@pytest.mark.parametrize(
+    "invoke",
+    [
+        pytest.param(lambda r: r._get_script_run_ctx(), id="get_script_run_ctx"),
+        # Call the base implementation directly: TestScriptRunner swallows the
+        # exception into script_thread_exceptions, hiding the guard's RuntimeError.
+        pytest.param(
+            lambda r: ScriptRunner._run_script_thread(r), id="run_script_thread"
+        ),
+        pytest.param(lambda r: r._run_script(RerunData()), id="run_script"),
+    ],
+)
+def test_script_thread_methods_raise_when_called_off_thread(
+    invoke: Callable[[TestScriptRunner], object],
+) -> None:
+    """Script-thread-only methods must raise when called from another thread."""
+    runner = TestScriptRunner("not_a_script.py")
+    with pytest.raises(RuntimeError, match="must be called from the script thread"):
+        invoke(runner)
+
+
+def test_set_execing_flag_disallows_nested_calls() -> None:
+    """_set_execing_flag raises when nested while already execing."""
+    runner = TestScriptRunner("not_a_script.py")
+    with runner._set_execing_flag():
+        with pytest.raises(RuntimeError, match="Nested set_execing_flag call"):
+            with runner._set_execing_flag():
+                pass
+
+
+@pytest.mark.parametrize(
+    "side_effect",
+    [
+        pytest.param(None, id="happy_path"),
+        # Failures in optional cleanup must never propagate.
+        pytest.param(RuntimeError("boom"), id="swallows_exceptions"),
+    ],
+)
+def test_clean_problem_modules_handles_keras_and_matplotlib(
+    side_effect: Exception | None,
+) -> None:
+    """_clean_problem_modules clears Keras + closes matplotlib, swallowing errors."""
+    fake_keras = MagicMock()
+    fake_keras.backend.clear_session.side_effect = side_effect
+    fake_plt = MagicMock()
+    fake_plt.close.side_effect = side_effect
+
+    with patch.dict(
+        sys.modules, {"keras": fake_keras, "matplotlib.pyplot": fake_plt}, clear=False
+    ):
+        _clean_problem_modules()
+
+    fake_keras.backend.clear_session.assert_called_once()
+    fake_plt.close.assert_called_once_with("all")
+
+
+def test_log_if_error_logs_exception_and_does_not_raise() -> None:
+    """_log_if_error must catch exceptions and log them instead of propagating."""
+
+    def raises() -> None:
+        raise ValueError("kaboom")
+
+    with patch.object(script_runner_module, "_LOGGER") as mock_logger:
+        _log_if_error(raises)
+
+    mock_logger.warning.assert_called_once()

@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-export const StyledDialogTitle = styled.div(({ theme }) => ({
+export const StyledDialogTitle = styled.span(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.sm,
@@ -24,7 +24,7 @@ export const StyledDialogTitle = styled.div(({ theme }) => ({
   marginRight: theme.spacing.threeXL,
 }))
 
-export const StyledDialogIcon = styled.div(() => ({
+export const StyledDialogIcon = styled.span(() => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",

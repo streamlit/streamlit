@@ -723,5 +723,143 @@ def test_get_module_paths_outputs_abs_paths():
     assert module_paths == {DUMMY_MODULE_1_FILE}
 
 
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+@patch("streamlit.watcher.local_sources_watcher.os.path.isdir", return_value=False)
+def test_watch_folder_skipped_when_not_a_directory(
+    _mock_isdir: MagicMock, mock_path_watcher: MagicMock
+) -> None:
+    """Non-directory entries in ``server.folderWatchList`` are skipped with a warning."""
+    config.set_option("server.folderWatchList", ["/not/a/dir"])
+    try:
+        with patch("streamlit.watcher.local_sources_watcher._LOGGER") as mock_logger:
+            lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        try:
+            registered_paths = [c.args[0] for c in mock_path_watcher.call_args_list]
+            assert "/not/a/dir" not in registered_paths
+            assert any(
+                "Watch folder is not a directory" in str(c.args[0])
+                for c in mock_logger.warning.call_args_list
+            )
+        finally:
+            lsw.close()
+    finally:
+        config.set_option("server.folderWatchList", [])
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_on_path_changed_with_non_watched_path_logs_error(
+    _mock_path_watcher: MagicMock,
+) -> None:
+    """``on_path_changed`` logs an error and does not notify callbacks for an
+    unknown path (neither a watched module nor a file in a watched directory)."""
+    lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+    try:
+        observed: list[str] = []
+        lsw.register_file_change_callback(observed.append)
+
+        with patch("streamlit.watcher.local_sources_watcher._LOGGER") as mock_logger:
+            lsw.on_path_changed("/totally/unwatched/path.py")
+
+        assert observed == []
+        assert any(
+            "Received event for non-watched path" in str(c.args[0])
+            for c in mock_logger.error.call_args_list
+        )
+    finally:
+        lsw.close()
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_update_watched_modules_is_noop_after_close(
+    _mock_path_watcher: MagicMock,
+) -> None:
+    """``update_watched_modules`` short-circuits once the watcher is closed so
+    no new watchers are spawned on a torn-down instance."""
+    lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+    lsw.close()
+    cached_before = lsw._cached_sys_modules
+
+    lsw.update_watched_modules()
+
+    assert lsw._cached_sys_modules is cached_before
+    assert lsw._watched_modules == {}
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_deregister_watcher_returns_when_filepath_unknown(
+    _mock_path_watcher: MagicMock,
+) -> None:
+    """``_deregister_watcher`` is a no-op for an unknown filepath.
+
+    Anti-regression: must not raise, must leave ``_watched_modules`` unchanged,
+    and must not close existing watchers.
+    """
+    lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+    try:
+        existing_watcher = next(iter(lsw._watched_modules.values())).watcher
+        watched_before = dict(lsw._watched_modules)
+
+        lsw._deregister_watcher("/never/watched.py")
+
+        assert lsw._watched_modules == watched_before
+        existing_watcher.close.assert_not_called()
+    finally:
+        lsw.close()
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_update_watched_pages_skips_pages_without_script_path(
+    mock_path_watcher: MagicMock,
+) -> None:
+    """Pages with an empty ``script_path`` are skipped rather than registered.
+
+    Anti-regression: must not raise from ``os.path.realpath("")`` and must not
+    spawn a watcher for the empty path.
+    """
+    pages_manager = PagesManager(SCRIPT_PATH)
+    with patch.object(
+        pages_manager,
+        "get_pages",
+        return_value={
+            "real_page": {"script_path": SCRIPT_PATH},
+            "broken_page": {"script_path": ""},
+        },
+    ):
+        lsw = local_sources_watcher.LocalSourcesWatcher(pages_manager)
+
+    try:
+        registered_paths = [
+            call_args[0][0] for call_args in mock_path_watcher.call_args_list
+        ]
+        assert "" not in registered_paths
+        assert "" not in lsw._watched_pages
+    finally:
+        lsw.close()
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_deregister_watcher_keeps_main_script(
+    _mock_path_watcher: MagicMock,
+) -> None:
+    """``_deregister_watcher`` never tears down the main script watcher,
+    even when explicitly asked, so the app keeps reacting to file edits."""
+    lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+    try:
+        main_watcher_entry = lsw._watched_modules[lsw._main_script_path]
+
+        lsw._deregister_watcher(lsw._main_script_path)
+
+        assert lsw._main_script_path in lsw._watched_modules
+        main_watcher_entry.watcher.close.assert_not_called()
+    finally:
+        lsw.close()
+
+
 def sort_args_list(args_list):
     return sorted(args_list, key=lambda args: args[0])

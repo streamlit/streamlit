@@ -21,7 +21,7 @@ import sys
 import threading
 import time
 import uuid
-from collections.abc import Callable, Sized
+from collections.abc import Callable, Sequence, Sized
 from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
@@ -207,7 +207,6 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "snowflake",
     "pydantic",
     "fastapi",
-    "starlette",
     "playwright",
     "folium",
     "geopandas",
@@ -256,6 +255,7 @@ _HARNESSES: Final = (
     ("agents", ".agents/skills", ".agents/skills", ".agents"),
     ("claude", ".claude/skills", ".claude/skills", ".claude"),
     ("codex", ".codex/skills", ".codex/skills", ".codex"),
+    ("copilot", ".github/skills", ".copilot/skills", ".copilot"),
     ("cortex", ".cortex/skills", ".snowflake/cortex/skills", ".snowflake/cortex"),
     ("cursor", ".cursor/skills", ".cursor/skills", ".cursor"),
     ("gemini", ".gemini/skills", ".gemini/skills", ".gemini"),
@@ -292,8 +292,8 @@ def _detect_installed_skills(app_dir: str | None) -> list[str]:
 
     Returns a sorted, deduplicated list of ``"<location>:<harness>:<skill>"``
     tokens. ``location`` is ``home``, ``app``, or ``repo``; ``harness`` is one
-    of ``agents``, ``claude``, ``codex``, ``cortex``, ``cursor``, ``gemini``,
-    or ``opencode``; ``skill`` is one of ``_STREAMLIT_SKILL_NAMES``.
+    of ``agents``, ``claude``, ``codex``, ``copilot``, ``cortex``, ``cursor``,
+    ``gemini``, or ``opencode``; ``skill`` is one of ``_STREAMLIT_SKILL_NAMES``.
     Never raises: filesystem errors are swallowed and produce an empty list.
 
     The result is cached per ``app_dir`` for the lifetime of the process.
@@ -342,7 +342,7 @@ def _detect_installed_agents() -> list[str]:
     """Detect agent harnesses installed under the user's home directory.
 
     Returns a sorted, deduplicated list of harness name tokens (``agents``,
-    ``claude``, ``codex``, ``cortex``, ``cursor``, ``gemini``, ``opencode``)
+    ``claude``, ``codex``, ``copilot``, ``cortex``, ``cursor``, ``gemini``, ``opencode``)
     for each harness whose home-level config directory exists. Independent
     of whether Streamlit-specific skills are installed for that harness.
 
@@ -660,7 +660,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
             ctx is not None
             and ctx.gather_usage_stats
             and not ctx.command_tracking_deactivated
-            and len(ctx.tracked_commands)
+            and ctx.shared.tracked_commands_count
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
 
@@ -677,13 +677,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
                     non_optional_func, name, *args, **kwargs
                 )
 
-                if (
-                    command_telemetry.name not in ctx.tracked_commands_counter
-                    or ctx.tracked_commands_counter[command_telemetry.name]
-                    < _MAX_TRACKED_PER_COMMAND
-                ):
-                    ctx.tracked_commands.append(command_telemetry)
-                ctx.tracked_commands_counter.update([command_telemetry.name])
+                ctx.shared.track_command(command_telemetry, _MAX_TRACKED_PER_COMMAND)
                 # Deactivate tracking to prevent calls inside already tracked commands
                 ctx.command_tracking_deactivated = True
                 # The ctx.command_tracking_deactivated flag was set to True,
@@ -726,7 +720,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
 
 def create_page_profile_message(
-    commands: list[Command],
+    commands: Sequence[Command],
     exec_time: int,
     prep_time: int,
     uncaught_exception: str | None = None,

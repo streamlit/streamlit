@@ -857,8 +857,8 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
 
         # Clear the widget registry to allow reusing the same key
         ctx = get_script_run_ctx()
-        ctx.widget_ids_this_run.clear()
-        ctx.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
 
         # Create second element with different kwargs
         kwargs["label"] = "Different Label"
@@ -886,8 +886,8 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
 
         # Clear the widget registry to allow reusing the same key
         ctx = get_script_run_ctx()
-        ctx.widget_ids_this_run.clear()
-        ctx.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
 
         # Create text_area with same key - different element type
         id2 = compute_and_register_element_id(
@@ -933,8 +933,8 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
 
         # Clear registry, then compute with main DG context
         ctx = get_script_run_ctx()
-        ctx.widget_ids_this_run.clear()
-        ctx.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
 
         id2 = compute_and_register_element_id(dg=main_dg, **base_kwargs)
 
@@ -1007,8 +1007,8 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
 
         # Clear the widget registry to allow reusing the same key/ids
         ctx = get_script_run_ctx()
-        ctx.widget_ids_this_run.clear()
-        ctx.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
 
         # Change the selected kwarg
         if changed_kwarg == "label":
@@ -1041,8 +1041,8 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
 
         # Clear registry before next computation
         ctx = get_script_run_ctx()
-        ctx.widget_ids_this_run.clear()
-        ctx.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
 
         # Changing a non-whitelisted kwarg should still change the ID when no user_key
         kwargs_changed_default = dict(base_kwargs)
@@ -1051,8 +1051,8 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
         assert id1 != id2
 
         # Clear again and change a whitelisted kwarg
-        ctx.widget_ids_this_run.clear()
-        ctx.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
         kwargs_changed_label = dict(base_kwargs)
         kwargs_changed_label["label"] = "Different Label"
         id3 = compute_and_register_element_id(**kwargs_changed_label)
@@ -1160,3 +1160,148 @@ class DeltaGeneratorImageTest(DeltaGeneratorTestCase):
         transient_element = msg.delta.new_transient.elements[0]
         assert transient_element.width_config.pixel_width == 100
         assert transient_element.height_config.pixel_height == 200
+
+
+# _is_inside_fragment_path tests
+
+
+@pytest.mark.parametrize(
+    ("cursor_path", "fragment_path", "expected"),
+    [
+        # Equal paths → True
+        ((0, 1, 2), (0, 1, 2), True),
+        # Cursor path is a child of fragment path (longer, matching prefix) → True
+        ((0, 1, 2, 3), (0, 1, 2), True),
+        ((0, 1, 2, 3, 4, 5), (0, 1), True),
+        # Cursor path is shorter than fragment path → False
+        ((0, 1), (0, 1, 2), False),
+        ((0,), (0, 1, 2), False),
+        # Non-matching prefix of same length → False
+        ((0, 1, 3), (0, 1, 2), False),
+        ((1, 1, 2), (0, 1, 2), False),
+        # Non-matching prefix of greater length → False
+        ((0, 1, 3, 4), (0, 1, 2), False),
+        ((1, 2, 3, 4, 5), (0, 1, 2), False),
+        # Empty fragment path → True (any path is "inside" empty prefix)
+        ((0, 1, 2), (), True),
+        ((0,), (), True),
+        # Empty cursor path with non-empty fragment path → False
+        ((), (0, 1, 2), False),
+        ((), (0,), False),
+        # Both empty → True
+        ((), (), True),
+    ],
+)
+def test_is_inside_fragment_path(
+    cursor_path: tuple[int, ...],
+    fragment_path: tuple[int, ...],
+    expected: bool,
+) -> None:
+    """_is_inside_fragment_path returns whether cursor_path is within fragment_path."""
+    from streamlit.delta_generator import _is_inside_fragment_path
+
+    assert _is_inside_fragment_path(cursor_path, fragment_path) == expected
+
+
+# Parallel worker external container write restriction tests
+
+
+class ParallelWorkerExternalContainerWriteTest(DeltaGeneratorTestCase):
+    """Tests for external container write restriction in parallel workers."""
+
+    def test_parallel_worker_write_outside_fragment_raises_exception(self) -> None:
+        """Enqueue raises StreamlitAPIException when writing outside fragment path.
+
+        The fragment_path and cursor delta_path both include the root container.
+        RootContainer.MAIN = 0, so fragment_path (0, 1, 2) means the fragment is
+        at MAIN container, parent_path (1,), index 2. A cursor outside this path
+        (e.g., at parent_path (1,), index 3) will have delta_path (0, 1, 3).
+        """
+        # Fragment at MAIN (0), parent_path (1,), index 2 → delta_path = (0, 1, 2)
+        fragment_path = (0, 1, 2)
+        ThreadState.update(is_parallel_worker=True, delta_path=fragment_path)
+
+        try:
+            # Cursor at MAIN (0), parent_path (1,), index 3 → delta_path = (0, 1, 3)
+            # This path is NOT inside (0, 1, 2) because they diverge at index 2 vs 3
+            outside_cursor = LockedCursor(
+                root_container=RootContainer.MAIN,
+                parent_path=(1,),
+                index=3,
+            )
+            outside_dg = DeltaGenerator(
+                root_container=RootContainer.MAIN,
+                cursor=outside_cursor,
+            )
+
+            with pytest.raises(StreamlitAPIException) as exc_info:
+                outside_dg._enqueue("text", TextProto())
+
+            assert "outside a parallel fragment" in str(exc_info.value)
+        finally:
+            ThreadState.update(is_parallel_worker=False, delta_path=())
+
+    def test_parallel_worker_write_inside_fragment_succeeds(self) -> None:
+        """Enqueue succeeds when writing inside the fragment path.
+
+        A cursor path (0, 1, 2, 3) is inside fragment path (0, 1, 2) because
+        the cursor path starts with the fragment path prefix.
+        """
+        # Fragment at MAIN (0), parent_path (1,), index 2 → delta_path = (0, 1, 2)
+        fragment_path = (0, 1, 2)
+        ThreadState.update(is_parallel_worker=True, delta_path=fragment_path)
+
+        try:
+            # Cursor at MAIN (0), parent_path (1, 2), index 3 → delta_path = (0, 1, 2, 3)
+            # This path IS inside (0, 1, 2) because it starts with the fragment path
+            inside_cursor = LockedCursor(
+                root_container=RootContainer.MAIN,
+                parent_path=(1, 2),
+                index=3,
+            )
+            inside_dg = DeltaGenerator(
+                root_container=RootContainer.MAIN,
+                cursor=inside_cursor,
+            )
+
+            # Should not raise
+            text_proto = TextProto()
+            text_proto.body = "test content"
+            result = inside_dg._enqueue("text", text_proto)
+
+            # Verify we got a valid result (not an exception)
+            assert result is not None
+        finally:
+            ThreadState.update(is_parallel_worker=False, delta_path=())
+
+    def test_parallel_worker_write_at_fragment_path_succeeds(self) -> None:
+        """Enqueue succeeds when writing exactly at fragment path.
+
+        A cursor path equal to fragment path (0, 1, 2) is considered "inside"
+        because _is_inside_fragment_path returns True for equal paths.
+        """
+        # Fragment at MAIN (0), parent_path (1,), index 2 → delta_path = (0, 1, 2)
+        fragment_path = (0, 1, 2)
+        ThreadState.update(is_parallel_worker=True, delta_path=fragment_path)
+
+        try:
+            # Cursor at MAIN (0), parent_path (1,), index 2 → delta_path = (0, 1, 2)
+            # This path IS equal to fragment path
+            at_cursor = LockedCursor(
+                root_container=RootContainer.MAIN,
+                parent_path=(1,),
+                index=2,
+            )
+            at_dg = DeltaGenerator(
+                root_container=RootContainer.MAIN,
+                cursor=at_cursor,
+            )
+
+            # Should not raise
+            text_proto = TextProto()
+            text_proto.body = "test content"
+            result = at_dg._enqueue("text", text_proto)
+
+            assert result is not None
+        finally:
+            ThreadState.update(is_parallel_worker=False, delta_path=())

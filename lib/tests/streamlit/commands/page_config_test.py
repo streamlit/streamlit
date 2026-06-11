@@ -117,6 +117,12 @@ class PageConfigTest(DeltaGeneratorTestCase):
         c = self.get_message_from_queue().page_config_changed
         assert c.initial_sidebar_state == PageConfigProto.SIDEBAR_UNSET
 
+    def test_set_page_config_sidebar_locked(self):
+        """``"locked"`` maps to the LOCKED protobuf enum value."""
+        st.set_page_config(initial_sidebar_state="locked")
+        c = self.get_message_from_queue().page_config_changed
+        assert c.initial_sidebar_state == PageConfigProto.LOCKED
+
     def test_set_page_config_sidebar_invalid(self):
         with pytest.raises(StreamlitInvalidSidebarStateError):
             st.set_page_config(initial_sidebar_state="INVALID")

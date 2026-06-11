@@ -176,6 +176,9 @@ class AppTest:
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
+        # Cache the discovered component manager so installed CCv2 components are
+        # only scanned once per AppTest instance instead of on every rerun.
+        self._bidi_component_manager: BidiComponentManager | None = None
 
         tree = ElementTree()
         tree._runner = self
@@ -341,7 +344,13 @@ class AppTest:
             MemoryMediaFileStorage("/mock/media")
         )
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
-        mock_runtime.bidi_component_registry = BidiComponentManager()
+        if self._bidi_component_manager is None:
+            bidi_component_manager = BidiComponentManager()
+            bidi_component_manager.discover_and_register_components(
+                start_file_watching=False
+            )
+            self._bidi_component_manager = bidi_component_manager
+        mock_runtime.bidi_component_registry = self._bidi_component_manager
         Runtime._instance = mock_runtime
         script_cache = ScriptCache()
         # Reset to ensure st.navigation works correctly regardless of prior test state.

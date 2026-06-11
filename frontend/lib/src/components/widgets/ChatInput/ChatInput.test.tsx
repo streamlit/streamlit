@@ -922,12 +922,9 @@ describe("ChatInput widget", () => {
       const textarea = screen.getByTestId("stChatInputTextArea")
       expect(textarea).not.toBeDisabled()
 
-      // The min-height is applied via baseweb overrides to the textarea Root element.
-      // While we can't easily assert the exact style value through toHaveStyle
-      // (baseweb injects styles in a way that's not directly accessible),
-      // we verify the component renders correctly with the height config.
-      const rootElement = textarea.closest('[data-baseweb="textarea"]')
-      expect(rootElement).toBeInTheDocument()
+      // Verify the textarea is inside the chat input container.
+      const rootElement = textarea.closest('[data-testid="stChatInput"]')
+      expect(rootElement).toBeVisible()
     })
   })
 })
