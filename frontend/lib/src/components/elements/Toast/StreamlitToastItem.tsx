@@ -16,7 +16,7 @@
 
 import { ReactElement, useCallback, useState } from "react"
 
-import { Close } from "@emotion-icons/material-outlined"
+import { Close } from "@emotion-icons/material-rounded"
 import { type QueuedToast } from "react-aria-components/Toast"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"

@@ -81,7 +81,6 @@ export const StyledCloseButton = styled(Button)(({ theme }) => ({
   alignItems: "center",
   justifyContent: "center",
   padding: 0,
-  marginLeft: "auto",
   marginRight: `calc(-1 * ${theme.spacing.lg} / 2)`,
   borderRadius: theme.radii.sm,
   "&[data-hovered]": {

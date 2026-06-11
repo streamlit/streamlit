@@ -117,8 +117,8 @@ def test_toast_above_dialog(app: Page, assert_snapshot: ImageCompareFunction):
     toasts = app.get_by_test_id("stToast")
     expect(toasts).to_have_count(1)
     expect(toasts.nth(0)).to_contain_text("🎉Toast above dialog")
-    toaster = app.get_by_test_id("stToastContainer")
-    assert_snapshot(toaster, name="toast-above-dialog")
+    dialog = app.get_by_test_id("stDialog")
+    assert_snapshot(dialog, name="toast-above-dialog")
 
 
 def test_toast_duration(app: Page):
