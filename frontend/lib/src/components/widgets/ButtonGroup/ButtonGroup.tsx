@@ -186,26 +186,28 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
 
   // When options change and the currently stored value no longer matches any
   // option (e.g. because format_func changed dynamically due to a language
-  // switch, making the stored formatted strings stale), reset to the proto
-  // default so the widget stays visually consistent. An explicit user
-  // deselection always produces value=[], which short-circuits this guard
-  // immediately, so we never auto-select over a deliberate empty selection.
+  // switch, making the stored formatted strings stale), reset the widget so
+  // it stays visually consistent. An explicit user deselection always produces
+  // value=[], which short-circuits this guard immediately.
   //
-  // Safety for non-default selections: when format_func changes, the backend
-  // resolves the user's actual selection via session_state_fallback and sends
-  // it back serialised with the new format_func in rawValues (e.g. "naranja"
-  // for option "B" in ES mode). Because element props (options + rawValues)
-  // arrive as a single atomic proto update, useBasicWidgetState applies the
-  // corrected value before this effect runs. The validIndices guard above
-  // therefore fires an early return — the default reset path is only reached
-  // during the brief window before the first backend response (initial render),
-  // when no user selection yet exists and the default is correct.
+  // Reset target priority:
+  //   1. element.rawValues (non-empty) — the backend detected the stale wire
+  //      value via session_state_fallback and sent back the correct
+  //      serialization with set_value=True (e.g. "naranja" for option "B" in
+  //      ES mode). Using rawValues ensures non-default selections are preserved
+  //      and the widgetMgr stores the fresh label for the next rerun.
+  //   2. getDefaultStateFromProto — fallback for the brief window before the
+  //      first backend response, where only the proto default is known.
   useEffect(() => {
     if (value.length === 0) return
     const validIndices = contentStringsToIndices(options, value)
     if (validIndices.length > 0) return
+    const backendValue = getCurrStateFromProto(element)
     setValueWithSource({
-      value: getDefaultStateFromProto(element),
+      value:
+        backendValue.length > 0
+          ? backendValue
+          : getDefaultStateFromProto(element),
       fromUi: false,
     })
   }, [options, value, setValueWithSource, element])

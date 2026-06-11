@@ -92,6 +92,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
     default_option_index: int | None
     format_func: Callable[[Any], str]
     session_state_fallback: T | None
+    used_session_state_fallback: bool
 
     def __init__(
         self,
@@ -109,6 +110,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         self.default_option_index = default_option_index
         self.format_func = format_func
         self.session_state_fallback = session_state_fallback
+        self.used_session_state_fallback = False
 
     def serialize(self, v: T | str | None) -> list[str]:
         """Serialize single-select value to a list of strings for wire format."""
@@ -161,6 +163,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         # always more accurate than the default because it reflects what the user
         # actually had selected (e.g. user clicked "B" while default was "A").
         if self.session_state_fallback is not None:
+            self.used_session_state_fallback = True
             return self.session_state_fallback
         if self.default_option_index is not None:
             return self.options[self.default_option_index]
@@ -180,6 +183,7 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
     default_option_indices: list[int]
     format_func: Callable[[Any], str]
     session_state_fallback: list[T] | None
+    used_session_state_fallback: bool
 
     def __init__(
         self,
@@ -197,6 +201,7 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         self.default_option_indices = default_option_indices or []
         self.format_func = format_func
         self.session_state_fallback = session_state_fallback
+        self.used_session_state_fallback = False
 
     def serialize(self, value: list[T | str] | list[T] | None) -> list[str]:
         """Serialize multi-select values to list of strings for wire format."""
@@ -251,6 +256,7 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         # single-select behaviour in _SingleSelectButtonGroupSerde.deserialize.
         if not values and ui_value:
             if self.session_state_fallback is not None:
+                self.used_session_state_fallback = True
                 return self.session_state_fallback
             if self.default_option_indices:
                 return [self.options[i] for i in self.default_option_indices]
@@ -1053,7 +1059,11 @@ class ButtonGroupMixin:
             except Exception:  # noqa: S110
                 pass  # KeyError (key not yet set) or other SS error; safe to ignore
 
-        # Create appropriate serde based on selection mode
+        # Create appropriate serde based on selection mode. A shared mutable
+        # container tracks whether the stale-wire fallback fired during
+        # deserialization so _button_group can force proto.set_value=True and
+        # send the fresh serialization to the frontend (see _button_group).
+        _stale_fallback_container: list[bool] = [False]
         serializer: WidgetSerializer[Any]
         deserializer: WidgetDeserializer[Any]
         if selection_mode == "multi":
@@ -1065,8 +1075,17 @@ class ButtonGroupMixin:
                 format_func=actual_format_func,
                 session_state_fallback=_ss_fallback_multi,
             )
+            _multi_base = multi_serde.deserialize
+
+            def _multi_deserialize(
+                ui_value: list[str] | None,
+            ) -> list[V] | list[V | str]:
+                result_ = _multi_base(ui_value)
+                _stale_fallback_container[0] = multi_serde.used_session_state_fallback
+                return result_  # type: ignore[return-value]
+
             serializer = multi_serde.serialize
-            deserializer = multi_serde.deserialize
+            deserializer = cast("WidgetDeserializer[Any]", _multi_deserialize)
         else:
             single_serde = _SingleSelectButtonGroupSerde[V](
                 indexable_options,
@@ -1076,8 +1095,17 @@ class ButtonGroupMixin:
                 format_func=actual_format_func,
                 session_state_fallback=_ss_fallback_single,
             )
+            _single_base = single_serde.deserialize
+
+            def _single_deserialize(
+                ui_value: list[str] | None,
+            ) -> V | None:
+                result_ = _single_base(ui_value)
+                _stale_fallback_container[0] = single_serde.used_session_state_fallback
+                return result_  # type: ignore[return-value]
+
             serializer = single_serde.serialize
-            deserializer = single_serde.deserialize
+            deserializer = cast("WidgetDeserializer[Any]", _single_deserialize)
 
         # Single call to _button_group with the appropriate serde
         result: RegisterWidgetResult[Any] = self._button_group(
@@ -1101,6 +1129,7 @@ class ButtonGroupMixin:
             options_format_func=actual_format_func,
             bind=bind,
             string_formatted_options=formatted_options,
+            stale_fallback_container=_stale_fallback_container,
         )
 
         # Handle return type based on selection mode
@@ -1138,6 +1167,7 @@ class ButtonGroupMixin:
         options_format_func: Callable[[Any], str] | None = None,
         bind: BindOption = None,
         string_formatted_options: list[str] | None = None,
+        stale_fallback_container: list[bool] | None = None,
     ) -> RegisterWidgetResult[T]:
         _maybe_raise_selection_mode_warning(selection_mode)
 
@@ -1259,10 +1289,24 @@ class ButtonGroupMixin:
                     )
                 )
 
-        if value_needs_reset or widget_state.value_changed:
+        # The stale-wire fallback fires when the frontend sends a formatted string
+        # from a previous format_func mapping (e.g. "orange" after switching to ES
+        # mode where the mapping no longer contains "orange"). The serde resolves the
+        # canonical value via session_state_fallback but neither value_needs_reset nor
+        # value_changed is True because the canonical value ("B") is unchanged.
+        # We must still send set_value=True with the NEW serialization ("naranja") so
+        # the frontend can update its displayed value; otherwise the stored stale wire
+        # value stays in widgetMgr and on the next rerun the backend would receive a
+        # fresh (non-stale) but wrong formatted string and fire a spurious on_change.
+        stale_fallback_used = (
+            stale_fallback_container is not None and stale_fallback_container[0]
+        )
+        if value_needs_reset or widget_state.value_changed or stale_fallback_used:
             # Always use string-based raw_values field
             value_for_serialization = (
-                current_value if value_needs_reset else widget_state.value
+                current_value
+                if (value_needs_reset or stale_fallback_used)
+                else widget_state.value
             )
             proto.raw_values[:] = serializer(cast("T", value_for_serialization))
             proto.set_value = True
@@ -1275,7 +1319,9 @@ class ButtonGroupMixin:
             "button_group",
             proto,
             layout_config=layout_config,
-            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            has_one_shot_effect=value_needs_reset
+            or widget_state.value_changed
+            or stale_fallback_used,
         )
 
         # Return widget_state with possibly updated value
