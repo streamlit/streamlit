@@ -1037,21 +1037,21 @@ class ButtonGroupMixin:
         _ss_fallback_multi: list[V] | None = None
         if key is not None:
             try:
-                _ss = get_session_state()
-                if key in _ss:
-                    _ss_val = _ss[key]
-                    if selection_mode == "single":
-                        if _ss_val is not None and _ss_val in indexable_options:
-                            _ss_fallback_single = cast("V", _ss_val)
-                    elif isinstance(_ss_val, list):
-                        _valid = cast(
-                            "list[V]",
-                            [v for v in _ss_val if v in indexable_options],
-                        )
-                        if _valid:
-                            _ss_fallback_multi = _valid
+                # KeyError is raised if the key hasn't been set yet (first run).
+                # Any other exception is caught defensively to avoid breaking rendering.
+                _ss_val = get_session_state()[str(key)]
+                if selection_mode == "single":
+                    if _ss_val is not None and _ss_val in indexable_options:
+                        _ss_fallback_single = cast("V", _ss_val)
+                elif isinstance(_ss_val, list):
+                    _valid = cast(
+                        "list[V]",
+                        [v for v in _ss_val if v in indexable_options],
+                    )
+                    if _valid:
+                        _ss_fallback_multi = _valid
             except Exception:  # noqa: S110
-                pass  # Defensive: never let SS lookup break widget rendering
+                pass  # KeyError (key not yet set) or other SS error; safe to ignore
 
         # Create appropriate serde based on selection mode
         serializer: WidgetSerializer[Any]
