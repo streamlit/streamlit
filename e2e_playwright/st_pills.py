@@ -360,3 +360,4 @@ st.text(
 
 if st.button("Switch to ES", key="switch_to_es_btn"):
     st.session_state["dynamic_fmt_lang"] = "es"
+    st.rerun()

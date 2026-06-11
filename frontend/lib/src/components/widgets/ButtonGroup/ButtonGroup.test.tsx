@@ -491,7 +491,7 @@ describe("ButtonGroup widget", () => {
     )
   })
 
-  it("resets to default when options change and stored value is stale", async () => {
+  it("resets to default when options change and stored value is stale", () => {
     // Simulate EN options: "apple" and "orange"
     const enOptions = [
       ButtonGroupProto.Option.create({ content: "apple" }),

@@ -349,7 +349,7 @@ def test_dynamic_format_func_preserves_selection_and_suppresses_callback(
 
     # Step 1: EN mode - "apple" is selected, no callback yet
     apple_btn = get_pill_button(dynamic_fmt_section, "apple")
-    expect(apple_btn).to_have_attribute("data-selected", "")
+    expect(apple_btn).to_have_attribute("data-selected", "true")
     expect_text(app, "dynamic_fmt_pills value: A")
     expect_text(app, "dynamic_fmt_callback_count: 0")
 
@@ -358,7 +358,7 @@ def test_dynamic_format_func_preserves_selection_and_suppresses_callback(
 
     # "manzana" (translated "apple") must be selected - no deselection flash
     manzana_btn = get_pill_button(dynamic_fmt_section, "manzana")
-    expect(manzana_btn).to_have_attribute("data-selected", "")
+    expect(manzana_btn).to_have_attribute("data-selected", "true")
     # Negative assertion: "apple" must not appear in the widget (labels changed)
     expect(dynamic_fmt_section).not_to_contain_text("apple")
     # Primary bug fix: callback must NOT have fired
@@ -374,7 +374,7 @@ def test_dynamic_format_func_preserves_selection_and_suppresses_callback(
     expect_text(app, "dynamic_fmt_last_value: B")
     expect_text(app, "dynamic_fmt_pills value: B")
     naranja_btn = get_pill_button(dynamic_fmt_section, "naranja")
-    expect(naranja_btn).to_have_attribute("data-selected", "")
+    expect(naranja_btn).to_have_attribute("data-selected", "true")
 
 
 # --- Query parameter binding tests ---
