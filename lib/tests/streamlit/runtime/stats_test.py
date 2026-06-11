@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 from typing import TYPE_CHECKING
 from unittest.mock import patch
@@ -40,6 +41,7 @@ from streamlit.runtime.stats import (
     group_cache_stats,
     metric_type_string_to_proto,
     safe_sizeof,
+    stats_to_otlp_dict,
 )
 
 if TYPE_CHECKING:
@@ -490,3 +492,159 @@ class SafeSizeofTest(unittest.TestCase):
             side_effect=ReferenceError("weakly-referenced object no longer exists"),
         ):
             assert safe_sizeof(object()) == 0
+
+
+# Fixed timestamps (in nanoseconds) used by the OTLP serialization tests.
+_TIME_NS = 1_700_000_000_000_000_000
+_START_TIME_NS = 1_699_999_000_000_000_000
+
+
+def test_cache_stat_to_otlp_data_point() -> None:
+    """CacheStat.to_otlp_data_point encodes cache labels and int64 fields as strings."""
+    stat = CacheStat("st.cache_data", "my_func", 512)
+
+    data_point = stat.to_otlp_data_point(_TIME_NS, _START_TIME_NS)
+
+    assert data_point == {
+        "attributes": [
+            {"key": "cache_type", "value": {"stringValue": "st.cache_data"}},
+            {"key": "cache", "value": {"stringValue": "my_func"}},
+        ],
+        "startTimeUnixNano": str(_START_TIME_NS),
+        "timeUnixNano": str(_TIME_NS),
+        "asInt": "512",
+    }
+
+
+def test_counter_stat_to_otlp_data_point_sorts_labels() -> None:
+    """CounterStat.to_otlp_data_point emits attributes sorted by key."""
+    stat = CounterStat(
+        family_name="my_counter",
+        value=5,
+        labels={"z_label": "z_val", "a_label": "a_val"},
+    )
+
+    data_point = stat.to_otlp_data_point(_TIME_NS, _START_TIME_NS)
+
+    assert data_point["asInt"] == "5"
+    assert data_point["attributes"] == [
+        {"key": "a_label", "value": {"stringValue": "a_val"}},
+        {"key": "z_label", "value": {"stringValue": "z_val"}},
+    ]
+
+
+def test_gauge_stat_to_otlp_data_point_without_labels_omits_attributes() -> None:
+    """GaugeStat.to_otlp_data_point omits the attributes key when there are no labels."""
+    stat = GaugeStat(family_name="active_sessions", value=3)
+
+    data_point = stat.to_otlp_data_point(_TIME_NS, _START_TIME_NS)
+
+    assert "attributes" not in data_point
+    assert data_point["asInt"] == "3"
+
+
+def test_stats_to_otlp_dict_maps_gauge_family() -> None:
+    """A gauge family is serialized as an OTLP gauge metric."""
+    stats = {CACHE_MEMORY_FAMILY: [CacheStat("st.cache_data", "my_func", 512)]}
+
+    result = stats_to_otlp_dict(
+        stats, time_unix_nano=_TIME_NS, start_time_unix_nano=_START_TIME_NS
+    )
+
+    metrics = result["resourceMetrics"][0]["scopeMetrics"][0]["metrics"]
+    assert len(metrics) == 1
+    metric = metrics[0]
+    assert metric["name"] == CACHE_MEMORY_FAMILY
+    assert metric["unit"] == "bytes"
+    assert metric["description"] == "Total memory consumed by a cache."
+    # Gauges have no aggregation temporality / monotonic fields.
+    assert "gauge" in metric
+    assert "sum" not in metric
+    assert metric["gauge"]["dataPoints"][0]["asInt"] == "512"
+
+
+def test_stats_to_otlp_dict_maps_counter_family_as_cumulative_sum() -> None:
+    """A counter family is serialized as a cumulative, monotonic OTLP sum."""
+    stats = {
+        "session_events": [
+            CounterStat(family_name="session_events", value=10, labels={"type": "x"})
+        ]
+    }
+
+    result = stats_to_otlp_dict(
+        stats, time_unix_nano=_TIME_NS, start_time_unix_nano=_START_TIME_NS
+    )
+
+    metric = result["resourceMetrics"][0]["scopeMetrics"][0]["metrics"][0]
+    # OTLP counter names must NOT carry the Prometheus-only "_total" suffix.
+    assert metric["name"] == "session_events"
+    assert "gauge" not in metric
+    sum_data = metric["sum"]
+    assert sum_data["isMonotonic"] is True
+    # 2 == AGGREGATION_TEMPORALITY_CUMULATIVE.
+    assert sum_data["aggregationTemporality"] == 2
+    assert sum_data["dataPoints"][0]["asInt"] == "10"
+
+
+def test_stats_to_otlp_dict_skips_empty_families() -> None:
+    """Families with no stats are omitted from the output."""
+    stats = {
+        "active_sessions": [GaugeStat(family_name="active_sessions", value=3)],
+        "empty_family": [],
+    }
+
+    result = stats_to_otlp_dict(
+        stats, time_unix_nano=_TIME_NS, start_time_unix_nano=_START_TIME_NS
+    )
+
+    metrics = result["resourceMetrics"][0]["scopeMetrics"][0]["metrics"]
+    names = {metric["name"] for metric in metrics}
+    assert names == {"active_sessions"}
+
+
+def test_stats_to_otlp_dict_includes_resource_and_scope_metadata() -> None:
+    """Resource attributes and a non-empty scope version are included."""
+    stats = {"active_sessions": [GaugeStat(family_name="active_sessions", value=1)]}
+
+    result = stats_to_otlp_dict(
+        stats,
+        time_unix_nano=_TIME_NS,
+        start_time_unix_nano=_START_TIME_NS,
+        resource_attributes={"service.name": "streamlit"},
+        scope_version="1.2.3",
+    )
+
+    resource_metrics = result["resourceMetrics"][0]
+    assert resource_metrics["resource"]["attributes"] == [
+        {"key": "service.name", "value": {"stringValue": "streamlit"}}
+    ]
+    scope = resource_metrics["scopeMetrics"][0]["scope"]
+    assert scope == {"name": "streamlit", "version": "1.2.3"}
+
+
+def test_stats_to_otlp_dict_omits_scope_version_when_empty() -> None:
+    """An empty scope version is not emitted as a key."""
+    stats = {"active_sessions": [GaugeStat(family_name="active_sessions", value=1)]}
+
+    result = stats_to_otlp_dict(
+        stats, time_unix_nano=_TIME_NS, start_time_unix_nano=_START_TIME_NS
+    )
+
+    scope = result["resourceMetrics"][0]["scopeMetrics"][0]["scope"]
+    assert "version" not in scope
+    assert result["resourceMetrics"][0]["resource"] == {}
+
+
+def test_stats_to_otlp_dict_is_json_serializable() -> None:
+    """The OTLP dict round-trips through JSON (the forwarded OTLP/HTTP body)."""
+    stats = {
+        CACHE_MEMORY_FAMILY: [CacheStat("st.cache_data", "my_func", 512)],
+        "session_events": [CounterStat(family_name="session_events", value=10)],
+    }
+
+    result = stats_to_otlp_dict(
+        stats, time_unix_nano=_TIME_NS, start_time_unix_nano=_START_TIME_NS
+    )
+
+    # Should not raise, and should round-trip unchanged.
+    assert json.loads(json.dumps(result)) == result

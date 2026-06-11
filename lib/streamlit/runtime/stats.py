@@ -114,6 +114,16 @@ class Stat(Protocol):
     def marshall_metric_proto(self, metric: MetricProto) -> None:
         """Fill an OpenMetrics `Metric` protobuf object."""
 
+    def to_otlp_data_point(
+        self, time_unix_nano: int, start_time_unix_nano: int
+    ) -> dict[str, Any]:
+        """Return this stat as an OTLP `NumberDataPoint` dict.
+
+        The dict matches the proto3 JSON encoding of the OTLP NumberDataPoint
+        message, so int64 fields (timestamps and integer values) are encoded as
+        strings.
+        """
+
 
 # TODO(vdonato): Could we use GaugeStat below and get rid of this class?
 # We'd have to make some minor changes to use the other class, but overall the
@@ -171,6 +181,20 @@ class CacheStat(NamedTuple):
 
         metric_point = metric.metric_points.add()
         metric_point.gauge_value.int_value = self.byte_length
+
+    def to_otlp_data_point(
+        self, time_unix_nano: int, start_time_unix_nano: int
+    ) -> dict[str, Any]:
+        """Return this cache stat as an OTLP `NumberDataPoint` dict."""
+        return {
+            "attributes": [
+                {"key": "cache_type", "value": {"stringValue": self.category_name}},
+                {"key": "cache", "value": {"stringValue": self.cache_name}},
+            ],
+            "startTimeUnixNano": str(start_time_unix_nano),
+            "timeUnixNano": str(time_unix_nano),
+            "asInt": str(self.byte_length),
+        }
 
 
 def group_cache_stats(stats: list[CacheStat]) -> list[CacheStat]:
@@ -239,6 +263,17 @@ class CounterStat(NamedTuple):
         metric_point = metric.metric_points.add()
         metric_point.counter_value.int_value = self.value
 
+    def to_otlp_data_point(
+        self, time_unix_nano: int, start_time_unix_nano: int
+    ) -> dict[str, Any]:
+        """Return this counter stat as an OTLP `NumberDataPoint` dict."""
+        return _build_otlp_number_data_point(
+            value=self.value,
+            labels=self.labels,
+            time_unix_nano=time_unix_nano,
+            start_time_unix_nano=start_time_unix_nano,
+        )
+
 
 class GaugeStat(NamedTuple):
     """A gauge stat.
@@ -283,6 +318,17 @@ class GaugeStat(NamedTuple):
         metric_point = metric.metric_points.add()
         metric_point.gauge_value.int_value = self.value
 
+    def to_otlp_data_point(
+        self, time_unix_nano: int, start_time_unix_nano: int
+    ) -> dict[str, Any]:
+        """Return this gauge stat as an OTLP `NumberDataPoint` dict."""
+        return _build_otlp_number_data_point(
+            value=self.value,
+            labels=self.labels,
+            time_unix_nano=time_unix_nano,
+            start_time_unix_nano=start_time_unix_nano,
+        )
+
 
 def metric_type_string_to_proto(type_string: str) -> MetricType.ValueType:
     """Convert a metric type string to its corresponding proto enum value."""
@@ -307,6 +353,128 @@ def metric_type_string_to_proto(type_string: str) -> MetricType.ValueType:
         "summary": SUMMARY,
     }
     return type_map.get(type_string, UNKNOWN)
+
+
+# OTLP `AggregationTemporality.AGGREGATION_TEMPORALITY_CUMULATIVE`. Streamlit's
+# counters are cumulative (monotonically increasing for the life of the server).
+_OTLP_AGGREGATION_TEMPORALITY_CUMULATIVE: Final = 2
+
+
+def _labels_to_otlp_attributes(
+    labels: Mapping[str, str],
+) -> list[dict[str, Any]]:
+    """Convert a label mapping to a list of OTLP `KeyValue` dicts.
+
+    Labels are sorted by key so the output is deterministic.
+    """
+    return [
+        {"key": name, "value": {"stringValue": value}}
+        for name, value in sorted(labels.items())
+    ]
+
+
+def _build_otlp_number_data_point(
+    *,
+    value: int,
+    labels: Mapping[str, str] | None,
+    time_unix_nano: int,
+    start_time_unix_nano: int,
+) -> dict[str, Any]:
+    """Build an OTLP `NumberDataPoint` dict for an integer-valued stat."""
+    data_point: dict[str, Any] = {
+        "startTimeUnixNano": str(start_time_unix_nano),
+        "timeUnixNano": str(time_unix_nano),
+        "asInt": str(value),
+    }
+    if labels:
+        data_point["attributes"] = _labels_to_otlp_attributes(labels)
+    return data_point
+
+
+def stats_to_otlp_dict(
+    stats_by_family: Mapping[str, Sequence[Stat]],
+    *,
+    time_unix_nano: int,
+    start_time_unix_nano: int,
+    resource_attributes: Mapping[str, str] | None = None,
+    scope_name: str = "streamlit",
+    scope_version: str = "",
+) -> dict[str, Any]:
+    """Convert stats to an OTLP `MetricsData` dict (proto3 JSON encoding).
+
+    The returned dict matches the JSON representation of the OTLP
+    ``MetricsData`` / ``ExportMetricsServiceRequest`` message and can be
+    forwarded to an OTLP/HTTP receiver with ``Content-Type: application/json``.
+    int64 fields (timestamps and integer values) are encoded as strings, as
+    required by the proto3 JSON mapping.
+
+    Parameters
+    ----------
+    stats_by_family : Mapping[str, Sequence[Stat]]
+        Stats grouped by metric family name, as returned by
+        ``StatsManager.get_stats``.
+    time_unix_nano : int
+        The time of the observation, in nanoseconds since the Unix epoch.
+    start_time_unix_nano : int
+        The time the metrics started being collected (e.g. server start), in
+        nanoseconds since the Unix epoch. Used as the start time for cumulative
+        sums.
+    resource_attributes : Mapping[str, str] | None
+        Optional attributes describing the resource (e.g. ``service.name``).
+    scope_name : str
+        The instrumentation scope name.
+    scope_version : str
+        The instrumentation scope version (e.g. the Streamlit version).
+    """
+    metrics: list[dict[str, Any]] = []
+
+    for stats in stats_by_family.values():
+        if not stats:
+            continue
+
+        # All stats in a family share the same family_name, type, unit, and
+        # help, so the first one provides the family-level metadata.
+        first_stat = stats[0]
+        data_points = [
+            stat.to_otlp_data_point(time_unix_nano, start_time_unix_nano)
+            for stat in stats
+        ]
+
+        metric: dict[str, Any] = {"name": first_stat.family_name}
+        if first_stat.unit:
+            metric["unit"] = first_stat.unit
+        if first_stat.help:
+            metric["description"] = first_stat.help
+
+        if first_stat.type == "counter":
+            # OTLP counter names omit the Prometheus-only "_total" suffix.
+            metric["sum"] = {
+                "dataPoints": data_points,
+                "aggregationTemporality": _OTLP_AGGREGATION_TEMPORALITY_CUMULATIVE,
+                "isMonotonic": True,
+            }
+        else:
+            # Gauges (and any unrecognized type) map to an OTLP gauge.
+            metric["gauge"] = {"dataPoints": data_points}
+
+        metrics.append(metric)
+
+    scope: dict[str, Any] = {"name": scope_name}
+    if scope_version:
+        scope["version"] = scope_version
+
+    resource: dict[str, Any] = {}
+    if resource_attributes:
+        resource["attributes"] = _labels_to_otlp_attributes(resource_attributes)
+
+    return {
+        "resourceMetrics": [
+            {
+                "resource": resource,
+                "scopeMetrics": [{"scope": scope, "metrics": metrics}],
+            }
+        ]
+    }
 
 
 @runtime_checkable

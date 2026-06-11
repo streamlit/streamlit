@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import TYPE_CHECKING, Final
 from urllib.parse import quote
 
@@ -60,6 +61,11 @@ if TYPE_CHECKING:
     from streamlit.runtime.stats import Stat
 
 _LOGGER: Final = get_logger(__name__)
+
+# Approximate process/server start time, captured when this module is first
+# imported (during server startup). Used as the start time for cumulative OTLP
+# sums so a counter's accumulation window is stable across scrapes.
+_SERVER_START_TIME_UNIX_NANO: Final = time.time_ns()
 
 # Route path constants (without base URL prefix)
 # These define the canonical paths for all Starlette server endpoints.
@@ -158,6 +164,28 @@ def _stats_to_proto(
             stat.marshall_metric_proto(metric_proto)
 
     return metric_set
+
+
+def _stats_to_otlp_response(
+    stats_by_family: Mapping[str, Sequence[Stat]],
+) -> Response:
+    """Build a JSON response with stats encoded as OTLP `MetricsData`.
+
+    The body is OTLP/HTTP JSON and can be forwarded as-is to an OTLP receiver.
+    """
+    from starlette.responses import JSONResponse
+
+    from streamlit.runtime.stats import stats_to_otlp_dict
+    from streamlit.version import STREAMLIT_VERSION_STRING
+
+    otlp_data = stats_to_otlp_dict(
+        stats_by_family,
+        time_unix_nano=time.time_ns(),
+        start_time_unix_nano=_SERVER_START_TIME_UNIX_NANO,
+        resource_attributes={"service.name": "streamlit"},
+        scope_version=STREAMLIT_VERSION_STRING,
+    )
+    return JSONResponse(otlp_data)
 
 
 def _with_base(path: str, base_url: str | None = None) -> str:
@@ -445,8 +473,9 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRo
     async def _metrics_endpoint(request: Request) -> Response:
         requested_families = request.query_params.getlist("families")
         stats = runtime.stats_mgr.get_stats(family_names=requested_families or None)
-        accept = request.headers.get("Accept", "")
-        if "application/x-protobuf" in accept:
+        if request.query_params.get("format") == "otlp":
+            response = _stats_to_otlp_response(stats)
+        elif "application/x-protobuf" in request.headers.get("Accept", ""):
             payload = _stats_to_proto(stats).SerializeToString()
             response = Response(payload, media_type="application/x-protobuf")
         else:

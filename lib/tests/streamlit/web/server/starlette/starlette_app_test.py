@@ -520,6 +520,41 @@ def test_metrics_endpoint_protobuf_uses_canonical_family_name(
     assert "session_duration_seconds_total" not in family_names
 
 
+def test_metrics_endpoint_otlp_format(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """?format=otlp returns the stats as OTLP/HTTP JSON."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics?format=otlp")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/json"
+
+    metrics = response.json()["resourceMetrics"][0]["scopeMetrics"][0]["metrics"]
+    metrics_by_name = {metric["name"]: metric for metric in metrics}
+
+    # Gauge and counter map to the matching OTLP data types.
+    assert "gauge" in metrics_by_name["active_sessions"]
+    assert metrics_by_name["session_events"]["sum"]["isMonotonic"] is True
+    # OTLP counter names omit the Prometheus-only "_total" suffix.
+    assert "session_events" in metrics_by_name
+    assert "session_events_total" not in metrics_by_name
+    # int64 values are encoded as strings per proto3 JSON.
+    assert metrics_by_name["active_sessions"]["gauge"]["dataPoints"][0]["asInt"] == "3"
+
+
+def test_metrics_endpoint_otlp_format_respects_family_filter(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """?format=otlp honors the families filter just like the other formats."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics?format=otlp&families=session_events")
+    assert response.status_code == 200
+
+    metrics = response.json()["resourceMetrics"][0]["scopeMetrics"][0]["metrics"]
+    names = {metric["name"] for metric in metrics}
+    assert names == {"session_events"}
+
+
 def test_media_endpoint_serves_file(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
