@@ -22,11 +22,10 @@ Currently, validating user input in `st.text_input` requires triggering a full a
 **Requests:**
 
 - [#8790](https://github.com/streamlit/streamlit/issues/8790) - Support client-side validation via
-  regex pattern for `st.text_input` (28+ upvotes)
+  regex pattern for `st.text_input`
 - [#1850](https://github.com/streamlit/streamlit/issues/1850) - Minimum characters for text_input
-  (19+ upvotes)
 - [#6704](https://github.com/streamlit/streamlit/issues/6704) - Support more specialized types for
-  `st.text_input` (email, url, phone) (40+ upvotes)
+  `st.text_input` (email, url, phone)
 
 **Use cases:**
 
