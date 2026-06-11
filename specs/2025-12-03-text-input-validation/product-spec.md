@@ -49,7 +49,7 @@ server-side callable validation.
 ```python
 st.text_input(
     ...
-    validate: str | Callable[[str], bool | str] | None = None,  # NEW
+    validate: str | tuple[str, str] | Callable[[str], bool | str] | None = None,  # NEW
 )
 ```
 
@@ -57,7 +57,7 @@ st.text_input(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `validate` | `str \| Callable[[str], bool \| str] \| None` | `None` | Validation rule for input. If string, treated as JS-flavored regex for client-side validation. If callable, executed server-side when value is submitted. If `None`, no validation is performed. |
+| `validate` | `str \| tuple[str, str] \| Callable[[str], bool \| str] \| None` | `None` | Validation rule for input. If string, treated as JS-flavored regex for client-side validation with a generic error message. If a tuple, treated as `(regex, error_message)` for client-side validation with a custom error message. If callable, executed server-side when value is submitted. If `None`, no validation is performed. |
 
 ### Behavior
 
@@ -81,33 +81,52 @@ st.text_input("Email", validate=r"^[\w.+-]+@[\w-]+\.[\w.-]+$")
 # Only accept Streamlit widget names
 st.text_input("Widget", validate=r"^st\.[a-z_]+$")
 
-# Minimum 5 characters
+# If provided, require at least 5 characters
 st.text_input("Username", validate=r"^.{5,}$")
+
+# Custom error message
+st.text_input(
+    "Email",
+    validate=(r"^[\w.+-]+@[\w-]+\.[\w.-]+$", "Enter a valid email address."),
+)
 ```
 
 **Behavior:**
 
-1. Regex is compiled on the frontend with `us` flags (unicode, dotAll)
-2. Validation runs on blur/submit events; error state is cleared when user types in the input field.
-3. If input doesn't match the pattern:
+1. Regex is compiled on the frontend with fixed `us` flags to match existing
+   `st.column_config.TextColumn` behavior. The `u` flag enables Unicode mode, and
+   the `s` flag lets `.` match newlines. We intentionally don't use `m`, `g`, or
+   `y`: validation patterns should match against the whole value, and stateful
+   regex flags can produce inconsistent results across repeated validations.
+2. Validation does not run on initial render. It runs when the user attempts to
+   commit a value (blur/Enter) or submit a form; error state is cleared when user
+   types in the input field.
+3. If the input is the empty string, validation is skipped. Requiredness is handled
+   separately by a future `required` parameter.
+4. If input doesn't match the pattern:
    - Input turns red (error state) showing an error icon and a tooltip with the error message
    - Submit/Enter is blocked; value is not sent to backend
    - Similar to the error state update planned for number input:
   ![Number input validation error state mockup](number-input-validation.png)
-4. If input matches the pattern:
+5. If input matches the pattern:
    - Normal styling is restored
    - Value can be submitted, triggering a normal rerun and on_change callback execution if provided.
 
 **Error messages:**
 
-TBD; see open questions. Do we need a way to specify the error message?
+Client-side regex validation shows a generic error message by default. To provide a custom error
+message, pass `validate=(regex, error_message)`:
 
 ```python
 st.text_input(
     "Email",
-    validate=r"^[\w.+-]+@[\w-]+\.[\w.-]+$",
+    validate=(r"^[\w.+-]+@[\w-]+\.[\w.-]+$", "Enter a valid email address."),
 )
 ```
+
+The docstring should recommend custom error messages where possible because generic validation
+messages are less helpful to users. Server-side validators can return `False` to show the generic
+error message or return a string to show a custom error message.
 
 > **Note:** We need to document that client-side validation can be bypassed by an "attacker". If the validation is security-relevant, it should be performed on the server-side.
 
@@ -128,7 +147,11 @@ def check_username(value: str) -> bool | str:
 st.text_input("Username", validate=check_username)
 ```
 
-> **Note:** if the validation callable returns anything other than bool or str, an exception will be raised which will be shown to the developer in the validation error message and logged to the console.
+> **Note:** if the validation callable returns anything other than bool or str, it's treated as an
+> internal validation error. The widget uses the normal validation error UI with a generic error
+> message; the exception message and full traceback are logged to the backend console for the
+> developer. Developers are responsible for catching expected internal failures and returning
+> user-friendly strings themselves.
 
 **Callable signature:**
 
@@ -153,6 +176,8 @@ def validator(value: str) -> bool | str:
 
 1. User types in the input field (no validation yet; clears existing error state)
 2. User submits (Enter key or blur):
+   - If the input is the empty string, validation is skipped and the value is accepted.
+     Requiredness is handled separately by a future `required` parameter.
    - The widget's normal blur/Enter commit is **deferred**: today `st.text_input` immediately
      pushes the new widget value to the backend and schedules a rerun on blur/Enter, but with a
      server-side validator this commit (and the rerun it would trigger) is held back until
@@ -275,14 +300,22 @@ password = st.text_input(
 ### Edge cases
 
 - **None value**: If the text input is initialized with `value=None`, resetting to `None` (empty state) is allowed and bypasses validation.
-- **Invalid regex**: If the regex pattern is invalid, a visible error is surfaced in the input
-  (consistent with `st.column_config.TextColumn`, which displays an "Invalid validate regex"
-  error) and a warning is logged on the backend. Validation is not silently skipped, so
-  developers are notified of the broken pattern instead of unintentionally accepting
-  unvalidated input.
-- **Callable exception**: If the callable raises an exception, the error message is displayed to the
-  user and the value is rejected. Exception is logged on the backend.
-- **Slow callable**: Loading state is shown while waiting for server response. A X-second timeout
+- **Empty string**: Empty strings bypass validation. This keeps `validate` focused on validating
+  provided values and avoids showing errors for optional empty fields. Requiredness should be
+  handled by a future `required` parameter; for example, `required=True` combined with
+  `validate=r"^.{5,}$"` would mean "must be present and at least 5 characters."
+- **Invalid regex**: Since the pattern is JavaScript-flavored and compiled in the browser, invalid
+  regexes are detected on the frontend after render rather than raised as normal Python exceptions
+  during script execution. If the regex pattern is invalid, a visible error is surfaced in the
+  input (consistent with `st.column_config.TextColumn`, which displays an "Invalid validate regex"
+  error) and a warning is logged on the backend. Validation is not silently skipped, so developers
+  are notified of the broken pattern instead of unintentionally accepting unvalidated input.
+- **Callable exception**: If the callable raises an exception, the value is rejected and the widget
+  uses the normal validation error UI with a generic error message. The exception message and
+  traceback are not sent to the frontend; the exception with the full traceback is logged to the
+  backend console. Developers should catch expected validation errors and return user-friendly
+  strings.
+- **Slow callable**: Loading state is shown while waiting for server response. A 10-second timeout
   is enforced, after which validation fails with a timeout error.
 - **Concurrent validation**: If user modifies input while server-side validation is in progress,
   the pending validation is cancelled and a new one is triggered on the next submit.
@@ -293,6 +326,8 @@ password = st.text_input(
 This validation pattern can be extended to other input widgets:
 
 - `st.text_area`: Same API as `st.text_input`
+- `st.column_config.TextColumn`: Server-side callable validation as a follow-up. It already
+  supports client-side regex validation.
 - `st.number_input`: Callable validation for custom numeric constraints
 - `st.date_input`: Callable validation for date range/availability checks
 - `st.selectbox`: Callable validation for conditional options
