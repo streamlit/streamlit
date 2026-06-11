@@ -186,6 +186,19 @@ it("builds WSS URI correctly", () => {
   expect(uri).toBe("wss://the_host:9988/foo/bar/baz")
 })
 
+it("builds WSS URI without port when URL uses default HTTPS port", () => {
+  const uri = buildWsUri(
+    {
+      protocol: "https:",
+      hostname: "the_host",
+      port: "",
+      pathname: "foo/bar",
+    } as URL,
+    "baz"
+  )
+  expect(uri).toBe("wss://the_host/foo/bar/baz")
+})
+
 it("builds WS URI with no base path", () => {
   window.location.href = "http://something"
   const uri = buildWsUri(
@@ -198,6 +211,19 @@ it("builds WS URI with no base path", () => {
     "baz"
   )
   expect(uri).toBe("ws://the_host:9988/baz")
+})
+
+it("builds WS URI with no port and no base path", () => {
+  const uri = buildWsUri(
+    {
+      protocol: "http:",
+      hostname: "the_host",
+      port: "",
+      pathname: "",
+    } as URL,
+    "baz"
+  )
+  expect(uri).toBe("ws://the_host/baz")
 })
 
 describe("getPossibleBaseUris", () => {

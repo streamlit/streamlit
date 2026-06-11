@@ -83,16 +83,12 @@ def _get_server_address() -> str:
 def _get_bind_address(server_address: str) -> str:
     """Resolve the socket bind address for the configured server address.
 
-    When the address is the implicit default (0.0.0.0, not set by the user),
-    bind the IPv6 dual-stack wildcard "::" so the advertised localhost URL works
-    on systems where localhost resolves to ::1 before 127.0.0.1. Fall back to the
-    original address on systems without IPv6 support.
+    When the address is the IPv4 wildcard (0.0.0.0), bind the IPv6 dual-stack
+    wildcard "::" so the advertised localhost URL works on systems where
+    localhost resolves to ::1 before 127.0.0.1. Fall back to the original address
+    on systems without IPv6 support.
     """
-    if (
-        server_address == DEFAULT_SERVER_ADDRESS
-        and not config.is_manually_set("server.address")
-        and socket.has_ipv6
-    ):
+    if server_address == DEFAULT_SERVER_ADDRESS and socket.has_ipv6:
         return "::"
     return server_address
 

@@ -117,7 +117,7 @@ export function buildWsUri(
 ): string {
   const wsProtocol = protocol === "https:" ? "wss" : "ws"
   const fullPath = makePath(pathname, path)
-  return `${wsProtocol}://${hostname}:${port}/${fullPath}`
+  return `${wsProtocol}://${hostname}${port ? `:${port}` : ""}/${fullPath}`
 }
 
 /**

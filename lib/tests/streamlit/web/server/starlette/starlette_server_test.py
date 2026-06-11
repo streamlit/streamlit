@@ -119,34 +119,22 @@ class TestGetBindAddress:
 
     def test_uses_ipv6_wildcard_for_default_address_when_available(self) -> None:
         """Test that wildcard binds accept IPv6 localhost when possible."""
-        with (
-            patch("socket.has_ipv6", True),
-            patch("streamlit.config.is_manually_set", return_value=False),
-        ):
+        with patch("socket.has_ipv6", True):
             assert _get_bind_address("0.0.0.0") == "::"
 
     def test_uses_ipv4_wildcard_for_default_address_without_ipv6(self) -> None:
         """Test that the default bind address falls back without IPv6 support."""
-        with (
-            patch("socket.has_ipv6", False),
-            patch("streamlit.config.is_manually_set", return_value=False),
-        ):
+        with patch("socket.has_ipv6", False):
             assert _get_bind_address("0.0.0.0") == "0.0.0.0"
 
-    def test_preserves_manually_configured_ipv4_wildcard_address(self) -> None:
-        """Test that explicit IPv4 wildcard configuration stays IPv4-only."""
-        with (
-            patch("socket.has_ipv6", True),
-            patch("streamlit.config.is_manually_set", return_value=True),
-        ):
-            assert _get_bind_address("0.0.0.0") == "0.0.0.0"
+    def test_uses_ipv6_wildcard_for_configured_ipv4_wildcard_address(self) -> None:
+        """Test that explicit 0.0.0.0 also accepts IPv6 localhost."""
+        with patch("socket.has_ipv6", True):
+            assert _get_bind_address("0.0.0.0") == "::"
 
     def test_preserves_specific_address(self) -> None:
         """Test that explicitly configured non-wildcard addresses are preserved."""
-        with (
-            patch("socket.has_ipv6", True),
-            patch("streamlit.config.is_manually_set", return_value=True),
-        ):
+        with patch("socket.has_ipv6", True):
             assert _get_bind_address("127.0.0.1") == "127.0.0.1"
 
 
@@ -709,6 +697,36 @@ class TestStartStarletteServer:
         call_args = bind_socket.call_args[0]
         assert call_args[0] == "::"
 
+    def test_uses_ipv6_bind_address_for_configured_ipv4_wildcard(self) -> None:
+        """Test that configured 0.0.0.0 also binds dual-stack when possible."""
+
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch("socket.has_ipv6", True),
+            patch_config_options({"server.address": "0.0.0.0"}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ) as bind_socket,
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server.start())
+
+        bind_socket.assert_called_once()
+        call_args = bind_socket.call_args[0]
+        assert call_args[0] == "::"
+        uvicorn_config = uvicorn_server_cls.call_args[0][0]
+        assert uvicorn_config.host == "::"
+
     def test_updates_uvicorn_host_after_default_bind_fallback(self) -> None:
         """Test that uvicorn logs/config reflect the fallback address."""
 
@@ -1159,13 +1177,12 @@ class TestUvicornRunner:
             uvicorn_instance.run.assert_called_once_with(sockets=[mock_socket])
             mock_socket.close.assert_called_once()
 
-    def test_run_preserves_manually_configured_ipv4_wildcard_address(self) -> None:
-        """Test that explicit 0.0.0.0 remains an IPv4-only bind."""
+    def test_run_uses_ipv6_wildcard_for_configured_ipv4_wildcard(self) -> None:
+        """Test that explicit 0.0.0.0 also accepts IPv6 localhost."""
         mock_socket = mock.MagicMock(spec=socket.socket)
 
         with (
             patch("socket.has_ipv6", True),
-            patch("streamlit.config.is_manually_set", return_value=True),
             patch_config_options({"server.address": "0.0.0.0", "server.port": 8502}),
             patch(
                 "streamlit.web.server.starlette.starlette_server._get_uvicorn_config_kwargs",
@@ -1183,9 +1200,9 @@ class TestUvicornRunner:
             runner = UvicornRunner("myapp:app")
             runner.run()
 
-        assert bind_socket.call_args[0][0] == "0.0.0.0"
+        assert bind_socket.call_args[0][0] == "::"
         uvicorn_config = uvicorn_server_cls.call_args[0][0]
-        assert uvicorn_config.host == "0.0.0.0"
+        assert uvicorn_config.host == "::"
 
     def test_run_updates_uvicorn_host_after_default_bind_fallback(self) -> None:
         """Test that uvicorn runner config reflects the fallback address."""
