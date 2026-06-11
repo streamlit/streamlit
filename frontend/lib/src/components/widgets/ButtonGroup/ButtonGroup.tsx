@@ -190,6 +190,16 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   // default so the widget stays visually consistent. An explicit user
   // deselection always produces value=[], which short-circuits this guard
   // immediately, so we never auto-select over a deliberate empty selection.
+  //
+  // Safety for non-default selections: when format_func changes, the backend
+  // resolves the user's actual selection via session_state_fallback and sends
+  // it back serialised with the new format_func in rawValues (e.g. "naranja"
+  // for option "B" in ES mode). Because element props (options + rawValues)
+  // arrive as a single atomic proto update, useBasicWidgetState applies the
+  // corrected value before this effect runs. The validIndices guard above
+  // therefore fires an early return — the default reset path is only reached
+  // during the brief window before the first backend response (initial render),
+  // when no user selection yet exists and the default is correct.
   useEffect(() => {
     if (value.length === 0) return
     const validIndices = contentStringsToIndices(options, value)
