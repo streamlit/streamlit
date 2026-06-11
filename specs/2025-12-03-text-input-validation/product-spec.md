@@ -174,18 +174,23 @@ def validator(value: str) -> bool | str:
 **Behavior:**
 
 1. User types in the input field (no validation yet; clears existing error state)
-2. User submits (Enter key or blur):
-   - If the input is the empty string, validation is skipped and the value is accepted.
-     Requiredness is handled separately by a future `required` parameter.
+2. User submits (Enter key, blur, or form submit):
+   - If the input is the empty string or `None` (e.g. an unset input or one cleared back to its
+     `None` initial state), validation is skipped and the value is accepted. Requiredness is
+     handled separately by a future `required` parameter.
    - The widget's normal blur/Enter commit is **deferred**: today `st.text_input` immediately
      pushes the new widget value to the backend and schedules a rerun on blur/Enter, but with a
      server-side validator this commit (and the rerun it would trigger) is held back until
-     validation succeeds.
+     validation succeeds. Inside a form, the deferred commit happens on form submit instead of
+     per-field blur/Enter (see the **Forms** edge case below).
    - Frontend sends a validation request to backend (no full rerun triggered)
    - Backend executes the callable with the current value
    - Backend returns validation result to frontend
 3. Based on result:
-   - `True`: Value is accepted, a normal rerun is triggered and on_change executed if provided.
+   - `True`: Value is accepted. Outside a form, the deferred commit goes through and triggers the
+     widget's normal rerun (and `on_change` callback if provided). Inside a form, the validated
+     value is committed as part of the form submission and only the form's single submit rerun
+     occurs (see the **Forms** edge case below).
    - `False` or error string: Input shows error state, no rerun, user can correct input (see mockup above for error state).
 4. While validation is in progress:
    - Input shows a loading indicator (spinner icon)
@@ -319,7 +324,13 @@ password = st.text_input(
   is enforced, after which validation fails with a timeout error.
 - **Concurrent validation**: If user modifies input while server-side validation is in progress,
   the pending validation is cancelled and a new one is triggered on the next submit.
-- **Forms**: Validation runs before form submission. Invalid inputs block form submit.
+- **Forms**: Inside an `st.form`, validation is triggered by the form's submit button rather than
+  by per-field blur/Enter, matching how form widgets defer their commits until submit. On submit,
+  client-side regex checks run first, then any server-side callables; validation must pass for
+  every field before the form is submitted. If any field is invalid, form submission is blocked,
+  the offending fields show their error state, and no rerun occurs. When all fields are valid, the
+  form submits with a single rerun—server-side validation does not trigger an extra per-field
+  rerun inside forms.
 
 ### Future extensions
 
