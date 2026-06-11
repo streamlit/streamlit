@@ -12190,15 +12190,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knip@npm:^6.15.0":
-  version: 6.15.0
-  resolution: "knip@npm:6.15.0"
+"knip@npm:^6.16.0":
+  version: 6.16.0
+  resolution: "knip@npm:6.16.0"
   dependencies:
     fdir: "npm:^6.5.0"
     formatly: "npm:^0.3.0"
     get-tsconfig: "npm:4.14.0"
     jiti: "npm:^2.7.0"
-    minimist: "npm:^1.2.8"
     oxc-parser: "npm:^0.133.0"
     oxc-resolver: "npm:^11.20.0"
     picomatch: "npm:^4.0.4"
@@ -12211,7 +12210,7 @@ __metadata:
   bin:
     knip: bin/knip.js
     knip-bun: bin/knip-bun.js
-  checksum: 10c0/f31d96c3cdb7ec6a49642cbaa272b64deab33d734de405b6177fff96448dd1f31d17d31941d07290b50f90573789af32dc2386b35f2b69316e87768a2f1e94a1
+  checksum: 10c0/95f68d1759b83c61cd4768e25f0b66fbecca14d4d70e6eaf3458100b643a440d6b7156ad5a040262da58f7cfe6cd3704055791032f7667ffaeca0f82294329d3
   languageName: node
   linkType: hard
 
@@ -17053,7 +17052,7 @@ __metadata:
     eslint-plugin-testing-library: "npm:^7.16.2"
     globals: "npm:^17.6.0"
     jiti: "npm:^2.7.0"
-    knip: "npm:^6.15.0"
+    knip: "npm:^6.16.0"
     oxfmt: "npm:^0.53.0"
     oxlint: "npm:^1.68.0"
     typescript: "npm:^6.0.3"
