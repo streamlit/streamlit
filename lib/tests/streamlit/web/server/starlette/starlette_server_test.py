@@ -117,8 +117,11 @@ class TestBindSocket:
 class TestGetBindAddress:
     """Tests for _get_bind_address function."""
 
-    def test_uses_ipv6_wildcard_for_default_address_when_available(self) -> None:
-        """Test that wildcard binds accept IPv6 localhost when possible."""
+    def test_uses_ipv6_wildcard_for_ipv4_wildcard_address_when_available(
+        self,
+    ) -> None:
+        """Test that any 0.0.0.0 bind (implicit default or explicitly configured)
+        accepts IPv6 localhost when possible."""
         with patch("socket.has_ipv6", True):
             assert _get_bind_address("0.0.0.0") == "::"
 
@@ -126,11 +129,6 @@ class TestGetBindAddress:
         """Test that the default bind address falls back without IPv6 support."""
         with patch("socket.has_ipv6", False):
             assert _get_bind_address("0.0.0.0") == "0.0.0.0"
-
-    def test_uses_ipv6_wildcard_for_configured_ipv4_wildcard_address(self) -> None:
-        """Test that explicit 0.0.0.0 also accepts IPv6 localhost."""
-        with patch("socket.has_ipv6", True):
-            assert _get_bind_address("0.0.0.0") == "::"
 
     def test_preserves_specific_address(self) -> None:
         """Test that explicitly configured non-wildcard addresses are preserved."""
