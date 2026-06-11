@@ -65,7 +65,7 @@ st.query_params["category"] = cat   # don't do this when bind= handles sync
 ```
 
 Notes:
-- `bind="query-params"` requires `key=`. The only valid value is the exact string `"query-params"` (hyphen, not `"query_params"`); anything else is invalid.
+- `bind="query-params"` requires `key=`. The only valid value is the exact string `"query-params"` (hyphen, not `"query_params"`); anything else is invalid. Not supported with `st.text_input(type="password")`.
 - When the value equals the default, the param is dropped from the URL to keep it clean.
 - A bound param can't be set or deleted through `st.query_params` — change it programmatically via `st.session_state[key]` instead. Do not mix `bind=` with manual `st.query_params` reads/writes.
 - Still render the value (e.g. `st.write(f"Selected: {cat}")`) if the app needs to show the current selection.
