@@ -83,14 +83,22 @@ def skeleton(
         Width of the skeleton in pixels, or ``"stretch"`` to fill the
         available horizontal space. Defaults to ``"stretch"``.
         Note: ``"content"`` is not supported since skeleton has no inherent
-        content width.
+        content width. (This intentionally differs from ``st.spinner()``,
+        which defaults ``width`` to ``"content"``.)
 
     Returns
     -------
     SkeletonPlaceholder
-        A placeholder object that wraps a ``DeltaGenerator``. Use ``with``
-        notation or call ``st.*`` methods directly on the returned object
-        to replace the skeleton with content.
+        A placeholder object that wraps a ``DeltaGenerator``. There are two
+        ways to use it:
+
+        - **Standalone**: Call ``st.*`` methods directly on the returned
+          object (e.g. ``placeholder.dataframe(...)``) to replace the
+          skeleton with content.
+        - **Context manager**: Use it in a ``with`` block. The skeleton is
+          shown as a transient element while the block runs and auto-clears
+          on exit. Elements written inside the block render in the parent
+          container (like ``st.spinner()``), not inside the skeleton.
 
     Examples
     --------
@@ -167,9 +175,22 @@ st.dataframe(data)  # Content appears in normal flow
 
 **Dual-mode transition:**
 
-When entering context manager mode, `__enter__` clears the immediately-shown skeleton and
-switches to transient mode with the 0.5s delay. This allows a single API to support both
-use cases transparently.
+When `st.skeleton()` is used as a context manager, the skeleton shown by the initial call
+is cleared in `__enter__` and re-shown as a transient element with the 0.5s delay. See
+[Alternatives Considered](#alternatives-considered) for why a single call can behave this
+way and the simpler alternatives that were weighed.
+
+- **Interleaved sequence (single rerun):** a standalone-then-`with` use briefly creates the
+  immediate skeleton, which `__enter__` clears; the transient skeleton then appears only if
+  the block runs longer than 0.5s. The persistent show and the `__enter__` clear are
+  expected to coalesce on the frontend so there is no visible flash (to be verified during
+  implementation).
+- **`with ... as ph`:** `__enter__` returns the `SkeletonPlaceholder` for API symmetry, but
+  in context-manager mode the skeleton is transient—calling methods on `ph` to replace it is
+  not the intended pattern (use standalone mode for replacement).
+- **Error before the block is entered:** if the script errors after `st.skeleton()` is called
+  but before the `with` block starts, the initially-shown skeleton is cleared on the next
+  rerun like any other element that is no longer rendered.
 
 **Dimension behavior:**
 
@@ -197,10 +218,19 @@ via the `useLayoutStyles` hook.
 
 **Accessibility:**
 
-- The skeleton uses `role="status"` with `aria-busy="true"` to indicate loading state
+These are **net-new requirements** for the implementation PR. The existing internal
+`Skeleton` frontend component does not yet implement them (it renders no `role`/`aria-*`
+attributes, and the pulse animation has no `prefers-reduced-motion` guard). The same
+treatment should be applied retroactively to existing internal `_skeleton` usages (e.g.,
+`AppSkeleton`).
+
+- The skeleton is treated as a **decorative placeholder**: it is marked `aria-hidden="true"`
+  so assistive technologies do not announce each skeleton individually. This avoids silence
+  (a bare skeleton has no text to read) as well as noisy, repeated announcements when many
+  skeletons render at once (e.g., chat or card grids). Apps that need an audible "loading"
+  cue should own that announcement via a higher-level labeled live region.
 - The pulse animation respects `prefers-reduced-motion` (animation disabled when reduced
-  motion is preferred)
-- Screen readers announce the loading state without being overly verbose
+  motion is preferred).
 
 **Rerun behavior:**
 
@@ -208,6 +238,13 @@ If the skeleton is never replaced (e.g., a data fetch fails or the script reruns
 replacement), the skeleton persists and displays again on the next rerun. This matches
 `st.empty()` behavior - the placeholder maintains its position in the layout until
 explicitly replaced or the element is no longer rendered in the script.
+
+> **Flicker caveat (standalone mode):** When data loads quickly (e.g., a warm
+> `@st.cache_data` cache), the skeleton appears for a single frame and is immediately
+> replaced, which can cause a brief flicker on every rerun. Since reducing layout shift is
+> the primary motivation for this command, apps that want to avoid the flicker should gate
+> the skeleton on a session-state "loaded" flag (or only render it on a cache miss) rather
+> than rendering it unconditionally.
 
 ### Usage Examples
 
@@ -328,6 +365,52 @@ No text, icons, or other decorations—just a clean placeholder shape.
 | `st.spinner()` | Yes | No | No | 0.5s | Yes |
 | `st.skeleton()` standalone | Yes | Yes | Yes | None | No |
 | `st.skeleton()` context mgr | Yes | Yes | No | 0.5s | No |
+
+## Alternatives Considered
+
+> **Open decision:** the return-type and dual-mode choices below need maintainer sign-off
+> before implementation begins. The options are documented here per "Present Options, Not
+> Edicts"; the final selection is intentionally deferred to review.
+
+**Return type — `SkeletonPlaceholder` wrapper vs. plain `DeltaGenerator`:**
+
+`st.empty()` returns a plain `DeltaGenerator`. We propose a thin `SkeletonPlaceholder`
+wrapper instead because the context-manager mode needs custom `__enter__`/`__exit__`
+semantics (transient display + auto-clear) that a plain `DeltaGenerator` does not provide.
+The wrapper delegates `st.*` methods to the underlying `DeltaGenerator`, so
+`placeholder.dataframe(...)`, type narrowing, and IDE autocompletion behave like
+`st.empty()`.
+
+- **Option A (proposed): `SkeletonPlaceholder` wrapper** — supports both standalone
+  replacement and the transient `with` block from a single return value. Cost: one new
+  public type plus method delegation.
+- **Option B: plain `DeltaGenerator`** — matches `st.empty()` exactly, but cannot carry the
+  transient context-manager behavior.
+- **Option C: two commands** (e.g., a placeholder command plus a separate context manager) —
+  unambiguous, but adds API surface and splits a single concept.
+
+**Dual-mode in one command vs. splitting it:**
+
+Supporting both an immediate standalone placeholder and a 0.5s-delayed context manager from a
+single `st.skeleton()` call is the most novel part of this API. Because the call fully
+evaluates before a `with` statement begins, the proposed mechanism is: show the skeleton
+immediately, and if it is then used as a context manager, `__enter__` clears that initial
+skeleton and re-shows it as a transient element with the 0.5s delay. Simpler alternatives —
+dropping the 0.5s delay in `with` mode, adding an explicit `delay` parameter, or splitting
+into two commands — are viable and should be weighed during review.
+
+**`height` positional vs. keyword-only:**
+
+`height` is the only positional argument because it is the most-tuned per-instance value
+(each skeleton typically reserves a different amount of space), so `st.skeleton(200)` reads
+naturally. The alternative is making it keyword-only like `st.empty()` (which takes no
+positional arguments); once shipped as positional, this slot can never change.
+
+**`width` default of `"stretch"` vs. `"content"`:**
+
+`st.spinner()` defaults `width="content"`, but a skeleton has no intrinsic content size, so
+it defaults to `"stretch"` and does not accept `"content"`. This is an intentional,
+documented deviation from the "Same Name, Same Behavior" principle.
 
 ## Out of Scope (Future Work)
 
