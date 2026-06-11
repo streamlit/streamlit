@@ -371,7 +371,11 @@ No text, icons, or other decorations—just a clean placeholder shape.
 | `st.empty()` | No | No | Yes | — | No |
 | `st.spinner()` | Yes | No | No | 0.5s | Yes |
 | `st.skeleton()` standalone | Yes | Yes | Yes | None | No |
-| `st.skeleton()` context mgr | Yes | Yes | No | 0.5s | No |
+| `st.skeleton()` context mgr | Yes | No¹ | No | 0.5s | No |
+
+¹ Like `st.spinner()`, context-manager mode does not reserve space during the 0.5s delay
+(and shows nothing at all for blocks that finish within it). Use standalone mode to reserve
+layout space immediately.
 
 ## Alternatives Considered
 
