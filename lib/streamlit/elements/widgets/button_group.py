@@ -230,6 +230,16 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
             # These are stale wire values from a previous format_func mapping
             # (e.g. a language switch). validate_and_sync_multiselect_value_with_options
             # applies the same filter for invalid canonical values.
+
+        # If ui_value was non-empty but every entry was stale (all dropped),
+        # fall back to the configured default so that _widget_changed sees no
+        # difference and suppresses the spurious on_change callback. This mirrors
+        # the single-select behaviour in _SingleSelectButtonGroupSerde.deserialize.
+        # When no default is configured, default_option_indices is [], which
+        # returns [] - matching the initial stored value and still suppressing
+        # the callback.
+        if not values and ui_value:
+            return [self.options[i] for i in self.default_option_indices]
         return values
 
 
