@@ -441,7 +441,18 @@ def test_convert_timelike_to_time_invalid_raises(
 
 def test_convert_datelike_to_date_today_keyword() -> None:
     """The string ``"today"`` resolves to today's date."""
-    assert _convert_datelike_to_date("today") == datetime.now().date()
+    # Freeze time so the comparison cannot flake across a midnight boundary.
+    # A datetime subclass is used (instead of a plain mock) so the function's
+    # internal isinstance(..., datetime) checks keep working.
+    frozen_now = datetime(2026, 6, 11, 12, 0, 0)
+
+    class _FrozenDatetime(datetime):
+        @classmethod
+        def now(cls, tz: object = None) -> datetime:  # type: ignore[override]
+            return frozen_now
+
+    with patch("streamlit.elements.widgets.time_widgets.datetime", _FrozenDatetime):
+        assert _convert_datelike_to_date("today") == frozen_now.date()
 
 
 @pytest.mark.parametrize(

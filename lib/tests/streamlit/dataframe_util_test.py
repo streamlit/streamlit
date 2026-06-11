@@ -1707,6 +1707,9 @@ def test_pandas_df_to_series_returns_first_column() -> None:
 
 def test_unify_missing_values_replaces_nan_with_none() -> None:
     """``_unify_missing_values`` replaces NaN with None and preserves other values."""
-    df = pd.DataFrame({"a": [1.0, np.nan, 3.0]})
+    # Use an object-dtype column so the None replacement is stable across all
+    # supported pandas versions. For pure-float columns, pandas < 3.0 coerces
+    # None back to NaN via infer_objects(), which is the documented behavior.
+    df = pd.DataFrame({"a": ["x", np.nan, "y"]})
     result = dataframe_util._unify_missing_values(df)
-    assert result["a"].tolist() == [1.0, None, 3.0]
+    assert result["a"].tolist() == ["x", None, "y"]
