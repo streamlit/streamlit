@@ -253,9 +253,13 @@ def _compute_data_editor_signature(
     # Data format for return conversion
     h.update(f"format:{data_format.name}".encode("utf-8"))
 
-    # Column names in order (after _fix_column_headers)
+    # Column names in order (after _fix_column_headers).
+    # Use repr() so the `:` separator boundary is unambiguous even when a
+    # column name itself contains a colon (e.g., a column literally named
+    # "disabled:all"). repr() quotes and escapes the value, preventing
+    # collisions across the otherwise colon-delimited fields below.
     for col in data_df.columns:
-        h.update(f"col:{col}".encode("utf-8"))
+        h.update(f"col:{col!r}".encode("utf-8"))
 
     # Index type and names
     h.update(f"index_type:{type(data_df.index).__name__}".encode("utf-8"))
@@ -284,9 +288,13 @@ def _compute_data_editor_signature(
         ).hexdigest()[:8]
         h.update(f"index_values:{index_hash}".encode("utf-8"))
 
-    # Arrow field types with nullability
+    # Arrow field types with nullability.
+    # repr() the field name (which can contain colons) so the colon-delimited
+    # boundary stays unambiguous; type/nullable are repr-safe primitives.
     for field in arrow_schema:
-        h.update(f"arrow:{field.name}:{field.type}:{field.nullable}".encode("utf-8"))
+        h.update(
+            f"arrow:{field.name!r}:{field.type}:{field.nullable}".encode("utf-8")
+        )
 
     # DataframeSchema data kinds for parsing
     for col_name, data_kind in dataframe_schema.items():
@@ -670,9 +678,20 @@ except Exception:
     raise
 ```
 
-**Alternative**: Provide a `DataEditorValidationError` class that users explicitly raise for
-validation failures they want displayed. Any other exception propagates normally. This is
-safer than catching all exceptions but requires users to learn a new pattern.
+**Alternative (recommended for final implementation)**: Provide a `DataEditorValidationError`
+class that users explicitly raise for validation failures they want displayed. Any other
+exception propagates normally. This is safer than catching all `ValueError`/`TypeError` and
+requires users to opt in to surfacing a message.
+
+**Why the opt-in approach is safer**: A broad `except (ValueError, TypeError)` is wider than it
+looks. Third-party validators (pydantic, pandera, marshmallow, etc.) commonly raise `ValueError`
+subclasses whose messages embed the offending input data or internal stack fragments. Catching
+them and calling `st.error(str(e))` would surface those details to end users — the exact leak the
+security consideration above warns against. Standardizing on an explicit `DataEditorValidationError`
+opt-in means only messages the developer intentionally marked as user-facing are displayed, while
+everything else (including third-party `ValueError`s) follows Streamlit's normal exception path
+with its redaction/logging. The implementation sketch below uses the broad catch for brevity, but
+the opt-in class is the preferred contract to lock in.
 
 ```python
 def validate_and_save(source_df, edited_df, edits):

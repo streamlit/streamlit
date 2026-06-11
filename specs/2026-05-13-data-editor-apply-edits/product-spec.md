@@ -81,6 +81,16 @@ but the callback always receives and must return `pd.DataFrame`. The implementat
 inputs to pandas before invoking the callback and converts the return value back to the original
 `data_format` as needed. This simplifies the callback API while preserving existing type behavior.
 
+**Performance caveat (non-pandas inputs)**: For non-pandas inputs this forces a round-trip
+conversion (e.g., Polars → pandas → Polars) on every rerun where the callback runs, which is not
+visible in the callback's `pd.DataFrame` signature. This is a deliberate trade-off (a uniform,
+simple callback contract over zero-copy fidelity) but it slightly conflicts with API principle #29
+("Embrace the Python Ecosystem"). The cost is bounded by the editor's data size and only incurred
+when edits are present. This caveat must be surfaced in the public `apply_edits` docstring (not
+just here) so Polars/PyArrow users aren't surprised. A future enhancement could pass the callback
+the data in its original `data_format` to avoid the round-trip; deferred to keep the initial API
+minimal.
+
 **Parameters:**
 
 | Parameter | Type | Description |
