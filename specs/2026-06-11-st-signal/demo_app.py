@@ -682,9 +682,11 @@ def consumer_alert() -> None:  # watches loaded
 
 
 def lab_trace_panel() -> None:
-    # A run_every poller, not a watcher. Parallel batch members write the trace
-    # from worker threads, and those writes are only visible to a *later* pass
-    # (not to a serial watcher in the same pass), so we poll to aggregate them.
+    # A run_every poller, not a watcher. The parallel consumers are dispatched
+    # fire-and-forget, so a same-pass serial watcher could run before they
+    # finish (and session_state assignments from workers aren't guaranteed
+    # visible within the dispatching pass). Polling a beat later sees the
+    # complete, settled trace.
     with st.container(border=True):
         st.markdown(
             "**:material/timeline: Cascade trace** — execution order of the last run"

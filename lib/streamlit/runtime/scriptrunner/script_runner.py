@@ -580,32 +580,58 @@ class ScriptRunner:
         container the descendant nests into), so outstanding work is drained
         before a descendant runs. ``order_fragment_ids`` places ancestors before
         descendants, so this only affects nested watchers of the same signal.
+
+        A fragment that is the rerun's *direct target* (a widget-triggered or
+        ``run_every`` rerun of that fragment — ``rerun_data.direct_fragment_ids``)
+        always runs inline, even when declared ``parallel=True``: parallel
+        fragments' own reruns are sequential per the parallel-fragments
+        contract, so interaction-gated ``st.dialog``/``st.switch_page`` keep
+        working. Only fragments queued as signal watchers are dispatched to
+        workers.
+
+        If the pass escapes (a serial watcher re-raising Rerun/Stop, or an
+        interrupt) while parallel watchers are in flight, they are drained
+        before the escape propagates — mirroring the full-run path — so workers
+        never outlive the pass.
         """
         storage = self._fragment_storage
         consumed = ctx.fragment_ids_consumed
         in_flight: list[str] = []
         used_coordinator = False
 
-        queue_index = 0
-        while queue_index < len(fragment_ids_this_run):
-            fragment_id = fragment_ids_this_run[queue_index]
-            queue_index += 1
-            if fragment_id in consumed:
-                continue
+        try:
+            queue_index = 0
+            while queue_index < len(fragment_ids_this_run):
+                fragment_id = fragment_ids_this_run[queue_index]
+                queue_index += 1
+                if fragment_id in consumed:
+                    continue
 
-            if in_flight and storage.has_ancestor_in(fragment_id, set(in_flight)):
+                if in_flight and storage.has_ancestor_in(fragment_id, set(in_flight)):
+                    self._join_parallel_watchers(ctx, in_flight)
+                    in_flight = []
+
+                if (
+                    storage.is_parallel(fragment_id)
+                    and fragment_id not in rerun_data.direct_fragment_ids
+                ):
+                    if self._dispatch_parallel_watcher(ctx, rerun_data, fragment_id):
+                        in_flight.append(fragment_id)
+                        used_coordinator = True
+                else:
+                    self._run_serial_watcher(ctx, rerun_data, fragment_id)
+
+            if in_flight:
                 self._join_parallel_watchers(ctx, in_flight)
-                in_flight = []
+        except BaseException:
+            # Drain in-flight workers before the escape (a worker or serial
+            # watcher rerun/stop, a user error, or an interrupt) propagates so
+            # they don't run into the next pass. drain() is idempotent, so a
+            # join that already drained is fine.
+            if used_coordinator and ctx.parallel_coordinator is not None:
+                ctx.parallel_coordinator.drain()
+            raise
 
-            if storage.is_parallel(fragment_id):
-                if self._dispatch_parallel_watcher(ctx, rerun_data, fragment_id):
-                    in_flight.append(fragment_id)
-                    used_coordinator = True
-            else:
-                self._run_serial_watcher(ctx, rerun_data, fragment_id)
-
-        if in_flight:
-            self._join_parallel_watchers(ctx, in_flight)
         if used_coordinator and ctx.parallel_coordinator is not None:
             ctx.parallel_coordinator.close()
 
@@ -729,16 +755,13 @@ class ScriptRunner:
         global ``new_fragment_ids`` snapshot rather than the serial loop's
         registration-sequence window, which races under the concurrent
         registration that parallel watchers perform.
+
+        If ``join()`` raises (a worker requested rerun/stop, or an interrupt),
+        the exception propagates to ``_run_fragment_pass``, which drains the
+        coordinator before letting the escape continue.
         """
         coordinator = cast("ParallelFragmentCoordinator", ctx.parallel_coordinator)
-        try:
-            coordinator.join()
-        except BaseException:
-            # Mirror the full-run path: drain in-flight workers before the
-            # escape (worker rerun/stop, user error, or interrupt) propagates so
-            # they don't outlive the pass.
-            coordinator.drain()
-            raise
+        coordinator.join()
 
         newly_registered_ids = ctx.shared.new_fragment_ids.snapshot()
         for fragment_id in dispatched:

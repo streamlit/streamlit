@@ -208,6 +208,39 @@ class ScriptRequestsTest(unittest.TestCase):
         ]
         assert reqs._rerun_data.fired_signal_keys == frozenset({"sig_a", "sig_b"})
 
+    def test_request_rerun_records_direct_fragment_ids(self):
+        """Fragment ids arriving as ``fragment_id`` (widget-triggered or
+        run_every reruns) are recorded as the rerun's direct targets; ids
+        arriving via ``fragment_id_queue`` (signal watchers) are not. Direct
+        targets always run inline, even when declared parallel=True."""
+        reqs = ScriptRequests()
+
+        reqs.request_rerun(RerunData(fragment_id="direct1"))
+        assert reqs._rerun_data.direct_fragment_ids == frozenset({"direct1"})
+
+        # A coalesced widget rerun adds its id to the direct set.
+        reqs.request_rerun(RerunData(fragment_id="direct2"))
+        # A coalesced watcher queue adds to the queue but not to the direct set.
+        reqs.request_rerun(RerunData(fragment_id_queue=["watcher1"]))
+
+        assert reqs._rerun_data.fragment_id_queue == [
+            "direct1",
+            "direct2",
+            "watcher1",
+        ]
+        assert reqs._rerun_data.direct_fragment_ids == frozenset({"direct1", "direct2"})
+
+    def test_request_rerun_full_rerun_clears_direct_fragment_ids(self):
+        """A full rerun supersedes pending fragment runs; the direct-target
+        set is dropped along with the queue."""
+        reqs = ScriptRequests()
+
+        reqs.request_rerun(RerunData(fragment_id="direct1"))
+        reqs.request_rerun(RerunData())
+
+        assert reqs._rerun_data.fragment_id_queue == []
+        assert reqs._rerun_data.direct_fragment_ids == frozenset()
+
     def test_request_rerun_full_rerun_drops_fired_signal_keys(self):
         """A full rerun supersedes a pending signal pass: both the queue and
         the fired signal keys are cleared."""

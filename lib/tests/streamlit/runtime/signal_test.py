@@ -43,13 +43,21 @@ def _fresh_thread_state() -> Iterator[None]:
 def _make_ctx(
     fragment_ids_this_run: list[str] | None = None,
     signal_storage: MemorySignalStorage | None = None,
+    registered_fragments: tuple[str, ...] = (),
 ) -> MagicMock:
-    """Create a mock ScriptRunContext with real signal-related fields."""
+    """Create a mock ScriptRunContext with real signal-related fields.
+
+    ``registered_fragments`` are registered in the ctx's fragment storage so
+    they pass ``_enqueue_watchers``'s stale-id filter (a fired watcher is only
+    queued if its fragment is still registered).
+    """
     ctx = MagicMock()
     ctx.signal_storage = (
         signal_storage if signal_storage is not None else MemorySignalStorage()
     )
     ctx.fragment_storage = MemoryFragmentStorage()
+    for fragment_id in registered_fragments:
+        ctx.fragment_storage.register(fragment_id, lambda: None)
     ctx.signal_keys_declared_this_run = set()
     ctx.signals_fired_this_pass = set()
     ctx.fragment_ids_consumed = set()
@@ -338,9 +346,11 @@ def test_send_during_full_run_is_state_update_only() -> None:
         assert ctx.signals_fired_this_pass == set()
 
 
-def test_send_appends_watchers_to_live_queue_in_declared_order() -> None:
-    """In a fragment pass, send() queues the watchers in page order."""
-    ctx = _make_ctx(fragment_ids_this_run=["trigger"])
+def test_send_appends_watchers_to_live_queue_in_execution_order() -> None:
+    """In a fragment pass, send() queues the watchers in execution order."""
+    ctx = _make_ctx(
+        fragment_ids_this_run=["trigger"], registered_fragments=("w1", "w2")
+    )
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
         sig = signal("k", initial=0)
         ctx.signal_storage.register_watcher("k", "w1")
@@ -367,7 +377,10 @@ def test_send_with_zero_watchers_is_state_update_only() -> None:
 
 def test_send_dedups_against_queued_and_consumed_ids() -> None:
     """Watchers that already ran or are already queued aren't re-queued."""
-    ctx = _make_ctx(fragment_ids_this_run=["already_ran", "still_queued"])
+    ctx = _make_ctx(
+        fragment_ids_this_run=["already_ran", "still_queued"],
+        registered_fragments=("already_ran", "still_queued", "fresh"),
+    )
     ctx.fragment_ids_consumed.add("already_ran")
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
         sig = signal("k", initial=0)
@@ -382,9 +395,28 @@ def test_send_dedups_against_queued_and_consumed_ids() -> None:
     mock_warning.assert_not_called()
 
 
+def test_send_skips_watchers_no_longer_in_fragment_storage() -> None:
+    """A fired watcher whose fragment was dropped from storage isn't queued.
+
+    Mirrors the request-time filtering in AppSession._resolve_scope_token: a
+    stale subscription (e.g. its fragment was removed by a preceding full run)
+    must not reach the pass loop, where it would log a missing-fragment
+    warning.
+    """
+    ctx = _make_ctx(fragment_ids_this_run=["trigger"], registered_fragments=("alive",))
+    with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
+        sig = signal("k", initial=0)
+        ctx.signal_storage.register_watcher("k", "alive")
+        ctx.signal_storage.register_watcher("k", "stale")
+
+        sig.send(1)
+
+    assert ctx.fragment_ids_this_run == ["trigger", "alive"]
+
+
 def test_repeated_sends_coalesce_to_last_value_without_warning() -> None:
     """Multiple sends in one pass queue watchers once; last value wins."""
-    ctx = _make_ctx(fragment_ids_this_run=["trigger"])
+    ctx = _make_ctx(fragment_ids_this_run=["trigger"], registered_fragments=("w1",))
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
         sig = signal("k", initial=0)
         ctx.signal_storage.register_watcher("k", "w1")
@@ -400,7 +432,7 @@ def test_repeated_sends_coalesce_to_last_value_without_warning() -> None:
 
 def test_refire_within_own_cascade_warns_and_does_not_requeue() -> None:
     """A signal can't re-fire from within its own cascade (cycle guard)."""
-    ctx = _make_ctx(fragment_ids_this_run=["w1"])
+    ctx = _make_ctx(fragment_ids_this_run=["w1"], registered_fragments=("w1",))
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
         sig = signal("k", initial=0)
         ctx.signal_storage.register_watcher("k", "w1")
@@ -452,7 +484,7 @@ def test_reorder_keeps_consumed_prefix_intact() -> None:
 
 def test_bare_call_fires_with_state_unchanged() -> None:
     """sig() pokes the watchers without replacing the state."""
-    ctx = _make_ctx(fragment_ids_this_run=["trigger"])
+    ctx = _make_ctx(fragment_ids_this_run=["trigger"], registered_fragments=("w1",))
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
         sig = signal("k", initial=7)
         ctx.signal_storage.register_watcher("k", "w1")
@@ -465,7 +497,7 @@ def test_bare_call_fires_with_state_unchanged() -> None:
 
 def test_call_with_value_is_equivalent_to_send() -> None:
     """sig(value) behaves exactly like sig.send(value)."""
-    ctx = _make_ctx(fragment_ids_this_run=["trigger"])
+    ctx = _make_ctx(fragment_ids_this_run=["trigger"], registered_fragments=("w1",))
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
         sig = signal("k", initial=7)
         ctx.signal_storage.register_watcher("k", "w1")

@@ -56,11 +56,15 @@ A session-scoped store, sibling of `FragmentStorage`:
 
 ```python
 @dataclass
-class SignalRecord:
-    state: Any                       # current value (initial resolved lazily)
-    watchers: list[str]              # fragment ids, in execution (call-time) order
-    declared_this_full_run: bool     # lifecycle reconciliation flag
+class _SignalRecord:
+    initial: Any        # value or zero-arg callable, resolved lazily
+    state: Any          # current value (initial resolved on first access)
+    watchers: list[str] # fragment ids, in execution (call-time) order
 ```
+
+Lifecycle bookkeeping lives on the run context, not the record: `st.signal` adds its key
+to `ctx.signal_keys_declared_this_run`, and the end-of-full-run reconciliation calls
+`SignalStorage.clear(keep_keys=...)` with that set.
 
 - `st.signal(key, *, initial=...)` registers/looks up the record by `key`. A second
   `st.signal` call with the same key **in the same run** raises `StreamlitAPIException`
@@ -88,11 +92,13 @@ group":
   `Signal` or a fragment function (detected via `isinstance` at element registration).
   Coexists with `Delta.fragment_id`, which keeps its cleanup role for widgets inside
   fragments.
-- `ClientState.scope_token: string` — the frontend's `WidgetStateManager` prefers the
-  element's `scopeToken` over its `fragmentId` when scheduling the flush, so the rerun
-  request arrives scoped to the token instead of the enclosing fragment (or instead of a
-  full rerun for top-level widgets). This is what implements both suppressions in the
-  product spec without special cases.
+- `ClientState.scope_token: string` — the frontend substitutes the element's
+  `scopeToken` for its `fragmentId` when building widget props
+  (`ElementNodeRenderer.tsx`), so the token rides the existing fragment-id plumbing;
+  `App.tsx#sendRerunBackMsg` then splits prefixed tokens back out into
+  `ClientState.scope_token` (and leaves `fragment_id` unset). This is what implements
+  both suppressions in the product spec without special cases — `WidgetStateManager`
+  itself is untouched.
 
 Token values:
 
@@ -145,8 +151,8 @@ machinery remains the fallback for sends that arrive too late in the pass to be 
 **Once-per-pass + cycle guard:** the context tracks `signals_fired_this_pass: set[str]`.
 Repeated sends to the same signal update state and re-dedup the queue (watchers run once,
 with the final value — "last value wins" falls out of watchers reading `record.state` at
-execution time). A send to a signal already in the set from *within its own cascade* is a
-no-op with a logged warning.
+execution time). A send to a signal already in the set from *within its own cascade* still updates the
+state but queues nothing, and logs a warning.
 
 #### Parallel watchers (non-blocking)
 
@@ -160,19 +166,38 @@ same pass (they reconcile on the next pass). The one ordering constraint is nest
 running a watcher whose ancestor is still in flight, the loop drains outstanding parallel work
 (`has_ancestor_in`), because the ancestor creates the container the descendant nests into;
 `order_fragment_ids` puts ancestors first, so this only affects nested watchers of the same
-signal. Three runtime changes made this work:
+signal.
+
+Only fragments queued **as watchers** are dispatched to workers. A fragment that is the
+rerun's *direct target* — its own widget or `run_every` triggered the rerun — always runs
+inline, even with `parallel=True`. `ScriptRequests` records such ids in
+`RerunData.direct_fragment_ids` when it converts a single `fragment_id` into the queue, and
+the loop checks that set before dispatching. This preserves the parallel-fragments contract
+that a fragment's own reruns are sequential (interaction-gated `st.dialog`/`st.switch_page`
+keep working).
+
+Three runtime changes made this work:
 
 - **`ctx.cursors` is ContextVar-backed** (`script_run_context.py`) so each worker's snapshot
   restore (`fragment.py` rerun branch) stays isolated to its copied context — the one piece of
-  shared mutable position state the full-run path never touched.
+  shared mutable position state the full-run path never touched. Two compatibility details:
+  the getter persists a map on first access in an unseeded context, and
+  `add_script_run_ctx` seeds an attached user thread with the parent's map (the same dict
+  object), preserving the pre-ContextVar behavior where top-level writes from user threads
+  continue the parent's delta positions.
 - **`ParallelFragmentCoordinator` is reusable**: `join()` no longer shuts the executor down;
   a separate `close()` tears it down once per pass, so the nesting drain can join mid-pass and
   keep dispatching.
 - **The `parallel` flag is persisted** in `FragmentStorage` (`is_parallel`, `has_ancestor_in`).
 
-Batch cleanup (`clear_stale_descendants`) runs after the join using the global
-`new_fragment_ids` snapshot, not the serial loop's registration-sequence window, which races
-under concurrent registration.
+Cleanup (`clear_stale_descendants`) for dispatched watchers runs after the join using the
+global `new_fragment_ids` snapshot, not the serial loop's registration-sequence window, which
+races under concurrent registration. If the pass escapes (a serial watcher re-raising
+Rerun/Stop, or an interrupt) while parallel watchers are in flight, `_run_fragment_pass`
+drains the coordinator before the escape propagates — mirroring the full-run path — so
+workers never outlive the pass. Mid-pass `send()` also filters watcher ids against
+`FragmentStorage.contains` (mirroring the request-time filter in `_resolve_scope_token`), so
+stale subscriptions never reach the pass loop's missing-fragment warning.
 
 The in-pass scatter→gather case (a serial watcher reading a parallel fan-out's writes) is
 intentionally unsupported; an explicit `st.wait()` barrier is the planned answer (product
@@ -216,13 +241,15 @@ scope is decided:
   are **forwarded**, not banned. They are stashed alongside the `fragment_fn:<hash>` token
   and applied when the fragment reruns: the queue loop invokes the fragment with the
   callback's `(args, kwargs)` in place of its captured call-site arguments for that pass.
-  Mechanism: `register_widget` records `(fragment_hash → args, kwargs)` for the pass; the
-  resolver attaches them to the resolved fragment ids in `RerunData`; `wrap()` reads an
-  override off `ctx` (keyed by `fragment_id`) and calls `non_optional_func(*args, **kwargs)`
-  when present, else the captured args. No override → today's behavior (rerun with
-  call-site args). The callback is no longer nulled for fragment functions; instead it is
-  skipped in the callback phase (it must run in its container during the scoped pass, not
-  in the callback phase).
+  Mechanism: `register_widget` stores the function hash plus `callback_args`/`callback_kwargs`
+  on the widget's `WidgetMetadata`; during the callback phase the ScriptRunner collects the
+  changed widgets' overrides (`SessionState.collect_fragment_callback_overrides`), resolves
+  the hash to its registered fragment ids, and stashes them in `ctx.fragment_arg_overrides`;
+  `wrap()` calls `non_optional_func(*args, **kwargs)` with the override when present, else
+  the captured call-site args. Riding `WidgetMetadata` (not `RerunData`) means the overrides
+  survive request coalescing for free. The fragment function itself is **not** stored as the
+  widget's callback (the stored callback is `None`) — only its hash — so nothing executes in
+  the callback phase; the fragment runs in its container during the scoped pass.
 
 ### Implementation phases
 
@@ -234,7 +261,7 @@ scope is decided:
    *(done)*
 3. **API refinements:** `st.signal(key, *, initial=None)` signature; signal-callback
    single-value `args` + `kwargs` rejection; fragment-callback `args`/`kwargs` forwarding
-   (override plumbing above).
+   (override plumbing above). *(done)*
 4. **Non-blocking parallel watchers** in the queue loop (see *Parallel watchers* above).
    *(done)* — `parallel=True` watchers are dispatched fire-and-forget and joined at the end
    of the pass, matching the full-run model. Resolved the three blockers: ContextVar-backed

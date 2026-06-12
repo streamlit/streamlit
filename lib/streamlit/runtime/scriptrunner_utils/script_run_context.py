@@ -281,13 +281,20 @@ class ScriptRunContext:
         """Per-context map of root container -> cursor.
 
         Backed by the module-level ``_container_cursors`` ContextVar so that
-        each copied context (e.g. a parallel watcher batch worker) owns an
-        isolated map. ``cursor.get_container_cursor`` reads and mutates this
-        map; ``wrap()`` reassigns it to a fresh deepcopy at the start of each
-        fragment-pass rerun. The getter falls back to an empty dict if the
-        ContextVar was never set in the current context.
+        each copied context (e.g. a parallel watcher worker) owns an isolated
+        map. ``cursor.get_container_cursor`` reads and mutates this map;
+        ``wrap()`` reassigns it to a fresh deepcopy at the start of each
+        fragment-pass rerun. If the ContextVar was never set in the current
+        context (e.g. a user thread attached via ``add_script_run_ctx`` before
+        its seeding ran), the getter creates a map and persists it in the
+        context so subsequent mutations through this property aren't lost.
         """
-        return _container_cursors.get({})
+        try:
+            return _container_cursors.get()
+        except LookupError:
+            value: dict[int, RunningCursor] = {}
+            _container_cursors.set(value)
+            return value
 
     @cursors.setter
     def cursors(self, value: dict[int, RunningCursor]) -> None:
@@ -398,6 +405,7 @@ _FRAGMENT_THREAD_STATE_FIELDS_ATTR: Final = "_streamlit_fragment_thread_state_fi
 _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR: Final = (
     "_streamlit_fragment_thread_state_wrap_installed"
 )
+_CONTAINER_CURSORS_ATTR: Final = "_streamlit_container_cursors"
 
 
 def add_script_run_ctx(
@@ -460,6 +468,15 @@ def add_script_run_ctx(
             _FRAGMENT_THREAD_STATE_FIELDS_ATTR,
             dataclasses.asdict(parent_ts),
         )
+        # Also capture the parent's container-cursor map (the same dict
+        # object, not a copy). ContextVars don't cross thread boundaries, so
+        # without this the child thread would get its own empty cursor map and
+        # top-level writes (st.write etc.) would restart at delta path [.., 0],
+        # clobbering existing elements. Sharing the map restores the
+        # pre-ContextVar semantics where ctx.cursors was a plain attribute
+        # shared across attached threads.
+        if ctx is not None:
+            setattr(thread, _CONTAINER_CURSORS_ATTR, ctx.cursors)
         # Skip the wrap if the target is already running: run() has
         # already been called, and setting the sentinel here would
         # pollute the main thread across tests.
@@ -472,6 +489,9 @@ def add_script_run_ctx(
                 fields = getattr(thread, _FRAGMENT_THREAD_STATE_FIELDS_ATTR, None)
                 if fields is not None:
                     ThreadState.initialize(**fields)
+                parent_cursors = getattr(thread, _CONTAINER_CURSORS_ATTR, None)
+                if parent_cursors is not None:
+                    _container_cursors.set(parent_cursors)
                 original_run(*args, **kwargs)
 
             thread.run = _run_with_thread_state  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]

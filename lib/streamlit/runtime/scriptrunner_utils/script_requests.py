@@ -54,6 +54,13 @@ class RerunData:
     fragment_id: str | None = None
     # The queue of fragment_ids waiting to be run.
     fragment_id_queue: list[str] = field(default_factory=list)
+    # Fragment ids that entered the queue as the rerun's direct target (a
+    # widget-triggered or run_every rerun of that fragment) rather than as
+    # signal watchers. Direct targets always run inline on the script thread,
+    # even when declared parallel=True, preserving the parallel-fragments
+    # contract that a fragment's own reruns are sequential (so st.dialog /
+    # st.switch_page gated behind its widgets keep working).
+    direct_fragment_ids: frozenset[str] = field(default_factory=frozenset)
     # Keys of signals whose firing produced fragment_id_queue (scope-token
     # reruns). The ScriptRunner pre-marks them as fired for the pass so a
     # re-fire from within the cascade gets correct cycle-warning semantics.
@@ -198,12 +205,15 @@ class ScriptRequests:
                 # just change self._state and set self._rerun_data.
                 self._state = ScriptRequestType.RERUN
 
-                # Convert from a single fragment_id into fragment_id_queue.
+                # Convert from a single fragment_id into fragment_id_queue,
+                # remembering that this id is the rerun's direct target.
                 if new_data.fragment_id:
                     new_data = replace(
                         new_data,
                         fragment_id=None,
                         fragment_id_queue=[new_data.fragment_id],
+                        direct_fragment_ids=new_data.direct_fragment_ids
+                        | {new_data.fragment_id},
                     )
 
                 self._rerun_data = new_data
@@ -225,6 +235,9 @@ class ScriptRequests:
 
                     if new_data.fragment_id not in fragment_id_queue:
                         fragment_id_queue.append(new_data.fragment_id)
+                    direct_fragment_ids = self._rerun_data.direct_fragment_ids | {
+                        new_data.fragment_id
+                    }
                 elif new_data.fragment_id_queue:
                     # new_data contains a new fragment_id_queue (e.g. a scope-token
                     # rerun). Union it with any queue already pending so that two
@@ -235,11 +248,16 @@ class ScriptRequests:
                         for fragment_id in new_data.fragment_id_queue
                         if fragment_id not in fragment_id_queue
                     )
+                    direct_fragment_ids = (
+                        self._rerun_data.direct_fragment_ids
+                        | new_data.direct_fragment_ids
+                    )
                 else:
                     # Otherwise, this is a request to rerun the full script, so we want
                     # to clear out any fragments we have queued to run since they'll all
                     # be run with the full script anyway.
                     fragment_id_queue = []
+                    direct_fragment_ids = frozenset()
 
                 self._rerun_data = RerunData(
                     query_string=new_data.query_string,
@@ -247,6 +265,7 @@ class ScriptRequests:
                     page_script_hash=new_data.page_script_hash,
                     page_name=new_data.page_name,
                     fragment_id_queue=fragment_id_queue,
+                    direct_fragment_ids=direct_fragment_ids,
                     # A full rerun (empty queue) supersedes any pending signal
                     # pass, so the fired keys are dropped along with the queue.
                     fired_signal_keys=(

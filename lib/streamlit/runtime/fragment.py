@@ -591,6 +591,12 @@ def _fragment(
                             # there is a correct handler for these exceptions.
                             raise
                         except Exception as e:
+                            # If the exception landed between a widget's
+                            # registration and its delta enqueue, a scope token
+                            # may still be pending on this thread; clear it so
+                            # it can't stamp the next fragment's deltas after
+                            # this error is swallowed by the pass loop.
+                            ThreadState.update(pending_scope_token=None)
                             handle_user_script_exception(e, ctx.on_script_error)
                             # Raise FragmentHandledException to signal that the error
                             # was already handled and flags should be set accordingly

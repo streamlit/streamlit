@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from streamlit.cursor import RunningCursor
 from streamlit.errors import NoSessionContext
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Command
@@ -386,6 +387,56 @@ class ScriptRunContextTest(unittest.TestCase):
         t.join()
 
         assert captured["fragment_id"] == "frag2"
+
+    def test_add_script_run_ctx_shares_cursor_map_with_child_thread(self):
+        """A thread attached via ``add_script_run_ctx`` shares the parent's
+        container-cursor map, so its top-level writes continue the parent's
+        delta positions instead of restarting at index 0 and clobbering
+        existing elements."""
+        ctx = _create_script_run_context(lambda _msg: None)
+        parent_map = ctx.cursors
+        parent_cursor = RunningCursor(root_container=0)
+        parent_map[0] = parent_cursor
+
+        captured: dict[str, object] = {}
+
+        def worker_target() -> None:
+            captured["same_map"] = ctx.cursors is parent_map
+            captured["same_cursor"] = ctx.cursors.get(0) is parent_cursor
+            ctx.cursors[1] = RunningCursor(root_container=1)
+
+        t = threading.Thread(target=worker_target)
+        add_script_run_ctx(t, ctx)
+        t.start()
+        t.join()
+
+        assert captured["same_map"] is True
+        assert captured["same_cursor"] is True
+        # The child's cursor write is visible to the parent too.
+        assert 1 in ctx.cursors
+
+    def test_cursors_getter_persists_map_in_unseeded_context(self):
+        """In a context where the cursor ContextVar was never set (a bare
+        thread without ``add_script_run_ctx`` seeding), the getter creates the
+        map once and persists it — repeated reads return the same dict, so
+        mutations through the property are not lost."""
+        ctx = _create_script_run_context(lambda _msg: None)
+        captured: dict[str, object] = {}
+
+        def worker_target() -> None:
+            first = ctx.cursors
+            first[0] = RunningCursor(root_container=0)
+            captured["persisted"] = ctx.cursors is first
+            captured["kept_entry"] = 0 in ctx.cursors
+
+        # Deliberately NOT attached via add_script_run_ctx: this pins the
+        # getter's persist-on-first-get behavior in a fresh context.
+        t = threading.Thread(target=worker_target)
+        t.start()
+        t.join()
+
+        assert captured["persisted"] is True
+        assert captured["kept_entry"] is True
 
     def test_reset_raises_when_called_from_non_main_thread(self):
         """``reset()`` may only be called from the script thread that

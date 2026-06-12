@@ -77,7 +77,7 @@ class _SignalRecord:
     # produces it lazily on first access.
     initial: Any
     state: Any = _UNINITIALIZED
-    # Watcher fragment ids in registration (page) order.
+    # Watcher fragment ids in registration (execution) order.
     watchers: list[str] = field(default_factory=list)
 
 
@@ -127,7 +127,7 @@ class SignalStorage(Protocol):
 
         A fragment id that is already registered keeps its existing position
         so that re-registration during fragment-only passes doesn't corrupt
-        the declared page order.
+        the execution order captured when the watchers first registered.
 
         Raises KeyError if the key isn't declared.
         """
@@ -135,7 +135,7 @@ class SignalStorage(Protocol):
 
     @abstractmethod
     def watchers(self, key: str) -> list[str]:
-        """Return the watcher fragment ids in registration (page) order.
+        """Return the watcher fragment ids in registration (execution) order.
 
         Returns an empty list for unknown keys.
         """
@@ -259,8 +259,8 @@ class Signal(Generic[T]):
         """Replace the signal's state with ``value`` and fire the signal.
 
         Firing appends the signal's watching fragments to the current
-        fragment pass so they rerun, in page order, after the fragments that
-        are already queued. During a full app run, ``send`` only updates the
+        fragment pass so they rerun, in execution order, after the fragments
+        that are already queued. During a full app run, ``send`` only updates the
         state since the whole page renders anyway. A signal fires at most
         once per pass; repeated sends coalesce to the last value.
 
@@ -349,6 +349,11 @@ def _enqueue_watchers(ctx: ScriptRunContext, key: str) -> None:
         for fragment_id in watcher_ids
         if fragment_id not in ctx.fragment_ids_consumed
         and fragment_id not in queued_ids
+        # Skip watchers whose fragments are no longer registered (e.g. dropped
+        # by a preceding full run). This mirrors the request-time filter in
+        # AppSession._resolve_scope_token and avoids the pass loop's
+        # missing-fragment warning for ids that are simply stale.
+        and ctx.fragment_storage.contains(fragment_id)
     ]
 
     if new_ids:
@@ -403,8 +408,9 @@ def signal(key: str, *, initial: T | Callable[[], T] | None = None) -> Signal[T]
     A signal is a session-scoped, stateful value with subscribers. Fragments
     subscribe with the ``watch`` parameter of ``@st.fragment``; when the
     signal fires — from a widget callback or an explicit ``Signal.send`` —
-    every watching fragment reruns in place, in page order, and nothing else
-    runs. Reading ``Signal.value`` never subscribes.
+    every watching fragment reruns in place, in execution order (the order
+    the watchers were called during the run that registered them), and
+    nothing else runs. Reading ``Signal.value`` never subscribes.
 
     The signal's state persists across reruns as long as the signal is
     re-declared during each full app run. If a full app run finishes without

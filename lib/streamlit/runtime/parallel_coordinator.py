@@ -71,9 +71,12 @@ class ParallelFragmentCoordinator:
     """Manages the lifecycle of parallel fragment workers for one script run.
 
     Owned by ScriptRunContext (created in ctx.reset()) and exposed as
-    ctx.parallel_coordinator. The coordinator is single-use: a fresh
-    instance is created at the start of every script run, joined or drained
-    before the run ends, and discarded.
+    ctx.parallel_coordinator. A fresh instance is created at the start of
+    every script run and discarded at its end. Within a run it supports
+    repeated dispatch/join cycles — ``join()`` leaves the executor alive so a
+    fragment pass can drain outstanding parallel watchers and keep dispatching
+    — until ``close()`` (normal completion) or ``drain()`` (cancellation)
+    tears the executor down.
 
     Workers submitted via :meth:`submit` run inside a
     ``contextvars.copy_context()`` snapshot of the caller's context with a

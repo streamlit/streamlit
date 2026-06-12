@@ -1090,6 +1090,83 @@ class ScriptRunnerTest(unittest.TestCase):
             "join:['child']",
         ]
 
+    def test_rerun_from_serial_watcher_drains_in_flight_parallel_watchers(self):
+        """A serial watcher re-raising RerunException must not leak workers.
+
+        With a parallel watcher still in flight, the escape drains the
+        coordinator (stop event set, executor shut down) before propagating,
+        so the worker observes the stop instead of running into the next pass.
+        """
+        started = threading.Event()
+        observed_stop = threading.Event()
+
+        def parallel_body() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            coordinator = ctx.parallel_coordinator
+            assert coordinator is not None
+            started.set()
+            deadline = time.time() + 5.0
+            while time.time() < deadline:
+                if coordinator.should_stop():
+                    observed_stop.set()
+                    return
+                time.sleep(0.01)
+
+        def serial_raiser() -> None:
+            # Wait until the parallel watcher is actually running so the
+            # escape happens with a worker genuinely in flight.
+            assert started.wait(timeout=5.0)
+            raise RerunException(RerunData())
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("p", parallel_body, parallel=True)
+        scriptrunner._fragment_storage.register("s", serial_raiser)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["p", "s"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        # The worker saw the drain's stop signal rather than outliving the pass.
+        assert observed_stop.is_set()
+
+    def test_direct_rerun_of_parallel_fragment_runs_inline(self):
+        """A widget-triggered rerun of a parallel=True fragment stays inline.
+
+        The rerun's direct target runs on the script thread, not a worker —
+        preserving the parallel-fragments contract that a fragment's own
+        reruns are sequential (so interaction-gated st.dialog/st.switch_page
+        keep working). Only signal watchers are dispatched to workers.
+        """
+        seen: dict[str, Any] = {}
+
+        def body() -> None:
+            seen["thread_ident"] = threading.get_ident()
+            seen["is_parallel_worker"] = ThreadState.get().is_parallel_worker
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("frag", body, parallel=True)
+
+        script_thread: dict[str, int] = {}
+        original_run_fragment_pass = scriptrunner._run_fragment_pass
+
+        def spy_run_fragment_pass(ctx, rerun_data, fragment_ids):
+            script_thread["ident"] = threading.get_ident()
+            original_run_fragment_pass(ctx, rerun_data, fragment_ids)
+
+        scriptrunner._run_fragment_pass = spy_run_fragment_pass  # type: ignore[method-assign]
+
+        # A plain widget-triggered rerun arrives as a single fragment_id; the
+        # request layer records it as the rerun's direct target.
+        scriptrunner.request_rerun(RerunData(fragment_id="frag"))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        assert seen["thread_ident"] == script_thread["ident"]
+        assert seen["is_parallel_worker"] is False
+
     def test_parallel_watcher_exception_does_not_abort_others(self):
         """One parallel watcher raising a user error must not stop the others."""
         completed: set[str] = set()
