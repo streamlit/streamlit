@@ -38,7 +38,8 @@ export const StyledToastRegion = styled(ToastRegion)(({ theme }) => ({
   },
   // React Aria renders an <ol> inside the region — reverse its order
   // so the most recently added toast appears at the top.
-  ol: {
+  // Scope to the direct child only; toast bodies may contain markdown <ol>s.
+  "> ol": {
     display: "flex",
     flexDirection: "column-reverse",
     listStyle: "none",
