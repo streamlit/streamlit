@@ -16,7 +16,10 @@ comment authors, and chat participants.
 
 Streamlit has no native way to render the single most common identity primitive on the
 web: a circular avatar. Users routinely build profile pages, member directories, team
-sections, leaderboards, and activity feeds, and today they have to hack it together.
+sections, leaderboards, and activity feeds, and today they have to hack it together. This
+has been requested directly in
+[#12475](https://github.com/streamlit/streamlit/issues/12475) (`st.avatar` to show a
+standalone avatar image).
 
 **Current workarounds:**
 
@@ -53,6 +56,8 @@ st.avatar(
     size: Literal["small", "medium", "large"] | int = "medium",
     border: bool = False,
     on_click: Literal["ignore", "rerun"] | Callable[[], None] = "ignore",
+    disabled: bool = False,
+    help: str | None = None,
     key: str | None = None,
 ) -> bool
 ```
@@ -75,9 +80,11 @@ st.avatar("https://avatars.githubusercontent.com/u/1673013")
 | `image` | `str \| Image \| None` | `None` | The avatar content. Accepts the same image inputs as `st.image` (URL, local path, `PIL.Image`, NumPy array, bytes/`BytesIO`), **plus** a single emoji (e.g. `"🦖"`) or a Material icon (e.g. `":material/person:"`)—matching `st.chat_message`'s `avatar`. If `None`, falls back to initials derived from `label`, or a generic person icon when no label is given. |
 | `label` | `str \| None` | `None` | Primary text shown to the right of the avatar (typically a name). Supports markdown. |
 | `caption` | `str \| None` | `None` | Secondary text shown below the label (typically a role or status). Supports markdown and renders in the muted caption style used elsewhere in Streamlit. |
-| `size` | `"small" \| "medium" \| "large" \| int` | `"medium"` | Diameter of the circular avatar. Semantic sizes map to fixed pixel values (`small` ≈ 24px, `medium` ≈ 40px, `large` ≈ 64px; exact values TBD with design). An `int` sets a custom diameter in pixels. |
+| `size` | `"small" \| "medium" \| "large" \| int` | `"medium"` | Diameter of the circular avatar. Semantic sizes map to fixed pixel values (`small` ≈ 24px, `medium` ≈ 40px, `large` ≈ 64px; exact values TBD with design). An `int` sets a custom diameter in pixels and must be a positive value; non-positive values raise a `StreamlitAPIError` (Fail Fast). No upper bound is enforced, but very large values are clamped to the element's container width at render time. |
 | `border` | `bool` | `False` | If `True`, draws a subtle border around the avatar (useful for light images on light backgrounds). |
-| `on_click` | `"ignore" \| "rerun" \| Callable[[], None]` | `"ignore"` | Click behavior. `"ignore"` disables click interaction (avatar is purely decorative). `"rerun"` triggers a rerun when clicked. A callable runs as a callback before the rerun. |
+| `on_click` | `"ignore" \| "rerun" \| Callable[[], None]` | `"ignore"` | Click behavior. `"ignore"` disables click interaction (avatar is purely decorative). `"rerun"` triggers a rerun when clicked. A callable runs as a callback before the rerun. Follows the `st.button` click pattern (a click action), not the `on_change` value-change pattern. |
+| `disabled` | `bool` | `False` | If `True`, disables click interaction and renders the avatar in a muted/disabled state. Only meaningful when `on_click != "ignore"`. |
+| `help` | `str \| None` | `None` | An optional tooltip shown on hover. Supports markdown. |
 | `key` | `str \| None` | `None` | Unique key for the element. Required when multiple clickable avatars would otherwise share identical parameters. |
 
 ### Return value
@@ -118,7 +125,11 @@ thing you pass to `st.avatar`.
 - `label` and `caption` are each constrained to a single line and truncate with an ellipsis
   when they overflow; the full text is shown on hover (matching the reference component).
 - Emoji and icon avatars render centered on a themed neutral background; initials avatars
-  show 1–2 uppercase letters derived from `label`.
+  show 1–2 uppercase letters derived from `label`. Initials are derived from the
+  *plain-text* form of `label` (markdown syntax, links, emoji, and Material icons are
+  stripped first): the first letter of the first two whitespace-separated words, or the
+  first two letters of a single word. If no letters remain after stripping, the generic
+  person icon is shown instead.
 - The element sizes to its content (the circle plus any text). Place avatars side by side
   with `st.container(horizontal=True)`—no `multiple`/grouping parameter is needed
   (composition over configuration).
@@ -134,7 +145,9 @@ display element into a widget (different return type, requires `key`). Two optio
 **Option 1: Clickable widget** ✅ PREFERRED
 
 Add `on_click: Literal["ignore", "rerun"] | Callable[[], None] = "ignore"` plus `key`, and
-return `bool` (matching the extra and `st.button`).
+return `bool` (matching the extra and `st.button`). For consistency with other interactive
+widgets (Principle #11: Patterns Are Sacred), a clickable avatar also accepts `disabled`
+and `help`, which behave identically to their `st.button` counterparts.
 
 ```python
 if st.avatar("profile.jpg", label="Jane Smith", on_click="rerun", key="profile"):
