@@ -249,10 +249,6 @@ class App:
     """ASGI-compatible Streamlit application.
 
     .. warning::
-        This feature is experimental and may change or be removed in future
-        versions without warning. Use at your own risk.
-
-    .. warning::
         Hosting multiple ``App`` instances with different ``script_path`` values
         in the same process is not supported. The first ``App`` constructed in a
         process pins the script-level config directory (via the process-global
