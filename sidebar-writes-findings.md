@@ -128,11 +128,87 @@ elements on a later rerun:
   same shared-container hazard that already applies to any external write and is not an
   accumulation/duplication bug. Documented as a caveat, not a blocker.
 
+## The overwrite caveat across all four root containers
+
+The overwrite caveat is not sidebar-specific: it applies to any **root container** a fragment can
+write to **directly** that also holds **persistent positional** content interleaved with the
+fragment. Streamlit has four root containers (`RootContainer`): `MAIN=0`, `SIDEBAR=1`, `EVENT=2`,
+`BOTTOM=3`. Each was checked with a fragment that varies its element count (`n=3 → 1 → 5`) with a
+non-fragment "footer" written after the fragment call (`work-tmp/sidebar_tests/driver_generic.py`,
+apps `p7`–`p10`):
+
+| Root | Fragment can write directly? | Accumulation? | Growth overwrites trailing neighbor? | Needs wrapper? |
+|------|------------------------------|---------------|--------------------------------------|----------------|
+| `MAIN` | **No** — body writes go to the fragment's own auto-container; no public handle to `_main_dg` | n/a | n/a | **No** |
+| `SIDEBAR` | Yes (`st.sidebar.write`, `with st.sidebar:`) | No (cursor reset via `ctx.cursors`) | **Yes** (verified, `p6`/`p7`) | **Yes** |
+| `BOTTOM` | Yes (`st.chat_input`, `with st.bottom:`) | No (cursor reset via `ctx.cursors`) | **Yes** (verified, `p8`) | **Yes** |
+| `EVENT` | Yes (`st.toast`, dialogs) | No (cursor reset via `ctx.cursors`) | Mechanically yes at the delta level (`p10`), **but no user-visible loss** | **No** (see below) |
+
+### BOTTOM (verified) — same problem as the sidebar
+
+`st.chat_input()` routes to `bottom_dg._enqueue(...)` and `with st.bottom:` makes the bottom root
+the active DG, so a fragment can write directly to it. With `n=3 → 5`:
+
+```
+FULL RUN (n=3):  [3,0] header   [3,1] item0   [3,2] item1   [3,3] item2   [3,4] FOOTER
+RERUN  (n=5):    [3,1] item0  [3,2] item1  [3,3] item2  [3,4] item3  [3,5] item4
+                                                         ↑ [3,4] overwrites the FOOTER
+```
+
+Identical mechanism and delta-level outcome as the sidebar (`[3,…]` = bottom root). **BOTTOM needs
+the wrapper too.**
+
+### EVENT (investigated) — same mechanism, but does NOT need the wrapper
+
+`st.toast(...)` enqueues to the event root (`[2,…]`) with `has_one_shot_effect=True`; dialogs also
+live in the event root. The cursor resets each rerun (no accumulation), and at the **delta level**
+the growth collision is present — with a trailing main-script toast, `n=3 → 5` puts `frag toast 3`
+on the main toast's slot `[2,3]`:
+
+```
+FULL RUN (n=3):  [2,0] frag0   [2,1] frag1   [2,2] frag2   [2,3] MAIN-SCRIPT toast
+RERUN  (n=5):    [2,0] frag0  [2,1] frag1  [2,2] frag2  [2,3] frag3  [2,4] frag4
+```
+
+But this is **not a user-visible regression**, because EVENT content is not persistent positional
+UI:
+
+- Toasts are one-shot effects. `canReuseElementPayload` in `frontend/lib/src/render-tree/AppRoot.ts`
+  explicitly refuses to reuse payloads when `hasOneShotEffect` is set, i.e. each delivery re-fires
+  and the toast auto-dismisses; there is no stable node sitting at `[2,3]` to "lose".
+- On a real fragment-only rerun the main script does not re-run, so the main toast is not
+  re-emitted regardless of the collision — it already fired and dismissed during the full run.
+- Dialogs in the event root are modal singletons opened on interaction (one at a time), so there is
+  no variable-count interleaving to collide with.
+
+So EVENT should **not** be wrapped — positional isolation is meaningless for transient/singleton
+event content, and wrapping toasts in a block could interfere with one-shot rendering.
+
+### Implication for the wrapper spec (PR #15413)
+
+The spec excludes **all** top-level/root DGs from the wrapper (`if dg._is_top_level: return False`)
+on the rationale that "root cursors are managed by `ctx.cursors`." That rationale only addresses
+**accumulation**; it does not address the **interleaving/overwrite** problem the spec itself lists
+as a core motivation ("Why simple cursor reset won't work" → *Interleaving* / *Non-contiguous
+writes*). The exclusion should therefore be **root-container-aware** rather than a blanket
+`_is_top_level` short-circuit:
+
+- Keep excluding `MAIN` (a fragment cannot write to it directly) and `EVENT` (transient one-shot /
+  singleton content, no positional isolation needed).
+- **Wrap `SIDEBAR` and `BOTTOM`** so a fragment's direct writes are isolated in their own
+  independently-resettable block, which prevents growth from clobbering interleaved non-fragment
+  content while still advancing the root cursor only once (at wrapper creation). There is no real
+  conflict with `ctx.cursors`: the root cursor and the wrapper's internal cursor are different
+  cursors, and on a standalone rerun the cached wrapper is returned so the snapshot-restored root
+  cursor is simply unused.
+
 ## Verification performed
 
 - Backend reproduction harness (`work-tmp/sidebar_tests/harness.py`) drives a single
   `ScriptRunner` through a full run + N **fragment-scoped** reruns (AppTest only does full reruns,
   so it can't surface this) and prints each delta's `delta_path` and widget IDs. Apps: `p1`–`p6`.
+- Variable-element-count driver (`work-tmp/sidebar_tests/driver_generic.py`) reproduces the
+  overwrite collision for `SIDEBAR` (`p7`), `BOTTOM` (`p8`), and `EVENT` (`p9`, `p10`).
 - Python unit tests pass with the change:
   - `lib/tests/streamlit/delta_generator_test.py` (89 passed; the old "explodes" test rewritten to
     `test_enqueue_can_write_directly_to_sidebar_from_fragment`).
@@ -148,13 +224,19 @@ accumulation problem; the sidebar root self-heals via the existing cursor-snapsh
 change in this branch is: delete the guard + unused helper, update the affected unit test, and
 update the `st.fragment` docstring.
 
+The **overwrite caveat** (growth clobbering interleaved non-fragment content) affects `SIDEBAR` and
+`BOTTOM` and is best fixed by extending the wrapper mechanism (PR #15413) to those two roots — see
+"Implication for the wrapper spec" above. It is a separate issue from accumulation and is not fixed
+by simply removing the restriction.
+
 Follow-ups to harden before merge:
 - Add e2e coverage mirroring `st_fragment_outside_container` for the sidebar: a fragment writing
   multiple elements + a widget via `st.sidebar.write/…` and via `with st.sidebar:`, asserting
   `to_have_count(1)` after several reruns, state retention, and that surrounding non-fragment
   sidebar content is preserved.
 - Add a regression test for the variable-element-count case (count decreasing across reruns should
-  not leave stale sidebar elements).
+  not leave stale sidebar elements; growth should not overwrite trailing content once the wrapper
+  fix lands), and mirror it for `BOTTOM`.
 
 ## Reproduction
 
@@ -163,6 +245,11 @@ Follow-ups to harden before merge:
 uv run python work-tmp/sidebar_tests/harness.py work-tmp/sidebar_tests/p4_direct_sidebar.py 3
 uv run python work-tmp/sidebar_tests/harness.py work-tmp/sidebar_tests/p6_direct_sidebar_with_outside.py 3
 uv run python work-tmp/sidebar_tests/harness.py work-tmp/sidebar_tests/p2_sidebar_container_ref.py 3   # accumulating contrast
+
+# Overwrite collision across root containers (n = 3 -> 1 -> 5):
+uv run python work-tmp/sidebar_tests/driver_generic.py work-tmp/sidebar_tests/p7_variable_count.py 3 1 5          # SIDEBAR
+uv run python work-tmp/sidebar_tests/driver_generic.py work-tmp/sidebar_tests/p8_bottom_variable.py 3 1 5         # BOTTOM
+uv run python work-tmp/sidebar_tests/driver_generic.py work-tmp/sidebar_tests/p10_event_with_trailing.py 3 1 5    # EVENT (one-shot, no visible loss)
 
 uv run pytest lib/tests/streamlit/delta_generator_test.py lib/tests/streamlit/runtime/fragment_test.py -q
 ```
