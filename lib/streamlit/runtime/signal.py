@@ -230,7 +230,7 @@ class Signal(Generic[T]):
     across reruns.
     """
 
-    def __init__(self, key: str, initial: T | Callable[[], T]) -> None:
+    def __init__(self, key: str, initial: T | Callable[[], T] | None = None) -> None:
         self._key = key
         self._initial = initial
         # Fallback storage for bare execution (no script run context), so the
@@ -385,15 +385,19 @@ def _reorder_unconsumed_queue_tail(ctx: ScriptRunContext, queue: list[str]) -> N
 
 
 @overload
-def signal(initial: Callable[[], T], *, key: str) -> Signal[T]: ...
+def signal(key: str) -> Signal[None]: ...
 
 
 @overload
-def signal(initial: T, *, key: str) -> Signal[T]: ...
+def signal(key: str, *, initial: Callable[[], T]) -> Signal[T]: ...
+
+
+@overload
+def signal(key: str, *, initial: T) -> Signal[T]: ...
 
 
 @gather_metrics("signal")
-def signal(initial: T | Callable[[], T], *, key: str) -> Signal[T]:
+def signal(key: str, *, initial: T | Callable[[], T] | None = None) -> Signal[T]:
     """Create a signal that connects widgets and fragments across your app.
 
     A signal is a session-scoped, stateful value with subscribers. Fragments
@@ -409,16 +413,18 @@ def signal(initial: T | Callable[[], T], *, key: str) -> Signal[T]:
 
     Parameters
     ----------
-    initial : T or callable
-        The signal's initial state. If this is a zero-argument callable, it
-        is invoked lazily on first access (and again after the signal's state
-        is reset).
-
     key : str
         A unique identifier for the signal within the session. Unlike
         elements, signals have no position on the page to derive an identity
-        from, so a key is required. Creating two signals with the same key in
-        one script run raises a ``StreamlitAPIException``.
+        from, so a key is required and positional. Creating two signals with
+        the same key in one script run raises a ``StreamlitAPIException``.
+
+    initial : T, callable, or None
+        The signal's initial state, keyword-only. If this is a zero-argument
+        callable, it is invoked lazily on first access (and again after the
+        signal's state is reset). If this is ``None`` (default), the signal's
+        value is ``None`` until its first ``Signal.send`` — omit it for
+        pure-trigger signals whose watchers read their data elsewhere.
 
     Returns
     -------
@@ -438,7 +444,7 @@ def signal(initial: T | Callable[[], T], *, key: str) -> Signal[T]:
 
         import streamlit as st
 
-        country = st.signal("US", key="country")
+        country = st.signal("country", initial="US")
 
         st.sidebar.selectbox("Country", ["US", "CA", "DE"], key="c", on_change=country)
 

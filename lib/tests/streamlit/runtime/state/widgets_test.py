@@ -758,6 +758,66 @@ class ScopedCallbackDetectionTest(DeltaGeneratorTestCase):
         assert self.get_delta_from_queue(1).scope_token == ""
         assert ThreadState.get().pending_scope_token is None
 
+    def test_signal_callback_rejects_kwargs(self):
+        """kwargs aren't supported for a signal callback: send takes one value."""
+        sig = Signal("my_signal", 0)
+
+        with pytest.raises(
+            errors.StreamlitAPIException,
+            match="`kwargs` are not supported",
+        ):
+            st.checkbox("checkbox", on_change=sig, kwargs={"x": 1})
+
+    def test_signal_callback_rejects_more_than_one_arg(self):
+        """A signal callback sends a single value, so it takes one arg at most."""
+        sig = Signal("my_signal", 0)
+
+        with pytest.raises(
+            errors.StreamlitAPIException,
+            match="sends a single value",
+        ):
+            st.checkbox("checkbox", on_change=sig, args=(1, 2))
+
+    def test_signal_callback_with_one_arg_sends_that_value(self):
+        """A single positional arg flows to Signal.send(value) when fired."""
+        sig = Signal("my_signal", 0)
+
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register_widget_from_metadata:
+            st.checkbox("checkbox", on_change=sig, args=(42,))
+
+        metadata = patched_register_widget_from_metadata.call_args[0][0]
+        # The Signal stays the stored callback and keeps its single value arg.
+        assert metadata.callback is sig
+        assert metadata.callback_args == (42,)
+
+        # Firing the callback as the callback phase does (callback(*args)) sends
+        # the value.
+        metadata.callback(*metadata.callback_args)
+        assert sig.value == 42
+
+    def test_signal_callback_bare_fires_with_state_unchanged(self):
+        """With no args, firing the callback pokes watchers without a new value."""
+        sig = Signal("my_signal", 7)
+        # Resolve the initial so the bare fire has a known prior value.
+        assert sig.value == 7
+
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register_widget_from_metadata:
+            st.checkbox("checkbox", on_change=sig)
+
+        metadata = patched_register_widget_from_metadata.call_args[0][0]
+        assert metadata.callback is sig
+        assert metadata.callback_args is None
+
+        # A bare fire (callback() with no args) leaves the state unchanged.
+        metadata.callback()
+        assert sig.value == 7
+
     def test_fragment_fn_callback_is_nulled_and_stamps_scope_token(self):
         """A fragment-function callback is not stored (the token-scoped queue
         run is the behavior) and tags the widget's delta with its token."""
@@ -777,22 +837,41 @@ class ScopedCallbackDetectionTest(DeltaGeneratorTestCase):
         function_hash = my_fragment._st_fragment_function_hash
         assert self.get_delta_from_queue().scope_token == f"fragment_fn:{function_hash}"
 
-    @parameterized.expand([("args", {"args": (1,)}), ("kwargs", {"kwargs": {"x": 1}})])
-    def test_fragment_fn_callback_rejects_args_and_kwargs(
-        self, _name: str, extra_kwargs: dict
+    @parameterized.expand(
+        [
+            ("args", {"args": (1,)}, (1,), None),
+            ("kwargs", {"kwargs": {"x": 1}}, None, {"x": 1}),
+            ("both", {"args": (1,), "kwargs": {"y": 2}}, (1,), {"y": 2}),
+        ]
+    )
+    def test_fragment_fn_callback_forwards_args_and_kwargs(
+        self,
+        _name: str,
+        extra_kwargs: dict,
+        expected_args: tuple | None,
+        expected_kwargs: dict | None,
     ):
-        """args/kwargs with a fragment-function callback raise: the fragment
-        reruns with the arguments from its original call site."""
+        """args/kwargs with a fragment-function callback are forwarded: they
+        are kept on the metadata (with the callback nulled and the function
+        hash stashed) so the fragment reruns with them."""
 
         @fragment
-        def my_fragment(x=None):  # pragma: no cover - registration raises
+        def my_fragment(x=None, *, y=None):  # pragma: no cover - never invoked
             pass
 
-        with pytest.raises(
-            errors.StreamlitAPIException,
-            match="`args` and `kwargs` are not supported",
-        ):
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register_widget_from_metadata:
             st.button("button", on_click=my_fragment, **extra_kwargs)
+
+        metadata = patched_register_widget_from_metadata.call_args[0][0]
+        assert metadata.callback is None
+        assert metadata.callback_args == expected_args
+        assert metadata.callback_kwargs == expected_kwargs
+        function_hash = my_fragment._st_fragment_function_hash
+        assert metadata.fragment_callback_function_hash == function_hash
+        assert self.get_delta_from_queue().scope_token == f"fragment_fn:{function_hash}"
 
     def test_plain_callback_does_not_set_scope_token(self):
         """Ordinary callbacks keep today's behavior: stored unchanged, no

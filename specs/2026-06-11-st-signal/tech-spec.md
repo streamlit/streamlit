@@ -62,7 +62,7 @@ class SignalRecord:
     declared_this_full_run: bool     # lifecycle reconciliation flag
 ```
 
-- `st.signal(initial, key=...)` registers/looks up the record by `key`. A second
+- `st.signal(key, *, initial=...)` registers/looks up the record by `key`. A second
   `st.signal` call with the same key **in the same run** raises `StreamlitAPIException`
   (fail fast, principle #23). Re-declaration across runs is the normal case and preserves
   state.
@@ -179,15 +179,49 @@ an optional positional value so the object satisfies the widget callback protoco
 - `st.rerun(scope="app")` / `st.stop()` inside a watcher → existing semantics
   (`RerunException`/`StopException` re-raised by the queue loop, `script_runner.py:748-752`).
 
+### Callback argument handling
+
+Both kinds of scoped callback are detected in `register_widget` →
+`_detect_scoped_callback` (`lib/streamlit/runtime/state/widgets.py`), before the rerun
+scope is decided:
+
+- **Signal callback** (`isinstance(cb, Signal)`): the `Signal` stays the stored callback —
+  its `__call__(value=_UNCHANGED)` fires during the callback phase. `args` may be empty
+  (bare fire) or a single positional `(value,)` → `send(value)`. **`kwargs` raise** a
+  `StreamlitAPIException` at registration (`send` has nowhere to put them). More than one
+  positional arg also raises. The `signal:<key>` token scopes the rerun as today.
+- **Fragment callback** (`getattr(cb, "_st_fragment_function_hash", None)`): `args`/`kwargs`
+  are **forwarded**, not banned. They are stashed alongside the `fragment_fn:<hash>` token
+  and applied when the fragment reruns: the queue loop invokes the fragment with the
+  callback's `(args, kwargs)` in place of its captured call-site arguments for that pass.
+  Mechanism: `register_widget` records `(fragment_hash → args, kwargs)` for the pass; the
+  resolver attaches them to the resolved fragment ids in `RerunData`; `wrap()` reads an
+  override off `ctx` (keyed by `fragment_id`) and calls `non_optional_func(*args, **kwargs)`
+  when present, else the captured args. No override → today's behavior (rerun with
+  call-site args). The callback is no longer nulled for fragment functions; instead it is
+  skipped in the callback phase (it must run in its container during the scoped pass, not
+  in the callback phase).
+
 ### Implementation phases
 
 1. **Core:** `Signal` + `SignalStorage`, `watch=` registration, `send()` from fragment
    bodies and callbacks (live-queue append), lifecycle reconciliation. Python unit tests.
+   *(done)*
 2. **Protocol:** `scope_token` on `Delta`/`ClientState`, frontend `WidgetStateManager`
    preference, server-side resolution, fragment-as-callback function index. E2E tests.
-3. **Parallel batching** in the queue loop (depends on coordinator extraction from the
-   full-run path — anticipated by the parallel fragments spec's "parallel fragment reruns"
-   follow-up).
+   *(done)*
+3. **API refinements:** `st.signal(key, *, initial=None)` signature; signal-callback
+   single-value `args` + `kwargs` rejection; fragment-callback `args`/`kwargs` forwarding
+   (override plumbing above).
+4. **Parallel watcher batching** in the queue loop — the deferred execution model from the
+   product spec ("serial → joined parallel batch → serial"). The known blockers to resolve:
+   (a) `ParallelFragmentCoordinator.join()` currently shuts its executor down (single-use
+   per run) — needs a per-batch join or a reusable pool; (b) fragment-pass reruns reassign
+   shared `ctx.cursors` (`fragment.py:393`), which concurrent watchers in a batch would
+   race on — needs per-worker cursor isolation like the full-run path; (c) the `parallel`
+   flag must be persisted in `FragmentStorage` (today it lives only in `wrap`'s closure) so
+   the queue loop can group consecutive parallel watchers. Sequential execution remains
+   correct in the meantime; batching is a pure latency optimization.
 
 ## Alternatives Considered
 

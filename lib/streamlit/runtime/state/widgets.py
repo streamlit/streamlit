@@ -43,7 +43,7 @@ def _detect_scoped_callback(
     on_change_handler: WidgetCallback,
     args: WidgetArgs | None,
     kwargs: WidgetKwargs | None,
-) -> WidgetCallback | None:
+) -> tuple[WidgetCallback | None, str | None]:
     """Detect a Signal or fragment-function callback and stash its scope token.
 
     Direct attachment of a signal or a fragment function to a widget's
@@ -51,11 +51,17 @@ def _detect_scoped_callback(
     watcher queue. The token is stashed in ThreadState so enqueue_message()
     can stamp it onto the widget's outgoing delta.
 
-    Returns the callback to store in the widget's metadata: a Signal is kept
-    (its ``__call__`` fires the signal during the callback phase), but a
-    fragment function is replaced with ``None`` — the token-scoped queue run
-    *is* the behavior, and invoking the fragment during the callback phase
-    would execute it at the wrong time and place.
+    Returns ``(callback, fragment_function_hash)``:
+
+    - A Signal is kept as the callback (its ``__call__`` fires the signal
+      during the callback phase) with no fragment hash. A signal sends a
+      single value, so ``kwargs`` and more than one positional ``args`` raise.
+    - A fragment function's callback is replaced with ``None`` — the
+      token-scoped queue run *is* the behavior, and invoking the fragment
+      during the callback phase would execute it at the wrong time and place —
+      and its function hash is returned so the callback phase can forward
+      ``args`` / ``kwargs`` to the fragment when it reruns.
+    - Any other callback is returned unchanged, with no fragment hash.
     """
     # Imported here to avoid a circular import: streamlit.runtime.signal
     # depends on modules that import this one.
@@ -66,27 +72,38 @@ def _detect_scoped_callback(
     )
 
     if isinstance(on_change_handler, Signal):
+        if kwargs:
+            raise StreamlitAPIException(
+                "`kwargs` are not supported when a signal is used as a widget "
+                "callback. A signal sends a single value — pass it via "
+                "`args=(value,)`."
+            )
+        if args is not None and len(args) > 1:
+            raise StreamlitAPIException(
+                "A signal callback sends a single value, so it takes at most "
+                "one positional argument. Pass the value to send via "
+                "`args=(value,)`, or omit `args` to fire the signal with its "
+                "state unchanged."
+            )
         ThreadState.update(
             pending_scope_token=SIGNAL_SCOPE_TOKEN_PREFIX + on_change_handler.key
         )
-        return on_change_handler
+        return on_change_handler, None
 
     fragment_function_hash = getattr(
         on_change_handler, "_st_fragment_function_hash", None
     )
     if fragment_function_hash is not None:
-        if args or kwargs:
-            raise StreamlitAPIException(
-                "`args` and `kwargs` are not supported when a fragment "
-                "function is used as a widget callback. The fragment reruns "
-                "with the arguments from its original call site."
-            )
+        # A fragment callback forwards its args/kwargs to the fragment when it
+        # reruns (a fragment, unlike a signal's send, takes an arbitrary
+        # signature). They are kept on the widget metadata and applied in the
+        # scoped pass; the callback itself is not run during the callback phase.
         ThreadState.update(
             pending_scope_token=FRAGMENT_FN_SCOPE_TOKEN_PREFIX + fragment_function_hash
         )
-        return None
+        return None, fragment_function_hash
 
-    return on_change_handler
+    return on_change_handler, None
 
 
 def register_widget(
@@ -206,8 +223,11 @@ def register_widget(
                 "This is required for correct empty value handling."
             )
 
+    fragment_callback_function_hash: str | None = None
     if on_change_handler is not None and ctx is not None:
-        on_change_handler = _detect_scoped_callback(on_change_handler, args, kwargs)
+        on_change_handler, fragment_callback_function_hash = _detect_scoped_callback(
+            on_change_handler, args, kwargs
+        )
 
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
@@ -219,6 +239,7 @@ def register_widget(
         callbacks=callbacks,
         callback_args=args,
         callback_kwargs=kwargs,
+        fragment_callback_function_hash=fragment_callback_function_hash,
         fragment_id=ThreadState.get().fragment_id if ctx else None,
         presenter=presenter,
         bind=bind,

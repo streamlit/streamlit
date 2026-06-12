@@ -1480,6 +1480,47 @@ def test_wrapped_fragment_skips_container_when_pre_allocated(
 
 
 @patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_wrapped_fragment_applies_arg_override(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """A fragment-arg override on ctx replaces the captured call-site args.
+
+    When a fragment is fired as a widget callback with args/kwargs, the
+    override is keyed by fragment id; wrapped_fragment() calls the body with
+    the override instead of the arguments captured at the original call site.
+    """
+    ctx = MagicMock()
+    ctx.fragment_storage = MemoryFragmentStorage()
+    ctx.fragment_ids_this_run = ["unused"]
+    ctx.shared = SharedRunState()
+    ctx.cursors = {}
+    ctx.fragment_arg_overrides = {}
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize()
+
+    calls: list[tuple] = []
+
+    @fragment
+    def my_fragment(row_id, *, highlight=False) -> None:
+        calls.append((row_id, highlight))
+
+    # Initial render uses the call-site args.
+    my_fragment("original")
+    assert calls == [("original", False)]
+
+    saved_fragment = next(iter(ctx.fragment_storage._fragments.values()))
+    fragment_id = next(iter(ctx.fragment_storage._fragments.keys()))
+
+    # With an override registered for this fragment id, the next pass reruns it
+    # with the override args/kwargs instead of the captured "original".
+    ctx.fragment_arg_overrides = {fragment_id: (("overridden",), {"highlight": True})}
+    calls.clear()
+    saved_fragment()
+    assert calls == [("overridden", True)]
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
 def test_wrapped_fragment_clears_skip_signal_after_use(
     patched_get_script_run_ctx: MagicMock,
 ) -> None:

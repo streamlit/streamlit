@@ -70,16 +70,18 @@ work.
 
 ```python
 def signal(
-    initial: T | Callable[[], T],
-    *,
     key: str,
+    *,
+    initial: T | Callable[[], T] | None = None,
 ) -> Signal[T]: ...
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `initial` | `T \| Callable[[], T]` | (required) | The signal's initial state. If a callable, it is invoked lazily on first use (and again after the signal's state is reset). |
-| `key` | `str` | (required) | A unique identifier for the signal within the session. Required because signals, unlike elements, have no position in the element tree to derive a stable identity from. |
+| `key` | `str` | (required) | A unique identifier for the signal within the session. Required and positional because signals, unlike elements, have no position in the element tree to derive a stable identity from. The `key` frames the API, mirroring `label` on widgets. |
+| `initial` | `T \| Callable[[], T] \| None` | `None` | The signal's initial state, keyword-only. If a callable, it is invoked lazily on first use (and again after the signal's state is reset). Omit it for pure-trigger signals (`st.signal("refresh")`) whose watchers read their data elsewhere. |
+
+`key` first / `initial` keyword-only keeps the required identity in the framing position and matches the widget convention (`label` positional, everything else keyword-only, principle #17).
 
 #### `Signal[T]`
 
@@ -87,7 +89,26 @@ def signal(
 |--------|-------------|
 | `value: T` | The current state. Readable anywhere, anytime. **Reading never subscribes** — only `watch=` creates a subscription. |
 | `send(value: T) -> None` | Replace the state with `value` and fire the signal. Fully typed: a type checker rejects a `send()` whose value doesn't match `T`. |
-| `__call__(value: T = unchanged) -> None` | Makes the signal a valid widget callback. Bare call fires with the state unchanged (a pure "poke the watchers" event); with a value it is equivalent to `send(value)`. |
+| `__call__(value: T = unchanged) -> None` | Makes the signal a valid widget callback (see below). Bare call fires with the state unchanged (a pure "poke the watchers" event); with a value it is equivalent to `send(value)`. |
+
+#### A signal is a callback
+
+A `Signal` is directly usable in any `on_change` / `on_click` slot — that is the
+primary way widgets fire signals, and it is what lets the runtime scope the rerun
+to the signal's watchers (a signal in a callback slot is detected at widget
+registration, before the rerun scope is decided).
+
+- **`on_change=sig`** — fires the signal with its state unchanged. The widget's new
+  value reaches watchers via `st.session_state[key]`, the usual channel.
+- **`on_change=sig, args=(value,)`** — fires `sig.send(value)`. A signal callback
+  takes **a single positional argument of type `T`** (the value to send). This is the
+  same contract as `Signal.__call__`.
+- **`kwargs` are rejected** for a signal callback (`send` takes one positional value,
+  so there is nowhere to put them) — raises a `StreamlitAPIException` (fail fast,
+  principle #23).
+
+This makes the common case payload-free (`on_change=sig`) and the value-carrying case
+explicit (`args=(value,)`), with no new widget parameter.
 
 #### `watch` parameter on `@st.fragment`
 
@@ -115,8 +136,25 @@ st.button("Refresh chart", on_click=chart_panel)
 ```
 
 Interacting with the widget reruns **all currently-registered instances** of that fragment
-function — and nothing else. Widget `args=`/`kwargs=` are not allowed with a fragment
-callback (the fragment reruns with the arguments from its original call site).
+function — and nothing else.
+
+Unlike a signal callback, a fragment callback **does** accept `args`/`kwargs`, and they are
+forwarded to the fragment when it reruns (since a fragment, unlike `send`, takes an arbitrary
+signature):
+
+```python
+@st.fragment
+def detail_panel(row_id, *, highlight=False): ...
+
+detail_panel(current_id)                       # initial render, call-site args
+st.button("Re-run highlighted",
+          on_click=detail_panel, args=(current_id,), kwargs={"highlight": True})
+```
+
+When the button fires, the matching fragment reruns as `detail_panel(current_id, highlight=True)`
+— the callback's `args`/`kwargs` override the fragment's original call-site arguments for that
+rerun. With no `args`/`kwargs`, the fragment reruns with its original call-site arguments, as
+before.
 
 ### Examples
 
@@ -125,7 +163,7 @@ callback (the fragment reruns with the arguments from its original call site).
 ```python
 import streamlit as st
 
-country = st.signal("US", key="country")
+country = st.signal("country", initial="US")
 
 # Bare attachment fires the signal; watchers read the widget via its key.
 st.sidebar.selectbox("Country", COUNTRIES, key="c", on_change=country)
@@ -158,7 +196,7 @@ class Filters:
     country: str = "US"
     year: int = 2020
 
-filters = st.signal(Filters(), key="filters")
+filters = st.signal("filters", initial=Filters())
 
 def apply():
     filters.send(Filters(st.session_state.c, st.session_state.y))
@@ -178,8 +216,8 @@ results()
 **Chained signals** — a watcher that recomputes data re-emits for its own dependents:
 
 ```python
-country = st.signal("US", key="country")
-stats = st.signal(compute_stats, key="stats")
+country = st.signal("country", initial="US")
+stats = st.signal("stats", initial=compute_stats)
 
 @st.fragment(watch=country)
 def chart_panel():
@@ -297,8 +335,14 @@ queue is sequential and all watcher functions from one full run share the same m
 globals, a value computed by watcher N is visible to watcher N+1 — though signal state and
 `session_state` are the durable channels (module globals reset on the next full run).
 
-Consecutive `parallel=True` watchers execute as a concurrent batch; ordering guarantees do
-not hold *within* a batch, only across its boundaries.
+The signal maintains the **dependency boundary**: watchers run in declared order, and a run
+of consecutive `parallel=True` watchers collapses into a single concurrent batch that must
+fully join before the next serial watcher starts. So a `[serial, serial, parallel, parallel,
+parallel, parallel, serial, serial]` watcher list executes as: two serial, then a 4-wide
+batch (joined), then two serial — order preserved at every boundary, concurrency only inside
+a batch. Ordering guarantees do not hold *within* a batch (use signal state / `session_state`
+to communicate across one). This is the intended execution model; the initial implementation
+runs all watchers serially and parallel batching lands as a follow-up (see tech spec).
 
 The triggering widget's new value is applied to `session_state` before any watcher runs, so
 every watcher sees it.

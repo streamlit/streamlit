@@ -23,7 +23,13 @@ if TYPE_CHECKING:
 
     from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
-    from streamlit.runtime.state.common import RegisterWidgetResult, T, WidgetMetadata
+    from streamlit.runtime.state.common import (
+        RegisterWidgetResult,
+        T,
+        WidgetArgs,
+        WidgetKwargs,
+        WidgetMetadata,
+    )
     from streamlit.runtime.state.query_params import QueryParams
     from streamlit.runtime.state.session_state import SessionState
 
@@ -66,6 +72,12 @@ class SafeSessionState:
             #  duration. (This will also allow us to downgrade our RLock
             #  to a Lock.)
             self._state.on_script_will_rerun(latest_widget_states)
+
+    def collect_fragment_callback_overrides(
+        self,
+    ) -> list[tuple[str, WidgetArgs, WidgetKwargs]]:
+        with self._lock:
+            return self._state.collect_fragment_callback_overrides()
 
     def on_script_finished(self, widget_ids_this_run: frozenset[str]) -> None:
         with self._lock:

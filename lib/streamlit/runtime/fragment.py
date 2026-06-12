@@ -530,7 +530,16 @@ def _fragment(
                                     )[:-1]
                                 )
                             )
-                            result = non_optional_func(*args, **kwargs)
+                            # A fragment fired as a widget callback with
+                            # args/kwargs reruns with those, overriding the
+                            # captured call-site arguments for this pass only.
+                            if fragment_id in ctx.fragment_arg_overrides:
+                                call_args, call_kwargs = ctx.fragment_arg_overrides[
+                                    fragment_id
+                                ]
+                            else:
+                                call_args, call_kwargs = args, kwargs
+                            result = non_optional_func(*call_args, **call_kwargs)
                         except (
                             RerunException,
                             StopException,

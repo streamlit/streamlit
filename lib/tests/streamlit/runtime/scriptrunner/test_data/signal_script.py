@@ -14,5 +14,5 @@
 
 import streamlit as st
 
-sig = st.signal(0, key="declared_signal")
+sig = st.signal("declared_signal", initial=0)
 st.text(f"value={sig.value}")

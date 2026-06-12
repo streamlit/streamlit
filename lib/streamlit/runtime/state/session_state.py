@@ -49,6 +49,7 @@ from streamlit.runtime.state.common import (
     ValueFieldName,
     WidgetArgs,
     WidgetCallback,
+    WidgetKwargs,
     WidgetMetadata,
     is_array_value_field_name,
     is_element_id,
@@ -649,6 +650,34 @@ class SessionState:
         self._compact_state()
         self.set_widgets_from_proto(latest_widget_states)
         self._call_callbacks()
+
+    def collect_fragment_callback_overrides(
+        self,
+    ) -> list[tuple[str, WidgetArgs, WidgetKwargs]]:
+        """Return ``(function_hash, args, kwargs)`` for fired fragment callbacks.
+
+        A widget whose callback is a ``@st.fragment`` function carries the
+        function hash plus the ``args`` / ``kwargs`` to forward to the fragment
+        when it reruns. This collects those for widgets that fired (value
+        changed) and that actually pass args or kwargs; bare fragment callbacks
+        (no args/kwargs) rerun with their captured call-site arguments and need
+        no override.
+        """
+        overrides: list[tuple[str, WidgetArgs, WidgetKwargs]] = []
+        for wid in self._new_widget_state:
+            metadata = self._new_widget_state.widget_metadata.get(wid)
+            if (
+                metadata is None
+                or metadata.fragment_callback_function_hash is None
+                or not self._widget_changed(wid)
+            ):
+                continue
+            args = metadata.callback_args or ()
+            kwargs = metadata.callback_kwargs or {}
+            if not args and not kwargs:
+                continue
+            overrides.append((metadata.fragment_callback_function_hash, args, kwargs))
+        return overrides
 
     def _call_callbacks(self) -> None:
         """Call callbacks for widgets whose value changed or whose trigger fired."""

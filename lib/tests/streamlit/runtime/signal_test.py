@@ -197,7 +197,7 @@ def test_signal_returns_handle_and_declares_record() -> None:
     """st.signal declares a record and returns a working handle."""
     ctx = _make_ctx()
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal("US", key="country")
+        sig = signal("country", initial="US")
 
         assert isinstance(sig, Signal)
         assert sig.key == "country"
@@ -209,9 +209,9 @@ def test_signal_duplicate_key_in_same_run_raises() -> None:
     """Creating two signals with the same key in one run fails fast."""
     ctx = _make_ctx()
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        signal(0, key="dup")
+        signal("dup", initial=0)
         with pytest.raises(StreamlitAPIException, match="already created"):
-            signal(1, key="dup")
+            signal("dup", initial=1)
 
 
 def test_signal_same_key_redeclares_across_runs() -> None:
@@ -220,12 +220,12 @@ def test_signal_same_key_redeclares_across_runs() -> None:
 
     first_run_ctx = _make_ctx(signal_storage=storage)
     with patch.object(signal_module, "get_script_run_ctx", return_value=first_run_ctx):
-        sig = signal(0, key="k")
+        sig = signal("k", initial=0)
         sig.send(5)
 
     second_run_ctx = _make_ctx(signal_storage=storage)
     with patch.object(signal_module, "get_script_run_ctx", return_value=second_run_ctx):
-        redeclared = signal(0, key="k")
+        redeclared = signal("k", initial=0)
         assert redeclared.value == 5
 
 
@@ -233,7 +233,7 @@ def test_signal_same_key_redeclares_across_runs() -> None:
 def test_signal_invalid_key_raises(bad_key: Any) -> None:
     """The key must be a non-empty string."""
     with pytest.raises(StreamlitAPIException, match="non-empty string"):
-        signal(0, key=cast("Any", bad_key))
+        signal(cast("Any", bad_key), initial=0)
 
 
 def test_signal_full_run_declare_resets_watchers() -> None:
@@ -245,14 +245,14 @@ def test_signal_full_run_declare_resets_watchers() -> None:
 
     first_run_ctx = _make_ctx(signal_storage=storage)
     with patch.object(signal_module, "get_script_run_ctx", return_value=first_run_ctx):
-        signal(0, key="k")
+        signal("k", initial=0)
         storage.register_watcher("k", "conditional_fragment")
 
     # Next full run: the fragment is behind a false conditional and never
     # re-registers.
     second_run_ctx = _make_ctx(signal_storage=storage)
     with patch.object(signal_module, "get_script_run_ctx", return_value=second_run_ctx):
-        signal(0, key="k")
+        signal("k", initial=0)
         assert storage.watchers("k") == []
 
 
@@ -262,7 +262,7 @@ def test_signal_fragment_pass_declare_preserves_watchers_and_state() -> None:
 
     full_run_ctx = _make_ctx(signal_storage=storage)
     with patch.object(signal_module, "get_script_run_ctx", return_value=full_run_ctx):
-        sig = signal(0, key="k")
+        sig = signal("k", initial=0)
         storage.register_watcher("k", "w1")
         sig.send(5)
 
@@ -270,7 +270,7 @@ def test_signal_fragment_pass_declare_preserves_watchers_and_state() -> None:
     with patch.object(
         signal_module, "get_script_run_ctx", return_value=fragment_pass_ctx
     ):
-        redeclared = signal(0, key="k")
+        redeclared = signal("k", initial=0)
         assert storage.watchers("k") == ["w1"]
         assert redeclared.value == 5
 
@@ -278,7 +278,7 @@ def test_signal_fragment_pass_declare_preserves_watchers_and_state() -> None:
 def test_signal_bare_mode_returns_detached_working_handle() -> None:
     """Without a script run context, the handle manages its own state."""
     with patch.object(signal_module, "get_script_run_ctx", return_value=None):
-        sig = signal(1, key="k")
+        sig = signal("k", initial=1)
         assert sig.value == 1
 
         sig.send(2)
@@ -294,7 +294,7 @@ def test_stale_handle_self_heals_after_lifecycle_reset() -> None:
     storage = MemorySignalStorage()
     ctx = _make_ctx(signal_storage=storage)
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal("initial", key="k")
+        sig = signal("k", initial="initial")
         sig.send("updated")
 
         # End of a full run that did not re-declare the signal:
@@ -313,7 +313,7 @@ def test_lazy_initial_re_resolves_after_lifecycle_reset() -> None:
 
     ctx = _make_ctx()
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal(make_value, key="k")
+        sig = signal("k", initial=make_value)
         assert calls == []
         assert sig.value == "computed"
 
@@ -331,7 +331,7 @@ def test_send_during_full_run_is_state_update_only() -> None:
     """During full runs there is no queue: send() only replaces the state."""
     ctx = _make_ctx(fragment_ids_this_run=None)
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal(0, key="k")
+        sig = signal("k", initial=0)
         sig.send(3)
 
         assert sig.value == 3
@@ -342,7 +342,7 @@ def test_send_appends_watchers_to_live_queue_in_declared_order() -> None:
     """In a fragment pass, send() queues the watchers in page order."""
     ctx = _make_ctx(fragment_ids_this_run=["trigger"])
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal(0, key="k")
+        sig = signal("k", initial=0)
         ctx.signal_storage.register_watcher("k", "w1")
         ctx.signal_storage.register_watcher("k", "w2")
 
@@ -357,7 +357,7 @@ def test_send_with_zero_watchers_is_state_update_only() -> None:
     """A fire with no registered watchers leaves the queue untouched."""
     ctx = _make_ctx(fragment_ids_this_run=["trigger"])
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal(0, key="k")
+        sig = signal("k", initial=0)
         sig.send(9)
 
     assert ctx.fragment_ids_this_run == ["trigger"]
@@ -370,7 +370,7 @@ def test_send_dedups_against_queued_and_consumed_ids() -> None:
     ctx = _make_ctx(fragment_ids_this_run=["already_ran", "still_queued"])
     ctx.fragment_ids_consumed.add("already_ran")
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal(0, key="k")
+        sig = signal("k", initial=0)
         for watcher_id in ("already_ran", "still_queued", "fresh"):
             ctx.signal_storage.register_watcher("k", watcher_id)
 
@@ -386,7 +386,7 @@ def test_repeated_sends_coalesce_to_last_value_without_warning() -> None:
     """Multiple sends in one pass queue watchers once; last value wins."""
     ctx = _make_ctx(fragment_ids_this_run=["trigger"])
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal(0, key="k")
+        sig = signal("k", initial=0)
         ctx.signal_storage.register_watcher("k", "w1")
 
         with patch.object(signal_module._LOGGER, "warning") as mock_warning:
@@ -402,7 +402,7 @@ def test_refire_within_own_cascade_warns_and_does_not_requeue() -> None:
     """A signal can't re-fire from within its own cascade (cycle guard)."""
     ctx = _make_ctx(fragment_ids_this_run=["w1"])
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal(0, key="k")
+        sig = signal("k", initial=0)
         ctx.signal_storage.register_watcher("k", "w1")
 
         sig.send(1)
@@ -424,7 +424,7 @@ def test_appended_watchers_respect_ancestor_ordering() -> None:
     ctx.fragment_storage.register("parent", lambda: None)
     ctx.fragment_storage.register("child", lambda: None, parent_fragment_id="parent")
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal(0, key="k")
+        sig = signal("k", initial=0)
         # Registered child-first to prove the re-ordering happens.
         ctx.signal_storage.register_watcher("k", "child")
         ctx.signal_storage.register_watcher("k", "parent")
@@ -441,7 +441,7 @@ def test_reorder_keeps_consumed_prefix_intact() -> None:
     ctx.fragment_storage.register("parent", lambda: None)
     ctx.fragment_storage.register("child", lambda: None, parent_fragment_id="parent")
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal(0, key="k")
+        sig = signal("k", initial=0)
         ctx.signal_storage.register_watcher("k", "child")
         ctx.signal_storage.register_watcher("k", "parent")
 
@@ -454,7 +454,7 @@ def test_bare_call_fires_with_state_unchanged() -> None:
     """sig() pokes the watchers without replacing the state."""
     ctx = _make_ctx(fragment_ids_this_run=["trigger"])
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal(7, key="k")
+        sig = signal("k", initial=7)
         ctx.signal_storage.register_watcher("k", "w1")
 
         sig()
@@ -467,7 +467,7 @@ def test_call_with_value_is_equivalent_to_send() -> None:
     """sig(value) behaves exactly like sig.send(value)."""
     ctx = _make_ctx(fragment_ids_this_run=["trigger"])
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal(7, key="k")
+        sig = signal("k", initial=7)
         ctx.signal_storage.register_watcher("k", "w1")
 
         sig(99)
@@ -480,7 +480,7 @@ def test_send_from_parallel_worker_raises() -> None:
     """send() is prohibited on parallel fragment worker threads."""
     ctx = _make_ctx(fragment_ids_this_run=None)
     with patch.object(signal_module, "get_script_run_ctx", return_value=ctx):
-        sig = signal(0, key="k")
+        sig = signal("k", initial=0)
 
         ThreadState.update(is_parallel_worker=True)
         with pytest.raises(StreamlitAPIException, match=r"Signal\.send"):

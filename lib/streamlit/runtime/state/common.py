@@ -143,6 +143,14 @@ class WidgetMetadata(Generic[T]):
     callback_args: WidgetArgs | None = None
     callback_kwargs: WidgetKwargs | None = None
 
+    # Set when the widget's callback is a ``@st.fragment``-decorated function
+    # (``on_click=my_fragment``). The function's own callback is not stored
+    # (``callback`` is None — the scoped queue run is the behavior), but the
+    # function hash is kept so the callback phase can resolve which fragment
+    # instances rerun and forward ``callback_args`` / ``callback_kwargs`` to
+    # them in place of their captured call-site arguments.
+    fragment_callback_function_hash: str | None = None
+
     fragment_id: str | None = None
 
     # Optional presenter hook used for customizing the user-visible value in

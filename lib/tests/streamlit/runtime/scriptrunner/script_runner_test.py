@@ -831,6 +831,54 @@ class ScriptRunnerTest(unittest.TestCase):
         assert signal_storage.contains("persisted")
         assert signal_storage.get_state("persisted") == "v"
 
+    def test_fragment_callback_args_forwarded_to_fragment_pass(self):
+        """A fragment fired as a widget callback with args/kwargs records a
+        per-fragment-id override that the fragment reads during its pass."""
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            get_script_run_ctx,
+        )
+
+        captured: list[tuple] = []
+
+        def my_fragment() -> None:
+            ctx = get_script_run_ctx()
+            captured.append(ctx.fragment_arg_overrides.get("frag"))
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        # Register the fragment instance under a function hash so the callback
+        # phase can resolve the firing widget's hash to this fragment id.
+        scriptrunner._fragment_storage.register(
+            "frag", my_fragment, function_hash="fn-hash"
+        )
+
+        # A button widget whose callback was a fragment function: the callback
+        # is nulled, but the function hash + args/kwargs are kept.
+        widget_id = "$$ID-fragment-callback-widget"
+        scriptrunner._session_state._state._new_widget_state.set_widget_metadata(
+            WidgetMetadata(
+                id=widget_id,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="trigger_value",
+                callback=None,
+                callback_args=(7,),
+                callback_kwargs={"highlight": True},
+                fragment_callback_function_hash="fn-hash",
+            )
+        )
+        widget_states = WidgetStates()
+        _create_widget(widget_id, widget_states).trigger_value = True
+
+        scriptrunner.request_rerun(
+            RerunData(fragment_id_queue=["frag"], widget_states=widget_states)
+        )
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        # The fragment saw the override recorded from the callback's args/kwargs.
+        assert captured == [((7,), {"highlight": True})]
+
     @patch("streamlit.runtime.scriptrunner.script_runner.get_script_run_ctx")
     @patch("streamlit.runtime.fragment.handle_user_script_exception")
     def test_regular_KeyError_is_rethrown(

@@ -26,25 +26,30 @@ if TYPE_CHECKING:
     from streamlit.runtime.state.common import WidgetCallback
 
     # =====================================================================
+    # st.signal with no initial (pure-trigger signal)
+    # =====================================================================
+
+    trigger_signal = signal("trigger_signal")
+    assert_type(trigger_signal, Signal[None])
+    assert_type(trigger_signal.value, None)
+
+    # =====================================================================
     # st.signal type inference from a value initial
     # =====================================================================
 
-    int_signal = signal(0, key="int_signal")
+    int_signal = signal("int_signal", initial=0)
     assert_type(int_signal, Signal[int])
     assert_type(int_signal.value, int)
     assert_type(int_signal.send(1), None)
     assert_type(int_signal.key, str)
 
-    str_signal = signal("US", key="str_signal")
+    str_signal = signal("str_signal", initial="US")
     assert_type(str_signal, Signal[str])
     assert_type(str_signal.value, str)
 
-    list_signal = signal([1, 2, 3], key="list_signal")
+    list_signal = signal("list_signal", initial=[1, 2, 3])
     assert_type(list_signal, Signal[list[int]])
     assert_type(list_signal.value, list[int])
-
-    none_signal = signal(None, key="none_signal")
-    assert_type(none_signal, Signal[None])
 
     # =====================================================================
     # st.signal type inference from a callable initial (lazy)
@@ -53,12 +58,12 @@ if TYPE_CHECKING:
     def make_list() -> list[str]:
         return []
 
-    lazy_signal = signal(make_list, key="lazy_signal")
+    lazy_signal = signal("lazy_signal", initial=make_list)
     assert_type(lazy_signal, Signal[list[str]])
     assert_type(lazy_signal.value, list[str])
 
-    lambda_signal = signal(lambda: 1.5, key="lambda_signal")
-    assert_type(lambda_signal, Signal[float])
+    lambda_signal = signal("lambda_signal", initial=lambda: 5)
+    assert_type(lambda_signal, Signal[int])
 
     # Typed payload objects flow through end-to-end.
     class Filters:
@@ -66,10 +71,10 @@ if TYPE_CHECKING:
 
     # A class with a zero-arg constructor acts as a lazy initializer and
     # binds to the instance type.
-    filters_class_signal = signal(Filters, key="filters_class_signal")
+    filters_class_signal = signal("filters_class_signal", initial=Filters)
     assert_type(filters_class_signal, Signal[Filters])
 
-    filters_signal = signal(Filters(), key="filters_signal")
+    filters_signal = signal("filters_signal", initial=Filters())
     assert_type(filters_signal, Signal[Filters])
     assert_type(filters_signal.value.country, str)
 
@@ -91,9 +96,9 @@ if TYPE_CHECKING:
     # A Signal satisfies the widget-callback protocol.
     callback: WidgetCallback = int_signal
 
-    # key is required and keyword-only.
-    signal(0)  # type: ignore[call-overload]
-    signal(0, "key")  # type: ignore[call-overload]
+    # key is required and positional; initial is keyword-only.
+    signal()  # type: ignore[call-overload]
+    signal("key", 0)  # type: ignore[call-overload]
 
     # =====================================================================
     # fragment(watch=...) typing

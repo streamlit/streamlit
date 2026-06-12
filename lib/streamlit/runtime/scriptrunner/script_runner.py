@@ -533,6 +533,26 @@ class ScriptRunner:
         finally:
             self._execing = False
 
+    def _record_fragment_arg_overrides(self, ctx: ScriptRunContext) -> None:
+        """Resolve fired fragment callbacks into per-fragment-id arg overrides.
+
+        A fragment function fired as a widget callback with ``args`` / ``kwargs``
+        forwards them to every currently-registered instance of that function
+        for this pass. We resolve the function hash to its fragment ids via the
+        FragmentStorage function-hash index (the same index ``app_session``
+        uses to resolve the scope token) and record the override keyed by
+        fragment id, which ``wrapped_fragment()`` reads off ``ctx``.
+        """
+        for (
+            function_hash,
+            args,
+            kwargs,
+        ) in self._session_state.collect_fragment_callback_overrides():
+            for fragment_id in self._fragment_storage.fragment_ids_for_function(
+                function_hash
+            ):
+                ctx.fragment_arg_overrides[fragment_id] = (tuple(args), dict(kwargs))
+
     def _run_script(self, rerun_data: RerunData) -> None:
         """Run our script.
 
@@ -721,6 +741,14 @@ class ScriptRunner:
                         self._session_state.on_script_will_rerun(
                             rerun_data.widget_states
                         )
+                        # A fragment function fired as a widget callback with
+                        # args/kwargs forwards them to its fragment instances
+                        # for this pass, overriding their captured call-site
+                        # arguments. Resolve the function hash to its currently
+                        # registered fragment ids and stash the override on ctx
+                        # so wrapped_fragment() can apply it.
+                        if fragment_ids_this_run:
+                            self._record_fragment_arg_overrides(ctx)
 
                     ctx.on_script_start()
 

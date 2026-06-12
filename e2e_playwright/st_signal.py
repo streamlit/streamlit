@@ -24,8 +24,8 @@ def count_run(name: str) -> int:
 
 full_runs = count_run("full_runs")
 
-country = st.signal("US", key="country")
-stats = st.signal("stats for US", key="stats")
+country = st.signal("country", initial="US")
+stats = st.signal("stats", initial="stats for US")
 
 # Bare attachment: changing the selectbox fires the signal and reruns only
 # its watchers (chart_panel, plus metrics_row via the chained stats signal).

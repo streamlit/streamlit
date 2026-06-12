@@ -22,6 +22,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
+    Any,
     Final,
     TypeAlias,
     TypedDict,
@@ -248,6 +249,14 @@ class ScriptRunContext:
     # Fragment ids already picked up by the fragment queue loop this pass;
     # Signal.send() dedups appended watchers against this set.
     fragment_ids_consumed: set[str] = field(default_factory=set)
+    # Per-fragment-id (args, kwargs) overrides for this pass. Set during the
+    # callback phase when a fragment function is fired as a widget callback
+    # with args/kwargs; wrapped_fragment() applies the override in place of the
+    # fragment's captured call-site arguments. Empty for full runs and for
+    # fragment callbacks fired without args/kwargs.
+    fragment_arg_overrides: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = field(
+        default_factory=dict
+    )
 
     def __post_init__(self) -> None:
         # Capture the main script thread's identity so reset() can refuse to
@@ -311,6 +320,7 @@ class ScriptRunContext:
         self.signal_keys_declared_this_run = set()
         self.signals_fired_this_pass = set()
         self.fragment_ids_consumed = set()
+        self.fragment_arg_overrides = {}
 
         in_cached_function.set(False)
 
