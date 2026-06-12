@@ -76,17 +76,40 @@ function MenuButton(props: Props): ReactElement {
   // avoiding the ref duplication issue that occurs when BaseButtonTooltip
   // renders its children twice (desktop tooltip + mobile variant).
   const containerRef = useRef<HTMLDivElement>(null)
+  // Ref to the popover DOM element — needed by the outside-click handler below
+  // to distinguish clicks on portal-rendered menu items from true outside clicks.
+  const popoverRef = useRef<HTMLElement>(null)
 
-  // isNonModal sets isDismissable=false, disabling the Popover's built-in
-  // Escape handler. Use a native DOM listener (capture phase) so it fires
-  // independently of React's synthetic event system.
+  // isNonModal=true sets isDismissable=false inside usePopover, which disables
+  // React Aria's built-in useInteractOutside and Escape-key dismissal. Both are
+  // required for a menu, so we register native DOM listeners in capture phase
+  // (fires before any React synthetic handlers, independent of stopPropagation).
   useEffect(() => {
     if (!isOpen) return
+
+    const handlePointerDown = (e: PointerEvent): void => {
+      const target = e.target as Node
+      // Close only when the pointer lands outside BOTH the trigger container
+      // and the portal-rendered popover. Clicks inside either are handled by
+      // their own React handlers (trigger onClick toggle / MenuItem onAction).
+      if (
+        !containerRef.current?.contains(target) &&
+        !popoverRef.current?.contains(target)
+      ) {
+        setIsOpen(false)
+      }
+    }
+
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === "Escape") setIsOpen(false)
     }
+
+    document.addEventListener("pointerdown", handlePointerDown, true)
     document.addEventListener("keydown", handleKeyDown, true)
-    return () => document.removeEventListener("keydown", handleKeyDown, true)
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true)
+      document.removeEventListener("keydown", handleKeyDown, true)
+    }
   }, [isOpen])
 
   const kind = BUTTON_TYPE_TO_KIND[element.type] ?? BaseButtonKind.SECONDARY
@@ -149,6 +172,7 @@ function MenuButton(props: Props): ReactElement {
         </BaseButton>
       </BaseButtonTooltip>
       <StyledMenuPopover
+        ref={popoverRef}
         triggerRef={containerRef}
         data-testid="stMenuButtonBody"
         isOpen={isOpen}
@@ -156,7 +180,7 @@ function MenuButton(props: Props): ReactElement {
         // isNonModal prevents ariaHideOutside from adding `inert` to the rest of
         // the page. Without it, clicking outside the popover would fail in E2E
         // tests because the target element is marked inert by the overlay.
-        // shouldCloseOnInteractOutside (below) handles dismiss-on-outside-click.
+        // Outside-click and Escape dismissal are handled by the useEffect above.
         isNonModal
         // React Aria's useOverlayPosition hard-codes `zIndex: 100000` as an
         // inline style, which overrides CSS class rules. Passing the z-index
@@ -164,8 +188,9 @@ function MenuButton(props: Props): ReactElement {
         // style, so this wins. Must exceed theme.zIndices.header (999990) so
         // the portal is always above the app toolbar and sidebar overlays.
         style={{ zIndex: theme.zIndices.popup }}
-        // Prevent dismiss when clicking the trigger button — onClick handles
-        // the toggle, so without this the menu would immediately re-open.
+        // Prevent the shouldCloseOnBlur mechanism from closing when focus moves
+        // to the trigger button (which is inside containerRef but outside the
+        // portal). Without this, re-clicking the trigger would close+reopen.
         shouldCloseOnInteractOutside={target =>
           !containerRef.current?.contains(target)
         }
