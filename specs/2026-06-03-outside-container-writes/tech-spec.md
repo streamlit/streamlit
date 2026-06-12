@@ -110,7 +110,7 @@ whether the target cursor is outside the current fragment's delta path using the
 `_is_inside_fragment_path` helper:
 
 ```python
-def _is_outside_container_write(dg: DeltaGenerator) -> bool:
+def _needs_outside_wrapper(dg: DeltaGenerator) -> bool:
     ts = ThreadState.get()
     if not ts.fragment_id or not ts.delta_path:
         return False
@@ -169,7 +169,7 @@ frag\_a's wrapper is not in frag\_b's registry, so frag\_b correctly gets its ow
 When detected, redirect the write through a wrapper:
 
 ```python
-if ctx and _is_outside_container_write(dg):
+if ctx and _needs_outside_wrapper(dg):
     dg = _get_or_create_outside_wrapper(dg, ts.fragment_id)
 ```
 
@@ -303,7 +303,7 @@ fragment only resets its own wrapper's cursor.
 **Nested containers.** A fragment calling `outer.container()` triggers `_block` on the
 outside container, which is redirected through the wrapper. The returned DG is a child of
 the wrapper. Subsequent writes to this nested DG are recognized as already inside the
-current fragment's wrapper via the ancestor walk in `_is_outside_container_write`, so they
+current fragment's wrapper via the ancestor walk in `_needs_outside_wrapper`, so they
 pass through without creating additional wrappers.
 
 **`st.empty()` as outside container.** `st.empty()` uses a `LockedCursor` that always
@@ -333,7 +333,7 @@ identically. This is the interleaving/overwrite failure mode from the Summary; w
 wrapper, a fragment that grows from 3 → 5 elements would overwrite the footer.
 
 **`EVENT` root is out of scope for wrapping.** `st.toast` and dialogs route to the `EVENT`
-root, which `_is_outside_container_write` deliberately excludes. The delta-level collision
+root, which `_needs_outside_wrapper` deliberately excludes. The delta-level collision
 exists mechanically, but it causes no user-visible loss: toasts are one-shot effects (the
 frontend forces fresh payloads / re-fire and auto-dismiss rather than reusing element
 payloads), and dialogs are modal singletons with no variable-count positional interleaving.
