@@ -21,10 +21,18 @@ import { Quiver } from "~lib/dataframes/Quiver"
 import {
   computeBooleanStatistics,
   computeDateTimeStatistics,
+  computeEmptyPercentage,
   computeNumericStatistics,
   computeStatistics,
   computeTextStatistics,
+  createLabeledBarDatum,
   DateTimeStatistics,
+  formatCountWithPercent,
+  formatDatetime,
+  formatNumber,
+  formatTooltipDate,
+  formatTooltipNumber,
+  getNullOrEmptyCount,
   getStatisticsType,
   supportsStatistics,
 } from "./statisticsUtils"
@@ -471,6 +479,149 @@ describe("statisticsUtils", () => {
     it("returns null when cell extraction fails", () => {
       const data = makeMockQuiver(row => row, 5, true)
       expect(computeStatistics("number", data, 0)).toBeNull()
+    })
+  })
+
+  describe("formatNumber", () => {
+    it("returns '-' for non-finite values", () => {
+      expect(formatNumber(NaN)).toBe("-")
+      expect(formatNumber(Infinity)).toBe("-")
+      expect(formatNumber(-Infinity)).toBe("-")
+    })
+
+    it("formats integers without fraction digits", () => {
+      // Strip grouping/decimal separators so the assertion is locale-independent.
+      expect(formatNumber(1000).replace(/\D/g, "")).toBe("1000")
+      expect(formatNumber(42, 0).replace(/\D/g, "")).toBe("42")
+    })
+
+    it("rounds to the requested precision", () => {
+      // Separators vary by locale, so match digits around an arbitrary separator.
+      expect(formatNumber(3.14159, 2)).toMatch(/^3\D14$/)
+      expect(formatNumber(2.5)).toMatch(/^2\D5$/)
+      expect(formatNumber(2.6, 0).replace(/\D/g, "")).toBe("3")
+    })
+  })
+
+  describe("formatDatetime", () => {
+    // Fixed UTC noon timestamp so the calendar day is unambiguous everywhere.
+    const ts = Date.UTC(2023, 0, 15, 12, 0, 0)
+
+    it("omits the time component when isDateOnly is true", () => {
+      const dateOnly = formatDatetime(ts, true, "UTC")
+      const withTime = formatDatetime(ts, false, "UTC")
+
+      expect(withTime).not.toBe(dateOnly)
+      // The datetime variant adds the hour/minute, so it is strictly longer.
+      expect(withTime.length).toBeGreaterThan(dateOnly.length)
+      expect(dateOnly).toContain("2023")
+      expect(withTime).toContain("2023")
+    })
+
+    it("defaults to UTC when no timezone is provided", () => {
+      expect(formatDatetime(ts, true)).toBe(formatDatetime(ts, true, "UTC"))
+      expect(formatDatetime(ts, false)).toBe(formatDatetime(ts, false, "UTC"))
+    })
+
+    it("respects an explicit timezone", () => {
+      // 02:00 UTC falls on the previous calendar day in Honolulu (UTC-10), so
+      // the rendered date differs from the UTC rendering.
+      const earlyTs = Date.UTC(2023, 0, 15, 2, 0, 0)
+      expect(formatDatetime(earlyTs, true, "Pacific/Honolulu")).not.toBe(
+        formatDatetime(earlyTs, true, "UTC")
+      )
+    })
+  })
+
+  describe("computeEmptyPercentage", () => {
+    it("computes the empty share of the total", () => {
+      expect(computeEmptyPercentage(75, 25)).toBe(25)
+      expect(computeEmptyPercentage(3, 1)).toBe(25)
+    })
+
+    it("returns 0 when there are no values", () => {
+      expect(computeEmptyPercentage(0, 0)).toBe(0)
+    })
+  })
+
+  describe("formatCountWithPercent", () => {
+    it("renders the count followed by the percentage in parentheses", () => {
+      const result = formatCountWithPercent(1234, 50)
+      const [countPart, percentPart] = result.split(" (")
+
+      expect(result.endsWith("%)")).toBe(true)
+      expect(countPart.replace(/\D/g, "")).toBe("1234")
+      expect(percentPart.replace(/\D/g, "")).toBe("50")
+    })
+  })
+
+  describe("getNullOrEmptyCount", () => {
+    it("returns nullCount for numeric statistics", () => {
+      const stats = computeNumericStatistics([1, null, 2, undefined, 3], false)
+      expect(stats.nullCount).toBe(2)
+      expect(getNullOrEmptyCount(stats)).toBe(2)
+    })
+
+    it("returns nullCount for datetime statistics", () => {
+      const stats = computeDateTimeStatistics(
+        [new Date("2023-01-01T00:00:00Z"), null],
+        false
+      )
+      expect(stats.nullCount).toBe(1)
+      expect(getNullOrEmptyCount(stats)).toBe(1)
+    })
+
+    it("returns nullCount for boolean statistics", () => {
+      const stats = computeBooleanStatistics([true, null, false], false)
+      expect(getNullOrEmptyCount(stats)).toBe(stats.nullCount)
+    })
+
+    it("returns the empty count for text statistics", () => {
+      const stats = computeTextStatistics(["a", "", null], false)
+      expect(stats.empty).toBe(2)
+      expect(getNullOrEmptyCount(stats)).toBe(2)
+    })
+  })
+
+  describe("formatTooltipNumber", () => {
+    it("formats integers without decimals", () => {
+      expect(formatTooltipNumber(1000).replace(/\D/g, "")).toBe("1000")
+      expect(formatTooltipNumber(0)).toBe("0")
+    })
+
+    it("keeps up to two fraction digits for decimals", () => {
+      expect(formatTooltipNumber(1.23456)).toMatch(/^1\D23$/)
+    })
+  })
+
+  describe("formatTooltipDate", () => {
+    const ts = Date.UTC(2023, 0, 15, 12, 0, 0)
+
+    it("includes the time only when includeTime is true", () => {
+      const dateOnly = formatTooltipDate(ts, false, "UTC")
+      const withTime = formatTooltipDate(ts, true, "UTC")
+
+      expect(withTime).not.toBe(dateOnly)
+      expect(withTime.length).toBeGreaterThan(dateOnly.length)
+    })
+
+    it("defaults to UTC when no timezone is provided", () => {
+      expect(formatTooltipDate(ts, false)).toBe(
+        formatTooltipDate(ts, false, "UTC")
+      )
+    })
+  })
+
+  describe("createLabeledBarDatum", () => {
+    it("builds a datum with label, percent share, and a descriptive title", () => {
+      const datum = createLabeledBarDatum("True", 30, 60)
+
+      expect(datum.label).toBe("True")
+      expect(datum.percent).toBe(60)
+      // The visible value label shows the percentage.
+      expect(datum.valueLabel).toBe("60%")
+      // The hover title carries the label, raw count, and percentage.
+      expect(datum.title).toBe("True: 30 (60%)")
     })
   })
 })

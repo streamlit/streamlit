@@ -27,7 +27,14 @@ import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaL
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import type { EmotionTheme } from "~lib/theme/types"
 
-import { ColumnStatistics, HistogramBin } from "./statisticsUtils"
+import {
+  ColumnStatistics,
+  createLabeledBarDatum,
+  formatTooltipDate,
+  formatTooltipNumber,
+  HistogramBin,
+  LabeledBarDatum,
+} from "./statisticsUtils"
 import {
   StyledStatisticsBarChart,
   StyledStatisticsBarFill,
@@ -77,65 +84,6 @@ function createPopoverTooltipStyles(theme: EmotionTheme): CSSObject {
       zIndex: theme.zIndices.tablePortalTooltip,
     },
   }
-}
-
-/**
- * Formats a number for display in tooltips.
- */
-function formatTooltipNumber(value: number): string {
-  if (Number.isInteger(value)) {
-    return value.toLocaleString()
-  }
-  // For decimals, show up to 2 significant decimal places
-  return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
-}
-
-/**
- * Formats a compact count for visible chart labels.
- */
-function formatChartCount(value: number): string {
-  return value.toLocaleString(undefined, { maximumFractionDigits: 0 })
-}
-
-/**
- * Formats a compact percentage for visible chart labels.
- */
-function formatChartPercent(value: number): string {
-  return `${value.toLocaleString(undefined, {
-    maximumFractionDigits: 1,
-  })}%`
-}
-
-/**
- * Formats a timestamp as a date/datetime string.
- * @param timestamp - Unix timestamp in milliseconds
- * @param includeTime - If true, include time in the formatted string
- * @param timezone - Optional timezone identifier (e.g., "America/New_York", "UTC").
- *                   Defaults to UTC for consistency with StatisticsMenu.
- */
-function formatTooltipDate(
-  timestamp: number,
-  includeTime = false,
-  timezone?: string
-): string {
-  const date = new Date(timestamp)
-  const tz = timezone || "UTC"
-  if (includeTime) {
-    return date.toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: tz,
-    })
-  }
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: tz,
-  })
 }
 
 interface StatisticsChartProps {
@@ -213,38 +161,6 @@ function createHistogramSpec(
 
   spec.config = applyStreamlitTheme(spec.config, theme)
   return spec
-}
-
-interface LabeledBarDatum {
-  label: string
-  /**
-   * Share of the column's total values (0–100). Drives the bar width so the
-   * bar length directly represents the proportion the value takes on, with the
-   * track behind it standing for 100%.
-   */
-  percent: number
-  valueLabel: string
-  title: string
-}
-
-/**
- * Builds a labeled bar datum for categorical statistics. The visible value
- * label shows the percentage, while the row title (hover) carries both the raw
- * count and the percentage.
- */
-function createLabeledBarDatum(
-  label: string,
-  count: number,
-  percentage: number
-): LabeledBarDatum {
-  const countLabel = formatChartCount(count)
-  const percentLabel = formatChartPercent(percentage)
-  return {
-    label,
-    percent: percentage,
-    valueLabel: percentLabel,
-    title: `${label}: ${countLabel} (${percentLabel})`,
-  }
 }
 
 /**

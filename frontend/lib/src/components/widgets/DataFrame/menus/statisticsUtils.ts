@@ -744,3 +744,97 @@ export function getNullOrEmptyCount(statistics: ColumnStatistics): number {
       return statistics.empty
   }
 }
+
+/**
+ * Formats a number for display in chart tooltips. Integers are shown without
+ * decimals; non-integers keep up to two fraction digits.
+ */
+export function formatTooltipNumber(value: number): string {
+  if (Number.isInteger(value)) {
+    return value.toLocaleString()
+  }
+  // For decimals, show up to 2 significant decimal places
+  return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+}
+
+/**
+ * Formats a compact count for visible chart labels.
+ */
+function formatChartCount(value: number): string {
+  return value.toLocaleString(undefined, { maximumFractionDigits: 0 })
+}
+
+/**
+ * Formats a compact percentage for visible chart labels.
+ */
+function formatChartPercent(value: number): string {
+  return `${value.toLocaleString(undefined, {
+    maximumFractionDigits: 1,
+  })}%`
+}
+
+/**
+ * Formats a timestamp as a date/datetime string for chart tooltips.
+ *
+ * @param timestamp - Unix timestamp in milliseconds
+ * @param includeTime - If true, include time in the formatted string
+ * @param timezone - Optional timezone identifier (e.g., "America/New_York", "UTC").
+ *                   Defaults to UTC for consistency with formatDatetime.
+ */
+export function formatTooltipDate(
+  timestamp: number,
+  includeTime = false,
+  timezone?: string
+): string {
+  const date = new Date(timestamp)
+  const tz = timezone || "UTC"
+  if (includeTime) {
+    return date.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: tz,
+    })
+  }
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: tz,
+  })
+}
+
+/** A single bar entry for the categorical statistics bar chart. */
+export interface LabeledBarDatum {
+  label: string
+  /**
+   * Share of the column's total values (0–100). Drives the bar width so the
+   * bar length directly represents the proportion the value takes on, with the
+   * track behind it standing for 100%.
+   */
+  percent: number
+  valueLabel: string
+  title: string
+}
+
+/**
+ * Builds a labeled bar datum for categorical statistics. The visible value
+ * label shows the percentage, while the row title (hover) carries both the raw
+ * count and the percentage.
+ */
+export function createLabeledBarDatum(
+  label: string,
+  count: number,
+  percentage: number
+): LabeledBarDatum {
+  const countLabel = formatChartCount(count)
+  const percentLabel = formatChartPercent(percentage)
+  return {
+    label,
+    percent: percentage,
+    valueLabel: percentLabel,
+    title: `${label}: ${countLabel} (${percentLabel})`,
+  }
+}
