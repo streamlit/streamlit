@@ -64,6 +64,7 @@ const LONG_MESSAGE =
 
 describe("Toast Component", () => {
   let scrollHeightSpy: MockInstance | undefined
+  let getComputedStyleSpy: MockInstance | undefined
 
   beforeEach(() => {
     // Use fake timers across tests to control and flush internal timeouts
@@ -73,6 +74,8 @@ describe("Toast Component", () => {
   afterEach(() => {
     scrollHeightSpy?.mockRestore()
     scrollHeightSpy = undefined
+    getComputedStyleSpy?.mockRestore()
+    getComputedStyleSpy = undefined
     // Clear all toasts and flush timers to avoid updates after test teardown
     act(() => {
       toastQueue.visibleToasts.forEach(t => toastQueue.close(t.key))
@@ -94,6 +97,15 @@ describe("Toast Component", () => {
           return 100
         }
         return 0
+      })
+    const realGetComputedStyle = window.getComputedStyle.bind(window)
+    getComputedStyleSpy = vi
+      .spyOn(window, "getComputedStyle")
+      .mockImplementation((el, pseudoElt) => {
+        if (el instanceof HTMLElement && el.dataset.testid === "stToastText") {
+          return { lineHeight: "20px" } as CSSStyleDeclaration
+        }
+        return realGetComputedStyle(el, pseudoElt)
       })
   }
 

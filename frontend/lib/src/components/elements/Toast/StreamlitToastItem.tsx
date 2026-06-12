@@ -52,8 +52,10 @@ export function StreamlitToastItem({
   useLayoutEffect(() => {
     const el = textRef.current
     if (el && !expanded) {
-      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- One-shot measurement on mount; no animation loop.
-      setIsOverflowing(el.scrollHeight > el.clientHeight)
+      const lineHeight = parseFloat(getComputedStyle(el).lineHeight)
+      const maxVisibleHeight = lineHeight * 3 + 1
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Batched with the getComputedStyle read above.
+      setIsOverflowing(el.scrollHeight > maxVisibleHeight)
     }
   }, [body, expanded])
 
@@ -72,12 +74,12 @@ export function StreamlitToastItem({
         <StyledMessageWrapper>
           <StyledClampedText
             ref={textRef}
-            clamped={!expanded}
+            clamped={isOverflowing && !expanded}
             data-testid="stToastText"
           >
             <StreamlitMarkdown source={body} allowHTML={false} isToast />
           </StyledClampedText>
-          {(isOverflowing || expanded) && (
+          {isOverflowing && (
             <StyledViewButton
               data-testid="stToastViewButton"
               onClick={handleToggle}
