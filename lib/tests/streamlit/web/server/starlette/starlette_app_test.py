@@ -555,6 +555,20 @@ def test_metrics_endpoint_otlp_format_respects_family_filter(
     assert names == {"session_events"}
 
 
+def test_metrics_endpoint_otlp_format_takes_precedence_over_accept_header(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """?format=otlp wins over an Accept: application/x-protobuf header."""
+    client, _ = starlette_client
+    response = client.get(
+        "/_stcore/metrics?format=otlp",
+        headers={"Accept": "application/x-protobuf"},
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/json"
+    assert "resourceMetrics" in response.json()
+
+
 def test_media_endpoint_serves_file(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
