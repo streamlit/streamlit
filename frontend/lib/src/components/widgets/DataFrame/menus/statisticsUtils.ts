@@ -706,7 +706,7 @@ export function formatDatetime(
 /**
  * Format a percentage for display.
  */
-export function formatPercent(value: number): string {
+function formatPercent(value: number): string {
   return `${formatNumber(value, 1)}%`
 }
 
