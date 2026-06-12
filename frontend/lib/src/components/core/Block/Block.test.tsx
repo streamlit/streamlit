@@ -21,6 +21,7 @@ import { screen } from "@testing-library/react"
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { BlockNode } from "~lib/AppNode"
+import { text } from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -338,5 +339,56 @@ describe("BlockNodeRenderer CSS key class placement", () => {
 
     const innerBlock = screen.getByTestId("stVerticalBlock")
     expect(innerBlock.className).not.toContain("st-key-")
+  })
+})
+
+describe("BlockNodeRenderer transparent blocks", () => {
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+
+  function makeBlockNodeComponent(node: BlockNode): ReactElement {
+    return (
+      <BlockNodeRenderer
+        node={node}
+        scriptRunId=""
+        scriptRunState={ScriptRunState.NOT_RUNNING}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        // @ts-expect-error
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  it("renders children directly with no wrapping container", () => {
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("transparent child")],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+
+    renderWithContexts(makeBlockNodeComponent(node))
+
+    expect(screen.getByText("transparent child")).toBeVisible()
+
+    expect(screen.queryByTestId("stVerticalBlock")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stLayoutWrapper")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stExpander")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stColumn")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stHorizontalBlock")).not.toBeInTheDocument()
+  })
+
+  it("renders nothing when empty even with allowEmpty", () => {
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+
+    const { container } = renderWithContexts(makeBlockNodeComponent(node))
+
+    expect(container).toBeEmptyDOMElement()
   })
 })
