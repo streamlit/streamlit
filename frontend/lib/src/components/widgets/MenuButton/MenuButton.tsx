@@ -18,7 +18,7 @@ import {
   memo,
   ReactElement,
   useCallback,
-  useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -28,7 +28,6 @@ import { type Key } from "react-aria-components"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
@@ -73,14 +72,22 @@ function MenuButton(props: Props): ReactElement {
 
   const [isOpen, setIsOpen] = useState(false)
   const theme = useEmotionTheme()
-  // When in the sidebar, use isNonModal to prevent ariaHideOutside from adding
-  // `inert` to the sidebar container — which would cause the menu to close
-  // immediately after opening (shouldCloseOnBlur fires when inert removes focus).
-  const isInSidebar = useContext(IsSidebarContext)
   // Anchor ref on the outer container — mirrors the original anchorRef pattern,
   // avoiding the ref duplication issue that occurs when BaseButtonTooltip
   // renders its children twice (desktop tooltip + mobile variant).
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // isNonModal sets isDismissable=false, disabling the Popover's built-in
+  // Escape handler. Use a native DOM listener (capture phase) so it fires
+  // independently of React's synthetic event system.
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") setIsOpen(false)
+    }
+    document.addEventListener("keydown", handleKeyDown, true)
+    return () => document.removeEventListener("keydown", handleKeyDown, true)
+  }, [isOpen])
 
   const kind = BUTTON_TYPE_TO_KIND[element.type] ?? BaseButtonKind.SECONDARY
 
@@ -146,7 +153,11 @@ function MenuButton(props: Props): ReactElement {
         data-testid="stMenuButtonBody"
         isOpen={isOpen}
         onOpenChange={setIsOpen}
-        isNonModal={isInSidebar}
+        // isNonModal prevents ariaHideOutside from adding `inert` to the rest of
+        // the page. Without it, clicking outside the popover would fail in E2E
+        // tests because the target element is marked inert by the overlay.
+        // shouldCloseOnInteractOutside (below) handles dismiss-on-outside-click.
+        isNonModal
         // React Aria's useOverlayPosition hard-codes `zIndex: 100000` as an
         // inline style, which overrides CSS class rules. Passing the z-index
         // via `style` prop instead — RAC merges user style AFTER its internal
@@ -158,11 +169,15 @@ function MenuButton(props: Props): ReactElement {
         shouldCloseOnInteractOutside={target =>
           !containerRef.current?.contains(target)
         }
-        // Match the original BaseWeb popoverMargin (twoXS spacing below trigger).
         offset={4}
         placement="bottom start"
       >
-        <StyledMenuList onAction={handleItemSelect} aria-label={element.label}>
+        <StyledMenuList
+          onAction={handleItemSelect}
+          aria-label={element.label}
+          // Focus the first item on open
+          autoFocus="first"
+        >
           {menuItems.map(item => {
             const { icon, text } = extractLeadingMaterialIcon(item.label)
             return (
