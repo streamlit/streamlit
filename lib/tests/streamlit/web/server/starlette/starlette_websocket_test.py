@@ -21,6 +21,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from starlette.datastructures import Headers
 
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_websocket import (
@@ -363,6 +364,22 @@ class TestParseUserCookieSigned:
 class TestIsOriginAllowed:
     """Tests for _is_origin_allowed function (Origin validation for WebSocket)."""
 
+    @staticmethod
+    def _headers(
+        host: str | None,
+        *,
+        forwarded_host: str | None = None,
+        forwarded: str | None = None,
+    ) -> Headers:
+        raw_headers: list[tuple[bytes, bytes]] = []
+        if host is not None:
+            raw_headers.append((b"host", host.encode()))
+        if forwarded_host is not None:
+            raw_headers.append((b"x-forwarded-host", forwarded_host.encode()))
+        if forwarded is not None:
+            raw_headers.append((b"forwarded", forwarded.encode()))
+        return Headers(raw=raw_headers)
+
     @pytest.mark.parametrize(
         ("origin", "host", "expected"),
         [
@@ -393,12 +410,15 @@ class TestIsOriginAllowed:
         self, origin: str | None, host: str, expected: bool
     ) -> None:
         """Test origin validation when CORS is enabled."""
-        assert _is_origin_allowed(origin, host) is expected
+        assert _is_origin_allowed(origin, self._headers(host)) is expected
 
     @patch_config_options({"server.enableCORS": False})
     def test_allows_all_origins_when_cors_disabled(self) -> None:
         """Test that all origins are allowed when CORS is disabled."""
-        assert _is_origin_allowed("http://evil.com", "localhost:8501") is True
+        assert (
+            _is_origin_allowed("http://evil.com", self._headers("localhost:8501"))
+            is True
+        )
 
     @pytest.mark.parametrize(
         ("origin", "expected"),
@@ -415,7 +435,59 @@ class TestIsOriginAllowed:
         self, origin: str, expected: bool
     ) -> None:
         """Test origin validation against explicit allowlist."""
-        assert _is_origin_allowed(origin, "localhost:8501") is expected
+        assert _is_origin_allowed(origin, self._headers("localhost:8501")) is expected
+
+    @pytest.mark.parametrize(
+        ("origin", "host"),
+        [
+            ("https://example.com", "example.com:443"),
+            ("http://example.com", "example.com:80"),
+            ("wss://example.com", "example.com:443"),
+            ("ws://example.com", "example.com:80"),
+        ],
+    )
+    @patch_config_options({"server.enableCORS": True})
+    def test_origin_validation_allows_default_port_equivalents(
+        self, origin: str, host: str
+    ) -> None:
+        """Test that same-origin default ports do not need exact string matches."""
+        assert _is_origin_allowed(origin, self._headers(host)) is True
+
+    @patch_config_options({"server.enableCORS": True})
+    def test_origin_validation_allows_x_forwarded_host(self) -> None:
+        """Test same-origin validation behind reverse proxies that rewrite Host."""
+        assert (
+            _is_origin_allowed(
+                "https://public.example.com",
+                self._headers("127.0.0.1:8501", forwarded_host="public.example.com"),
+            )
+            is True
+        )
+
+    @patch_config_options({"server.enableCORS": True})
+    def test_origin_validation_allows_forwarded_host(self) -> None:
+        """Test same-origin validation with RFC 7239 Forwarded host."""
+        assert (
+            _is_origin_allowed(
+                "https://public.example.com",
+                self._headers(
+                    "127.0.0.1:8501",
+                    forwarded='for=192.0.2.1;proto=https;host="public.example.com"',
+                ),
+            )
+            is True
+        )
+
+    @patch_config_options({"server.enableCORS": True})
+    def test_origin_validation_rejects_forwarded_host_mismatch(self) -> None:
+        """Test that forwarded host support still rejects cross-origin requests."""
+        assert (
+            _is_origin_allowed(
+                "https://attacker.example.com",
+                self._headers("127.0.0.1:8501", forwarded_host="public.example.com"),
+            )
+            is False
+        )
 
 
 class TestWebsocketHandlerUserInfoPrecedence:

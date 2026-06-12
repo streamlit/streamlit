@@ -59,6 +59,12 @@ _LOGGER: Final = get_logger(__name__)
 
 # WebSocket stream route path (without base URL prefix).
 _ROUTE_WEBSOCKET_STREAM: Final = "_stcore/stream"
+_DEFAULT_PORT_BY_SCHEME: Final[dict[str, int]] = {
+    "http": 80,
+    "https": 443,
+    "ws": 80,
+    "wss": 443,
+}
 
 
 def _parse_subprotocols(
@@ -101,7 +107,53 @@ def _gather_user_info(headers: Headers) -> dict[str, str | bool | None]:
     return user_info
 
 
-def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
+def _parse_authority(authority: str) -> tuple[str, int | None] | None:
+    """Parse a Host-style authority into a normalized hostname and port."""
+    try:
+        parsed = urlparse(f"//{authority.strip()}")
+    except ValueError:
+        return None
+
+    if parsed.hostname is None:
+        return None
+
+    try:
+        port = parsed.port
+    except ValueError:
+        return None
+
+    return parsed.hostname.lower(), port
+
+
+def _normalize_authority(
+    authority: str, default_port: int | None
+) -> tuple[str, int | None] | None:
+    parsed = _parse_authority(authority)
+    if parsed is None:
+        return None
+
+    hostname, port = parsed
+    return hostname, port if port is not None else default_port
+
+
+def _get_forwarded_hosts(headers: Headers) -> list[str]:
+    """Return client-facing hosts reported by common proxy headers."""
+    hosts: list[str] = []
+
+    for value in headers.getlist("x-forwarded-host"):
+        hosts.extend(host.strip() for host in value.split(",") if host.strip())
+
+    for value in headers.getlist("forwarded"):
+        for forwarded_element in value.split(","):
+            for param in forwarded_element.split(";"):
+                key, separator, raw_value = param.partition("=")
+                if separator and key.strip().lower() == "host":
+                    hosts.append(raw_value.strip().strip('"'))
+
+    return hosts
+
+
+def _is_origin_allowed(origin: str | None, headers: Headers) -> bool:
     """Check if the WebSocket Origin header is allowed.
 
     Allows same-origin connections by default and delegates to
@@ -112,8 +164,8 @@ def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
     origin: str | None
         The origin of the WebSocket connection.
 
-    host: str | None
-        The host of the WebSocket connection.
+    headers: Headers
+        The WebSocket request headers.
 
     Returns
     -------
@@ -129,13 +181,18 @@ def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
     if origin is None:
         return True
 
-    # Check same-origin: compare origin host with request host
     parsed_origin = urlparse(origin)
-    origin_host = parsed_origin.netloc
+    default_port = _DEFAULT_PORT_BY_SCHEME.get(parsed_origin.scheme)
+    origin_host = _normalize_authority(parsed_origin.netloc, default_port)
 
-    # If origin host matches request host, it's same-origin
-    if origin_host == host:
-        return True
+    if origin_host is not None:
+        candidate_hosts = [headers.get("host"), *_get_forwarded_hosts(headers)]
+        for candidate_host in candidate_hosts:
+            if candidate_host is None:
+                continue
+
+            if _normalize_authority(candidate_host, default_port) == origin_host:
+                return True
 
     # Delegate to the standard allowed origins check
     return is_url_from_allowed_origins(origin)
@@ -387,10 +444,14 @@ def create_websocket_handler(runtime: Runtime) -> Any:
         # Validate origin before accepting the connection to prevent
         # cross-site WebSocket hijacking.
         origin = websocket.headers.get("Origin")
-        host = websocket.headers.get("Host")
-        if not _is_origin_allowed(origin, host):
+        if not _is_origin_allowed(origin, websocket.headers):
             _LOGGER.warning(
-                "Rejecting WebSocket connection from disallowed origin: %s", origin
+                "Rejecting WebSocket connection from disallowed origin: %s "
+                "(host=%s, x-forwarded-host=%s, forwarded=%s)",
+                origin,
+                websocket.headers.get("Host"),
+                websocket.headers.get("X-Forwarded-Host"),
+                websocket.headers.get("Forwarded"),
             )
             await websocket.close(code=1008)  # 1008 = Policy Violation
             return
