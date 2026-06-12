@@ -47,6 +47,7 @@ import "streamlit/proto/Html.proto";
 import "streamlit/proto/IFrame.proto";
 import "streamlit/proto/Image.proto";
 import "streamlit/proto/Json.proto";
+import "streamlit/proto/Lens.proto";
 import "streamlit/proto/LinkButton.proto";
 import "streamlit/proto/Markdown.proto";
 import "streamlit/proto/MenuButton.proto";
@@ -144,7 +145,8 @@ message Element {
     Code code = 48;
     MenuButton menu_button = 64;
     Pagination pagination = 66;
-    // Next ID: 67
+    Lens lens = 67;
+    // Next ID: 68
   }
 
   reserved 3, 9, 10, 11, 17;

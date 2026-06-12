@@ -66,6 +66,7 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("dataframe", lambda: st.dataframe(pd.DataFrame(), on_select="rerun")),
     # other widgets
     ("color_picker", lambda: st.color_picker("Pick a color")),
+    ("lens", lambda: st.lens(key="mock_lens")),
     # media manager
     ("audio_input", lambda: st.audio_input("Record me")),
     ("camera_input", lambda: st.camera_input("Take a picture")),

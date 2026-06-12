@@ -29,7 +29,9 @@ version = "0.0.0"
 description = "Development environment for Streamlit"
 requires-python = ">=3.10"
 # Empty dependencies - the actual package is installed via [tool.uv.sources]
-dependencies = []
+dependencies = [
+    "openai>=2.41.0",
+]
 
 [tool.uv]
 # Minimum uv version required for this project

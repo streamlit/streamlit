@@ -84,6 +84,7 @@ export const ElementContainer = memo(function ElementContainer({
       )}
       data-testid="stElementContainer"
       data-stale={isStale}
+      data-st-key={userKey ?? undefined}
       isStale={isStale && !isFullScreen}
       elementType={elementType}
       node={node}

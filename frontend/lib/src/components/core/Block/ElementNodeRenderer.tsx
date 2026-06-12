@@ -44,6 +44,7 @@ import {
   IFrame as IFrameProto,
   ImageList as ImageListProto,
   Json as JsonProto,
+  Lens as LensProto,
   LinkButton as LinkButtonProto,
   Markdown as MarkdownProto,
   MenuButton as MenuButtonProto,
@@ -169,6 +170,7 @@ const ColorPicker = lazy(
 const DateInput = lazy(
   () => import("~lib/components/widgets/DateInput/DateInput")
 )
+const Lens = lazy(() => import("~lib/components/widgets/Lens/Lens"))
 const DateTimeInput = lazy(
   () => import("~lib/components/widgets/DateTimeInput/DateTimeInput")
 )
@@ -1258,6 +1260,19 @@ const RawElementNodeRenderer = (
             element={bidiComponentProto}
             {...widgetProps}
           />
+        </ElementContainer>
+      )
+    }
+    case "lens": {
+      const lensProto = node.element.lens as LensProto
+      widgetProps.disabled = widgetProps.disabled || lensProto.disabled
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.FULL_WIDTH}
+          isStale={isStale}
+        >
+          <Lens key={lensProto.id} element={lensProto} {...widgetProps} />
         </ElementContainer>
       )
     }

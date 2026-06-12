@@ -224,6 +224,7 @@ image = _main.image
 info = _main.info
 json = _main.json
 latex = _main.latex
+lens = _main.lens
 line_chart = _main.line_chart
 link_button = _main.link_button
 map = _main.map
