@@ -23,7 +23,7 @@ df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 10, 2]})
 st.line_chart(df)
 
 
-def analyze(_snapshot: bytes, prompt: str) -> str:
+def analyze(_snapshot: str, prompt: str) -> str:
     return f"Prompt: _{prompt}_ — Add your AI callback here."
 
 
