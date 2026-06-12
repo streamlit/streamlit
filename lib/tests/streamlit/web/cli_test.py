@@ -565,6 +565,18 @@ class CliTest(unittest.TestCase):
         assert result.exit_code != 0
         assert "No public Streamlit command found" in result.output
 
+    def test_docs_command_rejects_synthesized_placeholder(self):
+        """Tests that unknown members on DeltaGenerator do not resolve falsely.
+
+        ``DeltaGenerator.__getattr__`` synthesizes a placeholder callable for
+        unknown names, so ``st.sidebar.not_a_real_command`` must error instead
+        of printing a generic ``(*args, **kwargs)`` signature.
+        """
+        result = self.runner.invoke(cli, ["docs", "st.sidebar.not_a_real_command"])
+
+        assert result.exit_code != 0
+        assert "No public Streamlit command found" in result.output
+
     def test_hello_command(self):
         """Tests the hello command runs the hello script in streamlit"""
         from streamlit.hello import streamlit_app

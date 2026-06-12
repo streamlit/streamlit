@@ -188,14 +188,22 @@ def _resolve_streamlit_command(command_name: str) -> tuple[str, Any] | None:
     """
     import streamlit as st
 
-    name = command_name.strip().removeprefix("streamlit.").removeprefix("st.")
+    name = command_name.strip()
+    # Strip a single leading "st." or "streamlit." prefix (exclusively).
+    if name.startswith("streamlit."):
+        name = name.removeprefix("streamlit.")
+    elif name.startswith("st."):
+        name = name.removeprefix("st.")
     if not name:
         return None
 
     obj: Any = st
     for part in name.split("."):
-        # Only resolve public attributes to avoid exposing private internals.
-        if not part or part.startswith("_"):
+        # Only resolve genuine public attributes. The ``part in dir(obj)`` check
+        # guards against objects (e.g. ``DeltaGenerator``) whose ``__getattr__``
+        # synthesizes placeholder callables for unknown names, which would
+        # otherwise resolve falsely.
+        if not part or part.startswith("_") or part not in dir(obj):
             return None
         try:
             obj = getattr(obj, part)
