@@ -1082,7 +1082,7 @@ class ButtonGroupMixin:
             ) -> list[V] | list[V | str]:
                 result_ = _multi_base(ui_value)
                 _stale_fallback_container[0] = multi_serde.used_session_state_fallback
-                return result_  # type: ignore[return-value]
+                return result_
 
             serializer = multi_serde.serialize
             deserializer = cast("WidgetDeserializer[Any]", _multi_deserialize)
@@ -1102,7 +1102,7 @@ class ButtonGroupMixin:
             ) -> V | None:
                 result_ = _single_base(ui_value)
                 _stale_fallback_container[0] = single_serde.used_session_state_fallback
-                return result_  # type: ignore[return-value]
+                return result_
 
             serializer = single_serde.serialize
             deserializer = cast("WidgetDeserializer[Any]", _single_deserialize)
