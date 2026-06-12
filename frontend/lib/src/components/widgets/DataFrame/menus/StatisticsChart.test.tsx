@@ -202,6 +202,25 @@ describe("StatisticsChart", () => {
     )
   })
 
+  it("formats the tooltip range with dates for datetime histograms", async () => {
+    render(<StatisticsChart statistics={datetimeStats} />)
+
+    await waitFor(() => {
+      expect(mockEmbed).toHaveBeenCalledTimes(1)
+    })
+
+    const spec = mockEmbed.mock.calls[0][1] as {
+      data: { values: { range: string }[] }
+    }
+    const ranges = spec.data.values.map(value => value.range)
+    // The datetime formatRange callback renders each bin as "<start> – <end>"
+    // using formatted dates. Assertions stay locale-agnostic (year + en dash).
+    expect(ranges[0]).toContain("2023")
+    expect(ranges[0]).toContain("–")
+    // Distinct date bins produce distinct range labels.
+    expect(new Set(ranges).size).toBe(ranges.length)
+  })
+
   it("renders labeled bar chart for text statistics", () => {
     render(<StatisticsChart statistics={textStats} />)
 

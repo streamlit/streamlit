@@ -760,14 +760,14 @@ export function formatTooltipNumber(value: number): string {
 /**
  * Formats a compact count for visible chart labels.
  */
-function formatChartCount(value: number): string {
+export function formatChartCount(value: number): string {
   return value.toLocaleString(undefined, { maximumFractionDigits: 0 })
 }
 
 /**
  * Formats a compact percentage for visible chart labels.
  */
-function formatChartPercent(value: number): string {
+export function formatChartPercent(value: number): string {
   return `${value.toLocaleString(undefined, {
     maximumFractionDigits: 1,
   })}%`

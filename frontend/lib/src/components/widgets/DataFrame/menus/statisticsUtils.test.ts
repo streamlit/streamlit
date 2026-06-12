@@ -27,6 +27,8 @@ import {
   computeTextStatistics,
   createLabeledBarDatum,
   DateTimeStatistics,
+  formatChartCount,
+  formatChartPercent,
   formatCountWithPercent,
   formatDatetime,
   formatNumber,
@@ -591,6 +593,26 @@ describe("statisticsUtils", () => {
 
     it("keeps up to two fraction digits for decimals", () => {
       expect(formatTooltipNumber(1.23456)).toMatch(/^1\D23$/)
+    })
+  })
+
+  describe("formatChartCount", () => {
+    it("rounds to a whole number", () => {
+      expect(formatChartCount(1234.6).replace(/\D/g, "")).toBe("1235")
+      expect(formatChartCount(0)).toBe("0")
+    })
+  })
+
+  describe("formatChartPercent", () => {
+    it("appends a percent sign", () => {
+      expect(formatChartPercent(50)).toBe("50%")
+    })
+
+    it("keeps at most one fraction digit", () => {
+      const result = formatChartPercent(33.33)
+      expect(result.endsWith("%")).toBe(true)
+      // 33.33 -> "33.3%"; digits only (separator-agnostic) are "333".
+      expect(result.replace(/\D/g, "")).toBe("333")
     })
   })
 
