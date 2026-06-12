@@ -8,12 +8,29 @@ created: 2026-06-03
 ## Summary
 
 Enable `@st.fragment` functions to reliably write elements to containers declared outside
-the fragment's scope — for example, a parent-scoped `st.container()` or `st.sidebar`
-entered via `with`. Today this is blocked to prevent crashes from stale cursor state. The
-core technical problem to address in order to allow this is that the outside container's
-`RunningCursor` accumulates across fragment reruns instead of resetting. This spec proposes
-implicit wrapper containers that isolate each fragment's outside writes into a stable,
-independently-resettable block.
+the fragment's scope — for example, a parent-scoped `st.container()`, or a root container
+such as `st.sidebar` / `st.bottom` entered via `with`. Today this is blocked to prevent
+crashes from stale cursor state.
+
+There are **two distinct failure modes** behind the block, and they affect different kinds
+of containers:
+
+1. **Cursor accumulation** — affects **non-root containers** (e.g. a captured
+   `st.container()`). The outside container's `RunningCursor` accumulates across fragment
+   reruns instead of resetting (0 → 2 → 4 → …), producing delta paths that exceed the
+   frontend tree's child count. Root containers do **not** have this problem: their cursors
+   live in `ctx.cursors`, which `wrapped_fragment()` already snapshots and restores.
+2. **Interleaving / overwrite** — affects **root containers a fragment writes to directly**
+   (`st.sidebar`, `st.bottom`). A fragment that writes to such a root and changes its
+   element count across reruns will overwrite non-fragment content positioned after it. A
+   cursor reset does not prevent this; only positional isolation does.
+
+This spec proposes implicit wrapper containers that isolate each fragment's outside writes
+into a stable, independently-resettable block. The wrapper solves accumulation (the
+wrapper's cursor always starts at 0) and interleaving (the wrapper occupies one fixed slot,
+so the fragment's element count can vary without touching its neighbors). Consequently
+`st.sidebar` and `st.bottom` still need wrappers — not because they accumulate, but because
+a fragment writing directly to them would otherwise overwrite trailing main-script content.
 
 ## Problem
 
@@ -98,12 +115,19 @@ def _is_outside_container_write(dg: DeltaGenerator) -> bool:
     if not ts.fragment_id or not ts.delta_path:
         return False
 
-    # Root-container DGs (st.sidebar, st._main) have their cursors managed
-    # by ctx.cursors, which is already snapshot/restored by wrapped_fragment().
-    # These must not be wrapped — doing so would conflict with the existing
-    # cursor restore mechanism.
     if dg._is_top_level:
-        return False
+        # Root-container cursors are reset by ctx.cursors (snapshot/restored by
+        # wrapped_fragment), so root writes do NOT accumulate. But SIDEBAR and
+        # BOTTOM hold persistent, positionally-indexed content that a fragment can
+        # interleave with main-script content; if the fragment changes its element
+        # count across reruns, growth overwrites trailing neighbors. These two
+        # roots need a wrapper purely for positional isolation.
+        #   - MAIN:  a fragment cannot write to it directly (body writes land in
+        #            the fragment's own auto-container), so this branch is never hit.
+        #   - EVENT: one-shot toasts / singleton dialogs — no persistent positional
+        #            content, so a wrapper is unnecessary and could interfere with
+        #            one-shot rendering.
+        return dg._root_container in (RootContainer.SIDEBAR, RootContainer.BOTTOM)
 
     cursor_path = tuple(dg._cursor.delta_path) if dg._cursor else ()
     if _is_inside_fragment_path(cursor_path, ts.delta_path):
@@ -124,6 +148,19 @@ def _is_outside_container_write(dg: DeltaGenerator) -> bool:
 
     return True
 ```
+
+Only writes to the **bare root** DG hit the `_is_top_level` branch. The wrapper itself is
+created with a provided cursor, so `wrapper._is_top_level` is `False`; likewise an
+`st.container()` opened on a root is non-top-level. Both fall through to the path check and
+ancestor walk below, so nested writes inside a root's wrapper are correctly recognized as
+already-inside and not re-wrapped. The `return True` for a bare root write does not create
+duplicate wrappers either: `_get_or_create_outside_wrapper` is cache-keyed by
+`(fragment_id, dg._id)`, and a root DG's `_id` is stable across runs, so repeated direct
+writes to the same root reuse the one cached wrapper.
+
+`dg._is_top_level` is defined as `dg._provided_cursor is None`, which holds for all four
+root containers (`RootContainer.MAIN=0`, `SIDEBAR=1`, `EVENT=2`, `BOTTOM=3`);
+`dg._root_container` is what distinguishes them inside the branch.
 
 The ancestor walk is scoped to the **current fragment's** wrapper registry. This is
 important for nested fragments: if frag\_b writes to a container inside frag\_a's wrapper,
@@ -148,10 +185,18 @@ _outside_wrappers: dict[tuple[str, str], DeltaGenerator]
 ```
 
 Keyed by `(fragment_id, dg._id)` where `dg` is the outside container. On a full app
-rerun, all wrappers are cleared unconditionally — the main script recreates outside
-containers as new DG objects, so old wrapper entries are stale. New wrappers are created
-as fragments re-execute. On the frontend, `ClearStaleNodeVisitor` garbage-collects the
-old wrapper `BlockNode`s because they aren't re-emitted with the current `scriptRunId`.
+rerun, all wrappers are cleared unconditionally — for non-root containers the main script
+recreates outside containers as new DG objects, so old wrapper entries are stale. New
+wrappers are created as fragments re-execute. On the frontend, `ClearStaleNodeVisitor`
+garbage-collects the old wrapper `BlockNode`s because they aren't re-emitted with the
+current `scriptRunId`.
+
+Note that root containers (`st.sidebar`, `st.bottom`) are singletons with a **stable**
+`_id`, so unlike a captured `st.container()` they are *not* recreated as new DG objects on
+a full rerun. Correctness does not depend on the DG being new: the unconditional `clear()`
+drops the old entry regardless, the entry is recreated as the fragment re-executes, and the
+root's `RunningCursor` is fresh at full-run start — so the wrapper is re-placed at the same
+stable slot.
 
 ### Proto: new `Transparent` block type
 
@@ -181,9 +226,12 @@ is reusable for any future case that needs an invisible grouping node.
 
 `_get_or_create_outside_wrapper` returns a cached wrapper if one exists, or creates a new
 one by emitting a `Transparent` block on the outside container. The creation must bypass
-the outside-write detection path (e.g., call a lower-level block-emission helper or store
-the wrapper in the registry before the call) to avoid re-triggering the check and recursing
-infinitely. The wrapper's cursor type
+the outside-write detection path so that emitting the wrapper block does not itself
+re-trigger the check and recurse infinitely. The exact bypass mechanism is left to the
+implementation plan (it is out of scope here); note in particular that relying on the
+ancestor walk to break the recursion does **not** generalize to root containers — a root's
+wrapper is a *child* of the root, never an ancestor, so when the wrapper-creation block is
+emitted on the bare root the ancestor walk finds nothing to match. The wrapper's cursor type
 is inherited from the outside container: if the container uses a `LockedCursor` (e.g.
 `st.empty()`), the wrapper gets a `LockedCursor(index=0)` to preserve replace semantics;
 otherwise it gets a `RunningCursor` for normal append behavior. The creation delta path and
@@ -195,6 +243,14 @@ recreates the container. The outside container's `RunningCursor` is only advance
 wrapper creation time. On standalone fragment reruns the cached wrapper is returned
 directly, bypassing the outside container's cursor entirely. This is what avoids
 reintroducing the same stale-cursor problem the wrapper is designed to solve.
+
+**Root containers have no creating scope.** `st.sidebar` and `st.bottom` are not created by
+a statement in the main script, so there is no "creating scope" to hook into. Instead, for
+these roots the wrapper is established on the initial full app run — and on any subsequent
+full rerun — the first time the fragment writes to that root: the root's `RunningCursor`
+advances exactly once to place the wrapper, then the wrapper is cached. The
+"no new outside writes during standalone reruns" restriction below applies unchanged: the
+fragment must have written to the root during a full run for its wrapper to exist.
 
 **Restriction: no new outside writes during standalone fragment reruns.** If a fragment
 attempts to write to an outside container during a standalone rerun (`ts.fragment_id in
@@ -259,9 +315,36 @@ means every write inside the wrapper replaces the previous one, matching `st.emp
 documented "single-element container" contract. On fragment rerun, there is nothing to
 reset — a `LockedCursor` always points to index 0.
 
-**Full app rerun.** Clears `_outside_wrappers` entirely. All wrappers are
-recreated fresh because the main script re-executes and creates new outside containers
-with fresh cursors.
+**Root containers (`st.sidebar`, `st.bottom`).** A fragment writing directly to a root
+that also holds main-script content gets a wrapper for positional isolation. Concretely,
+with a header written to the root before the fragment call and a footer after it:
+
+```
+st.sidebar
+  ├── "Header"          (main script, index 0)
+  ├── [fragment_wrapper] (index 1, stable slot)
+  │     └── …fragment content, count varies across reruns…
+  └── "Footer"          (main script, index 2)
+```
+
+The fragment's element count can grow or shrink freely inside the wrapper without ever
+touching the footer's slot. `st.bottom` (e.g. `st.chat_input()` routes there) behaves
+identically. This is the interleaving/overwrite failure mode from the Summary; without the
+wrapper, a fragment that grows from 3 → 5 elements would overwrite the footer.
+
+**`EVENT` root is out of scope for wrapping.** `st.toast` and dialogs route to the `EVENT`
+root, which `_is_outside_container_write` deliberately excludes. The delta-level collision
+exists mechanically, but it causes no user-visible loss: toasts are one-shot effects (the
+frontend forces fresh payloads / re-fire and auto-dismiss rather than reusing element
+payloads), and dialogs are modal singletons with no variable-count positional interleaving.
+A wrapper would be unnecessary here and could interfere with one-shot rendering.
+
+**Full app rerun.** Clears `_outside_wrappers` entirely. For non-root containers, all
+wrappers are recreated fresh because the main script re-executes and creates new outside
+containers with fresh cursors. Root containers keep their stable `_id` across reruns, but
+the unconditional `clear()` still drops and recreates their wrapper entries as the fragment
+re-executes against a fresh root cursor (see "Wrapper registry"), so the wrapper lands at
+the same stable slot.
 
 ## Behavior Decisions
 
@@ -298,7 +381,29 @@ fragment's scope. This is consistent with standard fragment behavior: `enqueue_m
 stamps every delta with `ThreadState.fragment_id`, and the frontend sends this ID back with
 the rerun request. The wrapper does not change this; `fragment_id` stamping is based on
 which thread is executing, not on the delta path. Widget identity and stale cleanup are
-also unaffected — widget IDs do not include `delta_path`.
+also unaffected — widget IDs do not include `delta_path`. This applies equally to widgets a
+fragment writes into a root container (e.g. `st.sidebar.button(...)`): interacting with
+them triggers the writing fragment's rerun, since `fragment_id` stamping is
+container-agnostic.
+
+## Testing plan
+
+Beyond the existing non-root `st.container()` coverage, add variable-element-count tests for
+the root containers a fragment can write to directly:
+
+- **SIDEBAR.** A fragment writes a non-fragment "header" to `st.sidebar`, then a fragment
+  whose direct-sidebar element count varies across reruns (e.g. 3 → 5 → 2), then a
+  non-fragment "footer" to the same sidebar after the fragment call. Drive real
+  fragment-scoped reruns and assert:
+  - (a) **shrink** (5 → 2) does not leave stale fragment elements behind, and
+  - (b) **growth** (3 → 5) does not overwrite the trailing non-fragment footer — the footer
+    stays at its stable slot once the wrapper fix lands.
+- **BOTTOM.** Mirror the SIDEBAR test against `st.bottom` (e.g. via `st.chat_input()` and
+  other bottom-routed writes), with non-fragment content before and after the fragment's
+  bottom writes, asserting the same shrink/growth invariants.
+
+These cases specifically guard the interleaving/overwrite failure mode; before the wrapper
+fix, growth in the SIDEBAR/BOTTOM cases overwrites the trailing footer.
 
 ## Alternatives Considered
 
