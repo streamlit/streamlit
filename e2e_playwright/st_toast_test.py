@@ -52,7 +52,7 @@ def test_collapsed_toast_rendering(
 
     expect(toasts.nth(1)).to_contain_text(
         "🦄Random toast message that is a really really really really really really "
-        "really long message, going wayview more"
+        "really long message, going way past the 3 line limitview more"
     )
     assert_snapshot(toasts.nth(1), name="toast-collapsed")
 
@@ -69,8 +69,8 @@ def test_expanded_toast_rendering(
     expect(toasts).to_have_count(3)
     toasts.nth(1).hover()
 
-    expand = themed_app.get_by_text("view more")
-    expect(expand).to_have_count(1)
+    expand = toasts.nth(1).get_by_text("view more")
+    expect(expand).to_be_visible()
     expand.click()
 
     expect(toasts.nth(1)).to_contain_text(
@@ -117,7 +117,7 @@ def test_toast_above_dialog(app: Page, assert_snapshot: ImageCompareFunction):
     toasts = app.get_by_test_id("stToast")
     expect(toasts).to_have_count(1)
     expect(toasts.nth(0)).to_contain_text("🎉Toast above dialog")
-    dialog = app.get_by_test_id("stDialog")
+    dialog = app.get_by_role("dialog")
     assert_snapshot(dialog, name="toast-above-dialog")
 
 

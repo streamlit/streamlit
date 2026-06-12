@@ -14,34 +14,40 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
-
 import { act, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { UNSTABLE_ToastRegion as ToastRegion } from "react-aria-components/Toast"
-import { vi } from "vitest"
+import { MockInstance, vi } from "vitest"
 
 import { render } from "~lib/test_util"
 
 import { StreamlitToastItem } from "./StreamlitToastItem"
 import { toastQueue } from "./toastQueue"
 
-const renderWithQueue = (): ReactElement => (
-  <ToastRegion
-    queue={toastQueue}
-    aria-label="Notifications"
-    data-testid="stToastContainer"
-  >
-    {({ toast }) => <StreamlitToastItem toast={toast} />}
-  </ToastRegion>
-)
+const renderWithQueue = (): ReturnType<typeof render> =>
+  render(
+    <ToastRegion
+      queue={toastQueue}
+      aria-label="Notifications"
+      data-testid="stToastContainer"
+    >
+      {({ toast }) => <StreamlitToastItem toast={toast} />}
+    </ToastRegion>
+  )
+
+const LONG_MESSAGE =
+  "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit"
 
 describe("StreamlitToastItem", () => {
+  let scrollHeightSpy: MockInstance | undefined
+
   beforeEach(() => {
     vi.useFakeTimers()
   })
 
   afterEach(() => {
+    scrollHeightSpy?.mockRestore()
+    scrollHeightSpy = undefined
     act(() => {
       toastQueue.visibleToasts.forEach(t => toastQueue.close(t.key))
     })
@@ -52,8 +58,21 @@ describe("StreamlitToastItem", () => {
     vi.useRealTimers()
   })
 
+  function simulateOverflow(): void {
+    // Mock scrollHeight > clientHeight so useLayoutEffect detects overflow.
+    // clientHeight defaults to 0 in JSDOM, so any positive scrollHeight works.
+    scrollHeightSpy = vi
+      .spyOn(HTMLElement.prototype, "scrollHeight", "get")
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.dataset.testid === "stToastText") {
+          return 100
+        }
+        return 0
+      })
+  }
+
   it("renders toast with body and icon", () => {
-    render(renderWithQueue())
+    renderWithQueue()
     act(() => {
       toastQueue.add(
         { body: "Hello toast", icon: "🐶" },
@@ -68,7 +87,7 @@ describe("StreamlitToastItem", () => {
   })
 
   it("renders toast without icon when icon is not provided", () => {
-    render(renderWithQueue())
+    renderWithQueue()
     act(() => {
       toastQueue.add({ body: "No icon toast" }, { timeout: undefined })
     })
@@ -78,29 +97,23 @@ describe("StreamlitToastItem", () => {
     expect(screen.queryByTestId("stToastDynamicIcon")).not.toBeInTheDocument()
   })
 
-  it("shows truncated message with view more button for long messages", () => {
-    render(renderWithQueue())
+  it("shows view more button when text overflows", () => {
+    simulateOverflow()
+    renderWithQueue()
     act(() => {
-      toastQueue.add(
-        {
-          body: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
-        },
-        { timeout: undefined }
-      )
+      toastQueue.add({ body: LONG_MESSAGE }, { timeout: undefined })
     })
 
     const toast = screen.getByTestId("stToast")
-    const expandButton = within(toast).getByRole("button", {
-      name: "view more",
-    })
-    expect(expandButton).toBeInTheDocument()
-    expect(within(toast).getByTestId("stMarkdownContainer")).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long"
-    )
+    expect(
+      within(toast).getByRole("button", { name: "view more" })
+    ).toBeVisible()
+    // Full text is always in the DOM — CSS handles visual truncation
+    expect(toast).toHaveTextContent(LONG_MESSAGE)
   })
 
   it("does not show view more button for short messages", () => {
-    render(renderWithQueue())
+    renderWithQueue()
     act(() => {
       toastQueue.add({ body: "Short message" }, { timeout: undefined })
     })
@@ -112,54 +125,39 @@ describe("StreamlitToastItem", () => {
   })
 
   it("expands and collapses long messages", async () => {
+    simulateOverflow()
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    render(renderWithQueue())
+    renderWithQueue()
     act(() => {
-      toastQueue.add(
-        {
-          body: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
-        },
-        { timeout: undefined }
-      )
+      toastQueue.add({ body: LONG_MESSAGE }, { timeout: undefined })
     })
 
     const toast = screen.getByTestId("stToast")
 
     // Expand
-    const expandButton = within(toast).getByRole("button", {
-      name: "view more",
-    })
-    await user.click(expandButton)
+    await user.click(within(toast).getByRole("button", { name: "view more" }))
     act(() => {
       vi.runOnlyPendingTimers()
     })
 
-    expect(within(toast).getByTestId("stMarkdownContainer")).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit"
-    )
+    expect(toast).toHaveTextContent(LONG_MESSAGE)
     expect(
       within(toast).getByRole("button", { name: "view less" })
-    ).toBeInTheDocument()
+    ).toBeVisible()
 
     // Collapse
-    const collapseButton = within(toast).getByRole("button", {
-      name: "view less",
-    })
-    await user.click(collapseButton)
+    await user.click(within(toast).getByRole("button", { name: "view less" }))
     act(() => {
       vi.runOnlyPendingTimers()
     })
 
-    expect(within(toast).getByTestId("stMarkdownContainer")).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long"
-    )
     expect(
       within(toast).getByRole("button", { name: "view more" })
-    ).toBeInTheDocument()
+    ).toBeVisible()
   })
 
   it("renders close button with accessible label", () => {
-    render(renderWithQueue())
+    renderWithQueue()
     act(() => {
       toastQueue.add({ body: "Closeable toast" }, { timeout: undefined })
     })
@@ -169,7 +167,7 @@ describe("StreamlitToastItem", () => {
   })
 
   it("has correct test id and class name", () => {
-    render(renderWithQueue())
+    renderWithQueue()
     act(() => {
       toastQueue.add({ body: "Test toast" }, { timeout: undefined })
     })

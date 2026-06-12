@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { ReactElement, useCallback, useState } from "react"
+import {
+  ReactElement,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { Close } from "@emotion-icons/material-rounded"
 import { type QueuedToast } from "react-aria-components/Toast"
@@ -24,6 +30,7 @@ import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
 import {
+  StyledClampedText,
   StyledCloseButton,
   StyledMessageWrapper,
   StyledToast,
@@ -31,7 +38,6 @@ import {
   StyledViewButton,
 } from "./styled-components"
 import { type StreamlitToastContent } from "./toastQueue"
-import { shortenMessage } from "./utils"
 
 export function StreamlitToastItem({
   toast,
@@ -39,9 +45,18 @@ export function StreamlitToastItem({
   toast: QueuedToast<StreamlitToastContent>
 }): ReactElement {
   const { body, icon } = toast.content
-  const displayMessage = shortenMessage(body)
-  const shortened = body !== displayMessage
-  const [expanded, setExpanded] = useState(!shortened)
+  const [expanded, setExpanded] = useState(false)
+  const [isOverflowing, setIsOverflowing] = useState(false)
+  const textRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const el = textRef.current
+    if (el && !expanded) {
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- One-shot measurement on mount; no animation loop.
+      setIsOverflowing(el.scrollHeight > el.clientHeight)
+    }
+  }, [body, expanded])
+
   const handleToggle = useCallback(() => setExpanded(v => !v), [])
 
   return (
@@ -55,12 +70,14 @@ export function StreamlitToastItem({
           />
         )}
         <StyledMessageWrapper>
-          <StreamlitMarkdown
-            source={expanded ? body : displayMessage}
-            allowHTML={false}
-            isToast
-          />
-          {shortened && (
+          <StyledClampedText
+            ref={textRef}
+            clamped={!expanded}
+            data-testid="stToastText"
+          >
+            <StreamlitMarkdown source={body} allowHTML={false} isToast />
+          </StyledClampedText>
+          {(isOverflowing || expanded) && (
             <StyledViewButton
               data-testid="stToastViewButton"
               onClick={handleToggle}

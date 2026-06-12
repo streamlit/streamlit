@@ -135,7 +135,20 @@ export const StyledMessageWrapper = styled.div(({ theme }) => ({
   minHeight: "100%",
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.base,
-  div: {
-    display: "inline-flex",
-  },
 }))
+
+interface StyledClampedTextProps {
+  clamped: boolean
+}
+
+export const StyledClampedText = styled.div<StyledClampedTextProps>(
+  ({ clamped }) => ({
+    ...(clamped && {
+      display: "-webkit-box",
+      WebkitLineClamp: "3",
+      WebkitBoxOrient: "vertical",
+      lineClamp: "3",
+      overflow: "hidden",
+    }),
+  })
+)
