@@ -147,7 +147,6 @@ export const StyledClampedText = styled.div<StyledClampedTextProps>(
       display: "-webkit-box",
       WebkitLineClamp: 3,
       WebkitBoxOrient: "vertical",
-      lineClamp: 3,
       overflow: "hidden",
     }),
   })

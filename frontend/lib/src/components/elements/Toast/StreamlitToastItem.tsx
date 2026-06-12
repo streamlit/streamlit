@@ -51,13 +51,15 @@ export function StreamlitToastItem({
 
   useLayoutEffect(() => {
     const el = textRef.current
-    if (el && !expanded) {
-      const lineHeight = parseFloat(getComputedStyle(el).lineHeight)
+    if (el) {
+      const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20
       const maxVisibleHeight = lineHeight * 3 + 1
       // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Batched with the getComputedStyle read above.
       setIsOverflowing(el.scrollHeight > maxVisibleHeight)
     }
-  }, [body, expanded])
+    // Omit expanded: re-measuring while CSS clamping is active causes WebKit
+    // to report a clipped scrollHeight.
+  }, [body])
 
   const handleToggle = useCallback(() => setExpanded(v => !v), [])
 

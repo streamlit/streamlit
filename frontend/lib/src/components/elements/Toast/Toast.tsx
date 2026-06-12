@@ -51,7 +51,8 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
       toastQueue.close(key)
     }
 
-    // Mount/unmount only — toastQueue is the external system being synchronized
+    // Mount/unmount only — Streamlit creates a new Toast element per st.toast() call;
+    // the component never receives updated props for the same toast instance.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
