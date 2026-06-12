@@ -532,9 +532,10 @@ def fragment(
     rerun. Instead, elements will accumulate in those containers with each
     fragment rerun, until the next app rerun.
 
-    Calling ``st.sidebar`` in a fragment is not supported. To write elements to
-    the sidebar with a fragment, call your fragment function inside a
-    ``with st.sidebar`` context manager.
+    Fragments can write elements directly to the sidebar (for example with
+    ``st.sidebar.write(...)`` or inside a ``with st.sidebar:`` block). Elements
+    written this way are cleared and redrawn on each fragment rerun, just like
+    elements in the fragment's main body.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these

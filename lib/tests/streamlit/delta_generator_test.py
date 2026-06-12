@@ -299,14 +299,15 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         delta = self.get_delta_from_queue()
         assert delta.fragment_id == "my_fragment_id"
 
-    def test_enqueue_explodes_if_fragment_writes_to_sidebar(self):
+    def test_enqueue_can_write_directly_to_sidebar_from_fragment(self):
         ctx = get_script_run_ctx()
         ThreadState.update(fragment_id="my_fragment_id")
         ctx.fragment_ids_this_run = ["my_fragment_id"]
 
-        exc = "is not supported"
-        with pytest.raises(StreamlitAPIException, match=exc):
-            get_dg_singleton_instance().sidebar_dg._enqueue("text", TextProto())
+        get_dg_singleton_instance().sidebar_dg._enqueue("text", TextProto())
+
+        delta = self.get_delta_from_queue()
+        assert delta.fragment_id == "my_fragment_id"
 
     def test_enqueue_can_write_to_container_in_sidebar(self):
         ctx = get_script_run_ctx()
