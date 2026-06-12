@@ -467,6 +467,7 @@ function Lens({
         resizeRef.current = null
         window.removeEventListener("mousemove", handleMouseMove)
         window.removeEventListener("mouseup", handleMouseUp)
+      triggerAnalyze()
       }
       window.addEventListener("mousemove", handleMouseMove)
       window.addEventListener("mouseup", handleMouseUp)
