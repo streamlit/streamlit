@@ -116,17 +116,13 @@ def _needs_outside_wrapper(dg: DeltaGenerator) -> bool:
         return False
 
     if dg._is_top_level:
-        # Root-container cursors are reset by ctx.cursors (snapshot/restored by
-        # wrapped_fragment), so root writes do NOT accumulate. But SIDEBAR and
-        # BOTTOM hold persistent, positionally-indexed content that a fragment can
-        # interleave with main-script content; if the fragment changes its element
-        # count across reruns, growth overwrites trailing neighbors. These two
-        # roots need a wrapper purely for positional isolation.
-        #   - MAIN:  a fragment cannot write to it directly (body writes land in
-        #            the fragment's own auto-container), so this branch is never hit.
-        #   - EVENT: one-shot toasts / singleton dialogs — no persistent positional
-        #            content, so a wrapper is unnecessary and could interfere with
-        #            one-shot rendering.
+        # Only SIDEBAR and BOTTOM need a wrapper: a fragment writing directly to
+        # one of these roots interleaves with main-script content, so when its
+        # element count changes across reruns the wrapper keeps that content from
+        # overwriting trailing neighbors.
+        #   - MAIN never reaches here (a fragment can't write to it directly).
+        #   - EVENT holds only one-shot toasts / singleton dialogs, which need no
+        #     positional isolation.
         return dg._root_container in (RootContainer.SIDEBAR, RootContainer.BOTTOM)
 
     cursor_path = tuple(dg._cursor.delta_path) if dg._cursor else ()
