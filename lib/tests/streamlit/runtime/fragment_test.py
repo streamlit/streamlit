@@ -34,12 +34,14 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitFragmentWidgetsNotAllowedOutsideError,
 )
+from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.fragment import (
     FragmentStorage,
     MemoryFragmentStorage,
     _check_not_parallel_worker,
     _dispatch_parallel_fragment,
     _fragment,
+    _OutsideWrapper,
     _run_parallel_fragment,
     fragment,
 )
@@ -152,6 +154,49 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert len(self._storage._fragments) == 1
         assert self._storage._fragments["some_key"] == "some_fragment"
         assert "some_other_key" not in self._storage._parent_by_id
+
+    def _make_wrapper(self, dg_id: str) -> _OutsideWrapper:
+        delta_generator = MagicMock()
+        delta_generator._id = dg_id
+        return _OutsideWrapper(
+            delta_generator=delta_generator,
+            creation_delta_path=[0, 1],
+            block_proto=Block(),
+        )
+
+    def test_register_and_get_outside_wrapper(self):
+        """register_outside_wrapper then get_outside_wrapper returns the record."""
+        wrapper = self._make_wrapper("dg-1")
+        self._storage.register_outside_wrapper("frag", "container", wrapper)
+
+        assert self._storage.get_outside_wrapper("frag", "container") is wrapper
+
+    def test_get_outside_wrapper_missing_returns_none(self):
+        """A missing (fragment, container) key returns None."""
+        assert self._storage.get_outside_wrapper("frag", "container") is None
+
+    def test_outside_wrappers_for_isolates_fragments(self):
+        """outside_wrappers_for returns only the matching fragment's records."""
+        wrapper_a = self._make_wrapper("dg-a")
+        wrapper_b = self._make_wrapper("dg-b")
+        self._storage.register_outside_wrapper("frag_a", "container", wrapper_a)
+        self._storage.register_outside_wrapper("frag_b", "container", wrapper_b)
+
+        wrappers_a = self._storage.outside_wrappers_for("frag_a")
+        assert [w.delta_generator._id for w in wrappers_a] == ["dg-a"]
+        assert self._storage.outside_wrappers_for("frag_b") == [wrapper_b]
+        assert self._storage.outside_wrappers_for("missing") == []
+
+    def test_clear_drops_outside_wrappers_even_when_fragment_retained(self):
+        """clear() empties wrappers even when the fragment id is retained."""
+        wrapper = self._make_wrapper("dg-1")
+        self._storage.register_outside_wrapper("some_key", "container", wrapper)
+
+        self._storage.clear(new_fragment_ids=frozenset({"some_key"}))
+
+        # The fragment closure survives, but its wrapper does not.
+        assert self._storage.contains("some_key")
+        assert self._storage._outside_wrappers == {}
 
     def test_clear_stale_descendants_removes_orphan_nested(self):
         """Descendants of root not re-registered this run are removed."""
