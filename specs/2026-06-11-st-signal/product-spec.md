@@ -9,7 +9,7 @@ created: 2026-06-11
 
 `st.signal` creates a stateful signal object that connects widgets and fragments anywhere
 on the page. When a signal fires — from a widget callback or an explicit `send()` — every
-fragment *watching* it reruns in place, in page order, and nothing else runs. This
+fragment *watching* it reruns in place, in execution order, and nothing else runs. This
 generalizes `@st.fragment` from "a region that updates itself" to "regions that update each
 other," without a full app rerun. As a companion, fragment functions become valid widget
 callbacks (`on_click=my_fragment`), rerunning just that fragment from anywhere.
@@ -256,7 +256,7 @@ st.sidebar.button("Reload data", on_click=live_table)  # reruns only live_table
 | Identity | `key` explicit and **required** | Signals have no element-tree position to hash (unlike fragments). Auto-derived identity via compile-time magic is future work; an explicit key is unambiguous today. Duplicate keys in one run raise. |
 | Firing | **Only explicit**: signal attached to `on_*`, or `send()` in code | A widget inside a watcher never fires the signal implicitly. Every widget's blast radius is readable at its call site. |
 | Scope rule | Direct attachment (`on_change=sig` / `on_click=fragment_fn`) scopes the rerun to the watcher queue, suppressing the full rerun **and** the enclosing fragment's rerun. `send()` inside a plain callback or fragment body never widens or narrows the scope the interaction decided — it only adds watchers to the pending pass. | Suppression is the recoverable default: opting back in is one explicit step (make the enclosing fragment a watcher); opting out of an always-included enclosing fragment would be impossible. |
-| Watcher order | Declared (page) order, always — regardless of what triggered the fire | Deterministic order is what lets watcher N rely on watcher N-1 having run. Trigger-relative ordering would make execution depend on layout. |
+| Watcher order | Execution order — the order each watcher's fragment was *called* during the run that registered it (not source/declaration order; a watcher behind a conditional or in a loop takes its slot from when it ran), always, regardless of what triggered the fire | Deterministic order is what lets watcher N rely on watcher N-1 having run. Registration is call-time, so the order follows actual execution. |
 | Watcher resolution | At fire time, against currently-registered fragments | A watcher behind a false conditional is simply absent. A fire with zero watchers updates state and is otherwise a no-op. |
 | Lifecycle | State resets if the signal is not re-declared during a full run | Mirrors fragment lifecycle. Main-script signals persist across MPA page switches; page-script signals reset on navigation. |
 | Coalescing | A signal fires at most once per pass; multiple `send()`s coalesce to the last value | Prevents redundant watcher runs and, combined with the cycle guard, makes cascades terminate. |
@@ -315,7 +315,7 @@ There are exactly two ways a signal fires; nothing fires implicitly:
    Detected when the widget is registered, so the interaction requests a scoped rerun: the
    watcher queue runs, the full rerun is suppressed, and the enclosing fragment of the
    triggering widget is suppressed too (unless it is itself a watcher, in which case it runs
-   in its declared slot).
+   in its execution-order slot).
 2. **`send()` in code** — inside a plain callback, a fragment body, or the main script. The
    state updates and the signal's watchers join the *current* pass. The scope already decided
    by the interaction is never changed: a full rerun stays a full rerun (watchers render in
@@ -329,14 +329,17 @@ patched (glitch-free re-enqueueing is possible future work).
 
 #### Watcher execution
 
-When a signal fires, its registered watchers rerun **in the order they were declared on the
-page**, each into its own stable container, exactly like fragment reruns today. Because the
-queue is sequential and all watcher functions from one full run share the same module
-globals, a value computed by watcher N is visible to watcher N+1 — though signal state and
-`session_state` are the durable channels (module globals reset on the next full run).
+When a signal fires, its registered watchers rerun **in execution order — the order each
+watcher's fragment was called during the run that registered it** (which equals top-to-bottom
+source order only for a flat script; a watcher behind a conditional, in a loop, or called from
+a helper takes its slot from when it actually ran), each into its own stable container,
+exactly like fragment reruns today. Because the queue is sequential and all watcher functions
+from one full run share the same module globals, a value computed by watcher N is visible to
+watcher N+1 — though signal state and `session_state` are the durable channels (module globals
+reset on the next full run).
 
-The signal maintains the **dependency boundary**: watchers run in declared order, and a run
-of consecutive `parallel=True` watchers collapses into a single concurrent batch that must
+The signal maintains the **dependency boundary**: watchers run in that execution order, and a
+run of consecutive `parallel=True` watchers collapses into a single concurrent batch that must
 fully join before the next serial watcher starts. So a `[serial, serial, parallel, parallel,
 parallel, parallel, serial, serial]` watcher list executes as: two serial, then a 4-wide
 batch (joined), then two serial — order preserved at every boundary, concurrency only inside

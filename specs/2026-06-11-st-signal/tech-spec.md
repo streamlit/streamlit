@@ -58,7 +58,7 @@ A session-scoped store, sibling of `FragmentStorage`:
 @dataclass
 class SignalRecord:
     state: Any                       # current value (initial resolved lazily)
-    watchers: list[str]              # fragment ids, in registration (page) order
+    watchers: list[str]              # fragment ids, in execution (call-time) order
     declared_this_full_run: bool     # lifecycle reconciliation flag
 ```
 
@@ -170,7 +170,7 @@ an optional positional value so the object satisfies the widget callback protoco
 - Widget with `scope_token` inside fragment `F`, `F` **not** a watcher → `F` does not rerun;
   its widget value is still applied to `session_state` (callback phase) and visible on
   `F`'s next natural rerun.
-- Same, but `F` **is** a watcher → `F` runs once, in its declared slot.
+- Same, but `F` **is** a watcher → `F` runs once, in its execution-order slot.
 - Fragment-as-callback where the function is the widget's own enclosing fragment →
   degenerates to today's behavior (queue of one).
 - Watcher list mutates mid-pass (a watcher body's conditional registers/unregisters a

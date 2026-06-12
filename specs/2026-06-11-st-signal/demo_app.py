@@ -681,7 +681,7 @@ def consumer_alert() -> None:  # watches loaded
     _lab_card("④", "Alert", "loaded", None, f"{state}\n\n{rows:,} rows loaded")
 
 
-def lab_trace_panel() -> None:  # watches loaded — declared last, so runs last
+def lab_trace_panel() -> None:  # watches loaded — called last, so it runs last
     with st.container(border=True):
         st.markdown(
             "**:material/timeline: Cascade trace** — execution order of the last pass"
@@ -775,8 +775,9 @@ with fan[1]:
 with fan[2]:
     st.fragment(consumer_alert, watch=[LAB["loaded"]], parallel=False)()
 
-# Declared last so it runs after every other loaded-watcher in the pass and
-# therefore sees the complete, ordered trace.
+# Called last so it registers after every other loaded-watcher and therefore
+# runs last in the pass — seeing the complete, ordered trace. (Watcher order
+# follows execution/call order, not source declaration.)
 st.fragment(lab_trace_panel, watch=[LAB["loaded"]], parallel=False)()
 
 st.caption(
