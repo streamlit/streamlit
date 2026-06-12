@@ -27,7 +27,12 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import StatisticsChart from "./StatisticsChart"
 import {
   ColumnStatistics,
+  computeEmptyPercentage,
   computeStatistics,
+  formatCountWithPercent,
+  formatDatetime,
+  formatNumber,
+  getNullOrEmptyCount,
   supportsStatistics,
 } from "./statisticsUtils"
 import {
@@ -56,69 +61,6 @@ export interface StatisticsMenuProps {
   children: ReactElement
 }
 
-/**
- * Format a number for display in statistics.
- * Uses toLocaleString consistently for all numbers to respect locale decimal separators.
- */
-function formatNumber(value: number, precision = 2): string {
-  if (!Number.isFinite(value)) return "-"
-
-  return value.toLocaleString(undefined, {
-    maximumFractionDigits: precision,
-    minimumFractionDigits: 0,
-  })
-}
-
-/**
- * Format a datetime timestamp for display in statistics.
- * Uses the column's timezone if available, otherwise defaults to UTC
- * to avoid local timezone shifts that can change dates.
- *
- * @param timestamp - Unix timestamp in milliseconds
- * @param isDateOnly - If true, format as date only without time
- * @param timezone - Optional timezone identifier (e.g., "America/New_York", "UTC")
- */
-function formatDatetime(
-  timestamp: number,
-  isDateOnly = false,
-  timezone?: string
-): string {
-  const date = new Date(timestamp)
-  // Use provided timezone, or default to UTC for consistency
-  const tz = timezone || "UTC"
-  if (isDateOnly) {
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      timeZone: tz,
-    })
-  }
-  return date.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: tz,
-  })
-}
-
-/**
- * Format a percentage for display.
- */
-function formatPercent(value: number): string {
-  return `${formatNumber(value, 1)}%`
-}
-
-/**
- * Compute empty percentage from count and empty/null count.
- */
-function computeEmptyPercentage(count: number, emptyCount: number): number {
-  const total = count + emptyCount
-  return total > 0 ? (emptyCount / total) * 100 : 0
-}
-
 /** A single row in the statistics metrics display. */
 interface MetricRow {
   label: string
@@ -135,13 +77,6 @@ function StatisticsRow({ label, value }: MetricRow): ReactElement {
       <StyledStatisticsValue>{value}</StyledStatisticsValue>
     </StyledStatisticsRow>
   )
-}
-
-/**
- * Format a count with optional percentage.
- */
-function formatCountWithPercent(count: number, percentage: number): string {
-  return `${formatNumber(count, 0)} (${formatPercent(percentage)})`
 }
 
 /**
@@ -262,20 +197,6 @@ function MetricsDisplay({ rows }: { rows: MetricRow[] }): ReactElement {
       ))}
     </StyledStatisticsMetrics>
   )
-}
-
-/**
- * Get the null/empty count from statistics.
- */
-function getNullOrEmptyCount(statistics: ColumnStatistics): number {
-  switch (statistics.type) {
-    case "numeric":
-    case "datetime":
-    case "boolean":
-      return statistics.nullCount
-    case "text":
-      return statistics.empty
-  }
 }
 
 /**

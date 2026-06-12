@@ -654,3 +654,93 @@ export function computeStatistics(
       return computeBooleanStatistics(values, isSampled)
   }
 }
+
+/**
+ * Format a number for display in statistics.
+ * Uses toLocaleString consistently for all numbers to respect locale decimal separators.
+ */
+export function formatNumber(value: number, precision = 2): string {
+  if (!Number.isFinite(value)) return "-"
+
+  return value.toLocaleString(undefined, {
+    maximumFractionDigits: precision,
+    minimumFractionDigits: 0,
+  })
+}
+
+/**
+ * Format a datetime timestamp for display in statistics.
+ * Uses the column's timezone if available, otherwise defaults to UTC
+ * to avoid local timezone shifts that can change dates.
+ *
+ * @param timestamp - Unix timestamp in milliseconds
+ * @param isDateOnly - If true, format as date only without time
+ * @param timezone - Optional timezone identifier (e.g., "America/New_York", "UTC")
+ */
+export function formatDatetime(
+  timestamp: number,
+  isDateOnly = false,
+  timezone?: string
+): string {
+  const date = new Date(timestamp)
+  // Use provided timezone, or default to UTC for consistency
+  const tz = timezone || "UTC"
+  if (isDateOnly) {
+    return date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: tz,
+    })
+  }
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: tz,
+  })
+}
+
+/**
+ * Format a percentage for display.
+ */
+export function formatPercent(value: number): string {
+  return `${formatNumber(value, 1)}%`
+}
+
+/**
+ * Compute empty percentage from count and empty/null count.
+ */
+export function computeEmptyPercentage(
+  count: number,
+  emptyCount: number
+): number {
+  const total = count + emptyCount
+  return total > 0 ? (emptyCount / total) * 100 : 0
+}
+
+/**
+ * Format a count with optional percentage.
+ */
+export function formatCountWithPercent(
+  count: number,
+  percentage: number
+): string {
+  return `${formatNumber(count, 0)} (${formatPercent(percentage)})`
+}
+
+/**
+ * Get the null/empty count from statistics.
+ */
+export function getNullOrEmptyCount(statistics: ColumnStatistics): number {
+  switch (statistics.type) {
+    case "numeric":
+    case "datetime":
+    case "boolean":
+      return statistics.nullCount
+    case "text":
+      return statistics.empty
+  }
+}
