@@ -91,12 +91,14 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Building a dashboard with KPIs, metrics, and charts** — composing `st.metric`, charts, and data tables into clean dashboard layouts with columns and containers | read `references/dashboards.md` |
 | **Making an app look polished** — icons (Material Symbols), spacing, color accents, visual hierarchy, and small design touches that elevate quality | read `references/design.md` |
 | **Choosing the right selection widget** — when to use `st.selectbox` vs `st.radio` vs `st.pills` vs `st.segmented_control` vs `st.multiselect`, including modern replacements for deprecated patterns | read `references/selection-widgets.md` |
+| **Value-entry input widgets** — `st.number_input` (with bounds), `st.slider`, `st.date_input`/`st.time_input`/`st.datetime_input`, `st.text_input`/`st.text_area`, and the `st.button` rerun model; picking the right widget for numbers/dates/text instead of `st.text_input` + casting | read `references/input-widgets.md` |
 | **Custom themes, colors, and CSS styling** — configuring colors in `.streamlit/config.toml`, reading the active theme at runtime via `st.context.theme`, and targeting widgets with `st.markdown` CSS injection | read `references/theme.md` |
 | **Page structure and layout** — `st.columns`, `st.tabs`, `st.sidebar`, `st.container`, `st.expander`, responsive layout patterns, and when to use each container type | read `references/layouts.md` |
 | **Displaying or editing tabular data** — `st.dataframe` column configuration, `st.data_editor` for editable tables, chart selection, and best practices for large datasets | read `references/data-display.md` |
 | **Multi-page app architecture** — `st.navigation`, `st.Page`, page routing, shared state across pages, and structuring apps with multiple views | read `references/multipage-apps.md` |
 | **Persisting values across reruns** — `st.session_state`, widget keys, callbacks (`on_change`, `on_click`), and patterns for stateful interactions | read `references/session-state.md` |
 | **Rich text formatting** — Markdown in `st.markdown` and widget labels, colored text (`:red[...]`), badges, Material Symbols icons (`:material/icon_name:`), and LaTeX math | read `references/markdown.md` |
+| **Putting things on screen** — `st.write`, magic (bare variables auto-render), `st.write_stream`, and when to prefer a specific element (`st.dataframe`/`st.metric`/`st.json`) over `st.write` | read `references/displaying-output.md` |
 | **Chat and conversational UIs** — `st.chat_message`, `st.chat_input`, streaming responses with `st.write_stream`, and building AI assistant interfaces | read `references/chat-ui.md` |
 | **Connecting to Snowflake** — `st.connection("snowflake")`, secrets configuration, querying data, and Snowflake-specific patterns | read `references/snowflake-connection.md` |
 | **Building or packaging a custom component, triggering events back to Python from JS/HTML, custom HTML/JS with event handling (CCv2), OR any UI element that doesn't exist as a native Streamlit widget** (e.g., drag-and-drop, custom interactive visualization, canvas drawing) | read `references/custom-components-v2.md` — **IMPORTANT: `st.components.v1` is deprecated. Never use v1 for new components; always use `st.components.v2.component()`.** |
@@ -104,6 +106,9 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Structuring app code** — when to split into modules vs keep in one file, helper functions, and clean project organization patterns | read `references/code-organization.md` |
 | **Environment and dependency setup** — Python environment management, installing packages, and configuring the development environment for Streamlit apps | read `references/environment-setup.md` |
 | **Streamlit CLI and configuration** — `streamlit run`, `streamlit config`, `.streamlit/config.toml` (script-level and project-level), port settings, and server options | read `references/cli.md` |
+| **Handling failures gracefully** — wrapping risky calls (APIs, queries, file/parse, input conversion) in `try/except`, showing `st.error`/`st.warning` + `st.stop()` instead of a raw traceback, and validating input | read `references/error-handling.md` |
+| **Requiring users to sign in** — `st.login`/`st.logout`/`st.user` with OIDC, gating on `st.user.is_logged_in`, and `[auth]` secrets configuration (not a hand-rolled password gate) | read `references/authentication.md` |
+| **Writing automated tests for an app** — `st.testing.v1.AppTest` for headless, in-process tests (simulate widgets, assert on elements) instead of launching a browser/server | read `references/testing.md` |
 
 **Fallback — "this widget doesn't exist in Streamlit":**
 
