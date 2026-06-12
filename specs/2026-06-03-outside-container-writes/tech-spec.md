@@ -112,13 +112,14 @@ def _is_outside_container_write(dg: DeltaGenerator) -> bool:
     # The DG is outside the fragment's delta path, but it may already be
     # inside a wrapper belonging to this fragment (e.g. a nested container
     # created via outer.container() that was redirected through the wrapper).
-    # Walk the DG's ancestor chain to check.
-    wrapper_ids = {
-        dg_id
-        for (fid, dg_id) in fragment_storage.outside_wrapper_keys_for(ts.fragment_id)
+    # Walk the DG's ancestor chain and check against wrapper DG ids (the
+    # registry *values*), not the outside container ids (part of the keys).
+    wrapper_dg_ids = {
+        wrapper._id
+        for wrapper in fragment_storage.outside_wrapper_values_for(ts.fragment_id)
     }
     for ancestor in dg._ancestors:
-        if ancestor._id in wrapper_ids:
+        if ancestor._id in wrapper_dg_ids:
             return False  # already inside this fragment's wrapper
 
     return True
