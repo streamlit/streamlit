@@ -116,8 +116,9 @@ time self-heals the same way the existing missing-fragment skip does.
 4. `ctx.reset`, `SCRIPT_STARTED`, callbacks run (`on_script_will_rerun`) — widget values
    land in `session_state` first, then `send()` calls in callbacks may append watchers to
    the live queue (below).
-5. The queue loop executes watchers in order through `order_fragment_ids`, with parallel
-   batching (below). Per-fragment cleanup as today.
+5. The queue loop executes watchers in order through `order_fragment_ids`: serial watchers
+   inline, `parallel=True` watchers dispatched non-blocking and joined at end of pass (below).
+   Per-fragment cleanup as today.
 
 #### `send()` semantics
 
@@ -147,14 +148,35 @@ with the final value — "last value wins" falls out of watchers reading `record
 execution time). A send to a signal already in the set from *within its own cascade* is a
 no-op with a logged warning.
 
-#### Parallel watcher batching
+#### Parallel watchers (non-blocking)
 
-The queue loop groups maximal runs of consecutive `parallel=True` watchers (the fragment's
-`parallel` flag is known from its registration). A serial watcher executes inline as today;
-a parallel batch is dispatched through `ParallelFragmentCoordinator` and **joined before
-the next serial watcher starts**. Guarantees: ordering and globals-visibility hold across
-batch boundaries only; within a batch, watchers must communicate via signal state /
-`session_state` (single-op atomicity per the parallel fragments spec).
+The queue loop (`_run_fragment_pass`) runs serial watchers inline and dispatches each
+`parallel=True` watcher **fire-and-forget** to `ParallelFragmentCoordinator` via
+`_run_watcher_worker` (the `parallel` flag comes from `FragmentStorage.is_parallel`). A
+single barrier joins all outstanding parallel watchers at the **end of the pass** — exactly
+the full-run model, not a per-batch join. So a parallel watcher overlaps the serial watchers
+that follow it, and its `session_state` writes are **not** observable by any watcher in the
+same pass (they reconcile on the next pass). The one ordering constraint is nesting: before
+running a watcher whose ancestor is still in flight, the loop drains outstanding parallel work
+(`has_ancestor_in`), because the ancestor creates the container the descendant nests into;
+`order_fragment_ids` puts ancestors first, so this only affects nested watchers of the same
+signal. Three runtime changes made this work:
+
+- **`ctx.cursors` is ContextVar-backed** (`script_run_context.py`) so each worker's snapshot
+  restore (`fragment.py` rerun branch) stays isolated to its copied context — the one piece of
+  shared mutable position state the full-run path never touched.
+- **`ParallelFragmentCoordinator` is reusable**: `join()` no longer shuts the executor down;
+  a separate `close()` tears it down once per pass, so the nesting drain can join mid-pass and
+  keep dispatching.
+- **The `parallel` flag is persisted** in `FragmentStorage` (`is_parallel`, `has_ancestor_in`).
+
+Batch cleanup (`clear_stale_descendants`) runs after the join using the global
+`new_fragment_ids` snapshot, not the serial loop's registration-sequence window, which races
+under concurrent registration.
+
+The in-pass scatter→gather case (a serial watcher reading a parallel fan-out's writes) is
+intentionally unsupported; an explicit `st.wait()` barrier is the planned answer (product
+spec, *Out of Scope*).
 
 #### Typing
 
@@ -213,15 +235,13 @@ scope is decided:
 3. **API refinements:** `st.signal(key, *, initial=None)` signature; signal-callback
    single-value `args` + `kwargs` rejection; fragment-callback `args`/`kwargs` forwarding
    (override plumbing above).
-4. **Parallel watcher batching** in the queue loop — the deferred execution model from the
-   product spec ("serial → joined parallel batch → serial"). The known blockers to resolve:
-   (a) `ParallelFragmentCoordinator.join()` currently shuts its executor down (single-use
-   per run) — needs a per-batch join or a reusable pool; (b) fragment-pass reruns reassign
-   shared `ctx.cursors` (`fragment.py:393`), which concurrent watchers in a batch would
-   race on — needs per-worker cursor isolation like the full-run path; (c) the `parallel`
-   flag must be persisted in `FragmentStorage` (today it lives only in `wrap`'s closure) so
-   the queue loop can group consecutive parallel watchers. Sequential execution remains
-   correct in the meantime; batching is a pure latency optimization.
+4. **Non-blocking parallel watchers** in the queue loop (see *Parallel watchers* above).
+   *(done)* — `parallel=True` watchers are dispatched fire-and-forget and joined at the end
+   of the pass, matching the full-run model. Resolved the three blockers: ContextVar-backed
+   `ctx.cursors`, a reusable coordinator (`join()`/`close()` split), and a persisted
+   `parallel` flag in `FragmentStorage`.
+5. **`st.wait()` (future):** an explicit barrier for in-pass scatter→gather (product spec,
+   *Out of Scope*). Gated on root-causing where worker `session_state` writes are deferred.
 
 ## Alternatives Considered
 

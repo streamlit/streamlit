@@ -681,10 +681,13 @@ def consumer_alert() -> None:  # watches loaded
     _lab_card("④", "Alert", "loaded", None, f"{state}\n\n{rows:,} rows loaded")
 
 
-def lab_trace_panel() -> None:  # watches loaded — called last, so it runs last
+def lab_trace_panel() -> None:
+    # A run_every poller, not a watcher. Parallel batch members write the trace
+    # from worker threads, and those writes are only visible to a *later* pass
+    # (not to a serial watcher in the same pass), so we poll to aggregate them.
     with st.container(border=True):
         st.markdown(
-            "**:material/timeline: Cascade trace** — execution order of the last pass"
+            "**:material/timeline: Cascade trace** — execution order of the last run"
         )
         if not ss.lab_trace:
             st.caption("Click **Ingest batch** to run the pipeline.")
@@ -695,18 +698,23 @@ def lab_trace_panel() -> None:  # watches loaded — called last, so it runs las
                 f"`{stamp}` &nbsp; **{label}** — {detail} &nbsp; :gray[{secs * 1000:.0f}ms]"
             )
         total = sum(s for *_, s in ss.lab_trace)
-        fanout = sum(LAB_LATENCY[k] for k in ("report", "audit", "alert"))
-        batched = max(LAB_LATENCY[k] for k in ("report", "audit", "alert"))
+        serial_chain = sum(LAB_LATENCY[k] for k in ("extract", "transform", "load"))
+        fanout_serial = sum(LAB_LATENCY[k] for k in ("report", "audit", "alert"))
+        fanout_parallel = max(LAB_LATENCY[k] for k in ("report", "audit", "alert"))
+        wall = serial_chain + fanout_parallel
         st.caption(
-            f"One trigger → {len(ss.lab_trace)} stages, in order, in a single rerun "
-            f"pass · {total * 1000:.0f}ms of pipeline work."
+            f"One trigger → {len(ss.lab_trace)} stages · "
+            f"{total * 1000:.0f}ms of total pipeline work."
         )
         st.caption(
-            f":material/schedule: The three :green-badge[loaded] consumers run "
-            f"**serially** today ({fanout * 1000:.0f}ms). *Parallel watcher batching* "
-            f"(spec Phase 3) would run them as one concurrent batch (~{batched * 1000:.0f}ms) "
-            "and then return to serial — not yet implemented; signal-triggered watchers "
-            "always run serially for now."
+            f":material/schedule: The serial chain ({serial_chain * 1000:.0f}ms) runs "
+            f"sequentially; then the three :green-badge[loaded] consumers fan out and "
+            f"run **concurrently** (~{fanout_parallel * 1000:.0f}ms, not "
+            f"{fanout_serial * 1000:.0f}ms serial) — their trace rows share a timestamp "
+            f"because they started together on separate threads. Wall-clock ≈ "
+            f"**{wall * 1000:.0f}ms** instead of {total * 1000:.0f}ms. Parallel watchers "
+            "are dispatched non-blocking (like a full run) and joined at the end of the "
+            "pass, so this trace aggregates them on the next poll."
         )
 
 
@@ -764,21 +772,23 @@ with pipe[2]:
     st.fragment(stage_load, watch=[LAB["transformed"]], parallel=False)()
 
 st.markdown(
-    "**:material/call_split: Fan-out** — :green-badge[loaded] drives three consumers "
-    "(one signal, three watchers). They run **serially** for now — see the trace note below."
+    "**:material/call_split: Fan-out** — :green-badge[loaded] drives three "
+    ":violet-badge[:material/account_tree: parallel] consumers (one signal, three "
+    "watchers). They're dispatched **concurrently** and run on separate threads — "
+    "see the wall-clock note below."
 )
 fan = st.columns(3)
 with fan[0]:
-    st.fragment(consumer_report, watch=[LAB["loaded"]], parallel=False)()
+    st.fragment(consumer_report, watch=[LAB["loaded"]], parallel=True)()
 with fan[1]:
-    st.fragment(consumer_audit, watch=[LAB["loaded"]], parallel=False)()
+    st.fragment(consumer_audit, watch=[LAB["loaded"]], parallel=True)()
 with fan[2]:
-    st.fragment(consumer_alert, watch=[LAB["loaded"]], parallel=False)()
+    st.fragment(consumer_alert, watch=[LAB["loaded"]], parallel=True)()
 
-# Called last so it registers after every other loaded-watcher and therefore
-# runs last in the pass — seeing the complete, ordered trace. (Watcher order
-# follows execution/call order, not source declaration.)
-st.fragment(lab_trace_panel, watch=[LAB["loaded"]], parallel=False)()
+# Polls once a second. The parallel batch members write the trace from worker
+# threads; those writes surface in a later pass, so a same-pass serial watcher
+# wouldn't see them — the poller picks them up on its next tick.
+st.fragment(lab_trace_panel, run_every="1s")()
 
 st.caption(
     ":material/info: Each stage `send()`s the next signal, so the runtime runs them "

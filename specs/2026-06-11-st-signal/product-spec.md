@@ -261,8 +261,8 @@ st.sidebar.button("Reload data", on_click=live_table)  # reruns only live_table
 | Lifecycle | State resets if the signal is not re-declared during a full run | Mirrors fragment lifecycle. Main-script signals persist across MPA page switches; page-script signals reset on navigation. |
 | Coalescing | A signal fires at most once per pass; multiple `send()`s coalesce to the last value | Prevents redundant watcher runs and, combined with the cycle guard, makes cascades terminate. |
 | Cycle guard | A signal cannot re-fire from within its own cascade | `A watches s1, emits s2` + `B watches s2, emits s1` degrades to one round with a warning instead of looping. |
-| Parallel watchers | Serial watchers run serially in order; **consecutive** `parallel=True` watchers run as a concurrent batch; the next serial watcher waits for the batch to complete | Preserves ordering guarantees at batch boundaries while letting independent slow panels overlap. |
-| `send()` in parallel workers | Prohibited (raises `StreamlitAPIException`) | Firing from a worker thread mid-batch has no well-defined position in the queue. Same guard pattern as other APIs restricted during parallel execution. |
+| Parallel watchers | Serial watchers run inline in execution order; a `parallel=True` watcher is dispatched fire-and-forget (non-blocking) and joined at the end of the pass — identical to `parallel=True` in a full run. A parallel watcher's `session_state` writes are not visible to other watchers in the same pass (reconcile next pass). | One uniform model for `parallel=True` everywhere; no surprise that the same flag means different things in a cascade vs a full run. Independent slow panels overlap; cross-watcher data flow uses serial watchers + signals. |
+| `send()` in parallel workers | Prohibited (raises `StreamlitAPIException`) | A worker thread has no well-defined position in the queue, so a parallel watcher can't grow the cascade — it only grows at serial boundaries. Same guard pattern as other APIs restricted during parallel execution. |
 | Errors | An exception in one watcher renders inline in its container; the rest of the queue continues | Existing fragment-queue behavior; consistent with parallel fragments. |
 | Forms | No special behavior | Form values batch-apply first (existing semantics), then the fire scopes the rerun. |
 
@@ -338,14 +338,19 @@ from one full run share the same module globals, a value computed by watcher N i
 watcher N+1 — though signal state and `session_state` are the durable channels (module globals
 reset on the next full run).
 
-The signal maintains the **dependency boundary**: watchers run in that execution order, and a
-run of consecutive `parallel=True` watchers collapses into a single concurrent batch that must
-fully join before the next serial watcher starts. So a `[serial, serial, parallel, parallel,
-parallel, parallel, serial, serial]` watcher list executes as: two serial, then a 4-wide
-batch (joined), then two serial — order preserved at every boundary, concurrency only inside
-a batch. Ordering guarantees do not hold *within* a batch (use signal state / `session_state`
-to communicate across one). This is the intended execution model; the initial implementation
-runs all watchers serially and parallel batching lands as a follow-up (see tech spec).
+**Serial vs. parallel watchers.** Serial watchers (`parallel=False`, the default) run inline
+on the script thread, each gated on the previous one — so a serial watcher sees the
+`session_state` and signal-state writes of the serial watchers before it. A `parallel=True`
+watcher is **dispatched fire-and-forget** and runs concurrently with the watchers that follow
+it; a single barrier at the end of the pass joins all outstanding parallel watchers. This is
+deliberately identical to how `parallel=True` behaves during a full app run: dispatch is
+non-blocking, the only join is the end-of-pass barrier. The consequence — same as a full run —
+is that **a parallel watcher's `session_state` writes are not visible to other watchers in the
+same pass; they reconcile on the next pass.** A parallel watcher is for an independent region
+that renders itself (a slow panel in a fan-out), not for producing data a later watcher reads
+this pass. (The one exception is nesting: a watcher never runs while one of its ancestors is
+still in flight, so nested containers stay correct.) See *Out of Scope* for `st.wait()`, a
+possible explicit barrier for the genuine scatter-then-gather case.
 
 The triggering widget's new value is applied to `session_state` before any watcher runs, so
 every watcher sees it.
@@ -371,6 +376,27 @@ call this out; trigger-style widgets (buttons) are unaffected.
 - **Derived/computed signals** (`st.computed`) and **auto-subscription on read**.
 - **AppTest helpers** and a **dev-mode signal inspector** (signals, watcher lists, fire log).
 - **Glitch-free `send()` during full runs** (re-enqueueing already-rendered watchers).
+- **`st.wait()` — an explicit barrier for scatter-then-gather.** Today a parallel watcher's
+  `session_state` writes aren't readable until the next pass (the uniform non-blocking rule
+  above), so a serial step can't aggregate a fan-out's results *this* pass. `st.wait()` would
+  block until the parallel fragments dispatched so far in this run have finished **and their
+  writes are reconciled**, then return — making the gather explicit and opt-in:
+
+  ```python
+  shard_a()        # @st.fragment(parallel=True)
+  shard_b()        # @st.fragment(parallel=True)
+  st.wait()        # join + reconcile
+  combine(st.session_state.results)   # now sees both shards
+  ```
+
+  The appeal is that the *same* `st.wait()` works in a full run and in a signal cascade — one
+  non-blocking model plus one explicit barrier, instead of two implicit visibility rules
+  (satisfies #6 Explicit Over Implicit). Open questions: it returns `None` (results travel
+  through `session_state`/the UI, not a return value); it's banned inside a parallel worker
+  (same shape as the `send()` ban); concurrent writes to the same key still race; and the
+  *reconcile* half depends on first root-causing exactly where worker `session_state` writes
+  are deferred. Worth designing as a follow-up — it's the principled answer to the limitation,
+  not a workaround.
 
 ## Checklist
 

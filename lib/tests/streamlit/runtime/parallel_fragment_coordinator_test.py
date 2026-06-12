@@ -221,6 +221,43 @@ def test_join_after_drain_is_safe():
     c.join()
 
 
+def test_join_leaves_executor_alive_for_reuse():
+    """join() must NOT shut the executor down, so the coordinator can be
+    reused for another batch (parallel watcher batching). A second submit
+    after join() must succeed."""
+    c = ParallelFragmentCoordinator(yield_check=lambda: None, poll_interval=0.01)
+    first = threading.Event()
+    second = threading.Event()
+    try:
+        c.submit(lambda: first.set(), None)
+        c.join()
+        assert first.is_set()
+        # Executor is still alive: a second batch can be submitted and joined.
+        c.submit(lambda: second.set(), None)
+        c.join()
+        assert second.is_set()
+    finally:
+        c.close()
+
+
+def test_submit_after_close_raises():
+    """close() tears the executor down; a subsequent submit() rolls back the
+    outstanding counter and raises (the executor rejects new work)."""
+    c = ParallelFragmentCoordinator(yield_check=lambda: None)
+    c.close()
+    with pytest.raises(RuntimeError):
+        c.submit(lambda: None, None)
+    assert c._outstanding == 0
+
+
+def test_close_is_idempotent():
+    """close() may be called more than once without error (the script run
+    path and tests both call it after the final join)."""
+    c = ParallelFragmentCoordinator(yield_check=lambda: None)
+    c.close()
+    c.close()
+
+
 def test_join_propagates_yield_check_exception():
     """If yield_check raises (e.g. an external RERUN arrived while
     join() was polling), the exception must propagate so the caller's

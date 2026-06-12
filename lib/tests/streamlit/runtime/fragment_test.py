@@ -41,6 +41,7 @@ from streamlit.runtime.fragment import (
     _dispatch_parallel_fragment,
     _fragment,
     _run_parallel_fragment,
+    _run_watcher_worker,
     fragment,
 )
 from streamlit.runtime.pages_manager import PagesManager
@@ -127,6 +128,60 @@ class MemoryFragmentStorageTest(unittest.TestCase):
             "outer",
             "inner",
         ]
+
+    def test_is_parallel_defaults_to_false(self):
+        """register() without parallel marks the fragment non-parallel."""
+        self._storage.register("serial_key", "serial_fragment")
+        assert self._storage.is_parallel("serial_key") is False
+
+    def test_is_parallel_round_trips_true(self):
+        """register(parallel=True) is recoverable via is_parallel()."""
+        self._storage.register("parallel_key", "parallel_fragment", parallel=True)
+        assert self._storage.is_parallel("parallel_key") is True
+
+    def test_is_parallel_unknown_key_is_false(self):
+        """is_parallel() returns False for ids not present in storage."""
+        assert self._storage.is_parallel("never_registered") is False
+
+    def test_is_parallel_cleared_on_remove(self):
+        """Deleting a fragment drops its parallel flag; re-asking returns False."""
+        self._storage.register("parallel_key", "parallel_fragment", parallel=True)
+        self._storage.delete("parallel_key")
+        assert self._storage.is_parallel("parallel_key") is False
+        assert "parallel_key" not in self._storage._parallel_by_id
+
+    def test_is_parallel_re_register_can_flip_flag(self):
+        """Re-registering an id updates its stored parallel flag."""
+        self._storage.register("flip_key", "frag", parallel=True)
+        assert self._storage.is_parallel("flip_key") is True
+        self._storage.register("flip_key", "frag", parallel=False)
+        assert self._storage.is_parallel("flip_key") is False
+
+    def test_has_ancestor_in_true_for_direct_parent(self):
+        """has_ancestor_in() sees an immediate parent in the candidate set."""
+        self._set_fragment_chain("outer", "inner")
+        assert self._storage.has_ancestor_in("inner", {"outer"}) is True
+
+    def test_has_ancestor_in_true_for_grandparent(self):
+        """has_ancestor_in() walks the full ancestor chain, not just the parent."""
+        self._set_fragment_chain("outer", "middle", "inner")
+        assert self._storage.has_ancestor_in("inner", {"outer"}) is True
+
+    def test_has_ancestor_in_false_for_unrelated_ids(self):
+        """has_ancestor_in() is False when no ancestor is in the candidate set."""
+        self._set_fragment_chain("outer", "inner")
+        self._set_fragment("sibling")
+        assert self._storage.has_ancestor_in("inner", {"sibling"}) is False
+
+    def test_has_ancestor_in_false_for_empty_candidates(self):
+        """An empty candidate set never matches an ancestor."""
+        self._set_fragment_chain("outer", "inner")
+        assert self._storage.has_ancestor_in("inner", set()) is False
+
+    def test_has_ancestor_in_excludes_self(self):
+        """A fragment is not its own ancestor, even if it's in the set."""
+        self._set_fragment_chain("outer", "inner")
+        assert self._storage.has_ancestor_in("inner", {"inner"}) is False
 
     def test_delete(self):
         self._storage.delete("some_key")
@@ -1647,6 +1702,81 @@ def test_run_parallel_fragment_handles_fragment_handled_exception() -> None:
     ):
         ThreadState.initialize()
         _run_parallel_fragment("test_id", raising_fragment, [])
+
+    mock_coordinator.request_rerun.assert_not_called()
+    mock_coordinator.request_stop.assert_not_called()
+
+
+def test_run_watcher_worker_sets_is_parallel_worker() -> None:
+    """_run_watcher_worker marks the worker context as a parallel worker.
+
+    The flag is what bans send() inside a batched watcher
+    (``_check_not_parallel_worker``).
+    """
+    mock_ctx = MagicMock()
+    mock_ctx.parallel_coordinator = MagicMock()
+
+    seen_flag: list[bool] = []
+
+    def wrapped_fragment() -> None:
+        seen_flag.append(ThreadState.get().is_parallel_worker)
+
+    with patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx):
+        ThreadState.initialize()
+        _run_watcher_worker(wrapped_fragment)
+
+    assert seen_flag == [True]
+
+
+def test_run_watcher_worker_routes_rerun_exception() -> None:
+    """A worker RerunException is surfaced via coordinator.request_rerun()."""
+    mock_coordinator = MagicMock()
+    mock_ctx = MagicMock()
+    mock_ctx.parallel_coordinator = mock_coordinator
+
+    rerun_exc = RerunException(rerun_data=None)
+
+    def raising_fragment() -> None:
+        raise rerun_exc
+
+    with patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx):
+        ThreadState.initialize()
+        _run_watcher_worker(raising_fragment)
+
+    mock_coordinator.request_rerun.assert_called_once_with(rerun_exc)
+
+
+def test_run_watcher_worker_routes_stop_exception() -> None:
+    """A worker StopException is surfaced via coordinator.request_stop()."""
+    mock_coordinator = MagicMock()
+    mock_ctx = MagicMock()
+    mock_ctx.parallel_coordinator = mock_coordinator
+
+    def raising_fragment() -> None:
+        raise StopException()
+
+    with patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx):
+        ThreadState.initialize()
+        _run_watcher_worker(raising_fragment)
+
+    mock_coordinator.request_stop.assert_called_once()
+
+
+def test_run_watcher_worker_swallows_user_exception() -> None:
+    """A user exception inside a batched watcher is swallowed, not re-raised, so
+    the rest of the batch still runs. It is not routed to the coordinator.
+    """
+    mock_coordinator = MagicMock()
+    mock_ctx = MagicMock()
+    mock_ctx.parallel_coordinator = mock_coordinator
+
+    def raising_fragment() -> None:
+        raise ValueError("boom")
+
+    with patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx):
+        ThreadState.initialize()
+        # Must not raise out of the worker.
+        _run_watcher_worker(raising_fragment)
 
     mock_coordinator.request_rerun.assert_not_called()
     mock_coordinator.request_stop.assert_not_called()

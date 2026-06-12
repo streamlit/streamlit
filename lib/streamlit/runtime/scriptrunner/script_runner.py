@@ -553,6 +553,200 @@ class ScriptRunner:
             ):
                 ctx.fragment_arg_overrides[fragment_id] = (tuple(args), dict(kwargs))
 
+    def _run_fragment_pass(
+        self,
+        ctx: ScriptRunContext,
+        rerun_data: RerunData,
+        fragment_ids_this_run: list[str],
+    ) -> None:
+        """Execute the queue of watcher fragments for a fragment-only pass.
+
+        ``fragment_ids_this_run`` is the same list object as
+        ``ctx.fragment_ids_this_run``. ``Signal.send()`` appends watcher
+        fragment ids to it mid-pass — during the callback phase or from serial
+        watcher bodies — so we consume it by index instead of snapshotting it.
+        ``ctx.fragment_ids_consumed`` dedups ids that end up queued more than
+        once.
+
+        Parallel watchers are dispatched fire-and-forget and run concurrently
+        with the serial watchers that follow them; serial watchers run inline,
+        each gated on the previous one. A single barrier at the end of the pass
+        joins all outstanding parallel watchers. This mirrors how parallel
+        fragments behave during a full app run: dispatch is non-blocking and the
+        only join is the end-of-pass barrier, so a serial watcher never observes
+        a still-running parallel watcher's session_state writes in the same pass.
+        The one exception is nesting: a watcher must not run while one of its
+        ancestors is still in flight on a worker (the ancestor creates the
+        container the descendant nests into), so outstanding work is drained
+        before a descendant runs. ``order_fragment_ids`` places ancestors before
+        descendants, so this only affects nested watchers of the same signal.
+        """
+        storage = self._fragment_storage
+        consumed = ctx.fragment_ids_consumed
+        in_flight: list[str] = []
+        used_coordinator = False
+
+        queue_index = 0
+        while queue_index < len(fragment_ids_this_run):
+            fragment_id = fragment_ids_this_run[queue_index]
+            queue_index += 1
+            if fragment_id in consumed:
+                continue
+
+            if in_flight and storage.has_ancestor_in(fragment_id, set(in_flight)):
+                self._join_parallel_watchers(ctx, in_flight)
+                in_flight = []
+
+            if storage.is_parallel(fragment_id):
+                if self._dispatch_parallel_watcher(ctx, rerun_data, fragment_id):
+                    in_flight.append(fragment_id)
+                    used_coordinator = True
+            else:
+                self._run_serial_watcher(ctx, rerun_data, fragment_id)
+
+        if in_flight:
+            self._join_parallel_watchers(ctx, in_flight)
+        if used_coordinator and ctx.parallel_coordinator is not None:
+            ctx.parallel_coordinator.close()
+
+    def _run_serial_watcher(
+        self,
+        ctx: ScriptRunContext,
+        rerun_data: RerunData,
+        fragment_id: str,
+    ) -> None:
+        """Run a single watcher fragment inline on the script thread.
+
+        This is the original per-fragment execution body: it marks the id
+        consumed, looks the fragment up (skipping ids removed from storage), runs
+        it with Rerun/Stop re-raised and other exceptions swallowed, and cleans
+        up stale descendants using the registration-sequence before/after
+        window.
+        """
+        ctx.fragment_ids_consumed.add(fragment_id)
+
+        registration_sequence_before = self._fragment_storage.registration_sequence()
+        try:
+            wrapped_fragment = self._fragment_storage.lookup(fragment_id)
+        except FragmentStorageKeyError:
+            # This can happen if the fragment_id is removed from the
+            # storage before the script runner gets to it. In this
+            # case, the fragment is simply skipped.
+            # Also, only log an error if the fragment is not an
+            # auto_rerun to avoid noise. If it is an auto_rerun, we
+            # might have a race condition where the fragment_id is
+            # removed but the webapp sends a rerun request before
+            # the removal information has reached the web app
+            # (see https://github.com/streamlit/streamlit/issues/9080).
+            if not rerun_data.is_auto_rerun:
+                _LOGGER.warning(
+                    "Couldn't find fragment with id %s."
+                    " This can happen if the fragment does not"
+                    " exist anymore when this request is processed,"
+                    " for example because a full app rerun happened"
+                    " that did not register the fragment."
+                    " Usually this doesn't happen or no action is"
+                    " required, so its mainly for debugging.",
+                    fragment_id,
+                )
+            return
+
+        try:
+            wrapped_fragment()
+        except (RerunException, StopException):
+            # The wrapped_fragment function is executed
+            # inside of a exec_func_with_error_handling call, so
+            # there is a correct handler for these exceptions.
+            raise
+        except Exception:  # noqa: S110
+            # Ignore exceptions raised by fragments here as we don't
+            # want to stop the execution of other fragments. The
+            # error itself is already rendered within the wrapped
+            # fragment.
+            pass
+        finally:
+            # Cleanup always uses what was actually re-registered
+            # during this attempt, regardless of how the fragment
+            # exited (normal return, RerunException, StopException,
+            # or a swallowed user exception). Children that the
+            # fragment did not get a chance to re-register will be
+            # dropped here and re-created on the next rerun.
+            registered_ids = self._fragment_storage.ids_registered_after(
+                registration_sequence_before
+            )
+            self._fragment_storage.clear_stale_descendants(
+                fragment_id,
+                registered_ids,
+            )
+
+    def _dispatch_parallel_watcher(
+        self,
+        ctx: ScriptRunContext,
+        rerun_data: RerunData,
+        fragment_id: str,
+    ) -> bool:
+        """Dispatch a parallel watcher to the coordinator, fire-and-forget.
+
+        Submits ``_run_watcher_worker`` to run the fragment on a worker inside
+        its own copied context and returns immediately — the join happens later,
+        at the end-of-pass barrier (or before a descendant runs). Returns
+        ``True`` if the watcher was dispatched, ``False`` if its id was no longer
+        in storage (same skip-and-warn behavior as the serial path).
+        """
+        from streamlit.runtime.fragment import _run_watcher_worker
+
+        ctx.fragment_ids_consumed.add(fragment_id)
+        try:
+            wrapped_fragment = self._fragment_storage.lookup(fragment_id)
+        except FragmentStorageKeyError:
+            # The id may have been removed from storage before we got to it.
+            if not rerun_data.is_auto_rerun:
+                _LOGGER.warning(
+                    "Couldn't find fragment with id %s."
+                    " This can happen if the fragment does not"
+                    " exist anymore when this request is processed,"
+                    " for example because a full app rerun happened"
+                    " that did not register the fragment."
+                    " Usually this doesn't happen or no action is"
+                    " required, so its mainly for debugging.",
+                    fragment_id,
+                )
+            return False
+
+        coordinator = cast("ParallelFragmentCoordinator", ctx.parallel_coordinator)
+        coordinator.submit(_run_watcher_worker, ctx, wrapped_fragment)
+        return True
+
+    def _join_parallel_watchers(
+        self,
+        ctx: ScriptRunContext,
+        dispatched: list[str],
+    ) -> None:
+        """Wait for outstanding parallel watchers to finish, then clean up.
+
+        ``dispatched`` are the parallel watchers submitted since the last join.
+        After the barrier, each watcher's stale descendants are cleaned using the
+        global ``new_fragment_ids`` snapshot rather than the serial loop's
+        registration-sequence window, which races under the concurrent
+        registration that parallel watchers perform.
+        """
+        coordinator = cast("ParallelFragmentCoordinator", ctx.parallel_coordinator)
+        try:
+            coordinator.join()
+        except BaseException:
+            # Mirror the full-run path: drain in-flight workers before the
+            # escape (worker rerun/stop, user error, or interrupt) propagates so
+            # they don't outlive the pass.
+            coordinator.drain()
+            raise
+
+        newly_registered_ids = ctx.shared.new_fragment_ids.snapshot()
+        for fragment_id in dispatched:
+            self._fragment_storage.clear_stale_descendants(
+                fragment_id,
+                newly_registered_ids,
+            )
+
     def _run_script(self, rerun_data: RerunData) -> None:
         """Run our script.
 
@@ -753,80 +947,7 @@ class ScriptRunner:
                     ctx.on_script_start()
 
                     if fragment_ids_this_run:
-                        # `fragment_ids_this_run` is the same list object as
-                        # `ctx.fragment_ids_this_run`. Signal.send() appends
-                        # watcher fragment ids to it mid-pass — during the
-                        # callback phase above or from watcher bodies — so we
-                        # consume it by index instead of snapshotting it.
-                        # `ctx.fragment_ids_consumed` dedups ids that end up
-                        # queued more than once.
-                        queue_index = 0
-                        while queue_index < len(fragment_ids_this_run):
-                            fragment_id = fragment_ids_this_run[queue_index]
-                            queue_index += 1
-                            if fragment_id in ctx.fragment_ids_consumed:
-                                continue
-                            ctx.fragment_ids_consumed.add(fragment_id)
-
-                            registration_sequence_before = (
-                                self._fragment_storage.registration_sequence()
-                            )
-                            try:
-                                wrapped_fragment = self._fragment_storage.lookup(
-                                    fragment_id
-                                )
-                            except FragmentStorageKeyError:
-                                # This can happen if the fragment_id is removed from the
-                                # storage before the script runner gets to it. In this
-                                # case, the fragment is simply skipped.
-                                # Also, only log an error if the fragment is not an
-                                # auto_rerun to avoid noise. If it is an auto_rerun, we
-                                # might have a race condition where the fragment_id is
-                                # removed but the webapp sends a rerun request before
-                                # the removal information has reached the web app
-                                # (see https://github.com/streamlit/streamlit/issues/9080).
-                                if not rerun_data.is_auto_rerun:
-                                    _LOGGER.warning(
-                                        "Couldn't find fragment with id %s."
-                                        " This can happen if the fragment does not"
-                                        " exist anymore when this request is processed,"
-                                        " for example because a full app rerun happened"
-                                        " that did not register the fragment."
-                                        " Usually this doesn't happen or no action is"
-                                        " required, so its mainly for debugging.",
-                                        fragment_id,
-                                    )
-                                continue
-
-                            try:
-                                wrapped_fragment()
-                            except (RerunException, StopException):
-                                # The wrapped_fragment function is executed
-                                # inside of a exec_func_with_error_handling call, so
-                                # there is a correct handler for these exceptions.
-                                raise
-                            except Exception:  # noqa: S110
-                                # Ignore exceptions raised by fragments here as we don't
-                                # want to stop the execution of other fragments. The
-                                # error itself is already rendered within the wrapped
-                                # fragment.
-                                pass
-                            finally:
-                                # Cleanup always uses what was actually re-registered
-                                # during this attempt, regardless of how the fragment
-                                # exited (normal return, RerunException, StopException,
-                                # or a swallowed user exception). Children that the
-                                # fragment did not get a chance to re-register will be
-                                # dropped here and re-created on the next rerun.
-                                registered_ids = (
-                                    self._fragment_storage.ids_registered_after(
-                                        registration_sequence_before
-                                    )
-                                )
-                                self._fragment_storage.clear_stale_descendants(
-                                    fragment_id,
-                                    registered_ids,
-                                )
+                        self._run_fragment_pass(ctx, rerun_data, fragment_ids_this_run)
 
                     else:
                         # Expect parallel_coordinator to be initialized;
@@ -849,6 +970,9 @@ class ScriptRunner:
                             # interrupt.
                             coordinator.drain()
                             raise
+                        # join() leaves the executor alive; tear it down once
+                        # the full run's parallel fragments have all joined.
+                        coordinator.close()
                         self._fragment_storage.clear(
                             new_fragment_ids=ctx.shared.new_fragment_ids.snapshot()
                         )

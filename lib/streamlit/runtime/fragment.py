@@ -145,6 +145,7 @@ class FragmentStorage(Protocol):
         *,
         parent_fragment_id: str | None = None,
         function_hash: str | None = None,
+        parallel: bool = False,
     ) -> None:
         """Store a fragment definition.
 
@@ -159,6 +160,20 @@ class FragmentStorage(Protocol):
             A hash identifying the decorated function across all of its call
             sites, or ``None``. Used to resolve a fragment function passed as
             a widget callback to all of its registered instances.
+
+        parallel
+            Whether this fragment was declared with ``parallel=True``. Persisted
+            so the fragment-pass queue loop can dispatch parallel watchers
+            without blocking (a fragment-only rerun can't recover the flag from
+            the decorator closure otherwise).
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_parallel(self, key: str) -> bool:
+        """Return whether the fragment was registered with ``parallel=True``.
+
+        Returns ``False`` for unknown keys.
         """
         raise NotImplementedError
 
@@ -202,6 +217,16 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
+    def has_ancestor_in(self, fragment_id: str, candidate_ids: set[str]) -> bool:
+        """Return whether any ancestor of ``fragment_id`` is in ``candidate_ids``.
+
+        Used by the fragment-pass queue loop to drain outstanding parallel work
+        before running a watcher whose ancestor is still in flight, so the
+        ancestor runs (and creates its container) before the descendant.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def delete(self, key: str) -> None:
         """Delete the fragment corresponding to the given key.
 
@@ -236,6 +261,9 @@ class MemoryFragmentStorage(FragmentStorage):
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._fragments: dict[str, Fragment] = {}
+        # Whether each fragment was declared with parallel=True. Read by the
+        # fragment-pass queue loop to dispatch parallel watchers without blocking.
+        self._parallel_by_id: dict[str, bool] = {}
         # Enclosing fragment id for nested fragments; top-level fragments use None.
         self._parent_by_id: dict[str, str | None] = {}
         self._registration_sequence_by_id: dict[str, int] = {}
@@ -266,6 +294,7 @@ class MemoryFragmentStorage(FragmentStorage):
 
     def _remove(self, fragment_id: str) -> None:
         del self._fragments[fragment_id]
+        self._parallel_by_id.pop(fragment_id, None)
         self._parent_by_id.pop(fragment_id, None)
         self._registration_sequence_by_id.pop(fragment_id, None)
         self._remove_from_function_index(fragment_id)
@@ -293,6 +322,10 @@ class MemoryFragmentStorage(FragmentStorage):
         except KeyError as e:
             raise FragmentStorageKeyError(str(e))
 
+    def is_parallel(self, key: str) -> bool:
+        with self._lock:
+            return self._parallel_by_id.get(key, False)
+
     def register(
         self,
         key: str,
@@ -300,10 +333,12 @@ class MemoryFragmentStorage(FragmentStorage):
         *,
         parent_fragment_id: str | None = None,
         function_hash: str | None = None,
+        parallel: bool = False,
     ) -> None:
         with self._lock:
             self._registration_sequence += 1
             self._fragments[key] = fragment
+            self._parallel_by_id[key] = parallel
             self._parent_by_id[key] = parent_fragment_id
             self._registration_sequence_by_id[key] = self._registration_sequence
 
@@ -378,6 +413,13 @@ class MemoryFragmentStorage(FragmentStorage):
                     break
 
             return ordered_fragment_ids
+
+    def has_ancestor_in(self, fragment_id: str, candidate_ids: set[str]) -> bool:
+        with self._lock:
+            return any(
+                ancestor_id in candidate_ids
+                for ancestor_id in self._iter_ancestor_ids(fragment_id)
+            )
 
     def fragment_ids_for_function(self, function_hash: str) -> list[str]:
         with self._lock:
@@ -560,6 +602,7 @@ def _fragment(
             wrapped_fragment,
             parent_fragment_id=parent_fragment_id_at_def,
             function_hash=function_hash,
+            parallel=parallel,
         )
 
         # Subscribe this fragment instance to its watched signals at the same
@@ -713,12 +756,14 @@ def fragment(
         One or more signals created by ``st.signal`` that this fragment
         watches. If this is ``None`` (default), the fragment doesn't watch
         any signal. When a watched signal fires, the fragment reruns in
-        place, in page order with the other watchers of that signal.
+        place, in execution order with the other watchers of that signal.
 
         The subscription registers when the fragment executes, so a fragment
-        behind a false conditional is not subscribed. ``parallel=True``
-        watchers currently execute sequentially during signal-triggered
-        passes.
+        behind a false conditional is not subscribed. A watcher with
+        ``parallel=True`` is dispatched to a worker thread without blocking and
+        runs concurrently with the watchers that follow it, exactly like
+        ``parallel=True`` during a full app run; its ``st.session_state`` writes
+        are not visible to other watchers until the next rerun.
 
     Examples
     --------
@@ -881,3 +926,46 @@ def _run_parallel_fragment(
         return
     except Exception:  # pragma: no cover - defensive
         _LOGGER.exception("Uncaught exception in parallel fragment worker")
+
+
+def _run_watcher_worker(
+    wrapped_fragment: Callable[[], Any],
+) -> None:
+    """Worker entry point for a parallel watcher in a signal-triggered pass.
+
+    Runs inside the coordinator's context propagation boundary (copy_context +
+    _scoped_ctx_attach). Unlike :func:`_run_parallel_fragment` (the full-run
+    path), this worker does **not** pre-allocate a container: the watcher's
+    ``wrapped_fragment()`` runs in a fragment pass (``ctx.fragment_ids_this_run``
+    is set), so it restores its own ``cursors``/``dg_stack`` snapshots and
+    creates its container at its stable delta path. Because ``ctx.cursors`` is
+    ContextVar-backed, each watcher's reassignment stays isolated to its own
+    copied context.
+
+    Control-flow exceptions route through the coordinator so ``join()`` surfaces
+    them on the script thread; user exceptions are already rendered inside the
+    fragment's container, so they're swallowed here to keep one failing watcher
+    from aborting the others dispatched alongside it.
+    """
+    ctx = get_script_run_ctx(suppress_warning=True)
+    if ctx is None:  # pragma: no cover - defensive
+        return
+
+    ThreadState.update(is_parallel_worker=True)
+
+    coordinator = ctx.parallel_coordinator
+    if coordinator is None:  # pragma: no cover - defensive
+        return
+
+    try:
+        wrapped_fragment()
+    except RerunException as e:
+        coordinator.request_rerun(e)
+    except StopException:
+        coordinator.request_stop()
+    except Exception:  # noqa: S110
+        # The error is already rendered inside the fragment's container
+        # (handle_user_script_exception in wrapped_fragment). Swallow it here so
+        # the other parallel watchers still run, mirroring the serial loop's
+        # per-watcher exception isolation.
+        pass

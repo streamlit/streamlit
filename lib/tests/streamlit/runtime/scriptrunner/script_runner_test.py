@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
 import time
 import unittest
 from typing import TYPE_CHECKING, Any
@@ -878,6 +879,317 @@ class ScriptRunnerTest(unittest.TestCase):
         self._assert_no_exceptions(scriptrunner)
         # The fragment saw the override recorded from the callback's args/kwargs.
         assert captured == [((7,), {"highlight": True})]
+
+    def test_parallel_watchers_run_concurrently(self):
+        """Consecutive parallel watchers execute concurrently on worker threads.
+
+        Each parallel watcher blocks on a shared barrier; if they were run
+        serially the barrier would deadlock. Reaching the barrier proves they
+        run on distinct worker threads at the same time. The main script thread
+        is not one of the worker threads.
+        """
+        barrier = threading.Barrier(3, timeout=5.0)
+        worker_threads: dict[str, int] = {}
+        main_thread_id: dict[str, int] = {}
+
+        def make_parallel(name: str):
+            def run() -> None:
+                worker_threads[name] = threading.get_ident()
+                barrier.wait()
+
+            return run
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        for name in ("p1", "p2", "p3"):
+            scriptrunner._fragment_storage.register(
+                name, make_parallel(name), parallel=True
+            )
+
+        # Capture the script thread id so we can assert workers are distinct.
+        original_run_fragment_pass = scriptrunner._run_fragment_pass
+
+        def spy_run_fragment_pass(ctx, rerun_data, fragment_ids):
+            main_thread_id["main"] = threading.get_ident()
+            original_run_fragment_pass(ctx, rerun_data, fragment_ids)
+
+        scriptrunner._run_fragment_pass = spy_run_fragment_pass  # type: ignore[method-assign]
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["p1", "p2", "p3"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        # All three watchers ran (barrier of 3 was satisfied) on three distinct
+        # worker threads, none of which is the main script thread.
+        assert set(worker_threads.keys()) == {"p1", "p2", "p3"}
+        assert len(set(worker_threads.values())) == 3
+        assert main_thread_id["main"] not in worker_threads.values()
+
+    def test_serial_watchers_run_inline_on_script_thread(self):
+        """Serial-only cascades run inline, in order, on the script thread —
+        behavior unchanged from before parallel batching."""
+        run_order: list[str] = []
+        thread_ids: dict[str, int] = {}
+        main_thread_id: dict[str, int] = {}
+
+        def make_serial(name: str):
+            def run() -> None:
+                run_order.append(name)
+                thread_ids[name] = threading.get_ident()
+
+            return run
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        for name in ("s1", "s2", "s3"):
+            scriptrunner._fragment_storage.register(name, make_serial(name))
+
+        original_run_fragment_pass = scriptrunner._run_fragment_pass
+
+        def spy_run_fragment_pass(ctx, rerun_data, fragment_ids):
+            main_thread_id["main"] = threading.get_ident()
+            original_run_fragment_pass(ctx, rerun_data, fragment_ids)
+
+        scriptrunner._run_fragment_pass = spy_run_fragment_pass  # type: ignore[method-assign]
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["s1", "s2", "s3"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        assert run_order == ["s1", "s2", "s3"]
+        # All serial watchers ran on the same (main script) thread.
+        assert set(thread_ids.values()) == {main_thread_id["main"]}
+
+    def test_parallel_watchers_do_not_block_following_serial(self):
+        """Parallel watchers are dispatched fire-and-forget, so a trailing serial
+        watcher runs WHILE they are still in flight (the full-run model).
+
+        For ``[serial, parallel, parallel, serial]`` the parallel watchers block
+        on a gate that only the trailing serial watcher releases. If dispatch
+        blocked (the old per-batch join), the gate would never be set and the
+        parallel watchers would deadlock until timeout. A single end-of-pass
+        barrier still joins them before the pass completes.
+        """
+        events: list[str] = []
+        events_lock = threading.Lock()
+        gate = threading.Event()
+
+        def record(name: str) -> None:
+            with events_lock:
+                events.append(name)
+
+        def serial_head() -> None:
+            record("s_head")
+
+        def make_parallel(name: str):
+            def run() -> None:
+                record(f"{name}_start")
+                # Only the trailing serial watcher sets the gate; reaching here
+                # without timing out proves dispatch did not block it.
+                assert gate.wait(timeout=5.0), f"{name} blocked the serial tail"
+                record(f"{name}_end")
+
+            return run
+
+        def serial_tail() -> None:
+            record("s_tail")
+            gate.set()  # unblocks the in-flight parallel watchers
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("s_head", serial_head)
+        scriptrunner._fragment_storage.register(
+            "p_a", make_parallel("p_a"), parallel=True
+        )
+        scriptrunner._fragment_storage.register(
+            "p_b", make_parallel("p_b"), parallel=True
+        )
+        scriptrunner._fragment_storage.register("s_tail", serial_tail)
+
+        scriptrunner.request_rerun(
+            RerunData(fragment_id_queue=["s_head", "p_a", "p_b", "s_tail"])
+        )
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        # Serial head runs first.
+        assert events[0] == "s_head"
+        # The trailing serial ran (and released the gate) before the parallel
+        # watchers finished — proving the dispatch did not block it.
+        assert events.index("s_tail") < events.index("p_a_end")
+        assert events.index("s_tail") < events.index("p_b_end")
+        # The end-of-pass barrier still joined the parallel watchers.
+        assert "p_a_end" in events
+        assert "p_b_end" in events
+
+    def test_nested_parallel_watcher_waits_for_ancestor(self):
+        """A parallel child of a parallel parent does not run concurrently with it.
+
+        ``order_fragment_ids`` queues the ancestor first; the ancestor guard then
+        drains the outstanding parallel work (joining the parent) before
+        dispatching the child, so the parent finishes — and would create the
+        container the child nests into — before the child runs.
+        """
+        call_order: list[str] = []
+
+        scriptrunner = TestScriptRunner("good_script.py")
+
+        # Mimic what a real nested @fragment does: the parent body re-registers
+        # itself AND its child (a nested fragment is created by executing the
+        # parent), so the after-join clear_stale_descendants() call keeps the
+        # still-queued child.
+        def parent_body() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.shared.new_fragment_ids.check_and_add("parent")
+            ctx.shared.new_fragment_ids.check_and_add("child")
+
+        def child_body() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.shared.new_fragment_ids.check_and_add("child")
+
+        scriptrunner._fragment_storage.register(
+            "parent",
+            parent_body,
+            parent_fragment_id=None,
+            parallel=True,
+        )
+        scriptrunner._fragment_storage.register(
+            "child",
+            child_body,
+            parent_fragment_id="parent",
+            parallel=True,
+        )
+
+        original_dispatch = scriptrunner._dispatch_parallel_watcher
+        original_join = scriptrunner._join_parallel_watchers
+
+        def spy_dispatch(ctx, rerun_data, fragment_id):
+            call_order.append(f"dispatch:{fragment_id}")
+            return original_dispatch(ctx, rerun_data, fragment_id)
+
+        def spy_join(ctx, dispatched):
+            call_order.append(f"join:{list(dispatched)}")
+            return original_join(ctx, dispatched)
+
+        scriptrunner._dispatch_parallel_watcher = spy_dispatch  # type: ignore[method-assign]
+        scriptrunner._join_parallel_watchers = spy_join  # type: ignore[method-assign]
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["parent", "child"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        # The parent is dispatched and joined before the child is dispatched: the
+        # ancestor guard drains outstanding parallel work before the descendant.
+        assert call_order == [
+            "dispatch:parent",
+            "join:['parent']",
+            "dispatch:child",
+            "join:['child']",
+        ]
+
+    def test_parallel_watcher_exception_does_not_abort_others(self):
+        """One parallel watcher raising a user error must not stop the others."""
+        completed: set[str] = set()
+        completed_lock = threading.Lock()
+
+        def raising() -> None:
+            raise RuntimeError("this watcher errored out")
+
+        def make_ok(name: str):
+            def run() -> None:
+                with completed_lock:
+                    completed.add(name)
+
+            return run
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("bad", raising, parallel=True)
+        scriptrunner._fragment_storage.register("ok1", make_ok("ok1"), parallel=True)
+        scriptrunner._fragment_storage.register("ok2", make_ok("ok2"), parallel=True)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["bad", "ok1", "ok2"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        # The bad watcher's error is swallowed (no uncaught script exception)
+        # and the other two parallel watchers still completed.
+        self._assert_no_exceptions(scriptrunner)
+        assert completed == {"ok1", "ok2"}
+
+    def test_send_from_parallel_watcher_does_not_queue_downstream(self):
+        """A send() from inside a parallel watcher is banned, so it can't grow
+        the queue — the downstream watcher never runs.
+
+        This is what guarantees a parallel watcher never mutates the queue: the
+        cascade only grows at serial boundaries.
+        """
+        downstream_ran: list[str] = []
+        sig = Signal("sig_from_batch", 0)
+
+        def batched_sender() -> None:
+            # Banned inside a parallel worker (_check_not_parallel_worker); the
+            # StreamlitAPIException is swallowed by the worker, so it neither
+            # fires the signal nor aborts the batch.
+            sig.send(1)
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("sender", batched_sender, parallel=True)
+        scriptrunner._fragment_storage.register("other", lambda: None, parallel=True)
+        scriptrunner._fragment_storage.register(
+            "downstream", lambda: downstream_ran.append("downstream")
+        )
+
+        signal_storage = scriptrunner._signal_storage
+        signal_storage.declare("sig_from_batch", 0, reset_watchers=False)
+        signal_storage.register_watcher("sig_from_batch", "downstream")
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["sender", "other"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        # The downstream watcher was never queued: send() raised in the worker.
+        assert downstream_ran == []
+        # The signal state was not updated either (the guard runs before the
+        # state write in _fire).
+        assert signal_storage.get_state("sig_from_batch") == 0
+
+    def test_mixed_cascade_preserves_order_across_boundaries(self):
+        """[s, s, p, p, p, s] runs serials inline in order with the parallels
+        batched in the middle; the final serial runs after the batch joins."""
+        order: list[str] = []
+        order_lock = threading.Lock()
+
+        def make(name: str):
+            def run() -> None:
+                with order_lock:
+                    order.append(name)
+
+            return run
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("s1", make("s1"))
+        scriptrunner._fragment_storage.register("s2", make("s2"))
+        scriptrunner._fragment_storage.register("p1", make("p1"), parallel=True)
+        scriptrunner._fragment_storage.register("p2", make("p2"), parallel=True)
+        scriptrunner._fragment_storage.register("p3", make("p3"), parallel=True)
+        scriptrunner._fragment_storage.register("s3", make("s3"))
+
+        scriptrunner.request_rerun(
+            RerunData(fragment_id_queue=["s1", "s2", "p1", "p2", "p3", "s3"])
+        )
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        # Leading serials run first, in order; trailing serial runs last.
+        assert order[:2] == ["s1", "s2"]
+        assert order[-1] == "s3"
+        # The three parallels all ran between the serials (any concurrent order).
+        assert set(order[2:5]) == {"p1", "p2", "p3"}
 
     @patch("streamlit.runtime.scriptrunner.script_runner.get_script_run_ctx")
     @patch("streamlit.runtime.fragment.handle_user_script_exception")

@@ -216,6 +216,12 @@ class ParallelFragmentCoordinator:
         If join() raises (worker exception or yield-check exception), the
         executor is left running and the caller is responsible for calling
         drain() to shut down in-flight workers.
+
+        join() leaves the executor alive so the coordinator can be reused for a
+        later barrier within the same run (e.g. a fragment pass that drains
+        outstanding parallel watchers before a nested descendant, then dispatches
+        more). Callers must call :meth:`close` once they are done with the
+        coordinator to tear the executor down.
         """
         while True:
             with self._join_condition:
@@ -227,6 +233,15 @@ class ParallelFragmentCoordinator:
                 if self._outstanding > 0:
                     self._join_condition.wait(timeout=self._poll_interval)
         self._raise_if_worker_exception()
+
+    def close(self) -> None:
+        """Tear down the thread pool after the coordinator is no longer needed.
+
+        Called once per script run (or fragment pass) after the final
+        :meth:`join`. Shuts the executor down without waiting on in-flight
+        workers — by the time ``close()`` runs, ``join()`` has already drained
+        outstanding work. Safe to call multiple times.
+        """
         self._executor.shutdown(wait=False)
 
     def drain(self) -> None:

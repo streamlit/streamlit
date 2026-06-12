@@ -121,6 +121,16 @@ _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.Context
     "fragment_thread_state",
 )
 
+# Per-context root-container cursors. Backing a ContextVar (rather than a plain
+# ScriptRunContext attribute) isolates the cursor map across copied contexts so
+# parallel watcher batches — each running wrapped_fragment() inside its own
+# copy_context() — don't race on the shared map when they reassign it to their
+# own deepcopied snapshot. Serial paths run in a single context, where the
+# ContextVar-backed `cursors` property behaves exactly like the old attribute.
+_container_cursors: contextvars.ContextVar[dict[int, RunningCursor]] = (
+    contextvars.ContextVar("container_cursors")
+)
+
 
 def _default_signal_storage() -> SignalStorage:
     # Imported lazily: streamlit.runtime.signal imports this module for
@@ -229,7 +239,6 @@ class ScriptRunContext:
     command_tracking_deactivated: bool = False
     _has_script_started: bool = False
     shared: SharedRunState = field(default_factory=SharedRunState)
-    cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     fragment_ids_this_run: list[str] | None = None
     # we allow only one dialog to be open at the same time
@@ -262,6 +271,27 @@ class ScriptRunContext:
         # Capture the main script thread's identity so reset() can refuse to
         # run from worker threads.
         self._main_thread_ident = threading.get_ident()
+        # Seed an empty cursor map in the current context so cursor access
+        # works before the first reset() (e.g. directly constructed contexts
+        # in tests).
+        self.cursors = {}
+
+    @property
+    def cursors(self) -> dict[int, RunningCursor]:
+        """Per-context map of root container -> cursor.
+
+        Backed by the module-level ``_container_cursors`` ContextVar so that
+        each copied context (e.g. a parallel watcher batch worker) owns an
+        isolated map. ``cursor.get_container_cursor`` reads and mutates this
+        map; ``wrap()`` reassigns it to a fresh deepcopy at the start of each
+        fragment-pass rerun. The getter falls back to an empty dict if the
+        ContextVar was never set in the current context.
+        """
+        return _container_cursors.get({})
+
+    @cursors.setter
+    def cursors(self, value: dict[int, RunningCursor]) -> None:
+        _container_cursors.set(value)
 
     @property
     def page_script_hash(self) -> str:
