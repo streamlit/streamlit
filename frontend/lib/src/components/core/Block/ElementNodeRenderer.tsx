@@ -249,7 +249,11 @@ const RawElementNodeRenderer = (
     ...elementProps,
     widgetMgr: props.widgetMgr,
     disabled: props.widgetsDisabled,
-    fragmentId: node.fragmentId,
+    // A scope token (set when the widget's callback is a signal or a
+    // fragment function) replaces the enclosing fragment id as the scope of
+    // the widget's rerun requests; App.sendRerunBackMsg splits prefixed
+    // tokens back out of the fragmentId-shaped value.
+    fragmentId: node.scopeToken || node.fragmentId,
     componentRegistry: props.componentRegistry,
   }
 
@@ -1011,7 +1015,7 @@ const RawElementNodeRenderer = (
           <LinkButton
             element={linkButtonProto}
             widgetMgr={props.widgetMgr}
-            fragmentId={node.fragmentId}
+            fragmentId={node.scopeToken || node.fragmentId}
           />
         </ElementContainer>
       )

@@ -54,6 +54,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
     from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
+    from streamlit.runtime.signal import SignalStorage
     from streamlit.runtime.state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
@@ -92,6 +93,10 @@ class FragmentThreadState:
     # _check_not_parallel_worker() to gate APIs that are unsafe during
     # concurrent execution (e.g. st.dialog, st.switch_page).
     is_parallel_worker: bool = False
+    # Set by register_widget() when a widget's callback is a Signal or a
+    # fragment function; enqueue_message() stamps it onto the widget's
+    # outgoing delta as Delta.scope_token. Cleared after first use.
+    pending_scope_token: str | None = None
 
 
 class _FragmentThreadStateFields(TypedDict, total=False):
@@ -108,11 +113,22 @@ class _FragmentThreadStateFields(TypedDict, total=False):
     active_script_hash: str
     pre_allocated_container_fragment_id: str | None
     is_parallel_worker: bool
+    pending_scope_token: str | None
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(
     "fragment_thread_state",
 )
+
+
+def _default_signal_storage() -> SignalStorage:
+    # Imported lazily: streamlit.runtime.signal imports this module for
+    # get_script_run_ctx, so a module-level import would be circular. The
+    # production code path passes the session-owned storage explicitly; this
+    # default keeps mock/test contexts working in isolation.
+    from streamlit.runtime.signal import MemorySignalStorage
+
+    return MemorySignalStorage()
 
 
 class ThreadState:
@@ -218,6 +234,20 @@ class ScriptRunContext:
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
     parallel_coordinator: ParallelFragmentCoordinator | None = None
+    # Session-scoped signal state and watcher subscriptions (st.signal). The
+    # production path passes the AppSession-owned storage; the default keeps
+    # isolated contexts (tests, mocks) functional.
+    signal_storage: SignalStorage = field(default_factory=_default_signal_storage)
+    # Signal keys created via st.signal during the current run; used for the
+    # duplicate-key check and, at the end of full runs, for lifecycle
+    # reconciliation of the signal storage.
+    signal_keys_declared_this_run: set[str] = field(default_factory=set)
+    # Signals that fired during the current pass (once-per-pass coalescing
+    # and cycle detection).
+    signals_fired_this_pass: set[str] = field(default_factory=set)
+    # Fragment ids already picked up by the fragment queue loop this pass;
+    # Signal.send() dedups appended watchers against this set.
+    fragment_ids_consumed: set[str] = field(default_factory=set)
 
     def __post_init__(self) -> None:
         # Capture the main script thread's identity so reset() can refuse to
@@ -276,6 +306,11 @@ class ScriptRunContext:
         self.fragment_ids_this_run = fragment_ids_this_run
         self.has_dialog_opened = False
         self.cached_message_hashes = frozenset(cached_message_hashes or ())
+        # Per-run signal bookkeeping; signal_storage itself persists across
+        # runs (it is session-scoped, like fragment_storage).
+        self.signal_keys_declared_this_run = set()
+        self.signals_fired_this_pass = set()
+        self.fragment_ids_consumed = set()
 
         in_cached_function.set(False)
 
@@ -457,7 +492,14 @@ def enqueue_message(msg: ForwardMsg) -> None:
         raise NoSessionContext()
 
     ts = ThreadState.get()
-    if ts.fragment_id and msg.WhichOneof("type") == "delta":
-        msg.delta.fragment_id = ts.fragment_id
+    if msg.WhichOneof("type") == "delta":
+        if ts.fragment_id:
+            msg.delta.fragment_id = ts.fragment_id
+        if ts.pending_scope_token:
+            # Consume the scope token stashed by register_widget(): the next
+            # delta after a widget registration is that widget's own element
+            # (registration and enqueue happen back-to-back on this thread).
+            msg.delta.scope_token = ts.pending_scope_token
+            ThreadState.update(pending_scope_token=None)
 
     ctx.enqueue(msg)

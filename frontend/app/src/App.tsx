@@ -96,6 +96,7 @@ import {
   isKeyboardEventFromEditableTarget,
   isPaddingDisplayed,
   isPresetTheme,
+  isScopeToken,
   isScrollingHidden,
   isToolbarDisplayed,
   IToolbarItem,
@@ -1991,6 +1992,13 @@ export class App extends PureComponent<Props, State> {
     const cachedMessageHashes =
       this.connectionManager?.getCachedMessageHashes() ?? []
 
+    // Widgets whose callback is a signal or a fragment function carry a
+    // prefixed scope token through the fragment id plumbing. Split it back
+    // out into its own ClientState field so the server resolves it into the
+    // watcher fragment queue instead of treating it as a fragment id.
+    const isTokenScopedRerun =
+      fragmentId !== undefined && isScopeToken(fragmentId)
+
     this.sendBackMsg(
       new BackMsg({
         rerunScript: {
@@ -1998,7 +2006,8 @@ export class App extends PureComponent<Props, State> {
           widgetStates,
           pageScriptHash,
           pageName,
-          fragmentId,
+          fragmentId: isTokenScopedRerun ? undefined : fragmentId,
+          scopeToken: isTokenScopedRerun ? fragmentId : undefined,
           isAutoRerun,
           cachedMessageHashes,
           contextInfo,

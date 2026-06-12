@@ -218,6 +218,39 @@ class ScriptRunContextTest(unittest.TestCase):
         )
         assert fake_enqueue_result["msg"].delta.fragment_id == "my_fragment_id"
 
+    def test_enqueue_message_consumes_pending_scope_token(self):
+        """A pending scope token (stashed by register_widget) is stamped onto
+        the next delta only and cleared afterwards."""
+        enqueued_msgs: list[ForwardMsg] = []
+
+        ctx = _create_script_run_context(enqueued_msgs.append)
+        add_script_run_ctx(ctx=ctx)
+        ThreadState.update(pending_scope_token="signal:my_key")
+
+        widget_msg = ForwardMsg()
+        widget_msg.delta.new_element.checkbox.label = "the widget"
+        enqueue_message(widget_msg)
+
+        next_msg = ForwardMsg()
+        next_msg.delta.new_element.markdown.body = "the next element"
+        enqueue_message(next_msg)
+
+        assert enqueued_msgs[0].delta.scope_token == "signal:my_key"
+        assert enqueued_msgs[1].delta.scope_token == ""
+        assert ThreadState.get().pending_scope_token is None
+
+    def test_enqueue_non_delta_message_keeps_pending_scope_token(self):
+        """Non-delta messages don't consume the pending scope token."""
+        ctx = _create_script_run_context(lambda _msg: None)
+        add_script_run_ctx(ctx=ctx)
+        ThreadState.update(pending_scope_token="signal:my_key")
+
+        msg = ForwardMsg()
+        msg.page_config_changed.title = "foo"
+        enqueue_message(msg)
+
+        assert ThreadState.get().pending_scope_token == "signal:my_key"
+
     def test_run_with_active_hash(self):
         """Ensure the active script is set correctly"""
         pages_manager = PagesManager("")

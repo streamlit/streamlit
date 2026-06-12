@@ -40,6 +40,14 @@ export class ElementNode implements AppNode {
   // The hash of this element's payload for content-based deduplication.
   public readonly elementHash?: string
 
+  /**
+   * The widget's scope token (Delta.scope_token): set when the widget's
+   * callback is a Signal or a fragment function. When present, it replaces
+   * fragmentId as the scope of the rerun requests the widget triggers
+   * (fragmentId keeps its element-cleanup role).
+   */
+  public readonly scopeToken?: string
+
   /** Create a new ElementNode. */
   public constructor(
     element: Element,
@@ -47,7 +55,8 @@ export class ElementNode implements AppNode {
     scriptRunId: string,
     activeScriptHash: string,
     fragmentId?: string,
-    elementHash?: string
+    elementHash?: string,
+    scopeToken?: string
   ) {
     this.element = element
     this.metadata = metadata
@@ -55,6 +64,7 @@ export class ElementNode implements AppNode {
     this.activeScriptHash = activeScriptHash
     this.fragmentId = fragmentId
     this.elementHash = elementHash
+    this.scopeToken = scopeToken
   }
 
   /**

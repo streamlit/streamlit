@@ -49,6 +49,12 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.runtime.signal import (
+    FRAGMENT_FN_SCOPE_TOKEN_PREFIX,
+    SIGNAL_SCOPE_TOKEN_PREFIX,
+    MemorySignalStorage,
+    SignalStorage,
+)
 from streamlit.runtime.theme_util import parse_fonts_with_source
 from streamlit.string_util import to_snake_case
 from streamlit.version import STREAMLIT_VERSION_STRING
@@ -193,6 +199,7 @@ class AppSession:
         self._debug_last_backmsg_id: str | None = None
 
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
+        self._signal_storage: SignalStorage = MemorySignalStorage()
 
         self._backend_operation_dispatcher = self._create_backend_operation_dispatcher()
 
@@ -450,12 +457,22 @@ class AppSession:
             if client_state.HasField("context_info"):
                 self._client_state.context_info.CopyFrom(client_state.context_info)
 
+            fragment_id_queue, fired_signal_keys = self._resolve_scope_token(
+                client_state.scope_token
+            )
+            _LOGGER.debug(
+                "request_rerun resolved scope_token %r to queue %r",
+                client_state.scope_token,
+                fragment_id_queue,
+            )
             rerun_data = RerunData(
                 query_string=client_state.query_string,
                 widget_states=client_state.widget_states,
                 page_script_hash=client_state.page_script_hash,
                 page_name=client_state.page_name,
                 fragment_id=fragment_id or None,
+                fragment_id_queue=fragment_id_queue,
+                fired_signal_keys=fired_signal_keys,
                 is_auto_rerun=client_state.is_auto_rerun,
                 cached_message_hashes=frozenset(client_state.cached_message_hashes),
                 context_info=client_state.context_info,
@@ -467,6 +484,9 @@ class AppSession:
             if (
                 bool(config.get_option("runner.fastReruns"))
                 and not rerun_data.fragment_id
+                # Scope-token reruns are fragment runs too: they must not
+                # preempt a running script like a full rerun would.
+                and not rerun_data.fragment_id_queue
             ):
                 # If fastReruns is enabled and this is *not* a rerun of a fragment,
                 # we don't send rerun requests to our existing ScriptRunner. Instead, we
@@ -486,6 +506,60 @@ class AppSession:
         # current ScriptRunner is shutting down and cannot handle a rerun
         # request - so we'll create and start a new ScriptRunner.
         self._create_scriptrunner(rerun_data)
+
+    def _resolve_scope_token(
+        self, scope_token: str
+    ) -> tuple[list[str], frozenset[str]]:
+        """Resolve a widget's scope token into an ordered fragment id queue.
+
+        A ``signal:`` token resolves to the signal's currently registered
+        watchers, a ``fragment_fn:`` token to all currently registered
+        instances of the decorated function. Resolving at request time (rather
+        than holding fragment id lists in the browser) self-heals as watcher
+        sets change between renders. An unknown or stale token resolves to an
+        empty queue, which falls back to a full rerun: the interaction's
+        widget value must not be lost, and a full run re-syncs every watcher.
+
+        Returns the queue plus the keys of the signals that fired (so the
+        ScriptRunner can pre-mark them for cycle detection).
+        """
+        if not scope_token:
+            return [], frozenset()
+
+        if scope_token.startswith(SIGNAL_SCOPE_TOKEN_PREFIX):
+            signal_key = scope_token[len(SIGNAL_SCOPE_TOKEN_PREFIX) :]
+            watchers = [
+                fragment_id
+                for fragment_id in self._signal_storage.watchers(signal_key)
+                if self._fragment_storage.contains(fragment_id)
+            ]
+            if not watchers:
+                _LOGGER.info(
+                    "The signal with key %s has no registered watchers - "
+                    "falling back to a full rerun.",
+                    signal_key,
+                )
+                return [], frozenset()
+            return watchers, frozenset({signal_key})
+
+        if scope_token.startswith(FRAGMENT_FN_SCOPE_TOKEN_PREFIX):
+            function_hash = scope_token[len(FRAGMENT_FN_SCOPE_TOKEN_PREFIX) :]
+            fragment_ids = self._fragment_storage.fragment_ids_for_function(
+                function_hash
+            )
+            if not fragment_ids:
+                _LOGGER.info(
+                    "The fragment function with hash %s has no registered "
+                    "instances - falling back to a full rerun.",
+                    function_hash,
+                )
+            return fragment_ids, frozenset()
+
+        _LOGGER.warning(
+            "Received an unrecognized scope token %s - falling back to a full rerun.",
+            scope_token,
+        )
+        return [], frozenset()
 
     def request_script_stop(self) -> None:
         """Request that the scriptrunner stop execution.
@@ -510,6 +584,7 @@ class AppSession:
             initial_rerun_data=initial_rerun_data,
             user_info=self._user_info,
             fragment_storage=self._fragment_storage,
+            signal_storage=self._signal_storage,
             pages_manager=self._pages_manager,
             on_script_error=self._on_script_error,
             local_sources_watcher=self._local_sources_watcher,

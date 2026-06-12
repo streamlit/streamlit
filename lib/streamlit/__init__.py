@@ -130,6 +130,7 @@ from streamlit.runtime.connection_factory import (
 )
 from streamlit.runtime.fragment import fragment as _fragment
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
+from streamlit.runtime.signal import signal as _signal
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
 from streamlit.runtime.context import ContextProxy as _ContextProxy
 from streamlit.runtime.state import (
@@ -295,6 +296,9 @@ connection = _connection
 # Fragment and dialog
 dialog = _dialog_decorator
 fragment = _fragment
+
+# Signal
+signal = _signal
 
 
 # Auth

@@ -35,5 +35,11 @@ message Delta {
 
   string fragment_id = 8;
 
+  // Set on a widget's delta when its callback is a Signal or a fragment
+  // function. Interacting with the widget then requests a rerun scoped to
+  // the server-resolved group (e.g. "signal:<key>" or "fragment_fn:<hash>")
+  // instead of a full rerun or a rerun of the enclosing fragment.
+  string scope_token = 10;
+
   reserved 5, 7;
 }

@@ -420,7 +420,10 @@ function getMockConnectionManagerProp(
   return getStoredValue<ConnectionManager>(ConnectionManager).props[propName]
 }
 
-type DeltaWithElement = Omit<Delta, "fragmentId" | "newElement" | "toJSON"> & {
+type DeltaWithElement = Omit<
+  Delta,
+  "fragmentId" | "scopeToken" | "newElement" | "toJSON"
+> & {
   newElement: Omit<Element, "toJSON">
 }
 
@@ -1997,7 +2000,34 @@ describe("App", () => {
         // @ts-expect-error
         connectionManager.sendMessage.mock.calls[1][0].rerunScript.fragmentId
       ).toBe("myFragmentId")
+      // A plain fragment id must not be routed to scopeToken.
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[1][0].rerunScript.scopeToken
+      ).toBe(undefined)
     })
+
+    it.each(["signal:my_key", "fragment_fn:abc123"])(
+      "routes the scope token %s to scopeToken instead of fragmentId in BackMsg",
+      scopeToken => {
+        renderApp(getProps())
+
+        const widgetStateManager =
+          getStoredValue<WidgetStateManager>(WidgetStateManager)
+        const connectionManager = getMockConnectionManager()
+
+        // Widgets whose callback is a signal or a fragment function carry
+        // their server-issued scope token through the fragmentId plumbing.
+        widgetStateManager.sendUpdateWidgetsMessage(scopeToken)
+        expect(connectionManager.sendMessage).toBeCalledTimes(1)
+
+        const rerunScript =
+          // @ts-expect-error
+          connectionManager.sendMessage.mock.calls[0][0].rerunScript
+        expect(rerunScript.scopeToken).toBe(scopeToken)
+        expect(rerunScript.fragmentId).toBe(undefined)
+      }
+    )
 
     it("extracts the pageName as an empty string if we can't get a pageScriptHash (main page)", () => {
       renderApp(getProps())

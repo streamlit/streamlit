@@ -75,6 +75,7 @@ NON_ELEMENT_COMMANDS: set[str] = {
     "set_option",
     "set_page_config",
     "sidebar",
+    "signal",
     "stop",
     "switch_page",
     "user",

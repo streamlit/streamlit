@@ -39,6 +39,56 @@ if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner import ScriptRunContext
 
 
+def _detect_scoped_callback(
+    on_change_handler: WidgetCallback,
+    args: WidgetArgs | None,
+    kwargs: WidgetKwargs | None,
+) -> WidgetCallback | None:
+    """Detect a Signal or fragment-function callback and stash its scope token.
+
+    Direct attachment of a signal or a fragment function to a widget's
+    ``on_*`` parameter scopes the widget's rerun to the server-resolved
+    watcher queue. The token is stashed in ThreadState so enqueue_message()
+    can stamp it onto the widget's outgoing delta.
+
+    Returns the callback to store in the widget's metadata: a Signal is kept
+    (its ``__call__`` fires the signal during the callback phase), but a
+    fragment function is replaced with ``None`` — the token-scoped queue run
+    *is* the behavior, and invoking the fragment during the callback phase
+    would execute it at the wrong time and place.
+    """
+    # Imported here to avoid a circular import: streamlit.runtime.signal
+    # depends on modules that import this one.
+    from streamlit.runtime.signal import (
+        FRAGMENT_FN_SCOPE_TOKEN_PREFIX,
+        SIGNAL_SCOPE_TOKEN_PREFIX,
+        Signal,
+    )
+
+    if isinstance(on_change_handler, Signal):
+        ThreadState.update(
+            pending_scope_token=SIGNAL_SCOPE_TOKEN_PREFIX + on_change_handler.key
+        )
+        return on_change_handler
+
+    fragment_function_hash = getattr(
+        on_change_handler, "_st_fragment_function_hash", None
+    )
+    if fragment_function_hash is not None:
+        if args or kwargs:
+            raise StreamlitAPIException(
+                "`args` and `kwargs` are not supported when a fragment "
+                "function is used as a widget callback. The fragment reruns "
+                "with the arguments from its original call site."
+            )
+        ThreadState.update(
+            pending_scope_token=FRAGMENT_FN_SCOPE_TOKEN_PREFIX + fragment_function_hash
+        )
+        return None
+
+    return on_change_handler
+
+
 def register_widget(
     element_id: str,
     *,
@@ -155,6 +205,9 @@ def register_widget(
                 "clearable must be explicitly set when bind='query-params'. "
                 "This is required for correct empty value handling."
             )
+
+    if on_change_handler is not None and ctx is not None:
+        on_change_handler = _detect_scoped_callback(on_change_handler, args, kwargs)
 
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(

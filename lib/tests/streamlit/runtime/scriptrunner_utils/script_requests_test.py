@@ -183,6 +183,47 @@ class ScriptRequestsTest(unittest.TestCase):
             "my_fragment3",
         ]
 
+    def test_request_rerun_unions_fragment_id_queues(self):
+        """Two in-flight queue reruns (e.g. scope-token reruns) must not drop
+        each other's fragments: queues are unioned in order, without dupes."""
+        reqs = ScriptRequests()
+
+        reqs.request_rerun(
+            RerunData(
+                fragment_id_queue=["watcher1", "watcher2"],
+                fired_signal_keys=frozenset({"sig_a"}),
+            )
+        )
+        reqs.request_rerun(
+            RerunData(
+                fragment_id_queue=["watcher2", "watcher3"],
+                fired_signal_keys=frozenset({"sig_b"}),
+            )
+        )
+
+        assert reqs._rerun_data.fragment_id_queue == [
+            "watcher1",
+            "watcher2",
+            "watcher3",
+        ]
+        assert reqs._rerun_data.fired_signal_keys == frozenset({"sig_a", "sig_b"})
+
+    def test_request_rerun_full_rerun_drops_fired_signal_keys(self):
+        """A full rerun supersedes a pending signal pass: both the queue and
+        the fired signal keys are cleared."""
+        reqs = ScriptRequests()
+
+        reqs.request_rerun(
+            RerunData(
+                fragment_id_queue=["watcher1"],
+                fired_signal_keys=frozenset({"sig_a"}),
+            )
+        )
+        reqs.request_rerun(RerunData())
+
+        assert reqs._rerun_data.fragment_id_queue == []
+        assert reqs._rerun_data.fired_signal_keys == frozenset()
+
     def test_request_rerun_appends_clears_fragment_queue_on_full_rerun(self):
         reqs = ScriptRequests()
         reqs.request_rerun(

@@ -685,6 +685,28 @@ describe("AppRoot", () => {
       expect(newNode.fragmentId).toBe("myFragmentId")
     })
 
+    it("can set scopeToken alongside fragmentId in 'newElement' deltas", () => {
+      const delta = makeProto(DeltaProto, {
+        newElement: { text: { body: "newElement!" } },
+        fragmentId: "myFragmentId",
+        scopeToken: "signal:my_key",
+      })
+      const newRoot = ROOT.applyDelta(
+        "new_session_id",
+        delta,
+        forwardMsgMetadata([0, 1, 1])
+      )
+
+      const newNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        newRoot.main,
+        [1, 1]
+      ) as ElementNode
+      // The scope token doesn't replace the fragmentId on the node;
+      // fragmentId keeps its element-cleanup role.
+      expect(newNode.scopeToken).toBe("signal:my_key")
+      expect(newNode.fragmentId).toBe("myFragmentId")
+    })
+
     it("can set fragmentId in 'addBlock' deltas", () => {
       const delta = makeProto(DeltaProto, {
         addBlock: {},

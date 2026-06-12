@@ -50,6 +50,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
+from streamlit.runtime.signal import MemorySignalStorage, Signal
 from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
@@ -904,8 +905,132 @@ class FragmentTest(unittest.TestCase):
         )
         mock_show.assert_called_once_with(test_exception)
 
+    def _make_signal_ctx(self) -> MagicMock:
+        """Create a mock ScriptRunContext with real fragment/signal storages."""
+        ctx = MagicMock()
+        ctx.cursors = {}
+        ctx.fragment_ids_this_run = []
+        ctx.shared = SharedRunState()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.signal_storage = MemorySignalStorage()
+        return ctx
 
-# TESTS FOR WRITING TO CONTAINERS OUTSIDE AND INSIDE OF FRAGMENT
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_watch_registers_fragment_as_watcher(self, patched_get_script_run_ctx):
+        """@st.fragment(watch=sig) subscribes the fragment when it executes."""
+        ctx = self._make_signal_ctx()
+        patched_get_script_run_ctx.return_value = ctx
+
+        sig = Signal("country", "US")
+
+        @fragment(watch=sig)
+        def my_fragment():
+            pass
+
+        my_fragment()
+
+        watcher_ids = ctx.signal_storage.watchers("country")
+        assert len(watcher_ids) == 1
+        assert ctx.fragment_storage.contains(watcher_ids[0])
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_watch_list_subscribes_to_all_signals(self, patched_get_script_run_ctx):
+        """watch=[a, b] registers the fragment with every watched signal."""
+        ctx = self._make_signal_ctx()
+        patched_get_script_run_ctx.return_value = ctx
+
+        sig_a = Signal("sig_a", 0)
+        sig_b = Signal("sig_b", 0)
+
+        @fragment(watch=[sig_a, sig_b])
+        def my_fragment():
+            pass
+
+        my_fragment()
+
+        watchers_a = ctx.signal_storage.watchers("sig_a")
+        watchers_b = ctx.signal_storage.watchers("sig_b")
+        assert len(watchers_a) == 1
+        assert watchers_a == watchers_b
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_watch_registration_follows_page_order(self, patched_get_script_run_ctx):
+        """Two watching fragments register in the order they execute."""
+        ctx = self._make_signal_ctx()
+        patched_get_script_run_ctx.return_value = ctx
+
+        sig = Signal("sig", 0)
+
+        @fragment(watch=sig)
+        def first_fragment():
+            pass
+
+        @fragment(watch=sig)
+        def second_fragment():
+            pass
+
+        first_fragment()
+        second_fragment()
+
+        watcher_ids = ctx.signal_storage.watchers("sig")
+        assert len(watcher_ids) == 2
+        assert watcher_ids[0] != watcher_ids[1]
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_watch_re_execution_does_not_duplicate_watcher(
+        self, patched_get_script_run_ctx
+    ):
+        """Re-running a watching fragment keeps a single watcher entry."""
+        ctx = self._make_signal_ctx()
+        patched_get_script_run_ctx.return_value = ctx
+
+        sig = Signal("sig", 0)
+
+        @fragment(watch=sig)
+        def my_fragment():
+            pass
+
+        # Pin the delta path so both executions compute the same fragment id,
+        # like a fragment rerun at the same call site does.
+        with patch.object(DeltaGenerator, "_get_delta_path_str", return_value="(0,)"):
+            my_fragment()
+            my_fragment()
+
+        assert len(ctx.signal_storage.watchers("sig")) == 1
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_watch_not_registered_when_fragment_does_not_execute(
+        self, patched_get_script_run_ctx
+    ):
+        """A fragment behind a false conditional is not subscribed."""
+        ctx = self._make_signal_ctx()
+        patched_get_script_run_ctx.return_value = ctx
+
+        sig = Signal("sig", 0)
+
+        @fragment(watch=sig)
+        def my_fragment():  # pragma: no cover - intentionally never called
+            pass
+
+        # The fragment function is never called (e.g. behind `if False:`).
+        assert ctx.signal_storage.watchers("sig") == []
+
+    def test_watch_rejects_non_signal_values(self):
+        """Invalid watch values fail fast at decoration time."""
+        with pytest.raises(StreamlitAPIException, match="`watch` parameter"):
+
+            @fragment(watch="not-a-signal")  # type: ignore[call-overload]
+            def my_fragment():  # pragma: no cover - decoration raises
+                pass
+
+    def test_watch_rejects_sequence_with_non_signal_entry(self):
+        """A sequence entry that isn't a Signal fails fast at decoration time."""
+        with pytest.raises(StreamlitAPIException, match="one entry is of type"):
+
+            @fragment(watch=[Signal("ok", 0), 42])  # type: ignore[list-item]
+            def my_fragment():  # pragma: no cover - decoration raises
+                pass
+
 
 APP_FUNCTION = Callable[[ELEMENT_PRODUCER], None]
 

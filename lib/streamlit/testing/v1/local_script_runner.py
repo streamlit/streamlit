@@ -25,6 +25,7 @@ from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+from streamlit.runtime.signal import MemorySignalStorage
 from streamlit.testing.v1.element_tree import ElementTree, parse_tree_from_messages
 
 if TYPE_CHECKING:
@@ -67,6 +68,7 @@ class LocalScriptRunner(ScriptRunner):
             initial_rerun_data=RerunData(),
             user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
+            signal_storage=MemorySignalStorage(),
             pages_manager=pages_manager,
         )
 

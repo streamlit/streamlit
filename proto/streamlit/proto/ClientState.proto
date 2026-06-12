@@ -38,4 +38,8 @@ message ClientState {
   // the frontend forward message cache.
   repeated string cached_message_hashes = 7;
   ContextInfo context_info = 8;
+  // The scope token of the interacted widget (Delta.scope_token), if any.
+  // The server resolves it into an ordered queue of fragments to rerun.
+  // Mutually exclusive with fragment_id.
+  string scope_token = 9;
 }

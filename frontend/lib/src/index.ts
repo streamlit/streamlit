@@ -180,6 +180,7 @@ export type {
   StPerformanceMark,
   StPerformanceMetric,
 } from "./util/performance/types"
+export { isScopeToken } from "./util/scopeToken"
 export { LocalStore } from "./util/storageUtils"
 export { getCrossOriginAttribute } from "./util/UriUtil"
 export {

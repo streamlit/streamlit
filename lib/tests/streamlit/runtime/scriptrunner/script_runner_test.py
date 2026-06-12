@@ -32,6 +32,7 @@ from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
+from streamlit.runtime import signal as signal_module
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import (
     MemoryFragmentStorage,
@@ -64,6 +65,8 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
     get_script_run_ctx,
 )
+from streamlit.runtime.signal import MemorySignalStorage, Signal
+from streamlit.runtime.state.common import WidgetMetadata
 from streamlit.runtime.state.session_state import SessionState
 from tests import testutil
 
@@ -609,6 +612,224 @@ class ScriptRunnerTest(unittest.TestCase):
         outer.assert_not_called()
         assert scriptrunner._fragment_storage.contains("outer")
         assert scriptrunner._fragment_storage.contains("inner")
+
+    def test_duplicate_ids_in_fragment_queue_run_once(self):
+        """The consumed-id set coalesces duplicate queue entries."""
+        fragment = MagicMock()
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("my_fragment", fragment)
+
+        scriptrunner.request_rerun(
+            RerunData(fragment_id_queue=["my_fragment", "my_fragment"])
+        )
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        fragment.assert_called_once()
+
+    def test_signal_send_during_callback_phase_appends_watchers_to_live_queue(self):
+        """A signal fired from a widget callback joins the in-flight pass.
+
+        The Signal itself is registered as the widget's on_change callback
+        (bare attachment), so this also covers Signal.__call__ working as a
+        plain widget callback.
+        """
+        run_order: list[str] = []
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register(
+            "trigger", lambda: run_order.append("trigger")
+        )
+        scriptrunner._fragment_storage.register("w1", lambda: run_order.append("w1"))
+        scriptrunner._fragment_storage.register("w2", lambda: run_order.append("w2"))
+
+        signal_storage = scriptrunner._signal_storage
+        signal_storage.declare("sig", 17, reset_watchers=False)
+        signal_storage.register_watcher("sig", "w1")
+        signal_storage.register_watcher("sig", "w2")
+        sig = Signal("sig", 17)
+
+        # Register a real widget whose on_change callback is the Signal, and
+        # send a changed value for it so the callback phase invokes it.
+        widget_id = "$$ID-signal-widget"
+        scriptrunner._session_state._state._new_widget_state.set_widget_metadata(
+            WidgetMetadata(
+                id=widget_id,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="int_value",
+                callback=sig,
+            )
+        )
+        widget_states = WidgetStates()
+        _create_widget(widget_id, widget_states).int_value = 5
+
+        scriptrunner.request_rerun(
+            RerunData(fragment_id_queue=["trigger"], widget_states=widget_states)
+        )
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        # A single fragment pass handled the trigger and both watchers, in
+        # declared order.
+        self._assert_control_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+        assert run_order == ["trigger", "w1", "w2"]
+        # The bare attachment fired with the signal state unchanged.
+        assert signal_storage.get_state("sig") == 17
+
+    def test_signal_send_in_watcher_body_chains_within_same_pass(self):
+        """A watcher that sends another signal queues its watchers in-pass."""
+        run_order: list[str] = []
+        downstream = Signal("downstream", 0)
+
+        def watcher_a() -> None:
+            run_order.append("a")
+            downstream.send("from-a")
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("a", watcher_a)
+        scriptrunner._fragment_storage.register("b", lambda: run_order.append("b"))
+
+        signal_storage = scriptrunner._signal_storage
+        signal_storage.declare("downstream", 0, reset_watchers=False)
+        signal_storage.register_watcher("downstream", "b")
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["a"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        # One fragment pass handled both the sender and its watcher.
+        self._assert_control_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+        assert run_order == ["a", "b"]
+        assert signal_storage.get_state("downstream") == "from-a"
+
+    def test_signal_send_dedups_against_already_run_fragments(self):
+        """Watchers that already ran this pass are not run again."""
+        run_order: list[str] = []
+        sig = Signal("sig", 0)
+
+        def f2() -> None:
+            run_order.append("f2")
+            sig.send(1)
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("f1", lambda: run_order.append("f1"))
+        scriptrunner._fragment_storage.register("f2", f2)
+        scriptrunner._fragment_storage.register("f3", lambda: run_order.append("f3"))
+
+        signal_storage = scriptrunner._signal_storage
+        signal_storage.declare("sig", 0, reset_watchers=False)
+        for watcher_id in ("f1", "f2", "f3"):
+            signal_storage.register_watcher("sig", watcher_id)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["f1", "f2"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        # f1 and f2 already ran (f2 was mid-run), so only f3 was appended.
+        assert run_order == ["f1", "f2", "f3"]
+
+    def test_signal_cycle_degrades_to_one_round_with_warning(self):
+        """Mutually-emitting watchers run one round instead of looping."""
+        run_order: list[str] = []
+        s1 = Signal("s1", 0)
+        s2 = Signal("s2", 0)
+
+        def frag_a() -> None:
+            run_order.append("a")
+            s2.send("from-a")
+
+        def frag_b() -> None:
+            run_order.append("b")
+            s1.send("from-b")
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("noop", lambda: None)
+        scriptrunner._fragment_storage.register("a", frag_a)
+        scriptrunner._fragment_storage.register("b", frag_b)
+
+        signal_storage = scriptrunner._signal_storage
+        signal_storage.declare("s1", 0, reset_watchers=False)
+        signal_storage.declare("s2", 0, reset_watchers=False)
+        signal_storage.register_watcher("s1", "a")
+        signal_storage.register_watcher("s2", "b")
+
+        # The pass starts as s1's cascade: a widget callback fires s1, which
+        # queues a; a emits s2 (queues b); b re-emits s1 -> cycle guard.
+        widget_id = "$$ID-cycle-widget"
+        scriptrunner._session_state._state._new_widget_state.set_widget_metadata(
+            WidgetMetadata(
+                id=widget_id,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="int_value",
+                callback=s1,
+            )
+        )
+        widget_states = WidgetStates()
+        _create_widget(widget_id, widget_states).int_value = 1
+
+        with patch.object(signal_module._LOGGER, "warning") as mock_warning:
+            scriptrunner.request_rerun(
+                RerunData(fragment_id_queue=["noop"], widget_states=widget_states)
+            )
+            scriptrunner.start()
+            scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        assert run_order == ["a", "b"]
+        assert signal_storage.get_state("s1") == "from-b"
+        mock_warning.assert_called_once()
+
+    def test_signal_full_run_drops_records_not_redeclared(self):
+        """End-of-full-run reconciliation drops stale signal records."""
+        scriptrunner = TestScriptRunner("signal_script.py")
+        signal_storage = scriptrunner._signal_storage
+        signal_storage.declare("stale", "old", reset_watchers=False)
+
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        self._assert_text_deltas(scriptrunner, ["value=0"])
+        assert signal_storage.contains("declared_signal")
+        assert not signal_storage.contains("stale")
+
+    def test_signal_fragment_pass_preserves_records(self):
+        """Fragment-only passes don't run signal lifecycle reconciliation."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("frag", MagicMock())
+
+        signal_storage = scriptrunner._signal_storage
+        signal_storage.declare("persisted", "v", reset_watchers=False)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["frag"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        assert signal_storage.contains("persisted")
+        assert signal_storage.get_state("persisted") == "v"
 
     @patch("streamlit.runtime.scriptrunner.script_runner.get_script_run_ctx")
     @patch("streamlit.runtime.fragment.handle_user_script_exception")
@@ -1463,6 +1684,7 @@ class TestScriptRunner(ScriptRunner):
             initial_rerun_data=RerunData(),
             user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
+            signal_storage=MemorySignalStorage(),
             pages_manager=PagesManager(main_script_path, script_cache),
         )
 

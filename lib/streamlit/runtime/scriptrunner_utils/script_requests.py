@@ -54,6 +54,10 @@ class RerunData:
     fragment_id: str | None = None
     # The queue of fragment_ids waiting to be run.
     fragment_id_queue: list[str] = field(default_factory=list)
+    # Keys of signals whose firing produced fragment_id_queue (scope-token
+    # reruns). The ScriptRunner pre-marks them as fired for the pass so a
+    # re-fire from within the cascade gets correct cycle-warning semantics.
+    fired_signal_keys: frozenset[str] = field(default_factory=frozenset)
     is_fragment_scoped_rerun: bool = False
     # set to true when a script is rerun by the fragment auto-rerun mechanism
     is_auto_rerun: bool = False
@@ -222,8 +226,15 @@ class ScriptRequests:
                     if new_data.fragment_id not in fragment_id_queue:
                         fragment_id_queue.append(new_data.fragment_id)
                 elif new_data.fragment_id_queue:
-                    # new_data contains a new fragment_id_queue, so we just use it.
-                    fragment_id_queue = new_data.fragment_id_queue
+                    # new_data contains a new fragment_id_queue (e.g. a scope-token
+                    # rerun). Union it with any queue already pending so that two
+                    # in-flight queue reruns don't drop each other's fragments.
+                    fragment_id_queue = [*self._rerun_data.fragment_id_queue]
+                    fragment_id_queue.extend(
+                        fragment_id
+                        for fragment_id in new_data.fragment_id_queue
+                        if fragment_id not in fragment_id_queue
+                    )
                 else:
                     # Otherwise, this is a request to rerun the full script, so we want
                     # to clear out any fragments we have queued to run since they'll all
@@ -236,6 +247,13 @@ class ScriptRequests:
                     page_script_hash=new_data.page_script_hash,
                     page_name=new_data.page_name,
                     fragment_id_queue=fragment_id_queue,
+                    # A full rerun (empty queue) supersedes any pending signal
+                    # pass, so the fired keys are dropped along with the queue.
+                    fired_signal_keys=(
+                        self._rerun_data.fired_signal_keys | new_data.fired_signal_keys
+                        if fragment_id_queue
+                        else frozenset()
+                    ),
                     cached_message_hashes=new_data.cached_message_hashes,
                     is_fragment_scoped_rerun=new_data.is_fragment_scoped_rerun,
                     is_auto_rerun=new_data.is_auto_rerun,

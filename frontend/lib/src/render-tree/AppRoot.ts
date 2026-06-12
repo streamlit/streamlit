@@ -266,7 +266,8 @@ export class AppRoot {
           metadata,
           activeScriptHash,
           delta.fragmentId,
-          elementHash
+          elementHash,
+          delta.scopeToken
         )
       }
 
@@ -418,7 +419,8 @@ export class AppRoot {
     metadata: ForwardMsgMetadata,
     activeScriptHash: string,
     fragmentId?: string,
-    elementHash?: string
+    elementHash?: string,
+    scopeToken?: string
   ): AppRoot {
     const elementNode = new ElementNode(
       element,
@@ -426,7 +428,8 @@ export class AppRoot {
       scriptRunId,
       activeScriptHash,
       fragmentId,
-      elementHash
+      elementHash,
+      scopeToken
     )
     return new AppRoot(
       this.mainScriptHash,

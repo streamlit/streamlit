@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from parameterized import parameterized
 
 from streamlit import config
 from streamlit.errors import StreamlitAPIException
@@ -345,6 +346,100 @@ class AppSessionTest(unittest.TestCase):
         # And a new ScriptRunner should *not* be created.
         mock_create_scriptrunner.assert_not_called()
 
+    @patch_config_options({"runner.fastReruns": False})
+    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
+    def test_rerun_with_signal_scope_token_resolves_watcher_queue(
+        self, mock_create_scriptrunner: MagicMock
+    ):
+        """A signal scope token resolves to the signal's registered watchers
+        (in page order, filtered to registered fragments) and carries the
+        fired signal key for cycle pre-marking."""
+        session = _create_test_session()
+        session._fragment_storage.register("watcher1", lambda: None)
+        session._fragment_storage.register("watcher2", lambda: None)
+        session._signal_storage.declare("country", "US", reset_watchers=False)
+        session._signal_storage.register_watcher("country", "watcher1")
+        session._signal_storage.register_watcher("country", "watcher2")
+        # A watcher whose fragment was dropped by a preceding full run must be
+        # filtered out of the queue.
+        session._signal_storage.register_watcher("country", "stale_watcher")
+
+        session.request_rerun(ClientState(scope_token="signal:country"))
+
+        rerun_data = mock_create_scriptrunner.call_args[0][0]
+        assert rerun_data.fragment_id_queue == ["watcher1", "watcher2"]
+        assert rerun_data.fragment_id is None
+        assert rerun_data.fired_signal_keys == frozenset({"country"})
+
+    @patch_config_options({"runner.fastReruns": False})
+    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
+    def test_rerun_with_fragment_fn_scope_token_resolves_all_instances(
+        self, mock_create_scriptrunner: MagicMock
+    ):
+        """A fragment-function scope token resolves to all currently
+        registered instances of the decorated function."""
+        session = _create_test_session()
+        session._fragment_storage.register(
+            "instance1", lambda: None, function_hash="my_function_hash"
+        )
+        session._fragment_storage.register(
+            "instance2", lambda: None, function_hash="my_function_hash"
+        )
+        session._fragment_storage.register(
+            "other", lambda: None, function_hash="other_function_hash"
+        )
+
+        session.request_rerun(ClientState(scope_token="fragment_fn:my_function_hash"))
+
+        rerun_data = mock_create_scriptrunner.call_args[0][0]
+        assert rerun_data.fragment_id_queue == ["instance1", "instance2"]
+        assert rerun_data.fired_signal_keys == frozenset()
+
+    @parameterized.expand(
+        [
+            ("unknown_signal", "signal:never_declared"),
+            ("unknown_fragment_fn", "fragment_fn:never_registered"),
+            ("unrecognized_prefix", "garbage-token"),
+        ]
+    )
+    @patch_config_options({"runner.fastReruns": False})
+    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
+    def test_rerun_with_stale_scope_token_falls_back_to_full_rerun(
+        self, _name: str, scope_token: str, mock_create_scriptrunner: MagicMock
+    ):
+        """An unknown or stale scope token must not lose the interaction:
+        it falls back to a full rerun (empty fragment_id_queue)."""
+        session = _create_test_session()
+
+        session.request_rerun(ClientState(scope_token=scope_token))
+
+        rerun_data = mock_create_scriptrunner.call_args[0][0]
+        assert rerun_data.fragment_id_queue == []
+        assert rerun_data.fragment_id is None
+        assert rerun_data.fired_signal_keys == frozenset()
+
+    @patch_config_options({"runner.fastReruns": True})
+    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
+    def test_rerun_scope_token_does_not_preempt_running_script(
+        self, mock_create_scriptrunner: MagicMock
+    ):
+        """With fastReruns enabled, a scope-token rerun is a fragment run and
+        must not stop the running script like a full rerun would."""
+        session = _create_test_session()
+        session._fragment_storage.register("watcher1", lambda: None)
+        session._signal_storage.declare("country", "US", reset_watchers=False)
+        session._signal_storage.register_watcher("country", "watcher1")
+
+        mock_active_scriptrunner = MagicMock(spec=ScriptRunner)
+        mock_active_scriptrunner.request_rerun = MagicMock(return_value=True)
+        session._scriptrunner = mock_active_scriptrunner
+
+        session.request_rerun(ClientState(scope_token="signal:country"))
+
+        mock_active_scriptrunner.request_rerun.assert_called_once()
+        mock_active_scriptrunner.request_stop.assert_not_called()
+        mock_create_scriptrunner.assert_not_called()
+
     @patch("streamlit.runtime.app_session.ScriptRunner")
     def test_create_scriptrunner(self, mock_scriptrunner: MagicMock):
         """Test that _create_scriptrunner does what it should."""
@@ -363,6 +458,7 @@ class AppSessionTest(unittest.TestCase):
             initial_rerun_data=RerunData(),
             user_info={"email": "test@example.com"},
             fragment_storage=session._fragment_storage,
+            signal_storage=session._signal_storage,
             pages_manager=session._pages_manager,
             on_script_error=None,
             local_sources_watcher=session._local_sources_watcher,

@@ -18,7 +18,7 @@ import contextlib
 import inspect
 import threading
 from abc import abstractmethod
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from datetime import timedelta
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.signal import Signal
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -74,6 +75,37 @@ def _check_not_parallel_worker(api_name: str) -> None:
 
 F = TypeVar("F", bound=Callable[..., Any])
 Fragment = Callable[[], Any]
+
+
+def _normalize_watch(watch: object) -> tuple[Signal[Any], ...]:
+    """Validate the ``watch`` parameter and normalize it to a tuple of signals.
+
+    Typed as ``object`` because this is the runtime guard against invalid
+    values that the annotations can't prevent (e.g. plain strings).
+    """
+    # Imported here because streamlit.runtime.signal imports this module at
+    # module level (a module-level import would be circular).
+    from streamlit.runtime.signal import Signal
+
+    if watch is None:
+        return ()
+    if isinstance(watch, Signal):
+        return (watch,)
+    if isinstance(watch, Sequence) and not isinstance(watch, (str, bytes)):
+        watch_signals = tuple(watch)
+        for entry in watch_signals:
+            if not isinstance(entry, Signal):
+                raise StreamlitAPIException(
+                    "The `watch` parameter of `st.fragment` must be a signal "
+                    "created by `st.signal` or a sequence of such signals, "
+                    f"but one entry is of type `{type(entry).__name__}`."
+                )
+        return watch_signals
+    raise StreamlitAPIException(
+        "The `watch` parameter of `st.fragment` must be a signal created by "
+        "`st.signal` or a sequence of such signals, but got type "
+        f"`{type(watch).__name__}`."
+    )
 
 
 class FragmentStorage(Protocol):
@@ -112,6 +144,7 @@ class FragmentStorage(Protocol):
         fragment: Fragment,
         *,
         parent_fragment_id: str | None = None,
+        function_hash: str | None = None,
     ) -> None:
         """Store a fragment definition.
 
@@ -121,6 +154,21 @@ class FragmentStorage(Protocol):
         parent_fragment_id
             The fragment id of the enclosing ``@st.fragment`` when this fragment is
             nested, or ``None`` for a top-level fragment.
+
+        function_hash
+            A hash identifying the decorated function across all of its call
+            sites, or ``None``. Used to resolve a fragment function passed as
+            a widget callback to all of its registered instances.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def fragment_ids_for_function(self, function_hash: str) -> list[str]:
+        """Return the registered fragment ids sharing the given function hash,
+        in registration (page) order. Returns an empty list for unknown hashes.
+
+        May be called from non-script threads (e.g. the event loop), like
+        ``contains``.
         """
         raise NotImplementedError
 
@@ -192,6 +240,12 @@ class MemoryFragmentStorage(FragmentStorage):
         self._parent_by_id: dict[str, str | None] = {}
         self._registration_sequence_by_id: dict[str, int] = {}
         self._registration_sequence = 0
+        # Secondary index resolving a decorated function to all of its
+        # registered instances. The two maps are kept in sync: every id in an
+        # _ids_by_function_hash list has the matching _function_hash_by_id
+        # entry, and vice versa.
+        self._function_hash_by_id: dict[str, str] = {}
+        self._ids_by_function_hash: dict[str, list[str]] = {}
 
     def _iter_ancestor_ids(self, fragment_id: str) -> Iterator[str]:
         """Yield ancestors from the immediate parent outward.
@@ -214,6 +268,15 @@ class MemoryFragmentStorage(FragmentStorage):
         del self._fragments[fragment_id]
         self._parent_by_id.pop(fragment_id, None)
         self._registration_sequence_by_id.pop(fragment_id, None)
+        self._remove_from_function_index(fragment_id)
+
+    def _remove_from_function_index(self, fragment_id: str) -> None:
+        function_hash = self._function_hash_by_id.pop(fragment_id, None)
+        if function_hash is not None:
+            function_ids = self._ids_by_function_hash[function_hash]
+            function_ids.remove(fragment_id)
+            if not function_ids:
+                del self._ids_by_function_hash[function_hash]
 
     def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
         with self._lock:
@@ -236,12 +299,23 @@ class MemoryFragmentStorage(FragmentStorage):
         fragment: Fragment,
         *,
         parent_fragment_id: str | None = None,
+        function_hash: str | None = None,
     ) -> None:
         with self._lock:
             self._registration_sequence += 1
             self._fragments[key] = fragment
             self._parent_by_id[key] = parent_fragment_id
             self._registration_sequence_by_id[key] = self._registration_sequence
+
+            if self._function_hash_by_id.get(key) != function_hash:
+                self._remove_from_function_index(key)
+            if function_hash is not None:
+                self._function_hash_by_id[key] = function_hash
+                function_ids = self._ids_by_function_hash.setdefault(function_hash, [])
+                # A re-registration (fragment-only passes) keeps its existing
+                # position so the list stays in page order.
+                if key not in function_ids:
+                    function_ids.append(key)
 
     def clear_stale_descendants(
         self,
@@ -305,6 +379,10 @@ class MemoryFragmentStorage(FragmentStorage):
 
             return ordered_fragment_ids
 
+    def fragment_ids_for_function(self, function_hash: str) -> list[str]:
+        with self._lock:
+            return list(self._ids_by_function_hash.get(function_hash, ()))
+
     def delete(self, key: str) -> None:
         with self._lock:
             try:
@@ -335,6 +413,7 @@ def _fragment(
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
     additional_hash_info: str = "",
+    watch: Signal[Any] | Sequence[Signal[Any]] | None = None,
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
@@ -350,10 +429,22 @@ def _fragment(
                 func=f,
                 run_every=run_every,
                 parallel=parallel,
+                watch=watch,
             )
 
         return wrapper
     non_optional_func: F = func
+
+    # Validate eagerly so a bad `watch` value fails at decoration time.
+    watch_signals = _normalize_watch(watch)
+
+    # Identifies the decorated function across all of its call sites (the
+    # fragment id additionally hashes the delta path, so one function can
+    # register many instances). Widgets use this hash to resolve a fragment
+    # function passed as a callback to all of its registered instances.
+    function_hash = calc_hash(
+        f"{non_optional_func.__module__}.{get_object_name(non_optional_func)}"
+    )
 
     @wraps(non_optional_func)
     def wrap(*args: Any, **kwargs: Any) -> Any:
@@ -459,7 +550,15 @@ def _fragment(
             fragment_id,
             wrapped_fragment,
             parent_fragment_id=parent_fragment_id_at_def,
+            function_hash=function_hash,
         )
+
+        # Subscribe this fragment instance to its watched signals at the same
+        # moment it registers in FragmentStorage. Full app runs rebuild the
+        # watcher lists from scratch (st.signal resets them at declaration);
+        # fragment-only passes re-register without duplicating entries.
+        for watched_signal in watch_signals:
+            watched_signal._register_watcher(ctx, fragment_id)
 
         if run_every:
             msg = ForwardMsg()
@@ -480,6 +579,12 @@ def _fragment(
         wrap.__dict__.update(non_optional_func.__dict__)
         wrap.__signature__ = inspect.signature(non_optional_func)  # type: ignore
 
+    # Marks the wrapper as a fragment function so register_widget() detects it
+    # when passed as a widget callback (e.g. on_click=my_fragment). Set after
+    # the __dict__.update above so the wrapped function's own attributes can't
+    # clobber it.
+    wrap._st_fragment_function_hash = function_hash  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+
     return wrap
 
 
@@ -489,6 +594,7 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
+    watch: Signal[Any] | Sequence[Signal[Any]] | None = None,
 ) -> F: ...
 
 
@@ -500,6 +606,7 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
+    watch: Signal[Any] | Sequence[Signal[Any]] | None = None,
 ) -> Callable[[F], F]: ...
 
 
@@ -509,6 +616,7 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
+    watch: Signal[Any] | Sequence[Signal[Any]] | None = None,
 ) -> Callable[[F], F] | F:
     """Decorator to turn a function into a fragment which can rerun independently\
     of the full app.
@@ -592,6 +700,17 @@ def fragment(
             unsynchronized mutations of shared mutable resources across fragments
             unless you coordinate access explicitly.
 
+    watch : Signal, Sequence of Signal, or None
+        One or more signals created by ``st.signal`` that this fragment
+        watches. If this is ``None`` (default), the fragment doesn't watch
+        any signal. When a watched signal fires, the fragment reruns in
+        place, in page order with the other watchers of that signal.
+
+        The subscription registers when the fragment executes, so a fragment
+        behind a false conditional is not subscribed. ``parallel=True``
+        watchers currently execute sequentially during signal-triggered
+        passes.
+
     Examples
     --------
     The following example demonstrates basic usage of
@@ -673,7 +792,7 @@ def fragment(
         height: 400px
 
     """
-    return _fragment(func, run_every=run_every, parallel=parallel)
+    return _fragment(func, run_every=run_every, parallel=parallel, watch=watch)
 
 
 def _dispatch_parallel_fragment(

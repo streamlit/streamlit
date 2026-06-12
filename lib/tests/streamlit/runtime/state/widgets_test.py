@@ -30,8 +30,13 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime.fragment import fragment
 from streamlit.runtime.scriptrunner_utils.script_requests import _coalesce_widget_states
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
+    get_script_run_ctx,
+)
+from streamlit.runtime.signal import Signal
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
     ValueFieldName,
@@ -721,6 +726,105 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
             bind=None,
         )
         assert result is not None
+
+
+class ScopedCallbackDetectionTest(DeltaGeneratorTestCase):
+    """Direct attachment of a Signal / fragment function as a widget callback."""
+
+    def test_signal_callback_is_kept_and_stamps_scope_token_on_delta(self):
+        """A Signal callback stays the stored callback and tags the widget's
+        delta with its signal scope token."""
+        sig = Signal("my_signal", 0)
+
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register_widget_from_metadata:
+            st.checkbox("checkbox", on_change=sig)
+
+        metadata = patched_register_widget_from_metadata.call_args[0][0]
+        assert metadata.callback is sig
+        assert self.get_delta_from_queue().scope_token == "signal:my_signal"
+
+    def test_scope_token_is_consumed_by_the_widget_delta_only(self):
+        """The pending scope token is cleared once stamped, so the next
+        element's delta doesn't inherit it."""
+        sig = Signal("my_signal", 0)
+
+        st.checkbox("checkbox", on_change=sig)
+        st.text("after the widget")
+
+        assert self.get_delta_from_queue(0).scope_token == "signal:my_signal"
+        assert self.get_delta_from_queue(1).scope_token == ""
+        assert ThreadState.get().pending_scope_token is None
+
+    def test_fragment_fn_callback_is_nulled_and_stamps_scope_token(self):
+        """A fragment-function callback is not stored (the token-scoped queue
+        run is the behavior) and tags the widget's delta with its token."""
+
+        @fragment
+        def my_fragment():  # pragma: no cover - never invoked in this test
+            pass
+
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register_widget_from_metadata:
+            st.button("button", on_click=my_fragment)
+
+        metadata = patched_register_widget_from_metadata.call_args[0][0]
+        assert metadata.callback is None
+        function_hash = my_fragment._st_fragment_function_hash
+        assert self.get_delta_from_queue().scope_token == f"fragment_fn:{function_hash}"
+
+    @parameterized.expand([("args", {"args": (1,)}), ("kwargs", {"kwargs": {"x": 1}})])
+    def test_fragment_fn_callback_rejects_args_and_kwargs(
+        self, _name: str, extra_kwargs: dict
+    ):
+        """args/kwargs with a fragment-function callback raise: the fragment
+        reruns with the arguments from its original call site."""
+
+        @fragment
+        def my_fragment(x=None):  # pragma: no cover - registration raises
+            pass
+
+        with pytest.raises(
+            errors.StreamlitAPIException,
+            match="`args` and `kwargs` are not supported",
+        ):
+            st.button("button", on_click=my_fragment, **extra_kwargs)
+
+    def test_plain_callback_does_not_set_scope_token(self):
+        """Ordinary callbacks keep today's behavior: stored unchanged, no
+        scope token on the widget's delta."""
+
+        def plain_callback():  # pragma: no cover - never invoked in this test
+            pass
+
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register_widget_from_metadata:
+            st.checkbox("checkbox", on_change=plain_callback)
+
+        metadata = patched_register_widget_from_metadata.call_args[0][0]
+        assert metadata.callback is plain_callback
+        assert self.get_delta_from_queue().scope_token == ""
+
+    def test_detection_skipped_without_script_run_context(self):
+        """With ctx=None (bare script), no token is stashed in ThreadState."""
+        sig = Signal("my_signal", 0)
+
+        register_widget(
+            "el_id",
+            deserializer=lambda x: x,
+            serializer=lambda x: x,
+            ctx=None,
+            on_change_handler=sig,
+            value_type="bool_value",
+        )
+
+        assert ThreadState.get().pending_scope_token is None
 
 
 @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))

@@ -70,6 +70,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
         OnScriptErrorHandler,
     )
+    from streamlit.runtime.signal import SignalStorage
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
     from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
@@ -181,6 +182,7 @@ class ScriptRunner:
         initial_rerun_data: RerunData,
         user_info: UserInfoType,
         fragment_storage: FragmentStorage,
+        signal_storage: SignalStorage,
         pages_manager: PagesManager,
         on_script_error: OnScriptErrorHandler | None = None,
         local_sources_watcher: LocalSourcesWatcher | None = None,
@@ -223,6 +225,10 @@ class ScriptRunner:
         fragment_storage
             The AppSession's FragmentStorage instance.
 
+        signal_storage
+            The AppSession's SignalStorage instance (st.signal state and
+            watcher subscriptions).
+
         on_script_error
             Callback to invoke when an uncaught exception occurs in user script code.
             Returns True to suppress the default exception display, or False/None
@@ -242,6 +248,7 @@ class ScriptRunner:
         self._script_cache = script_cache
         self._user_info = user_info
         self._fragment_storage = fragment_storage
+        self._signal_storage = signal_storage
         self._on_script_error = on_script_error
 
         self._pages_manager = pages_manager
@@ -403,6 +410,7 @@ class ScriptRunner:
             user_info=self._user_info,
             gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
             fragment_storage=self._fragment_storage,
+            signal_storage=self._signal_storage,
             pages_manager=self._pages_manager,
             context_info=None,
             on_script_error=self._on_script_error,
@@ -624,6 +632,10 @@ class ScriptRunner:
                 context_info=rerun_data.context_info,
                 yield_check=self._maybe_handle_execution_control_request,
             )
+            # Pre-mark the signals whose firing produced this pass's queue so
+            # that a re-fire from within their own cascade gets correct
+            # cycle-warning semantics.
+            ctx.signals_fired_this_pass.update(rerun_data.fired_signal_keys)
             with self._join_wake_lock:
                 self._join_wake_coordinator = ctx.parallel_coordinator
 
@@ -713,7 +725,21 @@ class ScriptRunner:
                     ctx.on_script_start()
 
                     if fragment_ids_this_run:
-                        for fragment_id in fragment_ids_this_run:
+                        # `fragment_ids_this_run` is the same list object as
+                        # `ctx.fragment_ids_this_run`. Signal.send() appends
+                        # watcher fragment ids to it mid-pass — during the
+                        # callback phase above or from watcher bodies — so we
+                        # consume it by index instead of snapshotting it.
+                        # `ctx.fragment_ids_consumed` dedups ids that end up
+                        # queued more than once.
+                        queue_index = 0
+                        while queue_index < len(fragment_ids_this_run):
+                            fragment_id = fragment_ids_this_run[queue_index]
+                            queue_index += 1
+                            if fragment_id in ctx.fragment_ids_consumed:
+                                continue
+                            ctx.fragment_ids_consumed.add(fragment_id)
+
                             registration_sequence_before = (
                                 self._fragment_storage.registration_sequence()
                             )
@@ -797,6 +823,13 @@ class ScriptRunner:
                             raise
                         self._fragment_storage.clear(
                             new_fragment_ids=ctx.shared.new_fragment_ids.snapshot()
+                        )
+                        # Mirror the fragment lifecycle for signals: records
+                        # that weren't re-declared during this full run are
+                        # dropped, so their state resets if they are declared
+                        # again later.
+                        self._signal_storage.clear(
+                            keep_keys=frozenset(ctx.signal_keys_declared_this_run)
                         )
 
                     self._session_state.maybe_check_serializable()
