@@ -95,3 +95,24 @@ if TYPE_CHECKING:
         ),
         DeltaGenerator,
     )
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+
+    # Invalid latitude / longitude values (only str | None, not int)
+    st_map(df, latitude=1)  # type: ignore[arg-type]
+    st_map(df, longitude=1)  # type: ignore[arg-type]
+
+    # Invalid zoom value (only int | None, not str)
+    st_map(df, zoom="10")  # type: ignore[arg-type]
+
+    # Invalid width / height values ("content" is not a valid value here, and
+    # None is not allowed)
+    st_map(df, width="content")  # type: ignore[arg-type]
+    st_map(df, width=None)  # type: ignore[arg-type]
+    st_map(df, height="content")  # type: ignore[arg-type]
+    st_map(df, height=None)  # type: ignore[arg-type]
+
+    # All parameters except data are keyword-only.
+    st_map(df, "lat")  # type: ignore[misc]
