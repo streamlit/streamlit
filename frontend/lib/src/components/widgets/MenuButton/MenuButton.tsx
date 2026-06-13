@@ -222,9 +222,7 @@ function MenuButton(props: Props): ReactElement {
       >
         <StyledMenuList
           onAction={handleItemSelect}
-          aria-label={
-            extractLeadingMaterialIcon(element.label).text || element.label
-          }
+          aria-label={extractLeadingMaterialIcon(element.label).text || "Menu"}
           autoFocus="first"
         >
           {menuItems.map(item => {

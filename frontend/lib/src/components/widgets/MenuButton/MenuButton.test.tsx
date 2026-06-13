@@ -331,8 +331,8 @@ describe("MenuButton widget", () => {
       render(<MenuButton {...props} />)
 
       await user.click(screen.getByTestId("stMenuButtonButton"))
-      const menuBody = await screen.findByTestId("stMenuButtonBody")
-      expect(menuBody.querySelector("[role='menu']")).toBeInTheDocument()
+      await screen.findByTestId("stMenuButtonBody")
+      expect(screen.getByRole("menu")).toBeVisible()
     })
 
     it("menu items have role=menuitem", async () => {
@@ -348,6 +348,17 @@ describe("MenuButton widget", () => {
       expect(items[0]).toHaveTextContent("Option A")
       expect(items[1]).toHaveTextContent("Option B")
       expect(items[2]).toHaveTextContent("Option C")
+    })
+
+    it("uses generic aria-label when label is icon-only", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ label: ":material/menu:" })
+      render(<MenuButton {...props} />)
+
+      await user.click(screen.getByTestId("stMenuButtonButton"))
+      await screen.findByTestId("stMenuButtonBody")
+
+      expect(screen.getByRole("menu")).toHaveAttribute("aria-label", "Menu")
     })
   })
 })
