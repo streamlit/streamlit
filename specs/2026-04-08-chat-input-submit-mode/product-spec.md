@@ -66,7 +66,7 @@ st.markdown("""
 st.chat_input(
     placeholder: str = "Your message",
     *,
-    submit_mode: Literal["disabled", "stoppable"] | None = None,  # NEW
+    submit_mode: Literal["submit", "disable", "stop"] = "submit",  # NEW
     ...,
 )
 ```
@@ -75,24 +75,24 @@ st.chat_input(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `submit_mode` | `Literal["disabled", "stoppable"]` \| `None` | `None` | Controls widget behavior after submission while the script is running. `"disabled"` disables input during the run. `"stoppable"` transforms the submit button into a stop button. `None` keeps input enabled (current behavior). |
+| `submit_mode` | `Literal["submit", "disable", "stop"]` | `"submit"` | Controls widget behavior after submission while the script is running. `"submit"` keeps input enabled (current behavior). `"disable"` disables input during the run. `"stop"` transforms the submit button into a stop button. |
 
 ### Behavior
 
-**`submit_mode=None` (default):**
+**`submit_mode="submit"` (default):**
 
 - Current behavior: widget remains fully enabled after submission
 - Users can submit new messages while the script is running
 - Preserves backward compatibility
 
-**`submit_mode="disabled"`:**
+**`submit_mode="disable"`:**
 
 - Widget is automatically disabled after the user submits a message
 - The text area and all buttons (submit, file upload, voice) are disabled
 - Widget re-enables when the script run completes
 - Input field is cleared on submit; when the run completes and the widget re-enables, focus returns to the input automatically
 
-**`submit_mode="stoppable"`:**
+**`submit_mode="stop"`:**
 
 - After submission, the text area is disabled for the duration of the script run
 - The file upload and voice buttons are also disabled during the run
@@ -105,7 +105,7 @@ st.chat_input(
 
 ### Visual Design
 
-When `submit_mode="stoppable"` and the script is running:
+When `submit_mode="stop"` and the script is running:
 
 ```
 +------------------------------------------------------------------+
@@ -120,7 +120,7 @@ When `submit_mode="stoppable"` and the script is running:
 ```python
 import streamlit as st
 
-if prompt := st.chat_input("Ask anything", submit_mode="disabled"):
+if prompt := st.chat_input("Ask anything", submit_mode="disable"):
     with st.chat_message("user"):
         st.write(prompt)
     with st.chat_message("assistant"):
@@ -133,7 +133,7 @@ if prompt := st.chat_input("Ask anything", submit_mode="disabled"):
 ```python
 import streamlit as st
 
-if prompt := st.chat_input("Ask anything", submit_mode="stoppable"):
+if prompt := st.chat_input("Ask anything", submit_mode="stop"):
     with st.chat_message("user"):
         st.write(prompt)
     with st.chat_message("assistant"):
@@ -153,7 +153,7 @@ Detection uses the same mechanism as the existing `disabled` prop flow, but is s
 
 1. When the user submits, the frontend sends a rerun BackMsg with the updated widget value
 2. The frontend tracks that this widget triggered the rerun (similar to how form submit works)
-3. During the script run, if `submit_mode` is set, the triggering widget applies the behavior
+3. During the script run, if `submit_mode` is `"disable"` or `"stop"`, the triggering widget applies the behavior
 4. When a `scriptFinished` ForwardMsg arrives, the widget reverts to normal state
 
 This approach ensures:
@@ -179,12 +179,12 @@ Several parameter names were considered:
 
 | Name | Example | Pros | Cons |
 |------|---------|------|------|
-| `submit_mode` | `submit_mode="stoppable"` | Focuses on what changes (submit button), concise | Doesn't explicitly mention "during run" |
-| `running` | `running="disabled"` | Short, indicates timing | Ambiguous ("running what?") |
-| `while_running` | `while_running="stoppable"` | Most explicit about timing | Longer, slightly awkward |
-| `busy` | `busy="disabled"` | Shortest, intuitive | Generic, doesn't indicate when it applies |
-| `processing` | `processing="stoppable"` | Clear intent | Implies CPU work specifically |
-| `on_submit_running` | `on_submit_running="disabled"` | Explicit about trigger+state | Very long |
+| `submit_mode` | `submit_mode="stop"` | Focuses on what changes (submit button), concise | Doesn't explicitly mention "during run" |
+| `running` | `running="disable"` | Short, indicates timing | Ambiguous ("running what?") |
+| `while_running` | `while_running="stop"` | Most explicit about timing | Longer, slightly awkward |
+| `busy` | `busy="disable"` | Shortest, intuitive | Generic, doesn't indicate when it applies |
+| `processing` | `processing="stop"` | Clear intent | Implies CPU work specifically |
+| `on_submit_running` | `on_submit_running="disable"` | Explicit about trigger+state | Very long |
 
 **Decision:** `submit_mode` was chosen as it's concise, focuses on the user-facing change (the submit button behavior), and follows a `*_mode` pattern that could extend to other widgets.
 
@@ -193,7 +193,7 @@ Several parameter names were considered:
 **Option 1: Separate `on_running` callback**
 
 ```python
-st.chat_input("Ask", on_running=lambda: "disabled")
+st.chat_input("Ask", on_running=lambda: "disable")
 ```
 
 - Pros: Maximum flexibility
@@ -203,7 +203,7 @@ st.chat_input("Ask", on_running=lambda: "disabled")
 
 ```toml
 [client]
-chat_input_running_behavior = "disabled"
+chat_input_running_behavior = "disable"
 ```
 
 - Pros: App-wide setting
@@ -227,7 +227,7 @@ st.chat_input("Ask", disable_during_run=True)
 | Item                         | ✅ or comment          |
 |------------------------------|------------------------|
 | Works on SiS, Cloud, etc?    | ✅ uses existing stop mechanism |
-| No breaking API changes      | ✅ new optional parameter with `None` default |
+| No breaking API changes      | ✅ new optional parameter with `"submit"` default |
 | No new dependencies          | ✅ reuses existing stop infrastructure |
 | Metrics collected            | ✅ `submit_mode` parameter usage |
 | Any security/legal impact?   | ✅ No impact |
