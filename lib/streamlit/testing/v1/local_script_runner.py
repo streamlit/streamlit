@@ -155,7 +155,9 @@ class LocalScriptRunner(ScriptRunner):
         self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
     ) -> None:
         if not premature_stop:
-            self._session_state.on_script_finished(ctx.widget_ids_this_run.snapshot())
+            self._session_state.on_script_finished(
+                ctx.shared.widget_ids_this_run.snapshot()
+            )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)

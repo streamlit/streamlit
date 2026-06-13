@@ -18,6 +18,15 @@ import { localStorageAvailable } from "@streamlit/utils"
 
 export const DEFAULT_WIDTH = "300"
 
+/**
+ * Convert a CSS breakpoint string (e.g. "768px") to the max-width threshold
+ * used for media-query comparisons. Subtracts 0.02px to match the CSS
+ * `max-width` convention (exclusive upper bound).
+ */
+export function calculateMaxBreakpoint(value: string): number {
+  return parseInt(value, 10) - 0.02
+}
+
 export function shouldCollapse(
   initialSidebarState: PageConfig.SidebarState | undefined,
   mediumBreakpointPx: number,
@@ -28,6 +37,10 @@ export function shouldCollapse(
       return false
     case PageConfig.SidebarState.COLLAPSED:
       return true
+    case PageConfig.SidebarState.LOCKED:
+      // On desktop the sidebar is pinned open; on mobile degrade like AUTO
+      // so the overlay sidebar doesn't trap users.
+      return windowInnerWidth <= mediumBreakpointPx
     case PageConfig.SidebarState.AUTO:
     default: {
       // Expand sidebar only if browser width > MEDIUM_BREAKPOINT_PX

@@ -21,7 +21,7 @@ import sys
 import threading
 import time
 import uuid
-from collections.abc import Callable, Sized
+from collections.abc import Callable, Sequence, Sized
 from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
@@ -660,7 +660,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
             ctx is not None
             and ctx.gather_usage_stats
             and not ctx.command_tracking_deactivated
-            and len(ctx.tracked_commands)
+            and ctx.shared.tracked_commands_count
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
 
@@ -677,13 +677,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
                     non_optional_func, name, *args, **kwargs
                 )
 
-                if (
-                    command_telemetry.name not in ctx.tracked_commands_counter
-                    or ctx.tracked_commands_counter[command_telemetry.name]
-                    < _MAX_TRACKED_PER_COMMAND
-                ):
-                    ctx.tracked_commands.append(command_telemetry)
-                ctx.tracked_commands_counter.update([command_telemetry.name])
+                ctx.shared.track_command(command_telemetry, _MAX_TRACKED_PER_COMMAND)
                 # Deactivate tracking to prevent calls inside already tracked commands
                 ctx.command_tracking_deactivated = True
                 # The ctx.command_tracking_deactivated flag was set to True,
@@ -726,7 +720,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
 
 def create_page_profile_message(
-    commands: list[Command],
+    commands: Sequence[Command],
     exec_time: int,
     prep_time: int,
     uncaught_exception: str | None = None,

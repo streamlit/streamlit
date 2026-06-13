@@ -169,8 +169,8 @@ The click state is a dict with:
 - `"tertiary"`: Text-only button, minimal styling
 
 **Read-only:**
-- Button columns are always read-only in supported contexts
-- `ButtonColumn` is not supported in `st.data_editor`
+- Button columns are always read-only—the underlying cell values cannot be edited
+- In `st.data_editor`, button columns display and respond to clicks but don't participate in cell editing
 
 **CSV export:**
 - Button columns are excluded from CSV export (toolbar download button)
@@ -309,9 +309,10 @@ st.dataframe(
 **Selection modes:** Button clicks are independent of row/cell selection. Both can be used
 together—selecting rows for bulk operations while buttons handle individual actions.
 
-**st.data_editor:** Not supported. ButtonColumn is read-only and only works with
-`st.dataframe`. This is intentional—`st.data_editor` is for editing data, not triggering
-actions.
+**st.data_editor:** Button columns are supported in `st.data_editor` with read-only behavior.
+The underlying cell values (button labels) cannot be edited, but button clicks still trigger
+callbacks and update session state. This allows using buttons for row-level actions alongside
+editable data columns.
 
 **Sorting:** Row indices in click state refer to the original dataframe positions, not the
 visually sorted order. This matches the behavior of selection state.
@@ -418,7 +419,6 @@ The top-level parameter would optimize for the simple case at the cost of extens
 - **Confirmation dialogs**: Built-in "Are you sure?" prompts before destructive actions
 - **Disabled buttons**: Per-cell disabled state based on data
 - **Custom button colors**: Beyond the three type variants
-- **Button in st.data_editor**: Focus on st.dataframe first
 
 ## Checklist
 

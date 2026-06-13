@@ -161,6 +161,45 @@ def _get_global_target_dirs() -> list[Path]:
     return targets
 
 
+def are_skills_installed() -> bool:
+    """Check whether Streamlit agent skills appear to be installed.
+
+    Returns ``True`` if the bundled skill is present (as a symlink, copied
+    directory, or regular directory) in any of the project-local or global
+    target directories. This is a best-effort check used to decide whether to
+    recommend installing skills; it does not validate skill contents.
+    """
+    candidate_dirs: list[Path] = []
+    try:
+        project_root = _find_project_root()
+    except (OSError, RuntimeError):
+        # RuntimeError can be raised by Path.home() when the home directory
+        # cannot be determined. This is a best-effort check, so skip project dirs.
+        pass
+    else:
+        try:
+            candidate_dirs.extend(_get_project_target_dirs(project_root))
+        except (OSError, RuntimeError):
+            # Same reasoning as above; still check global dirs.
+            pass
+
+    try:
+        candidate_dirs.extend(_get_global_target_dirs())
+    except (OSError, RuntimeError):
+        # Keep any project dirs already collected above instead of discarding
+        # them; still a best-effort check, so just skip the global dirs.
+        pass
+
+    for target_dir in candidate_dirs:
+        skill_path = target_dir / _GLOBAL_SKILL_NAME
+        try:
+            if skill_path.is_symlink() or skill_path.exists():
+                return True
+        except OSError:
+            continue
+    return False
+
+
 def _is_streamlit_owned_symlink(link_path: Path, bundled_skill_names: set[str]) -> bool:
     """Check if a symlink appears to be a Streamlit-managed skill link.
 

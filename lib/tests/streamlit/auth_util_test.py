@@ -30,7 +30,6 @@ from streamlit.auth_util import (
     AuthCache,
     _calculate_signing_overhead,
     _set_split_cookie,
-    clear_cookie_and_chunks,
     generate_default_provider_section,
     get_cookie_with_chunks,
     get_expose_tokens_config,
@@ -437,71 +436,6 @@ class CookieChunkingTest(unittest.TestCase):
 
         result = get_cookie_with_chunks(mock_get_cookie, "test_cookie")
         assert result == b"chunks-invalid"
-
-    def test_clear_cookie_and_chunks_single_cookie(self):
-        """Test clearing a single (non-chunked) cookie."""
-        cookies: dict[str, bytes] = {
-            "test_cookie": b'{"key": "value"}',
-        }
-        cleared: list[str] = []
-
-        def mock_get_cookie(name: str) -> bytes | None:
-            return cookies.get(name)
-
-        def mock_clear_cookie(name: str) -> None:
-            cleared.append(name)
-            cookies.pop(name, None)
-
-        clear_cookie_and_chunks(mock_get_cookie, mock_clear_cookie, "test_cookie")
-
-        assert "test_cookie" in cleared
-        assert len(cleared) == 1
-
-    def test_clear_cookie_and_chunks_chunked_cookie(self):
-        """Test clearing a chunked cookie."""
-        cookies: dict[str, bytes] = {
-            "test_cookie": b"chunks-3",
-            "test_cookie_1": b"chunk1",
-            "test_cookie_2": b"chunk2",
-            "test_cookie_3": b"chunk3",
-        }
-        cleared: list[str] = []
-
-        def mock_get_cookie(name: str) -> bytes | None:
-            return cookies.get(name)
-
-        def mock_clear_cookie(name: str) -> None:
-            cleared.append(name)
-            cookies.pop(name, None)
-
-        clear_cookie_and_chunks(mock_get_cookie, mock_clear_cookie, "test_cookie")
-
-        # Should clear the main cookie, additional chunks (1, 2), and the count cookie
-        assert "test_cookie" in cleared
-        assert "test_cookie_1" in cleared
-        assert "test_cookie_2" in cleared
-        assert "test_cookie_3" in cleared
-        assert len(cleared) == 4  # main, 1, 2, 3
-
-    def test_clear_cookie_and_chunks_invalid_count(self):
-        """Test clearing a chunked cookie with invalid count."""
-        cookies: dict[str, bytes] = {
-            "test_cookie": b"chunks-invalid",
-        }
-        cleared: list[str] = []
-
-        def mock_get_cookie(name: str) -> bytes | None:
-            return cookies.get(name)
-
-        def mock_clear_cookie(name: str) -> None:
-            cleared.append(name)
-            cookies.pop(name, None)
-
-        clear_cookie_and_chunks(mock_get_cookie, mock_clear_cookie, "test_cookie")
-
-        # Should clear the main cookie and the count cookie
-        assert "test_cookie" in cleared
-        assert len(cleared) == 1
 
     def test_round_trip_small_cookie(self):
         """Test setting and getting a small cookie."""

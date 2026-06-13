@@ -41,6 +41,7 @@ from streamlit.elements.lib.column_config_utils import (
     determine_dataframe_schema,
 )
 from streamlit.elements.widgets.data_editor import (
+    DataEditorSerde,
     _apply_cell_edits,
     _apply_dataframe_edits,
     _apply_row_additions,
@@ -184,6 +185,12 @@ class DataEditorUtilTest(unittest.TestCase):
                 ColumnDataKind.EMPTY,
                 True,
             ),
+            # Invalid / edge-case inputs that should normalize to None or pass through.
+            ("not_a_number", ColumnDataKind.INTEGER, None),
+            ("not-a-date", ColumnDataKind.DATETIME, None),
+            (float("nan"), ColumnDataKind.DATETIME, None),
+            ("anything", ColumnDataKind.UNKNOWN, "anything"),
+            ([1, 2, 3], ColumnDataKind.INTEGER, None),
         ]
     )
     def test_parse_value(
@@ -195,6 +202,49 @@ class DataEditorUtilTest(unittest.TestCase):
         """Test that _parse_value parses the input to the correct type."""
         result = _parse_value(value, column_data_kind)
         assert result == expected
+
+    def test_data_editor_serde_serialize_round_trips(self):
+        """``DataEditorSerde.serialize`` produces JSON containing all editing-state keys."""
+        state = {
+            "edited_rows": {0: {"col1": 1}},
+            "added_rows": [],
+            "deleted_rows": [],
+        }
+        decoded = json.loads(DataEditorSerde().serialize(state))
+        assert decoded == {
+            "edited_rows": {"0": {"col1": 1}},
+            "added_rows": [],
+            "deleted_rows": [],
+        }
+
+    def test_data_editor_serde_deserialize_none_returns_empty_state(self):
+        """A None ui_value should produce an empty editing state."""
+        assert DataEditorSerde().deserialize(None) == {
+            "edited_rows": {},
+            "added_rows": [],
+            "deleted_rows": [],
+        }
+
+    def test_data_editor_serde_deserialize_partial_payload_fills_defaults(self):
+        """Missing payload keys are filled with empty defaults and row keys become ints."""
+        payload = json.dumps({"edited_rows": {"0": {"col1": 1}}})
+        assert DataEditorSerde().deserialize(payload) == {
+            "edited_rows": {0: {"col1": 1}},
+            "added_rows": [],
+            "deleted_rows": [],
+        }
+
+    def test_data_editor_serde_converts_string_keys_to_int(self):
+        """String row position keys from JSON are converted to ints."""
+        payload = json.dumps(
+            {
+                "edited_rows": {"5": {"col1": 1}, "10": {"col1": 2}},
+                "added_rows": [],
+                "deleted_rows": [],
+            }
+        )
+        result = DataEditorSerde().deserialize(payload)
+        assert result["edited_rows"] == {5: {"col1": 1}, 10: {"col1": 2}}
 
     def test_apply_cell_edits(self):
         """Test applying cell edits to a DataFrame."""

@@ -22,6 +22,7 @@ import pytest
 
 from streamlit.errors import NoSessionContext
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.PageProfile_pb2 import Command
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -34,18 +35,24 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     add_script_run_ctx,
     enqueue_message,
 )
+from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.testing.v1.util import patch_config_options
+from tests.conftest import enable_mpa_v2_mode
 from tests.streamlit.message_mocks import create_dataframe_msg
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 
+def _make_command(name: str) -> Command:
+    return Command(name=name)
+
+
 def _create_script_run_context(
     fake_enqueue: Callable[[ForwardMsg], None],
     pages_manager: PagesManager | None = None,
-    cached_message_hashes: set[str] | None = None,
+    cached_message_hashes: frozenset[str] | None = None,
 ):
     return ScriptRunContext(
         session_id="TestSessionID",
@@ -57,7 +64,7 @@ def _create_script_run_context(
         user_info={"email": "test@example.com"},
         fragment_storage=MemoryFragmentStorage(),
         pages_manager=pages_manager or PagesManager(""),
-        cached_message_hashes=cached_message_hashes or set(),
+        cached_message_hashes=cached_message_hashes or frozenset(),
     )
 
 
@@ -185,7 +192,7 @@ class ScriptRunContextTest(unittest.TestCase):
             populate_hash_if_needed(cacheable_msg)
             assert bool(cacheable_msg.hash)
             ctx = _create_script_run_context(
-                fake_enqueue, cached_message_hashes={cacheable_msg.hash}
+                fake_enqueue, cached_message_hashes=frozenset({cacheable_msg.hash})
             )
             add_script_run_ctx(ctx=ctx)
             enqueue_message(cacheable_msg)
@@ -222,7 +229,7 @@ class ScriptRunContextTest(unittest.TestCase):
         ctx.reset(page_script_hash=pages_manager.main_script_hash)
         assert ThreadState.get().active_script_hash == pages_manager.main_script_hash
 
-        pages_manager.set_pages({})
+        enable_mpa_v2_mode(pages_manager)
         ctx.set_mpa_v2_page("new_hash")
         assert ThreadState.get().active_script_hash == pages_manager.main_script_hash
 
@@ -239,7 +246,7 @@ class ScriptRunContextTest(unittest.TestCase):
         this mode and must remain at their defaults.
         """
         pages_manager = PagesManager("/main/script/path")
-        pages_manager.set_pages({})  # populate main_script_hash
+        enable_mpa_v2_mode(pages_manager)  # populate main_script_hash
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
 
         result: dict[str, object] = {}
@@ -274,7 +281,7 @@ class ScriptRunContextTest(unittest.TestCase):
         the worker) do NOT inherit the parent's ``fragment_id``.
         """
         pages_manager = PagesManager("/main/script/path")
-        pages_manager.set_pages({})
+        enable_mpa_v2_mode(pages_manager)
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
         ThreadState.update(fragment_id="parent_fragment")
 
@@ -302,7 +309,7 @@ class ScriptRunContextTest(unittest.TestCase):
         sees the main hash.
         """
         pages_manager = PagesManager("/main/script/path")
-        pages_manager.set_pages({})
+        enable_mpa_v2_mode(pages_manager)
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
 
         captured: dict[str, object] = {}
@@ -326,7 +333,7 @@ class ScriptRunContextTest(unittest.TestCase):
         are last-wins for the parent ``FragmentThreadState`` snapshot.
         """
         pages_manager = PagesManager("/main/script/path")
-        pages_manager.set_pages({})
+        enable_mpa_v2_mode(pages_manager)
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
 
         captured: dict[str, object] = {}
@@ -372,7 +379,7 @@ class ScriptRunContextTest(unittest.TestCase):
         runs would let a previous run's stop event / worker exception leak
         into the next run."""
         pages_manager = PagesManager("/main/script/path")
-        pages_manager.set_pages({})
+        enable_mpa_v2_mode(pages_manager)
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
 
         ctx.reset(page_script_hash=pages_manager.main_script_hash)
@@ -401,7 +408,7 @@ class ScriptRunContextTest(unittest.TestCase):
         ContextVar.
         """
         pages_manager = PagesManager("/main/script/path")
-        pages_manager.set_pages({})
+        enable_mpa_v2_mode(pages_manager)
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
 
         ThreadState.initialize(
@@ -434,3 +441,72 @@ class ScriptRunContextTest(unittest.TestCase):
         assert parent_ts.fragment_id == "parent_fragment"
         assert parent_ts.delta_path == (1, 2, 3)
         assert parent_ts.active_script_hash == "parent_hash"
+
+    def test_ctx_construction_creates_shared(self):
+        """A freshly constructed ScriptRunContext owns its own SharedRunState."""
+        ctx_a = _create_script_run_context(lambda _msg: None)
+        ctx_b = _create_script_run_context(lambda _msg: None)
+
+        assert isinstance(ctx_a.shared, SharedRunState)
+        assert ctx_a.shared is not ctx_b.shared
+
+    def test_reset_resets_shared_state(self):
+        """``ctx.reset()`` clears the shared mutable state container."""
+        pages_manager = PagesManager("/main/script/path")
+        enable_mpa_v2_mode(pages_manager)
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        ctx.shared.widget_ids_this_run.check_and_add("widget")
+        ctx.shared.widget_user_keys_this_run.check_and_add("key")
+        ctx.shared.form_ids_this_run.check_and_add("form")
+        ctx.shared.new_fragment_ids.check_and_add("fragment")
+        ctx.shared.track_command(_make_command("markdown"), max_per_command=5)
+
+        ctx.reset(page_script_hash=pages_manager.main_script_hash)
+
+        assert "widget" not in ctx.shared.widget_ids_this_run
+        assert "key" not in ctx.shared.widget_user_keys_this_run
+        assert "form" not in ctx.shared.form_ids_this_run
+        assert "fragment" not in ctx.shared.new_fragment_ids
+        assert ctx.shared.tracked_commands == ()
+        assert ctx.shared.tracked_commands_count == 0
+
+    def test_run_wrapper_accepts_positional_args(self):
+        """The _run_with_thread_state wrapper must accept positional arguments.
+
+        Regression test for GitHub issue #15374: some threading patterns call
+        thread.run() with positional arguments. The wrapper installed by
+        add_script_run_ctx must handle this gracefully to avoid TypeError.
+        """
+        pages_manager = PagesManager("/main/script/path")
+        enable_mpa_v2_mode(pages_manager)
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        ThreadState.initialize(fragment_id="test_fragment")
+
+        received_args: list[object] = []
+
+        class ThreadWithRunArgs(threading.Thread):
+            """Thread subclass whose run() accepts extra arguments."""
+
+            def run(self, *args: object) -> None:
+                received_args.extend(args)
+
+        t = ThreadWithRunArgs()
+        add_script_run_ctx(t, ctx)
+
+        t.run("test_arg")
+
+        assert received_args == ["test_arg"]
+
+
+def test_script_run_context_attr_name_reexported_from_leaf_module() -> None:
+    """SCRIPT_RUN_CONTEXT_ATTR_NAME stays importable from script_run_context,
+    re-exporting the same object defined in the script_run_context_attr leaf
+    module, so existing import paths keep working."""
+    from streamlit.runtime.scriptrunner_utils import script_run_context_attr
+
+    assert (
+        SCRIPT_RUN_CONTEXT_ATTR_NAME
+        is script_run_context_attr.SCRIPT_RUN_CONTEXT_ATTR_NAME
+    )

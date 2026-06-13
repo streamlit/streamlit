@@ -254,7 +254,14 @@ def select_selectbox_option(
     # Type to filter the dropdown (handles virtualized lists where options
     # may not be rendered until scrolled into view)
     selectbox_input = selectbox.locator("input")
+
+    # Wait for the React component to be fully initialized before interacting
+    selectbox_input.wait_for(state="visible")
     selectbox_input.click()
+    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
+    # Note: this shifts focus to the first option, so the initially-selected item
+    # will not be highlighted when the dropdown first opens.
+    selectbox_input.press("ArrowDown")
 
     # Wait for dropdown to be visible before typing
     dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
@@ -268,8 +275,8 @@ def select_selectbox_option(
 
     wait_for_app_run(page)
 
-    # Verify the selection was applied
-    expect(selectbox).to_contain_text(option)
+    # Verify the selection was applied (value is in the input's value attribute)
+    expect(selectbox.locator("input")).to_have_value(option)
 
 
 def get_multiselect(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
@@ -417,7 +424,7 @@ def get_radio_option(locator: Locator | Page, label: str | re.Pattern[str]) -> L
     Locator
         The element.
     """
-    element = locator.locator('[data-baseweb="radio"]').filter(has_text=label)
+    element = locator.get_by_test_id("stRadioOption").filter(has_text=label)
     expect(element).to_be_visible()
     return element
 
@@ -1459,9 +1466,9 @@ def get_segment_button(locator: Locator, text: str) -> Locator:
     Locator
         The segment button.
     """
-    return locator.get_by_test_id(
-        re.compile(r"stBaseButton-segmented_control(Active)?")
-    ).filter(has_text=text)
+    return locator.locator("button[data-variant='segmented_control']").filter(
+        has_text=text
+    )
 
 
 def goto_app(page: Page, url: str) -> None:

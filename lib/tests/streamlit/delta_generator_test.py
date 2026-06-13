@@ -857,8 +857,8 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
 
         # Clear the widget registry to allow reusing the same key
         ctx = get_script_run_ctx()
-        ctx.widget_ids_this_run.clear()
-        ctx.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
 
         # Create second element with different kwargs
         kwargs["label"] = "Different Label"
@@ -886,8 +886,8 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
 
         # Clear the widget registry to allow reusing the same key
         ctx = get_script_run_ctx()
-        ctx.widget_ids_this_run.clear()
-        ctx.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
 
         # Create text_area with same key - different element type
         id2 = compute_and_register_element_id(
@@ -933,8 +933,8 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
 
         # Clear registry, then compute with main DG context
         ctx = get_script_run_ctx()
-        ctx.widget_ids_this_run.clear()
-        ctx.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
 
         id2 = compute_and_register_element_id(dg=main_dg, **base_kwargs)
 
@@ -1007,8 +1007,8 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
 
         # Clear the widget registry to allow reusing the same key/ids
         ctx = get_script_run_ctx()
-        ctx.widget_ids_this_run.clear()
-        ctx.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
 
         # Change the selected kwarg
         if changed_kwarg == "label":
@@ -1041,8 +1041,8 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
 
         # Clear registry before next computation
         ctx = get_script_run_ctx()
-        ctx.widget_ids_this_run.clear()
-        ctx.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
 
         # Changing a non-whitelisted kwarg should still change the ID when no user_key
         kwargs_changed_default = dict(base_kwargs)
@@ -1051,8 +1051,8 @@ class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
         assert id1 != id2
 
         # Clear again and change a whitelisted kwarg
-        ctx.widget_ids_this_run.clear()
-        ctx.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
         kwargs_changed_label = dict(base_kwargs)
         kwargs_changed_label["label"] = "Different Label"
         id3 = compute_and_register_element_id(**kwargs_changed_label)

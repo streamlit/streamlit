@@ -243,12 +243,21 @@ def test_empty_number_input_behaves_correctly(
 
     assert_snapshot(empty_number_input, name="st_number_input-clearable_input")
 
-    # Press escape to clear value:
+    # Press Escape to clear value — verifies Escape-to-clear behavior end-to-end:
     empty_number_input_field.focus()
+    # Clear button should be visible while input has a value:
+    expect(
+        empty_number_input.locator('[data-testid="stNumberInputClearButton"]')
+    ).to_be_visible()
     empty_number_input_field.press("Escape")
+    # After Escape, the field should be empty and clear button should disappear:
+    expect(empty_number_input_field).to_have_value("")
+    expect(
+        empty_number_input.locator('[data-testid="stNumberInputClearButton"]')
+    ).not_to_be_visible()
     empty_number_input_field.press("Enter")
 
-    # Should be empty again:
+    # Backend should reflect None:
     expect_prefixed_markdown(app, "number input 11 (value=None) - value:", "None")
 
     # Check with second empty input, this one should be integer since the min_value was

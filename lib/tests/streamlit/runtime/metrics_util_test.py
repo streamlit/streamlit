@@ -37,6 +37,7 @@ from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_pep649_function
@@ -56,8 +57,7 @@ def _mock_script_run_ctx() -> MagicMock:
     ctx = MagicMock()
     ctx.gather_usage_stats = True
     ctx.command_tracking_deactivated = False
-    ctx.tracked_commands = []
-    ctx.tracked_commands_counter = Counter()
+    ctx.shared = SharedRunState()
     ctx.fragment_ids_this_run = []
     return ctx
 
@@ -313,24 +313,24 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
         test_function(param1=10, param2="foobar")
 
-        assert len(ctx.tracked_commands) == 1
-        assert ctx.tracked_commands[0].name.endswith("test_function")
-        assert ctx.tracked_commands[0].name.startswith("external:")
+        assert len(ctx.shared.tracked_commands) == 1
+        assert ctx.shared.tracked_commands[0].name.endswith("test_function")
+        assert ctx.shared.tracked_commands[0].name.startswith("external:")
 
         st.markdown("This function should be tracked")
 
-        assert len(ctx.tracked_commands) == 2
-        assert ctx.tracked_commands[0].name.endswith("test_function")
-        assert ctx.tracked_commands[0].name.startswith("external:")
-        assert ctx.tracked_commands[1].name == "markdown"
+        assert len(ctx.shared.tracked_commands) == 2
+        assert ctx.shared.tracked_commands[0].name.endswith("test_function")
+        assert ctx.shared.tracked_commands[0].name.startswith("external:")
+        assert ctx.shared.tracked_commands[1].name == "markdown"
 
         ctx.reset()
         # Deactivate usage stats gathering
         ctx.gather_usage_stats = False
 
-        assert len(ctx.tracked_commands) == 0
+        assert len(ctx.shared.tracked_commands) == 0
         test_function(param1=10, param2="foobar")
-        assert len(ctx.tracked_commands) == 0
+        assert len(ctx.shared.tracked_commands) == 0
 
     @parameterized.expand(
         [
@@ -364,12 +364,14 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         with contextlib.suppress(Exception):
             command()
 
-        assert len(ctx.tracked_commands) > 0, f"No command tracked for {expected_name}"
+        assert len(ctx.shared.tracked_commands) > 0, (
+            f"No command tracked for {expected_name}"
+        )
 
         # Sometimes multiple commands are executed
         # so we check the full list of tracked commands
         assert expected_name in [
-            tracked_commands.name for tracked_commands in ctx.tracked_commands
+            tracked_commands.name for tracked_commands in ctx.shared.tracked_commands
         ], f"Command {expected_name} was not tracked."
 
     def test_public_api_commands(self):
@@ -421,7 +423,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # Assert that the API name is in the list of tracked commands.
             # (It's possible for multiple tracked commands to be issued as
             # the result of a single API call.)
-            assert api_name in [cmd.name for cmd in ctx.tracked_commands], (
+            assert api_name in [cmd.name for cmd in ctx.shared.tracked_commands], (
                 (
                     f"When executing `st.{api_name}()`, we expect the string "
                     f'"{api_name}" to be in the list of tracked commands.'
@@ -460,7 +462,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # (It's possible for multiple tracked commands to be issued as
             # the result of a single API call.)
             assert f"column_config.{api_name}" in [
-                cmd.name for cmd in ctx.tracked_commands
+                cmd.name for cmd in ctx.shared.tracked_commands
             ], (
                 (
                     f"When executing `st.{api_name}()`, we expect the string "
@@ -497,11 +499,11 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             for func in funcs:
                 func()
 
-        assert len(ctx.tracked_commands) <= metrics_util._MAX_TRACKED_COMMANDS
+        assert len(ctx.shared.tracked_commands) <= metrics_util._MAX_TRACKED_COMMANDS
 
         # Test that no individual command is tracked more than _MAX_TRACKED_PER_COMMAND
         command_counts = Counter(
-            [command.name for command in ctx.tracked_commands]
+            [command.name for command in ctx.shared.tracked_commands]
         ).most_common()
         assert command_counts[0][1] <= metrics_util._MAX_TRACKED_PER_COMMAND
 
@@ -710,8 +712,8 @@ def test_gather_metrics_empty_name_logs_warning_and_tracks_as_undefined() -> Non
         assert tracked() == "x"
 
     mock_warning.assert_called_once_with("gather_metrics: name is empty")
-    assert len(ctx.tracked_commands) == 1
-    assert ctx.tracked_commands[0].name == "undefined"
+    assert len(ctx.shared.tracked_commands) == 1
+    assert ctx.shared.tracked_commands[0].name == "undefined"
 
 
 def test_gather_metrics_swallows_command_telemetry_errors() -> None:
@@ -736,7 +738,7 @@ def test_gather_metrics_swallows_command_telemetry_errors() -> None:
 
     mock_debug.assert_called_once()
     assert mock_debug.call_args[0][0] == "Failed to collect command telemetry"
-    assert ctx.tracked_commands == []
+    assert ctx.shared.tracked_commands == ()
 
 
 def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
@@ -758,8 +760,8 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         with pytest.raises(RerunException):
             raises_rerun()
 
-    assert len(ctx.tracked_commands) == 1
-    assert ctx.tracked_commands[0].time == metrics_util.to_microseconds(0.25)
+    assert len(ctx.shared.tracked_commands) == 1
+    assert ctx.shared.tracked_commands[0].time == metrics_util.to_microseconds(0.25)
 
 
 @pytest.mark.parametrize("server_mode", ["tornado", "starlette-app"])
