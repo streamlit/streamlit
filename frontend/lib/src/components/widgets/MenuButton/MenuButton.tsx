@@ -19,6 +19,7 @@ import {
   ReactElement,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -60,6 +61,10 @@ const BUTTON_TYPE_TO_KIND: Record<string, BaseButtonKind> = {
   tertiary: BaseButtonKind.TERTIARY,
 }
 
+// Passed to RAC Popover to disable its internal close-on-blur/interact-outside
+// paths. All dismissal is handled by our own capture-phase useEffect instead.
+const NEVER_CLOSE = (): boolean => false
+
 export interface Props {
   disabled: boolean
   element: MenuButtonProto
@@ -72,6 +77,7 @@ function MenuButton(props: Props): ReactElement {
 
   const [isOpen, setIsOpen] = useState(false)
   const theme = useEmotionTheme()
+  const instanceId = useId()
   // Anchor ref on the outer container — mirrors the original anchorRef pattern,
   // avoiding the ref duplication issue that occurs when BaseButtonTooltip
   // renders its children twice (desktop tooltip + mobile variant).
@@ -80,10 +86,17 @@ function MenuButton(props: Props): ReactElement {
   // to distinguish clicks on portal-rendered menu items from true outside clicks.
   const popoverRef = useRef<HTMLElement>(null)
 
-  // isNonModal=true sets isDismissable=false inside usePopover, which disables
-  // React Aria's built-in useInteractOutside and Escape-key dismissal. Both are
-  // required for a menu, so we register native DOM listeners in capture phase
-  // (fires before any React synthetic handlers, independent of stopPropagation).
+  // Custom dismissal via capture-phase DOM listeners.
+  //
+  // Why not use RAC's built-in close paths? The popover requires `isNonModal`
+  // to prevent ariaHideOutside from marking the page `inert` (which would block
+  // outside clicks). But `isNonModal` enables useCloseOnScroll inside RAC's
+  // useOverlayPosition — closing the menu whenever a parent container scrolls
+  // (e.g. Playwright auto-scrolling to a button below the fold). It also leaves
+  // shouldCloseOnBlur active, which fires spuriously in Chromium after
+  // autoFocus="first". Rather than fight each path individually, we disable all
+  // RAC close channels (no onOpenChange, shouldCloseOnInteractOutside=false) and
+  // implement the two behaviors we actually need: outside-click and Escape/Tab.
   useEffect(() => {
     if (!isOpen) return
 
@@ -101,7 +114,15 @@ function MenuButton(props: Props): ReactElement {
     }
 
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape" || e.key === "Tab") setIsOpen(false)
+      if (e.key === "Escape" || e.key === "Tab") {
+        setIsOpen(false)
+        // Restore focus to the trigger button after dismissal
+        if (e.key === "Escape") {
+          containerRef.current
+            ?.querySelector<HTMLButtonElement>("button")
+            ?.focus()
+        }
+      }
     }
 
     document.addEventListener("pointerdown", handlePointerDown, true)
@@ -126,15 +147,20 @@ function MenuButton(props: Props): ReactElement {
 
   const handleItemSelect = useCallback(
     (key: Key) => {
+      if (buttonDisabled) {
+        return
+      }
+      // Strip the instance prefix added for DOM id uniqueness
+      const value = String(key).slice(instanceId.length)
       widgetMgr.setStringTriggerValue(
         element,
-        String(key),
+        value,
         { fromUi: true },
         fragmentId
       )
       setIsOpen(false)
     },
-    [element, widgetMgr, fragmentId]
+    [buttonDisabled, element, widgetMgr, fragmentId, instanceId]
   )
 
   return (
@@ -187,19 +213,15 @@ function MenuButton(props: Props): ReactElement {
         // style, so this wins. Must exceed theme.zIndices.header (999990) so
         // the portal is always above the app toolbar and sidebar overlays.
         style={{ zIndex: theme.zIndices.popup }}
-        // Disable React Aria's shouldCloseOnBlur path entirely — useFocusWithin
-        // registers a global focus listener that fires onBlurWithin whenever
-        // focus moves outside the popover, including Chromium-specific cases
-        // where focus events fire on elements outside containerRef right after
-        // autoFocus="first". All dismissals are handled by our useEffect above.
-        shouldCloseOnInteractOutside={() => false}
+        shouldCloseOnInteractOutside={NEVER_CLOSE}
         offset={4}
         placement="bottom start"
       >
         <StyledMenuList
           onAction={handleItemSelect}
-          aria-label={element.label}
-          // Focus the first item on open
+          aria-label={
+            extractLeadingMaterialIcon(element.label).text || element.label
+          }
           autoFocus="first"
         >
           {menuItems.map(item => {
@@ -207,7 +229,7 @@ function MenuButton(props: Props): ReactElement {
             return (
               <StyledMenuListItem
                 key={item.value}
-                id={item.value}
+                id={`${instanceId}${item.value}`}
                 textValue={text}
               >
                 <StyledMenuOptionLabel>
