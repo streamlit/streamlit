@@ -79,7 +79,7 @@ st.avatar("https://avatars.githubusercontent.com/u/1673013")
 | `image` | `str \| Image \| None` | `None` | The avatar content. Accepts the same image inputs as `st.image` (URL, local path, `PIL.Image`, NumPy array, bytes/`BytesIO`), **plus** a single emoji (e.g. `"🦖"`) or a Material icon (e.g. `":material/person:"`)—matching `st.chat_message`'s `avatar`. If `None`, falls back to initials derived from `label`, or a generic person icon when no label is given. |
 | `label` | `str \| None` | `None` | Primary text shown to the right of the avatar (typically a name). Supports markdown. |
 | `caption` | `str \| None` | `None` | Secondary text shown below the label (typically a role or status). Supports markdown and renders in the muted caption style used elsewhere in Streamlit. |
-| `size` | `"small" \| "medium" \| "large" \| int` | `"medium"` | Diameter of the circular avatar. Semantic sizes map to fixed pixel values (`small` ≈ 24px, `medium` ≈ 40px, `large` ≈ 64px; exact values TBD with design). An `int` sets a custom diameter in pixels and must be a positive value; non-positive values raise a `StreamlitAPIError` (Fail Fast). No upper bound is enforced, but very large values are clamped to the element's container width at render time. |
+| `size` | `"small" \| "medium" \| "large" \| int` | `"medium"` | Diameter of the circular avatar image only. Semantic sizes map to rem-based values (`small` ≈ 1.5rem, `medium` ≈ 2.5rem, `large` ≈ 4rem; exact values TBD with design) so they scale with the root font size. An `int` sets a custom diameter in pixels and must be a positive value; non-positive values raise a `StreamlitAPIError` (Fail Fast). No upper bound is enforced, but very large values are clamped to the element's container width at render time. |
 | `border` | `bool` | `False` | If `True`, draws a subtle border around the avatar (useful for light images on light backgrounds). |
 | `on_click` | `"ignore" \| "rerun" \| Callable[[], None]` | `"ignore"` | Click behavior. `"ignore"` disables click interaction (avatar is purely decorative). `"rerun"` triggers a rerun when clicked. A callable runs as a callback before the rerun. Follows the `st.button` click pattern (a click action), not the `on_change` value-change pattern. |
 | `key` | `str \| None` | `None` | Unique key for the element. Required when multiple clickable avatars would otherwise share identical parameters. |
@@ -108,21 +108,16 @@ st.avatar(None, label="Jane Doe")      # initials avatar → "JD"
 This keeps a single, consistent mental model: the thing you'd pass as a chat avatar is the
 thing you pass to `st.avatar`.
 
-> **Delta vs. the reference component:** the `streamlit-extras` avatar accepts images only
-> and renders `label`/`caption` as plain text. The emoji/Material-icon inputs, the
-> `image=None` initials fallback, and markdown in `label`/`caption` are native enhancements
-> proposed here to align with `st.chat_message` and Streamlit's "markdown everywhere"
-> convention. All can be trimmed if we want to ship the smallest possible v1. The image
-> handling itself reuses the same internals the reference relies on (`image_to_url`).
-
 ### Behavior
 
 - The avatar always renders as a circle, cropping non-square images to a centered square
   (`object-fit: cover`).
+- `size` controls only the circular avatar image; it does not scale the label, caption,
+  spacing, or other surrounding element layout.
 - When `label` and/or `caption` are provided, they render in a row to the right of the
   avatar, vertically centered against it. With no text, only the circle is shown.
 - `label` and `caption` are each constrained to a single line and truncate with an ellipsis
-  when they overflow; the full text is shown on hover (matching the reference component).
+  when they overflow; the full text is shown on hover.
 - Emoji and icon avatars render centered on a themed neutral background; initials avatars
   show 1–2 uppercase letters derived from `label`. Initials are derived from the
   *plain-text* form of `label` (markdown syntax, links, emoji, and Material icons are
@@ -132,15 +127,14 @@ thing you pass to `st.avatar`.
 - The element sizes to its content (the circle plus any text). Place avatars side by side
   with `st.container(horizontal=True)`—no `multiple`/grouping parameter is needed
   (composition over configuration).
-- `label` and `caption` support Streamlit markdown (bold, italics, links, code, emoji,
-  Material icons), consistent with other text-bearing elements.
+- `label` and `caption` support Streamlit markdown, with the same restrictions used across
+  other labels.
 
 ### Interactivity
 
-The `streamlit-extras` version supports `on_click` and returns a `bool`. For a native
-command this is the main open design question, because enabling clicks changes `st.avatar`
-from a display element into a widget (conditional return type, requires `key`). Two
-options:
+The main open design question is whether `st.avatar` should support click interaction,
+because enabling clicks changes it from a display element into a widget (conditional return
+type, requires `key`). Two options:
 
 **Option 1: Clickable widget** ✅ PREFERRED
 
@@ -153,11 +147,10 @@ if st.avatar("profile.jpg", label="Jane Smith", on_click="rerun", key="profile")
 ```
 
 A clickable avatar should be keyboard-accessible: expose it as a button (`role="button"`,
-focusable, activatable with Enter/Space) with an `aria-label` derived from `label`—the
-reference component already does this.
+focusable, activatable with Enter/Space) with an `aria-label` derived from `label`.
 
-- Pros: Matches the reference API; enables clickable profiles (open a dialog, navigate to a
-  detail view) directly; `on_click="ignore"` keeps the common display-only case a one-liner.
+- Pros: Enables clickable profiles (open a dialog, navigate to a detail view) directly;
+  `on_click="ignore"` keeps the common display-only case a one-liner.
 - Cons: Mixed return type (display vs. widget); adds `key`/callback surface to the API.
 
 **Option 2: Display-only in v1**
@@ -171,9 +164,9 @@ wrap it in a container or pair it with a nearby `st.button`.
 - Cons: No built-in click handling; clickable-profile patterns need a workaround until a
   fast-follow adds it.
 
-**Recommendation:** Ship Option 1 (clickable). It matches the reference API users already
-know and keeps the display-only case ergonomic via the `on_click="ignore"` default, while
-covering the profile/navigation use cases natively without a fast-follow.
+**Recommendation:** Ship Option 1 (clickable). It covers more avatar use cases, including
+interactive profile chips, user pickers, and navigation to detail views, while keeping the
+display-only case ergonomic via the `on_click="ignore"` default.
 
 ### Examples
 
