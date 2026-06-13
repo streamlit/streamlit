@@ -485,6 +485,7 @@ const Selectbox: FC<Props> = ({
             shouldFlip={!isInSidebar}
             $isInSidebar={isInSidebar}
             offset={0}
+            style={{ zIndex: theme.zIndices.popup }}
           >
             <StyledListBox
               aria-label={label ?? "Selectbox options"}

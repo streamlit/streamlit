@@ -50,6 +50,10 @@ import {
   StyledPopoverLabelContainer,
 } from "./styled-components"
 
+// Passed to RAC Popover to disable its internal close-on-interact-outside
+// paths. All dismissal is handled by our own capture-phase useEffect instead.
+const NEVER_CLOSE = (): boolean => false
+
 export interface PopoverProps {
   element: BlockProto.Popover
   empty: boolean
@@ -113,9 +117,19 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
+  // Track whether the popover was just opened, so we can skip the opening
+  // pointerdown event in the outside-click handler. Without this flag, the
+  // capture-phase listener can catch the same pointerdown that triggered
+  // handleToggle and immediately close the popover.
+  const justOpenedRef = useRef(false)
+
   // Handle popover toggle with optimistic updates
   const handleToggle = useCallback((): void => {
     const newOpen = !open
+
+    if (newOpen) {
+      justOpenedRef.current = true
+    }
 
     setOpen(newOpen)
 
@@ -163,26 +177,31 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const triggerRef = useRef<HTMLDivElement>(null)
 
   // Ref for the popover body used in the outside-click handler below.
-  const popoverBodyRef = useRef<HTMLDivElement>(null)
+  const popoverBodyRef = useRef<HTMLElement>(null)
 
+  // Custom dismissal via capture-phase DOM listeners.
+  //
   // isNonModal disables React Aria's ariaHideOutside, which would otherwise
   // mark every element outside the popover as `inert`. In webkit (Safari),
   // `inert` fully prevents pointer events, making it impossible to click
-  // anything on the page while the popover is open. isNonModal also skips
-  // the position:fixed underlay div that independently causes the same webkit
-  // blocking.
+  // anything on the page while the popover is open. But isNonModal also
+  // disables React Aria's built-in dismiss handlers, so we implement
+  // outside-click and Escape dismissal ourselves.
   //
-  // Side-effect: with isNonModal=true, React Aria never auto-focuses the
-  // overlay and never installs its own useInteractOutside or keyboard handlers.
-  // We implement both outside-click and Escape-key dismissal ourselves.
+  // We also pass shouldCloseOnInteractOutside={NEVER_CLOSE} to disable any
+  // remaining RAC close-on-blur/interact-outside paths that could conflict.
   //
   // We use `click` (not `pointerdown`) so that a focused input inside the
-  // popover fires its blur/change handlers before we call handleClose, ensuring
-  // its value is committed to Streamlit's widget manager before the rerun.
+  // popover fires its blur/change handlers before we close, ensuring its
+  // value is committed to Streamlit's widget state before the rerun.
   useEffect(() => {
     if (!open) return
 
     const handleClick = (e: MouseEvent): void => {
+      if (justOpenedRef.current) {
+        justOpenedRef.current = false
+        return
+      }
       const target = e.target as Node
       if (
         !triggerRef.current?.contains(target) &&
@@ -192,12 +211,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       }
     }
 
-    // Capture phase: fires before any child handler, including React Aria's own
-    // overlay onKeyDown. This prevents a double-close (our handler + React
-    // Aria's) that would send two widget updates to the backend. The trade-off
-    // is that nested overlays inside the popover (e.g. a Select dropdown) won't
-    // get the first chance at Escape — pressing Escape always closes the
-    // popover. This is acceptable given Streamlit's typical popover content.
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
         e.stopPropagation()
@@ -206,18 +219,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       }
     }
 
-    // Defer by one tick so that the trigger click that opened the popover
-    // finishes propagating before we begin watching for outside clicks.
-    // Without this, in some chromium scenarios the opening click can race
-    // with useEffect and be caught by our listener, immediately closing
-    // the popover.
-    const timerId = setTimeout(() => {
-      document.addEventListener("click", handleClick)
-      document.addEventListener("keydown", handleKeyDown, true)
-    }, 0)
-
+    document.addEventListener("click", handleClick)
+    document.addEventListener("keydown", handleKeyDown, true)
     return () => {
-      clearTimeout(timerId)
       document.removeEventListener("click", handleClick)
       document.removeEventListener("keydown", handleKeyDown, true)
     }
@@ -259,14 +263,16 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         ref={popoverBodyRef}
         data-testid="stPopoverBody"
         isOpen={open}
-        onOpenChange={(isOpen): void => {
-          if (!isOpen) handleClose()
-        }}
         triggerRef={triggerRef}
         placement="bottom left"
         offset={convertRemToPx(theme.spacing.twoXS)}
         containerPadding={convertRemToPx(theme.spacing.lg)}
         isNonModal
+        shouldCloseOnInteractOutside={NEVER_CLOSE}
+        // React Aria's useOverlayPosition hard-codes zIndex: 100000 as an
+        // inline style which overrides CSS classes. Passing via style prop
+        // ensures the popover renders above app chrome (header, sidebar).
+        style={{ zIndex: theme.zIndices.popup }}
         $stretchWidth={stretchWidth}
         $calculatedWidth={calculatedWidth}
       >
