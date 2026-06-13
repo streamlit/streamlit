@@ -101,7 +101,7 @@ function MenuButton(props: Props): ReactElement {
     }
 
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") setIsOpen(false)
+      if (e.key === "Escape" || e.key === "Tab") setIsOpen(false)
     }
 
     document.addEventListener("pointerdown", handlePointerDown, true)
@@ -176,7 +176,6 @@ function MenuButton(props: Props): ReactElement {
         triggerRef={containerRef}
         data-testid="stMenuButtonBody"
         isOpen={isOpen}
-        onOpenChange={setIsOpen}
         // isNonModal prevents ariaHideOutside from adding `inert` to the rest of
         // the page. Without it, clicking outside the popover would fail in E2E
         // tests because the target element is marked inert by the overlay.
@@ -188,12 +187,12 @@ function MenuButton(props: Props): ReactElement {
         // style, so this wins. Must exceed theme.zIndices.header (999990) so
         // the portal is always above the app toolbar and sidebar overlays.
         style={{ zIndex: theme.zIndices.popup }}
-        // Prevent the shouldCloseOnBlur mechanism from closing when focus moves
-        // to the trigger button (which is inside containerRef but outside the
-        // portal). Without this, re-clicking the trigger would close+reopen.
-        shouldCloseOnInteractOutside={target =>
-          !containerRef.current?.contains(target)
-        }
+        // Disable React Aria's shouldCloseOnBlur path entirely — useFocusWithin
+        // registers a global focus listener that fires onBlurWithin whenever
+        // focus moves outside the popover, including Chromium-specific cases
+        // where focus events fire on elements outside containerRef right after
+        // autoFocus="first". All dismissals are handled by our useEffect above.
+        shouldCloseOnInteractOutside={() => false}
         offset={4}
         placement="bottom start"
       >
