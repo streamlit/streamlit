@@ -154,7 +154,7 @@ Detection uses the same mechanism as the existing `disabled` prop flow, but is s
 1. When the user submits, the frontend sends a rerun BackMsg with the updated widget value
 2. The frontend tracks that this widget triggered the rerun (similar to how form submit works)
 3. During the script run, if `submit_mode` is `"disable"` or `"stop"`, the triggering widget applies the behavior
-4. When a `scriptFinished` ForwardMsg arrives, the widget reverts to normal state
+4. The widget reverts to normal state when the run it triggered completes. The re-enable signal is the `scriptFinished` ForwardMsg for the matching run scope: the full script run for a page-level widget, or the corresponding fragment rerun for a widget inside a fragment (see the "Fragment reruns" edge case). A page-level widget therefore does not re-enable on a fragment rerun's completion, and a fragment-scoped widget re-enables when its fragment rerun finishes even if a full script run is still in progress from a different trigger.
 
 This approach ensures:
 
