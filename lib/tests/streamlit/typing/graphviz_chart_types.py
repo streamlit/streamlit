@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     assert_type(graphviz_chart(digraph), DeltaGenerator)
     assert_type(graphviz_chart(source), DeltaGenerator)
 
-    # With use_container_width parameter (deprecated, positional)
+    # With use_container_width parameter (positional or keyword)
     assert_type(graphviz_chart("digraph { a -> b }", True), DeltaGenerator)
     assert_type(graphviz_chart("digraph { a -> b }", False), DeltaGenerator)
     assert_type(
@@ -74,3 +74,17 @@ if TYPE_CHECKING:
         ),
         DeltaGenerator,
     )
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width / height values (only int or "stretch" / "content", and
+    # None is not allowed)
+    graphviz_chart("digraph { a -> b }", width="invalid")  # type: ignore[arg-type]
+    graphviz_chart("digraph { a -> b }", width=None)  # type: ignore[arg-type]
+    graphviz_chart("digraph { a -> b }", height="invalid")  # type: ignore[arg-type]
+    graphviz_chart("digraph { a -> b }", height=None)  # type: ignore[arg-type]
+
+    # width and height are keyword-only.
+    graphviz_chart("digraph { a -> b }", True, "stretch")  # type: ignore[misc]
