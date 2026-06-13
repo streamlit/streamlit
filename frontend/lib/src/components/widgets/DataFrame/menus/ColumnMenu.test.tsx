@@ -18,10 +18,15 @@ import type { ReactElement } from "react"
 
 import { screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { Field, Int64 } from "apache-arrow"
+import { Field, Int64, Utf8 } from "apache-arrow"
 
-import { NumberColumn } from "~lib/components/widgets/DataFrame/columns"
+import {
+  NumberColumn,
+  TextColumn,
+} from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { Quiver } from "~lib/dataframes/Quiver"
+import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
 
 import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
@@ -289,6 +294,81 @@ describe("DataFrame ColumnMenu", () => {
           within(copyButton).getByTestId("stIconMaterial")
         ).toHaveTextContent("check")
       })
+    })
+  })
+
+  describe("statistics menu functionality", () => {
+    const mockQuiver = new Quiver({ data: TEN_BY_TEN })
+
+    it("renders 'Statistics' when data is provided and column kind supports statistics", async () => {
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} data={mockQuiver} />
+      )
+
+      expect(screen.getByText("Statistics")).toBeVisible()
+    })
+
+    it("does not render 'Statistics' when data is not provided", async () => {
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} data={undefined} />
+      )
+
+      expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
+    })
+
+    it("does not render 'Statistics' for unsupported column kinds", async () => {
+      // Create a column with an unsupported kind (e.g., "image")
+      const imageColumn = {
+        ...defaultProps.column,
+        kind: "image",
+      }
+
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} column={imageColumn} data={mockQuiver} />
+      )
+
+      expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
+    })
+
+    it("renders 'Statistics' for text column kind", async () => {
+      const textColumn = TextColumn({
+        title: "textColumn",
+        id: "col-text",
+        indexNumber: 0,
+        isEditable: false,
+        name: "textColumn",
+        arrowType: {
+          type: DataFrameCellType.DATA,
+          arrowField: new Field("text_column", new Utf8(), true),
+          pandasType: {
+            field_name: "text_column",
+            name: "text_column",
+            pandas_type: "unicode",
+            numpy_type: "object",
+            metadata: null,
+          },
+        },
+        isHidden: false,
+        isIndex: false,
+        isPinned: false,
+        isStretched: false,
+      })
+
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} column={textColumn} data={mockQuiver} />
+      )
+
+      expect(screen.getByText("Statistics")).toBeVisible()
+    })
+
+    it("does not render 'Statistics' when isEditable is true", async () => {
+      // Statistics are hidden for editable tables (st.data_editor) because
+      // they would show stale data from the original Quiver, not the edits.
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} data={mockQuiver} isEditable={true} />
+      )
+
+      expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
     })
   })
 })
