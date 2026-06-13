@@ -944,10 +944,31 @@ class ConfigTest(unittest.TestCase):
         ):
             config._check_metrics_user_attributes()
 
+    def test_check_metrics_user_attributes_rejects_non_string_entries(self):
+        # Non-string entries produce a deterministic RuntimeError instead of a
+        # generic type error later when used as metric label names.
+        config._set_option("server.unsafeMetricsUserAttributes", ["email", 123], "test")
+        with pytest.raises(
+            RuntimeError,
+            match=r"must contain only strings.*123",
+        ):
+            config._check_metrics_user_attributes()
+
     def test_check_metrics_user_attributes_noop_when_empty(self):
         # The default empty list disables the feature and must not raise.
         config._set_option("server.unsafeMetricsUserAttributes", [], "test")
         config._check_metrics_user_attributes()
+
+    def test_check_metrics_user_attributes_warns_when_enabled(self):
+        # Enabling the feature should log a warning so operators know that the
+        # configured attribute values are exposed on the metrics endpoint.
+        config._set_option("server.unsafeMetricsUserAttributes", ["email"], "test")
+        with self.assertLogs("streamlit.config", level="WARNING") as logs:
+            config._check_metrics_user_attributes()
+        assert any(
+            "unsafeMetricsUserAttributes is enabled" in message
+            for message in logs.output
+        )
 
     def test_maybe_convert_to_number(self):
         assert config._maybe_convert_to_number("1234") == 1234
