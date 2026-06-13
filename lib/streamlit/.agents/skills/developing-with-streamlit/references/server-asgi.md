@@ -1,7 +1,5 @@
 # Advanced server configuration with st.App
 
-> **Experimental:** `st.App` is experimental and may change or be removed in future versions without warning. Avoid building hard production dependencies on its API.
-
 Use `st.App` when a normal Streamlit script needs ASGI-level composition: custom HTTP routes, middleware, startup/shutdown hooks, programmatic secrets, custom exception handling, or mounting with another ASGI framework.
 
 Do not create an ASGI wrapper for a simple app that only needs Streamlit UI and ordinary Streamlit configuration. When the app does need advanced server features, keep the UI in a normal Streamlit script and launch the `st.App` wrapper with `streamlit run asgi_app.py` when possible.
@@ -292,12 +290,9 @@ Return `True` from `on_script_error` only when the handler shows its own user-fa
 - Hosting multiple `App` instances with different `script_path` values in the same process is not supported.
 - Lifespan hooks run once per process, not once per browser session.
 - Custom routes and middleware run in the ASGI server context; Streamlit widget APIs belong in the Streamlit script.
-- Both `from streamlit.starlette import App` and `st.App` resolve to the same class. Prefer `st.App` in new code for brevity.
-- Pass `debug=True` to enable Starlette's debug mode for the underlying ASGI app while developing; keep it off in production.
-- Older feedback threads may mention `server.useStarlette`; do not add that option unless the installed Streamlit version's config reference includes it.
 
 ## References
 
 - [Starlette documentation](https://www.starlette.io/)
 - [Uvicorn documentation](https://www.uvicorn.org/)
-- [Starlette/ASGI feedback issue](https://github.com/streamlit/streamlit/issues/13600)
+- [st.App](https://docs.streamlit.io/develop/api-reference/server/st.app)
