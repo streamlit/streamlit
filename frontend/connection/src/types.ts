@@ -176,8 +176,8 @@ export interface StreamlitEndpoints {
   setFileUploadClientConfig?(config: FileUploadClientConfig): void
 }
 
-// Re-export base config types from @streamlit/utils for backward compatibility
-// These types are now defined in the utils package to avoid duplication
+// Re-export base config types from @streamlit/utils for backward compatibility.
+// These types are defined in the utils package to keep a single source of truth.
 export type {
   AppConfig,
   IHostConfigProperties,

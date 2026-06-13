@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import enum
 import os
+import sqlite3
 import unittest
+from collections.abc import Iterator, Mapping
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -31,6 +33,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import dataframe_util
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.type_util import get_fqn_type
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -56,6 +59,56 @@ class DataframeUtilTest(unittest.TestCase):
             dataframe_util.convert_pandas_df_to_arrow_bytes(df2)
         except Exception as ex:
             self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
+
+    def test_convert_pandas_df_to_arrow_bytes_downcasts_large_types(self):
+        """Test that downcast_large_types converts large Arrow types to standard ones."""
+        import pyarrow as pa
+
+        df = pd.DataFrame(
+            {"col": pd.array(["hello", "world"], dtype="string[pyarrow]")}
+        )
+        result_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(
+            df, downcast_large_types=True
+        )
+        result_table = pa.ipc.open_stream(result_bytes).read_all()
+        assert result_table.schema.field("col").type == pa.string()
+
+    def test_convert_pandas_df_to_arrow_bytes_no_downcast_by_default(self):
+        """Test that large types are preserved when downcast_large_types is False."""
+        import pyarrow as pa
+
+        df = pd.DataFrame(
+            {"col": pd.array(["hello", "world"], dtype="string[pyarrow]")}
+        )
+        result_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(df)
+        result_table = pa.ipc.open_stream(result_bytes).read_all()
+        # The default ArrowDtype("string[pyarrow]") uses large_string on
+        # pandas >= 3.0. Without downcasting the type should be preserved.
+        col_type = result_table.schema.field("col").type
+        assert col_type in {pa.string(), pa.large_string()}
+
+    def test_convert_arrow_table_to_arrow_bytes_downcasts_large_list(self):
+        """Test that convert_arrow_table_to_arrow_bytes downcasts large_list to list."""
+        table = pa.table(
+            {
+                "list_col": pa.array(
+                    [[1, 2], [3, 4, 5]], type=pa.large_list(pa.int64())
+                ),
+                "str_col": pa.array(["a", "b"], type=pa.large_string()),
+            }
+        )
+
+        result_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(table)
+        result_table = pa.ipc.open_stream(result_bytes).read_all()
+
+        # large_list should be downcast to list
+        list_field = result_table.schema.field("list_col")
+        assert pa.types.is_list(list_field.type)
+        assert not pa.types.is_large_list(list_field.type)
+
+        # large_string should be preserved (Arrow JS supports it)
+        str_field = result_table.schema.field("str_col")
+        assert pa.types.is_large_string(str_field.type)
 
     @parameterized.expand(
         SHARED_TEST_CASES,
@@ -197,6 +250,125 @@ class DataframeUtilTest(unittest.TestCase):
         converted = dataframe_util.convert_anything_to_pandas_df(DataFrameIsh())
         assert isinstance(converted, pd.DataFrame)
         assert converted.empty
+
+    @pytest.mark.skipif(
+        not hasattr(pa.Table.from_pydict({"col": [1]}), "__arrow_c_stream__"),
+        reason="PyArrow version does not support __arrow_c_stream__ on Table",
+    )
+    def test_convert_anything_to_pandas_df_uses_arrow_pycapsule_interface(self):
+        """Test that objects implementing __arrow_c_stream__ are converted via
+        the Arrow PyCapsule Interface.
+        """
+
+        class ArrowStreamObject:
+            """Mock object that implements __arrow_c_stream__ via a PyArrow Table."""
+
+            def __init__(self):
+                self._table = pa.Table.from_pydict({"col": [1, 2, 3]})
+                self.stream_called = False
+
+            def __arrow_c_stream__(self, requested_schema=None):
+                self.stream_called = True
+                return self._table.__arrow_c_stream__(requested_schema)
+
+        obj = ArrowStreamObject()
+        result = dataframe_util.convert_anything_to_pandas_df(obj)
+
+        assert obj.stream_called
+        assert isinstance(result, pd.DataFrame)
+        assert list(result.columns) == ["col"]
+        assert list(result["col"]) == [1, 2, 3]
+
+        # Test ensure_copy behavior
+        obj2 = ArrowStreamObject()
+        dataframe_util.convert_anything_to_pandas_df(obj2, ensure_copy=False)
+        result_with_copy = dataframe_util.convert_anything_to_pandas_df(
+            obj2, ensure_copy=True
+        )
+        # Modifying the copy should not affect future conversions
+        result_with_copy["col"] = [10, 20, 30]
+        result_fresh = dataframe_util.convert_anything_to_pandas_df(
+            obj2, ensure_copy=False
+        )
+        assert list(result_fresh["col"]) == [1, 2, 3]
+
+    @pytest.mark.skipif(
+        not hasattr(pa.Table.from_pydict({"col": [1]}), "__arrow_c_stream__"),
+        reason="PyArrow version does not support __arrow_c_stream__ on Table",
+    )
+    def test_convert_anything_to_pandas_df_pycapsule_fallback_on_arrow_error(self):
+        """Test that ArrowInvalid errors from __arrow_c_stream__ fall back to
+        other conversion methods.
+        """
+
+        class BrokenArrowStreamObject:
+            """Mock object with __arrow_c_stream__ that raises ArrowInvalid,
+            but has a to_pandas fallback.
+            """
+
+            def __init__(self):
+                self.stream_called = False
+                self.to_pandas_called = False
+
+            def __arrow_c_stream__(self, requested_schema=None):
+                """Raise ArrowInvalid to simulate an object with incompatible schema."""
+                self.stream_called = True
+                import pyarrow as pa
+
+                raise pa.ArrowInvalid("Test: simulated non-struct type export")
+
+            def to_pandas(self):
+                """Fallback via to_pandas method (checked before __arrow_c_stream__)."""
+                self.to_pandas_called = True
+                return pd.DataFrame({"values": [1, 2, 3]})
+
+        # Note: to_pandas is checked BEFORE __arrow_c_stream__ in the conversion code,
+        # so we need to test the fallback by ensuring to_pandas is used.
+        obj = BrokenArrowStreamObject()
+        result = dataframe_util.convert_anything_to_pandas_df(obj)
+
+        # Since to_pandas is checked first, it should be called
+        assert obj.to_pandas_called
+        # __arrow_c_stream__ should NOT be called since to_pandas succeeded first
+        assert not obj.stream_called
+        # Verify result is correct
+        assert isinstance(result, pd.DataFrame)
+        assert list(result["values"]) == [1, 2, 3]
+
+    @pytest.mark.skipif(
+        not hasattr(pa.Table.from_pydict({"col": [1]}), "__arrow_c_stream__"),
+        reason="PyArrow version does not support __arrow_c_stream__ on Table",
+    )
+    def test_pycapsule_arrow_error_falls_back_to_next_converter(self):
+        """Test that ArrowInvalid from __arrow_c_stream__ causes fallback to
+        later conversion methods (interchange protocol or pandas constructor).
+        """
+        from streamlit.errors import StreamlitAPIException
+
+        class PyCapsuleOnlyObject:
+            """Object with only __arrow_c_stream__ (no to_pandas or __dataframe__).
+
+            This tests that when PyCapsule fails with ArrowInvalid, the code
+            continues to later fallback paths.
+            """
+
+            def __init__(self):
+                self.stream_called = False
+
+            def __arrow_c_stream__(self, requested_schema=None):
+                self.stream_called = True
+                import pyarrow as pa
+
+                raise pa.ArrowInvalid("Test: non-struct schema")
+
+        obj = PyCapsuleOnlyObject()
+
+        # Should raise because there's no fallback after PyCapsule fails
+        with pytest.raises(StreamlitAPIException, match="Unable to convert"):
+            dataframe_util.convert_anything_to_pandas_df(obj)
+
+        # Verify the PyCapsule path was attempted
+        assert obj.stream_called
 
     @parameterized.expand(
         SHARED_TEST_CASES,
@@ -525,7 +697,6 @@ class DataframeUtilTest(unittest.TestCase):
 
     def test_verify_sqlite3_integration(self):
         """Verify that sqlite3 cursor can be used as a data source."""
-        import sqlite3
 
         con = sqlite3.connect("file::memory:", uri=True)
         cur = con.cursor()
@@ -804,6 +975,22 @@ class DataframeUtilTest(unittest.TestCase):
             df, dataframe_util.DataFormat.KEY_VALUE_DICT
         ) == {0: None, 1: None, 2: None, 3: None}
 
+    def test_convert_df_preserves_none_after_row_assignment(self):
+        """Regression test for https://github.com/streamlit/streamlit/issues/14693.
+
+        In pandas 3.0+, infer_objects() converts None back to np.nan. This test
+        verifies that None values assigned via df.loc[] are preserved as None.
+        """
+        # Simulate how data_editor adds new rows
+        df = pd.DataFrame([{"Text": "Row 1"}])
+        df.loc[1] = {"Text": None}
+
+        result = dataframe_util.convert_pandas_df_to_data_format(
+            df, dataframe_util.DataFormat.LIST_OF_RECORDS
+        )
+        # None must be preserved, not converted to np.nan
+        assert result == [{"Text": "Row 1"}, {"Text": None}]
+
     def test_convert_anything_to_sequence_object_is_indexable(self):
         l1 = ["a", "b", "c"]
         l2 = dataframe_util.convert_anything_to_list(l1)
@@ -897,6 +1084,237 @@ class DataframeUtilTest(unittest.TestCase):
     ) -> None:
         """Test `has_range_index` correctly identifies RangeIndex vs others."""
         assert dataframe_util.has_range_index(df) is expected
+
+
+@pytest.mark.parametrize(
+    ("iterable", "max_iterations", "expected"),
+    [
+        ([1, 2, 3], None, [1, 2, 3]),
+        (range(5), None, [0, 1, 2, 3, 4]),
+        (range(10), 3, [0, 1, 2]),
+    ],
+    ids=["list_full", "range_full", "range_capped"],
+)
+def test_iterable_to_list(
+    iterable: Any, max_iterations: int | None, expected: list[Any]
+) -> None:
+    """_iterable_to_list copies iterables and honors ``max_iterations`` when set."""
+    kwargs = {} if max_iterations is None else {"max_iterations": max_iterations}
+    assert dataframe_util._iterable_to_list(iterable, **kwargs) == expected
+
+
+def test_convert_numpy_zero_dimensional_array_to_empty_dataframe() -> None:
+    """A 0-D numpy array is converted to an empty DataFrame (not a 1x1 frame)."""
+    arr = np.array(42)
+    assert arr.shape == ()
+    out = dataframe_util.convert_anything_to_pandas_df(arr)
+    assert isinstance(out, pd.DataFrame)
+    assert out.empty
+
+
+def test_determine_arrow_column_fix_geometry_str_dtype() -> None:
+    """Treat columns whose string dtype is 'geometry' as needing string conversion."""
+    # Mimic a GeoPandas-style dtype without pulling in optional geospatial deps.
+
+    class _GeomDtype:
+        kind = "i"
+
+        def __str__(self) -> str:
+            return "geometry"
+
+    class _Column:
+        dtype = _GeomDtype()
+
+    assert dataframe_util.determine_arrow_column_fix(_Column()) == "string"  # type: ignore[arg-type]
+
+
+def test_fix_arrow_incompatible_column_types_stringifies_mixed_index_only() -> None:
+    """When columns are Arrow-safe, a mixed index is still cast to string."""
+    df = pd.DataFrame({"ints": [1, 2, 3]}, index=[1.0, "x", 2])
+    fixed = dataframe_util.fix_arrow_incompatible_column_types(df)
+    assert infer_dtype(fixed.index) == "string"
+
+
+def test_convert_dict_fallback_failure_raises_streamlit_api_exception() -> None:
+    """If both the default and key-value dict conversions fail, raise a clear error."""
+    bad: dict[int, list[int]] = {0: [1], 1: [2, 3]}
+    with (
+        pytest.raises(StreamlitAPIException, match="Unable to convert object"),
+        patch.object(
+            dataframe_util,
+            "_dict_to_pandas_df",
+            side_effect=ValueError("forced failure"),
+        ),
+    ):
+        dataframe_util.convert_anything_to_pandas_df(bad)
+
+
+def test_convert_anything_custom_streamlit_mapping_uses_to_dict() -> None:
+    """Objects that look like Streamlit CustomDict are converted via ``to_dict``."""
+
+    class _StreamlitLikeMapping(Mapping[str, int]):
+        def __init__(self, data: dict[str, int]) -> None:
+            self._data = data
+
+        def __getitem__(self, key: str) -> int:
+            return self._data[key]
+
+        def __iter__(self) -> Iterator[str]:
+            return iter(self._data)
+
+        def __len__(self) -> int:
+            return len(self._data)
+
+        def to_dict(self) -> dict[str, int]:
+            return dict(self._data)
+
+    _StreamlitLikeMapping.__module__ = "streamlit.runtime.state.test"
+
+    m = _StreamlitLikeMapping({"a": 1, "b": 2})
+    assert dataframe_util.is_custom_dict(m) is True
+    df = dataframe_util.convert_anything_to_pandas_df(m)
+    expected = pd.DataFrame({"value": [1, 2]}, index=["a", "b"])
+    pd.testing.assert_frame_equal(df.sort_index(), expected.sort_index())
+
+
+def test_convert_sequence_pydantic_path_attribute_error_falls_through() -> None:
+    """AttributeError from ``dump_pydantic_sequence`` falls back to generic conversion."""
+    data = [object(), object()]
+    with (
+        patch.object(
+            dataframe_util, "is_sequence_of_pydantic_models", return_value=True
+        ),
+        patch.object(
+            dataframe_util,
+            "dump_pydantic_sequence",
+            side_effect=AttributeError("forced"),
+        ),
+    ):
+        df = dataframe_util.convert_anything_to_pandas_df(data)
+    assert len(df) == 2
+
+
+def test_convert_duckdb_relation_row_cap_triggers_caption() -> None:
+    """DuckDB relations respect max_unevaluated_rows and may show an info caption."""
+
+    class _FakeRelation:
+        def __init__(self) -> None:
+            self._lim = 0
+
+        def limit(self, n: int) -> _FakeRelation:
+            self._lim = n
+            return self
+
+        def df(self) -> pd.DataFrame:
+            return pd.DataFrame({"x": list(range(self._lim))})
+
+    rel = _FakeRelation()
+    with (
+        patch.object(dataframe_util, "is_duckdb_relation", lambda o: o is rel),
+        patch.object(dataframe_util, "_show_data_information") as mock_info,
+    ):
+        out = dataframe_util.convert_anything_to_pandas_df(rel, max_unevaluated_rows=4)
+    assert len(out) == 4
+    mock_info.assert_called_once()
+
+
+def test_convert_dbapi_cursor_row_cap_triggers_caption() -> None:
+    """DB-API cursors that return a full fetchmany batch may show a row-limit caption."""
+    with sqlite3.connect("file::memory:", uri=True) as con:
+        cur = con.cursor()
+        cur.execute("CREATE TABLE t(x INTEGER)")
+        cur.executemany("INSERT INTO t VALUES (?)", [(i,) for i in range(6)])
+        con.commit()
+        db_cursor = cur.execute("SELECT * FROM t")
+        with patch.object(dataframe_util, "_show_data_information") as mock_info:
+            out = dataframe_util.convert_anything_to_pandas_df(
+                db_cursor, max_unevaluated_rows=3
+            )
+        assert len(out) == 3
+        mock_info.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "fmt",
+    [
+        dataframe_util.DataFormat.PYARROW_ARRAY,
+        dataframe_util.DataFormat.PANDAS_SERIES,
+        dataframe_util.DataFormat.LIST_OF_VALUES,
+    ],
+    ids=["pyarrow_array", "pandas_series", "list_of_values"],
+)
+def test_convert_pandas_df_to_data_format_requires_single_column_for_series_like_outputs(
+    fmt: dataframe_util.DataFormat,
+) -> None:
+    """Series-like targets reject multi-column frames."""
+    df = pd.DataFrame({"a": [1], "b": [2]})
+    with pytest.raises(ValueError, match="single column"):
+        dataframe_util.convert_pandas_df_to_data_format(df, fmt)
+
+
+@pytest.mark.require_integration
+def test_determine_data_format_polars_types() -> None:
+    """determine_data_format recognizes Polars DataFrame, Series, and LazyFrame."""
+    import polars as pl
+
+    df = pl.DataFrame({"a": [1, 2]})
+    cases: tuple[tuple[Any, dataframe_util.DataFormat], ...] = (
+        (df, dataframe_util.DataFormat.POLARS_DATAFRAME),
+        (pl.Series("b", [3, 4]), dataframe_util.DataFormat.POLARS_SERIES),
+        (df.lazy(), dataframe_util.DataFormat.POLARS_LAZYFRAME),
+    )
+    for obj, expected in cases:
+        assert dataframe_util.determine_data_format(obj) is expected
+
+
+@pytest.mark.require_integration
+def test_convert_polars_with_ensure_copy_and_lazyframe_limit_message() -> None:
+    """Polars inputs honor ensure_copy; lazy frames respect row limits and may warn."""
+    import polars as pl
+
+    pdf = pl.DataFrame({"a": [1, 2, 3]})
+    out1 = dataframe_util.convert_anything_to_pandas_df(pdf, ensure_copy=True)
+    assert isinstance(out1, pd.DataFrame)
+    assert list(out1["a"]) == [1, 2, 3]
+
+    ser = pl.Series("s", [10, 20])
+    out2 = dataframe_util.convert_anything_to_pandas_df(ser, ensure_copy=True)
+    assert isinstance(out2, pd.DataFrame)
+    assert out2.shape == (2, 1)
+
+    lf = pl.LazyFrame({"x": range(50)})
+    with patch.object(dataframe_util, "_show_data_information") as mock_info:
+        out3 = dataframe_util.convert_anything_to_pandas_df(lf, max_unevaluated_rows=5)
+    assert len(out3) == 5
+    mock_info.assert_called_once()
+
+
+@pytest.mark.require_integration
+def test_convert_pandas_df_to_polars_and_xarray_formats() -> None:
+    """convert_pandas_df_to_data_format can emit Polars and xarray objects."""
+    import polars as pl
+    import xarray as xr
+
+    pdf = pd.DataFrame({"c": [1.0, 2.0]})
+    pl_df = dataframe_util.convert_pandas_df_to_data_format(
+        pdf, dataframe_util.DataFormat.POLARS_DATAFRAME
+    )
+    assert isinstance(pl_df, pl.DataFrame)
+
+    pl_ser = dataframe_util.convert_pandas_df_to_data_format(
+        pdf, dataframe_util.DataFormat.POLARS_SERIES
+    )
+    assert isinstance(pl_ser, pl.Series)
+
+    ds = dataframe_util.convert_pandas_df_to_data_format(
+        pdf, dataframe_util.DataFormat.XARRAY_DATASET
+    )
+    assert isinstance(ds, xr.Dataset)
+
+    da = dataframe_util.convert_pandas_df_to_data_format(
+        pdf, dataframe_util.DataFormat.XARRAY_DATA_ARRAY
+    )
+    assert isinstance(da, xr.DataArray)
 
 
 class TestArrowTruncation(DeltaGeneratorTestCase):
@@ -1005,3 +1423,293 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue(-2).new_element
         assert "due to data size limitations" in el.markdown.body
         assert el.markdown.element_type == MarkdownProto.Type.CAPTION
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_dataframe() -> None:
+    """Direct Polars DataFrame to Arrow IPC produces valid bytes with correct schema."""
+    import polars as pl
+
+    df = pl.DataFrame(
+        {
+            "int_col": [1, 2, 3],
+            "str_col": ["hello", "world", "test"],
+            "float_col": [1.5, 2.5, 3.5],
+        }
+    )
+
+    result = dataframe_util.convert_anything_to_arrow_bytes(df)
+    assert isinstance(result, bytes)
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 3
+    assert table.num_columns == 3
+    assert table.column_names == ["int_col", "str_col", "float_col"]
+    # Polars uses large_string by default
+    assert table.schema.field("str_col").type == pa.large_string()
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_series() -> None:
+    """Direct Polars Series to Arrow IPC produces valid single-column bytes."""
+    import polars as pl
+
+    series = pl.Series("values", ["a", "b", "c"])
+
+    result = dataframe_util.convert_anything_to_arrow_bytes(series)
+    assert isinstance(result, bytes)
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 3
+    assert table.num_columns == 1
+    assert "values" in table.column_names
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_lazyframe_with_limit() -> None:
+    """Direct Polars LazyFrame to Arrow IPC respects row limits and shows warning."""
+    import polars as pl
+
+    lf = pl.LazyFrame({"x": range(100)})
+
+    with patch.object(dataframe_util, "_show_data_information") as mock_info:
+        result = dataframe_util.convert_anything_to_arrow_bytes(
+            lf, max_unevaluated_rows=50
+        )
+        mock_info.assert_called_once()
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 50
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_various_types() -> None:
+    """Direct Polars conversion handles various data types correctly."""
+    from datetime import date, datetime
+
+    import polars as pl
+
+    df = pl.DataFrame(
+        {
+            "int8": pl.Series([1, 2, 3], dtype=pl.Int8),
+            "int64": pl.Series([10, 20, 30], dtype=pl.Int64),
+            "float64": pl.Series([1.1, 2.2, 3.3], dtype=pl.Float64),
+            "bool": pl.Series([True, False, True], dtype=pl.Boolean),
+            "date": pl.Series([date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)]),
+            "datetime": pl.Series(
+                [datetime(2020, 1, 1, 12, 0), datetime(2020, 1, 2, 12, 0), None]
+            ),
+            "string": pl.Series(["a", "b", "c"], dtype=pl.Utf8),
+            "list": pl.Series([[1, 2], [3, 4], [5, 6]]),
+        }
+    )
+
+    result = dataframe_util.convert_anything_to_arrow_bytes(df)
+    assert isinstance(result, bytes)
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 3
+    assert table.num_columns == 8
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_with_nulls() -> None:
+    """Direct Polars conversion handles null values correctly."""
+    import polars as pl
+
+    df = pl.DataFrame(
+        {
+            "with_null": [1, None, 3],
+            "all_null": [None, None, None],
+            "str_null": ["a", None, "c"],
+        }
+    )
+
+    result = dataframe_util.convert_anything_to_arrow_bytes(df)
+    assert isinstance(result, bytes)
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 3
+    assert table.column("with_null").null_count == 1
+    assert table.column("all_null").null_count == 3
+    assert table.column("str_null").null_count == 1
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_downcasts_large_list() -> None:
+    """Direct Polars path downcasts large_list to list for Arrow JS compatibility."""
+    import polars as pl
+
+    df = pl.DataFrame(
+        {"list_col": [[1, 2], [3, 4, 5], [6]], "str_col": ["a", "b", "c"]}
+    )
+
+    result = dataframe_util.convert_anything_to_arrow_bytes(df)
+    assert isinstance(result, bytes)
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 3
+
+    # large_list should be downcast to list (Arrow JS doesn't support large_list)
+    list_field = table.schema.field("list_col")
+    assert pa.types.is_list(list_field.type), f"Expected list, got {list_field.type}"
+    assert not pa.types.is_large_list(list_field.type)
+
+    # large_string should be preserved (Arrow JS supports it)
+    str_field = table.schema.field("str_col")
+    assert pa.types.is_large_string(str_field.type)
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_empty_dataframe() -> None:
+    """Direct Polars path handles empty DataFrames correctly."""
+    import polars as pl
+
+    df = pl.DataFrame({"col": []}).cast({"col": pl.Int64})
+
+    result = dataframe_util.convert_anything_to_arrow_bytes(df)
+    assert isinstance(result, bytes)
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 0
+    assert table.num_columns == 1
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_lazyframe_no_warning_when_within_limit() -> None:
+    """LazyFrame with fewer rows than limit should not show warning."""
+    import polars as pl
+
+    lf = pl.LazyFrame({"x": range(30)})
+
+    with patch.object(dataframe_util, "_show_data_information") as mock_info:
+        result = dataframe_util.convert_anything_to_arrow_bytes(
+            lf, max_unevaluated_rows=50
+        )
+        mock_info.assert_not_called()
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 30
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_lazyframe_exact_row_count_no_warning() -> None:
+    """LazyFrame with exactly max_unevaluated_rows should not show false positive warning."""
+    import polars as pl
+
+    lf = pl.LazyFrame({"x": range(50)})
+
+    with patch.object(dataframe_util, "_show_data_information") as mock_info:
+        result = dataframe_util.convert_anything_to_arrow_bytes(
+            lf, max_unevaluated_rows=50
+        )
+        # No warning because the LazyFrame has exactly 50 rows, not more
+        mock_info.assert_not_called()
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 50
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_fallback_on_error() -> None:
+    """Polars fast path falls back to Pandas path when conversion fails."""
+    import polars as pl
+
+    df = pl.DataFrame({"x": [1, 2, 3]})
+
+    with patch.object(
+        dataframe_util,
+        "_convert_polars_to_arrow_bytes",
+        side_effect=RuntimeError("boom"),
+    ):
+        # Should still succeed via the Pandas fallback path
+        result = dataframe_util.convert_anything_to_arrow_bytes(df)
+
+    assert isinstance(result, bytes)
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 3
+
+
+@pytest.mark.parametrize(
+    ("input_type", "expected"),
+    [
+        (pa.int32(), pa.int32()),
+        (pa.large_string(), pa.string()),
+        (pa.large_binary(), pa.binary()),
+        (pa.large_list(pa.large_string()), pa.list_(pa.string())),
+    ],
+    ids=["int32", "large_string", "large_binary", "nested_large_list"],
+)
+def test_downcast_large_type(input_type: pa.DataType, expected: pa.DataType) -> None:
+    """``_downcast_large_type`` maps large types to their regular counterparts."""
+    assert dataframe_util._downcast_large_type(input_type) == expected
+
+
+def test_downcast_large_arrow_types_no_op_when_no_large_types() -> None:
+    """A table without large types is returned unchanged (same instance)."""
+    table = pa.table({"a": pa.array([1, 2, 3], type=pa.int32())})
+    assert dataframe_util._downcast_large_arrow_types(table) is table
+
+
+def test_downcast_large_arrow_types_casts_large_columns() -> None:
+    """Tables with large_string columns are cast to plain string and keep their values."""
+    table = pa.table({"text": pa.array(["a", "b", "c"], type=pa.large_string())})
+    result = dataframe_util._downcast_large_arrow_types(table)
+    assert result.schema.field("text").type == pa.string()
+    assert result.column("text").to_pylist() == ["a", "b", "c"]
+
+
+@pytest.mark.parametrize(
+    ("schema", "expected"),
+    [
+        (pa.schema([pa.field("col", pa.large_list(pa.int32()))]), True),
+        (
+            pa.schema([pa.field("a", pa.int64()), pa.field("b", pa.string())]),
+            False,
+        ),
+    ],
+    ids=["with_large_list", "plain_schema"],
+)
+def test_has_large_list_type(schema: pa.Schema, expected: bool) -> None:
+    """``_has_large_list_type`` detects LargeListType anywhere in the schema."""
+    assert dataframe_util._has_large_list_type(schema) is expected
+
+
+def test_downcast_large_list_schema_replaces_large_list() -> None:
+    """LargeList fields become regular list fields with downcast value types."""
+    schema = pa.schema([pa.field("nums", pa.large_list(pa.int32()))])
+    result = dataframe_util._downcast_large_list_schema(schema)
+    assert result.field("nums").type == pa.list_(pa.int32())
+
+
+def test_pandas_df_to_series_raises_on_multi_column() -> None:
+    """``_pandas_df_to_series`` raises ValueError on multi-column inputs."""
+    df = pd.DataFrame({"a": [1], "b": [2]})
+    with pytest.raises(ValueError, match="single column"):
+        dataframe_util._pandas_df_to_series(df)
+
+
+def test_pandas_df_to_series_returns_first_column() -> None:
+    """``_pandas_df_to_series`` returns the single column as a Series."""
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    assert list(dataframe_util._pandas_df_to_series(df)) == [1, 2, 3]
+
+
+def test_unify_missing_values_replaces_nan_with_none() -> None:
+    """``_unify_missing_values`` replaces NaN with None and preserves other values."""
+    # Use an object-dtype column so the None replacement is stable across all
+    # supported pandas versions. For pure-float columns, pandas < 3.0 coerces
+    # None back to NaN via infer_objects(), which is the documented behavior.
+    df = pd.DataFrame({"a": ["x", np.nan, "y"]})
+    result = dataframe_util._unify_missing_values(df)
+    assert result["a"].tolist() == ["x", None, "y"]

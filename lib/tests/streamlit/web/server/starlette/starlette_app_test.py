@@ -16,14 +16,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from unittest.mock import patch
 
 import pytest
+from starlette.applications import Starlette
 from starlette.middleware import Middleware
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
@@ -36,20 +39,48 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
-from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_app import (
     _RESERVED_ROUTE_PREFIXES,
     App,
     create_starlette_app,
+    create_streamlit_middleware,
 )
-from streamlit.web.server.stats_request_handler import StatsRequestHandler
+from streamlit.web.server.starlette.starlette_gzip_middleware import (
+    SelectiveGZipMiddleware,
+    _should_bypass_static_gzip,
+)
+from streamlit.web.server.starlette.starlette_routes import _stats_to_proto
+from streamlit.web.server.starlette.starlette_server_config import (
+    ANYIO_STATIC_FILE_THREAD_TOKENS,
+)
+from streamlit.web.server.starlette.starlette_static_routes import (
+    STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
+)
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
 
     from starlette.requests import Request
+
+
+@pytest.fixture(autouse=True)
+def _reset_main_script_path_and_config_options() -> Iterator[None]:
+    """Snapshot and restore module-level config state between tests.
+
+    `App.__init__` now sets `config._main_script_path` (so script-level
+    `.streamlit/config.toml` is discoverable under direct uvicorn launches).
+    That mutation, plus the lazily cached `_config_options` dict that depends
+    on it, would leak across tests without this autouse reset.
+    """
+    from streamlit import config
+
+    original_main_script_path = config._main_script_path
+    original_config_options = config._config_options
+    yield
+    config._main_script_path = original_main_script_path
+    config._config_options = original_config_options
 
 
 class _DummyStatsManager:
@@ -210,7 +241,7 @@ def starlette_client(tmp_path: Path) -> Iterator[tuple[TestClient, _DummyRuntime
         {
             "server.baseUrlPath": "",
             "global.developmentMode": False,
-            # Disable XSRF for basic tests (matches Tornado test behavior)
+            # Disable XSRF for basic tests
             "server.enableXsrfProtection": False,
         }
     ):
@@ -231,6 +262,96 @@ def test_health_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> 
     response = client.get("/_stcore/health")
     assert response.status_code == 200
     assert response.text == "ok"
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("/", True),
+        ("/static/app.123.js", True),
+        ("/app/static/logo.svg", False),
+        ("/assets/theme.css", False),
+        ("/_stcore/metrics", False),
+        ("/media/file", False),
+    ],
+    ids=[
+        "root",
+        "static-bundle",
+        "app-static",
+        "hashed-style",
+        "api-route",
+        "media-route",
+    ],
+)
+def test_should_bypass_static_gzip(path: str, expected: bool) -> None:
+    """Only root and `/static/...` paths should bypass the gzip middleware."""
+    assert _should_bypass_static_gzip(path) is expected
+
+
+def test_create_streamlit_middleware_uses_selective_gzip() -> None:
+    """The Streamlit middleware stack should use the selective gzip wrapper."""
+    middleware_list = create_streamlit_middleware()
+
+    assert middleware_list[2].cls is SelectiveGZipMiddleware
+
+
+def test_selective_gzip_skips_static_like_paths() -> None:
+    """Only `/static/...` paths should bypass gzip while API paths compress."""
+
+    async def javascript_asset(_: Any) -> PlainTextResponse:
+        return PlainTextResponse("x" * 2000, media_type="application/javascript")
+
+    async def json_api(_: Any) -> PlainTextResponse:
+        return PlainTextResponse("x" * 2000, media_type="application/json")
+
+    app = Starlette(
+        routes=[
+            Route("/static/app.123.js", javascript_asset),
+            Route("/_stcore/data", json_api),
+        ],
+        middleware=create_streamlit_middleware(),
+    )
+
+    with TestClient(app) as client:
+        static_response = client.get(
+            "/static/app.123.js", headers={"Accept-Encoding": "gzip"}
+        )
+        api_response = client.get("/_stcore/data", headers={"Accept-Encoding": "gzip"})
+
+    assert static_response.status_code == HTTPStatus.OK
+    assert static_response.headers.get("content-encoding") is None
+    assert api_response.status_code == HTTPStatus.OK
+    assert api_response.headers.get("content-encoding") == "gzip"
+
+
+def test_create_starlette_app_sets_anyio_thread_limiter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The Starlette app lifespan should apply the measured AnyIO thread limit."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text("<html>test</html>")
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    observed: dict[str, int] = {}
+
+    async def start() -> None:
+        from anyio import to_thread
+
+        observed["tokens"] = to_thread.current_default_thread_limiter().total_tokens
+
+    runtime.start = start
+    app = create_starlette_app(runtime)
+
+    with TestClient(app):
+        pass
+
+    assert observed["tokens"] == ANYIO_STATIC_FILE_THREAD_TOKENS
 
 
 def test_metrics_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> None:
@@ -305,7 +426,7 @@ def test_metrics_endpoint_protobuf(
     )
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/x-protobuf"
-    expected_proto = StatsRequestHandler._stats_to_proto(expected).SerializeToString()
+    expected_proto = _stats_to_proto(expected).SerializeToString()
     assert response.content == expected_proto
 
 
@@ -1490,14 +1611,26 @@ class TestAppScriptPathResolution:
         resolved = app._resolve_script_path()
         assert resolved == script_path
 
-    def test_relative_path_is_resolved_to_cwd(self) -> None:
+    def test_relative_path_is_resolved_to_cwd(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that relative script paths are resolved relative to cwd."""
+        from streamlit import config
+
+        # Ensure _main_script_path is None at construction so __init__ takes
+        # the CWD branch. The autouse fixture restores state between tests but
+        # does not reset to None at start, so we pin it here for robustness
+        # against any cross-module test-order pollution.
+        monkeypatch.setattr(config, "_main_script_path", None)
+
         app = App("main.py")
-        # The relative path should be resolved to an absolute path
+        # The relative path should be resolved to an absolute path. Note that
+        # App.__init__ caches the resolved path and sets config._main_script_path
+        # as a side-effect, so this call returns the cached value computed via
+        # the CWD branch during __init__.
         resolved = app._resolve_script_path()
         assert resolved.is_absolute()
         assert resolved.name == "main.py"
-        # Without config._main_script_path set, should resolve relative to cwd
         assert resolved == (Path.cwd() / "main.py").resolve()
 
     def test_relative_path_uses_main_script_path_when_set(
@@ -1535,6 +1668,154 @@ class TestAppScriptPathResolution:
         assert "does_not_exist.py" in str(exc_info.value)
         assert "not found" in str(exc_info.value).lower()
 
+    def test_init_sets_main_script_path_when_unset(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """App.__init__ sets config._main_script_path when it is unset.
+
+        This makes the script-level `.streamlit/config.toml` discoverable when
+        st.App is launched directly via an external ASGI server (regression
+        guard for issue #15215).
+        """
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\n")
+        monkeypatch.chdir(tmp_path)
+
+        App("app.py")
+
+        assert config._main_script_path == str(script.resolve())
+
+    def test_init_does_not_overwrite_main_script_path_when_set(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """App.__init__ must not clobber a value already set by `streamlit run`."""
+        from streamlit import config
+
+        cli_script = tmp_path / "cli_entry.py"
+        cli_script.touch()
+        monkeypatch.setattr(config, "_main_script_path", str(cli_script))
+
+        App("dashboard/app.py")
+
+        assert config._main_script_path == str(cli_script)
+
+    def test_init_caches_resolved_script_path_against_main_script_path_mutation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The cached _resolved_script_path keeps _resolve_script_path() stable.
+
+        After __init__ assigns config._main_script_path, a second call to
+        _resolve_script_path() must NOT re-route the relative path through the
+        CLI branch (which would mis-resolve `myapp/app.py` to
+        `<cwd>/myapp/myapp/app.py`).
+        """
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+
+        project = tmp_path / "myproject"
+        myapp = project / "myapp"
+        myapp.mkdir(parents=True)
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(project)
+
+        app = App("myapp/app.py")
+
+        expected = (myapp / "app.py").resolve()
+        # Calling _resolve_script_path() again must return the original cached
+        # value, not a path with a duplicated `myapp/` segment.
+        assert app._resolve_script_path() == expected
+        assert app._resolve_script_path() == expected
+        # And the public script_path property still reflects the user input.
+        assert app.script_path == Path("myapp/app.py")
+
+
+class TestAppConfigDiscovery:
+    """Regression tests for issue #15215.
+
+    `st.App` launched directly via uvicorn (or another external ASGI server)
+    from a working directory that is not the script's directory must still
+    discover the script-level `.streamlit/config.toml`.
+    """
+
+    def test_script_level_config_discovered_with_relative_script_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Reproduce issue #15215: cwd != script dir, relative script path."""
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_config_options", None)
+
+        project = tmp_path / "myproject"
+        myapp = project / "myapp"
+        (myapp / ".streamlit").mkdir(parents=True)
+        (myapp / ".streamlit" / "config.toml").write_text(
+            '[theme]\nprimaryColor = "#ff0000"\n'
+        )
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(project)
+
+        App("myapp/app.py")
+        # Stub out the config-parsed signal: any prior test that constructed
+        # an `AppSession` and registered file watchers leaves a strong
+        # reference on `_on_config_parsed`. Firing those receivers here would
+        # touch closed asyncio event loops from those defunct sessions.
+        with patch.object(config._on_config_parsed, "send"):
+            config.get_config_options(force_reparse=True)
+
+        assert config.get_option("theme.primaryColor") == "#ff0000"
+
+    def test_script_level_config_discovered_with_absolute_script_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Same regression as #15215, but with an absolute script path."""
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_config_options", None)
+
+        myapp = tmp_path / "myapp"
+        (myapp / ".streamlit").mkdir(parents=True)
+        (myapp / ".streamlit" / "config.toml").write_text(
+            '[theme]\nprimaryColor = "#00ff00"\n'
+        )
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(tmp_path)
+
+        App(str((myapp / "app.py").resolve()))
+        # See note in the relative-path variant above.
+        with patch.object(config._on_config_parsed, "send"):
+            config.get_config_options(force_reparse=True)
+
+        assert config.get_option("theme.primaryColor") == "#00ff00"
+
+    def test_get_config_files_includes_script_level_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Anti-regression: `config.get_config_files` must include the
+        script-level config path after `App.__init__` runs."""
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+
+        myapp = tmp_path / "myapp"
+        myapp.mkdir()
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(tmp_path)
+
+        App("myapp/app.py")
+
+        expected = file_util.get_main_script_streamlit_file_path(
+            str((myapp / "app.py").resolve()), "config.toml"
+        )
+        files = config.get_config_files("config.toml")
+        assert expected in files
+
 
 class TestAppExports:
     """Tests for App module exports."""
@@ -1550,6 +1831,12 @@ class TestAppExports:
         from streamlit.starlette import App as ShortcutApp
 
         assert ShortcutApp is App
+
+    def test_app_is_exported_from_st_namespace(self) -> None:
+        """Test that App is exported from the main st namespace."""
+        import streamlit as st
+
+        assert st.App is App
 
     def test_reserved_route_prefixes_constant(self) -> None:
         """Test that reserved route prefixes constant is defined correctly."""
@@ -1984,3 +2271,199 @@ class TestAppAutoStart:
         assert auto_start_call_count == 1
         assert app._auto_started is True
         assert config._server_mode == "asgi-mounted"
+
+
+# --- Tests for App secrets parameter ---
+
+
+class TestAppSecrets:
+    """Tests for App programmatic secrets parameter."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_runtime(self, reset_runtime: None) -> None:
+        """Auto-use the reset_runtime fixture for all tests in this class."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_static_dir(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Mock the static directory for all tests in this class."""
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>test</html>")
+        monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    @pytest.fixture(autouse=True)
+    def _reset_secrets(self) -> Iterator[None]:
+        """Reset secrets singleton and restore os.environ before and after each test."""
+        from streamlit.runtime.secrets import secrets_singleton
+
+        # Save current environ to restore after test (secrets can promote to environ)
+        prev_environ = dict(os.environ)
+
+        secrets_singleton._reset()
+        yield
+        secrets_singleton._reset()
+
+        # Restore original environ
+        os.environ.clear()
+        os.environ.update(prev_environ)
+
+    def test_stores_secrets(self, simple_script: Path) -> None:
+        """App stores the secrets parameter for later use."""
+        secrets = {"api_key": "secret123", "nested": {"value": 42}}
+        app = App(simple_script, secrets=secrets)
+
+        assert app._programmatic_secrets is not None
+        assert app._programmatic_secrets["api_key"] == "secret123"
+        assert app._programmatic_secrets["nested"]["value"] == 42
+
+    def test_accepts_none_secrets(self, simple_script: Path) -> None:
+        """App accepts None for secrets parameter."""
+        app = App(simple_script, secrets=None)
+        assert app._programmatic_secrets is None
+
+    @pytest.mark.parametrize(
+        ("secrets", "expected_match"),
+        [
+            pytest.param({"bad": None}, "Unsupported type 'NoneType'", id="none"),
+            pytest.param(
+                {"outer": {"inner": [1, None]}},
+                r"at 'outer\.inner\[1\]'",
+                id="nested_none_in_list",
+            ),
+            pytest.param(
+                {1: "value"}, r"Dictionary keys.*must be strings", id="int_key"
+            ),
+        ],
+    )
+    def test_validates_secrets_types_at_construction(
+        self, simple_script: Path, secrets: dict[str, Any], expected_match: str
+    ) -> None:
+        """Invalid secret types raise TypeError at construction."""
+        with pytest.raises(TypeError, match=expected_match):
+            App(simple_script, secrets=secrets)
+
+    @pytest.mark.parametrize(
+        "non_mapping",
+        [
+            pytest.param(["a", "b"], id="list"),
+            pytest.param("string", id="str"),
+            pytest.param(42, id="int"),
+        ],
+    )
+    def test_rejects_non_mapping_secrets(
+        self, simple_script: Path, non_mapping: Any
+    ) -> None:
+        """Non-mapping secrets types raise TypeError."""
+        with pytest.raises(TypeError, match=r"secrets must be a mapping"):
+            App(simple_script, secrets=non_mapping)
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_secrets_available_in_st_secrets(self, simple_script: Path) -> None:
+        """Programmatic secrets are available via st.secrets after startup."""
+        from streamlit.runtime.secrets import secrets_singleton
+
+        app = App(
+            simple_script,
+            secrets={
+                "api_key": "secret123",
+                "database": {"host": "localhost", "port": 5432},
+                "auth": {"expose_tokens": ["id", "access"]},
+            },
+        )
+
+        with TestClient(app) as client:
+            response = client.get("/_stcore/health")
+            assert response.status_code == 200
+
+            assert secrets_singleton["api_key"] == "secret123"
+            assert secrets_singleton["database"]["host"] == "localhost"
+            assert secrets_singleton["database"]["port"] == 5432
+            assert secrets_singleton["auth"]["expose_tokens"] == ["id", "access"]
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_secrets_promoted_to_environ(self, simple_script: Path) -> None:
+        """Top-level str/int/float secrets are promoted to os.environ."""
+        import os
+
+        app = App(
+            simple_script,
+            secrets={"str_key": "value", "int_key": 42, "float_key": 3.14},
+        )
+
+        with TestClient(app) as client:
+            response = client.get("/_stcore/health")
+            assert response.status_code == 200
+
+            # Lowercase keys test that secrets API preserves key casing
+            assert os.environ.get("str_key") == "value"  # noqa: SIM112
+            assert os.environ.get("int_key") == "42"  # noqa: SIM112
+            assert os.environ.get("float_key") == "3.14"  # noqa: SIM112
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_secrets_with_lifespan(self, simple_script: Path) -> None:
+        """Secrets work correctly with user-provided lifespan."""
+        from streamlit.runtime.secrets import secrets_singleton
+
+        startup_called = False
+
+        @asynccontextmanager
+        async def lifespan(app: App) -> AsyncIterator[dict[str, Any]]:
+            nonlocal startup_called
+            startup_called = True
+            yield {"loaded": True}
+
+        app = App(
+            simple_script,
+            secrets={"from_lifespan_test": "works"},
+            lifespan=lifespan,
+        )
+
+        with TestClient(app) as client:
+            response = client.get("/_stcore/health")
+            assert response.status_code == 200
+
+            assert startup_called
+            assert secrets_singleton["from_lifespan_test"] == "works"
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_secrets_with_auto_start(self, simple_script: Path) -> None:
+        """Secrets work correctly when auto-starting mounted apps."""
+        from starlette.applications import Starlette
+
+        from streamlit.runtime.secrets import secrets_singleton
+
+        app = App(simple_script, secrets={"auto_start_secret": "value"})
+
+        # Mount without using lifespan() - triggers auto-start
+        wrapper = Starlette()
+        wrapper.mount("/streamlit", app)
+
+        with TestClient(wrapper) as client:
+            response = client.get("/streamlit/_stcore/health")
+            assert response.status_code == 200
+
+            assert secrets_singleton["auto_start_secret"] == "value"

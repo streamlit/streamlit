@@ -20,7 +20,7 @@ from e2e_playwright.shared.app_utils import click_checkbox
 def _expect_numeric_tabs(app: Page):
     tabs = app.get_by_test_id("stTabs")
     expect(tabs).to_have_count(1)
-    tab_buttons = tabs.locator("button")
+    tab_buttons = tabs.get_by_role("tab")
     expect(tab_buttons).to_have_count(2)
     expect(tab_buttons.nth(0)).to_have_text("Tab 1")
     expect(tab_buttons.nth(1)).to_have_text("Tab 2")
@@ -29,7 +29,7 @@ def _expect_numeric_tabs(app: Page):
 def _expect_letter_tabs(app: Page):
     tabs = app.get_by_test_id("stTabs")
     expect(tabs).to_have_count(1)
-    tab_buttons = tabs.locator("button")
+    tab_buttons = tabs.get_by_role("tab")
     expect(tab_buttons).to_have_count(3)
     expect(tab_buttons.nth(0)).to_have_text("Tab A")
     expect(tab_buttons.nth(1)).to_have_text("Tab B")

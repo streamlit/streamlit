@@ -167,7 +167,7 @@ register_widget(
 - `/component/*`: Custom component v1 resources
 - `/_stcore/bidi-components/*`: v2 bidi component resources
 
-**WebSocket handler** (`browser_websocket_handler.py`):
+**WebSocket handler** (`starlette/starlette_websocket.py`):
 ```
 Browser connects -> Runtime.connect_session()
                  -> Create AppSession

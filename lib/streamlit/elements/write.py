@@ -233,7 +233,7 @@ class WriteMixin:
                         "Failed to parse the LangChain AIMessageChunk. "
                         "The most likely cause is a change of the chunk object structure "
                         "due to a recent LangChain update. You might be able to fix this "
-                        "by downgrading the OpenAI library or upgrading Streamlit. Also, "
+                        "by downgrading the LangChain library or upgrading Streamlit. Also, "
                         "please report this issue to: https://github.com/streamlit/streamlit/issues."
                     ) from err
 
@@ -250,7 +250,7 @@ class WriteMixin:
                 # Only add the streaming symbol on the second text chunk
                 # Use _markdown with unterminated_parsing=True to complete
                 # unclosed markdown syntax (e.g., **bold) during streaming.
-                stream_container._markdown(
+                stream_container._markdown(  # ty: ignore[unresolved-attribute]
                     streamed_response + ("" if first_text else cursor_str),
                     unterminated_parsing=True,
                 )
@@ -355,7 +355,7 @@ class WriteMixin:
 
         ..  output::
             https://doc-write1.streamlit.app/
-            height: 150px
+            height: 200px
 
         As mentioned earlier, ``st.write()`` also accepts other data formats, such as
         numbers, data frames, styled data frames, and assorted objects:
@@ -513,6 +513,7 @@ class WriteMixin:
                 or type_util.is_custom_dict(arg)
                 or type_util.is_namedtuple(arg)
                 or type_util.is_pydantic_model(arg)
+                or type_util.is_sequence_of_pydantic_models(arg)
             ):
                 flush_buffer()
                 self.dg.json(arg)

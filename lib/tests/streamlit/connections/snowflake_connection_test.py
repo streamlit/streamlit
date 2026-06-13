@@ -13,8 +13,12 @@
 # limitations under the License.
 
 import os
+import sys
 import threading
+import types
 import unittest
+from collections.abc import Iterator
+from contextlib import contextmanager
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
@@ -32,6 +36,70 @@ class SomeError(Exception):
     def __init__(self, message, **kwargs):
         self.__dict__.update(kwargs)
         super().__init__(self, message)
+
+
+class TestSnowflakeConnectionConfiguration:
+    """Tests for Snowflake configuration selection without the Snowflake dependency."""
+
+    @staticmethod
+    @contextmanager
+    def _patched_snowflake() -> Iterator[types.ModuleType]:
+        """Patch the Snowflake connector and Streamlit secrets, yielding the connector module."""
+        snowflake_mod = types.ModuleType("snowflake")
+        connector_mod = types.ModuleType("snowflake.connector")
+        connector_mod.Error = type("SnowflakeError", (Exception,), {})
+        connector_mod.connect = MagicMock()
+        snowflake_mod.connector = connector_mod
+
+        with (
+            patch.dict(
+                sys.modules,
+                {"snowflake": snowflake_mod, "snowflake.connector": connector_mod},
+            ),
+            patch(
+                "streamlit.connections.snowflake_connection.running_in_sis",
+                MagicMock(return_value=False),
+            ),
+            patch(
+                "streamlit.connections.snowflake_connection.SnowflakeConnection._secrets",
+                PropertyMock(return_value=AttrDict({})),
+            ),
+        ):
+            yield connector_mod
+
+    @pytest.mark.parametrize(
+        ("connection_name", "kwargs", "expected_connect_kwargs"),
+        [
+            ("my_connection", {}, {"connection_name": "my_connection"}),
+            ("my_connection", {"account": "my_account"}, {"account": "my_account"}),
+            ("snowflake", {}, {}),
+            ("", {}, {}),
+        ],
+        ids=[
+            "custom_name_uses_named_configuration",
+            "custom_name_with_kwargs_keeps_kwargs_behavior",
+            "snowflake_name_uses_default_configuration",
+            "empty_name_uses_default_configuration",
+        ],
+    )
+    def test_connect_selects_expected_configuration(
+        self,
+        connection_name: str,
+        kwargs: dict[str, str],
+        expected_connect_kwargs: dict[str, str],
+    ) -> None:
+        """Test that connect() is called with the configuration implied by name and kwargs."""
+        with self._patched_snowflake() as connector:
+            SnowflakeConnection(connection_name, **kwargs)
+            connector.connect.assert_called_once_with(**expected_connect_kwargs)
+
+    def test_failing_named_connection_raises_friendly_error(self) -> None:
+        """Test that a failing named connection without config raises a friendly error."""
+        with self._patched_snowflake() as connector:
+            connector.connect.side_effect = connector.Error("connection not found")
+
+            with pytest.raises(StreamlitAPIException, match="Missing Snowflake"):
+                SnowflakeConnection("unknown_connection")
 
 
 @pytest.mark.require_integration

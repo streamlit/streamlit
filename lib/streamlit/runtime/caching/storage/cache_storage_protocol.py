@@ -134,22 +134,22 @@ class CacheStorage(Protocol):
         CacheStorageKeyNotFoundError
             Raised if the key is not in the storage.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def set(self, key: str, value: bytes) -> None:
         """Sets the value for a given key."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def delete(self, key: str) -> None:
         """Delete a given key."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def clear(self) -> None:
         """Remove all keys for the storage."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     def close(self) -> None:
         """Closes the cache storage, it is optional to implement, and should be used
@@ -181,7 +181,7 @@ class CacheStorageManager(Protocol):
         -----
         Threading: Should be safe to call from any thread.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     def clear_all(self) -> None:
         """Remove everything what possible from the cache storages in optimal way.
@@ -204,7 +204,7 @@ class CacheStorageManager(Protocol):
         This is a responsibility of the concrete implementation to ensure
         thread safety guarantees.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - optional default
 
     def check_context(self, context: CacheStorageContext) -> None:
         """Checks if the context is valid for the storage manager.

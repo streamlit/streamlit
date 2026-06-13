@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import time
 
 import streamlit as st
@@ -79,7 +80,12 @@ with st.container(key="widget_container"):
         st.text_input("st.text_input", disabled=disabled)
         st.text_area("st.text_area", disabled=disabled)
     with col3:
-        st.time_input("st.time_input", disabled=disabled)
-        st.date_input("st.date_input", disabled=disabled)
+        # Use fixed value/date so the snapshot is deterministic. The defaults
+        # ("now"/"today") render the current time/date, which changes between
+        # runs and causes flaky snapshot mismatches.
+        st.time_input("st.time_input", value=datetime.time(4, 45), disabled=disabled)
+        st.date_input(
+            "st.date_input", value=datetime.date(2026, 6, 3), disabled=disabled
+        )
         st.chat_input("st.chat_input", disabled=disabled)
         st.audio_input("st.audio_input", disabled=disabled)

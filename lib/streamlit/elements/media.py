@@ -458,7 +458,7 @@ def _marshall_av_media(
     Otherwise assume strings are filenames and let any OS errors raise.
 
     Load data either from file or through bytes-processing methods into a
-    MediaFile object.  Pack proto with generated Tornado-based URL.
+    MediaFile object.  Pack proto with generated media URL.
 
     (When running in "raw" mode, we won't actually load data into the
     MediaFileManager, and we'll return an empty URL.)

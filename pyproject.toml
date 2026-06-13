@@ -33,15 +33,15 @@ dependencies = []
 
 [tool.uv]
 # Minimum uv version required for this project
-required-version = ">=0.9.0"
+required-version = ">=0.9.17"
 # Exclude packages published in the last 24 hours to lower risk from supply chain attacks
 exclude-newer = "24 hours"
 # Explicit pandas version constraints by Python version:
 # - Python 3.10: use pandas 2.x (pandas 3.x requires Python >= 3.11)
 # - Python 3.11+: use pandas 3.x
 override-dependencies = [
-    "pandas>=1.4.0,<3; python_version < '3.11'",
-    "pandas>=3.0.0,<4; python_version >= '3.11'",
+  "pandas>=1.4.0,<3; python_version < '3.11'",
+  "pandas>=3.0.0,<4; python_version >= '3.11'",
 ]
 
 [tool.uv.sources]
@@ -58,12 +58,12 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.28",
+  "ty==0.0.44",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.15.9",
-  # We are pinning the upper version to not break our CI on updates,
+  "ruff==0.15.16",
+  # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
-  "mypy>=1.16.1,<1.21",
+  "mypy==2.1.0",
   "mypy-protobuf>=3.2",
   "semver>=3",
   "setuptools>=65.5.1",
@@ -112,17 +112,11 @@ test = [
   "rich>=10.14.0",
   # Used by vega-lite / altair e2e tests:
   "vega_datasets",
-  # Required for Starlette support:
-  "starlette>=0.40.0",
-  "uvicorn>=0.30.0",
-  "python-multipart>=0.0.10",
-  "websockets>=12.0.0",
-  "itsdangerous>=2.1.2",
   # Only for unit tests:
   "httpx>=0.24.1",
   # Playwright and E2E test dependencies:
   # We pin playwright to a minor version to avoid new browser versions breaking our CI.
-  "playwright==1.58.*",
+  "playwright==1.60.*",
   "pytest-playwright>=0.3.3",
   "pixelmatch>=0.3.0",
   "pytest-xdist>=3.6.1",
@@ -146,9 +140,6 @@ integration = [
   # Snowflake dependencies:
   "snowflake-snowpark-python[modin]>=1.17.0",
   "snowflake-connector-python>=3.3.0",
-  # Required for testing the langchain integration:
-  "langchain>=0.2.0,<0.4",
-  "langchain-community>=0.2.0,<0.4",
   # Additional dataframe formats for testing:
   "polars",
   "xarray",
@@ -255,6 +246,7 @@ ignore = [
   "PLR2004", # Checks for numerical values that could be put into a constant.
   "PLR6301", # Checks for methods that do not use self.
   "PLW0108", # Checks for lambdas that can be replaced by existing functions.
+  "PLW0717", # Checks for try clauses with too many statements (new in ruff 0.15.14).
   "PLW3201", # Checks for bad dunder method names.
   "PT012",   # Checks for pytest.raises context managers with multiple statements.
   "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
@@ -264,6 +256,7 @@ ignore = [
   "RSE102",  # Checks for unnecessary parentheses on raised exceptions.
   "RUF052",  # Checks for dummy variables that are used.
   "RUF067",  # Checks for non empty __init__ modules.
+  "RUF075",  # Checks for context managers that don't catch exceptions (new preview rule in ruff 0.15.14).
   "SIM105",  # Enforces use of contextlib.suppress.
   "SIM108",  # Enforces ternary operators instead of if-else.
   "SIM115",  # Enforces context manager for opening files.
@@ -309,6 +302,11 @@ extend-safe-fixes = ["TC002", "TC003"]
   "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
+"lib/streamlit/.agents/**" = [
+  # Each template is a standalone app, not a package. Adding __init__.py would
+  # misrepresent them as importable modules.
+  "INP",
+]
 
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.
@@ -417,6 +415,8 @@ module = [
   "authlib.*",
   "uvloop.*",
   "polars.*",
+  # yfinance is a template-only dependency (used by dashboard-stock-peers) and has no stubs.
+  "yfinance.*",
   # SQLAlchemy is optional and its stubs are only installed with integration extras
   "sqlalchemy.*",
   # tomllib is only available in Python 3.11+, tomli is the fallback for Python 3.10

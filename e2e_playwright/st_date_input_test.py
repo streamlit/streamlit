@@ -483,7 +483,13 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # Ensure the previously entered value remains visible (value is within new bounds)
     expect_prefixed_markdown(app, "Updated date input value:", "2020-01-02")
 
-    dynamic_date_input.scroll_into_view_if_needed()
+    # Use deterministic scroll positioning ('start') to avoid firefox subpixel
+    # rendering inconsistency where the element height varies between 66 and 67
+    # pixels depending on the fractional scroll offset.
+    dynamic_date_input.evaluate(
+        "el => el.scrollIntoView({block: 'start', behavior: 'instant'})"
+    )
+    reset_focus(app)
     assert_snapshot(dynamic_date_input, name="st_date_input-dynamic_updated")
 
     # Check that the help tooltip is correct:

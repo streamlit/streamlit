@@ -64,16 +64,12 @@ _main_script_path: str | None = None
 
 # Stores the server mode for metrics tracking.
 # Possible values:
-# - "tornado": Traditional Tornado server
-# - "starlette-managed": Starlette server via server.useStarlette config
+# - "starlette-managed": Starlette server managed by Streamlit (streamlit run CLI)
 # - "starlette-app": st.App started via streamlit run
 # - "asgi-server": st.App with external ASGI server (uvicorn, gunicorn, etc.)
 # - "asgi-mounted": st.App mounted on another ASGI framework (FastAPI, Starlette)
 _server_mode: (
-    Literal[
-        "tornado", "starlette-managed", "starlette-app", "asgi-server", "asgi-mounted"
-    ]
-    | None
+    Literal["starlette-managed", "starlette-app", "asgi-server", "asgi-mounted"] | None
 ) = None
 
 # Indicates that a config option was defined by the user.
@@ -769,6 +765,17 @@ _create_option(
     type_=str,
 )
 
+_create_option(
+    "runner.parallelMaxWorkers",
+    description="""
+        Maximum number of parallel fragment worker threads per script run.
+        Sizes the per-run thread pool. Defaults to Python's
+        ThreadPoolExecutor default (min(32, os.cpu_count() + 4)).
+    """,
+    default_val=None,
+    type_=int,
+)
+
 # Config Section: Server #
 
 _create_section("server", "Settings for the Streamlit server")
@@ -818,6 +825,23 @@ _create_option(
     """,
     default_val="auto",
     type_=str,
+)
+
+_create_option(
+    "server.enableExpensiveMemoryStats",
+    description="""
+        If True, Streamlit will use a recursive object graph traversal to
+        calculate memory usage statistics for the /_stcore/metrics endpoint.
+
+        This can be slow for large session state or cached resource objects. If
+        False (the default), Streamlit reports fast proxy values for those
+        objects: item counts (the number of cached entries or session-state
+        keys) rather than byte sizes. The cache_memory_bytes metric will
+        therefore reflect entry counts, not memory consumption, for those
+        objects.
+    """,
+    default_val=False,
+    type_=bool,
 )
 
 
@@ -1037,8 +1061,7 @@ _create_option(
         "Connection error" messages), you may want to try adjusting this value.
 
         Note: When you set this option, Streamlit automatically sets the ping
-        timeout to match this interval. For Tornado >=6.5, a value less than 30
-        may cause connection issues.
+        timeout to match this interval.
     """,
     default_val=None,
     type_=int,
@@ -1092,16 +1115,6 @@ _create_option(
     type_=str,
     # Hide until API is finalized.
     visibility="hidden",
-)
-
-_create_option(
-    "server.useStarlette",
-    description="""
-        Enable the experimental Starlette-based server implementation instead of
-        Tornado. This is an experimental feature and may be removed in the future.
-    """,
-    default_val=False,
-    type_=bool,
 )
 
 # Config Section: Browser #

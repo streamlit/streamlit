@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -29,9 +28,8 @@ from typing import (
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     WidthWithoutContent,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.options_selector_utils import (
     SelectWidgetFilterMode,
@@ -69,7 +67,6 @@ from streamlit.type_util import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from streamlit.dataframe_util import OptionSequence
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import (
         WidgetArgs,
@@ -691,13 +688,17 @@ class MultiSelectMixin:
             proto.raw_values[:] = serde.serialize(current_values)
             proto.set_value = True
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue(widget_name, proto, layout_config=layout_config)
+        self.dg._enqueue(
+            widget_name,
+            proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+        )
 
         return current_values
 

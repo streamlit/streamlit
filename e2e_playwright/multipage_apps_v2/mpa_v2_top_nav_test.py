@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_checkbox, goto_app
+from e2e_playwright.shared.app_utils import (
+    click_checkbox,
+    goto_app,
+    reset_hovering,
+)
 
 
 def test_desktop_top_nav(app: Page):
@@ -293,6 +297,11 @@ def test_top_nav_with_logo(app: Page, assert_snapshot: ImageCompareFunction):
     logo = app.get_by_test_id("stHeaderLogo")
     expect(logo).to_be_visible()
 
+    # Reset hovering so the mouse cursor doesn't trigger hover styles on top
+    # nav links after the sidebar collapses (otherwise the snapshot can flake
+    # depending on where the close button ended up).
+    reset_hovering(app)
+
     # Take snapshot of the header with logo at full width
     header = app.locator("header").first
     assert_snapshot(header, name="st_navigation-top_nav_with_logo")
@@ -303,6 +312,7 @@ def test_top_nav_with_logo(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Logo should still be visible and maintain its size
     expect(logo).to_be_visible()
+    reset_hovering(app)
     assert_snapshot(header, name="st_navigation-top_nav_with_logo_narrow_viewport")
 
 

@@ -19,6 +19,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from streamlit.cursor import (
+    Cursor,
     LockedCursor,
     RunningCursor,
     SparseList,
@@ -149,10 +150,9 @@ class TestRunningCursor:
         cursor = RunningCursor(RootContainer.MAIN)
 
         # First lock
-        locked1 = cursor.get_locked_cursor(foo="bar")
+        locked1 = cursor.get_locked_cursor()
         assert isinstance(locked1, LockedCursor)
         assert locked1.index == 0
-        assert locked1.props == {"foo": "bar"}
         assert cursor.index == 1
 
         # Second lock
@@ -187,21 +187,60 @@ class TestRunningCursor:
         assert len(cursor.transient_elements) == 0
 
 
+class TestCursorBase:
+    """Tests for the abstract Cursor base class."""
+
+    def test_repr_returns_string(self) -> None:
+        """Test that __repr__ returns a string representation."""
+        cursor = Cursor()
+        result = repr(cursor)
+        assert isinstance(result, str)
+        assert "Cursor" in result
+
+    def test_root_container_raises_not_implemented(self) -> None:
+        """Test that root_container on base Cursor raises NotImplementedError."""
+        cursor = Cursor()
+        with pytest.raises(NotImplementedError):
+            _ = cursor.root_container
+
+    def test_parent_path_raises_not_implemented(self) -> None:
+        """Test that parent_path on base Cursor raises NotImplementedError."""
+        cursor = Cursor()
+        with pytest.raises(NotImplementedError):
+            _ = cursor.parent_path
+
+    def test_index_raises_not_implemented(self) -> None:
+        """Test that index on base Cursor raises NotImplementedError."""
+        cursor = Cursor()
+        with pytest.raises(NotImplementedError):
+            _ = cursor.index
+
+    def test_is_locked_raises_not_implemented(self) -> None:
+        """Test that is_locked on base Cursor raises NotImplementedError."""
+        cursor = Cursor()
+        with pytest.raises(NotImplementedError):
+            _ = cursor.is_locked
+
+    def test_get_locked_cursor_raises_not_implemented(self) -> None:
+        """Test that get_locked_cursor on base Cursor raises NotImplementedError."""
+        cursor = Cursor()
+        with pytest.raises(NotImplementedError):
+            cursor.get_locked_cursor()
+
+
 class TestLockedCursor:
     def test_initialization(self):
         """Test initialization of LockedCursor."""
-        cursor = LockedCursor(RootContainer.MAIN, (1,), 5, foo="bar")
+        cursor = LockedCursor(RootContainer.MAIN, (1,), 5)
         assert cursor.root_container == RootContainer.MAIN
         assert cursor.parent_path == (1,)
         assert cursor.index == 5
         assert cursor.is_locked
-        assert cursor.props == {"foo": "bar"}
 
     def test_get_locked_cursor(self):
         """Test get_locked_cursor from LockedCursor."""
         cursor = LockedCursor(RootContainer.MAIN, index=5)
 
-        locked = cursor.get_locked_cursor(new_prop="value")
+        locked = cursor.get_locked_cursor()
         assert locked == cursor
         assert cursor.index == 5  # Index doesn't change
-        assert cursor.props == {"new_prop": "value"}

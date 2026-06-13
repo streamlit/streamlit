@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from streamlit import util
 from streamlit.proto.Element_pb2 import Element
@@ -167,7 +167,7 @@ class Cursor:
     def transient_index(self) -> int:
         return 0 if self._transient_index is None else self._transient_index
 
-    def get_locked_cursor(self, **props: Any) -> LockedCursor:
+    def get_locked_cursor(self) -> LockedCursor:
         raise NotImplementedError()
 
     def get_transient_cursor(self) -> Cursor:
@@ -177,15 +177,6 @@ class Cursor:
             self._transient_index += 1
 
         return self
-
-    @property
-    def props(self) -> Any:
-        """Other data in this cursor. This is a temporary measure that will go
-        away when we implement improved return values for elements.
-
-        This is only implemented in LockedCursor.
-        """
-        raise NotImplementedError()
 
 
 class RunningCursor(Cursor):
@@ -235,12 +226,11 @@ class RunningCursor(Cursor):
     def is_locked(self) -> bool:
         return False
 
-    def get_locked_cursor(self, **props: Any) -> LockedCursor:
+    def get_locked_cursor(self) -> LockedCursor:
         locked_cursor = LockedCursor(
             root_container=self._root_container,
             parent_path=self._parent_path,
             index=self._index,
-            **props,
         )
 
         self._index += 1
@@ -258,7 +248,6 @@ class LockedCursor(Cursor):
         index: int = 0,
         transient_index: int | None = None,
         transient_elements: SparseList[Element] | None = None,
-        **props: Any,
     ) -> None:
         """A locked pointer to a location in the app.
 
@@ -277,17 +266,12 @@ class LockedCursor(Cursor):
           The running index of the transient elements.
         transient_elements: SparseList[Element]
           The list of active transient elements.
-        **props: any
-          Anything else you want to store in this cursor. This is a temporary
-          measure that will go away when we implement improved return values
-          for elements.
 
         """
         super().__init__(transient_index, transient_elements)
         self._root_container = root_container
         self._index = index
         self._parent_path = parent_path
-        self._props = props
 
     @property
     def root_container(self) -> int:
@@ -305,10 +289,5 @@ class LockedCursor(Cursor):
     def is_locked(self) -> bool:
         return True
 
-    @property
-    def props(self) -> Any:
-        return self._props
-
-    def get_locked_cursor(self, **props: Any) -> LockedCursor:
-        self._props = props
+    def get_locked_cursor(self) -> LockedCursor:
         return self

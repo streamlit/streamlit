@@ -129,6 +129,7 @@ function Tooltip({
   const theme = useEmotionTheme()
 
   // This section of code is to work around a timing issue with BaseWeb's Tooltip component
+
   const [tooltipElement, setTooltipElement] = useState<HTMLDivElement | null>(
     null
   )
