@@ -67,8 +67,9 @@ unsafeMetricsUserAttributes = ["email"]
 - **`server.unsafeMetricsUserAttributes`** : `list[str]`, default `[]`, hidden.
   A list of `st.user` keys (typically populated via `server.trustedUserHeaders`) whose
   values are attached as labels to the new `user_session_events` metric family. An empty
-  list (the default) disables the feature entirely — the family is not emitted and the
-  metrics endpoint output is byte-for-byte unchanged. The `unsafe` prefix is intentional:
+  list (the default) disables the feature entirely — the server does not read, cache, or
+  track per-user metric attributes, the family is not emitted, and the metrics endpoint
+  output is byte-for-byte unchanged. The `unsafe` prefix is intentional:
   enabling this can expose user-identifying values on the unauthenticated metrics endpoint
   and must only be done in hosting environments that restrict endpoint access. The option
   should be created with `visibility="hidden"` until the API and docs are finalized.
@@ -103,11 +104,12 @@ user_session_events_total{type="connect",email="bob@example.com"} 5
   already cover engagement; this MVP does not add per-user duration.
 - The family is **filterable** via the existing `?families=user_session_events` query
   param, so a scraper can request only this family.
-- Identity is captured at **connect** time and cached per session (until the session is
-  closed) so that `disconnect` and `close` events can be attributed to the right user. While
-  the feature is enabled, the cached identity is refreshed on `reconnect`, so if a session's
-  identity changes across a reconnect the later events are attributed to the most recently
-  seen identity.
+- Identity is captured at **connect** time only when the feature is enabled and cached per
+  session (until the session is closed) so that `disconnect` and `close` events can be
+  attributed to the right user. While the feature is enabled, the cached identity is
+  refreshed on `reconnect`, so if a session's identity changes across a reconnect the later
+  events are attributed to the most recently seen identity. When the option is empty, this
+  capture/cache path is skipped entirely.
 - `unsafeMetricsUserAttributes` is read at server **startup** and is not meant to be toggled on a
   running server (restart to apply a change). Like other `server.*` options, mid-session
   toggling is unsupported; per-user attribution across such a toggle is best-effort and
@@ -123,7 +125,8 @@ user_session_events_total{type="connect",email="bob@example.com"} 5
 - **Cardinality**: emitted series scale with the number of distinct users seen by the
   process. This is acceptable for the targeted hosting environments; see Out of Scope for
   high-cardinality concerns.
-- **Feature disabled**: zero overhead — no counters are tracked and no family is emitted.
+- **Feature disabled**: zero overhead — no per-user attributes are read or cached, no
+  counters are tracked, and no family is emitted.
 
 ### Privacy
 
@@ -132,6 +135,8 @@ This feature can expose PII (e.g. email) on an HTTP endpoint, so:
 - It is **opt-in** and **off by default**.
 - The host platform explicitly chooses which attributes to expose via
   `unsafeMetricsUserAttributes` — Streamlit never emits user identity unless configured.
+- Streamlit must also avoid collecting these attributes internally unless
+  `unsafeMetricsUserAttributes` is non-empty.
 - Collection is **best-effort**: a failure while recording per-user metrics must never
   break app execution or deny app access.
 
