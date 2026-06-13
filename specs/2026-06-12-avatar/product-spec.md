@@ -56,16 +56,15 @@ st.avatar(
     size: Literal["small", "medium", "large"] | int = "medium",
     border: bool = False,
     on_click: Literal["ignore", "rerun"] | Callable[[], None] = "ignore",
-    disabled: bool = False,
-    help: str | None = None,
     key: str | None = None,
-) -> bool
+) -> DeltaGenerator | bool
 ```
 
 By default (`on_click="ignore"`) `st.avatar` behaves like a display element and returns
-`False`. When made clickable (`on_click="rerun"` or a callback), it returns `True` on the
-rerun where it was clicked, matching `st.button`. This clickable-by-opt-in design is chosen
-over a display-only element—see [Interactivity](#interactivity) for the trade-offs.
+a `DeltaGenerator`. When made clickable (`on_click="rerun"` or a callback), it returns a
+`bool`: `True` on the rerun where it was clicked and `False` otherwise, matching
+`st.button`. This clickable-by-opt-in design is chosen over a display-only element—see
+[Interactivity](#interactivity) for the trade-offs.
 
 The simplest call is a single positional argument:
 
@@ -83,14 +82,14 @@ st.avatar("https://avatars.githubusercontent.com/u/1673013")
 | `size` | `"small" \| "medium" \| "large" \| int` | `"medium"` | Diameter of the circular avatar. Semantic sizes map to fixed pixel values (`small` ≈ 24px, `medium` ≈ 40px, `large` ≈ 64px; exact values TBD with design). An `int` sets a custom diameter in pixels and must be a positive value; non-positive values raise a `StreamlitAPIError` (Fail Fast). No upper bound is enforced, but very large values are clamped to the element's container width at render time. |
 | `border` | `bool` | `False` | If `True`, draws a subtle border around the avatar (useful for light images on light backgrounds). |
 | `on_click` | `"ignore" \| "rerun" \| Callable[[], None]` | `"ignore"` | Click behavior. `"ignore"` disables click interaction (avatar is purely decorative). `"rerun"` triggers a rerun when clicked. A callable runs as a callback before the rerun. Follows the `st.button` click pattern (a click action), not the `on_change` value-change pattern. |
-| `disabled` | `bool` | `False` | If `True`, disables click interaction and renders the avatar in a muted/disabled state. Only meaningful when `on_click != "ignore"`. |
-| `help` | `str \| None` | `None` | An optional tooltip shown on hover. Supports markdown. |
 | `key` | `str \| None` | `None` | Unique key for the element. Required when multiple clickable avatars would otherwise share identical parameters. |
 
 ### Return value
 
-`st.avatar` returns a `bool`: `True` only on the rerun triggered by a click (when
-`on_click != "ignore"`), and `False` otherwise—including always when `on_click="ignore"`.
+`st.avatar` returns a `DeltaGenerator` when `on_click="ignore"`, matching display elements
+like `st.image` and `st.logo`. When `on_click="rerun"` or a callback is provided,
+`st.avatar` returns a `bool`: `True` only on the rerun triggered by a click, and `False`
+otherwise.
 
 ### Content types
 
@@ -139,15 +138,14 @@ thing you pass to `st.avatar`.
 ### Interactivity
 
 The `streamlit-extras` version supports `on_click` and returns a `bool`. For a native
-command this is the main open design question, because it changes `st.avatar` from a
-display element into a widget (different return type, requires `key`). Two options:
+command this is the main open design question, because enabling clicks changes `st.avatar`
+from a display element into a widget (conditional return type, requires `key`). Two
+options:
 
 **Option 1: Clickable widget** ✅ PREFERRED
 
 Add `on_click: Literal["ignore", "rerun"] | Callable[[], None] = "ignore"` plus `key`, and
-return `bool` (matching the extra and `st.button`). For consistency with other interactive
-widgets (Principle #11: Patterns Are Sacred), a clickable avatar also accepts `disabled`
-and `help`, which behave identically to their `st.button` counterparts.
+return `DeltaGenerator` for the display-only case and `bool` for the clickable case.
 
 ```python
 if st.avatar("profile.jpg", label="Jane Smith", on_click="rerun", key="profile"):
@@ -280,6 +278,8 @@ later if needed (see Out of Scope).
 - **Avatar groups / stacking** — overlapping avatars with a `+N` overflow (e.g. "shared with").
 - **Shape variants** — `shape="square" | "rounded"` for non-circular avatars.
 - **Overall `width` parameter** — controlling the element's container width independently of `size`.
+- **Disabled state and help tooltip** — button-like widget affordances that can be added
+  later if the clickable use case needs them.
 - **Custom background / ring color** — theming for icon/initials avatars beyond the default.
 
 ## Checklist
