@@ -49,16 +49,23 @@ that capability is locked inside the chat element and can't be used standalone.
 
 ```python
 st.avatar(
-    image: str | Image | None = None,
+    image: str | AtomicImage | None = None,
     *,
     label: str | None = None,
     caption: str | None = None,
     size: Literal["small", "medium", "large"] | int = "medium",
     border: bool = False,
-    on_click: Literal["ignore", "rerun"] | Callable[[], None] = "ignore",
+    on_click: Literal["ignore", "rerun"] | Callable[..., None] = "ignore",
+    args: tuple[Any, ...] | None = None,
+    kwargs: dict[str, Any] | None = None,
     key: str | None = None,
 ) -> DeltaGenerator | bool
 ```
+
+`AtomicImage` is the existing single-image type alias used by `st.logo` (PIL image, NumPy
+array, bytes/`BytesIO`); `str` additionally covers a URL, local path, emoji, or Material
+icon. `st.avatar` is reused for a single image, so it intentionally borrows `st.logo`'s
+`AtomicImage` rather than `st.image`'s list-capable `ImageOrImageList`.
 
 By default (`on_click="ignore"`) `st.avatar` behaves like a display element and returns
 a `DeltaGenerator`. When made clickable (`on_click="rerun"` or a callback), it returns a
@@ -76,20 +83,28 @@ st.avatar("https://avatars.githubusercontent.com/u/1673013")
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `image` | `str \| Image \| None` | `None` | The avatar content. Accepts the same image inputs as `st.image` (URL, local path, `PIL.Image`, NumPy array, bytes/`BytesIO`), **plus** a single emoji (e.g. `"🦖"`) or a Material icon (e.g. `":material/person:"`)—matching `st.chat_message`'s `avatar`. If `None`, falls back to initials derived from `label`, or a generic person icon when no label is given. |
+| `image` | `str \| AtomicImage \| None` | `None` | The avatar content. Accepts the same single-image inputs as `st.logo`'s `AtomicImage` (URL, local path, `PIL.Image`, NumPy array, bytes/`BytesIO`), **plus** a single emoji (e.g. `"🦖"`) or a Material icon (e.g. `":material/person:"`)—matching `st.chat_message`'s `avatar`. If `None`, falls back to initials derived from `label`, or a generic person icon when no label is given. |
 | `label` | `str \| None` | `None` | Primary text shown to the right of the avatar (typically a name). Supports markdown. |
 | `caption` | `str \| None` | `None` | Secondary text shown below the label (typically a role or status). Supports markdown and renders in the muted caption style used elsewhere in Streamlit. |
-| `size` | `"small" \| "medium" \| "large" \| int` | `"medium"` | Diameter of the circular avatar image only. Semantic sizes map to rem-based values (`small` ≈ 1.5rem, `medium` ≈ 2.5rem, `large` ≈ 4rem; exact values TBD with design) so they scale with the root font size. An `int` sets a custom diameter in pixels and must be a positive value; non-positive values raise a `StreamlitAPIError` (Fail Fast). No upper bound is enforced, but very large values are clamped to the element's container width at render time. |
+| `size` | `"small" \| "medium" \| "large" \| int` | `"medium"` | Diameter of the circular avatar image only. Semantic sizes map to rem-based values (`small` ≈ 1.5rem, `medium` ≈ 2.5rem, `large` ≈ 4rem; exact values TBD with design) so they scale with the root font size. An `int` sets a custom diameter in pixels and must be a positive value; non-positive values raise a `StreamlitAPIException` (Fail Fast). No upper bound is enforced, but very large values are clamped to the element's container width at render time. |
 | `border` | `bool` | `False` | If `True`, draws a subtle border around the avatar (useful for light images on light backgrounds). |
-| `on_click` | `"ignore" \| "rerun" \| Callable[[], None]` | `"ignore"` | Click behavior. `"ignore"` disables click interaction (avatar is purely decorative). `"rerun"` triggers a rerun when clicked. A callable runs as a callback before the rerun. Follows the `st.button` click pattern (a click action), not the `on_change` value-change pattern. |
+| `on_click` | `"ignore" \| "rerun" \| Callable[..., None]` | `"ignore"` | Click behavior. `"ignore"` disables click interaction (avatar is purely decorative). `"rerun"` triggers a rerun when clicked. A callable runs as a callback before the rerun, receiving `args`/`kwargs`. Follows the `st.button` click pattern (a click action), not the `on_change` value-change pattern. |
+| `args` | `tuple[Any, ...] \| None` | `None` | An optional tuple of positional arguments passed to the `on_click` callback. Mirrors `st.button`'s `args` (Principle #11). |
+| `kwargs` | `dict[str, Any] \| None` | `None` | An optional dictionary of keyword arguments passed to the `on_click` callback. Mirrors `st.button`'s `kwargs` (Principle #11). |
 | `key` | `str \| None` | `None` | Unique key for the element. Required when multiple clickable avatars would otherwise share identical parameters. |
 
 ### Return value
 
-`st.avatar` returns a `DeltaGenerator` when `on_click="ignore"`, matching display elements
-like `st.image` and `st.logo`. When `on_click="rerun"` or a callback is provided,
-`st.avatar` returns a `bool`: `True` only on the rerun triggered by a click, and `False`
-otherwise.
+`st.avatar` returns a `DeltaGenerator` when `on_click="ignore"`, matching the display
+element `st.image`. (`st.logo` is also a display element but returns `None`; `st.avatar`
+returns a `DeltaGenerator` so the display-only call can be chained like other elements.)
+When `on_click="rerun"` or a callback is provided, `st.avatar` returns a `bool`: `True`
+only on the rerun triggered by a click, and `False` otherwise.
+
+Because the return type depends on the runtime value of `on_click`, the implementation will
+provide `@overload` stubs (as `st.download_button` and `st.link_button` already do) so that
+type checkers narrow the return type at call sites: `DeltaGenerator` for the
+`on_click="ignore"` default and `bool` for the clickable overloads.
 
 ### Content types
 
@@ -138,8 +153,10 @@ type, requires `key`). Two options:
 
 **Option 1: Clickable widget** ✅ PREFERRED
 
-Add `on_click: Literal["ignore", "rerun"] | Callable[[], None] = "ignore"` plus `key`, and
-return `DeltaGenerator` for the display-only case and `bool` for the clickable case.
+Add `on_click: Literal["ignore", "rerun"] | Callable[..., None] = "ignore"` plus `args`,
+`kwargs`, and `key`, and return `DeltaGenerator` for the display-only case and `bool` for
+the clickable case. The callback `args`/`kwargs` mirror `st.button` so callers can pass
+context (e.g. a user ID) without closures (Principle #11).
 
 ```python
 if st.avatar("profile.jpg", label="Jane Smith", on_click="rerun", key="profile"):
@@ -155,9 +172,9 @@ focusable, activatable with Enter/Space) with an `aria-label` derived from `labe
 
 **Option 2: Display-only in v1**
 
-Ship `st.avatar` as a pure display element (returns `DeltaGenerator`), matching `st.image`
-and `st.logo`. Users who need a clickable avatar compose with existing primitives, e.g.
-wrap it in a container or pair it with a nearby `st.button`.
+Ship `st.avatar` as a pure display element (returns `DeltaGenerator`), like `st.image`.
+Users who need a clickable avatar compose with existing primitives, e.g. wrap it in a
+container or pair it with a nearby `st.button`.
 
 - Pros: Simplest, smallest API; consistent return type with sibling display elements;
   avoids widget machinery (`key`, state, callbacks) for the 80% case.
