@@ -165,11 +165,11 @@ This approach ensures:
 ### Edge Cases
 
 - **Multiple chat inputs**: Only the widget that triggered the run is affected; others remain in their default state.
-- **Fragment reruns**: If the `chat_input` is inside a fragment, the behavior scopes to the fragment rerun, not the full app. The widget re-enables when the fragment completes, even if the full script is still running from a different trigger. Conversely, if a page-level `chat_input` triggers a full rerun while a fragment is running, the fragment's execution continues until completion (existing behavior) and the `chat_input` re-enables when the full script finishes.
-- **Already running**: If a script is running from a different trigger (button click, etc.), `chat_input` behaves normally per its `disabled` parameter.
+- **Fragment reruns**: If the `chat_input` is inside a fragment, the disable/re-enable lifecycle scopes to the fragment rerun, not the full app. The widget re-enables when the fragment completes, even if the full script is still running from a different trigger. Conversely, if a page-level `chat_input` triggers a full rerun while a fragment is running, the fragment's execution continues until completion (existing behavior) and the `chat_input` re-enables when the full script finishes. Note that for `submit_mode="stop"`, only this visual disable/re-enable lifecycle is fragment-scoped: clicking the stop button halts the entire script run via the app-wide `stop_script` mechanism, since there is no fragment-scoped stop today. If finer-grained, fragment-only cancellation is needed, that would require a separate mechanism and is out of scope here.
+- **Already running**: If a script is running from a different trigger (button click, etc.), `chat_input` behaves normally per its `disabled` parameter. Because the running-state behavior only applies to the widget that triggered the current run, a `submit_mode="stop"` input does not turn its submit button into a stop button in this case.
 - **`disabled=True` with `submit_mode`**: When `disabled=True` is explicitly set by the developer, the `disabled` parameter takes precedence and `submit_mode` has no effect (the widget is always disabled regardless of run state).
 - **Stop during streaming**: When stopped, `st.write_stream` halts output just as if `st.stop()` were called. The generator is interrupted.
-- **Callbacks**: The `on_submit` callback runs before the running behavior is applied (callbacks execute during widget processing, before script body runs).
+- **Callbacks**: The `on_submit` callback executes normally as part of widget processing on the server (before the script body runs). The running-state UI (disabled input or stop button) is a client-side change applied at submission time, independent of callback execution—so `on_submit` is unaffected by `submit_mode`.
 
 ## Alternatives Considered
 
