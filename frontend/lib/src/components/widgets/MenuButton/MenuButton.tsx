@@ -116,8 +116,11 @@ function MenuButton(props: Props): ReactElement {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === "Escape" || e.key === "Tab") {
         setIsOpen(false)
-        // Restore focus to the trigger button after dismissal
         if (e.key === "Escape") {
+          // Stop propagation so parent overlays (e.g. st.dialog) don't also
+          // dismiss — only the innermost overlay should close per ARIA pattern.
+          e.stopPropagation()
+          e.preventDefault()
           containerRef.current
             ?.querySelector<HTMLButtonElement>("button")
             ?.focus()
