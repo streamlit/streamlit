@@ -87,7 +87,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 
 | User Need | Reference to Read |
 |-----------|-------------------|
-| **App is slow, reruns take too long, or data loads repeatedly** — caching strategies (`st.cache_data`, `st.cache_resource`), `st.fragment` for partial reruns, and avoiding unnecessary recomputation | read `references/performance.md` |
+| **App is slow, reruns take too long, data loads repeatedly, or work is recomputed unnecessarily** — caching strategies (`st.cache_data`, `st.cache_resource`), `st.fragment` for partial reruns, and (optionally) `parallel=True` when independent fragments can run concurrently | read `references/performance.md` |
 | **Building a dashboard with KPIs, metrics, and charts** — composing `st.metric`, charts, and data tables into clean dashboard layouts with columns and containers | read `references/dashboards.md` |
 | **Making an app look polished** — icons (Material Symbols), spacing, color accents, visual hierarchy, and small design touches that elevate quality | read `references/design.md` |
 | **Choosing the right selection widget** — when to use `st.selectbox` vs `st.radio` vs `st.pills` vs `st.segmented_control` vs `st.multiselect`, including modern replacements for deprecated patterns | read `references/selection-widgets.md` |

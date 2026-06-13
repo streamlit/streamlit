@@ -14,14 +14,19 @@
 
 """time_input unit test."""
 
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.widgets.time_widgets import TimeInputSerde
+from streamlit.elements.widgets.time_widgets import (
+    TimeInputSerde,
+    _convert_datelike_to_date,
+    _convert_timelike_to_time,
+    _parse_date_value,
+)
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidBindValueError,
@@ -397,3 +402,114 @@ class TestTimeInputSerdeDeserialization:
         serde = TimeInputSerde(value=time(8, 45))
         result = serde.deserialize("not-a-time")
         assert result == time(8, 45)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("12:30", time(12, 30)),
+        ("2020-01-01T12:30:45.123", time(12, 30)),
+        (datetime(2020, 1, 1, 9, 5, 33), time(9, 5)),
+    ],
+    ids=["iso_time", "iso_datetime_drops_subseconds", "datetime_object"],
+)
+def test_convert_timelike_to_time_parses_value(
+    value: str | datetime, expected: time
+) -> None:
+    """``_convert_timelike_to_time`` parses ISO strings and datetimes to a time."""
+    assert _convert_timelike_to_time(value) == expected
+
+
+def test_convert_timelike_to_time_returns_same_instance_for_time() -> None:
+    """A ``time`` instance is returned unchanged (identity-preserving)."""
+    t = time(7, 15)
+    assert _convert_timelike_to_time(t) is t
+
+
+@pytest.mark.parametrize(
+    ("invalid_input", "match"),
+    [("not-a-time", "datetime, time"), (42, None)],
+    ids=["invalid_string", "invalid_type"],
+)
+def test_convert_timelike_to_time_invalid_raises(
+    invalid_input: object, match: str | None
+) -> None:
+    """Unparseable strings or wrong types raise StreamlitAPIException."""
+    with pytest.raises(StreamlitAPIException, match=match):
+        _convert_timelike_to_time(invalid_input)  # type: ignore[arg-type]
+
+
+def test_convert_datelike_to_date_today_keyword() -> None:
+    """The string ``"today"`` resolves to today's date."""
+    # Freeze time so the comparison cannot flake across a midnight boundary.
+    # A datetime subclass is used (instead of a plain mock) so the function's
+    # internal isinstance(..., datetime) checks keep working.
+    frozen_now = datetime(2026, 6, 11, 12, 0, 0)
+
+    class _FrozenDatetime(datetime):
+        @classmethod
+        def now(cls, tz: object = None) -> datetime:  # type: ignore[override]
+            return frozen_now
+
+    with patch("streamlit.elements.widgets.time_widgets.datetime", _FrozenDatetime):
+        assert _convert_datelike_to_date("today") == frozen_now.date()
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("2020-01-15", date(2020, 1, 15)),
+        ("2020-01-15T10:00:00", date(2020, 1, 15)),
+    ],
+    ids=["iso_date", "iso_datetime"],
+)
+def test_convert_datelike_to_date_parses_iso_strings(
+    value: str, expected: date
+) -> None:
+    """``_convert_datelike_to_date`` parses ISO date and datetime strings."""
+    assert _convert_datelike_to_date(value) == expected
+
+
+@pytest.mark.parametrize(
+    ("invalid_input", "match"),
+    [("not-a-date", "ISO string"), (42, None)],
+    ids=["invalid_string", "invalid_type"],
+)
+def test_convert_datelike_to_date_invalid_raises(
+    invalid_input: object, match: str | None
+) -> None:
+    """Unparseable strings or wrong types raise StreamlitAPIException."""
+    with pytest.raises(StreamlitAPIException, match=match):
+        _convert_datelike_to_date(invalid_input)  # type: ignore[arg-type]
+
+
+def test_parse_date_value_none_is_not_range() -> None:
+    """A ``None`` value yields ``(None, False)``."""
+    assert _parse_date_value(None) == (None, False)
+
+
+def test_parse_date_value_too_many_dates_raises() -> None:
+    """A range of more than 2 dates raises StreamlitAPIException."""
+    with pytest.raises(StreamlitAPIException, match="0 - 2 date"):
+        _parse_date_value([date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)])
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_dates", "expected_is_range"),
+    [
+        (date(2020, 1, 1), [date(2020, 1, 1)], False),
+        (
+            [date(2020, 1, 1), date(2020, 1, 2)],
+            [date(2020, 1, 1), date(2020, 1, 2)],
+            True,
+        ),
+    ],
+    ids=["single_date", "date_range"],
+)
+def test_parse_date_value_returns_dates_and_range_flag(
+    value: date | list[date],
+    expected_dates: list[date],
+    expected_is_range: bool,
+) -> None:
+    """Single dates are wrapped in a list; lists are treated as ranges."""
+    assert _parse_date_value(value) == (expected_dates, expected_is_range)

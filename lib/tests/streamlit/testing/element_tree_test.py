@@ -119,6 +119,35 @@ def test_button():
     repr(sr.button[0])
 
 
+def test_download_button():
+    def script():
+        import streamlit as st
+
+        clicked = st.download_button(
+            "Download",
+            data="contents",
+            file_name="example.txt",
+            mime="text/plain",
+            key="download",
+        )
+        st.write(clicked)
+
+    at = AppTest.from_function(script).run()
+    assert at.download_button[0].label == "Download"
+    assert at.download_button(key="download").value is False
+    assert at.markdown[0].value == "`False`"
+
+    at.download_button[0].click().run()
+    assert at.download_button[0].value is True
+    assert at.markdown[0].value == "`True`"
+
+    at.run()
+    assert at.download_button[0].value is False
+    assert at.markdown[0].value == "`False`"
+
+    repr(at.download_button[0])
+
+
 def test_chat():
     def script():
         import streamlit as st
@@ -201,6 +230,35 @@ def test_columns():
     assert at.columns[1].radio[0].value == "a"
 
     repr(at.columns[0])
+
+
+def test_image():
+    def script():
+        import streamlit as st
+
+        st.image("https://example.com/image.png", caption="A caption")
+        st.image(
+            [
+                "https://example.com/first.png",
+                "https://example.com/second.png",
+            ],
+            caption=["First", "Second"],
+        )
+        st.image("https://example.com/no_caption.png")
+
+    at = AppTest.from_function(script).run()
+    assert at.image.len == 3
+    assert at.image[0].value == ["https://example.com/image.png"]
+    assert at.image[0].captions == ["A caption"]
+    assert at.image[1].value == [
+        "https://example.com/first.png",
+        "https://example.com/second.png",
+    ]
+    assert at.image[1].captions == ["First", "Second"]
+    assert at.image[2].value == ["https://example.com/no_caption.png"]
+    assert at.image[2].captions == [""]
+
+    repr(at.image[0])
 
 
 def test_dataframe():
