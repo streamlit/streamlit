@@ -61,14 +61,17 @@ emitted and behavior is unchanged.
 [server]
 # Attributes from st.user to expose as labels on per-user analytics metrics.
 # When empty (default), no per-user metrics are emitted.
-metricsUserAttributes = ["email"]
+unsafeMetricsUserAttributes = ["email"]
 ```
 
-- **`server.metricsUserAttributes`** : `list[str]`, default `[]`.
+- **`server.unsafeMetricsUserAttributes`** : `list[str]`, default `[]`, hidden.
   A list of `st.user` keys (typically populated via `server.trustedUserHeaders`) whose
   values are attached as labels to the new `user_session_events` metric family. An empty
   list (the default) disables the feature entirely — the family is not emitted and the
-  metrics endpoint output is byte-for-byte unchanged.
+  metrics endpoint output is byte-for-byte unchanged. The `unsafe` prefix is intentional:
+  enabling this can expose user-identifying values on the unauthenticated metrics endpoint
+  and must only be done in hosting environments that restrict endpoint access. The option
+  should be created with `visibility="hidden"` until the API and docs are finalized.
 
 Because the metrics endpoint and identity propagation are deployment-environment concerns
 (not app behavior), this is a `config.toml` option rather than an `st.*` command, matching
@@ -76,7 +79,7 @@ Because the metrics endpoint and identity propagation are deployment-environment
 
 ### Behavior
 
-When `server.metricsUserAttributes` is non-empty, `/_stcore/metrics` gains one new family:
+When `server.unsafeMetricsUserAttributes` is non-empty, `/_stcore/metrics` gains one new family:
 
 ```
 # HELP user_session_events Total count of session events by type and user.
@@ -105,7 +108,7 @@ user_session_events_total{type="connect",email="bob@example.com"} 5
   the feature is enabled, the cached identity is refreshed on `reconnect`, so if a session's
   identity changes across a reconnect the later events are attributed to the most recently
   seen identity.
-- `metricsUserAttributes` is read at server **startup** and is not meant to be toggled on a
+- `unsafeMetricsUserAttributes` is read at server **startup** and is not meant to be toggled on a
   running server (restart to apply a change). Like other `server.*` options, mid-session
   toggling is unsupported; per-user attribution across such a toggle is best-effort and
   undefined (e.g. a cached identity may not refresh while disabled). Hosts set this once.
@@ -128,14 +131,14 @@ This feature can expose PII (e.g. email) on an HTTP endpoint, so:
 
 - It is **opt-in** and **off by default**.
 - The host platform explicitly chooses which attributes to expose via
-  `metricsUserAttributes` — Streamlit never emits user identity unless configured.
+  `unsafeMetricsUserAttributes` — Streamlit never emits user identity unless configured.
 - Collection is **best-effort**: a failure while recording per-user metrics must never
   break app execution or deny app access.
 
 **Endpoint access control is a prerequisite, not provided by this feature.** The existing
 `/_stcore/metrics` endpoint has no built-in authentication, authorization, or IP allow-list
 at the Streamlit layer — anything reachable on the server port can scrape it. Today that
-exposes only anonymous aggregate counters; once `metricsUserAttributes` is set, the same
+exposes only anonymous aggregate counters; once `unsafeMetricsUserAttributes` is set, the same
 unauthenticated endpoint also serves the configured PII. Enabling this option is therefore
 **only safe when the host restricts access to the metrics endpoint at the network layer**
 (the model SiS already uses — the port is internal and scraped by the platform, never exposed
@@ -150,7 +153,7 @@ is out of scope here (see Out of Scope).
 ```toml
 [server]
 trustedUserHeaders = '{"Sf-Context-Current-User-Email": "email"}'
-metricsUserAttributes = ["email"]
+unsafeMetricsUserAttributes = ["email"]
 ```
 
 **Querying just the new family from a scraper:**
@@ -179,9 +182,9 @@ curl "http://localhost:8501/_stcore/metrics?families=user_session_events"
 
 | Item                         | ✅ or comment          |
 |------------------------------|------------------------|
-| Works on SiS, Cloud, etc?    | Designed for SiS; no-op everywhere unless `server.metricsUserAttributes` is set. |
+| Works on SiS, Cloud, etc?    | Designed for SiS; no-op everywhere unless `server.unsafeMetricsUserAttributes` is set. |
 | No breaking API changes      | ✅ Additive config option; default off keeps endpoint output unchanged. |
 | No new dependencies          | ✅ Reuses existing stats/metrics infrastructure. |
 | Metrics collected            | ✅ This feature *is* a metrics feature; gather a usage stat when the option is enabled. |
 | Any security/legal impact?   | Yes — can expose PII (email) on the metrics endpoint. Off by default, opt-in, host-controlled attribute list; needs privacy/legal review and docs. |
-| Any docs changes needed?     | Yes — document `server.metricsUserAttributes` and the `user_session_events` family. |
+| Any docs changes needed?     | Yes — document `server.unsafeMetricsUserAttributes` and the `user_session_events` family before making the hidden option public. |
