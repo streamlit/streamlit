@@ -156,24 +156,6 @@ export default defineConfig(({ command }) => ({
       ...profilerAliases,
     ],
   },
-  // Prevent Vite from pre-bundling mermaid. Mermaid bundles its own lodash
-  // internally with __esm wrappers (e.g., init_hasIn). When Vite pre-bundles
-  // mermaid, these internal references can break because the lodash->lodash-es
-  // alias above can interfere with mermaid's bundled lodash code.
-  optimizeDeps: {
-    // Mermaid is excluded from pre-bundling, so Vite serves its ESM chunks
-    // directly in dev. Pre-bundle its CommonJS dependencies separately so
-    // Mermaid's ESM imports resolve to Vite-generated ESM interop modules.
-    include: [
-      "@braintree/sanitize-url",
-      "dayjs",
-      "dayjs/plugin/advancedFormat.js",
-      "dayjs/plugin/customParseFormat.js",
-      "dayjs/plugin/duration.js",
-      "dayjs/plugin/isoWeek.js",
-    ],
-    exclude: ["mermaid"],
-  },
   server: {
     open: true,
     port: DEV_SERVER_PORT,
