@@ -79,8 +79,9 @@ export const StyledPaginationButton =
   )
 
 /**
- * Non-interactive ellipsis indicator styled like a page button but using
- * a span element since it's not a button.
+ * Non-interactive ellipsis indicator that shares the page button's sizing and
+ * typography, but omits the button background, border radius, and interactive
+ * states since it's a plain span rather than a button.
  */
 export const StyledEllipsis = styled.span(({ theme }) => ({
   display: "flex",

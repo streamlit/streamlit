@@ -41,8 +41,8 @@ export const computeDerivedColors = (
   const darkenedBgMix100 = hasLightBg
     ? darken(bgMix, 0.3)
     : lighten(bgMix, 0.6) // Icons.
-  // TODO(tvst): Rename to darkenedBgMix25 (number = opacity)
   const darkenedBgMix40 = transparentize(darkenedBgMix100, 0.6)
+  // TODO(tvst): Rename to darkenedBgMix25 (number = opacity)
   const darkenedBgMix25 = transparentize(darkenedBgMix100, 0.75)
   const darkenedBgMix15 = transparentize(darkenedBgMix100, 0.85) // Hovered menu/nav items.
 
