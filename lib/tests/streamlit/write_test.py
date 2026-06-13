@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import dataclasses
+import re
 import time
 import unittest
 from collections import namedtuple
@@ -848,7 +849,10 @@ def _broken_langchain_ai_message_chunk() -> Any:
 def _openai_response_event(name: str, event_type: str, **attrs: Any) -> Any:
     """Instance whose type FQN matches OpenAI Responses API stream events."""
     cls = type(name, (), {})
-    cls.__module__ = f"openai.types.responses.{name.lower()}"
+    # Mirror the SDK's snake_case module naming (e.g. ResponseTextDeltaEvent ->
+    # openai.types.responses.response_text_delta_event).
+    snake_case_name = re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+    cls.__module__ = f"openai.types.responses.{snake_case_name}"
     event = cls()
     event.type = event_type
     for attr, value in attrs.items():

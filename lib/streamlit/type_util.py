@@ -219,9 +219,9 @@ def is_keras_model(obj: object) -> bool:
 
 # We use a regex here to allow potential changes in the module path in the future.
 _OPENAI_CHUNK_RE: Final = re.compile(r"^openai\..+\.ChatCompletionChunk$")
-_OPENAI_RESPONSE_EVENT_RE: Final = re.compile(
-    r"^openai\.types\.responses\..+\.Response.+Event$"
-)
+# Only anchor to the `openai` package and the `Response...Event` class name so
+# detection survives potential future restructuring of the intermediate module path.
+_OPENAI_RESPONSE_EVENT_RE: Final = re.compile(r"^openai\..+\.Response.+Event$")
 
 
 def is_openai_chunk(obj: object) -> bool:
