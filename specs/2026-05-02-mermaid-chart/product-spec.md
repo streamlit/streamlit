@@ -7,10 +7,9 @@ created: 2026-05-02
 
 ## Summary
 
-Add native support for rendering [Mermaid](https://mermaid.js.org/) diagrams in Streamlit apps
-through markdown code blocks and a dedicated `st.mermaid_chart` command. This enables users to
-create flowcharts, sequence diagrams, class diagrams, and other visualizations using Mermaid's
-text-based syntax.
+Add native support for rendering [Mermaid](https://mermaid.js.org/) diagrams in Streamlit apps.
+This enables users to create flowcharts, sequence diagrams, class diagrams, and other
+visualizations using Mermaid's text-based syntax.
 
 ## Problem
 
