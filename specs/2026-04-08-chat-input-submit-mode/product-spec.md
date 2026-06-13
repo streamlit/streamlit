@@ -170,6 +170,7 @@ This approach ensures:
 - **`disabled=True` with `submit_mode`**: When `disabled=True` is explicitly set by the developer, the `disabled` parameter takes precedence and `submit_mode` has no effect (the widget is always disabled regardless of run state).
 - **Stop during streaming**: When stopped, `st.write_stream` halts output just as if `st.stop()` were called. The generator is interrupted.
 - **Callbacks**: The `on_submit` callback executes normally as part of widget processing on the server (before the script body runs). The running-state UI (disabled input or stop button) is a client-side change applied at submission time, independent of callback execution—so `on_submit` is unaffected by `submit_mode`.
+- **`st.rerun()` inside the handler**: Calling `st.rerun()` within the triggered run ends that run and emits `scriptFinished`, so the widget re-enables, and the follow-up run is not attributed to the `chat_input`. For the initial version this is a known limitation: `submit_mode` keeps the widget disabled/stoppable only for the single run it triggered, not across a chain of `st.rerun()` calls. A more robust implementation could persist the "triggered-by" relationship across the rerun chain; that is out of scope here.
 
 ## Alternatives Considered
 
