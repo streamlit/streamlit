@@ -462,15 +462,19 @@ function ChatInput({
         return
       }
 
+      if (!e.clipboardData) {
+        return
+      }
+
       const pastedFiles = getPastedFiles(e.clipboardData)
       if (pastedFiles.length === 0) {
         return
       }
 
       e.preventDefault()
-      dropHandler(pastedFiles, [])
+      dropHandlerRef.current?.(pastedFiles, [])
     },
-    [acceptFile, disabled, dropHandler]
+    [acceptFile, disabled]
   )
 
   const { getRootProps, getInputProps } = useDropzone({
