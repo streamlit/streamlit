@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Final, TypeAlias
 
 from streamlit import cli_util, config, env_util
 
@@ -53,6 +53,12 @@ PathWatcherType: TypeAlias = (
     type["EventBasedPathWatcher"] | type["PollingPathWatcher"] | type[NoOpPathWatcher]
 )
 
+_DID_REPORT_WSL_POLLING = False
+_WSL_POLLING_INFO: Final = (
+    "  Detected WSL. Using poll-based file watching for better compatibility. "
+    'To force watchdog, set server.fileWatcherType = "watchdog".'
+)
+
 
 def _is_watchdog_available() -> bool:
     """Check if the watchdog module is installed."""
@@ -65,10 +71,17 @@ def _is_watchdog_available() -> bool:
 
 
 def report_watchdog_availability() -> None:
-    if (
-        config.get_option("server.fileWatcherType") not in {"poll", "none"}
-        and not _is_watchdog_available()
-    ):
+    global _DID_REPORT_WSL_POLLING  # noqa: PLW0603
+
+    watcher_type = config.get_option("server.fileWatcherType")
+
+    if watcher_type == "auto" and env_util.IS_WSL:
+        if not _DID_REPORT_WSL_POLLING:
+            cli_util.print_to_cli(_WSL_POLLING_INFO, fg="blue")
+            _DID_REPORT_WSL_POLLING = True
+        return
+
+    if watcher_type not in {"poll", "none"} and not _is_watchdog_available():
         msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
 
         cli_util.print_to_cli(
@@ -232,6 +245,11 @@ def get_path_watcher_class(watcher_type: str) -> PathWatcherType:
     """Return the PathWatcher class that corresponds to the given watcher_type
     string. Acceptable values are 'auto', 'watchdog', 'poll' and 'none'.
     """
+    if watcher_type == "auto" and env_util.IS_WSL:
+        from streamlit.watcher.polling_path_watcher import PollingPathWatcher
+
+        return PollingPathWatcher
+
     if watcher_type in {"watchdog", "auto"} and _is_watchdog_available():
         # Lazy-import this module to prevent unnecessary imports of the watchdog package.
         from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
