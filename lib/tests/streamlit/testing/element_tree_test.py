@@ -818,6 +818,89 @@ def test_format_func():
     assert not at.exception
 
 
+def test_format_func_accepts_formatted_labels():
+    # Regression test for #9476
+    expected_inventories = [
+        {"id_inventory": 1, "description": "Inventory 1"},
+        {"id_inventory": 2, "description": "Inventory 2"},
+        {"id_inventory": 3, "description": "Inventory 3"},
+    ]
+
+    def script():
+        import streamlit as st
+
+        inventories = [
+            {"id_inventory": 1, "description": "Inventory 1"},
+            {"id_inventory": 2, "description": "Inventory 2"},
+            {"id_inventory": 3, "description": "Inventory 3"},
+        ]
+
+        selected_items = st.multiselect(
+            "Multi inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="multi_inventory",
+        )
+        st.button(
+            "Run multi",
+            disabled=not selected_items,
+            key="multi_button",
+            on_click=lambda: st.session_state.update(multi_clicked=True),
+        )
+
+        selected_item = st.selectbox(
+            "Single inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="single_inventory",
+        )
+        st.button(
+            "Run single",
+            disabled=selected_item["description"] == "Inventory 1",
+            key="single_button",
+        )
+
+        st.radio(
+            "Radio inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="radio_inventory",
+        )
+
+        st.segmented_control(
+            "Segmented inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="segmented_inventory",
+        )
+
+    at = AppTest.from_function(script).run()
+
+    at.multiselect("multi_inventory").set_value(["Inventory 1"])
+    at = at.button("multi_button").click().run()
+
+    assert at.session_state.multi_clicked
+    assert at.multiselect("multi_inventory").value == [expected_inventories[0]]
+    assert at.multiselect("multi_inventory").indices == [0]
+    assert not at.button("multi_button").disabled
+
+    at = at.selectbox("single_inventory").set_value("Inventory 2").run()
+
+    assert at.selectbox("single_inventory").value == expected_inventories[1]
+    assert at.selectbox("single_inventory").index == 1
+    assert not at.button("single_button").disabled
+
+    at = at.radio("radio_inventory").set_value("Inventory 3").run()
+
+    assert at.radio("radio_inventory").value == expected_inventories[2]
+    assert at.radio("radio_inventory").index == 2
+
+    at = at.segmented_control("segmented_inventory").set_value("Inventory 1").run()
+
+    assert at.segmented_control("segmented_inventory").value == expected_inventories[0]
+    assert not at.exception
+
+
 def test_select_slider():
     script = AppTest.from_string(
         """
