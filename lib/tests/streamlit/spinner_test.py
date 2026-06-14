@@ -128,3 +128,131 @@ class SpinnerTest(DeltaGeneratorTestCase):
                 == WidthConfigFields.USE_CONTENT.value
             )
             assert el.width_config.use_content is True
+
+    def test_spinner_standalone_displays_immediately(self):
+        """Test that st.spinner displays the spinner immediately when used as a
+        standalone placeholder (not as a context manager), without any delay.
+        """
+        st.spinner("loading")
+        delta = self.get_delta_from_queue()
+        # The standalone spinner is shown immediately as a transient element.
+        assert delta.HasField("new_transient")
+        assert delta.new_transient.elements[0].spinner.text == "loading"
+        assert not delta.new_transient.elements[0].spinner.cache
+
+    def test_spinner_standalone_can_be_replaced(self):
+        """Test that calling a display method on the returned placeholder clears
+        the spinner and replaces it with that content (like st.empty).
+        """
+        placeholder = st.spinner("loading")
+        placeholder.success("done")
+
+        deltas = self.get_all_deltas_from_queue()
+        # The spinner content is replaced by the success alert.
+        assert deltas[-1].new_element.alert.body == "done"
+        # The last transient delta clears the spinner.
+        transient_deltas = [d for d in deltas if d.HasField("new_transient")]
+        assert len(transient_deltas[-1].new_transient.elements) == 0
+
+    def test_spinner_standalone_empty_clears(self):
+        """Test that calling .empty() on the placeholder clears the spinner."""
+        placeholder = st.spinner("loading")
+        placeholder.empty()
+
+        deltas = self.get_all_deltas_from_queue()
+        transient_deltas = [d for d in deltas if d.HasField("new_transient")]
+        assert len(transient_deltas[-1].new_transient.elements) == 0
+        # An empty element occupies the placeholder's position.
+        assert deltas[-1].new_element.HasField("empty")
+
+    def test_spinner_context_manager_reuses_slot(self):
+        """Test that content written inside a `with st.spinner()` block reuses
+        the spinner's slot, so the spinner does not reserve a persistent layout
+        slot (matching the classic context-manager behavior).
+        """
+        st.write("before")
+        with st.spinner("loading"):
+            time.sleep(0.7)
+            st.write("inside")
+        st.write("after")
+
+        markdown_messages = [
+            msg
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta")
+            and msg.delta.HasField("new_element")
+            and msg.delta.new_element.HasField("markdown")
+        ]
+        paths = {
+            msg.delta.new_element.markdown.body: tuple(msg.metadata.delta_path)
+            for msg in markdown_messages
+        }
+        # "inside" reuses the spinner's slot (index 1), "after" is at index 2.
+        assert paths["before"] == (0, 0)
+        assert paths["inside"] == (0, 1)
+        assert paths["after"] == (0, 2)
+
+    def test_nested_spinners_stack_transient_elements(self):
+        """Test that nested `with st.spinner()` blocks both stay visible by
+        sharing the same transient-element list.
+        """
+        with st.spinner("outer"):
+            with st.spinner("inner"):
+                time.sleep(0.7)
+                # While both blocks are active, the latest transient delta should
+                # contain both spinners.
+                transient = self.get_delta_from_queue().new_transient
+                spinner_texts = [el.spinner.text for el in transient.elements]
+                assert spinner_texts == ["outer", "inner"]
+
+    def test_spinner_returns_placeholder(self):
+        """Test that st.spinner returns a SpinnerPlaceholder instance."""
+        from streamlit.elements.spinner import SpinnerPlaceholder
+
+        placeholder = st.spinner("loading")
+        assert isinstance(placeholder, SpinnerPlaceholder)
+
+    def test_spinner_context_manager_fast_block_shows_nothing(self):
+        """Test that a `with st.spinner()` block finishing within the delay does
+        not leave a spinner displayed (anti-flicker behavior is preserved).
+        """
+        with st.spinner("loading"):
+            # Finishes immediately, well within DELAY_SECS, so the delayed timer
+            # never fires.
+            pass
+
+        deltas = self.get_all_deltas_from_queue()
+        transient_deltas = [d for d in deltas if d.HasField("new_transient")]
+        # The eagerly-shown spinner is cleared in __enter__ and never re-shown.
+        assert len(transient_deltas[-1].new_transient.elements) == 0
+
+    def test_spinner_placeholder_rejects_unknown_attribute(self):
+        """Test that accessing an unknown attribute on the placeholder raises
+        AttributeError without clearing the displayed spinner.
+        """
+        placeholder = st.spinner("loading")
+        with pytest.raises(AttributeError):
+            _ = placeholder.not_a_real_method
+
+        deltas = self.get_all_deltas_from_queue()
+        transient_deltas = [d for d in deltas if d.HasField("new_transient")]
+        # The spinner is still displayed (the incidental access did not clear it).
+        assert len(transient_deltas[-1].new_transient.elements) == 1
+
+    def test_spinner_without_session_context_is_noop(self):
+        """Test that st.spinner is a no-op when there is no script run context."""
+        from unittest.mock import patch
+
+        from streamlit.delta_generator import DeltaGenerator
+        from streamlit.errors import NoSessionContext
+
+        with patch.object(
+            DeltaGenerator, "_transient", side_effect=NoSessionContext("no ctx")
+        ):
+            placeholder = st.spinner("loading")
+            # Nothing is enqueued when there is no session context.
+            assert not self.get_all_deltas_from_queue()
+            # The placeholder still works as a no-op context manager.
+            with placeholder:
+                pass
+            assert not self.get_all_deltas_from_queue()

@@ -38,6 +38,13 @@ if st.button("Run markdown updated with spinner"):
     with placeholder.spinner("something"):
         time.sleep(2)
 
+# Standalone spinner: displayed immediately (like st.empty) and replaced once
+# the work is done, without a `with` block.
+if st.button("Run standalone spinner"):
+    placeholder = st.spinner("Loading standalone...")
+    time.sleep(2)
+    placeholder.success("Loaded standalone!")
+
 if st.button("Run spinner in with st.empty block"):
     with st.empty():
         with st.spinner("spinner in empty block"):

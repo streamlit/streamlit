@@ -315,9 +315,15 @@ class CachedFunc(Generic[P, R]):
         # on behalf of the user.
         is_nested_cache_function = in_cached_function.get()
 
+        # Imported lazily to avoid a circular import at module load time.
+        from streamlit.elements.spinner import show_spinner
+
         spinner_or_no_context = (
-            get_dg_singleton_instance().main_dg.spinner(
-                spinner_message, _cache=True, show_time=self._info.show_time
+            show_spinner(
+                get_dg_singleton_instance().main_dg,
+                spinner_message,
+                cache=True,
+                show_time=self._info.show_time,
             )
             if spinner_message is not None and not is_nested_cache_function
             else contextlib.nullcontext()

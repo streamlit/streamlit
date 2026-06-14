@@ -73,6 +73,28 @@ def test_spinner_on_markdown(app: Page):
     expect(markdown_elements.nth(0)).to_have_text("Some Text")
 
 
+def test_standalone_spinner_replaced_with_content(app: Page):
+    """Test that st.spinner used as a standalone placeholder shows immediately
+    and can be replaced with content (like st.empty).
+    """
+    get_button(app, "Run standalone spinner").click()
+
+    # The spinner is displayed immediately, without a `with` block.
+    spinner = app.get_by_test_id("stSpinner")
+    expect(spinner).to_have_count(1)
+    expect(spinner.nth(0)).to_have_text("Loading standalone...")
+    # The success message has not appeared yet.
+    expect(app.get_by_text("Loaded standalone!")).not_to_be_visible()
+
+    wait_for_app_run(app)
+
+    # The spinner is replaced by the success message.
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    success = app.get_by_test_id("stAlert")
+    expect(success).to_be_visible()
+    expect(success).to_contain_text("Loaded standalone!")
+
+
 def test_spinner_in_empty_block(app: Page):
     """Test that running a spinner in a st.empty block updates correctly."""
     get_button(app, "Run spinner in with st.empty block").click()
