@@ -819,7 +819,7 @@ def test_format_func():
 
 
 def test_format_func_accepts_formatted_labels():
-    # Regression test for #9476
+    """Selection widgets accept already-formatted labels via format_func (#9476)."""
     expected_inventories = [
         {"id_inventory": 1, "description": "Inventory 1"},
         {"id_inventory": 2, "description": "Inventory 2"},
