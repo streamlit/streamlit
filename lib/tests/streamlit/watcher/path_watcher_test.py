@@ -32,7 +32,7 @@ from tests.testutil import patch_config_options
 
 class FileWatcherTest(unittest.TestCase):
     def setUp(self) -> None:
-        streamlit.watcher.path_watcher._DID_REPORT_WSL_POLLING = False
+        streamlit.watcher.path_watcher._report_wsl_polling_once.cache_clear()
 
     @patch_config_options({"server.fileWatcherType": "watchdog"})
     def test_report_watchdog_availability_mac(self):
@@ -111,6 +111,7 @@ class FileWatcherTest(unittest.TestCase):
                 return_value=False,
             ),
             patch("streamlit.env_util.IS_DARWIN", new=False),
+            patch("streamlit.env_util.IS_WSL", new=False),
             patch("click.secho") as mock_echo,
         ):
             streamlit.watcher.path_watcher.report_watchdog_availability()

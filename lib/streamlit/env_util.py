@@ -39,7 +39,11 @@ def _is_wsl() -> bool:
     except OSError:
         return False
 
-    return "microsoft" in version_info or "wsl" in version_info
+    # "microsoft" matches the official WSL1 and WSL2 kernel strings, while
+    # "wsl2" additionally covers custom WSL2 kernels. We avoid a bare "wsl"
+    # substring check to prevent false positives from unrelated kernel build
+    # strings (e.g. a build host that happens to contain "wsl").
+    return "microsoft" in version_info or "wsl2" in version_info
 
 
 IS_WSL = _is_wsl()
