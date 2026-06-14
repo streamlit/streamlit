@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import sys
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
@@ -31,6 +32,7 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from streamlit import file_util
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 from streamlit.runtime.media_file_manager import MediaFileManager, MediaFileMetadata
@@ -1378,6 +1380,136 @@ class TestAppRouteValidation:
         ]
         app = App("main.py", routes=routes)
         assert len(app._user_routes) == 3
+
+
+class TestAppRun:
+    """Tests for App.run()."""
+
+    def test_run_uses_existing_app_instance_and_bootstrap_helpers(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """App.run should bootstrap direct launch without re-importing the app."""
+        from streamlit import config
+
+        launcher = tmp_path / "app.py"
+        launcher.write_text("import streamlit as st\n")
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_server_mode", config._server_mode)
+        monkeypatch.setattr(sys, "argv", [str(launcher), "--date", "2026-06-14"])
+
+        app = App(script)
+
+        with (
+            patch("streamlit.web.bootstrap._fix_sys_path") as fix_sys_path,
+            patch("streamlit.web.bootstrap._fix_sys_argv") as fix_sys_argv,
+            patch("streamlit.web.bootstrap.load_config_options") as load_config_options,
+            patch(
+                "streamlit.web.bootstrap._install_config_watchers"
+            ) as install_config_watchers,
+            patch("streamlit.watcher.report_watchdog_availability") as report,
+            patch(
+                "streamlit.web.server.starlette.starlette_server.UvicornRunner"
+            ) as runner_cls,
+        ):
+            app.run(config={"server.port": 8502})
+
+        launcher_path = str(launcher.resolve())
+        assert config._main_script_path == launcher_path
+        assert config._server_mode == "starlette-app"
+        fix_sys_path.assert_called_once_with(launcher_path)
+        fix_sys_argv.assert_called_once_with(launcher_path, ["--date", "2026-06-14"])
+        load_config_options.assert_called_once_with({"server.port": 8502})
+        install_config_watchers.assert_called_once_with({"server.port": 8502})
+        report.assert_called_once()
+        runner_cls.assert_called_once_with(app)
+        runner_cls.return_value.run.assert_called_once()
+
+    def test_run_with_default_config_loads_empty_overrides(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """App.run with no config should load an empty set of flag overrides."""
+        from streamlit import config
+
+        launcher = tmp_path / "app.py"
+        launcher.write_text("import streamlit as st\n")
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_server_mode", config._server_mode)
+        monkeypatch.setattr(sys, "argv", [str(launcher)])
+
+        app = App(script)
+
+        with (
+            patch("streamlit.web.bootstrap._fix_sys_path"),
+            patch("streamlit.web.bootstrap._fix_sys_argv") as fix_sys_argv,
+            patch("streamlit.web.bootstrap.load_config_options") as load_config_options,
+            patch(
+                "streamlit.web.bootstrap._install_config_watchers"
+            ) as install_config_watchers,
+            patch("streamlit.watcher.report_watchdog_availability"),
+            patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
+        ):
+            app.run()
+
+        fix_sys_argv.assert_called_once_with(str(launcher.resolve()), [])
+        load_config_options.assert_called_once_with({})
+        install_config_watchers.assert_called_once_with({})
+
+    def test_run_rejects_when_runtime_already_exists(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """App.run should fail clearly when a Runtime singleton already exists."""
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+        app = App(script)
+
+        with (
+            patch("streamlit.runtime.exists", return_value=True),
+            patch(
+                "streamlit.web.server.starlette.starlette_server.UvicornRunner"
+            ) as runner_cls,
+            pytest.raises(StreamlitAPIException, match="already running"),
+        ):
+            app.run()
+
+        runner_cls.assert_not_called()
+
+    def test_run_rejects_unknown_config_key(self, tmp_path: Path) -> None:
+        """App.run should reject unknown config keys before config loading."""
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+        app = App(script)
+
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"Unrecognized config option: 'unknown\.option'",
+        ):
+            app.run(config={"unknown.option": True})
+
+    def test_run_rejects_sensitive_config_key(self, tmp_path: Path) -> None:
+        """App.run should reject sensitive options like the CLI does."""
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+        app = App(script)
+
+        with pytest.raises(
+            StreamlitAPIException, match=r"server\.cookieSecret.*not allowed"
+        ):
+            app.run(config={"server.cookieSecret": "secret"})
+
+    def test_run_rejects_non_mapping_config(self, tmp_path: Path) -> None:
+        """App.run config must be a mapping."""
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+        app = App(script)
+
+        with pytest.raises(StreamlitAPIException, match="config must be a mapping"):
+            app.run(config=["server.port"])  # type: ignore[arg-type]
 
 
 class TestAppLifespan:

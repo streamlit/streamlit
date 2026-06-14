@@ -17,12 +17,14 @@
 from __future__ import annotations
 
 import copy
+import sys
 from collections.abc import Mapping as MappingABC
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config
+from streamlit.errors import StreamlitAPIException
 from streamlit.web.server.server_util import get_cookie_secret
 from streamlit.web.server.starlette.starlette_app_utils import (
     generate_random_hex_string,
@@ -87,6 +89,34 @@ _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
     f"/{BASE_ROUTE_COMPONENT}/",  # Custom component serving
     f"/{BASE_ROUTE_STATIC}/",  # Frontend assets (JS/CSS bundles)
 )
+
+
+def _validate_run_config(
+    run_config: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Validate config overrides passed to App.run()."""
+    if run_config is None:
+        return {}
+
+    if not isinstance(run_config, MappingABC):
+        raise StreamlitAPIException(
+            f"config must be a mapping or None, got {type(run_config).__name__!r}."
+        )
+
+    validated_config = dict(run_config)
+    for config_key in validated_config:
+        config_option = config._config_options_template.get(config_key)
+        if config_option is None:
+            raise StreamlitAPIException(f"Unrecognized config option: {config_key!r}")
+
+        if config_option.sensitive:
+            raise StreamlitAPIException(
+                f"Setting {config_key!r} option using App.run(config=...) is not "
+                "allowed. Set this option in the configuration file or environment "
+                f"variable: {config_option.env_var!r}"
+            )
+
+    return validated_config
 
 
 def _set_anyio_thread_limiter() -> None:
@@ -483,6 +513,72 @@ class App:
     def state(self) -> dict[str, Any]:
         """Application state, populated by lifespan context manager."""
         return self._state
+
+    def run(self, *, config: Mapping[str, Any] | None = None) -> None:
+        """Start a local Streamlit server for this app and block until stopped.
+
+        Intended for launching an st.App launcher module directly, e.g.
+        ``python app.py``. Reuses the same embedded ASGI server runner that
+        ``streamlit run`` uses for st.App scripts.
+
+        Parameters
+        ----------
+        config : Mapping[str, Any] or None
+            Config option overrides, keyed by dotted config name (e.g.
+            ``{"server.port": 8502}``). This is the programmatic equivalent of
+            the config flags accepted by ``streamlit run``. Sensitive options and
+            unknown options are rejected. If this is ``None`` (default), config
+            comes from ``config.toml`` and environment variables as usual.
+
+        Examples
+        --------
+        Launch a launcher module directly with ``python app.py``:
+
+        >>> import streamlit as st
+        >>>
+        >>> app = st.App("dashboard.py")
+        >>>
+        >>> if __name__ == "__main__":
+        ...     app.run()
+
+        Pin server settings so the launcher is fully self-contained:
+
+        >>> if __name__ == "__main__":
+        ...     app.run(config={"server.port": 8502, "server.address": "0.0.0.0"})
+        """
+        from streamlit import config as streamlit_config
+        from streamlit import runtime
+        from streamlit.watcher import report_watchdog_availability
+        from streamlit.web import bootstrap
+        from streamlit.web.server.starlette.starlette_server import UvicornRunner
+
+        config_overrides = _validate_run_config(config)
+
+        if runtime.exists():
+            raise StreamlitAPIException(
+                "A Streamlit server is already running in this process; call "
+                "App.run() only once, and not when the app is also served via "
+                "streamlit run, uvicorn, or mounted on another framework."
+            )
+
+        launcher_path = (
+            str(Path(sys.argv[0]).resolve())
+            if sys.argv
+            else str(self._resolve_script_path())
+        )
+        script_args = sys.argv[1:] if sys.argv else []
+
+        streamlit_config._main_script_path = launcher_path
+        bootstrap._fix_sys_path(launcher_path)
+        bootstrap._fix_sys_argv(launcher_path, script_args)
+        bootstrap.load_config_options(config_overrides)
+        bootstrap._install_config_watchers(config_overrides)
+
+        streamlit_config._server_mode = "starlette-app"
+
+        report_watchdog_availability()
+
+        UvicornRunner(self).run()
 
     def lifespan(self) -> Callable[[Any], AbstractAsyncContextManager[None]]:
         """Get a lifespan context manager for mounting on external ASGI frameworks.
