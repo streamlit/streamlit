@@ -239,6 +239,59 @@ class SpinnerTest(DeltaGeneratorTestCase):
         # The spinner is still displayed (the incidental access did not clear it).
         assert len(transient_deltas[-1].new_transient.elements) == 1
 
+    def test_spinner_placeholder_access_without_call_does_not_clear(self):
+        """Test that merely accessing (or probing via hasattr) a display method
+        does not clear the spinner; only calling the method replaces it.
+        """
+        placeholder = st.spinner("loading")
+
+        # Incidental probes that resolve real method names must not destroy the
+        # standalone spinner.
+        assert hasattr(placeholder, "success")
+        _ = placeholder.write
+        assert getattr(placeholder, "markdown", None) is not None
+
+        deltas = self.get_all_deltas_from_queue()
+        transient_deltas = [d for d in deltas if d.HasField("new_transient")]
+        # The spinner is still displayed; no replacement happened on access.
+        assert len(transient_deltas[-1].new_transient.elements) == 1
+
+        # Calling the method does replace the spinner.
+        placeholder.success("done")
+        deltas = self.get_all_deltas_from_queue()
+        assert deltas[-1].new_element.alert.body == "done"
+        transient_deltas = [d for d in deltas if d.HasField("new_transient")]
+        assert len(transient_deltas[-1].new_transient.elements) == 0
+
+    def test_spinner_placeholder_rejects_non_callable_attribute(self):
+        """Test that accessing a non-callable DeltaGenerator attribute (e.g. the
+        ``dg`` property) raises AttributeError without clearing the spinner.
+        """
+        placeholder = st.spinner("loading")
+        with pytest.raises(AttributeError):
+            _ = placeholder.dg
+
+        deltas = self.get_all_deltas_from_queue()
+        transient_deltas = [d for d in deltas if d.HasField("new_transient")]
+        assert len(transient_deltas[-1].new_transient.elements) == 1
+
+    def test_spinner_context_manager_after_replacement_does_not_reshow(self):
+        """Test that re-entering a replaced placeholder as a context manager does
+        not re-show the spinner over the replacement content.
+        """
+        placeholder = st.spinner("loading")
+        placeholder.success("done")
+
+        with placeholder:
+            time.sleep(0.7)
+
+        deltas = self.get_all_deltas_from_queue()
+        transient_deltas = [d for d in deltas if d.HasField("new_transient")]
+        # The spinner is not re-displayed after it was replaced.
+        assert len(transient_deltas[-1].new_transient.elements) == 0
+        # The replacement content is still the last rendered element.
+        assert deltas[-1].new_element.alert.body == "done"
+
     def test_spinner_without_session_context_is_noop(self):
         """Test that st.spinner is a no-op when there is no script run context."""
         from unittest.mock import patch

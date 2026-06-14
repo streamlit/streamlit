@@ -117,17 +117,26 @@ class SpinnerPlaceholder:
         # ``placeholder.dataframe(...)`` replaces the spinner with content.
         from streamlit.delta_generator import DeltaGenerator
 
-        # Only treat real DeltaGenerator attributes as replacements. This avoids
-        # accidentally clearing the spinner on incidental access (e.g. ``hasattr``
-        # checks, debuggers, or typos), which would otherwise silently destroy it.
-        if name.startswith("_") or not hasattr(DeltaGenerator, name):
+        # Only delegate callable DeltaGenerator methods. Non-callable attributes
+        # (e.g. the ``dg`` property) and unknown names are rejected so that
+        # incidental access never resolves to a replacement.
+        dg_attr = getattr(DeltaGenerator, name, None)
+        if name.startswith("_") or not callable(dg_attr):
             raise AttributeError(name)
-        if self._content_dg is None:
-            # Replacing the spinner: clear it and reserve a single-element
-            # container at the spinner's position to hold the new content.
-            self._clear()
-            self._content_dg = self._parent_dg.empty()
-        return getattr(self._content_dg, name)
+
+        def replace_spinner(*args: Any, **kwargs: Any) -> Any:
+            # The spinner is only cleared when a display method is actually
+            # *called*, not when it is accessed. This avoids destroying the
+            # standalone spinner on incidental attribute access (e.g. ``hasattr``
+            # checks, debuggers, or ``getattr(..., default)`` probes).
+            if self._content_dg is None:
+                # Replacing the spinner: clear it and reserve a single-element
+                # container at the spinner's position to hold the new content.
+                self._clear()
+                self._content_dg = self._parent_dg.empty()
+            return getattr(self._content_dg, name)(*args, **kwargs)
+
+        return replace_spinner
 
     def __enter__(self) -> Self:
         # When used as a context manager, hide the immediately-displayed
@@ -136,6 +145,12 @@ class SpinnerPlaceholder:
         # for blocks that finish within ``DELAY_SECS``).
         if self._create_transient is None or self._clear_transient is None:
             # We are not in a script thread; behave as a no-op context manager.
+            return self
+
+        if self._content_dg is not None:
+            # The spinner has already been replaced via standalone-placeholder
+            # usage. Don't reactivate it, which would flash the spinner back on
+            # top of the replacement content.
             return self
 
         # Hide the immediately-shown standalone spinner; the timer below re-shows
