@@ -18,6 +18,7 @@ import { screen } from "@testing-library/react"
 
 import { Button as SubmitButtonProto } from "@streamlit/protobuf"
 
+import { INITIAL_SCRIPT_RUN_ID } from "~lib/components/core/ScriptRunContext"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
 import {
@@ -61,6 +62,35 @@ describe("Form", () => {
     const formElement = screen.getByTestId("stForm")
     expect(formElement).toBeInTheDocument()
     expect(formElement).toHaveClass("stForm")
+  })
+
+  it("does not show missing submit button error during initial app load", () => {
+    const { rerenderWithContexts } = renderWithContexts(
+      <Form {...getProps()} />,
+      {
+        formsContext: {
+          formsData: defaultFormsData(),
+        },
+        scriptRunContext: {
+          scriptRunId: INITIAL_SCRIPT_RUN_ID,
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+        },
+      }
+    )
+
+    // During the initial app load (before the first script run), the warning
+    // must not flash even though the script is NOT_RUNNING.
+    expect(screen.queryByText("Missing Submit Button")).not.toBeInTheDocument()
+
+    // Once a real script run has finished, the warning should appear for a
+    // form that is still missing a submit button.
+    rerenderWithContexts(<Form {...getProps()} />, {
+      scriptRunContext: {
+        scriptRunId: "script run 123",
+        scriptRunState: ScriptRunState.NOT_RUNNING,
+      },
+    })
+    expect(screen.getByText("Missing Submit Button")).toBeInTheDocument()
   })
 
   it("shows error if !hasSubmitButton && scriptRunState==NOT_RUNNING", () => {

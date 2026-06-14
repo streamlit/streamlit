@@ -24,7 +24,10 @@ import {
 } from "react"
 
 import { FormsContext } from "~lib/components/core/FormsContext"
-import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
+import {
+  INITIAL_SCRIPT_RUN_ID,
+  ScriptRunContext,
+} from "~lib/components/core/ScriptRunContext"
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
 import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
@@ -74,8 +77,10 @@ function Form(props: Props): ReactElement {
     submitButtons !== undefined && submitButtons.length > 0
 
   // Consume ScriptRunContext to get script run state
-  const { scriptRunState } = useContext(ScriptRunContext)
-  const scriptNotRunning = scriptRunState === ScriptRunState.NOT_RUNNING
+  const { scriptRunId, scriptRunState } = useContext(ScriptRunContext)
+  const scriptRunFinished =
+    scriptRunId !== INITIAL_SCRIPT_RUN_ID &&
+    scriptRunState === ScriptRunState.NOT_RUNNING
 
   // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`
   useEffect(() => {
@@ -85,14 +90,14 @@ function Form(props: Props): ReactElement {
   // Determine if we need to show the "missing submit button" warning.
   // If we have a submit button, we don't show the warning, of course.
   // If we *don't* have a submit button, then we only mutate the showWarning
-  // flag when our scriptRunState is NOT_RUNNING. (If the script is still
-  // running, there might be an incoming SubmitButton delta that we just
-  // haven't seen yet.)
+  // flag once the script run has finished. (While the script is still running,
+  // or during the initial app load, there might be an incoming SubmitButton
+  // delta that we just haven't seen yet.)
   const [showWarning, setShowWarning] = useState(false)
 
   if (hasSubmitButton && showWarning) {
     setShowWarning(false)
-  } else if (!hasSubmitButton && !showWarning && scriptNotRunning) {
+  } else if (!hasSubmitButton && !showWarning && scriptRunFinished) {
     setShowWarning(true)
   }
 
