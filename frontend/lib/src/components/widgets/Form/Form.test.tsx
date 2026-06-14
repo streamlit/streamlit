@@ -90,7 +90,7 @@ describe("Form", () => {
         scriptRunState: ScriptRunState.NOT_RUNNING,
       },
     })
-    expect(screen.getByText("Missing Submit Button")).toBeInTheDocument()
+    expect(screen.getByText("Missing Submit Button")).toBeVisible()
   })
 
   it("shows error if !hasSubmitButton && scriptRunState==NOT_RUNNING", () => {
