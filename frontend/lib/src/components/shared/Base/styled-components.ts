@@ -30,6 +30,19 @@ export const Box = styled.div<{
 }))
 
 /**
+ * Returns the z-index override needed for React Aria positioned overlays.
+ * React Aria's useOverlayPosition hard-codes zIndex: 100000 as an inline
+ * style, which is below Streamlit's header (999990). !important in a CSS
+ * class overrides a non-!important inline style, placing overlays above all
+ * fixed UI. Apply this to every styled component wrapping RAC's Popover.
+ *
+ * @see Selectbox StyledPopover
+ * @see Popover StyledPopoverBody
+ */
+export const getOverlayZIndex = (theme: EmotionTheme): string =>
+  `${theme.zIndices.popup} !important`
+
+/**
  * Returns the shared popover container style: border-radius, border,
  * and box-shadow.
  *

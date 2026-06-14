@@ -17,6 +17,7 @@
 import styled from "@emotion/styled"
 import { Popover as RAPopover } from "react-aria-components"
 
+import { getOverlayZIndex } from "~lib/components/shared/Base/styled-components"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
 export const StyledPopoverBody = styled(RAPopover)<{
@@ -37,9 +38,7 @@ export const StyledPopoverBody = styled(RAPopover)<{
       ? `${Math.max($calculatedWidth, 160) / 16}rem`
       : theme.sizes.minPopupWidth,
     backgroundColor: theme.colors.bgColor,
-    // NOTE: z-index cannot be set here — React Aria's useOverlayPosition
-    // hard-codes zIndex: 100000 as an inline style which overrides CSS classes.
-    // The actual z-index override is passed via the `style` prop in Popover.tsx.
+    zIndex: getOverlayZIndex(theme),
     [`@media (max-width: ${theme.breakpoints.sm})`]: {
       maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
     },

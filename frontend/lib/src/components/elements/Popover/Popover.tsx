@@ -269,10 +269,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         containerPadding={convertRemToPx(theme.spacing.lg)}
         isNonModal
         shouldCloseOnInteractOutside={NEVER_CLOSE}
-        // React Aria's useOverlayPosition hard-codes zIndex: 100000 as an
-        // inline style which overrides CSS classes. Passing via style prop
-        // ensures the popover renders above app chrome (header, sidebar).
-        style={{ zIndex: theme.zIndices.popup }}
         $stretchWidth={stretchWidth}
         $calculatedWidth={calculatedWidth}
       >
