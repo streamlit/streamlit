@@ -561,12 +561,18 @@ class App:
                 "streamlit run, uvicorn, or mounted on another framework."
             )
 
+        # Guard on `sys.argv[0]` truthiness, not just `sys.argv`: Python always
+        # provides at least `['']`, and for interactive sessions or `-c`
+        # invocations `sys.argv[0]` is an empty string. `Path('').resolve()`
+        # would silently yield the cwd (a directory, not a script), so fall back
+        # to the resolved script path in those cases.
+        has_launcher = bool(sys.argv and sys.argv[0])
         launcher_path = (
             str(Path(sys.argv[0]).resolve())
-            if sys.argv
+            if has_launcher
             else str(self._resolve_script_path())
         )
-        script_args = sys.argv[1:] if sys.argv else []
+        script_args = sys.argv[1:] if has_launcher else []
 
         streamlit_config._main_script_path = launcher_path
 

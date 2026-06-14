@@ -1503,6 +1503,42 @@ class TestAppRun:
 
         assert app._resolve_script_path() == (app_dir / "dashboard.py").resolve()
 
+    def test_run_falls_back_to_script_path_when_argv0_empty(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """App.run should not use an empty sys.argv[0] as the launcher path.
+
+        Python always provides at least ``['']`` for sys.argv, and interactive
+        sessions or ``python -c`` set ``sys.argv[0]`` to an empty string.
+        ``Path('').resolve()`` would silently yield the cwd (a directory), so
+        the launcher path must fall back to the resolved script path instead.
+        """
+        from streamlit import config
+
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_server_mode", config._server_mode)
+        monkeypatch.setattr(sys, "argv", [""])
+
+        app = App(script)
+        expected_path = str(script.resolve())
+
+        with (
+            patch("streamlit.web.bootstrap._fix_sys_path") as fix_sys_path,
+            patch("streamlit.web.bootstrap._fix_sys_argv") as fix_sys_argv,
+            patch("streamlit.web.bootstrap.load_config_options"),
+            patch("streamlit.web.bootstrap._install_config_watchers"),
+            patch("streamlit.watcher.report_watchdog_availability"),
+            patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
+        ):
+            app.run()
+
+        assert config._main_script_path == expected_path
+        fix_sys_path.assert_called_once_with(expected_path)
+        fix_sys_argv.assert_called_once_with(expected_path, [])
+
     def test_run_rejects_when_runtime_already_exists(
         self, tmp_path: Path, reset_runtime: None
     ) -> None:
