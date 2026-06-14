@@ -25,6 +25,7 @@ import pytest
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.element_tree import _format_value_for_widget
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -899,6 +900,27 @@ def test_format_func_accepts_formatted_labels():
 
     assert at.segmented_control("segmented_inventory").value == expected_inventories[0]
     assert not at.exception
+
+
+def test_format_value_for_widget_error_semantics():
+    """_format_value_for_widget falls back only for string labels, else re-raises."""
+
+    def format_func(value: dict[str, str]) -> str:
+        return value["description"]
+
+    # Raw option formats normally.
+    assert format_func({"description": "Inventory 1"}) == "Inventory 1"
+    assert (
+        _format_value_for_widget(format_func, {"description": "Inventory 1"})
+        == "Inventory 1"
+    )
+
+    # Already-formatted string label: format_func raises, so the label is kept.
+    assert _format_value_for_widget(format_func, "Inventory 1") == "Inventory 1"
+
+    # Non-string value with a raising format_func is a real bug and must propagate.
+    with pytest.raises(TypeError):
+        _format_value_for_widget(format_func, 123)
 
 
 def test_select_slider():
