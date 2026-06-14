@@ -36,8 +36,10 @@ from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
     apply_data_specific_configs,
+    extract_button_column_configs,
     marshall_column_config,
     process_config_mapping,
+    register_button_column_widgets,
     update_column_config,
 )
 from streamlit.elements.lib.form_utils import current_form_id
@@ -918,8 +920,12 @@ class ArrowMixin:
             additional_allowed=["auto"],
         )
 
+        processed_column_config, button_columns = extract_button_column_configs(
+            column_config
+        )
+
         # Convert the user provided column config into the frontend compatible format:
-        column_config_mapping = process_config_mapping(column_config)
+        column_config_mapping = process_config_mapping(processed_column_config)
 
         proto = DataframeProto()
 
@@ -992,6 +998,21 @@ class ArrowMixin:
 
         marshall_column_config(proto, column_config_mapping)
 
+        ctx = get_script_run_ctx()
+        register_button_column_widgets(
+            dg=self.dg,
+            proto=proto,
+            button_columns=button_columns,
+            ctx=ctx,
+        )
+
+        # Preserve the enclosing form ID for dataframe selection state and
+        # button-column widgets. Button-column clicks use string triggers, not
+        # form-submit semantics, so this only records form association for the
+        # frontend.
+        if button_columns or is_selection_activated:
+            proto.form_id = current_form_id(self.dg)
+
         # Create layout configuration
         # For height, only include it in LayoutConfig if it's not "auto"
         # "auto" is the default behavior and doesn't need to be sent
@@ -1005,7 +1026,6 @@ class ArrowMixin:
             proto.selection_mode.extend(
                 _selection_mode_set_to_proto_values(selection_mode_set)
             )
-            proto.form_id = current_form_id(self.dg)
 
             normalized_selection_mode = tuple(sorted(selection_mode_set))
 
@@ -1020,8 +1040,6 @@ class ArrowMixin:
                 )
                 selection_default_json = json.dumps(validated_default)
                 proto.selection_default = selection_default_json
-
-            ctx = get_script_run_ctx()
 
             proto.id = compute_and_register_element_id(
                 "dataframe",

@@ -30,6 +30,8 @@ vi.mock("./useVegaEmbed", () => ({
       createView: () => Promise.resolve(null),
       updateView: () => Promise.resolve(null),
       finalizeView: () => {},
+      resizeView: () => Promise.resolve(false),
+      isViewReady: false,
     }
   },
 }))

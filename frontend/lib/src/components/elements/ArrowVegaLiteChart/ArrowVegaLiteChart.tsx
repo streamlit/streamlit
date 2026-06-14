@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import { FC, memo, useEffect, useLayoutEffect, useMemo, useState } from "react"
+import {
+  FC,
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import { Global } from "@emotion/react"
 import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
@@ -175,7 +183,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     [showData]
   )
 
-  const useStretchWidth =
+  const baseStretchWidth =
     shouldWidthStretch(widthConfig) || inputElement.useContainerWidth
 
   const useStretchHeight = shouldHeightStretch(heightConfig)
@@ -189,6 +197,32 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // well with forced stretch width, as it can cause "infinite extent" errors.
   const hasNestedComp = hasNestedComposition(inputElement.spec)
 
+  // Facet charts should only use container width in fullscreen mode.
+  // Outside fullscreen, they use their natural size (determined by Vega-Lite).
+  // This prevents the infinite loop caused by container-driven facet sizing.
+  const useStretchWidth = isFacet && !isFullScreen ? false : baseStretchWidth
+
+  // The dimensions to apply to the chart. Facet charts in fullscreen use
+  // fullScreenWidth; outside fullscreen they use natural sizing (0). Non-facet
+  // charts always use the measured container width. Height follows fullscreen
+  // vs. container measurement.
+  const currentWidth = isFacet
+    ? isFullScreen
+      ? (fullScreenWidth ?? 0)
+      : 0
+    : chartContainerWidth
+  const currentHeight =
+    (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0
+
+  // Whether each dimension is container-driven (stretch / fullscreen) rather than
+  // a fixed size from the spec. These flags drive both spec generation and which
+  // dimensions we update via Vega's native resize API. Nested compositions must
+  // not be forced to container width in fullscreen to avoid "infinite extent"
+  // layout errors (issues #13410, #14050).
+  const forceStretchWidth =
+    isFullScreen && !hasNestedComp ? true : useStretchWidth
+  const forceStretchHeight = isFullScreen ? true : useStretchHeight
+
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
   //    theming, container width, and full screen mode
@@ -197,47 +231,140 @@ const ArrowVegaLiteChart: FC<Props> = ({
   //    Note: We do not stabilize data/datasets as that is managed by the embed.
   const element = useVegaElementPreprocessor(
     inputElement,
-    // Facet charts enter a loop when using the width/height from the StyledVegaLiteChartContainer.
-    isFacet ? (fullScreenWidth ?? 0) : chartContainerWidth,
-    (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0,
-    // Don't force stretch width for nested compositions - they need natural sizing
-    isFullScreen && !hasNestedComp ? true : useStretchWidth,
-    isFullScreen ? true : useStretchHeight
+    currentWidth,
+    currentHeight,
+    forceStretchWidth,
+    forceStretchHeight
   )
 
   // This hook provides lifecycle functions for creating and removing the view.
   // It also will update the view if the data changes (and not the spec)
-  const { createView, updateView, finalizeView } = useVegaEmbed(
-    element,
-    widgetMgr,
-    fragmentId
+  const { createView, updateView, finalizeView, resizeView, isViewReady } =
+    useVegaEmbed(element, widgetMgr, fragmentId)
+
+  const { data, datasets, spec, baseSpecKey } = element
+
+  // Track the last dimensions to avoid redundant resize calls
+  const lastDimensionsRef = useRef<{ width: number; height: number } | null>(
+    null
   )
+  // Keep a ref to the latest spec so we can access it in the effect without
+  // adding spec to the dependency array (which would cause unnecessary re-renders
+  // when only dimensions change).
+  const latestSpecRef = useRef(spec)
+  latestSpecRef.current = spec
 
-  const { data, datasets, spec } = element
+  // Keep refs to dimensions updated so we can access them in the effect below
+  const latestDimensionsRef = useRef({
+    width: currentWidth,
+    height: currentHeight,
+  })
+  latestDimensionsRef.current = { width: currentWidth, height: currentHeight }
 
-  // Create the view once the container is ready and re-create
-  // if the spec changes or the dimensions change.
-  // We utilize useLayoutEffect to ensure that the view is created
-  // after the container is mounted to avoid layout shift.
+  // Determine if we have valid dimensions for container-driven sizing.
+  // For container-driven sizing, we need to wait for valid dimensions before
+  // creating the view, because Vega's resize API doesn't properly recalculate
+  // the data-to-pixel mapping after the initial view creation.
+  // For fixed-dimension charts, dimensions are in the spec, so we don't need
+  // to wait for container measurements.
+  const needsContainerWidth = useStretchWidth || isFullScreen
+  const needsContainerHeight = useStretchHeight || isFullScreen
+  const hasValidWidth = !needsContainerWidth || currentWidth > 0
+  const hasValidHeight = !needsContainerHeight || currentHeight > 0
+  const hasValidDimensions = hasValidWidth && hasValidHeight
+
+  // Create the view when the structural spec changes (not on dimension-only changes).
+  // useLayoutEffect ensures the view is created after the container is mounted to
+  // avoid layout shift.
+  // IMPORTANT: The cleanup (finalizeView) should only run when the view needs to be
+  // recreated, NOT when dimensions change. Using baseSpecKey (not spec) as the key
+  // dependency ensures this - baseSpecKey excludes dimension info and only changes
+  // when the structural parts of the spec change.
   useLayoutEffect(() => {
-    // TODO(lawilby): Can we just update the view if the width/height changes?
-    if (containerRef.current !== null) {
+    // For container-driven sizing, wait until we have valid dimensions.
+    // Creating the view with invalid dimensions and then resizing doesn't
+    // produce the same layout as creating with valid dimensions.
+    if (containerRef.current !== null && hasValidDimensions) {
+      // Initialize lastDimensionsRef with current dimensions when view is created
+      lastDimensionsRef.current = {
+        width: latestDimensionsRef.current.width,
+        height: latestDimensionsRef.current.height,
+      }
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      createView(containerRef, spec)
+      createView(containerRef, latestSpecRef.current)
     }
 
-    return finalizeView
-    // We can't use chartContainerWidth/containerHeight in this dependency array because it causes facet charts to enter a loop.
-    // TODO(lawilby): Do we need width/height in this dependency array? It seems any changes
-    // Are the changes in the spec enough?
+    // Finalize unconditionally: `finalizeView` is a no-op when no view exists,
+    // and calling it here also tears down a view created by an async `createView`
+    // that resolved after a valid->invalid dimension transition, preventing an
+    // orphaned Vega view from leaking on unmount.
+    return () => {
+      finalizeView()
+    }
   }, [
     createView,
     finalizeView,
-    spec,
-    fullScreenWidth,
-    fullScreenHeight,
+    // Use baseSpecKey as the structural change detector, not spec.
+    // spec includes dimensions which change frequently during resize;
+    // we handle those via resizeView in a separate effect.
+    baseSpecKey,
+    // showData affects which container ref is active
     showData,
     containerRef,
+    // Include hasValidDimensions so we create the view when dimensions become valid
+    hasValidDimensions,
+  ])
+
+  // Handle dimension-only changes using Vega's native resize API.
+  // This is much faster than recreating the entire view (~3.6x speedup).
+  // We only resize dimensions that are container-driven (forceStretch*); fixed
+  // dimensions come from the spec and must not be overridden by container size
+  // changes.
+  const shouldResize = forceStretchWidth || forceStretchHeight
+  useEffect(() => {
+    if (!isViewReady || !shouldResize) {
+      return
+    }
+
+    const lastDims = lastDimensionsRef.current
+    // Only track changes for dimensions we're actually resizing
+    const widthChanged = forceStretchWidth && lastDims?.width !== currentWidth
+    const heightChanged =
+      forceStretchHeight && lastDims?.height !== currentHeight
+    if (!widthChanged && !heightChanged) {
+      return
+    }
+
+    // Guard against stale resize callbacks: if this effect is superseded by a
+    // re-render with new dimensions while resizeView is still in-flight, skip
+    // the cache update so the latest effect run wins (the cleanup sets `ignore`).
+    let ignore = false
+    // Use an async IIFE to await resizeView and only update cache on success.
+    // Pass 0 for dimensions that shouldn't be resized (e.g., height='content').
+    void (async () => {
+      const success = await resizeView(
+        forceStretchWidth ? currentWidth : 0,
+        forceStretchHeight ? currentHeight : 0
+      )
+      if (success && !ignore) {
+        lastDimensionsRef.current = {
+          width: currentWidth,
+          height: currentHeight,
+        }
+      }
+    })()
+
+    return () => {
+      ignore = true
+    }
+  }, [
+    isViewReady,
+    shouldResize,
+    forceStretchWidth,
+    forceStretchHeight,
+    resizeView,
+    currentWidth,
+    currentHeight,
   ])
 
   // The references to data and datasets will always change each rerun

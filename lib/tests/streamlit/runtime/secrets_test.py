@@ -731,6 +731,15 @@ class TestValidateSecretsValue:
             pytest.param(3.14, id="float"),
             pytest.param(True, id="bool_true"),
             pytest.param(False, id="bool_false"),
+            pytest.param(["id", "access"], id="list"),
+            pytest.param([], id="empty_list"),
+            pytest.param(
+                {"auth": {"expose_tokens": ["id", "access"]}}, id="nested_list"
+            ),
+            pytest.param(
+                {"sections": [{"name": "primary", "enabled": True}]},
+                id="list_of_dicts",
+            ),
             pytest.param({"level1": {"level2": {"value": "deep"}}}, id="nested_dict"),
             pytest.param(
                 {"mixed": {"str": "a", "int": 1, "float": 2.5, "bool": True}},
@@ -739,7 +748,7 @@ class TestValidateSecretsValue:
         ],
     )
     def test_valid_types_pass_validation(self, value: object) -> None:
-        """Valid scalar types and nested dicts pass validation."""
+        """Valid scalar, list, and nested dict types pass validation."""
         from streamlit.runtime.secrets import _validate_secrets_value
 
         # Should not raise
@@ -748,8 +757,8 @@ class TestValidateSecretsValue:
     @pytest.mark.parametrize(
         ("value", "expected_match"),
         [
-            pytest.param(["a", "b"], "Unsupported type 'list'", id="list"),
             pytest.param(None, "Unsupported type 'NoneType'", id="none"),
+            pytest.param(("a", "b"), "Unsupported type 'tuple'", id="tuple"),
         ],
     )
     def test_invalid_types_raise_typeerror(
@@ -761,12 +770,12 @@ class TestValidateSecretsValue:
         with pytest.raises(TypeError, match=expected_match):
             _validate_secrets_value(value, "key")
 
-    def test_invalid_nested_list_includes_path(self) -> None:
-        """Nested invalid types include the path in the error message."""
+    def test_invalid_nested_list_value_includes_path(self) -> None:
+        """Nested invalid list values include the indexed path in the error message."""
         from streamlit.runtime.secrets import _validate_secrets_value
 
-        with pytest.raises(TypeError, match=r"at 'key\.outer\.inner'"):
-            _validate_secrets_value({"outer": {"inner": [1, 2, 3]}}, "key")
+        with pytest.raises(TypeError, match=r"at 'key\.outer\.inner\[2\]'"):
+            _validate_secrets_value({"outer": {"inner": [1, "ok", None]}}, "key")
 
     def test_invalid_custom_object(self) -> None:
         """Custom objects raise TypeError."""
@@ -854,15 +863,41 @@ class TestMergeProgrammaticSecrets:
 
         assert os.environ[key] == expected_environ
 
-    def test_merge_does_not_promote_dicts_or_bools(self) -> None:
-        """Dict and bool values are not promoted to os.environ."""
+    def test_merge_does_not_promote_dicts_lists_or_bools(self) -> None:
+        """Dict, list, and bool values are not promoted to os.environ."""
         secrets = Secrets()
         secrets.merge_programmatic_secrets(
-            {"dict_key": {"nested": "value"}, "bool_key": True}
+            {
+                "dict_key": {"nested": "value"},
+                "list_key": ["id", "access"],
+                "bool_key": True,
+            }
         )
 
         assert "dict_key" not in os.environ
+        assert "list_key" not in os.environ
         assert "bool_key" not in os.environ
+
+    def test_merge_accepts_list_values(self) -> None:
+        """Programmatic secrets support list values like TOML arrays."""
+        secrets = Secrets()
+
+        secrets.merge_programmatic_secrets(
+            {"auth": {"expose_tokens": ["id", "access"]}}
+        )
+
+        assert secrets["auth"]["expose_tokens"] == ["id", "access"]
+
+    def test_merge_accepts_list_of_dicts(self) -> None:
+        """Lists of dicts round-trip through the store like TOML arrays of tables."""
+        secrets = Secrets()
+
+        secrets.merge_programmatic_secrets(
+            {"sections": [{"name": "primary", "enabled": True}]}
+        )
+
+        assert secrets["sections"][0]["name"] == "primary"
+        assert secrets["sections"][0]["enabled"] is True
 
     def test_merge_replaces_environ_on_override(self) -> None:
         """When overriding a key, the environ value is updated."""
@@ -891,8 +926,8 @@ class TestMergeProgrammaticSecrets:
         """Merging invalid types raises TypeError."""
         secrets = Secrets()
 
-        with pytest.raises(TypeError, match="Unsupported type 'list'"):
-            secrets.merge_programmatic_secrets({"bad": [1, 2, 3]})
+        with pytest.raises(TypeError, match="Unsupported type 'set'"):
+            secrets.merge_programmatic_secrets({"bad": {"unsupported"}})  # type: ignore[dict-item]
 
     def test_merge_validates_top_level_keys_are_strings(self) -> None:
         """Merging with non-string top-level keys raises TypeError."""

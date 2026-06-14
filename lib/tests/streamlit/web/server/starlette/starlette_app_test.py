@@ -2324,9 +2324,11 @@ class TestAppSecrets:
     @pytest.mark.parametrize(
         ("secrets", "expected_match"),
         [
-            pytest.param({"bad": [1, 2, 3]}, "Unsupported type 'list'", id="list"),
+            pytest.param({"bad": None}, "Unsupported type 'NoneType'", id="none"),
             pytest.param(
-                {"outer": {"inner": [1, 2]}}, r"at 'outer\.inner'", id="nested_list"
+                {"outer": {"inner": [1, None]}},
+                r"at 'outer\.inner\[1\]'",
+                id="nested_none_in_list",
             ),
             pytest.param(
                 {1: "value"}, r"Dictionary keys.*must be strings", id="int_key"
@@ -2371,6 +2373,7 @@ class TestAppSecrets:
             secrets={
                 "api_key": "secret123",
                 "database": {"host": "localhost", "port": 5432},
+                "auth": {"expose_tokens": ["id", "access"]},
             },
         )
 
@@ -2381,6 +2384,7 @@ class TestAppSecrets:
             assert secrets_singleton["api_key"] == "secret123"
             assert secrets_singleton["database"]["host"] == "localhost"
             assert secrets_singleton["database"]["port"] == 5432
+            assert secrets_singleton["auth"]["expose_tokens"] == ["id", "access"]
 
     @patch_config_options(
         {

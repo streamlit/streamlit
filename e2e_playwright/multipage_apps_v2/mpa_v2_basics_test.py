@@ -125,8 +125,7 @@ def test_main_script_persists_across_page_changes(app: Page):
 
 def test_main_script_widgets_persist_across_page_changes(app: Page):
     """Test that we can switch between pages and widgets from main script persists."""
-    slider = app.locator('.stSlider [role="slider"]')
-    slider.click()
+    slider = app.get_by_test_id("stSlider").get_by_role("slider")
     slider.press("ArrowRight")
     wait_for_app_run(app, wait_delay=500)
 
@@ -168,8 +167,7 @@ def test_can_switch_between_pages_and_edit_widgets(app: Page):
     get_page_link(app, "Different Title").click()
     wait_for_app_run(app, wait_delay=1000)
 
-    slider = app.locator('.stSlider [role="slider"]').nth(1)
-    slider.click()
+    slider = app.get_by_test_id("stSlider").get_by_role("slider").nth(1)
     slider.press("ArrowRight")
     wait_for_app_run(app)
     expect(app.get_by_test_id("stMarkdown").nth(1)).to_contain_text("x is 1")
@@ -791,9 +789,7 @@ def test_widgets_maintain_state_in_fragment(app: Page):
 def test_widget_state_reset_on_page_switch(app: Page):
     # Regression test for GH issue 7338 for MPAv2
 
-    slider = app.locator('.stSlider [role="slider"]')
-    # Use force=True to ensure click completes before keypress on webkit
-    slider.click(force=True)
+    slider = app.get_by_test_id("stSlider").get_by_role("slider")
     slider.press("ArrowRight")
     wait_for_app_run(app, wait_delay=500)
     expect(app.get_by_text("x is 1")).to_be_attached()

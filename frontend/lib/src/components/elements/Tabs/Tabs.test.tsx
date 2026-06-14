@@ -377,11 +377,29 @@ describe("st.tabs", () => {
         id: widgetId,
       }
 
+      const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+
       rerender(<Tabs {...getProps({ node: updatedNode, widgetMgr })} />)
 
       tabs = screen.getAllByRole("tab")
       expect(tabs[2]).toHaveAttribute("aria-selected", "true")
       expect(tabs[0]).toHaveAttribute("aria-selected", "false")
+
+      // The widget manager must be updated with the new tab label and fromUi:false
+      // so subsequent reruns don't send a stale value and break tab.open (gh issue #15458).
+      expect(setStringValueSpy).toHaveBeenCalledWith(
+        { id: widgetId, formId: "" },
+        "Tab 2",
+        { fromUi: false },
+        undefined
+      )
+      // Must NOT use fromUi:true — that would schedule a spurious rerun
+      expect(setStringValueSpy).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        { fromUi: true },
+        expect.anything()
+      )
     })
   })
 

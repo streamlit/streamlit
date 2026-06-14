@@ -200,11 +200,30 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         if (newLabel) {
           setActiveTabKey(defaultTabIndex)
           activeTabNameRef.current = newLabel
+          // Keep the widget manager in sync with the backend-driven tab change.
+          // Without this, subsequent reruns would send a stale widget value that
+          // overrides session_state, making tab.open return False for the new tab.
+          // fromUi: false avoids scheduling a spurious rerun.
+          if (widgetId && widgetMgr) {
+            widgetMgr.setStringValue(
+              { id: widgetId, formId: "" },
+              newLabel,
+              { fromUi: false },
+              fragmentId
+            )
+          }
         }
         prevDefaultTabIndexRef.current = defaultTabIndex
       }
     }
-  }, [defaultTabIndex, isDynamic, allTabLabels])
+  }, [
+    defaultTabIndex,
+    isDynamic,
+    allTabLabels,
+    widgetId,
+    widgetMgr,
+    fragmentId,
+  ])
 
   // Reconciles active key & tab name when tab list changes.
   // When isPassivelyKeyed, also check elementStates so that the persisted
