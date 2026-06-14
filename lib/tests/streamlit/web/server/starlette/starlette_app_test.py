@@ -1460,6 +1460,49 @@ class TestAppRun:
         load_config_options.assert_called_once_with({})
         install_config_watchers.assert_called_once_with({})
 
+    def test_run_reresolves_relative_script_path_against_launcher_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """App.run should re-resolve a relative script_path against the launcher.
+
+        When the process is launched via ``python /proj/app.py`` from a
+        different working directory, a relative ``script_path`` must resolve
+        against the launcher module's directory, not the cwd that was captured
+        when the App was constructed.
+        """
+        from streamlit import config
+
+        app_dir = tmp_path / "proj"
+        app_dir.mkdir()
+        launcher = app_dir / "app.py"
+        launcher.write_text("import streamlit as st\n")
+        (app_dir / "dashboard.py").write_text("import streamlit as st\n")
+
+        other_dir = tmp_path / "elsewhere"
+        other_dir.mkdir()
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_server_mode", config._server_mode)
+        monkeypatch.setattr(sys, "argv", [str(launcher)])
+
+        # Construct the App from a working directory that is NOT the launcher's
+        # directory so __init__ caches the (wrong) cwd-relative path.
+        monkeypatch.chdir(other_dir)
+        app = App("dashboard.py")
+        assert app._resolve_script_path() == (other_dir / "dashboard.py").resolve()
+
+        with (
+            patch("streamlit.web.bootstrap._fix_sys_path"),
+            patch("streamlit.web.bootstrap._fix_sys_argv"),
+            patch("streamlit.web.bootstrap.load_config_options"),
+            patch("streamlit.web.bootstrap._install_config_watchers"),
+            patch("streamlit.watcher.report_watchdog_availability"),
+            patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
+        ):
+            app.run()
+
+        assert app._resolve_script_path() == (app_dir / "dashboard.py").resolve()
+
     def test_run_rejects_when_runtime_already_exists(
         self, tmp_path: Path, reset_runtime: None
     ) -> None:
