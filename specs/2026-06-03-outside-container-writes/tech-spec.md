@@ -166,9 +166,6 @@ recognized as already-inside. Repeated direct writes to the same root don't crea
 wrappers either, because `_get_or_create_outside_wrapper` is cache-keyed by
 `(fragment_id, dg._id)` and a root's `_id` is stable across runs.
 
-The final block walks `dg`'s ancestors to skip writes already inside one of this fragment's
-wrappers (see "Wrapper registry" for why the walk is scoped per-fragment).
-
 ### Wrapper registry
 
 `FragmentStorage` already manages per-fragment state with the right lifecycle (persists
