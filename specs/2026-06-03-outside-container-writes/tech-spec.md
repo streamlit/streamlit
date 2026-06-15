@@ -166,7 +166,7 @@ recognized as already-inside. Repeated direct writes to the same root don't crea
 wrappers either, because `_get_or_create_outside_wrapper` is cache-keyed by
 `(fragment_id, dg._id)` and a root's `_id` is stable across runs.
 
-### Wrapper registry
+#### Wrapper registry
 
 `FragmentStorage` already manages per-fragment state with the right lifecycle (persists
 across fragment reruns, cleared on full app reruns via `clear()`). Add a wrapper registry
