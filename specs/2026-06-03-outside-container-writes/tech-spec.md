@@ -165,7 +165,7 @@ recognized as already-inside. Repeated direct writes to the same root don't crea
 wrappers either, because `_get_or_create_outside_wrapper` is cache-keyed by
 `(fragment_id, dg._id)` and a root's `_id` is stable across runs.
 
-#### Wrapper registry
+#### Ancestor walk to detect existing wrapper
 
 `FragmentStorage` already manages per-fragment state with the right lifecycle (persists
 across fragment reruns, cleared on full app reruns via `clear()`). Add a wrapper registry
@@ -340,8 +340,8 @@ A wrapper would be unnecessary here and could interfere with one-shot rendering.
 wrappers are recreated fresh because the main script re-executes and creates new outside
 containers with fresh cursors. Root containers keep their stable `_id` across reruns, but
 the unconditional `clear()` still drops and recreates their wrapper entries as the fragment
-re-executes against a fresh root cursor (see "Wrapper registry"), so the wrapper lands at
-the same stable slot.
+re-executes against a fresh root cursor (see "Ancestor walk to detect existing wrapper"), so
+the wrapper lands at the same stable slot.
 
 ## Behavior Decisions
 
