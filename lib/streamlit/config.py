@@ -1141,7 +1141,6 @@ _create_option(
     """,
     default_val=[],
     multiple=True,
-    # Hidden until reviewed/finalized, mirroring trustedUserHeaders.
     visibility="hidden",
 )
 
@@ -2990,9 +2989,7 @@ def _check_metrics_user_attributes() -> None:
     Rejects non-string entries, the reserved label name ``type`` (the event-type
     discriminator on the user_session_events family, which a user attribute must
     not shadow) and any name that is not a valid OpenMetrics label name (which
-    would otherwise produce malformed metrics on the endpoint). When the option
-    is enabled, logs a warning so operators are aware that the configured
-    attribute values are exposed in plaintext on the metrics endpoint.
+    would otherwise produce malformed metrics on the endpoint).
     """
     attrs = get_option("server.unsafeMetricsUserAttributes")
     if not attrs:
@@ -3016,18 +3013,6 @@ def _check_metrics_user_attributes() -> None:
             f"{invalid}; names must match [a-zA-Z_][a-zA-Z0-9_]* to be valid "
             "OpenMetrics labels."
         )
-
-    # Import logger locally to prevent circular references.
-    from streamlit.logger import get_logger
-
-    logger: Final = get_logger(__name__)
-    logger.warning(
-        "server.unsafeMetricsUserAttributes is enabled with %s. The values of "
-        "these st.user attributes will be exposed in plaintext on the "
-        "unauthenticated /_stcore/metrics endpoint. Only enable this in trusted, "
-        "access-controlled environments.",
-        list(attrs),
-    )
 
 
 def on_config_parsed(
