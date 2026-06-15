@@ -160,6 +160,23 @@ recognized as already-inside. Repeated direct writes to the same root don't crea
 wrappers either, because `_get_or_create_outside_wrapper` is cache-keyed by
 `(fragment_id, dg._id)` and a root's `_id` is stable across runs.
 
+Concretely, when a fragment writes directly to a root that also holds main-script content —
+a header before the fragment call and a footer after it — the wrapper takes one stable slot
+between them:
+
+```
+st.sidebar
+  ├── "Header"          (main script, index 0)
+  ├── [fragment_wrapper] (index 1, stable slot)
+  │     └── …fragment content, count varies across reruns…
+  └── "Footer"          (main script, index 2)
+```
+
+The fragment's element count can grow or shrink freely inside the wrapper without ever
+touching the footer's slot (`st.bottom`, e.g. `st.chat_input()`, behaves identically).
+Without the wrapper, a fragment that grew from 3 → 5 elements would overwrite the footer —
+the interleaving/overwrite failure mode from the Summary.
+
 #### Ancestor walk to detect existing wrapper
 
 A fragment can write to a container nested inside an outside container — e.g. it calls
@@ -313,23 +330,6 @@ wrapper is created with a `LockedCursor(index=0)` instead of a `RunningCursor`. 
 means every write inside the wrapper replaces the previous one, matching `st.empty()`'s
 documented "single-element container" contract. On fragment rerun, there is nothing to
 reset — a `LockedCursor` always points to index 0.
-
-**Root containers (`st.sidebar`, `st.bottom`).** A fragment writing directly to a root
-that also holds main-script content gets a wrapper for positional isolation. Concretely,
-with a header written to the root before the fragment call and a footer after it:
-
-```
-st.sidebar
-  ├── "Header"          (main script, index 0)
-  ├── [fragment_wrapper] (index 1, stable slot)
-  │     └── …fragment content, count varies across reruns…
-  └── "Footer"          (main script, index 2)
-```
-
-The fragment's element count can grow or shrink freely inside the wrapper without ever
-touching the footer's slot. `st.bottom` (e.g. `st.chat_input()` routes there) behaves
-identically. This is the interleaving/overwrite failure mode from the Summary; without the
-wrapper, a fragment that grows from 3 → 5 elements would overwrite the footer.
 
 **`EVENT` root is out of scope for wrapping.** `st.toast` and dialogs route to the `EVENT`
 root, which `_needs_outside_wrapper` deliberately excludes. The delta-level collision
