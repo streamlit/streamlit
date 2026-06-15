@@ -163,7 +163,7 @@ def test_st_switch_page_applies_query_params(patched_get_script_run_ctx):
     """Test that providing query_params sets them before rerunning."""
     ctx = MagicMock()
     ctx.query_string = ""
-    ctx.cached_message_hashes = set()
+    ctx.cached_message_hashes = frozenset()
     ctx.context_info = {"foo": "bar"}
     ctx.script_requests = MagicMock()
     ctx.session_state = MagicMock()
@@ -203,7 +203,7 @@ def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx
     """Test that tuple-based query_params are accepted."""
     ctx = MagicMock()
     ctx.query_string = ""
-    ctx.cached_message_hashes = set()
+    ctx.cached_message_hashes = frozenset()
     ctx.context_info = {}
     ctx.script_requests = MagicMock()
     ctx.session_state = MagicMock()
@@ -250,7 +250,7 @@ def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx)
     ctx.session_state = MagicMock()
     ctx.script_requests = MagicMock()
     ctx.query_string = ""
-    ctx.cached_message_hashes = set()
+    ctx.cached_message_hashes = frozenset()
     ctx.context_info = {}
 
     query_params_cm = MagicMock()

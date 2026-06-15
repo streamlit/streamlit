@@ -1638,3 +1638,78 @@ def test_direct_polars_to_arrow_bytes_fallback_on_error() -> None:
     reader = pa.RecordBatchStreamReader(result)
     table = reader.read_all()
     assert table.num_rows == 3
+
+
+@pytest.mark.parametrize(
+    ("input_type", "expected"),
+    [
+        (pa.int32(), pa.int32()),
+        (pa.large_string(), pa.string()),
+        (pa.large_binary(), pa.binary()),
+        (pa.large_list(pa.large_string()), pa.list_(pa.string())),
+    ],
+    ids=["int32", "large_string", "large_binary", "nested_large_list"],
+)
+def test_downcast_large_type(input_type: pa.DataType, expected: pa.DataType) -> None:
+    """``_downcast_large_type`` maps large types to their regular counterparts."""
+    assert dataframe_util._downcast_large_type(input_type) == expected
+
+
+def test_downcast_large_arrow_types_no_op_when_no_large_types() -> None:
+    """A table without large types is returned unchanged (same instance)."""
+    table = pa.table({"a": pa.array([1, 2, 3], type=pa.int32())})
+    assert dataframe_util._downcast_large_arrow_types(table) is table
+
+
+def test_downcast_large_arrow_types_casts_large_columns() -> None:
+    """Tables with large_string columns are cast to plain string and keep their values."""
+    table = pa.table({"text": pa.array(["a", "b", "c"], type=pa.large_string())})
+    result = dataframe_util._downcast_large_arrow_types(table)
+    assert result.schema.field("text").type == pa.string()
+    assert result.column("text").to_pylist() == ["a", "b", "c"]
+
+
+@pytest.mark.parametrize(
+    ("schema", "expected"),
+    [
+        (pa.schema([pa.field("col", pa.large_list(pa.int32()))]), True),
+        (
+            pa.schema([pa.field("a", pa.int64()), pa.field("b", pa.string())]),
+            False,
+        ),
+    ],
+    ids=["with_large_list", "plain_schema"],
+)
+def test_has_large_list_type(schema: pa.Schema, expected: bool) -> None:
+    """``_has_large_list_type`` detects LargeListType anywhere in the schema."""
+    assert dataframe_util._has_large_list_type(schema) is expected
+
+
+def test_downcast_large_list_schema_replaces_large_list() -> None:
+    """LargeList fields become regular list fields with downcast value types."""
+    schema = pa.schema([pa.field("nums", pa.large_list(pa.int32()))])
+    result = dataframe_util._downcast_large_list_schema(schema)
+    assert result.field("nums").type == pa.list_(pa.int32())
+
+
+def test_pandas_df_to_series_raises_on_multi_column() -> None:
+    """``_pandas_df_to_series`` raises ValueError on multi-column inputs."""
+    df = pd.DataFrame({"a": [1], "b": [2]})
+    with pytest.raises(ValueError, match="single column"):
+        dataframe_util._pandas_df_to_series(df)
+
+
+def test_pandas_df_to_series_returns_first_column() -> None:
+    """``_pandas_df_to_series`` returns the single column as a Series."""
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    assert list(dataframe_util._pandas_df_to_series(df)) == [1, 2, 3]
+
+
+def test_unify_missing_values_replaces_nan_with_none() -> None:
+    """``_unify_missing_values`` replaces NaN with None and preserves other values."""
+    # Use an object-dtype column so the None replacement is stable across all
+    # supported pandas versions. For pure-float columns, pandas < 3.0 coerces
+    # None back to NaN via infer_objects(), which is the documented behavior.
+    df = pd.DataFrame({"a": ["x", np.nan, "y"]})
+    result = dataframe_util._unify_missing_values(df)
+    assert result["a"].tolist() == ["x", None, "y"]

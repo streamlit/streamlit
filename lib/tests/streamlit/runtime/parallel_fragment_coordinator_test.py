@@ -115,7 +115,7 @@ def test_submit_counter_round_trip(coordinator):
     def explodes() -> None:
         raise ValueError("boom")
 
-    coordinator.submit(explodes)
+    coordinator.submit(explodes, None)
     _wait_for_outstanding_zero(coordinator)
     assert coordinator._outstanding == 0
 
@@ -130,7 +130,7 @@ def test_submit_passes_args(coordinator):
         captured.append((value, label))
         done.set()
 
-    coordinator.submit(worker, 42, "hello")
+    coordinator.submit(worker, None, 42, "hello")
     assert done.wait(timeout=1.0)
     _wait_for_outstanding_zero(coordinator)
     assert captured == [(42, "hello")]
@@ -143,7 +143,7 @@ def test_submit_after_shutdown_rolls_back_outstanding():
     c = ParallelFragmentCoordinator(yield_check=lambda: None)
     c.drain()
     with pytest.raises(RuntimeError):
-        c.submit(lambda: None)
+        c.submit(lambda: None, None)
     assert c._outstanding == 0
 
 
@@ -155,9 +155,9 @@ def test_nested_submit_counter():
     child_done = threading.Event()
 
     def parent() -> None:
-        c.submit(lambda: child_done.set())
+        c.submit(lambda: child_done.set(), None)
 
-    c.submit(parent)
+    c.submit(parent, None)
     c.join()
     assert child_done.is_set()
 
@@ -187,7 +187,7 @@ def test_join_waits_and_yields():
         poll_interval=0.01,
     )
     gate = threading.Event()
-    c.submit(lambda: gate.wait(timeout=2.0))
+    c.submit(lambda: gate.wait(timeout=2.0), None)
     threading.Timer(0.05, gate.set).start()
     c.join()
     assert len(yields) >= 1
@@ -231,7 +231,7 @@ def test_join_propagates_yield_check_exception():
 
     c = ParallelFragmentCoordinator(yield_check=yield_raises, poll_interval=0.01)
     gate = threading.Event()
-    c.submit(lambda: gate.wait(timeout=2.0))
+    c.submit(lambda: gate.wait(timeout=2.0), None)
     try:
         with pytest.raises(RerunException):
             c.join()
@@ -257,7 +257,7 @@ def test_yield_check_exception_preempts_stored_worker_exception():
     worker_rerun = RerunException(RerunData(query_string="from_worker"))
     c.request_rerun(worker_rerun)
     gate = threading.Event()
-    c.submit(lambda: gate.wait(timeout=2.0))
+    c.submit(lambda: gate.wait(timeout=2.0), None)
     try:
         with pytest.raises(RerunException) as excinfo:
             c.join()
@@ -315,7 +315,7 @@ def test_drain_silent_and_synchronous():
         gate.wait(timeout=2.0)
         worker_done.set()
 
-    c.submit(worker)
+    c.submit(worker, None)
     threading.Timer(0.05, gate.set).start()
     c.drain()
     assert worker_done.is_set()
@@ -336,11 +336,9 @@ def test_drain_sets_stop_event():
 
 @pytest.mark.usefixtures("_attach_mock_ctx")
 def test_submit_propagates_ctx_to_worker():
-    """submit() captures the parent's ScriptRunContext at submit time
-    and the worker sees it via get_script_run_ctx()."""
+    """submit() forwards the ctx passed by the caller to the worker, which
+    reads it back via get_script_run_ctx()."""
     mock_ctx = MagicMock()
-    main_thread = threading.current_thread()
-    setattr(main_thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, mock_ctx)
 
     c = ParallelFragmentCoordinator(yield_check=lambda: None)
     holder: list[object] = []
@@ -351,7 +349,7 @@ def test_submit_propagates_ctx_to_worker():
         done.set()
 
     try:
-        c.submit(worker)
+        c.submit(worker, mock_ctx)
         assert done.wait(timeout=1.0)
         _wait_for_outstanding_zero(c)
         assert holder[0] is mock_ctx
@@ -374,7 +372,7 @@ def test_submit_propagates_thread_state_to_worker():
         done.set()
 
     try:
-        c.submit(worker)
+        c.submit(worker, None)
         assert done.wait(timeout=1.0)
         _wait_for_outstanding_zero(c)
         ts = holder[0]
@@ -398,7 +396,7 @@ def test_submit_isolates_worker_thread_state_writes():
         done.set()
 
     try:
-        c.submit(worker)
+        c.submit(worker, None)
         assert done.wait(timeout=1.0)
         _wait_for_outstanding_zero(c)
         assert ThreadState.get().fragment_id == "parent_frag"
@@ -410,7 +408,6 @@ def test_submit_clears_ctx_attribute_between_pool_submissions():
     """With max_workers=1, two submissions with different ctxs each
     see the correct ctx, and the pool thread's attribute is cleaned
     up after both complete."""
-    main_thread = threading.current_thread()
     ThreadState.initialize()
 
     ctx_a = MagicMock(name="ctx_a")
@@ -435,14 +432,12 @@ def test_submit_clears_ctx_attribute_between_pool_submissions():
         done_b.set()
 
     try:
-        setattr(main_thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx_a)
-        c.submit(worker_a)
+        c.submit(worker_a, ctx_a)
         gate.set()
         assert done_a.wait(timeout=1.0)
         _wait_for_outstanding_zero(c)
 
-        setattr(main_thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx_b)
-        c.submit(worker_b)
+        c.submit(worker_b, ctx_b)
         assert done_b.wait(timeout=1.0)
         _wait_for_outstanding_zero(c)
 
@@ -454,7 +449,6 @@ def test_submit_clears_ctx_attribute_between_pool_submissions():
         assert remaining is not ctx_a
         assert remaining is not ctx_b
     finally:
-        delattr(main_thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
         c.drain()
 
 
@@ -480,12 +474,12 @@ def test_submit_with_max_workers_1_serializes_distinct_thread_states():
 
     try:
         ThreadState.initialize(fragment_id="state_a", active_script_hash="hash_a")
-        c.submit(worker_a)
+        c.submit(worker_a, None)
         assert done_a.wait(timeout=1.0)
         _wait_for_outstanding_zero(c)
 
         ThreadState.update(fragment_id="state_b", active_script_hash="hash_b")
-        c.submit(worker_b)
+        c.submit(worker_b, None)
         assert done_b.wait(timeout=1.0)
         _wait_for_outstanding_zero(c)
 
@@ -499,3 +493,19 @@ def test_submit_with_max_workers_1_serializes_distinct_thread_states():
     finally:
         delattr(main_thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
         c.drain()
+
+
+def test_submit_with_none_ctx(coordinator):
+    """Passing ctx=None propagates None to the worker, which reads None back
+    via get_script_run_ctx()."""
+    holder: list[object] = []
+    done = threading.Event()
+
+    def worker() -> None:
+        holder.append(get_script_run_ctx(suppress_warning=True))
+        done.set()
+
+    coordinator.submit(worker, None)
+    assert done.wait(timeout=1.0)
+    _wait_for_outstanding_zero(coordinator)
+    assert holder[0] is None

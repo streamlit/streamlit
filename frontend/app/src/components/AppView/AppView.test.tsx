@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import {
@@ -28,6 +28,7 @@ import {
   mockSessionInfo,
   mockTheme,
   NavigationContextProps,
+  toastQueue,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
@@ -140,6 +141,28 @@ describe("AppView element", () => {
     const appViewContainer = screen.getByTestId("stAppViewContainer")
     expect(appViewContainer).toBeInTheDocument()
     expect(appViewContainer).toHaveClass("stAppViewContainer")
+  })
+
+  it("renders the toast container when toasts are present", () => {
+    render(<AppView {...getProps()} />)
+
+    // ToastRegion only renders when there are visible toasts
+    expect(screen.queryByTestId("stToastContainer")).not.toBeInTheDocument()
+
+    // Add a toast and verify the container appears
+    act(() => {
+      toastQueue.add({ body: "test toast" }, { timeout: undefined })
+    })
+    const toastContainer = screen.getByTestId("stToastContainer")
+    expect(toastContainer).toBeInTheDocument()
+    expect(toastContainer).toHaveClass("stToastContainer")
+
+    // Clean up
+    act(() => {
+      toastQueue.visibleToasts.forEach((t: { key: string }) =>
+        toastQueue.close(t.key)
+      )
+    })
   })
 
   it("does not render a sidebar when there are no elements and only one page", () => {
@@ -1440,7 +1463,11 @@ describe("AppView element", () => {
     ): ReturnType<typeof renderWithContexts> => {
       return renderAppView(
         { elements: elementsWithSidebar },
-        { sidebarConfigContext: { initialSidebarState } }
+        {
+          sidebarConfigContext: {
+            initialSidebarState,
+          },
+        }
       )
     }
 
@@ -1487,6 +1514,37 @@ describe("AppView element", () => {
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+    })
+
+    it("ignores a stale collapsed localStorage value when sidebar is locked", () => {
+      // Simulate a user who previously collapsed the sidebar, then the app
+      // switched to locked state — the sidebar must open regardless.
+      window.localStorage.setItem("stSidebarCollapsed-", "true")
+
+      renderAppViewWithSidebar(PageConfig.SidebarState.LOCKED)
+
+      const sidebarDOMElement = screen.getByTestId("stSidebar")
+      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+    })
+
+    it("renders locked sidebar open at desktop viewport width", () => {
+      // Default test viewport is 1024px (desktop). LOCKED keeps sidebar open
+      // and hides the collapse button. On mobile it degrades — see utils.test.ts.
+      renderAppView(
+        { elements: elementsWithSidebar },
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.LOCKED,
+          },
+        }
+      )
+
+      const sidebarDOMElement = screen.getByTestId("stSidebar")
+      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      // Collapse button must not exist in the DOM for a locked desktop sidebar
+      expect(
+        screen.queryByTestId("stSidebarCollapseButton")
+      ).not.toBeInTheDocument()
     })
   })
 })

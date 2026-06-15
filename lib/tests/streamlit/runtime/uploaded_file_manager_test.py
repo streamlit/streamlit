@@ -19,7 +19,7 @@ from __future__ import annotations
 import unittest
 
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
-from streamlit.runtime.stats import CacheStat
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from tests.exception_capturing_thread import call_on_threads
 
@@ -106,6 +106,47 @@ class UploadedFileManagerTest(unittest.TestCase):
         )
         expected = {expected_stat.family_name: [expected_stat]}
         assert expected == self.mgr.get_stats()
+
+    def test_cache_stats_updates_on_file_replacement_and_removal(self):
+        replacement = UploadedFileRec(
+            file_id=FILE_1.file_id,
+            name="replacement",
+            type="type",
+            data=b"replacement",
+        )
+
+        self.mgr.add_file("session1", FILE_1)
+        self.mgr.add_file("session1", replacement)
+        self.mgr.add_file("session2", FILE_2)
+
+        stats = self.mgr.get_stats()
+        assert stats[CACHE_MEMORY_FAMILY][0].byte_length == len(replacement.data) + len(
+            FILE_2.data
+        )
+
+        self.mgr.remove_file("session2", FILE_2.file_id)
+        stats = self.mgr.get_stats()
+        assert stats[CACHE_MEMORY_FAMILY][0].byte_length == len(replacement.data)
+
+        self.mgr.remove_session_files("session1")
+        assert self.mgr.get_stats() == {}
+
+    def test_cache_stats_includes_zero_byte_uploads(self):
+        """Zero-byte uploads still produce a stat (not dropped from metrics)."""
+        empty_file = UploadedFileRec(
+            file_id="empty",
+            name="empty",
+            type="type",
+            data=b"",
+        )
+        self.mgr.add_file("session1", empty_file)
+
+        stats = self.mgr.get_stats()
+        assert stats[CACHE_MEMORY_FAMILY][0].byte_length == 0
+
+        # Removing the only file clears the stats again.
+        self.mgr.remove_file("session1", empty_file.file_id)
+        assert self.mgr.get_stats() == {}
 
 
 class UploadedFileManagerThreadingTest(unittest.TestCase):
@@ -208,3 +249,39 @@ class UploadedFileManagerThreadingTest(unittest.TestCase):
             assert len(session_files) == 0
 
         call_on_threads(remove_session_files, num_threads=self.NUM_THREADS)
+
+    def test_byte_accounting_is_thread_safe(self):
+        """The tracked total byte count stays consistent under concurrent
+        add/remove operations.
+        """
+        # Each thread adds a file and then removes a different thread's file, so
+        # adds and removes interleave on the shared byte counter.
+        for ii in range(self.NUM_THREADS):
+            self.mgr.add_file(
+                "session",
+                UploadedFileRec(
+                    file_id=f"seed_{ii}", name=f"seed_{ii}", type="type", data=b"123"
+                ),
+            )
+
+        def churn(index: int) -> None:
+            self.mgr.add_file(
+                "session",
+                UploadedFileRec(
+                    file_id=f"id_{index}",
+                    name=f"file_{index}",
+                    type="type",
+                    data=b"12345",
+                ),
+            )
+            self.mgr.remove_file("session", f"seed_{index}")
+
+        call_on_threads(churn, num_threads=self.NUM_THREADS)
+
+        expected_bytes = sum(
+            len(file.data) for file in self.mgr.file_storage["session"].values()
+        )
+        assert self.mgr._total_bytes == expected_bytes
+        assert (
+            self.mgr.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length == expected_bytes
+        )

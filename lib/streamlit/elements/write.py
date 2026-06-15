@@ -250,7 +250,7 @@ class WriteMixin:
                 # Only add the streaming symbol on the second text chunk
                 # Use _markdown with unterminated_parsing=True to complete
                 # unclosed markdown syntax (e.g., **bold) during streaming.
-                stream_container._markdown(
+                stream_container._markdown(  # ty: ignore[unresolved-attribute]
                     streamed_response + ("" if first_text else cursor_str),
                     unterminated_parsing=True,
                 )

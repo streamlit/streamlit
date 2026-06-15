@@ -33,6 +33,7 @@ from typing import (
 from typing_extensions import ParamSpec
 
 import streamlit as st
+from streamlit import config
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
@@ -741,16 +742,24 @@ class ResourceCache(Cache[R]):
         if not cache_entries:
             return {}
 
-        from streamlit.runtime.stats import safe_sizeof
+        if config.get_option("server.enableExpensiveMemoryStats"):
+            from streamlit.runtime.stats import safe_sizeof
+
+            byte_lengths = [safe_sizeof(entry) for entry in cache_entries]
+        else:
+            # Use a cheap item-count proxy instead of traversing the cached
+            # resource objects, which can be very expensive.
+            byte_lengths = [len(cache_entries)]
 
         stats = [
             CacheStat(
                 category_name="st_cache_resource",
                 cache_name=self.display_name,
-                byte_length=safe_sizeof(entry),
+                byte_length=byte_length,
             )
-            for entry in cache_entries
+            for byte_length in byte_lengths
         ]
+
         # In general, get_stats methods need to be able to return only requested stat
         # families, but this method only returns a single family, and we're guaranteed
         # that it was one of those requested if we make it here.
