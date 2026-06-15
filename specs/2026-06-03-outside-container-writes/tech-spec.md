@@ -228,15 +228,10 @@ reintroducing the same stale-cursor problem the wrapper is designed to solve.
 a statement in the main script, so there is no "creating scope" to hook into. Instead, for
 these roots the wrapper is established on the initial full app run — and on any subsequent
 full rerun — the first time the fragment writes to that root: the root's `RunningCursor`
-advances exactly once to place the wrapper, then the wrapper is cached. The
-"no new outside writes during standalone reruns" restriction below applies unchanged: the
-fragment must have written to the root during a full run for its wrapper to exist.
-
-**Restriction: no new outside writes during standalone fragment reruns.** If a fragment
-attempts to write to an outside container during a standalone rerun (`ts.fragment_id in
-ctx.fragment_ids_this_run`) and no cached wrapper exists, we raise
-`StreamlitAPIException`. See the "Dynamic container selection" behavior decision below for
-the full rationale and workaround pattern.
+advances exactly once to place the wrapper, then the wrapper is cached. The restriction that
+a fragment cannot start writing to a new outside container during a standalone rerun (see
+"Dynamic container selection" below) applies unchanged: the fragment must have written to
+the root during a full run for its wrapper to exist.
 
 #### Proto: new `Transparent` block type
 
