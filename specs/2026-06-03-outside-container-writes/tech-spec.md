@@ -217,21 +217,26 @@ is locked (as with `st.empty()`), the wrapper gets a `LockedCursor(index=0)` to 
 replace semantics; otherwise a `RunningCursor` for normal append behavior. Its creation
 delta path and block proto are stored on the wrapper for re-emission on rerun.
 
-The wrapper is created whenever the outside container's creating scope executes — on the
-initial full app run, on subsequent full app reruns, or during a parent fragment rerun that
-recreates the container. The outside container's `RunningCursor` is only advanced at
-wrapper creation time. On standalone fragment reruns the cached wrapper is returned
-directly, bypassing the outside container's cursor entirely. This is what avoids
-reintroducing the same stale-cursor problem the wrapper is designed to solve.
+A wrapper can only be *created* while the outside container's `RunningCursor` is fresh,
+which is the case at the start of a full app run. Placing the wrapper advances that cursor
+exactly once; doing so on a standalone fragment rerun — when the cursor is already at its
+accumulated position — would reintroduce the very stale-cursor problem the wrapper exists to
+solve. So creation happens on full runs, and standalone reruns only ever return the cached
+wrapper, bypassing the container's cursor entirely.
 
-**Root containers have no creating scope.** `st.sidebar` and `st.bottom` are not created by
-a statement in the main script, so there is no "creating scope" to hook into. Instead, for
-these roots the wrapper is established on the initial full app run — and on any subsequent
-full rerun — the first time the fragment writes to that root: the root's `RunningCursor`
-advances exactly once to place the wrapper, then the wrapper is cached. The restriction that
-a fragment cannot start writing to a new outside container during a standalone rerun (see
-"Dynamic container selection" below) applies unchanged: the fragment must have written to
-the root during a full run for its wrapper to exist.
+For a normal captured container (e.g. `st.container()`), that fresh moment is when the
+statement constructing it runs — its *creating scope*, whether in the main script or a
+parent fragment body. The wrapper is therefore created on the initial full app run, on
+subsequent full reruns, or during a parent fragment rerun that recreates the container.
+
+**Root containers have no creating scope.** `st.sidebar` and `st.bottom` are singletons —
+no statement constructs them — so there is no creating scope to hook into. But their cursor
+is still reset to fresh at the start of every full run (via `ctx.cursors`), so the
+equivalent trigger is the first write the fragment makes to that root during a full run: the
+root's `RunningCursor` advances once to place the wrapper, then it is cached. The restriction
+that a fragment cannot start writing to a new outside container during a standalone rerun
+(see "Dynamic container selection" below) applies unchanged: the fragment must have written
+to the root during a full run for its wrapper to exist.
 
 #### Proto: new `Transparent` block type
 
