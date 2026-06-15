@@ -58,7 +58,7 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.44",
+  "ty==0.0.46",
   # We fix ruff to a version to be in sync with the pre-commit hook:
   "ruff==0.15.16",
   # We fix mypy to a version to avoid breaking our CI on updates,
@@ -90,7 +90,8 @@ dev = [
 test = [
   "streamlit",
   # Testing infrastructure dependencies:
-  "pytest>=8.3.5",
+  # pytest >= 9.1.0 is causing issues and is not yet supported.
+  "pytest>=9.0.3,<9.1.0",
   "pytest-cov",
   "hypothesis>=6.17.4",
   "parameterized",
