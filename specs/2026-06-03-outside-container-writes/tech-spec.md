@@ -145,14 +145,13 @@ def _needs_outside_wrapper(dg: DeltaGenerator) -> bool:
     return True
 ```
 
-Only writes to the **bare root** DG hit the `_is_top_level` branch. The wrapper itself is
-created with a provided cursor, so `wrapper._is_top_level` is `False`; likewise an
-`st.container()` opened on a root is non-top-level. Both fall through to the path check and
-ancestor walk below, so nested writes inside a root's wrapper are correctly recognized as
-already-inside and not re-wrapped. The `return True` for a bare root write does not create
-duplicate wrappers either: `_get_or_create_outside_wrapper` is cache-keyed by
-`(fragment_id, dg._id)`, and a root DG's `_id` is stable across runs, so repeated direct
-writes to the same root reuse the one cached wrapper.
+Only writes to the **bare root** DG hit this branch, and repeated root writes still produce
+just one wrapper. Nested writes don't reach it: the wrapper itself and any `st.container()`
+opened on a root are non-top-level (they have a provided cursor), so they fall through to
+the path check and ancestor walk below and are correctly recognized as already-inside. And
+because `_get_or_create_outside_wrapper` is cache-keyed by `(fragment_id, dg._id)` with a
+root's `_id` stable across runs, repeated direct writes to the same root reuse the one
+cached wrapper rather than creating duplicates.
 
 `dg._is_top_level` is defined as `dg._provided_cursor is None`, which holds for all four
 root containers (`RootContainer.MAIN=0`, `SIDEBAR=1`, `EVENT=2`, `BOTTOM=3`);
