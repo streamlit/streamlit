@@ -154,9 +154,9 @@ if ctx and _needs_outside_wrapper(dg):
     dg = _get_or_create_outside_wrapper(dg, ts.fragment_id)
 ```
 
-Two parts of the predicate above warrant explanation:
+#### Writes to root containers
 
-The **`if dg._is_top_level:` branch** handles writes to a root container. `dg._is_top_level`
+The `if dg._is_top_level:` branch handles writes to a root container. `dg._is_top_level`
 (defined as `dg._provided_cursor is None`) is true for all four roots —
 `RootContainer.MAIN=0`, `SIDEBAR=1`, `EVENT=2`, `BOTTOM=3` — and `dg._root_container` selects
 which ones need wrapping. Only writes to the **bare root** DG reach this branch: the wrapper
