@@ -212,11 +212,6 @@ caches it. Emitting that block must not itself be treated as an outside write â€
 detection would fire again on the same container and recurse. How that re-entrancy is
 avoided is an implementation detail, out of scope here.
 
-The wrapper inherits its cursor type from the outside container: when the container's cursor
-is locked (as with `st.empty()`), the wrapper gets a `LockedCursor(index=0)` to preserve
-replace semantics; otherwise a `RunningCursor` for normal append behavior. Its creation
-delta path and block proto are stored on the wrapper for re-emission on rerun.
-
 A wrapper can only be *created* while the outside container's `RunningCursor` is fresh,
 which is the case at the start of a full app run. Placing the wrapper advances that cursor
 exactly once; doing so on a standalone fragment rerun â€” when the cursor is already at its
@@ -237,6 +232,11 @@ root's `RunningCursor` advances once to place the wrapper, then it is cached. Th
 that a fragment cannot start writing to a new outside container during a standalone rerun
 (see "Dynamic container selection" below) applies unchanged: the fragment must have written
 to the root during a full run for its wrapper to exist.
+
+The wrapper inherits its cursor type from the outside container: when the container's cursor
+is locked (as with `st.empty()`), the wrapper gets a `LockedCursor(index=0)` to preserve
+replace semantics; otherwise a `RunningCursor` for normal append behavior. Its creation
+delta path and block proto are stored on the wrapper for re-emission on rerun.
 
 #### Proto: new `Transparent` block type
 
