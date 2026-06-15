@@ -197,7 +197,9 @@ wrapper registry to it:
 
 ```python
 # On MemoryFragmentStorage:
-_outside_wrappers: dict[tuple[str, str], DeltaGenerator]
+_outside_wrappers: dict[tuple[str, str], OutsideWrapper]
+# OutsideWrapper bundles the wrapper DeltaGenerator with creating_fragment_id —
+# the fragment whose scope created the outside container (None for the main script).
 ```
 
 Keyed by `(fragment_id, dg._id)` where `dg` is the outside container. Because the key
@@ -206,14 +208,31 @@ matters for nested fragments: if frag\_b writes to a container inside frag\_a's 
 frag\_a's wrapper is not in frag\_b's slice of the registry, so frag\_b correctly gets its
 own wrapper.
 
-On a full app rerun, `clear()` wipes the registry unconditionally and each fragment
-re-establishes its wrappers as it re-executes; on the frontend, `ClearStaleNodeVisitor`
-garbage-collects the old wrapper `BlockNode`s because they aren't re-emitted with the
-current `scriptRunId`. Correctness never depends on the outside container being a fresh DG
-object — which matters because the two cases differ: a captured `st.container()` comes back
-as a new DG, whereas the root singletons (`st.sidebar`, `st.bottom`) keep a stable `_id`.
-Since the clear is unconditional and wrappers are rebuilt on re-execution, both behave the
-same.
+Each entry also records the **creating fragment** of the outside container — the fragment
+whose body ran `st.container()`, or `None` for a main-script container — captured by stamping
+the container DG at creation from `ThreadState.fragment_id` (set because `wrapped_fragment()`
+runs the body under `with ThreadState.scoped(fragment_id=...)`). This is distinct from the
+key's `fragment_id`, which identifies the fragment that *writes* through the wrapper.
+
+**Lifecycle.** An entry is valid only while its outside container is live, and a container is
+rebuilt when its creating scope re-executes. So the registry is cleared per creating scope,
+mirroring the full-app `clear()`:
+
+- **Full app rerun:** `clear()` wipes everything (main-script containers have creating
+  fragment `None`).
+- **Fragment rerun of `X`:** before `X`'s body runs, evict entries whose
+  `creating_fragment_id == X`.
+
+In both cases the scope then re-establishes its wrappers as it re-executes. Keying eviction on
+the *creating* rather than writing fragment means a fragment that writes to an ancestor's
+container keeps its wrapper across its own standalone reruns and drops it only when the
+ancestor reruns.
+
+On the frontend, `ClearStaleNodeVisitor` garbage-collects old wrapper `BlockNode`s that
+aren't re-emitted with the current `scriptRunId`. The design doesn't depend on the outside
+container being a fresh DG object: a captured `st.container()` returns a new DG while the root
+singletons (`st.sidebar`, `st.bottom`) keep a stable `_id` — either way the entry is cleared
+when its creating scope reruns and the wrapper is rebuilt.
 
 ### Wrapper creation and retrieval
 
@@ -277,8 +296,19 @@ an invisible grouping node in the tree.
 
 ### Cursor reset on fragment rerun
 
-In `wrapped_fragment()` after the existing snapshot restore, reset all wrappers belonging
-to this fragment:
+In `wrapped_fragment()`, after the existing snapshot restore and before the fragment body
+executes, do two things. First, **evict** the registry entries this run will invalidate —
+those whose container is created by this fragment's scope (see the registry lifecycle above):
+
+```python
+def _evict_outside_wrappers(fragment_storage: FragmentStorage, fragment_id: str) -> None:
+    # Containers this fragment creates are about to be rebuilt; drop their wrappers.
+    for key in fragment_storage.outside_wrapper_keys_created_by(fragment_id):
+        del fragment_storage._outside_wrappers[key]
+```
+
+Then **reset** the wrappers this fragment writes through — re-emitting each and resetting its
+cursor so reused wrappers survive `ClearStaleNodeVisitor` and start at index 0:
 
 ```python
 def _reset_outside_wrappers(fragment_storage: FragmentStorage, fragment_id: str) -> None:
@@ -299,9 +329,9 @@ reset is skipped for locked cursors. The cursor reset enumerates all `RunningCur
 mutable fields to mirror `RunningCursor.__init__`. The `_root_container` and `_parent_path`
 fields are immutable after creation and do not need resetting.
 
-This function is called in `wrapped_fragment()` after the existing snapshot restore,
-before the fragment body executes. Re-emitting first ensures the frontend sees the wrapper
-block before any child elements arrive in the same forward message batch.
+Eviction runs first, so the reset only re-emits wrappers whose containers are still live.
+Re-emitting before the body also ensures the frontend sees each reused wrapper block before
+its child elements arrive in the same forward message batch.
 
 ### Interaction with `parallel=True`
 
@@ -349,7 +379,8 @@ initial script run (or any run where the container's creating scope executes) so
 is established. The content written can vary freely across reruns — only the wrapper
 creation requires the outside container's cursor to be fresh.
 
-Wrappers are keyed by container identity (`dg._id`). On subsequent standalone reruns, the
+Wrappers are keyed by container identity (`dg._id`) and persist across the fragment's
+standalone reruns (see the registry lifecycle above). On subsequent standalone reruns, the
 fragment can choose which established wrappers to populate — unused wrappers have their
 stale children cleared by `ClearStaleNodeVisitor` and remain invisible via
 `allow_empty=True`. Attempting to write to an outside container whose wrapper was never
@@ -397,6 +428,18 @@ the root containers a fragment can write to directly:
 
 These cases specifically guard the interleaving/overwrite failure mode; before the wrapper
 fix, growth in the SIDEBAR/BOTTOM cases overwrites the trailing footer.
+
+Also cover the **registry eviction lifecycle** when a parent fragment recreates an outside
+container:
+
+- **Parent-fragment recreation.** A parent fragment `P` creates `c = st.container()`; a
+  nested (or otherwise cross-scope) fragment `F` writes directly to `c`. Drive a standalone
+  rerun of `P` (which rebuilds `c` as a new DG) and assert (a) the registry holds no orphaned
+  entry for the old container — exactly one wrapper for `(F, c)`, keyed to the rebuilt `c`,
+  and (b) no stale/duplicate wrapper is re-emitted to the frontend (no stray node, no
+  out-of-bounds delta-path error). Then drive a standalone rerun of `F` (which does not
+  rebuild `c`) and assert its wrapper is reused rather than recreated, and its content resets
+  correctly.
 
 ## Alternatives Considered
 
