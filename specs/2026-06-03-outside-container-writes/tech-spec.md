@@ -338,13 +338,6 @@ forces fresh payloads / re-fire and auto-dismiss rather than reusing element pay
 dialogs are modal singletons with no variable-count positional interleaving. Wrapping it
 would serve no purpose and could interfere with one-shot rendering.
 
-**Full app rerun.** Clears `_outside_wrappers` entirely. For non-root containers, all
-wrappers are recreated fresh because the main script re-executes and creates new outside
-containers with fresh cursors. Root containers keep their stable `_id` across reruns, but
-the unconditional `clear()` still drops and recreates their wrapper entries as the fragment
-re-executes against a fresh root cursor (see "Ancestor walk to detect existing wrapper"), so
-the wrapper lands at the same stable slot.
-
 ## Behavior Decisions
 
 ### Dynamic container selection
