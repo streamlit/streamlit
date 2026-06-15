@@ -134,7 +134,9 @@ def _needs_outside_wrapper(dg: DeltaGenerator) -> bool:
     # The DG is outside the fragment's delta path, but it may already be
     # inside a wrapper belonging to this fragment (e.g. a nested container
     # created via outer.container() that was redirected through the wrapper).
-    # Walk the DG's ancestor chain against this fragment's wrapper DG ids.
+    # Walk the DG's ancestor chain against this fragment's wrapper DG ids and
+    # skip it if already wrapped — otherwise we'd nest a second wrapper and
+    # produce bad delta paths on rerun.
     wrapper_dg_ids = {
         wrapper._id
         for wrapper in fragment_storage.outside_wrapper_values_for(ts.fragment_id)
