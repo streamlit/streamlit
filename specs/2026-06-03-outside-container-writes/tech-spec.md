@@ -331,12 +331,12 @@ means every write inside the wrapper replaces the previous one, matching `st.emp
 documented "single-element container" contract. On fragment rerun, there is nothing to
 reset — a `LockedCursor` always points to index 0.
 
-**`EVENT` root is out of scope for wrapping.** `st.toast` and dialogs route to the `EVENT`
-root, which `_needs_outside_wrapper` deliberately excludes. The delta-level collision
-exists mechanically, but it causes no user-visible loss: toasts are one-shot effects (the
-frontend forces fresh payloads / re-fire and auto-dismiss rather than reusing element
-payloads), and dialogs are modal singletons with no variable-count positional interleaving.
-A wrapper would be unnecessary here and could interfere with one-shot rendering.
+**`EVENT` root does not need a wrapper.** `st.toast` and dialogs route to the `EVENT` root,
+which `_needs_outside_wrapper` excludes by design. The delta-level collision exists
+mechanically, but it causes no user-visible loss: toasts are one-shot effects (the frontend
+forces fresh payloads / re-fire and auto-dismiss rather than reusing element payloads), and
+dialogs are modal singletons with no variable-count positional interleaving. Wrapping it
+would serve no purpose and could interfere with one-shot rendering.
 
 **Full app rerun.** Clears `_outside_wrappers` entirely. For non-root containers, all
 wrappers are recreated fresh because the main script re-executes and creates new outside
