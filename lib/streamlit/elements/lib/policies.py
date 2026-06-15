@@ -55,8 +55,6 @@ def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -
         raise StreamlitInvalidFormCallbackError()
 
 
-_shown_default_value_warning: bool = False
-
 
 def check_session_state_rules(
     default_value: Any, key: str | None, writes_allowed: bool = True
@@ -72,8 +70,6 @@ def check_session_state_rules(
     StreamlitValueAssignmentNotAllowedError:
         Raised when writing is not allowed but session state contains a new value.
     """
-    global _shown_default_value_warning  # noqa: PLW0603
-
     if key is None or not runtime.exists():
         return
 
@@ -83,19 +79,6 @@ def check_session_state_rules(
 
     if not writes_allowed:
         raise StreamlitValueAssignmentNotAllowedError(key=key)
-
-    if (
-        default_value is not None
-        and not _shown_default_value_warning
-        and not config.get_option("global.disableWidgetStateDuplicationWarning")
-    ):
-        _LOGGER.warning(
-            'The widget with key "%s" was created with a default value but also had '
-            "its value set via the Session State API.",
-            key,
-            stack_info=True,
-        )
-        _shown_default_value_warning = True
 
 
 class CachedWidgetWarning(StreamlitAPIWarning):
