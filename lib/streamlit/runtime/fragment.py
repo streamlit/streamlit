@@ -60,12 +60,15 @@ class _OutsideWrapper:
     """A cached implicit wrapper interposed between an outside container and a
     fragment's writes. ``creation_delta_path`` and ``block_proto`` are retained
     so the wrapper's ``add_block`` delta can be re-emitted on each fragment
-    rerun.
+    rerun. ``creating_fragment_id`` is the fragment whose scope created the
+    outside container (``None`` for the main script); it drives per-fragment
+    eviction when that scope reruns.
     """
 
     delta_generator: DeltaGenerator
     creation_delta_path: list[int]
     block_proto: Block_pb2.Block
+    creating_fragment_id: str | None
 
 
 def _check_not_parallel_worker(api_name: str) -> None:
@@ -205,6 +208,14 @@ class FragmentStorage(Protocol):
         """Return all wrapper records belonging to the given fragment."""
         raise NotImplementedError
 
+    @abstractmethod
+    def evict_outside_wrappers_created_by(self, fragment_id: str) -> None:
+        """Drop every wrapper whose outside container was created by the given
+        fragment's scope. Called when that fragment reruns and is about to rebuild
+        those containers.
+        """
+        raise NotImplementedError
+
 
 # NOTE: Ideally, we'd like to add a MemoryFragmentStorageStatProvider implementation to
 # keep track of memory usage due to fragments, but doing something like this ends up
@@ -249,6 +260,11 @@ class MemoryFragmentStorage(FragmentStorage):
         del self._fragments[fragment_id]
         self._parent_by_id.pop(fragment_id, None)
         self._registration_sequence_by_id.pop(fragment_id, None)
+        self._outside_wrappers = {
+            key: wrapper
+            for key, wrapper in self._outside_wrappers.items()
+            if key[0] != fragment_id
+        }
 
     def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
         with self._lock:
@@ -375,6 +391,14 @@ class MemoryFragmentStorage(FragmentStorage):
                 ), wrapper in self._outside_wrappers.items()
                 if stored_fragment_id == fragment_id
             ]
+
+    def evict_outside_wrappers_created_by(self, fragment_id: str) -> None:
+        with self._lock:
+            self._outside_wrappers = {
+                key: wrapper
+                for key, wrapper in self._outside_wrappers.items()
+                if wrapper.creating_fragment_id != fragment_id
+            }
 
     def __deepcopy__(self, memo: dict[int, object]) -> NoReturn:
         raise TypeError(
