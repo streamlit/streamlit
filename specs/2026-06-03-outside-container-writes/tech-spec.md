@@ -167,9 +167,20 @@ wrappers either, because `_get_or_create_outside_wrapper` is cache-keyed by
 
 #### Ancestor walk to detect existing wrapper
 
-`FragmentStorage` already manages per-fragment state with the right lifecycle (persists
-across fragment reruns, cleared on full app reruns via `clear()`). Add a wrapper registry
-to it:
+A fragment can write to a container nested inside an outside container — e.g. it calls
+`outer.container()` and writes to the returned DG. That first call is redirected through the
+fragment's wrapper, so the nested DG lives *inside* the wrapper, but its cursor path is still
+outside the fragment's own delta path. The plain path check would therefore flag every
+subsequent write to it as a fresh outside-container write — re-wrapping already-wrapped
+content and producing spurious extra wrappers (and bad delta paths) on rerun.
+
+To prevent this, before wrapping we walk `dg`'s ancestor chain and skip the write if any
+ancestor is already one of this fragment's wrappers. That requires a way to look up the
+fragment's existing wrappers, which is what the wrapper registry provides.
+
+**Wrapper registry.** `FragmentStorage` already manages per-fragment state with the right
+lifecycle (persists across fragment reruns, cleared on full app reruns via `clear()`). Add a
+wrapper registry to it:
 
 ```python
 # On MemoryFragmentStorage:
@@ -177,10 +188,10 @@ _outside_wrappers: dict[tuple[str, str], DeltaGenerator]
 ```
 
 Keyed by `(fragment_id, dg._id)` where `dg` is the outside container. Because the key
-includes `fragment_id`, the ancestor walk in `_needs_outside_wrapper` only checks the
-current fragment's wrappers. This matters for nested fragments: if frag\_b writes to a
-container inside frag\_a's wrapper, frag\_a's wrapper is not in frag\_b's slice of the
-registry, so frag\_b correctly gets its own wrapper.
+includes `fragment_id`, the ancestor walk only checks the current fragment's wrappers. This
+matters for nested fragments: if frag\_b writes to a container inside frag\_a's wrapper,
+frag\_a's wrapper is not in frag\_b's slice of the registry, so frag\_b correctly gets its
+own wrapper.
 
 On a full app rerun, all wrappers are cleared unconditionally — for non-root containers the
 main script recreates outside containers as new DG objects, so old wrapper entries are
