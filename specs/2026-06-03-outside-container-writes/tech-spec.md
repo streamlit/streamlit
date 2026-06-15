@@ -103,7 +103,7 @@ initial full app run and never moved. On fragment rerun, only the wrapper's inte
 cursor resets. This solves all three problems: the cursor always starts at 0, fragments
 are isolated from each other, and main-script elements are unaffected.
 
-### Detection of outside container writes
+### Detecting when a write needs a wrapper
 
 In `DeltaGenerator._enqueue` and `_block`, after resolving `dg = self._active_dg`, use
 `_needs_outside_wrapper` to decide whether the write must be redirected through a wrapper. A
