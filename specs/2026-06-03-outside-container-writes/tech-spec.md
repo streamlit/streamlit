@@ -164,10 +164,8 @@ recognized as already-inside. Repeated direct writes to the same root don't crea
 wrappers either, because `_get_or_create_outside_wrapper` is cache-keyed by
 `(fragment_id, dg._id)` and a root's `_id` is stable across runs.
 
-The **ancestor walk** (the final block) is scoped to the **current fragment's** wrapper
-registry. This is important for nested fragments: if frag\_b writes to a container inside
-frag\_a's wrapper, frag\_a's wrapper is not in frag\_b's registry, so frag\_b correctly gets
-its own wrapper.
+The final block walks `dg`'s ancestors to skip writes already inside one of this fragment's
+wrappers (see "Wrapper registry" for why the walk is scoped per-fragment).
 
 ### Wrapper registry
 
@@ -180,10 +178,15 @@ to it:
 _outside_wrappers: dict[tuple[str, str], DeltaGenerator]
 ```
 
-Keyed by `(fragment_id, dg._id)` where `dg` is the outside container. On a full app
-rerun, all wrappers are cleared unconditionally — for non-root containers the main script
-recreates outside containers as new DG objects, so old wrapper entries are stale. New
-wrappers are created as fragments re-execute. On the frontend, `ClearStaleNodeVisitor`
+Keyed by `(fragment_id, dg._id)` where `dg` is the outside container. Because the key
+includes `fragment_id`, the ancestor walk in `_needs_outside_wrapper` only checks the
+current fragment's wrappers. This matters for nested fragments: if frag\_b writes to a
+container inside frag\_a's wrapper, frag\_a's wrapper is not in frag\_b's slice of the
+registry, so frag\_b correctly gets its own wrapper.
+
+On a full app rerun, all wrappers are cleared unconditionally — for non-root containers the
+main script recreates outside containers as new DG objects, so old wrapper entries are
+stale. New wrappers are created as fragments re-execute. On the frontend, `ClearStaleNodeVisitor`
 garbage-collects the old wrapper `BlockNode`s because they aren't re-emitted with the
 current `scriptRunId`.
 
