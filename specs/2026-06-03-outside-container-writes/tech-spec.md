@@ -12,25 +12,26 @@ the fragment's scope — for example, a parent-scoped `st.container()`, or a roo
 such as `st.sidebar` / `st.bottom` entered via `with`. Today this is blocked to prevent
 crashes from stale cursor state.
 
-There are **two distinct failure modes** behind the block, and they affect different kinds
-of containers:
+The block guards against **two distinct failure modes**:
 
-1. **Cursor accumulation** — affects **non-root containers** (e.g. a captured
-   `st.container()`). The outside container's `RunningCursor` accumulates across fragment
-   reruns instead of resetting (0 → 2 → 4 → …), producing delta paths that exceed the
-   frontend tree's child count. Root containers do **not** have this problem: their cursors
-   live in `ctx.cursors`, which `wrapped_fragment()` already snapshots and restores.
-2. **Interleaving / overwrite** — affects **root containers a fragment writes to directly**
-   (`st.sidebar`, `st.bottom`). A fragment that writes to such a root and changes its
-   element count across reruns will overwrite non-fragment content positioned after it. A
-   cursor reset does not prevent this; only positional isolation does.
+1. **Cursor accumulation** — the outside container's `RunningCursor` accumulates across
+   fragment reruns instead of resetting (0 → 2 → 4 → …), producing delta paths that exceed
+   the frontend tree's child count. This affects **non-root containers** (e.g. a captured
+   `st.container()`); root containers do **not** accumulate, because their cursors live in
+   `ctx.cursors`, which `wrapped_fragment()` already snapshots and restores.
+2. **Interleaving / overwrite** — when a fragment shares an outside container with other
+   content (the main script or another fragment) and its element count changes across
+   reruns, the fragment overwrites whatever is positioned after it. This affects **any**
+   shared outside container: a captured `st.container()` (header → fragment → footer) just
+   as much as a root a fragment writes to directly (`st.sidebar`, `st.bottom`). A cursor
+   reset does not prevent it; only positional isolation does.
 
 This spec proposes implicit wrapper containers that isolate each fragment's outside writes
-into a stable, independently-resettable block. The wrapper solves accumulation (the
-wrapper's cursor always starts at 0) and interleaving (the wrapper occupies one fixed slot,
-so the fragment's element count can vary without touching its neighbors). Consequently
-`st.sidebar` and `st.bottom` still need wrappers — not because they accumulate, but because
-a fragment writing directly to them would otherwise overwrite trailing main-script content.
+into a stable, independently-resettable block. The wrapper solves accumulation (its cursor
+always starts at 0) and interleaving (it occupies one fixed slot, so the fragment's element
+count can vary without touching its neighbors). Notably, this means `st.sidebar` and
+`st.bottom` need wrappers even though they don't accumulate — purely to keep a fragment
+writing directly to them from overwriting trailing main-script content.
 
 ## Problem
 
