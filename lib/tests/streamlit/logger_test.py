@@ -66,9 +66,7 @@ class LoggerTest(unittest.TestCase):
         """Test streamlit.logger.setup_log_formatter."""
 
         LOGGER = logger.get_logger("test")
-        # The "test" logger is process-global, so handlers can leak in from
-        # other tests sharing the same worker. Start from a clean slate so the
-        # handler-count assertion only reflects setup_formatter's own handler.
+        # Keep the handler-count assertion isolated from other tests.
         for handler in list(LOGGER.handlers):
             LOGGER.removeHandler(handler)
 

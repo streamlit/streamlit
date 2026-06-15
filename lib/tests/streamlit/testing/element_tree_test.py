@@ -915,7 +915,7 @@ def test_format_value_for_widget_error_semantics():
         == "Inventory 1"
     )
 
-    # Already-formatted string label: format_func raises, so the label is kept.
+    # Formatted string label is accepted.
     assert _format_value_for_widget(format_func, "Inventory 1") == "Inventory 1"
 
     # Non-string value with a raising format_func is a real bug and must propagate.

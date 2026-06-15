@@ -100,12 +100,11 @@ T = TypeVar("T")
 def _format_value_for_widget(format_func: Callable[[Any], str], value: Any) -> str:
     """Format a widget value into its option label.
 
-    The frontend round-trips the already-formatted label back to the backend, so
-    AppTest must accept either the raw option or its formatted label. When
-    ``value`` is already a string label, ``format_func`` may raise because it
-    expects a raw option; in that case the string is returned unchanged. For
-    non-string values a raising ``format_func`` indicates a real bug, so the
-    error is propagated to keep failures actionable.
+    AppTest supports setting widget values with either the raw option or the
+    formatted label. The latter matches what the production frontend sends to
+    the backend, but may raise when passed directly to ``format_func`` if the
+    function expects a raw option. To support formatted labels without hiding
+    real ``format_func`` bugs, only string values fall back to themselves.
     """
     try:
         return format_func(value)
