@@ -145,21 +145,20 @@ def _needs_outside_wrapper(dg: DeltaGenerator) -> bool:
     return True
 ```
 
-Only writes to the **bare root** DG hit this branch, and repeated root writes still produce
-just one wrapper. Nested writes don't reach it: the wrapper itself and any `st.container()`
-opened on a root are non-top-level (they have a provided cursor), so they fall through to
-the path check and ancestor walk below and are correctly recognized as already-inside. And
-because `_get_or_create_outside_wrapper` is cache-keyed by `(fragment_id, dg._id)` with a
-root's `_id` stable across runs, repeated direct writes to the same root reuse the one
-cached wrapper rather than creating duplicates.
+The **`if dg._is_top_level:` branch** handles writes to a root container. `dg._is_top_level`
+(defined as `dg._provided_cursor is None`) is true for all four roots —
+`RootContainer.MAIN=0`, `SIDEBAR=1`, `EVENT=2`, `BOTTOM=3` — and `dg._root_container` selects
+which ones need wrapping. Only writes to the **bare root** DG reach this branch: the wrapper
+itself and any `st.container()` opened on a root are non-top-level (they have a provided
+cursor), so they fall through to the path check and ancestor walk below, where they're
+recognized as already-inside. Repeated direct writes to the same root don't create duplicate
+wrappers either, because `_get_or_create_outside_wrapper` is cache-keyed by
+`(fragment_id, dg._id)` and a root's `_id` is stable across runs.
 
-`dg._is_top_level` is defined as `dg._provided_cursor is None`, which holds for all four
-root containers (`RootContainer.MAIN=0`, `SIDEBAR=1`, `EVENT=2`, `BOTTOM=3`);
-`dg._root_container` is what distinguishes them inside the branch.
-
-The ancestor walk is scoped to the **current fragment's** wrapper registry. This is
-important for nested fragments: if frag\_b writes to a container inside frag\_a's wrapper,
-frag\_a's wrapper is not in frag\_b's registry, so frag\_b correctly gets its own wrapper.
+The **ancestor walk** (the final block) is scoped to the **current fragment's** wrapper
+registry. This is important for nested fragments: if frag\_b writes to a container inside
+frag\_a's wrapper, frag\_a's wrapper is not in frag\_b's registry, so frag\_b correctly gets
+its own wrapper.
 
 When detected, redirect the write through a wrapper:
 
