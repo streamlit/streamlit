@@ -446,7 +446,8 @@ container:
 **Option 1: Implicit wrapper containers** ✅ PREFERRED
 - Pros: Clean isolation per fragment, no cursor bookkeeping, frontend-transparent,
   `parallel=True` compatible
-- Cons: Extra DOM div per (fragment, container) pair — invisible and layout-transparent
+- Cons: Extra tree node per (fragment, container) pair — invisible and layout-transparent
+  (no DOM footprint)
 
 **Option 2: Track fragment start indices on `RunningCursor`**
 Maintain `_fragment_start_indices: dict[str, int]` on each cursor and reset to the stored
