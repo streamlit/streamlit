@@ -9,10 +9,18 @@ created: 2026-06-03
 
 Enable `@st.fragment` functions to reliably write elements to containers declared outside
 the fragment's scope — for example, a parent-scoped `st.container()`, or a root container
-such as `st.sidebar` / `st.bottom` entered via `with`. Today this is blocked to prevent
-crashes from stale cursor state.
+such as `st.sidebar` / `st.bottom`. Today this is only **partially restricted**, and the
+paths that aren't restricted are buggy:
 
-The block guards against **two distinct failure modes**:
+- Writing a **widget** to an outside container raises
+  `StreamlitFragmentWidgetsNotAllowedOutsideError`.
+- Writing **directly to `st.sidebar`** from a fragment raises `StreamlitAPIException`.
+- Everything else is **allowed today but buggy**: non-widget elements written to a
+  captured `st.container()`, and any write to `st.bottom`, are unguarded and hit the
+  failure modes below. The widget and sidebar restrictions exist precisely because these
+  same modes are most easily triggered there.
+
+The failure modes are **two distinct problems**:
 
 1. **Cursor accumulation** — the outside container's `RunningCursor` accumulates across
    fragment reruns instead of resetting (0 → 2 → 4 → …), producing delta paths that exceed
@@ -46,8 +54,11 @@ def my_fragment():
     outside.write("Status: ok")
 ```
 
-This is blocked today to prevent crashes from stale `RunningCursor` state. Without the
-block, a fragment rerun would produce:
+Only part of this is restricted today: the `outside.button(...)` widget write raises
+`StreamlitFragmentWidgetsNotAllowedOutsideError`, but the `outside.write(...)` element
+write is allowed — there is no guard for non-widget writes to a captured `st.container()`.
+That unguarded path is buggy: on fragment rerun it produces stale `RunningCursor` state and
+crashes with:
 
 ```
 Bad delta path index 4 (should be between [0, 2])
@@ -214,19 +225,27 @@ the container DG at creation from `ThreadState.fragment_id` (set because `wrappe
 runs the body under `with ThreadState.scoped(fragment_id=...)`). This is distinct from the
 key's `fragment_id`, which identifies the fragment that *writes* through the wrapper.
 
-**Lifecycle.** An entry is valid only while its outside container is live, and a container is
-rebuilt when its creating scope re-executes. So the registry is cleared per creating scope,
-mirroring the full-app `clear()`:
+**Lifecycle.** An entry is valid only while both its outside container and its writing
+fragment are live. Three events evict entries; afterward the relevant scope re-establishes its
+wrappers as it re-executes:
 
-- **Full app rerun:** `clear()` wipes everything (main-script containers have creating
-  fragment `None`).
+- **Full app rerun:** `clear()` empties the whole registry. The existing
+  `MemoryFragmentStorage.clear()` clears only the fragment maps today, so it must be extended
+  to also flush `_outside_wrappers` — otherwise main-script and stable-`_id` root wrappers
+  (`st.sidebar`, `st.bottom`) would survive into the next run with an already-advanced cursor.
 - **Fragment rerun of `X`:** before `X`'s body runs, evict entries whose
-  `creating_fragment_id == X`.
+  `creating_fragment_id == X` — the containers `X` is about to rebuild.
+- **Fragment `X` removed:** when `X` is dropped from storage (`clear_stale_descendants` after
+  a parent rerun, or `delete`), evict entries *written by* `X` (the key's first element). A
+  removed nested fragment's wrapper for a stable-`_id` root is not covered by the
+  creating-fragment eviction (the root's creating fragment is `None`); without this step,
+  re-adding `X` on a later fragment-only rerun would reuse that stale wrapper. Both `clear()`
+  and `clear_stale_descendants` route through `MemoryFragmentStorage._remove`, so the eviction
+  lives there as the single chokepoint for all removals.
 
-In both cases the scope then re-establishes its wrappers as it re-executes. Keying eviction on
-the *creating* rather than writing fragment means a fragment that writes to an ancestor's
-container keeps its wrapper across its own standalone reruns and drops it only when the
-ancestor reruns.
+Keying the rerun eviction on the *creating* rather than writing fragment means a fragment that
+writes to an ancestor's container keeps its wrapper across its own standalone reruns and drops
+it only when the ancestor reruns.
 
 On the frontend, `ClearStaleNodeVisitor` garbage-collects old wrapper `BlockNode`s that
 aren't re-emitted with the current `scriptRunId`. The design doesn't depend on the outside
