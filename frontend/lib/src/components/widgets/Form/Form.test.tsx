@@ -15,10 +15,10 @@
  */
 
 import { screen } from "@testing-library/react"
+import { enableMapSet, enablePatches } from "immer"
 
 import { Button as SubmitButtonProto } from "@streamlit/protobuf"
 
-import { INITIAL_SCRIPT_RUN_ID } from "~lib/components/core/ScriptRunContext"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
 import {
@@ -28,6 +28,11 @@ import {
 } from "~lib/WidgetStateManager"
 
 import Form, { Props } from "./Form"
+import { FormSubmitButton } from "./FormSubmitButton"
+
+// Required by ImmerJS
+enablePatches()
+enableMapSet()
 
 describe("Form", () => {
   function getProps(props: Partial<Props> = {}): Props {
@@ -64,33 +69,60 @@ describe("Form", () => {
     expect(formElement).toHaveClass("stForm")
   })
 
-  it("does not show missing submit button error during initial app load", () => {
+  it("does not show missing submit button error when submit button registers after form renders", () => {
+    const formId = "mockFormId"
+    let formsData = createFormsData()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: vi.fn(),
+      formsDataChanged: newData => {
+        formsData = newData
+      },
+    })
+
+    const submitButtonElement = SubmitButtonProto.create({
+      id: "submit-button-id",
+      label: "Submit",
+      formId,
+    })
+
     const { rerenderWithContexts } = renderWithContexts(
-      <Form {...getProps()} />,
+      <Form {...getProps({ formId, widgetMgr })}>
+        <FormSubmitButton
+          disabled={false}
+          element={submitButtonElement}
+          widgetMgr={widgetMgr}
+        />
+      </Form>,
       {
         formsContext: {
-          formsData: defaultFormsData(),
+          formsData,
         },
         scriptRunContext: {
-          scriptRunId: INITIAL_SCRIPT_RUN_ID,
+          scriptRunId: "script run 123",
+          scriptRunState: ScriptRunState.RUNNING,
+        },
+      }
+    )
+
+    rerenderWithContexts(
+      <Form {...getProps({ formId, widgetMgr })}>
+        <FormSubmitButton
+          disabled={false}
+          element={submitButtonElement}
+          widgetMgr={widgetMgr}
+        />
+      </Form>,
+      {
+        formsContext: {
+          formsData,
+        },
+        scriptRunContext: {
           scriptRunState: ScriptRunState.NOT_RUNNING,
         },
       }
     )
 
-    // During the initial app load (before the first script run), the warning
-    // must not flash even though the script is NOT_RUNNING.
     expect(screen.queryByText("Missing Submit Button")).not.toBeInTheDocument()
-
-    // Once a real script run has finished, the warning should appear for a
-    // form that is still missing a submit button.
-    rerenderWithContexts(<Form {...getProps()} />, {
-      scriptRunContext: {
-        scriptRunId: "script run 123",
-        scriptRunState: ScriptRunState.NOT_RUNNING,
-      },
-    })
-    expect(screen.getByText("Missing Submit Button")).toBeVisible()
   })
 
   it("shows error if !hasSubmitButton && scriptRunState==NOT_RUNNING", () => {

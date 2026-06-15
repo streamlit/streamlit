@@ -24,10 +24,7 @@ import {
 } from "react"
 
 import { FormsContext } from "~lib/components/core/FormsContext"
-import {
-  INITIAL_SCRIPT_RUN_ID,
-  ScriptRunContext,
-} from "~lib/components/core/ScriptRunContext"
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
 import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
@@ -77,10 +74,8 @@ function Form(props: Props): ReactElement {
     submitButtons !== undefined && submitButtons.length > 0
 
   // Consume ScriptRunContext to get script run state
-  const { scriptRunId, scriptRunState } = useContext(ScriptRunContext)
-  const scriptRunFinished =
-    scriptRunId !== INITIAL_SCRIPT_RUN_ID &&
-    scriptRunState === ScriptRunState.NOT_RUNNING
+  const { scriptRunState } = useContext(ScriptRunContext)
+  const scriptNotRunning = scriptRunState === ScriptRunState.NOT_RUNNING
 
   // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`
   useEffect(() => {
@@ -90,19 +85,20 @@ function Form(props: Props): ReactElement {
   // Determine if we need to show the "missing submit button" warning.
   // If we have a submit button, we don't show the warning, of course.
   // If we *don't* have a submit button, then we only mutate the showWarning
-  // flag once the script run has finished. (While the script is still running,
-  // or during the initial app load, there might be an incoming SubmitButton
-  // delta that we just haven't seen yet.)
+  // flag after render when the script is not running. This gives child
+  // FormSubmitButton components a chance to register themselves first.
   const [showWarning, setShowWarning] = useState(false)
 
-  if (hasSubmitButton && showWarning) {
-    setShowWarning(false)
-  } else if (!hasSubmitButton && !showWarning && scriptRunFinished) {
-    setShowWarning(true)
-  }
+  useEffect(() => {
+    if (hasSubmitButton) {
+      setShowWarning(false)
+    } else if (scriptNotRunning) {
+      setShowWarning(true)
+    }
+  }, [hasSubmitButton, scriptNotRunning])
 
   let submitWarning: ReactElement | undefined
-  if (showWarning) {
+  if (showWarning && !hasSubmitButton) {
     submitWarning = (
       <StyledErrorContainer>
         <AlertElement body={MISSING_SUBMIT_BUTTON_WARNING} kind={Kind.ERROR} />
