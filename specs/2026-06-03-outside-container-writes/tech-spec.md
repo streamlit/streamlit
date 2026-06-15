@@ -207,31 +207,22 @@ if ctx and _needs_outside_wrapper(dg):
 ```
 
 `_get_or_create_outside_wrapper` returns the fragment's cached wrapper for the outside
-container if one exists; otherwise it emits a new `Transparent` block on the container and
-caches it. Emitting that block must not itself be treated as an outside write — otherwise
-detection would fire again on the same container and recurse. How that re-entrancy is
-avoided is an implementation detail, out of scope here.
+container, or, if none exists yet, emits a new `Transparent` block on the container and
+caches it. Emitting that block must not itself re-trigger outside-write detection, or it
+would recurse; how that re-entrancy is avoided is an implementation detail, out of scope
+here.
 
-A wrapper can only be *created* while the outside container's `RunningCursor` is fresh,
-which is the case at the start of a full app run. Placing the wrapper advances that cursor
-exactly once; doing so on a standalone fragment rerun — when the cursor is already at its
-accumulated position — would reintroduce the very stale-cursor problem the wrapper exists to
-solve. So creation happens on full runs, and standalone reruns only ever return the cached
-wrapper, bypassing the container's cursor entirely.
-
-For a normal captured container (e.g. `st.container()`), that fresh moment is when the
-statement constructing it runs — its *creating scope*, whether in the main script or a
-parent fragment body. The wrapper is therefore created on the initial full app run, on
-subsequent full reruns, or during a parent fragment rerun that recreates the container.
-
-**Root containers have no creating scope.** `st.sidebar` and `st.bottom` are singletons —
-no statement constructs them — so there is no creating scope to hook into. But their cursor
-is still reset to fresh at the start of every full run (via `ctx.cursors`), so the
-equivalent trigger is the first write the fragment makes to that root during a full run: the
-root's `RunningCursor` advances once to place the wrapper, then it is cached. The restriction
-that a fragment cannot start writing to a new outside container during a standalone rerun
-(see "Dynamic container selection" below) applies unchanged: the fragment must have written
-to the root during a full run for its wrapper to exist.
+A wrapper is only *created* while the container's `RunningCursor` is fresh — at the start of
+a full run — because placing it advances that cursor exactly once; doing so on a standalone
+fragment rerun, when the cursor is already at its accumulated position, would reintroduce the
+stale-cursor problem the wrapper exists to solve. So wrappers are created on full runs and
+merely reused on standalone reruns, which bypass the container's cursor entirely. For a
+captured `st.container()` that fresh moment is when its *creating scope* runs (in the main
+script or a parent fragment); root containers (`st.sidebar`, `st.bottom`) have no creating
+scope, but their cursor is reset each full run via `ctx.cursors`, so the trigger is simply
+the fragment's first write to the root during a full run. A fragment therefore cannot start
+writing to a brand-new outside container on a standalone rerun (see "Dynamic container
+selection" below).
 
 The wrapper inherits its cursor type from the outside container: when the container's cursor
 is locked (as with `st.empty()`), the wrapper gets a `LockedCursor(index=0)` to preserve
