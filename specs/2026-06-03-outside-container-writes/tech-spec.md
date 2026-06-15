@@ -195,18 +195,14 @@ matters for nested fragments: if frag\_b writes to a container inside frag\_a's 
 frag\_a's wrapper is not in frag\_b's slice of the registry, so frag\_b correctly gets its
 own wrapper.
 
-On a full app rerun, all wrappers are cleared unconditionally — for non-root containers the
-main script recreates outside containers as new DG objects, so old wrapper entries are
-stale. New wrappers are created as fragments re-execute. On the frontend, `ClearStaleNodeVisitor`
+On a full app rerun, `clear()` wipes the registry unconditionally and each fragment
+re-establishes its wrappers as it re-executes; on the frontend, `ClearStaleNodeVisitor`
 garbage-collects the old wrapper `BlockNode`s because they aren't re-emitted with the
-current `scriptRunId`.
-
-Note that root containers (`st.sidebar`, `st.bottom`) are singletons with a **stable**
-`_id`, so unlike a captured `st.container()` they are *not* recreated as new DG objects on
-a full rerun. Correctness does not depend on the DG being new: the unconditional `clear()`
-drops the old entry regardless, the entry is recreated as the fragment re-executes, and the
-root's `RunningCursor` is fresh at full-run start — so the wrapper is re-placed at the same
-stable slot.
+current `scriptRunId`. Correctness never depends on the outside container being a fresh DG
+object — which matters because the two cases differ: a captured `st.container()` comes back
+as a new DG, whereas the root singletons (`st.sidebar`, `st.bottom`) keep a stable `_id`.
+Since the clear is unconditional and wrappers are rebuilt on re-execution, both behave the
+same.
 
 ### Proto: new `Transparent` block type
 
