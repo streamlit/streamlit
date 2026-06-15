@@ -204,33 +204,6 @@ as a new DG, whereas the root singletons (`st.sidebar`, `st.bottom`) keep a stab
 Since the clear is unconditional and wrappers are rebuilt on re-execution, both behave the
 same.
 
-### Proto: new `Transparent` block type
-
-Add a general-purpose transparent block type to `Block.proto`:
-
-```protobuf
-message Block {
-  oneof type {
-    // ... existing types ...
-    Transparent transparent = 17;
-  }
-
-  message Transparent {
-    // A layout-transparent wrapper block with no visual treatment (no
-    // padding, border, or gap). Renders as a plain unstyled grouping with no
-    // DOM node of its own. Used to group elements into a single tree node
-    // without affecting the user-visible layout.
-  }
-}
-```
-
-The `Transparent` block reserves a slot in the Streamlit element tree (a `BlockNode`) for
-the backend's cursor bookkeeping, but has no DOM footprint: the frontend renders its
-children directly (via a `ChildRenderer` React fragment) rather than wrapping them in a
-container element, so they become direct flex items of the parent and inherit its layout
-context (direction, width, gap). This block type is reusable for any future case that needs
-an invisible grouping node in the tree.
-
 ### Wrapper creation and retrieval
 
 `_get_or_create_outside_wrapper` returns a cached wrapper if one exists, or creates a new
@@ -266,6 +239,34 @@ attempts to write to an outside container during a standalone rerun (`ts.fragmen
 ctx.fragment_ids_this_run`) and no cached wrapper exists, we raise
 `StreamlitAPIException`. See the "Dynamic container selection" behavior decision below for
 the full rationale and workaround pattern.
+
+#### Proto: new `Transparent` block type
+
+The wrapper is emitted as a new general-purpose transparent block type added to
+`Block.proto`:
+
+```protobuf
+message Block {
+  oneof type {
+    // ... existing types ...
+    Transparent transparent = 17;
+  }
+
+  message Transparent {
+    // A layout-transparent wrapper block with no visual treatment (no
+    // padding, border, or gap). Renders as a plain unstyled grouping with no
+    // DOM node of its own. Used to group elements into a single tree node
+    // without affecting the user-visible layout.
+  }
+}
+```
+
+The `Transparent` block reserves a slot in the Streamlit element tree (a `BlockNode`) for
+the backend's cursor bookkeeping, but has no DOM footprint: the frontend renders its
+children directly (via a `ChildRenderer` React fragment) rather than wrapping them in a
+container element, so they become direct flex items of the parent and inherit its layout
+context (direction, width, gap). This block type is reusable for any future case that needs
+an invisible grouping node in the tree.
 
 ### Cursor reset on fragment rerun
 
