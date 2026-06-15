@@ -111,7 +111,7 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
         self._session_connect_times: dict[str, float] = {}
         self._total_session_duration_seconds: float = 0
 
-        # Per-user session-event counters, keyed by an ordered tuple of
+        # Per-user session-event counters, keyed by a canonical tuple of
         # (attr_name, attr_value) label pairs -> {event_type: count}. Only
         # populated when server.unsafeMetricsUserAttributes is non-empty. Never
         # pruned (bounded by the number of distinct users seen by the process).
@@ -274,7 +274,7 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
     def _user_labels(
         self, user_info: UserInfoType
     ) -> tuple[tuple[str, str], ...] | None:
-        """Resolve ordered (name, value) label pairs from user_info.
+        """Resolve canonical (name, value) label pairs from user_info.
 
         Returns None when the feature is disabled (the option is empty).
         Missing/None attributes become "" (but other falsy values such as
@@ -286,8 +286,10 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
         if not attrs:
             return None
         return tuple(
-            (name, "" if (value := user_info.get(name)) is None else str(value))
-            for name in attrs
+            sorted(
+                (name, "" if (value := user_info.get(name)) is None else str(value))
+                for name in attrs
+            )
         )
 
     def _record_user_event(

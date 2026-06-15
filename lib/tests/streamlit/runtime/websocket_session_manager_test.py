@@ -718,6 +718,31 @@ class WebsocketSessionManagerUserMetricsTests(unittest.TestCase):
             series[frozenset({("email", "bob@example.com"), ("type", "connect")})] == 1
         )
 
+    def test_reordered_config_attributes_share_series(self) -> None:
+        """Same label set with config attrs reordered must not emit duplicate series."""
+        user_info = {"email": "alice@example.com", "user_name": "alice"}
+        with patch_config_options(
+            {"server.unsafeMetricsUserAttributes": ["email", "user_name"]}
+        ):
+            self.connect_session(user_info=user_info)
+
+        with patch_config_options(
+            {"server.unsafeMetricsUserAttributes": ["user_name", "email"]}
+        ):
+            self.connect_session(user_info=user_info)
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        assert series == {
+            frozenset(
+                {
+                    ("email", "alice@example.com"),
+                    ("user_name", "alice"),
+                    ("type", "connect"),
+                }
+            ): 2
+        }
+
     def test_families_filter_returns_only_user_family(self) -> None:
         """Requesting only user_session_events returns just that family."""
         with patch_config_options(_USER_ATTRS):

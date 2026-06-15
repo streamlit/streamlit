@@ -1134,7 +1134,8 @@ _create_option(
         output is unchanged.
 
         Warning: configured attribute values (e.g. email) are exposed in plaintext on
-        the unauthenticated metrics endpoint. Only enable this in trusted,
+        the unauthenticated metrics endpoint and retained in process memory for each
+        distinct label set seen by the process. Only enable this in trusted,
         access-controlled environments. The ``unsafe`` prefix is intentional.
 
         Example: ['email', 'user_name']
