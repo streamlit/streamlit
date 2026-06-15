@@ -148,13 +148,6 @@ def _needs_outside_wrapper(dg: DeltaGenerator) -> bool:
     return True
 ```
 
-When detected, redirect the write through a wrapper:
-
-```python
-if ctx and _needs_outside_wrapper(dg):
-    dg = _get_or_create_outside_wrapper(dg, ts.fragment_id)
-```
-
 #### Writes to root containers
 
 The `if dg._is_top_level:` branch handles writes to a root container. `dg._is_top_level`
@@ -205,6 +198,13 @@ Since the clear is unconditional and wrappers are rebuilt on re-execution, both 
 same.
 
 ### Wrapper creation and retrieval
+
+When a write needs a wrapper, redirect it through one:
+
+```python
+if ctx and _needs_outside_wrapper(dg):
+    dg = _get_or_create_outside_wrapper(dg, ts.fragment_id)
+```
 
 `_get_or_create_outside_wrapper` returns a cached wrapper if one exists, or creates a new
 one by emitting a `Transparent` block on the outside container. The creation must bypass
