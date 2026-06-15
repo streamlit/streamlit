@@ -105,9 +105,11 @@ are isolated from each other, and main-script elements are unaffected.
 
 ### Detection of outside container writes
 
-In `DeltaGenerator._enqueue` and `_block`, after resolving `dg = self._active_dg`, check
-whether the target cursor is outside the current fragment's delta path using the existing
-`_is_inside_fragment_path` helper:
+In `DeltaGenerator._enqueue` and `_block`, after resolving `dg = self._active_dg`, use
+`_needs_outside_wrapper` to decide whether the write must be redirected through a wrapper. A
+write needs one when a fragment targets either a non-root container outside its own delta
+path (detected via the existing `_is_inside_fragment_path` helper) or a `SIDEBAR`/`BOTTOM`
+root directly:
 
 ```python
 def _needs_outside_wrapper(dg: DeltaGenerator) -> bool:
