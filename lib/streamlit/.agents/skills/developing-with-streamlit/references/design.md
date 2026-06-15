@@ -178,7 +178,7 @@ Other elements like `st.button` and `st.tabs` also support icons—worth conside
 
 ## Titles on callouts
 
-Give a callout a bold headline above its body with the `title=` keyword. `title=` renders a dedicated bold title element *inside* the alert box, above the body. Don't fake it by bolding the first line of the body, putting a Markdown heading inside the body, or placing a separate `st.markdown`/`st.subheader`/`st.header` above the alert—those don't produce a real title and look wrong.
+The `title=` keyword adds an *optional* bold headline above a callout's body. It's not required—a plain callout with just body text is the common case—but it helps when a short label should stand out above the detail (e.g. `"Connection lost"` over the retry explanation). When you do want a headline, use `title=` rather than faking it: `title=` renders a dedicated bold title element *inside* the alert box, above the body. Don't bold the first line of the body, put a Markdown heading inside the body, or place a separate `st.markdown`/`st.subheader`/`st.header` above the alert—those don't produce a real title and look wrong.
 
 ```python
 # GOOD: real bold title rendered above the body, inside the alert box
@@ -206,3 +206,4 @@ st.error("Retrying in 5 seconds.")
 - [st.space](https://docs.streamlit.io/develop/api-reference/layout/st.space)
 - [st.markdown](https://docs.streamlit.io/develop/api-reference/text/st.markdown)
 - [st.toast](https://docs.streamlit.io/develop/api-reference/status/st.toast)
+- [st.error](https://docs.streamlit.io/develop/api-reference/status/st.error) (callout `title=`; same parameter on `st.warning`/`st.info`/`st.success`)
