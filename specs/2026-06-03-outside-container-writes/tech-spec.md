@@ -206,18 +206,16 @@ if ctx and _needs_outside_wrapper(dg):
     dg = _get_or_create_outside_wrapper(dg, ts.fragment_id)
 ```
 
-`_get_or_create_outside_wrapper` returns a cached wrapper if one exists, or creates a new
-one by emitting a `Transparent` block on the outside container. The creation must bypass
-the outside-write detection path so that emitting the wrapper block does not itself
-re-trigger the check and recurse infinitely. The exact bypass mechanism is left to the
-implementation plan (it is out of scope here); note in particular that relying on the
-ancestor walk to break the recursion does **not** generalize to root containers — a root's
-wrapper is a *child* of the root, never an ancestor, so when the wrapper-creation block is
-emitted on the bare root the ancestor walk finds nothing to match. The wrapper's cursor type
-is inherited from the outside container: if the container uses a `LockedCursor` (e.g.
-`st.empty()`), the wrapper gets a `LockedCursor(index=0)` to preserve replace semantics;
-otherwise it gets a `RunningCursor` for normal append behavior. The creation delta path and
-block proto are stored on the wrapper for re-emission during reruns.
+`_get_or_create_outside_wrapper` returns the fragment's cached wrapper for the outside
+container if one exists; otherwise it emits a new `Transparent` block on the container and
+caches it. Emitting that block must not itself be treated as an outside write — otherwise
+detection would fire again on the same container and recurse. How that re-entrancy is
+avoided is an implementation detail, out of scope here.
+
+The wrapper inherits its cursor type from the outside container: when the container's cursor
+is locked (as with `st.empty()`), the wrapper gets a `LockedCursor(index=0)` to preserve
+replace semantics; otherwise a `RunningCursor` for normal append behavior. Its creation
+delta path and block proto are stored on the wrapper for re-emission on rerun.
 
 The wrapper is created whenever the outside container's creating scope executes — on the
 initial full app run, on subsequent full app reruns, or during a parent fragment rerun that
