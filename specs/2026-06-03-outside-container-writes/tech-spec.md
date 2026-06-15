@@ -219,16 +219,19 @@ message Block {
 
   message Transparent {
     // A layout-transparent wrapper block with no visual treatment (no
-    // padding, border, or gap). Renders as a plain unstyled div. Useful
-    // whenever the backend needs to group elements into a single tree
-    // node without affecting the user-visible layout.
+    // padding, border, or gap). Renders as a plain unstyled grouping with no
+    // DOM node of its own. Used to group elements into a single tree node
+    // without affecting the user-visible layout.
   }
 }
 ```
 
-The frontend renders a `Transparent` block as an unstyled div — identical to how it
-renders an untyped block today, but with an explicit type to match on. This block type
-is reusable for any future case that needs an invisible grouping node.
+The `Transparent` block reserves a slot in the Streamlit element tree (a `BlockNode`) for
+the backend's cursor bookkeeping, but has no DOM footprint: the frontend renders its
+children directly (via a `ChildRenderer` React fragment) rather than wrapping them in a
+container element, so they become direct flex items of the parent and inherit its layout
+context (direction, width, gap). This block type is reusable for any future case that needs
+an invisible grouping node in the tree.
 
 ### Wrapper creation and retrieval
 
