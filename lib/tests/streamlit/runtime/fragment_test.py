@@ -155,21 +155,26 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert self._storage._fragments["some_key"] == "some_fragment"
         assert "some_other_key" not in self._storage._parent_by_id
 
-    def _make_wrapper(self, dg_id: str) -> _OutsideWrapper:
+    def _make_wrapper(
+        self, dg_id: str, *, creating_fragment_id: str | None = None
+    ) -> _OutsideWrapper:
         delta_generator = MagicMock()
         delta_generator._id = dg_id
         return _OutsideWrapper(
             delta_generator=delta_generator,
             creation_delta_path=[0, 1],
             block_proto=Block(),
+            creating_fragment_id=creating_fragment_id,
         )
 
     def test_register_and_get_outside_wrapper(self):
         """register_outside_wrapper then get_outside_wrapper returns the record."""
-        wrapper = self._make_wrapper("dg-1")
+        wrapper = self._make_wrapper("dg-1", creating_fragment_id="creator")
         self._storage.register_outside_wrapper("frag", "container", wrapper)
 
-        assert self._storage.get_outside_wrapper("frag", "container") is wrapper
+        stored = self._storage.get_outside_wrapper("frag", "container")
+        assert stored is wrapper
+        assert stored.creating_fragment_id == "creator"
 
     def test_get_outside_wrapper_missing_returns_none(self):
         """A missing (fragment, container) key returns None."""
@@ -197,6 +202,37 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         # The fragment closure survives, but its wrapper does not.
         assert self._storage.contains("some_key")
         assert self._storage._outside_wrappers == {}
+
+    def test_evict_outside_wrappers_created_by_filters_on_creating_fragment(self):
+        """evict_outside_wrappers_created_by drops only records created by the id."""
+        created_by_a = self._make_wrapper("dg-a", creating_fragment_id="creator_a")
+        created_by_b = self._make_wrapper("dg-b", creating_fragment_id="creator_b")
+        main_script = self._make_wrapper("dg-main", creating_fragment_id=None)
+        self._storage.register_outside_wrapper("writer", "container_a", created_by_a)
+        self._storage.register_outside_wrapper("writer", "container_b", created_by_b)
+        self._storage.register_outside_wrapper("writer", "container_main", main_script)
+
+        self._storage.evict_outside_wrappers_created_by("creator_a")
+
+        remaining = self._storage.outside_wrappers_for("writer")
+        assert created_by_a not in remaining
+        assert created_by_b in remaining
+        assert main_script in remaining
+
+    def test_remove_drops_removed_fragments_own_wrappers(self):
+        """Removing a fragment drops its own wrappers, even stable-root ones."""
+        self._set_fragment("outer")
+        self._set_fragment("inner", parent_fragment_id="outer")
+        inner_wrapper = self._make_wrapper("dg-inner", creating_fragment_id=None)
+        outer_wrapper = self._make_wrapper("dg-outer", creating_fragment_id=None)
+        self._storage.register_outside_wrapper("inner", "container", inner_wrapper)
+        self._storage.register_outside_wrapper("outer", "container", outer_wrapper)
+
+        self._storage.clear_stale_descendants("outer", frozenset({"outer"}))
+
+        assert not self._storage.contains("inner")
+        assert self._storage.outside_wrappers_for("inner") == []
+        assert self._storage.outside_wrappers_for("outer") == [outer_wrapper]
 
     def test_clear_stale_descendants_removes_orphan_nested(self):
         """Descendants of root not re-registered this run are removed."""
