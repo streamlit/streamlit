@@ -56,6 +56,10 @@ export { default as AlertElement } from "./components/elements/AlertElement/Aler
 export { default as StreamlitErrorCodeBlock } from "./components/elements/CodeBlock/StreamlitErrorCodeBlock"
 export { handleFavicon } from "./components/elements/Favicon/Favicon"
 export { default as TextElement } from "./components/elements/TextElement/TextElement"
+export { toastQueue } from "./components/elements/Toast/toastQueue"
+export type { StreamlitToastContent } from "./components/elements/Toast/toastQueue"
+export { StreamlitToastItem } from "./components/elements/Toast/StreamlitToastItem"
+export { StyledToastRegion } from "./components/elements/Toast/styled-components"
 export { getPopoverContainerStyle } from "./components/shared/Base/styled-components"
 export {
   default as BaseButton,
