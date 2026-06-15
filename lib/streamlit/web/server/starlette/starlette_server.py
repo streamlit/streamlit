@@ -32,8 +32,9 @@ These classes serve different architectural needs:
   control and runs as a background task.
 
 - **UvicornRunner** is designed for `st.App` mode where the app handles its own
-  runtime lifecycle via ASGI lifespan. It uses `uvicorn.run()` which manages its own
-  event loop and signal handlers - perfect for CLI "just run it" usage.
+  runtime lifecycle via ASGI lifespan. It uses `uvicorn.Server.run()` with a
+  pre-bound socket, giving Streamlit the same bind behavior and port retry
+  control as the managed server path.
 """
 
 from __future__ import annotations
@@ -79,6 +80,23 @@ def _get_server_address() -> str:
     return config.get_option("server.address") or DEFAULT_SERVER_ADDRESS
 
 
+def _get_bind_address(server_address: str) -> str:
+    """Resolve the socket bind address for the configured server address.
+
+    When the address is the implicit default (0.0.0.0, not set by the user),
+    bind the IPv6 dual-stack wildcard "::" so the advertised localhost URL works
+    on systems where localhost resolves to ::1 before 127.0.0.1. Fall back to the
+    original address on systems without IPv6 support.
+    """
+    if (
+        server_address == DEFAULT_SERVER_ADDRESS
+        and not config.is_manually_set("server.address")
+        and socket.has_ipv6
+    ):
+        return "::"
+    return server_address
+
+
 def _get_server_port() -> int:
     """Get the server port from config."""
     return int(config.get_option("server.port"))
@@ -93,6 +111,51 @@ def _server_address_is_unix_socket() -> bool:
     """Check if the server address is configured as a Unix socket."""
     address = config.get_option("server.address")
     return address is not None and address.startswith("unix://")
+
+
+# Errnos that indicate the IPv6 dual-stack wildcard bind is not supported, so we
+# should fall back to the original IPv4 address. EINVAL is included because some
+# platforms report it (rather than EAFNOSUPPORT) when dual-stack sockets are
+# disabled or unavailable. The fallback only triggers when we actually attempted
+# the "::" bind, so a misclassified EINVAL at worst skips the IPv6 upgrade.
+_IPV6_UNAVAILABLE_ERRNOS: Final[set[int]] = {
+    err
+    for err in (
+        getattr(errno, "EADDRNOTAVAIL", None),
+        getattr(errno, "EAFNOSUPPORT", None),
+        getattr(errno, "EPROTONOSUPPORT", None),
+        getattr(errno, "ENOPROTOOPT", None),
+        getattr(errno, "EINVAL", None),
+    )
+    if err is not None
+}
+# Distinct exit code used when uvicorn returns without ever starting, so this
+# failure mode is distinguishable from the generic sys.exit(1) used elsewhere.
+_UVICORN_STARTUP_FAILURE_EXIT_CODE: Final = 3
+
+
+def _bind_server_socket(
+    server_address: str, bind_address: str, port: int, backlog: int
+) -> tuple[socket.socket, str]:
+    """Bind ``bind_address``, falling back to ``server_address`` on IPv6 errors.
+
+    ``bind_address`` may be the IPv6 dual-stack wildcard chosen by
+    _get_bind_address(). If binding it fails because IPv6 is unavailable, retry
+    with the original ``server_address``.
+    """
+    try:
+        return _bind_socket(bind_address, port, backlog), bind_address
+    except OSError as exc:
+        if bind_address != server_address and exc.errno in _IPV6_UNAVAILABLE_ERRNOS:
+            _LOGGER.warning(
+                "Could not bind IPv6 wildcard address %s:%s; falling back to %s:%s.",
+                bind_address,
+                port,
+                server_address,
+                port,
+            )
+            return _bind_socket(server_address, port, backlog), server_address
+        raise
 
 
 def _validate_ssl_config() -> tuple[str | None, str | None]:
@@ -149,7 +212,7 @@ def _get_websocket_protocol() -> str:
 def _get_uvicorn_config_kwargs() -> dict[str, Any]:
     """Get common uvicorn configuration kwargs.
 
-    Returns a dict of kwargs that can be passed to uvicorn.Config or uvicorn.run().
+    Returns a dict of kwargs that can be passed to uvicorn.Config.
     Does NOT include app, host, or port - those must be provided separately.
     """
     cert_file, key_file = _validate_ssl_config()
@@ -281,6 +344,7 @@ class UvicornServer:
 
         # Get server configuration
         configured_address = _get_server_address()
+        bind_address = _get_bind_address(configured_address)
         configured_port = _get_server_port()
         uvicorn_kwargs = _get_uvicorn_config_kwargs()
 
@@ -291,17 +355,21 @@ class UvicornServer:
 
             uvicorn_config = uvicorn.Config(
                 app,
-                host=configured_address,
+                host=bind_address,
                 port=port,
                 **uvicorn_kwargs,
             )
 
             try:
-                self._socket = _bind_socket(
+                self._socket, actual_bind_address = _bind_server_socket(
                     configured_address,
+                    bind_address,
                     port,
                     uvicorn_config.backlog,
                 )
+                if actual_bind_address != bind_address:
+                    bind_address = actual_bind_address
+                    uvicorn_config.host = actual_bind_address
             except OSError as exc:
                 last_exception = exc
                 # EADDRINUSE: port in use by another process
@@ -332,7 +400,7 @@ class UvicornServer:
             config.set_option("server.port", port, ConfigOption.STREAMLIT_DEFINITION)
             _LOGGER.debug(
                 "Starting uvicorn server on %s:%s",
-                configured_address,
+                bind_address,
                 port,
             )
 
@@ -398,7 +466,7 @@ class UvicornServer:
 
             _LOGGER.info(
                 "Uvicorn server started on %s:%s",
-                configured_address,
+                bind_address,
                 port,
             )
             return
@@ -421,7 +489,7 @@ class UvicornRunner:
     """Sync uvicorn runner for standalone CLI usage.
 
     This class is used by `run_asgi_app()` when running `st.App` via `streamlit run`.
-    It wraps `uvicorn.run()` which is a blocking call that:
+    It wraps `uvicorn.Server.run()` which is a blocking call that:
 
     - Creates and manages its own event loop
     - Handles OS signals (SIGINT, SIGTERM) for graceful shutdown
@@ -470,6 +538,7 @@ class UvicornRunner:
 
         # Get server configuration
         configured_address = _get_server_address()
+        bind_address = _get_bind_address(configured_address)
         configured_port = _get_server_port()
         uvicorn_kwargs = _get_uvicorn_config_kwargs()
 
@@ -487,15 +556,41 @@ class UvicornRunner:
             try:
                 _LOGGER.debug(
                     "Starting uvicorn runner on %s:%s",
-                    configured_address,
+                    bind_address,
                     port,
                 )
-                uvicorn.run(
+                uvicorn_config = uvicorn.Config(
                     self._app,
-                    host=configured_address,
+                    host=bind_address,
                     port=port,
                     **uvicorn_kwargs,
                 )
+
+                server_socket, actual_bind_address = _bind_server_socket(
+                    configured_address,
+                    bind_address,
+                    port,
+                    uvicorn_config.backlog,
+                )
+                try:
+                    if actual_bind_address != bind_address:
+                        bind_address = actual_bind_address
+                        uvicorn_config.host = actual_bind_address
+
+                    if port == 0:
+                        port = server_socket.getsockname()[1]
+                        uvicorn_config.port = port
+                        config.set_option(
+                            "server.port", port, ConfigOption.STREAMLIT_DEFINITION
+                        )
+
+                    server = uvicorn.Server(uvicorn_config)
+                    server.run(sockets=[server_socket])
+                finally:
+                    server_socket.close()
+
+                if not server.started:
+                    sys.exit(_UVICORN_STARTUP_FAILURE_EXIT_CODE)
                 return  # Server exited normally
             except OSError as exc:
                 # EADDRINUSE: port in use by another process

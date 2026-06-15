@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -40,6 +41,7 @@ class PagesManager:
         script_cache: ScriptCache | None = None,
         **kwargs: Any,
     ) -> None:
+        self._lock = threading.Lock()
         self._main_script_path = main_script_path
         self._main_script_hash: PageHash = calc_hash(main_script_path)
         self._script_cache = script_cache
@@ -96,6 +98,9 @@ class PagesManager:
     def set_script_intent(
         self, page_script_hash: PageHash, page_name: PageName
     ) -> None:
+        # Not lock-protected: attribute assignment is atomic in both GIL and
+        # free-threaded CPython, and intent is always set before script
+        # execution begins (not concurrently with set_pages_and_resolve).
         self._intended_page_script_hash = page_script_hash
         self._intended_page_name = page_name
 
@@ -108,36 +113,85 @@ class PagesManager:
         }
 
     def get_pages(self) -> dict[PageHash, PageInfo]:
-        # If pages are not set, provide the common page info where
-        # - the main script path is the executing script to start
-        # - the page script hash and name reflects the intended page requested
-        return self._pages or {
-            self.main_script_hash: {
-                "page_script_hash": self.intended_page_script_hash or "",
-                "page_name": self.intended_page_name or "",
-                "icon": "",
-                "script_path": self.main_script_path,
+        """Return a snapshot of the current page registry.
+
+        Lock-protected for free-threaded Python (PEP 703) where
+        iterating a dict during concurrent mutation is unsafe.
+        Returns a shallow copy so callers can safely iterate.
+
+        If pages are not set, returns a default page info where the main
+        script path is the executing script and the page script hash/name
+        reflects the intended page requested.
+        """
+        with self._lock:
+            if self._pages is not None:
+                return dict(self._pages)
+            return {
+                self.main_script_hash: {
+                    "page_script_hash": self.intended_page_script_hash or "",
+                    "page_name": self.intended_page_name or "",
+                    "icon": "",
+                    "script_path": self.main_script_path,
+                }
             }
-        }
 
-    def set_pages(self, pages: dict[PageHash, PageInfo]) -> None:
-        self._pages = pages
+    def _set_pages(self, pages: dict[PageHash, PageInfo]) -> None:
+        """Internal method for setting pages. Use set_pages_and_resolve() instead."""
+        with self._lock:
+            self._pages = pages
 
-    def get_page_script(self, fallback_page_hash: PageHash = "") -> PageInfo | None:
+    def set_pages_and_resolve(
+        self,
+        pages: dict[PageHash, PageInfo],
+        fallback_page_hash: PageHash = "",
+    ) -> PageInfo | None:
+        """Atomically set the page registry and resolve the current page.
+
+        Both operations are performed under a single lock, ensuring the page
+        resolution sees the pages that were just set even under concurrent
+        access.
+
+        Parameters
+        ----------
+        pages : dict[PageHash, PageInfo]
+            The page registry to set.
+        fallback_page_hash : PageHash
+            The fallback page hash to use if the intended page is not found.
+
+        Returns
+        -------
+        PageInfo | None
+            The resolved page info, or None if no matching page is found.
+        """
+        with self._lock:
+            self._pages = pages
+            return self._resolve_page_script(fallback_page_hash)
+
+    def _resolve_page_script(
+        self, fallback_page_hash: PageHash = ""
+    ) -> PageInfo | None:
+        """Internal resolver — caller must hold self._lock.
+
+        Resolves the page script based on intended_page_script_hash or
+        intended_page_name, falling back to fallback_page_hash if needed.
+        """
         if self._pages is None:
             return None
 
         if self.intended_page_script_hash:
-            # We assume that if initial page hash is specified, that a page should
-            # exist, so we check out the page script hash or the default page hash
-            # as a backup
+            # If a page hash is specified, we assume a page should exist.
+            # Return the matching page or fall back to the default page hash.
             return self._pages.get(
                 self.intended_page_script_hash,
                 self._pages.get(fallback_page_hash, None),
             )
         if self.intended_page_name:
-            # If a user navigates directly to a non-main page of an app, the
-            # the page name can identify the page script to run
+            # If a user navigates directly to a non-main page of an app,
+            # the page name can identify the page script to run.
+            # Note: The lambda captures self.intended_page_name at execution
+            # time. This is safe because attribute reads are atomic in both
+            # GIL and free-threaded CPython, and set_script_intent is always
+            # called before script execution begins.
             return next(
                 filter(
                     # There seems to be this weird bug with mypy where it

@@ -30,7 +30,7 @@ from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
 )
 
-NUM_DATAFRAME_ELEMENTS = 36
+NUM_DATAFRAME_ELEMENTS = 37
 
 
 def test_dataframe_supports_various_configurations(
@@ -90,6 +90,7 @@ def test_dataframe_supports_various_configurations(
     assert_snapshot(dataframe_elements.nth(33), name="st_dataframe-multiselect_column")
     assert_snapshot(dataframe_elements.nth(34), name="st_dataframe-missing_placeholder")
     assert_snapshot(dataframe_elements.nth(35), name="st_dataframe-column_alignment")
+    assert_snapshot(dataframe_elements.nth(36), name="st_dataframe-button_column")
 
 
 def test_check_top_level_class(app: Page):
@@ -379,3 +380,46 @@ def test_localized_date_and_number_formatting(
     assert_snapshot(
         dataframe_element, name="st_dataframe-localized_date_and_number_formatting"
     )
+
+
+def test_button_column_click(app: Page):
+    """Test that clicking a button in a button column triggers the callback."""
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(36)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
+
+    # Click on the "Primary" button in the first row (column index 1)
+    click_on_cell(dataframe_element, 1, 1, column_width="small")
+
+    # Verify that the click result is displayed
+    click_result = app.get_by_text("Clicked row 0, label: View")
+    expect(click_result).to_be_visible()
+
+
+def test_button_column_multi_action_menu(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that clicking a multi-action button opens a menu."""
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(36)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
+
+    # Click on the multi-action cell in the first row (column index 6)
+    click_on_cell(dataframe_element, 1, 6, column_width="small")
+
+    # Verify that the menu appears
+    menu = app.get_by_test_id("stDataFrameButtonActionMenu")
+    expect(menu).to_be_visible()
+    assert_snapshot(menu, name="st_dataframe-button_column_multi_action_menu")
+
+    # Click on "Edit" option (use exact match to avoid matching "Edit" in other text)
+    menu.get_by_text("Edit", exact=True).click()
+
+    # Verify the click result - material icon is rendered, so match partial text
+    click_result = app.get_by_text("Clicked row 0, label:")
+    expect(click_result).to_be_visible()
+    # Verify it contains "Edit" (the icon is rendered, not the :material/edit: text)
+    expect(click_result).to_contain_text("Edit")
+
+    # Menu should be closed after selection
+    expect(menu).not_to_be_visible()

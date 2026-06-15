@@ -107,6 +107,59 @@ auto_refresh_metrics()
 
 Use for: live metrics, refresh buttons, interactive charts that don't affect global state.
 
+### Parallel fragments
+
+Use `parallel=True` to run independent fragments concurrently during full app reruns. Each parallel fragment is dispatched to a thread pool, so multiple slow operations overlap instead of running sequentially.
+
+```python
+# BAD: Three slow queries run sequentially (~9s total)
+@st.fragment
+def revenue():
+    st.metric("Revenue", query_revenue())  # ~3s
+
+@st.fragment
+def users():
+    st.metric("Users", query_users())  # ~3s
+
+@st.fragment
+def orders():
+    st.metric("Orders", query_orders())  # ~3s
+
+revenue()
+users()
+orders()
+
+# GOOD: Three slow queries run concurrently (~3s total)
+@st.fragment(parallel=True)
+def revenue():
+    st.metric("Revenue", query_revenue())
+
+@st.fragment(parallel=True)
+def users():
+    st.metric("Users", query_users())
+
+@st.fragment(parallel=True)
+def orders():
+    st.metric("Orders", query_orders())
+
+revenue()
+users()
+orders()
+```
+
+**When to use `parallel=True`:**
+- Independent, slow operations (DB queries, API calls, model inference)
+- Multiple fragments that don't depend on each other's output
+
+**When NOT to use:**
+- Fragments that depend on each other's Session State writes
+
+**Thread safety rules:**
+- Each parallel fragment should write to its own Session State keys
+- Avoid unsynchronized mutations of shared mutable objects across fragments
+
+Note: `parallel=True` applies to full-app reruns; `run_every` triggers fragment-scoped reruns, which execute sequentially.
+
 ## Forms to batch interactions
 
 By default, every widget interaction triggers a full rerun. Use `st.form` to batch multiple inputs and only rerun on submit.

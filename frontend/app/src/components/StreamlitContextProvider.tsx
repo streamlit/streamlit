@@ -177,6 +177,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       sidebarNavVisibleItems,
       hideSidebarNav,
       appRootRef,
+      isSidebarLocked: initialSidebarState === PageConfig.SidebarState.LOCKED,
     }),
     [
       initialSidebarState,

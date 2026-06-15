@@ -249,10 +249,6 @@ class App:
     """ASGI-compatible Streamlit application.
 
     .. warning::
-        This feature is experimental and may change or be removed in future
-        versions without warning. Use at your own risk.
-
-    .. warning::
         Hosting multiple ``App`` instances with different ``script_path`` values
         in the same process is not supported. The first ``App`` constructed in a
         process pins the script-level config directory (via the process-global
@@ -272,10 +268,12 @@ class App:
         or another ASGI server, they resolve relative to the current working directory.
     secrets : Mapping[str, SecretsValue] | None
         A dictionary of secrets to make available via ``st.secrets``. Supported
-        value types are: ``str``, ``int``, ``float``, ``bool``, and nested ``dict``.
-        When provided, these secrets are shallow-merged with file-based secrets
-        (programmatic secrets override file-based secrets at the top level).
-        Unsupported types raise ``TypeError`` at construction.
+        value types are: ``str``, ``int``, ``float``, ``bool``, ``list``, and nested
+        ``dict``. Lists and dicts are validated recursively, so their elements
+        must themselves be supported secrets types. When provided, these secrets
+        are shallow-merged with file-based secrets (programmatic secrets override
+        file-based secrets at the top level). Unsupported types raise
+        ``TypeError`` at construction.
     lifespan : Callable[[App], AbstractAsyncContextManager[dict[str, Any] | None]] | None
         Async context manager for startup/shutdown logic. The context manager
         receives the App instance and can yield a dictionary of state that will

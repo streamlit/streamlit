@@ -601,8 +601,8 @@ class SessionState:
 
         if ctx is not None:
             widget_id = self._key_id_mapper.get_id_from_key(user_key, None)
-            widget_ids = ctx.widget_ids_this_run
-            form_ids = ctx.form_ids_this_run
+            widget_ids = ctx.shared.widget_ids_this_run
+            form_ids = ctx.shared.form_ids_this_run
 
             if widget_id in widget_ids or user_key in form_ids:
                 raise StreamlitAPIException(
@@ -1281,9 +1281,16 @@ class SessionState:
     def get_stats(
         self, _family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
-        from streamlit.runtime.stats import safe_sizeof
+        if config.get_option("server.enableExpensiveMemoryStats"):
+            from streamlit.runtime.stats import safe_sizeof
 
-        stat = CacheStat("st_session_state", "", safe_sizeof(self))
+            byte_length = safe_sizeof(self)
+        else:
+            # Use a cheap item-count proxy instead of traversing the session
+            # state values, which can be very expensive.
+            byte_length = len(self)
+
+        stat = CacheStat("st_session_state", "", byte_length)
         # In general, get_stats methods need to be able to return only requested stat
         # families, but this method only returns a single family, and we're guaranteed
         # that it was one of those requested if we make it here.

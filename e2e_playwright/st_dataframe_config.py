@@ -18,11 +18,15 @@ import base64
 import datetime
 import random
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Construct test assets path relative to this script file to
 # allow its execution with different working directories.
@@ -1010,3 +1014,92 @@ st.dataframe(
     width="content",
     hide_index=True,
 )
+
+st.header("Button column:")
+
+if "button_click" not in st.session_state:
+    st.session_state.button_click = None
+
+
+def _on_button_click(key: str) -> Callable[[], None]:
+    """Create a click handler that stores the button click info in session state."""
+
+    def handler() -> None:
+        st.session_state.button_click = st.session_state[key]
+
+    return handler
+
+
+# Shared multi-action button labels (same for all rows)
+_MULTI_ACTION_LABELS = [
+    ":material/visibility: View",
+    ":material/edit: Edit",
+    ":material/delete: Delete",
+]
+
+st.dataframe(
+    pd.DataFrame(
+        {
+            "name": ["Alice", "Bob", "Charlie", "Diana"],
+            "primary": ["View"] * 4,
+            "secondary": ["Edit"] * 4,
+            "tertiary": ["Delete"] * 4,
+            "icon": [":material/visibility:"] * 4,
+            "icon_text": [":material/edit: Edit"] * 4,
+            "multi_action": [_MULTI_ACTION_LABELS] * 4,
+        }
+    ),
+    column_config={
+        "name": st.column_config.TextColumn("Name", width="small"),
+        "primary": st.column_config.ButtonColumn(
+            "Primary",
+            type="primary",
+            width="small",
+            on_click=_on_button_click("btn_primary"),
+            key="btn_primary",
+        ),
+        "secondary": st.column_config.ButtonColumn(
+            "Secondary",
+            type="secondary",
+            width="small",
+            on_click=_on_button_click("btn_secondary"),
+            key="btn_secondary",
+        ),
+        "tertiary": st.column_config.ButtonColumn(
+            "Tertiary",
+            type="tertiary",
+            width="small",
+            on_click=_on_button_click("btn_tertiary"),
+            key="btn_tertiary",
+        ),
+        "icon": st.column_config.ButtonColumn(
+            "Icon Only",
+            type="secondary",
+            width="small",
+            on_click=_on_button_click("btn_icon"),
+            key="btn_icon",
+        ),
+        "icon_text": st.column_config.ButtonColumn(
+            "Icon + Text",
+            type="secondary",
+            width="small",
+            on_click=_on_button_click("btn_icon_text"),
+            key="btn_icon_text",
+        ),
+        "multi_action": st.column_config.ButtonColumn(
+            "Multi-Action",
+            type="secondary",
+            width="small",
+            on_click=_on_button_click("btn_multi"),
+            key="btn_multi",
+        ),
+    },
+    width="content",
+    hide_index=True,
+)
+
+if st.session_state.button_click:
+    click = st.session_state.button_click
+    st.write(f"Clicked row {click['row']}, label: {click['label']}")
+
+st.write(st.session_state)

@@ -397,7 +397,7 @@ def _fragment(
             # we need to add them anyways and for fragment runs we add them
             # in case the to-be-executed fragment id was cleared from the storage
             # by the full app run.
-            ctx.new_fragment_ids.check_and_add(fragment_id)
+            ctx.shared.new_fragment_ids.check_and_add(fragment_id)
             # Pin the active script hash to the value captured at fragment
             # definition (consistent widget IDs across reruns). Computed
             # above ThreadState.scoped() so the comparison isn't coupled
@@ -687,9 +687,9 @@ def _dispatch_parallel_fragment(
     sees the container delta immediately), then submits the fragment body to
     run on a worker thread.
 
-    The coordinator's submit() handles context propagation: it captures
-    copy_context() and get_script_run_ctx() at submit time, and the worker
-    runs inside captured.run() with _scoped_ctx_attach().
+    The coordinator's submit() handles context propagation: the caller passes
+    ctx explicitly and submit() captures copy_context() at submit time, and the
+    worker runs inside captured.run() with _scoped_ctx_attach().
     """
     import streamlit as st
     from streamlit.delta_generator_singletons import context_dg_stack
@@ -707,6 +707,7 @@ def _dispatch_parallel_fragment(
 
     coordinator.submit(
         _run_parallel_fragment,
+        ctx,
         fragment_id,
         wrapped_fragment,
         dg_stack_with_container,

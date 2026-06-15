@@ -94,6 +94,7 @@ def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
 def _on_server_start(server: Server) -> None:
     prepare_streamlit_environment(server.main_script_path)
     _print_url(server.is_running_hello)
+    _maybe_print_skills_recommendation()
     report_watchdog_availability()
 
     def maybe_open_browser() -> None:
@@ -263,6 +264,35 @@ def _print_url(is_running_hello: bool) -> None:
         cli_util.print_to_cli("  May you create awesome apps!")
         cli_util.print_to_cli("")
         cli_util.print_to_cli("")
+
+
+def _maybe_print_skills_recommendation() -> None:
+    """Recommend installing Streamlit agent skills when starting an app.
+
+    The message is only shown for interactive (non-headless) sessions where the
+    skills are not already installed. It points users to ``streamlit skills`` so
+    AI coding assistants can build and debug their apps more effectively.
+    """
+    if config.get_option("server.headless"):
+        # Don't advertise in headless mode (e.g. deployments, CI).
+        return
+
+    if config.get_option("logger.hideWelcomeMessage"):
+        return
+
+    from streamlit.web import skills
+
+    if skills.are_skills_installed():
+        # Skills are already installed - nothing to recommend.
+        return
+
+    skills_command = cli_util.style_for_cli("streamlit skills", fg="cyan", bold=True)
+    cli_util.print_to_cli("  Help agents write better Streamlit apps?", bold=True)
+    cli_util.print_to_cli(
+        f"  Install the official Streamlit skills by running {skills_command} "
+        "in your terminal."
+    )
+    cli_util.print_to_cli("")
 
 
 def load_config_options(flag_options: dict[str, Any]) -> None:

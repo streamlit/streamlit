@@ -787,6 +787,7 @@ class ConfigTest(unittest.TestCase):
                 "server.disconnectedSessionTTL",
                 "server.enableArrowTruncation",
                 "server.enableCORS",
+                "server.enableExpensiveMemoryStats",
                 "server.enableStaticServing",
                 "server.enableWebsocketCompression",
                 "server.websocketPingInterval",

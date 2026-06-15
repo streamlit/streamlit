@@ -17,9 +17,10 @@ Invoke this skill when the user's request involves:
 - Optimizing Streamlit performance (caching, fragments, reruns)
 - Building and running Streamlit apps
 - Styling widgets (button colors, backgrounds, CSS customization)
+- Advanced server configuration with `st.App`, ASGI, Starlette, FastAPI integration, custom routes, middleware, or lifespan hooks
 - Any question about Streamlit widgets, layouts, or components
 
-**Trigger phrases:** "streamlit", "st.", "dashboard", "app.py", "beautify app", "make it look better", "style", "CSS", "color", "background", "theme", "button", "slow rerun", "session state", "performance", "faster", "cache"
+**Trigger phrases:** "streamlit", "st.", "st.App", "dashboard", "app.py", "beautify app", "make it look better", "style", "CSS", "color", "background", "theme", "button", "slow rerun", "session state", "performance", "faster", "cache"
 
 ## Workflow
 
@@ -87,7 +88,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 
 | User Need | Reference to Read |
 |-----------|-------------------|
-| **App is slow, reruns take too long, or data loads repeatedly** — caching strategies (`st.cache_data`, `st.cache_resource`), `st.fragment` for partial reruns, and avoiding unnecessary recomputation | read `references/performance.md` |
+| **App is slow, reruns take too long, data loads repeatedly, or work is recomputed unnecessarily** — caching strategies (`st.cache_data`, `st.cache_resource`), `st.fragment` for partial reruns, and (optionally) `parallel=True` when independent fragments can run concurrently | read `references/performance.md` |
 | **Building a dashboard with KPIs, metrics, and charts** — composing `st.metric`, charts, and data tables into clean dashboard layouts with columns and containers | read `references/dashboards.md` |
 | **Making an app look polished** — icons (Material Symbols), spacing, color accents, visual hierarchy, and small design touches that elevate quality | read `references/design.md` |
 | **Choosing the right selection widget** — when to use `st.selectbox` vs `st.radio` vs `st.pills` vs `st.segmented_control` vs `st.multiselect`, including modern replacements for deprecated patterns | read `references/selection-widgets.md` |
@@ -104,6 +105,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Structuring app code** — when to split into modules vs keep in one file, helper functions, and clean project organization patterns | read `references/code-organization.md` |
 | **Environment and dependency setup** — Python environment management, installing packages, and configuring the development environment for Streamlit apps | read `references/environment-setup.md` |
 | **Streamlit CLI and configuration** — `streamlit run`, `streamlit config`, `.streamlit/config.toml` (script-level and project-level), port settings, and server options | read `references/cli.md` |
+| **Advanced server configuration** — `st.App`, ASGI entry points, custom HTTP routes, middleware, lifespan hooks, programmatic secrets, exception handlers, and FastAPI/Starlette mounting | read `references/server-asgi.md` |
 
 **Fallback — "this widget doesn't exist in Streamlit":**
 
