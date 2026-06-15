@@ -90,7 +90,8 @@ dev = [
 test = [
   "streamlit",
   # Testing infrastructure dependencies:
-  "pytest>=8.3.5",
+  # pytest >= 9.1.0 is causing issues and is not yet supported.
+  "pytest>=9.0.3,<9.1.0",
   "pytest-cov",
   "hypothesis>=6.17.4",
   "parameterized",
