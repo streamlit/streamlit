@@ -96,7 +96,7 @@ This is a big error message.
 ### LATEST MATERIAL ICON TEST START ###
 st.success(
     "Success message to test material icon from latest material symbols font",
-    icon=":material/car_spark:",
+    icon=":material/dashboard_2_add:",
 )
 ### LATEST MATERIAL ICON TEST END ###
 
