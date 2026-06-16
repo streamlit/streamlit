@@ -78,6 +78,21 @@ This pairs well with inline script dependencies when launched with `uv run app.p
 the wrapper can declare `streamlit` and any launcher-only dependencies in a PEP 723
 `script` metadata block at the top of the file.
 
+```python
+# /// script
+# dependencies = [
+#   "streamlit",
+# ]
+# ///
+
+import streamlit as st
+
+app = st.App("streamlit_app.py")
+
+if __name__ == "__main__":
+    app.run()
+```
+
 Use this pattern only for launcher modules such as `app = st.App("streamlit_app.py")`.
 Avoid same-file launchers like `app = st.App(__file__)`: Streamlit executes app scripts
 in a fake `__main__` module, so an `if __name__ == "__main__": app.run()` block inside
