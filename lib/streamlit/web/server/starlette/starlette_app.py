@@ -575,14 +575,15 @@ class App:
                 "streamlit run, uvicorn, or mounted on another framework."
             )
 
-        # Guard on `sys.argv[0]` truthiness, not just `sys.argv`: Python always
-        # provides at least `['']`, and for interactive sessions or `-c`
-        # invocations `sys.argv[0]` is an empty string. `Path('').resolve()`
-        # would silently yield the cwd (a directory, not a script), so fall back
-        # to the resolved script path in those cases.
-        has_launcher = bool(sys.argv and sys.argv[0])
+        # Guard on `sys.argv[0]` representing a script path, not just on
+        # `sys.argv`: Python always provides at least `['']`, and interactive
+        # sessions, `python -c`, and stdin execution use non-file sentinels.
+        # Resolving those would silently yield bogus cwd-relative paths, so
+        # fall back to the resolved Streamlit script path in those cases.
+        argv0 = sys.argv[0] if sys.argv else ""
+        has_launcher = bool(argv0 and argv0 not in {"-c", "-"})
         launcher_path = (
-            str(Path(sys.argv[0]).resolve())
+            str(Path(argv0).resolve())
             if has_launcher
             else str(self._resolve_script_path())
         )

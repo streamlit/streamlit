@@ -1496,15 +1496,21 @@ class TestAppRun:
 
         assert app._resolve_script_path() == (app_dir / "dashboard.py").resolve()
 
-    def test_run_falls_back_to_script_path_when_argv0_empty(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    @pytest.mark.parametrize("argv0", ["", "-c", "-"])
+    def test_run_falls_back_to_script_path_when_argv0_is_not_script(
+        self,
+        argv0: str,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        reset_runtime: None,
     ) -> None:
-        """App.run should not use an empty sys.argv[0] as the launcher path.
+        """App.run should not use non-script sys.argv[0] as the launcher path.
 
         Python always provides at least ``['']`` for sys.argv, and interactive
-        sessions or ``python -c`` set ``sys.argv[0]`` to an empty string.
-        ``Path('').resolve()`` would silently yield the cwd (a directory), so
-        the launcher path must fall back to the resolved script path instead.
+        sessions, ``python -c``, or ``python -`` use ``sys.argv[0]`` values
+        that are not script paths. Resolving those would silently yield bogus
+        cwd-relative paths, so the launcher path must fall back to the resolved
+        script path instead.
         """
         from streamlit import config
 
@@ -1513,7 +1519,7 @@ class TestAppRun:
 
         monkeypatch.setattr(config, "_main_script_path", None)
         monkeypatch.setattr(config, "_server_mode", config._server_mode)
-        monkeypatch.setattr(sys, "argv", [""])
+        monkeypatch.setattr(sys, "argv", [argv0, "--ignored"])
 
         app = App(script)
         expected_path = str(script.resolve())
