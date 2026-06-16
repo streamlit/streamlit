@@ -548,7 +548,6 @@ class App:
         """
         from streamlit import config as streamlit_config
         from streamlit import runtime
-        from streamlit.watcher import report_watchdog_availability
         from streamlit.web import bootstrap
         from streamlit.web.server.starlette.starlette_server import UvicornRunner
 
@@ -584,14 +583,10 @@ class App:
         self._resolved_script_path = None
         self._resolved_script_path = self._resolve_script_path()
 
-        bootstrap._fix_sys_path(launcher_path)
-        bootstrap._fix_sys_argv(launcher_path, script_args)
         bootstrap.load_config_options(config_overrides)
-        bootstrap._install_config_watchers(config_overrides)
-
-        streamlit_config._server_mode = "starlette-app"
-
-        report_watchdog_availability()
+        bootstrap._prepare_asgi_app_run_context(
+            launcher_path, script_args, config_overrides
+        )
 
         UvicornRunner(self).run()
 

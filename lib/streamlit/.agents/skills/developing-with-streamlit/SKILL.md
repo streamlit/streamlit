@@ -104,6 +104,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Structuring app code** — when to split into modules vs keep in one file, helper functions, and clean project organization patterns | read `references/code-organization.md` |
 | **Environment and dependency setup** — Python environment management, installing packages, and configuring the development environment for Streamlit apps | read `references/environment-setup.md` |
 | **Streamlit CLI and configuration** — `streamlit run`, `streamlit config`, `.streamlit/config.toml` (script-level and project-level), port settings, and server options | read `references/cli.md` |
+| **ASGI/server integration** — `st.App`, custom routes/middleware/lifespan, `uvicorn app:app`, direct `python app.py` launchers with `App.run()`, and mounting Streamlit in FastAPI/Starlette | read `references/server-asgi.md` |
 
 **Fallback — "this widget doesn't exist in Streamlit":**
 

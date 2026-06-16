@@ -1403,13 +1403,10 @@ class TestAppRun:
         app = App(script)
 
         with (
-            patch("streamlit.web.bootstrap._fix_sys_path") as fix_sys_path,
-            patch("streamlit.web.bootstrap._fix_sys_argv") as fix_sys_argv,
             patch("streamlit.web.bootstrap.load_config_options") as load_config_options,
             patch(
-                "streamlit.web.bootstrap._install_config_watchers"
-            ) as install_config_watchers,
-            patch("streamlit.watcher.report_watchdog_availability") as report,
+                "streamlit.web.bootstrap._prepare_asgi_app_run_context"
+            ) as prepare_asgi_context,
             patch(
                 "streamlit.web.server.starlette.starlette_server.UvicornRunner"
             ) as runner_cls,
@@ -1418,12 +1415,10 @@ class TestAppRun:
 
         launcher_path = str(launcher.resolve())
         assert config._main_script_path == launcher_path
-        assert config._server_mode == "starlette-app"
-        fix_sys_path.assert_called_once_with(launcher_path)
-        fix_sys_argv.assert_called_once_with(launcher_path, ["--date", "2026-06-14"])
         load_config_options.assert_called_once_with({"server.port": 8502})
-        install_config_watchers.assert_called_once_with({"server.port": 8502})
-        report.assert_called_once()
+        prepare_asgi_context.assert_called_once_with(
+            launcher_path, ["--date", "2026-06-14"], {"server.port": 8502}
+        )
         runner_cls.assert_called_once_with(app)
         runner_cls.return_value.run.assert_called_once()
 
@@ -1445,20 +1440,16 @@ class TestAppRun:
         app = App(script)
 
         with (
-            patch("streamlit.web.bootstrap._fix_sys_path"),
-            patch("streamlit.web.bootstrap._fix_sys_argv") as fix_sys_argv,
             patch("streamlit.web.bootstrap.load_config_options") as load_config_options,
             patch(
-                "streamlit.web.bootstrap._install_config_watchers"
-            ) as install_config_watchers,
-            patch("streamlit.watcher.report_watchdog_availability"),
+                "streamlit.web.bootstrap._prepare_asgi_app_run_context"
+            ) as prepare_asgi_context,
             patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
         ):
             app.run()
 
-        fix_sys_argv.assert_called_once_with(str(launcher.resolve()), [])
         load_config_options.assert_called_once_with({})
-        install_config_watchers.assert_called_once_with({})
+        prepare_asgi_context.assert_called_once_with(str(launcher.resolve()), [], {})
 
     def test_run_reresolves_relative_script_path_against_launcher_dir(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
@@ -1492,11 +1483,8 @@ class TestAppRun:
         assert app._resolve_script_path() == (other_dir / "dashboard.py").resolve()
 
         with (
-            patch("streamlit.web.bootstrap._fix_sys_path"),
-            patch("streamlit.web.bootstrap._fix_sys_argv"),
             patch("streamlit.web.bootstrap.load_config_options"),
-            patch("streamlit.web.bootstrap._install_config_watchers"),
-            patch("streamlit.watcher.report_watchdog_availability"),
+            patch("streamlit.web.bootstrap._prepare_asgi_app_run_context"),
             patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
         ):
             app.run()
@@ -1526,18 +1514,16 @@ class TestAppRun:
         expected_path = str(script.resolve())
 
         with (
-            patch("streamlit.web.bootstrap._fix_sys_path") as fix_sys_path,
-            patch("streamlit.web.bootstrap._fix_sys_argv") as fix_sys_argv,
             patch("streamlit.web.bootstrap.load_config_options"),
-            patch("streamlit.web.bootstrap._install_config_watchers"),
-            patch("streamlit.watcher.report_watchdog_availability"),
+            patch(
+                "streamlit.web.bootstrap._prepare_asgi_app_run_context"
+            ) as prepare_asgi_context,
             patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
         ):
             app.run()
 
         assert config._main_script_path == expected_path
-        fix_sys_path.assert_called_once_with(expected_path)
-        fix_sys_argv.assert_called_once_with(expected_path, [])
+        prepare_asgi_context.assert_called_once_with(expected_path, [], {})
 
     def test_run_rejects_when_runtime_already_exists(
         self, tmp_path: Path, reset_runtime: None
