@@ -62,6 +62,7 @@ import {
   RootStyleProvider,
   ScriptRunState,
   SessionInfo,
+  toastQueue,
   toExportedTheme,
   WidgetStateManager,
   WindowDimensionsProvider,
@@ -6826,18 +6827,38 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
 describe("Skills install nudge", () => {
   beforeEach(() => {
-    // Force real timers (earlier describes enable fake timers) and a clean
-    // localhost + storage state so the nudge gating is deterministic.
-    vi.useRealTimers()
+    // Fake timers so the shared toast queue's close/exit-animation timers
+    // flush deterministically (matches the native toast tests). Date.now() is
+    // frozen, which also keeps the snooze-window math below stable.
+    vi.useFakeTimers()
     mockWindowLocation("localhost")
     window.localStorage.clear()
     window.sessionStorage.clear()
   })
 
   afterEach(() => {
+    // The nudge renders into the shared (module-level) toast queue; clear it so
+    // it can't leak into the next test, flushing the exit-animation timer.
+    act(() => {
+      toastQueue.visibleToasts.forEach(t => toastQueue.close(t.key))
+    })
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+    vi.clearAllTimers()
+    vi.useRealTimers()
     // Restore any prototype spies (clearAllMocks does not undo spyOn).
     vi.restoreAllMocks()
   })
+
+  /** Flush the install promise chain's microtasks and re-render. */
+  const flushInstall = async (): Promise<void> => {
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+  }
 
   const sendRecommendingNewSession = (recommend = true): void => {
     sendForwardMessage("newSession", {
@@ -6994,7 +7015,7 @@ describe("Skills install nudge", () => {
   })
 
   it("tracks install clicks", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     renderApp(getProps())
     const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
     sendRecommendingNewSession()
@@ -7007,7 +7028,7 @@ describe("Skills install nudge", () => {
   })
 
   it("tracks a successful install and shows where skills landed", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const installSpy = vi
       .spyOn(BackendOperationClient.prototype, "requestInstallSkills")
       .mockResolvedValue({ detail: "Installed to .agents/skills" })
@@ -7016,8 +7037,9 @@ describe("Skills install nudge", () => {
     sendRecommendingNewSession()
 
     await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
 
-    expect(await screen.findByText("Skills installed")).toBeVisible()
+    expect(screen.getByText("Skills installed")).toBeVisible()
     expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallSucceeded",
@@ -7030,7 +7052,7 @@ describe("Skills install nudge", () => {
   })
 
   it("tracks a failed install and surfaces the error", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     vi.spyOn(
       BackendOperationClient.prototype,
       "requestInstallSkills"
@@ -7040,8 +7062,9 @@ describe("Skills install nudge", () => {
     sendRecommendingNewSession()
 
     await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
 
-    expect(await screen.findByText("install blew up")).toBeVisible()
+    expect(screen.getByText("install blew up")).toBeVisible()
     // The actions remain so the user can retry; no success confirmation shows.
     expect(screen.getByRole("button", { name: "Install" })).toBeVisible()
     expect(screen.queryByText("Skills installed")).not.toBeInTheDocument()
@@ -7054,12 +7077,16 @@ describe("Skills install nudge", () => {
   })
 
   it("snoozes and tracks the dismiss (✕) control", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     renderApp(getProps())
     const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
     sendRecommendingNewSession()
 
     await user.click(screen.getByRole("button", { name: "Dismiss" }))
+    // Flush the toast's exit-animation timer so it leaves the DOM.
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
 
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
@@ -7069,7 +7096,7 @@ describe("Skills install nudge", () => {
   })
 
   it("permanently dismisses and tracks Don't show again", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     // Spy on the server-side marker write so we verify the dual-store dismissal:
     // a cleared localStorage in another browser must still stay suppressed.
     const dismissSpy = vi
@@ -7080,6 +7107,10 @@ describe("Skills install nudge", () => {
     sendRecommendingNewSession()
 
     await user.click(screen.getByRole("button", { name: "Don't show again" }))
+    // Flush the toast's exit-animation timer so it leaves the DOM.
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
 
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {

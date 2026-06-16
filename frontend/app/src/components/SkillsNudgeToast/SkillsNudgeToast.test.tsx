@@ -14,26 +14,93 @@
  * limitations under the License.
  */
 
-import { screen, waitFor } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
+import { ReactElement } from "react"
 
+import { act, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { UNSTABLE_ToastRegion as ToastRegion } from "react-aria-components/Toast"
+
+import { isCustomToastContent, toastQueue } from "@streamlit/lib"
 import { render } from "@streamlit/lib/testing"
 
 import SkillsNudgeToast, { SkillsNudgeToastProps } from "./SkillsNudgeToast"
 
-const getProps = (
-  propOverrides: Partial<SkillsNudgeToastProps> = {}
-): SkillsNudgeToastProps => ({
-  onInstall: vi.fn().mockResolvedValue(undefined),
-  onSnooze: vi.fn(),
-  onDontShowAgain: vi.fn(),
-  onDismiss: vi.fn(),
-  ...propOverrides,
-})
+type NudgeHandlers = Pick<
+  SkillsNudgeToastProps,
+  "onInstall" | "onSnooze" | "onDontShowAgain"
+>
+
+/**
+ * Render the nudge the way the app does: enqueue a custom toast into the shared
+ * queue and dispatch it through a ToastRegion. Returns the (mock) handlers.
+ */
+const renderNudge = (
+  overrides: Partial<NudgeHandlers> = {}
+): NudgeHandlers => {
+  const handlers: NudgeHandlers = {
+    onInstall: vi.fn().mockResolvedValue(undefined),
+    onSnooze: vi.fn(),
+    onDontShowAgain: vi.fn(),
+    ...overrides,
+  }
+
+  render(
+    <ToastRegion queue={toastQueue} aria-label="Notifications">
+      {({ toast }): ReactElement =>
+        isCustomToastContent(toast.content) ? (
+          <>{toast.content.render(toast, () => toastQueue.close(toast.key))}</>
+        ) : (
+          <div />
+        )
+      }
+    </ToastRegion>
+  )
+
+  act(() => {
+    toastQueue.add(
+      {
+        render: (toast, close) => (
+          <SkillsNudgeToast
+            toast={toast}
+            close={close}
+            onInstall={handlers.onInstall}
+            onSnooze={handlers.onSnooze}
+            onDontShowAgain={handlers.onDontShowAgain}
+          />
+        ),
+      },
+      { timeout: undefined }
+    )
+  })
+
+  return handlers
+}
 
 describe("SkillsNudgeToast", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    act(() => {
+      toastQueue.visibleToasts.forEach(t => toastQueue.close(t.key))
+    })
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+    vi.clearAllTimers()
+    vi.useRealTimers()
+  })
+
+  /** Flush the install promise's microtasks and re-render. */
+  const flush = async (): Promise<void> => {
+    await act(async () => {
+      await Promise.resolve()
+    })
+  }
+
   it("renders install, don't show again, and a dismiss control", () => {
-    render(<SkillsNudgeToast {...getProps()} />)
+    renderNudge()
 
     expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
     expect(screen.getByRole("button", { name: "Install" })).toBeVisible()
@@ -41,71 +108,86 @@ describe("SkillsNudgeToast", () => {
       screen.getByRole("button", { name: "Don't show again" })
     ).toBeVisible()
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeVisible()
-    // No success/error confirmation should be present initially.
+    // No success confirmation should be present initially.
     expect(screen.queryByText("Skills installed")).not.toBeInTheDocument()
   })
 
   it("installs and shows the success confirmation, then auto-dismisses", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const onInstall = vi.fn().mockResolvedValue(undefined)
-    const onDismiss = vi.fn()
-    render(<SkillsNudgeToast {...getProps({ onInstall, onDismiss })} />)
+    renderNudge({ onInstall })
 
     await user.click(screen.getByRole("button", { name: "Install" }))
+    await flush()
 
     expect(onInstall).toHaveBeenCalledTimes(1)
-    expect(await screen.findByText("Skills installed")).toBeVisible()
+    expect(screen.getByText("Skills installed")).toBeVisible()
     // The action buttons are gone once the install succeeds.
     expect(
       screen.queryByRole("button", { name: "Install" })
     ).not.toBeInTheDocument()
 
     // The toast auto-dismisses a few seconds after success.
-    await waitFor(() => expect(onDismiss).toHaveBeenCalledTimes(1))
+    act(() => {
+      vi.advanceTimersByTime(3000)
+    })
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
   })
 
   it("shows the install location detail returned by onInstall", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const onInstall = vi.fn().mockResolvedValue("Installed to .agents/skills")
-    render(<SkillsNudgeToast {...getProps({ onInstall })} />)
+    renderNudge({ onInstall })
 
     await user.click(screen.getByRole("button", { name: "Install" }))
+    await flush()
 
-    expect(await screen.findByText("Skills installed")).toBeVisible()
+    expect(screen.getByText("Skills installed")).toBeVisible()
     expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
   })
 
   it("shows an error and keeps the actions when the install fails", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const onInstall = vi.fn().mockRejectedValue(new Error("network down"))
-    const onDismiss = vi.fn()
-    render(<SkillsNudgeToast {...getProps({ onInstall, onDismiss })} />)
+    renderNudge({ onInstall })
 
     await user.click(screen.getByRole("button", { name: "Install" }))
+    await flush()
 
-    expect(await screen.findByText("network down")).toBeVisible()
-    // Actions remain so the user can retry or dismiss; no auto-dismiss occurs.
+    expect(screen.getByText("network down")).toBeVisible()
+    // Actions remain so the user can retry; the toast is not dismissed.
     expect(screen.getByRole("button", { name: "Install" })).toBeVisible()
-    expect(onDismiss).not.toHaveBeenCalled()
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
   })
 
-  it("calls onSnooze when the user clicks the dismiss (✕) control", async () => {
-    const user = userEvent.setup()
+  it("snoozes and dismisses when the user clicks the dismiss (✕) control", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const onSnooze = vi.fn()
-    render(<SkillsNudgeToast {...getProps({ onSnooze })} />)
+    renderNudge({ onSnooze })
 
     await user.click(screen.getByRole("button", { name: "Dismiss" }))
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
 
     expect(onSnooze).toHaveBeenCalledTimes(1)
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
   })
 
-  it("calls onDontShowAgain when the user clicks Don't show again", async () => {
-    const user = userEvent.setup()
+  it("permanently dismisses when the user clicks Don't show again", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const onDontShowAgain = vi.fn()
-    render(<SkillsNudgeToast {...getProps({ onDontShowAgain })} />)
+    renderNudge({ onDontShowAgain })
 
     await user.click(screen.getByRole("button", { name: "Don't show again" }))
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
 
     expect(onDontShowAgain).toHaveBeenCalledTimes(1)
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
   })
 })

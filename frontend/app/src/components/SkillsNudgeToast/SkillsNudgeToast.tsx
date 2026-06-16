@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
-import { ReactElement, useCallback, useEffect, useState } from "react"
+import { ReactElement, useCallback, useEffect, useRef, useState } from "react"
+
+import { type QueuedToast } from "react-aria-components/Toast"
 
 import {
   BaseButton,
   BaseButtonKind,
   BaseButtonSize,
   DynamicIcon,
+  StyledMessageWrapper,
+  StyledToast,
+  StyledToastWrapper,
+  type ToastContent,
   useEmotionTheme,
 } from "@streamlit/lib"
 
@@ -28,12 +34,9 @@ import {
   StyledSkillsNudgeActions,
   StyledSkillsNudgeBody,
   StyledSkillsNudgeClose,
-  StyledSkillsNudgeContent,
   StyledSkillsNudgeError,
   StyledSkillsNudgeHeading,
-  StyledSkillsNudgeIcon,
   StyledSkillsNudgeLink,
-  StyledSkillsNudgeToast,
 } from "./styled-components"
 
 /** How long the success confirmation stays visible before auto-dismissing. */
@@ -42,6 +45,10 @@ const SUCCESS_AUTO_DISMISS_MS = 3000
 type NudgeStatus = "idle" | "installing" | "success" | "error"
 
 export interface SkillsNudgeToastProps {
+  /** The queued toast this nudge renders into (provides the react-aria shell). */
+  toast: QueuedToast<ToastContent>
+  /** Dismiss this toast from the shared queue. */
+  close: () => void
   /**
    * Perform the one-click install. Resolves with an optional detail message
    * (e.g. where the skills were installed) on success, and rejects with an
@@ -52,26 +59,31 @@ export interface SkillsNudgeToastProps {
   onSnooze: () => void
   /** Permanently dismiss the nudge (localStorage + server-side marker). */
   onDontShowAgain: () => void
-  /** Hide the nudge (used to auto-dismiss after a successful install). */
-  onDismiss: () => void
 }
 
 /**
- * An app-level toast shown by Streamlit during local development that offers a
- * one-click install of the bundled agent skills. This is distinct from the
- * app-author `st.toast` API: it is injected by the framework, not the script,
- * and mirrors the native toast's look and feel.
+ * The framework "install skills" nudge, rendered into the shared toast region
+ * (the same react-aria queue/shell that backs ``st.toast``) so it inherits the
+ * native toast's positioning, elevation, animation, and accessibility. This is
+ * distinct from the app-author ``st.toast`` API: it is injected by Streamlit,
+ * not the script, and offers a one-click install of the bundled agent skills.
  */
 function SkillsNudgeToast({
+  toast,
+  close,
   onInstall,
   onSnooze,
   onDontShowAgain,
-  onDismiss,
 }: Readonly<SkillsNudgeToastProps>): ReactElement {
   const theme = useEmotionTheme()
   const [status, setStatus] = useState<NudgeStatus>("idle")
   const [errorMessage, setErrorMessage] = useState("")
   const [successDetail, setSuccessDetail] = useState("")
+
+  // The toast region hands us a fresh `close` on every render; keep the latest
+  // in a ref so the success auto-dismiss timer below isn't reset each render.
+  const closeRef = useRef(close)
+  closeRef.current = close
 
   const handleInstall = useCallback(() => {
     setStatus("installing")
@@ -96,22 +108,34 @@ function SkillsNudgeToast({
       return undefined
     }
     // eslint-disable-next-line no-restricted-globals -- Timed auto-dismiss of a transient confirmation.
-    const timeoutId = setTimeout(onDismiss, SUCCESS_AUTO_DISMISS_MS)
+    const timeoutId = setTimeout(
+      () => closeRef.current(),
+      SUCCESS_AUTO_DISMISS_MS
+    )
     return () => clearTimeout(timeoutId)
-  }, [status, onDismiss])
+  }, [status])
+
+  const handleSnooze = useCallback(() => {
+    onSnooze()
+    close()
+  }, [onSnooze, close])
+
+  const handleDontShowAgain = useCallback(() => {
+    onDontShowAgain()
+    close()
+  }, [onDontShowAgain, close])
 
   const isInstalling = status === "installing"
   const isSuccess = status === "success"
   const isError = status === "error"
 
   return (
-    <StyledSkillsNudgeToast
-      className="stSkillsNudge"
+    <StyledToast
+      toast={toast}
       data-testid="stSkillsNudge"
-      role="status"
-      aria-live="polite"
+      className="stSkillsNudge"
     >
-      <StyledSkillsNudgeIcon>
+      <StyledToastWrapper>
         <DynamicIcon
           iconValue={
             isSuccess ? ":material/check_circle:" : ":material/auto_awesome:"
@@ -119,64 +143,63 @@ function SkillsNudgeToast({
           size="lg"
           color={isSuccess ? theme.colors.greenColor : theme.colors.primary}
         />
-      </StyledSkillsNudgeIcon>
+        <StyledMessageWrapper>
+          {isSuccess ? (
+            <>
+              <StyledSkillsNudgeHeading>
+                Skills installed
+              </StyledSkillsNudgeHeading>
+              {successDetail && (
+                <StyledSkillsNudgeBody>{successDetail}</StyledSkillsNudgeBody>
+              )}
+            </>
+          ) : (
+            <>
+              <StyledSkillsNudgeHeading>
+                Help agents write better Streamlit apps
+              </StyledSkillsNudgeHeading>
+              <StyledSkillsNudgeBody>
+                Install the official Streamlit skills so AI coding assistants
+                can build and debug your app.
+              </StyledSkillsNudgeBody>
 
-      <StyledSkillsNudgeContent>
-        {isSuccess ? (
-          <>
-            <StyledSkillsNudgeHeading>
-              Skills installed
-            </StyledSkillsNudgeHeading>
-            {successDetail && (
-              <StyledSkillsNudgeBody>{successDetail}</StyledSkillsNudgeBody>
-            )}
-          </>
-        ) : (
-          <>
-            <StyledSkillsNudgeHeading>
-              Help agents write better Streamlit apps
-            </StyledSkillsNudgeHeading>
-            <StyledSkillsNudgeBody>
-              Install the official Streamlit skills so AI coding assistants can
-              build and debug your app.
-            </StyledSkillsNudgeBody>
+              {isError && (
+                <StyledSkillsNudgeError>{errorMessage}</StyledSkillsNudgeError>
+              )}
 
-            {isError && (
-              <StyledSkillsNudgeError>{errorMessage}</StyledSkillsNudgeError>
-            )}
-
-            <StyledSkillsNudgeActions>
-              <BaseButton
-                kind={BaseButtonKind.PRIMARY}
-                size={BaseButtonSize.SMALL}
-                onClick={handleInstall}
-                disabled={isInstalling}
-              >
-                {isInstalling ? "Installing…" : "Install"}
-              </BaseButton>
-              <StyledSkillsNudgeLink
-                type="button"
-                onClick={onDontShowAgain}
-                disabled={isInstalling}
-              >
-                Don't show again
-              </StyledSkillsNudgeLink>
-            </StyledSkillsNudgeActions>
-          </>
-        )}
-      </StyledSkillsNudgeContent>
+              <StyledSkillsNudgeActions>
+                <BaseButton
+                  kind={BaseButtonKind.PRIMARY}
+                  size={BaseButtonSize.SMALL}
+                  onClick={handleInstall}
+                  disabled={isInstalling}
+                >
+                  {isInstalling ? "Installing…" : "Install"}
+                </BaseButton>
+                <StyledSkillsNudgeLink
+                  type="button"
+                  onClick={handleDontShowAgain}
+                  disabled={isInstalling}
+                >
+                  Don't show again
+                </StyledSkillsNudgeLink>
+              </StyledSkillsNudgeActions>
+            </>
+          )}
+        </StyledMessageWrapper>
+      </StyledToastWrapper>
 
       {!isSuccess && (
         <StyledSkillsNudgeClose
           type="button"
           aria-label="Dismiss"
-          onClick={onSnooze}
+          onClick={handleSnooze}
           disabled={isInstalling}
         >
           <DynamicIcon iconValue=":material/close:" size="base" />
         </StyledSkillsNudgeClose>
       )}
-    </StyledSkillsNudgeToast>
+    </StyledToast>
   )
 }
 

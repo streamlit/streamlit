@@ -14,13 +14,42 @@
  * limitations under the License.
  */
 
-import { UNSTABLE_ToastQueue as ToastQueue } from "react-aria-components/Toast"
+import { type ReactNode } from "react"
 
+import {
+  type QueuedToast,
+  UNSTABLE_ToastQueue as ToastQueue,
+} from "react-aria-components/Toast"
+
+/** Content for a standard ``st.toast``: a markdown body and optional icon. */
 export interface StreamlitToastContent {
   body: string
   icon?: string
 }
 
-export const toastQueue = new ToastQueue<StreamlitToastContent>({
+/**
+ * Content for an app-level custom toast (e.g. the framework "install skills"
+ * nudge) that reuses the shared toast queue and shell rather than a bespoke
+ * one. The framework supplies a ``render`` callback so it can provide
+ * arbitrary interactive content while inheriting the toast region's
+ * positioning, elevation, animation, and accessibility. The ``ToastRegion``
+ * render prop dispatches these via ``isCustomToastContent``; ``close``
+ * dismisses this toast from the queue.
+ */
+export interface CustomToastContent {
+  render: (toast: QueuedToast<ToastContent>, close: () => void) => ReactNode
+}
+
+/** Union of all content the shared toast queue can carry. */
+export type ToastContent = StreamlitToastContent | CustomToastContent
+
+/** Whether a queued toast carries app-level custom-rendered content. */
+export function isCustomToastContent(
+  content: ToastContent
+): content is CustomToastContent {
+  return "render" in content
+}
+
+export const toastQueue = new ToastQueue<ToastContent>({
   maxVisibleToasts: Infinity,
 })
