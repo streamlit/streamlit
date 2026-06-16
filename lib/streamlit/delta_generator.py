@@ -628,14 +628,19 @@ class DeltaGenerator(
         if ctx:
             dg = _redirect_for_outside_write(dg, ThreadState.get(), ctx)
 
-        block_delta_path = list(dg._cursor.delta_path)
+        # The redirect only ever returns a DG with a cursor and root container
+        # (the guard above for the original dg, or a freshly built wrapper), but
+        # reassigning dg drops the narrowing, so re-resolve them explicitly.
+        parent_cursor = cast("Cursor", dg._cursor)
+        root_container = cast("int", dg._root_container)
+        block_delta_path = list(parent_cursor.delta_path)
 
         # Normally we'd return a new DeltaGenerator that uses the locked cursor
         # below. But in this case we want to return a DeltaGenerator that uses
         # a brand new cursor for this new block we're creating.
         block_cursor = cursor.RunningCursor(
-            root_container=dg._root_container,
-            parent_path=(*dg._cursor.parent_path, dg._cursor.index),
+            root_container=root_container,
+            parent_path=(*parent_cursor.parent_path, parent_cursor.index),
         )
 
         # `dg_type` param added for st.status container. It allows us to
@@ -646,7 +651,7 @@ class DeltaGenerator(
         block_dg = cast(
             "DeltaGenerator",
             dg_type(
-                root_container=dg._root_container,
+                root_container=root_container,
                 cursor=block_cursor,
                 parent=dg,
                 block_type=block_type,
@@ -658,7 +663,7 @@ class DeltaGenerator(
         block_dg._creating_fragment_id = ThreadState.get().fragment_id if ctx else None
 
         # Must be called to increment this cursor's index.
-        dg._cursor.get_locked_cursor()
+        parent_cursor.get_locked_cursor()
         _enqueue_add_block(block_delta_path, block_proto)
 
         caching.save_block_message(
@@ -788,7 +793,7 @@ def _needs_outside_wrapper(
     # is unreachable here (a fragment's own scope writes to it via the fragment
     # path) and EVENT needs no positional isolation.
     if dg._is_top_level:
-        return dg._root_container in (RootContainer.SIDEBAR, RootContainer.BOTTOM)
+        return dg._root_container in {RootContainer.SIDEBAR, RootContainer.BOTTOM}
 
     cursor_path = tuple(dg._cursor.delta_path) if dg._cursor else ()
     if _is_inside_fragment_path(cursor_path, ts.delta_path):
@@ -834,6 +839,7 @@ def _get_or_create_outside_wrapper(
         )
 
     parent_cursor = cast("Cursor", dg._cursor)
+    root_container = cast("int", dg._root_container)
     block_proto = Block_pb2.Block()
     block_proto.transparent.SetInParent()
     block_proto.allow_empty = True
@@ -846,15 +852,15 @@ def _get_or_create_outside_wrapper(
     parent_path = (*parent_cursor.parent_path, parent_cursor.index)
     if parent_cursor.is_locked:
         wrapper_cursor: Cursor = cursor.LockedCursor(
-            root_container=dg._root_container, parent_path=parent_path, index=0
+            root_container=root_container, parent_path=parent_path, index=0
         )
     else:
         wrapper_cursor = cursor.RunningCursor(
-            root_container=dg._root_container, parent_path=parent_path
+            root_container=root_container, parent_path=parent_path
         )
 
     wrapper_dg = DeltaGenerator(
-        root_container=dg._root_container,
+        root_container=root_container,
         cursor=wrapper_cursor,
         parent=dg,
         block_type="transparent",
