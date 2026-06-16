@@ -264,9 +264,7 @@ class MemoryFragmentStorage(FragmentStorage):
             seen_ids.add(parent_id)
             current = parent_id
 
-    def _remove(
-        self, fragment_id: str, *, evict_wrappers: bool = True
-    ) -> None:
+    def _remove(self, fragment_id: str, *, evict_wrappers: bool = True) -> None:
         del self._fragments[fragment_id]
         self._parent_by_id.pop(fragment_id, None)
         self._registration_sequence_by_id.pop(fragment_id, None)
