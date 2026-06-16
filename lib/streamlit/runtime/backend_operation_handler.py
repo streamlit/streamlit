@@ -162,9 +162,27 @@ class InstallSkillsHandler(BackendOperationHandler):
                 error_msg="Skills install is not available in headless mode.",
             )
 
+        # Defense in depth: the in-app nudge is offered only on localhost, but
+        # that gate lives in the frontend. A request that reaches this handler
+        # on a non-headless, publicly reachable server must not trigger a
+        # server-side install (which writes files and, in the global fallback,
+        # downloads from GitHub). Honor the install only in the same local
+        # agent-development context that surfaces the nudge: refuse when no
+        # agent harness is detected on this host. This reuses the same
+        # detection that gates the recommendation, so the action and the offer
+        # share one source of truth.
+        if not metrics_util.detect_installed_agents():
+            return BackendOperationResponse(
+                request_id=request.request_id,
+                error_msg="Skills install is not available in this environment.",
+            )
+
         try:
             # Run off the event loop: installing does filesystem I/O (and,
-            # in the global fallback, a network download).
+            # in the global fallback, a network download). The installer
+            # resolves the project root from the server's working directory,
+            # which in the common case (app run from the project/repo root)
+            # matches the app dir the nudge gate detected against.
             result = await asyncio.to_thread(
                 skills.install_skills, global_mode=False, yes=True
             )

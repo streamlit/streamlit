@@ -312,6 +312,12 @@ export class App extends PureComponent<Props, State> {
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
 
+  // Whether we've already logged a skills-nudge impression for this page load.
+  // `handleInitialization` re-runs on websocket reconnect, so without this the
+  // same nudge would log multiple `skillsNudgeShown` events and inflate the
+  // adoption funnel. Reset only by a full page reload (a new App instance).
+  private skillsNudgeImpressionTracked: boolean = false
+
   public constructor(props: Props) {
     super(props)
 
@@ -1500,7 +1506,13 @@ export class App extends PureComponent<Props, State> {
       !this.isSkillsNudgeSnoozed()
     ) {
       this.setState({ showSkillsNudge: true })
-      this.trackSkillsNudge("skillsNudgeShown")
+      // `handleInitialization` re-runs on reconnect; only log the impression
+      // the first time the nudge is shown this page load so the funnel's
+      // numerator isn't inflated by connection churn.
+      if (!this.skillsNudgeImpressionTracked) {
+        this.skillsNudgeImpressionTracked = true
+        this.trackSkillsNudge("skillsNudgeShown")
+      }
     }
   }
 

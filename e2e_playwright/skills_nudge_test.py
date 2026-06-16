@@ -19,14 +19,17 @@ from typing import TYPE_CHECKING
 import pytest
 from playwright.sync_api import expect
 
-from e2e_playwright.conftest import start_app_server, wait_for_app_loaded
+from e2e_playwright.conftest import (
+    start_app_server,
+    wait_for_app_loaded,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
     from playwright.sync_api import Page
 
-    from e2e_playwright.conftest import AsyncSubprocess
+    from e2e_playwright.conftest import AsyncSubprocess, ImageCompareFunction
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -62,7 +65,9 @@ def app_server(
     print(proc.terminate(), flush=True)
 
 
-def test_skills_nudge_shows_and_dismisses(app: Page) -> None:
+def test_skills_nudge_shows_and_dismisses(
+    app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
     """The nudge appears in local dev with an agent but no skills, can be
     permanently dismissed, and stays gone after a reload.
     """
@@ -73,6 +78,9 @@ def test_skills_nudge_shows_and_dismisses(app: Page) -> None:
     expect(nudge.get_by_role("button", name="Don't show again")).to_be_visible()
     # The close (✕) control exposes an accessible "Dismiss" name.
     expect(nudge.get_by_role("button", name="Dismiss")).to_be_visible()
+
+    # Snapshot the idle toast before any interaction mutates its state.
+    assert_snapshot(nudge, name="skills_nudge-idle")
 
     # Permanently dismiss; the toast disappears immediately.
     nudge.get_by_role("button", name="Don't show again").click()

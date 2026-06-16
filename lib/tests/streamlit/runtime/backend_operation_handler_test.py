@@ -183,6 +183,7 @@ def test_install_skills_handler_installs_in_project_mode() -> None:
     )
     with (
         patch("streamlit.config.get_option", return_value=False),
+        patch.object(metrics_util, "detect_installed_agents", return_value=["claude"]),
         patch(
             "streamlit.web.skills.install_skills", return_value=install_result
         ) as mock_install,
@@ -208,6 +209,7 @@ def test_install_skills_handler_reports_failure() -> None:
     """Install failures are returned via the response's error message."""
     with (
         patch("streamlit.config.get_option", return_value=False),
+        patch.object(metrics_util, "detect_installed_agents", return_value=["claude"]),
         patch(
             "streamlit.web.skills.install_skills",
             side_effect=click.ClickException("No skills found"),
@@ -236,6 +238,25 @@ def test_install_skills_handler_refuses_in_headless_mode() -> None:
     assert not response.HasField("install_skills")
 
 
+def test_install_skills_handler_refuses_without_agent() -> None:
+    """Defense in depth: with no agent harness detected (e.g. a request that
+    reaches a non-headless public server), the install is refused and never
+    attempted, mirroring the recommendation gate.
+    """
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(metrics_util, "detect_installed_agents", return_value=[]),
+        patch("streamlit.web.skills.install_skills") as mock_install,
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler().handle(_install_skills_request(), "session-id")
+        )
+
+    mock_install.assert_not_called()
+    assert response.error_msg == "Skills install is not available in this environment."
+    assert not response.HasField("install_skills")
+
+
 def test_install_skills_handler_runs_real_installer(tmp_path: Path) -> None:
     """End-to-end: the handler runs the real installer and reports where skills
     landed, so a click on the nudge actually creates the symlinks.
@@ -256,6 +277,7 @@ def test_install_skills_handler_runs_real_installer(tmp_path: Path) -> None:
 
     with (
         patch("streamlit.config.get_option", return_value=False),
+        patch.object(metrics_util, "detect_installed_agents", return_value=["claude"]),
         patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
         patch("pathlib.Path.cwd", return_value=project_dir),
         # No ~/.claude, so only .agents/skills is targeted.
