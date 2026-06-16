@@ -72,12 +72,14 @@ const DIAGRAM_TYPE_MAP: Record<string, string> = {
   gitGraph: "Git graph",
   mindmap: "mindmap",
   timeline: "timeline",
-  zenuml: "ZenUML diagram",
   sankey: "Sankey diagram",
   packet: "packet diagram",
   block: "block diagram",
   architecture: "architecture diagram",
   kanban: "Kanban board",
+  xychart: "XY chart",
+  radar: "radar chart",
+  treemap: "treemap",
 } as const
 
 /**
@@ -169,8 +171,15 @@ interface MermaidChartProps {
 }
 
 /**
- * Prepares SVG for responsive rendering by ensuring viewBox exists
- * and removing explicit dimensions to allow CSS control.
+ * Prepares the rendered SVG for responsive display inside an <img>.
+ *
+ * Mermaid emits SVGs with `width="100%"` plus an inline `max-width` style, which
+ * leaves the <img> without a definite intrinsic size. Inside a shrink-to-fit
+ * container (e.g. `width="content"`) that causes the image to collapse to 0×0.
+ * To avoid this we derive concrete pixel dimensions from the `viewBox` (falling
+ * back to the width/height attributes) and set them as the SVG's intrinsic size.
+ * CSS then scales the diagram down to fit its container while preserving the
+ * aspect ratio.
  */
 function prepareResponsiveSvg(svg: string): string {
   const parser = new DOMParser()
@@ -181,19 +190,38 @@ function prepareResponsiveSvg(svg: string): string {
     return svg
   }
 
-  // Get dimensions before removing (needed for fallback viewBox)
-  const width = svgElement.getAttribute("width") || "100"
-  const height = svgElement.getAttribute("height") || "100"
+  // Derive intrinsic dimensions, preferring the viewBox over the width/height
+  // attributes (which mermaid frequently sets to "100%").
+  let intrinsicWidth = 0
+  let intrinsicHeight = 0
 
-  // Ensure viewBox exists for proper scaling
-  if (!svgElement.hasAttribute("viewBox")) {
-    svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`)
+  const viewBox = svgElement.getAttribute("viewBox")
+  if (viewBox) {
+    const [, , vbWidth, vbHeight] = viewBox.split(/[\s,]+/).map(Number)
+    if (vbWidth > 0 && vbHeight > 0) {
+      intrinsicWidth = vbWidth
+      intrinsicHeight = vbHeight
+    }
   }
 
-  // Remove explicit dimensions to allow CSS to control sizing
-  svgElement.removeAttribute("width")
-  svgElement.removeAttribute("height")
+  if (!intrinsicWidth || !intrinsicHeight) {
+    intrinsicWidth =
+      Number.parseFloat(svgElement.getAttribute("width") ?? "") || 100
+    intrinsicHeight =
+      Number.parseFloat(svgElement.getAttribute("height") ?? "") || 100
+    svgElement.setAttribute(
+      "viewBox",
+      `0 0 ${intrinsicWidth} ${intrinsicHeight}`
+    )
+  }
+
+  // Set explicit pixel dimensions so the <img> has a definite intrinsic size and
+  // aspect ratio; CSS handles the responsive down-scaling.
+  svgElement.setAttribute("width", String(intrinsicWidth))
+  svgElement.setAttribute("height", String(intrinsicHeight))
   svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet")
+  // Remove mermaid's inline max-width so it cannot constrain the intrinsic size.
+  svgElement.style.removeProperty("max-width")
 
   return new XMLSerializer().serializeToString(svgElement)
 }
@@ -217,6 +245,18 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
     yellow: blend(markdownBgColors.yellowbg, theme.colors.bgColor),
     gray: blend(markdownBgColors.graybg, theme.colors.bgColor),
   }
+
+  // Saturated colors for data series (bars, lines, points). The lighter tints in
+  // `palette` above work for node fills but are too low-contrast for thin marks.
+  const dataPalette = [
+    theme.colors.blueTextColor,
+    theme.colors.greenTextColor,
+    theme.colors.orangeTextColor,
+    theme.colors.redTextColor,
+    theme.colors.violetTextColor,
+    theme.colors.yellowTextColor,
+    theme.colors.grayTextColor,
+  ]
 
   return {
     darkMode: !isLightTheme,
@@ -330,6 +370,31 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
       fillType5: palette.yellow,
       fillType6: palette.gray,
       fillType7: theme.colors.secondaryBg,
+
+      // XY chart: data series (bars/lines) use saturated colors for contrast
+      // (the lighter node-fill tints would be nearly invisible for thin marks),
+      // and the background/text/axis colors follow the theme so it doesn't show
+      // a white plot card in dark mode.
+      xyChart: {
+        backgroundColor: theme.colors.bgColor,
+        titleColor: theme.colors.bodyText,
+        xAxisLabelColor: theme.colors.bodyText,
+        xAxisTitleColor: theme.colors.bodyText,
+        xAxisTickColor: theme.colors.fadedText60,
+        xAxisLineColor: theme.colors.fadedText60,
+        yAxisLabelColor: theme.colors.bodyText,
+        yAxisTitleColor: theme.colors.bodyText,
+        yAxisTickColor: theme.colors.fadedText60,
+        yAxisLineColor: theme.colors.fadedText60,
+        plotColorPalette: dataPalette.join(", "),
+      },
+
+      // Radar series reuse the cScale colors; raise opacity and stroke width so
+      // the plotted curves stay visible against the background.
+      radar: {
+        curveOpacity: 0.5,
+        curveStrokeWidth: 2.5,
+      },
     },
   }
 }

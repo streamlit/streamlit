@@ -551,10 +551,14 @@ export const StyledMermaidContainer = styled.div<{
   height: isFullScreen ? "100%" : "auto",
   width: "100%",
   "& img": {
+    // Render the diagram at its natural size, scaled down to fit the container
+    // width. We intentionally do not clamp the height inline: a fixed max-height
+    // combined with a preserved aspect ratio shrinks tall/narrow diagrams into an
+    // unreadable sliver. Tall diagrams stay readable and can use fullscreen.
     width: isFullScreen ? "100%" : "auto",
     maxWidth: "100%",
-    height: "auto",
-    maxHeight: isFullScreen ? "100%" : "25rem",
+    height: isFullScreen ? "100%" : "auto",
+    maxHeight: isFullScreen ? "100%" : "none",
     objectFit: "contain",
     borderRadius: theme.radii.default,
   },

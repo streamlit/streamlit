@@ -24,13 +24,40 @@ from e2e_playwright.conftest import ImageCompareFunction
 def test_mermaid_charts_render(app: Page):
     """Test that all mermaid chart types render correctly."""
     mermaid_charts = app.get_by_test_id("stMermaidChart")
-    expect(mermaid_charts).to_have_count(7)
+    expect(mermaid_charts).to_have_count(9)
 
     # Check that each chart contains an img element with blob URL (rendered mermaid)
-    for i in range(7):
+    for i in range(9):
         img = mermaid_charts.nth(i).locator("img")
         expect(img).to_be_visible()
         expect(img).to_have_attribute("src", re.compile(r"^blob:"))
+
+
+def test_chart_sizing(app: Page):
+    """Test mermaid chart sizing for ``width="content"`` and tall diagrams.
+
+    Regression guards for two bugs: a ``width="content"`` diagram that collapsed
+    to a zero-size image, and tall diagrams that were clamped to an unreadable
+    sliver by a fixed inline ``max-height``.
+    """
+    mermaid_charts = app.get_by_test_id("stMermaidChart")
+
+    # The "Content width" chart (second to last) must render at a visible,
+    # non-zero size rather than collapsing to 0x0.
+    content_img = mermaid_charts.nth(7).locator("img")
+    expect(content_img).to_be_visible()
+    content_box = content_img.bounding_box()
+    assert content_box is not None
+    assert content_box["width"] > 50, content_box
+    assert content_box["height"] > 20, content_box
+
+    # The tall chart (last) must not be clamped to a short strip: its height
+    # should clearly exceed the previous 25rem (~400px) inline max-height.
+    tall_img = mermaid_charts.nth(8).locator("img")
+    expect(tall_img).to_be_visible()
+    tall_box = tall_img.bounding_box()
+    assert tall_box is not None
+    assert tall_box["height"] > 450, tall_box
 
 
 def test_chart_snapshots(app: Page, assert_snapshot: ImageCompareFunction):

@@ -108,3 +108,10 @@ mindmap
             Tabs
             Containers
 """)
+
+# Sizing regression cases (kept last so existing snapshot indices are stable).
+st.subheader("Content width")
+st.mermaid_chart("graph LR\n    A --> B --> C", width="content")
+
+st.subheader("Tall diagram")
+st.mermaid_chart("graph TD\n" + "\n".join(f"    N{i} --> N{i + 1}" for i in range(12)))
