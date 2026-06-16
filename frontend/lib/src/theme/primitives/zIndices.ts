@@ -35,6 +35,8 @@ const cacheSpinner = sidebar + 1
 // Toasts should overlap chatInput container
 // should also show above dialog
 const toast = popup + 1
+// Used for dropdowns that need to render above dialogs
+const dropdownAboveDialog = popup + 10
 
 export const zIndices = {
   hide: -1,
@@ -56,4 +58,5 @@ export const zIndices = {
   cacheSpinner,
   toast,
   headerDecoration,
+  dropdownAboveDialog,
 }
