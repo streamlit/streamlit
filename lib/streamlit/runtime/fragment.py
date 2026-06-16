@@ -487,7 +487,13 @@ def _fragment(
             if skip_container:
                 ThreadState.update(pre_allocated_container_fragment_id=None)
 
-            with ThreadState.scoped(fragment_id=fragment_id):
+            # Reset delta_path so it does not leak in from an enclosing fragment.
+            # The fragment's own delta_path is established below, after its
+            # container is created. Until then, outside-write detection must stay
+            # inert (it keys off delta_path); otherwise the container that frames
+            # this fragment (e.g. a dialog's event container) would be misread as
+            # a write outside the enclosing fragment's scope.
+            with ThreadState.scoped(fragment_id=fragment_id, delta_path=None):
                 result = None
                 with active_hash_context:
                     container_ctx = (

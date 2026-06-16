@@ -1369,6 +1369,20 @@ class NeedsOutsideWrapperTest(DeltaGeneratorTestCase):
             is False
         )
 
+    def test_no_delta_path_returns_false(self) -> None:
+        """Detection stays inert before a fragment establishes its delta path.
+
+        A fragment's own framing container is created while ``fragment_id`` is set
+        but ``delta_path`` is not yet known; that window must not be treated as an
+        outside write.
+        """
+        ts = FragmentThreadState(fragment_id="frag", delta_path=None)
+        dg = DeltaGenerator(root_container=RootContainer.SIDEBAR)
+        assert (
+            delta_generator._needs_outside_wrapper(dg, ts, self.fragment_storage)
+            is False
+        )
+
     def test_sidebar_root_returns_true(self) -> None:
         """A fragment writing directly to the sidebar root needs a wrapper."""
         dg = DeltaGenerator(root_container=RootContainer.SIDEBAR)
