@@ -52,8 +52,9 @@ uvicorn asgi_app:app --host 0.0.0.0 --port 8501
 
 ## Direct Python launchers with `App.run()`
 
-For shareable ASGI launchers that should run with `python app.py` or `uv run app.py`,
-call `App.run()` under a main guard in the wrapper:
+For shareable ASGI launchers that should run with `python app.py`, `uv run app.py`,
+or `uvx --with streamlit python app.py`, call `App.run()` under a main guard in
+the wrapper:
 
 ```python
 # app.py
@@ -73,9 +74,6 @@ if __name__ == "__main__":
     app.run(config={"server.port": 8502, "server.address": "0.0.0.0"})
 ```
 
-This launch mode is tracked separately from `streamlit run` and external ASGI servers
-with `server_mode="starlette-app-direct"`.
-
 Use this pattern only for launcher modules such as `app = st.App("streamlit_app.py")`.
 Avoid same-file launchers like `app = st.App(__file__)`: Streamlit executes app scripts
 in a fake `__main__` module, so an `if __name__ == "__main__": app.run()` block inside
@@ -87,7 +85,9 @@ The `script_path` argument points to the Streamlit UI script, not the ASGI wrapp
 
 Relative paths are resolved differently depending on how the app starts:
 - With `streamlit run asgi_app.py`, relative paths resolve from the script passed to `streamlit run`.
-- With `python asgi_app.py` and `App.run()`, relative paths resolve from the launcher module.
+- With `App.run()` direct launchers (`python asgi_app.py`, `uv run asgi_app.py`,
+  or `uvx --with streamlit python asgi_app.py`), relative paths resolve from the
+  launcher module.
 - With `uvicorn asgi_app:app`, relative paths resolve from the current working directory.
 
 Use an absolute path if the wrapper may be imported from different working directories.
