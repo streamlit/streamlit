@@ -38,6 +38,7 @@ export const Box = styled.div<{
  *
  * @see Selectbox StyledPopover
  * @see Popover StyledPopoverBody
+ * @see MenuButton StyledMenuPopover
  */
 export const getOverlayZIndex = (theme: EmotionTheme): string =>
   `${theme.zIndices.popup} !important`
