@@ -324,6 +324,30 @@ describe("Dynamic popover (widget mode)", () => {
       fragmentId
     )
   })
+
+  it("registers query param binding when queryParamKey is set", () => {
+    const widgetMgr = createWidgetMgr()
+    const registerSpy = vi.spyOn(widgetMgr, "registerQueryParamBinding")
+    const props = getProps(
+      { open: true, id: "popover-123", queryParamKey: "my_qp" },
+      { widgetMgr }
+    )
+
+    render(
+      <Popover {...props}>
+        <div>test</div>
+      </Popover>
+    )
+
+    expect(registerSpy).toHaveBeenCalledWith(
+      "popover-123",
+      "my_qp",
+      "bool_value",
+      true,
+      false,
+      undefined
+    )
+  })
 })
 
 describe("passive state persistence", () => {

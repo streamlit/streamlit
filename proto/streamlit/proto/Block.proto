@@ -113,6 +113,7 @@ message Block {
     optional string id = 4;
     // Visual style of the expandable container.
     Type type = 5;
+    optional string query_param_key = 6;
   }
 
   message Dialog {
@@ -148,6 +149,7 @@ message Block {
     // When absent, tabs may still have a block-level id for CSS key
     // styling but should not trigger reruns on tab change.
     optional string id = 2;
+    optional string query_param_key = 3;
   }
 
   message Tab {
@@ -167,6 +169,7 @@ message Block {
     // When absent, the popover may still have a block-level id for CSS
     // key styling but should not trigger reruns on toggle.
     optional string id = 8;
+    optional string query_param_key = 9;
 
     reserved 2;
   }

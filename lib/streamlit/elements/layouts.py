@@ -40,6 +40,7 @@ from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidBindValueError,
     StreamlitInvalidColumnSpecError,
     StreamlitInvalidVerticalAlignmentError,
     StreamlitValueError,
@@ -48,7 +49,7 @@ from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import BindOption, register_widget
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -637,6 +638,7 @@ class LayoutsMixin:
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        bind: BindOption = None,
     ) -> Sequence[TabContainer]:
         r"""Insert containers separated into tabs.
 
@@ -872,6 +874,16 @@ class LayoutsMixin:
                 "The input argument to st.tabs must contain at least one tab label."
             )
 
+        if bind is not None and bind != "query-params":
+            raise StreamlitInvalidBindValueError(bind)
+
+        if bind == "query-params" and key is None:
+            raise StreamlitAPIException(
+                "When using bind='query-params', the widget must have a unique 'key' "
+                "parameter specified. This 'key' will be used as the name of the "
+                "query parameter."
+            )
+
         if default and default not in tabs:
             raise StreamlitAPIException(
                 f"The default tab '{default}' is not in the list of tabs."
@@ -890,7 +902,7 @@ class LayoutsMixin:
 
         key = to_key(key)
         default_index = tabs.index(default) if default else 0
-        is_stateful = on_change != "ignore"
+        is_stateful = on_change != "ignore" or bind == "query-params"
 
         element_id: str | None = None
         block_id: str | None = None
@@ -931,6 +943,8 @@ class LayoutsMixin:
                 on_change_handler=on_change if callable(on_change) else None,
                 args=args if callable(on_change) else None,
                 kwargs=kwargs if callable(on_change) else None,
+                bind=bind,
+                clearable=False,
             )
 
             current_tab_label = tabs_state.value
@@ -962,6 +976,9 @@ class LayoutsMixin:
             current_tab_index = default_index
 
         block_proto.tab_container.default_tab_index = current_tab_index
+
+        if bind == "query-params":
+            block_proto.tab_container.query_param_key = str(key) if key is not None else "tabs"
 
         if is_stateful and element_id is not None:
             block_proto.tab_container.id = element_id
@@ -997,6 +1014,7 @@ class LayoutsMixin:
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        bind: BindOption = None,
     ) -> ExpanderContainer:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -1216,6 +1234,16 @@ class LayoutsMixin:
         if label is None:
             raise StreamlitAPIException("A label is required for an expander")
 
+        if bind is not None and bind != "query-params":
+            raise StreamlitInvalidBindValueError(bind)
+
+        if bind == "query-params" and key is None:
+            raise StreamlitAPIException(
+                "When using bind='query-params', the widget must have a unique 'key' "
+                "parameter specified. This 'key' will be used as the name of the "
+                "query parameter."
+            )
+
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:
             raise StreamlitValueError(
                 "on_change", ["'rerun'", "'ignore'", "a callable"]
@@ -1225,7 +1253,7 @@ class LayoutsMixin:
             raise StreamlitValueError("type", ["'default'", "'compact'"])
 
         key = to_key(key)
-        is_stateful = on_change != "ignore"
+        is_stateful = on_change != "ignore" or bind == "query-params"
 
         current_expanded = expanded
         element_id: str | None = None
@@ -1268,6 +1296,8 @@ class LayoutsMixin:
                 on_change_handler=on_change if callable(on_change) else None,
                 args=args if callable(on_change) else None,
                 kwargs=kwargs if callable(on_change) else None,
+                bind=bind,
+                clearable=False,
             )
 
             current_expanded = expander_state.value
@@ -1289,6 +1319,9 @@ class LayoutsMixin:
         )
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
+
+        if bind == "query-params":
+            expandable_proto.query_param_key = str(key) if key is not None else label
 
         if is_stateful and element_id is not None:
             expandable_proto.id = element_id
@@ -1330,6 +1363,7 @@ class LayoutsMixin:
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        bind: BindOption = None,
     ) -> PopoverContainer:
         r"""Insert a popover container.
 
@@ -1584,6 +1618,16 @@ class LayoutsMixin:
         if label is None:
             raise StreamlitAPIException("A label is required for a popover")
 
+        if bind is not None and bind != "query-params":
+            raise StreamlitInvalidBindValueError(bind)
+
+        if bind == "query-params" and key is None:
+            raise StreamlitAPIException(
+                "When using bind='query-params', the widget must have a unique 'key' "
+                "parameter specified. This 'key' will be used as the name of the "
+                "query parameter."
+            )
+
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
 
@@ -1600,7 +1644,7 @@ class LayoutsMixin:
             )
 
         key = to_key(key)
-        is_stateful = on_change != "ignore"
+        is_stateful = on_change != "ignore" or bind == "query-params"
 
         current_open = False
         element_id: str | None = None
@@ -1644,6 +1688,8 @@ class LayoutsMixin:
                 on_change_handler=on_change if callable(on_change) else None,
                 args=args if callable(on_change) else None,
                 kwargs=kwargs if callable(on_change) else None,
+                bind=bind,
+                clearable=False,
             )
 
             current_open = popover_state.value
@@ -1664,6 +1710,9 @@ class LayoutsMixin:
             popover_proto.help = str(help)
         if icon is not None:
             popover_proto.icon = validate_icon_or_emoji(icon)
+
+        if bind == "query-params":
+            popover_proto.query_param_key = str(key) if key is not None else label
 
         if is_stateful and element_id is not None:
             popover_proto.id = element_id

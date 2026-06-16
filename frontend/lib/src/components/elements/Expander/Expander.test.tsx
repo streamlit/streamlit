@@ -370,6 +370,30 @@ describe("widget mode (widgetMgr + element.id)", () => {
       fragmentId
     )
   })
+
+  it("registers query param binding when queryParamKey is set", () => {
+    const widgetMgr = createWidgetMgr()
+    const registerSpy = vi.spyOn(widgetMgr, "registerQueryParamBinding")
+    const props = getProps(
+      { expanded: true, id: "expander-123", queryParamKey: "my_qp" },
+      { widgetMgr }
+    )
+
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(registerSpy).toHaveBeenCalledWith(
+      "expander-123",
+      "my_qp",
+      "bool_value",
+      true,
+      false,
+      undefined
+    )
+  })
 })
 
 describe("passive state persistence", () => {

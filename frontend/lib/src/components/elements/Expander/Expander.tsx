@@ -22,6 +22,7 @@ import { notNullOrUndefined } from "@streamlit/utils"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -124,6 +125,15 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
       fragmentId
     )
   }, [widgetId, element.expanded])
+
+  useQueryParamBinding(
+    widgetMgr,
+    widgetId ?? "",
+    element.queryParamKey,
+    "bool_value",
+    element.expanded ?? false,
+    false
+  )
 
   // Callback to notify backend of toggle (only used in widget mode)
   const handleWidgetToggle = useCallback(

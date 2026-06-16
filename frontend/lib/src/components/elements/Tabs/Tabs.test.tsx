@@ -393,12 +393,35 @@ describe("st.tabs", () => {
         { fromUi: false },
         undefined
       )
-      // Must NOT use fromUi:true — that would schedule a spurious rerun
       expect(setStringValueSpy).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.anything(),
         { fromUi: true },
         expect.anything()
+      )
+    })
+
+    it("registers query param binding when queryParamKey is set", () => {
+      const widgetMgr = createWidgetMgr()
+      const registerSpy = vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+      const widgetId = "tabs-widget-id"
+      const node = makeTabsNode(3, { blockId: widgetId, widgetId })
+      node.deltaBlock.tabContainer = {
+        defaultTabIndex: 1,
+        id: widgetId,
+        queryParamKey: "my_qp",
+      }
+
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      expect(registerSpy).toHaveBeenCalledWith(
+        widgetId,
+        "my_qp",
+        "string_value",
+        "Tab 1",
+        false,
+        undefined
       )
     })
   })

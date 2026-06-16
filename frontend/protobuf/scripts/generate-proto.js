@@ -23,8 +23,11 @@ const gitRoot = execSync("git rev-parse --show-toplevel", {
   encoding: "utf8",
 }).trim()
 const protoDir = path.join(gitRoot, "proto")
-const protoGlob = path.join(protoDir, "streamlit/proto/*.proto")
-console.log(`Proto files: ${protoGlob}`)
+const protoFilesDir = path.join(protoDir, "streamlit/proto")
+const protoFiles = fs.readdirSync(protoFilesDir)
+  .filter(file => file.endsWith(".proto"))
+  .map(file => path.join(protoFilesDir, file))
+console.log(`Proto files: ${protoFiles.join(", ")}`)
 const outputJsFile = "proto.js"
 const outputDtsFile = "proto.d.ts"
 
@@ -34,7 +37,7 @@ const pbjsCommand = [
   "run",
   "--silent",
   "pbjs",
-  protoGlob,
+  ...protoFiles,
   "--path",
   protoDir,
   "-t",
@@ -52,6 +55,7 @@ const runCommand = (commandAndArgs, outputFile) => {
   const result = spawnSync(cmd, args, {
     maxBuffer: 4096 * 1024,
     encoding: "utf8",
+    shell: true,
   })
 
   if (result.error) {

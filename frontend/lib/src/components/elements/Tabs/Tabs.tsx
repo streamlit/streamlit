@@ -39,6 +39,7 @@ import {
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -114,6 +115,17 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         return tabNode?.deltaBlock?.tab?.label ?? index.toString()
       }),
     [node.children]
+  )
+
+  const queryParamKey = node.deltaBlock?.tabContainer?.queryParamKey
+
+  useQueryParamBinding(
+    widgetMgr,
+    widgetId ?? "",
+    queryParamKey,
+    "string_value",
+    allTabLabels[defaultTabIndex] ?? "",
+    false
   )
 
   // Memoize stale flags once so both the tab-button and tab-panel maps share

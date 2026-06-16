@@ -39,6 +39,7 @@ import {
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -112,6 +113,15 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       fragmentId
     )
   }, [widgetId, element.open])
+
+  useQueryParamBinding(
+    widgetMgr,
+    widgetId ?? "",
+    element.queryParamKey,
+    "bool_value",
+    element.open ?? false,
+    false
+  )
 
   // It would be nice to remove this since it uses a resize observer
   // and therefore has a performance overhead. However, this is needed

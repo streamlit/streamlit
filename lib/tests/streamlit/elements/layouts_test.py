@@ -624,6 +624,24 @@ class ExpanderTest(DeltaGeneratorTestCase):
         with st.form("form"):
             st.expander("label", on_change="rerun")
 
+    def test_bind_query_params_custom_key(self):
+        """Test that bind='query-params' with custom key sets the query_param_key."""
+        expander = st.expander("label", key="my_key", bind="query-params")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.expandable.query_param_key == "my_key"
+        assert expander_block.add_block.expandable.id != ""
+        assert expander.open is False
+
+    def test_bind_query_params_no_key_raises(self):
+        """Test that bind='query-params' without key raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.expander("label", bind="query-params")
+
+    def test_invalid_bind_raises(self):
+        """Test that invalid bind values raise StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.expander("label", bind="invalid")
+
 
 class ContainerTest(DeltaGeneratorTestCase):
     def test_border_parameter(self):
@@ -1255,6 +1273,24 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         with st.form("form"):
             st.popover("label", on_change="rerun")
 
+    def test_bind_query_params_custom_key(self):
+        """Test that bind='query-params' with custom key sets the query_param_key."""
+        popover = st.popover("label", key="my_key", bind="query-params")
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.popover.query_param_key == "my_key"
+        assert popover_block.add_block.popover.id != ""
+        assert popover.open is False
+
+    def test_bind_query_params_no_key_raises(self):
+        """Test that bind='query-params' without key raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.popover("label", bind="query-params")
+
+    def test_invalid_bind_raises(self):
+        """Test that invalid bind values raise StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.popover("label", bind="invalid")
+
 
 class StatusContainerTest(DeltaGeneratorTestCase):
     def test_label_required(self):
@@ -1741,6 +1777,26 @@ class TabsTest(DeltaGeneratorTestCase):
         """Test that on_change='rerun' inside st.form does not raise (not a callback)."""
         with st.form("form"):
             st.tabs(["A", "B"], on_change="rerun")
+
+    def test_bind_query_params_custom_key(self):
+        """Test that bind='query-params' with custom key sets the query_param_key."""
+        tabs = st.tabs(["A", "B"], key="my_key", bind="query-params")
+        all_deltas = self.get_all_deltas_from_queue()
+        container_block = all_deltas[0]
+        assert container_block.add_block.tab_container.query_param_key == "my_key"
+        assert container_block.add_block.tab_container.id != ""
+        assert tabs[0].open is True
+        assert tabs[1].open is False
+
+    def test_bind_query_params_no_key_raises(self):
+        """Test that bind='query-params' without key raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.tabs(["A", "B"], bind="query-params")
+
+    def test_invalid_bind_raises(self):
+        """Test that invalid bind values raise StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.tabs(["A", "B"], bind="invalid")
 
 
 class DialogTest(DeltaGeneratorTestCase):
