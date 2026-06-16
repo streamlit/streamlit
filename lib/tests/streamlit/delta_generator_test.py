@@ -1541,19 +1541,19 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
         assert len(wrappers) == 1
         assert wrappers[0].creating_fragment_id is None
 
-    def test_parallel_worker_redirect_is_noop(self) -> None:
-        """_redirect_for_outside_write leaves a parallel worker's write unwrapped."""
+    def test_parallel_worker_needs_no_wrapper(self) -> None:
+        """A parallel worker's write never needs an outside wrapper."""
         outside = st.container()
         ts = FragmentThreadState(
             fragment_id="frag", delta_path=(0, 99), is_parallel_worker=True
         )
 
-        result = delta_generator._redirect_for_outside_write(
-            outside, ts, self.script_run_ctx
+        assert (
+            delta_generator._needs_outside_wrapper(
+                outside, ts, self.script_run_ctx.fragment_storage
+            )
+            is False
         )
-
-        assert result is outside
-        assert self.script_run_ctx.fragment_storage.outside_wrappers_for("frag") == []
 
 
 class ContainerCreatingFragmentStampTest(DeltaGeneratorTestCase):

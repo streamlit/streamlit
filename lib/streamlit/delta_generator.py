@@ -534,8 +534,10 @@ class DeltaGenerator(
                         "sequential fragment rerun instead."
                     )
 
-            if ts.fragment_id:
-                dg = _redirect_for_outside_write(dg, ts, ctx)
+            if ts.fragment_id and _needs_outside_wrapper(
+                dg, ts, ctx.fragment_storage
+            ):
+                dg = _get_or_create_outside_wrapper(dg, ts, ctx)
 
         # Warn if an element is being changed but the user isn't running the streamlit server.
         _maybe_print_use_warning()
@@ -625,8 +627,10 @@ class DeltaGenerator(
 
         ctx = get_script_run_ctx()
         ts = ThreadState.get()
-        if ctx and ts.fragment_id:
-            dg = _redirect_for_outside_write(dg, ts, ctx)
+        if ctx and ts.fragment_id and _needs_outside_wrapper(
+            dg, ts, ctx.fragment_storage
+        ):
+            dg = _get_or_create_outside_wrapper(dg, ts, ctx)
 
         # The redirect only ever returns a DG with a cursor and root container
         # (the guard above for the original dg, or a freshly built wrapper), but
@@ -762,21 +766,6 @@ def _enqueue_add_block(delta_path: list[int], block_proto: Block_pb2.Block) -> N
     _enqueue_message(msg)
 
 
-def _redirect_for_outside_write(
-    dg: DeltaGenerator, ts: FragmentThreadState, ctx: ScriptRunContext
-) -> DeltaGenerator:
-    """Redirect a fragment's outside-container write through its implicit wrapper.
-
-    Creates the wrapper on first write. Returns ``dg`` unchanged when no redirect
-    applies (parallel worker, or not an outside write).
-    """
-    if not ts.is_parallel_worker and _needs_outside_wrapper(
-        dg, ts, ctx.fragment_storage
-    ):
-        return _get_or_create_outside_wrapper(dg, ts, ctx)
-    return dg
-
-
 def _needs_outside_wrapper(
     dg: DeltaGenerator,
     ts: FragmentThreadState,
@@ -785,7 +774,7 @@ def _needs_outside_wrapper(
     """Return whether `dg` is a fragment writing to a container declared outside
     its scope, and not already inside one of this fragment's wrappers.
     """
-    if not ts.fragment_id or not ts.delta_path:
+    if ts.is_parallel_worker or not ts.fragment_id or not ts.delta_path:
         return False
 
     # Only SIDEBAR and BOTTOM roots need a wrapper: a fragment writing directly to
