@@ -32,7 +32,7 @@
   "devDependencies": {
     "typesync": "^0.14.3",
     "vite": "^8.0.16",
-    "vite-plugin-dts": "^5.0.1",
+    "vite-plugin-dts": "^5.0.2",
     "vitest": "^4.1.8"
   },
   "browserslist": [
