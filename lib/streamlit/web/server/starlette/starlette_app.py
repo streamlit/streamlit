@@ -514,8 +514,12 @@ class App:
         """Start a local Streamlit server for this app and block until stopped.
 
         Intended for launching an st.App launcher module directly, e.g.
-        ``python app.py``. Reuses the same embedded ASGI server runner that
-        ``streamlit run`` uses for st.App scripts.
+        ``python app.py``, ``uv run app.py``, or
+        ``uvx --with streamlit python app.py``. Reuses the same embedded ASGI
+        server runner that ``streamlit run`` uses for st.App scripts.
+
+        ``uv run app.py`` is useful for shareable launcher scripts that declare
+        their dependencies inline with PEP 723 script metadata.
 
         Parameters
         ----------
@@ -541,6 +545,21 @@ class App:
 
         >>> if __name__ == "__main__":
         ...     app.run(config={"server.port": 8502, "server.address": "0.0.0.0"})
+
+        A launcher run with ``uv run app.py`` can include its dependencies in
+        the script:
+
+        # /// script
+        # dependencies = [
+        #   "streamlit",
+        # ]
+        # ///
+        import streamlit as st
+
+        app = st.App("dashboard.py")
+
+        if __name__ == "__main__":
+            app.run()
         """
         from streamlit import config as streamlit_config
         from streamlit import runtime
