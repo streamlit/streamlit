@@ -194,6 +194,12 @@ class AppSession:
 
         self._debug_last_backmsg_id: str | None = None
 
+        # Cached per-session "recommend installing agent skills" flag. Computed
+        # lazily once (see _should_recommend_skills_install): the frontend only
+        # reads it on the first NewSession of a connection, yet that message is
+        # re-sent on every rerun, so the filesystem detection should not repeat.
+        self._recommend_skills_install: bool | None = None
+
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
         self._backend_operation_dispatcher = self._create_backend_operation_dispatcher()
@@ -861,20 +867,37 @@ class AppSession:
         imsg.session_id = self.id
 
         # Recommend installing the bundled agent skills when running locally
-        # with an AI agent present but no skills installed yet. Computed here
-        # so the frontend can surface a one-click "install skills" nudge. Pass
-        # the app dir the page-profile telemetry uses so both share the cached
-        # skill-detection result. Guarded so this non-essential nudge can never
-        # break session creation (defaults to not recommending on any failure).
-        try:
-            from streamlit.web import skills
-
-            app_dir = os.path.dirname(self._script_data.main_script_path)
-            imsg.recommend_skills_install = skills.should_show_skills_nudge(app_dir)
-        except Exception as ex:  # pragma: no cover - defensive
-            _LOGGER.debug("Failed to compute skills nudge recommendation", exc_info=ex)
+        # with an AI agent present but no skills installed yet, so the frontend
+        # can surface a one-click "install skills" nudge.
+        imsg.recommend_skills_install = self._should_recommend_skills_install()
 
         return msg
+
+    def _should_recommend_skills_install(self) -> bool:
+        """Whether to recommend installing the bundled agent skills.
+
+        Computed once per session and cached. ``_create_new_session_message``
+        runs on every rerun, but the frontend only reads this flag on the first
+        NewSession of a connection, so repeating the filesystem detection each
+        rerun would be wasted work. Passes the app dir the page-profile
+        telemetry uses (``dirname(main_script_path)``) so both share the cached
+        skill-detection result. Guarded so this non-essential nudge can never
+        break session creation (defaults to not recommending on any failure).
+        """
+        if self._recommend_skills_install is None:
+            self._recommend_skills_install = False
+            try:
+                from streamlit.web import skills
+
+                app_dir = os.path.dirname(self._script_data.main_script_path)
+                self._recommend_skills_install = skills.should_show_skills_nudge(
+                    app_dir
+                )
+            except Exception as ex:  # pragma: no cover - defensive
+                _LOGGER.debug(
+                    "Failed to compute skills nudge recommendation", exc_info=ex
+                )
+        return self._recommend_skills_install
 
     def _create_script_finished_message(
         self, status: ForwardMsg.ScriptFinishedStatus.ValueType

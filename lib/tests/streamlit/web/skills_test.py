@@ -1644,6 +1644,21 @@ class TestSummarizeInstall:
         """An empty result yields no summary text (nothing to report)."""
         assert skills.summarize_install(skills._InstallResult()) == ""
 
+    def test_collapses_absolute_paths_to_harness_skills(self) -> None:
+        """When install paths are absolute (app run from a subdirectory), the
+        summary still collapses to the concise ``<harness>/skills`` label.
+        """
+        result = skills._InstallResult(
+            installed=[
+                "/home/user/repo/.agents/skills/developing-with-streamlit",
+                "/home/user/repo/.claude/skills/developing-with-streamlit",
+            ]
+        )
+        assert (
+            skills.summarize_install(result)
+            == "Installed to .agents/skills, .claude/skills"
+        )
+
 
 class TestInstallSkillsReturnsResult:
     """install_skills returns the structured result for callers (e.g. the nudge)."""

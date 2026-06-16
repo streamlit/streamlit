@@ -777,6 +777,23 @@ def install_skills(*, global_mode: bool = False, yes: bool = False) -> _InstallR
     return _install_project_skills(yes=yes)
 
 
+def _install_location(path: str) -> str:
+    """Return a concise ``<harness>/skills`` label for an installed skill path.
+
+    Install display paths are relative to the current working directory when
+    possible (e.g. ``.agents/skills/<skill>``), but fall back to an absolute
+    path when the resolved project root is an ancestor of the cwd (e.g. running
+    ``streamlit run sub/app.py`` from a subdirectory). The skill target layout
+    is always ``<harness>/skills/<skill>``, so collapse to the final two
+    segments of the parent directory to keep the in-app summary concise in both
+    cases.
+    """
+    parent = Path(path).parent
+    if len(parent.parts) > 2:
+        return Path(*parent.parts[-2:]).as_posix()
+    return parent.as_posix()
+
+
 def summarize_install(result: _InstallResult) -> str:
     """Return a short, user-facing summary of an install for the in-app nudge.
 
@@ -788,7 +805,7 @@ def summarize_install(result: _InstallResult) -> str:
     if result.installed:
         # Collapse the per-skill target paths to their distinct parent dirs
         # (e.g. ".agents/skills", ".claude/skills") for a concise message.
-        locations = sorted({str(Path(path).parent) for path in result.installed})
+        locations = sorted({_install_location(path) for path in result.installed})
         return "Installed to " + ", ".join(locations)
     if result.up_to_date:
         return "Skills are already up to date."

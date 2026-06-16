@@ -6861,6 +6861,42 @@ describe("Skills install nudge", () => {
     })
   })
 
+  it("tracks the impression only once across a reconnect", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    // Connect and show the nudge (first impression).
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendRecommendingNewSession()
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+
+    // Drop and re-establish the connection. The reconnect re-runs the
+    // first-session initialization, which must NOT re-log the impression.
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.PINGING_SERVER
+      )
+    })
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendRecommendingNewSession()
+
+    const shownImpressions = (
+      metricsManager.enqueue as ReturnType<typeof vi.fn>
+    ).mock.calls.filter(
+      ([event, payload]) =>
+        event === "menuClick" && payload?.label === "skillsNudgeShown"
+    )
+    expect(shownImpressions).toHaveLength(1)
+  })
+
   it("does not show the nudge when the server does not recommend it", () => {
     renderApp(getProps())
     const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
