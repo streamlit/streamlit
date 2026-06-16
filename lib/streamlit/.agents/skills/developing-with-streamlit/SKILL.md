@@ -106,6 +106,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Environment and dependency setup** — Python environment management, installing packages, and configuring the development environment for Streamlit apps | read `references/environment-setup.md` |
 | **Streamlit CLI and configuration** — `streamlit run`, `streamlit config`, looking up docstrings (`streamlit docs <command>`), `.streamlit/config.toml` (script-level and project-level), port settings, and server options | read `references/cli.md` |
 | **Advanced server configuration** — `st.App`, ASGI entry points, custom HTTP routes, middleware, lifespan hooks, programmatic secrets, exception handlers, and FastAPI/Starlette mounting | read `references/server-asgi.md` |
+| **Handling failures gracefully** — wrapping risky calls (APIs, queries, file/parse, input conversion) in `try/except`, showing `st.error`/`st.warning` + `st.stop()` instead of a raw traceback, and validating input | read `references/error-handling.md` |
 
 **Fallback — "this widget doesn't exist in Streamlit":**
 
