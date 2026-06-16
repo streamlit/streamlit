@@ -60,6 +60,7 @@ _ROUTE_AUTH_LOGOUT: Final = "auth/logout"
 _ROUTE_OAUTH_CALLBACK: Final = "oauth2callback"
 _AUTH_COOKIE_SAMESITE: Final = "lax"
 _AUTH_COOKIE_NAMES: Final = (USER_COOKIE_NAME, TOKENS_COOKIE_NAME)
+_PREFETCH_REQUEST_HEADERS: Final = ("sec-purpose", "purpose", "x-moz")
 
 
 def _normalize_nested_config(value: Any) -> Any:
@@ -148,6 +149,22 @@ async def _redirect_to_base(base_url: str) -> RedirectResponse:
     from starlette.responses import RedirectResponse
 
     return RedirectResponse(make_url_path(base_url, "/"), status_code=302)
+
+
+def _is_browser_prefetch_request(request: Request) -> bool:
+    """Return whether the request is marked as speculative browser prefetch."""
+    return any(
+        "prefetch" in request.headers.get(header_name, "").lower()
+        for header_name in _PREFETCH_REQUEST_HEADERS
+    )
+
+
+def _set_auth_response_headers(response: Response) -> Response:
+    """Set defensive headers on authentication route responses."""
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Vary"] = "Sec-Purpose, Purpose, X-Moz"
+    return response
 
 
 def _get_cookie_path() -> str:
@@ -552,6 +569,15 @@ async def _auth_logout(request: Request, base_url: str) -> Response:
 async def _auth_callback(request: Request, base_url: str) -> Response:
     """Handle the OAuth callback from the authentication provider."""
 
+    if _is_browser_prefetch_request(request):
+        # OAuth authorization codes are single-use. Some mobile browsers can make
+        # speculative requests with prefetch headers; exchanging the code for that
+        # request can consume it before the user's real navigation arrives.
+        from starlette.responses import Response
+
+        _LOGGER.info("Ignoring OAuth callback request marked as browser prefetch.")
+        return Response(status_code=204)
+
     state = request.query_params.get("state")
     provider = _get_provider_by_state(request, state)
     origin = _get_origin_from_secrets()
@@ -624,13 +650,16 @@ def create_auth_routes(base_url: str) -> list[Route]:
     from starlette.routing import Route
 
     async def login(request: Request) -> Response:
-        return await _auth_login(request, base_url)
+        response = await _auth_login(request, base_url)
+        return _set_auth_response_headers(response)
 
     async def logout(request: Request) -> Response:
-        return await _auth_logout(request, base_url)
+        response = await _auth_logout(request, base_url)
+        return _set_auth_response_headers(response)
 
     async def callback(request: Request) -> Response:
-        return await _auth_callback(request, base_url)
+        response = await _auth_callback(request, base_url)
+        return _set_auth_response_headers(response)
 
     return [
         Route(make_url_path(base_url, _ROUTE_AUTH_LOGIN), login, methods=["GET"]),

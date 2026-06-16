@@ -16,10 +16,11 @@ from __future__ import annotations
 
 import asyncio
 from http.cookies import SimpleCookie
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from unittest.mock import MagicMock
 from urllib.parse import parse_qs, urlparse
 
+import pytest
 from authlib.integrations import starlette_client
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
@@ -42,9 +43,6 @@ from streamlit.web.server.starlette.starlette_server_config import (
     USER_COOKIE_NAME,
 )
 from tests.testutil import patch_config_options
-
-if TYPE_CHECKING:
-    import pytest
 
 TORNADO_SIGNED_USER_COOKIE = (
     "2|1:0|10:1780515959|15:_streamlit_user|68:"
@@ -125,6 +123,30 @@ def test_redirect_without_provider(monkeypatch: pytest.MonkeyPatch) -> None:
         assert response.text == "ok"
 
 
+def test_login_sets_defensive_headers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that login responses are not cacheable."""
+    _patch_login_with_dummy_client(monkeypatch)
+
+    with TestClient(_build_app()) as client:
+        response = client.get("/auth/login?provider=dummy", follow_redirects=False)
+
+    assert response.status_code == 307
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["Pragma"] == "no-cache"
+    assert response.headers["Vary"] == "Sec-Purpose, Purpose, X-Moz"
+
+
+def test_logout_sets_defensive_headers() -> None:
+    """Test that logout responses are not cacheable."""
+    with TestClient(_build_app()) as client:
+        response = client.get("/auth/logout", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["Pragma"] == "no-cache"
+    assert response.headers["Vary"] == "Sec-Purpose, Purpose, X-Moz"
+
+
 def test_logout_clears_cookie() -> None:
     """Test that logout clears the auth cookie and redirects to root."""
     with TestClient(_build_app()) as client:
@@ -196,6 +218,44 @@ def test_callback_missing_provider_redirects(monkeypatch: pytest.MonkeyPatch) ->
         response = client.get("/oauth2callback?state=abc", follow_redirects=False)
         assert response.status_code == 302
         assert response.headers["location"].endswith("/")
+
+
+@pytest.mark.parametrize(
+    "header_name",
+    [
+        "Sec-Purpose",
+        "Purpose",
+        "X-Moz",
+    ],
+)
+def test_callback_prefetch_does_not_exchange_token(
+    header_name: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that speculative callback requests do not consume OAuth codes."""
+
+    def _raise_if_called(*args: Any, **kwargs: Any) -> None:
+        raise AssertionError("Prefetch callback should not inspect OAuth state")
+
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_get_provider_by_state",
+        _raise_if_called,
+    )
+
+    app = Starlette(routes=create_auth_routes(""))
+    with TestClient(app) as client:
+        response = client.get(
+            "/oauth2callback?state=abc&code=single-use-code",
+            headers={header_name: "prefetch"},
+            follow_redirects=False,
+        )
+
+    assert response.status_code == 204
+    assert response.content == b""
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["Pragma"] == "no-cache"
+    assert response.headers["Vary"] == "Sec-Purpose, Purpose, X-Moz"
 
 
 @patch_config_options({"server.cookieSecret": "test-secret"})
