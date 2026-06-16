@@ -1417,7 +1417,10 @@ class TestAppRun:
         assert config._main_script_path == launcher_path
         load_config_options.assert_called_once_with({"server.port": 8502})
         prepare_asgi_context.assert_called_once_with(
-            launcher_path, ["--date", "2026-06-14"], {"server.port": 8502}
+            launcher_path,
+            ["--date", "2026-06-14"],
+            {"server.port": 8502},
+            server_mode="starlette-app-direct",
         )
         runner_cls.assert_called_once_with(app)
         runner_cls.return_value.run.assert_called_once()
@@ -1449,7 +1452,9 @@ class TestAppRun:
             app.run()
 
         load_config_options.assert_called_once_with({})
-        prepare_asgi_context.assert_called_once_with(str(launcher.resolve()), [], {})
+        prepare_asgi_context.assert_called_once_with(
+            str(launcher.resolve()), [], {}, server_mode="starlette-app-direct"
+        )
 
     def test_run_reresolves_relative_script_path_against_launcher_dir(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
@@ -1523,7 +1528,9 @@ class TestAppRun:
             app.run()
 
         assert config._main_script_path == expected_path
-        prepare_asgi_context.assert_called_once_with(expected_path, [], {})
+        prepare_asgi_context.assert_called_once_with(
+            expected_path, [], {}, server_mode="starlette-app-direct"
+        )
 
     def test_run_rejects_when_runtime_already_exists(
         self, tmp_path: Path, reset_runtime: None

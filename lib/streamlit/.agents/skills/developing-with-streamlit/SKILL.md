@@ -17,9 +17,10 @@ Invoke this skill when the user's request involves:
 - Optimizing Streamlit performance (caching, fragments, reruns)
 - Building and running Streamlit apps
 - Styling widgets (button colors, backgrounds, CSS customization)
+- Advanced server configuration with `st.App`, ASGI, Starlette, FastAPI integration, custom routes, middleware, or lifespan hooks
 - Any question about Streamlit widgets, layouts, or components
 
-**Trigger phrases:** "streamlit", "st.", "dashboard", "app.py", "beautify app", "make it look better", "style", "CSS", "color", "background", "theme", "button", "slow rerun", "session state", "performance", "faster", "cache"
+**Trigger phrases:** "streamlit", "st.", "st.App", "dashboard", "app.py", "beautify app", "make it look better", "style", "CSS", "color", "background", "theme", "button", "slow rerun", "session state", "performance", "faster", "cache"
 
 ## Workflow
 
@@ -103,8 +104,8 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Using third-party community components** — `streamlit-extras` (pagination, annotated text), `streamlit-pivot-table`, and other popular packages that extend Streamlit's built-in capabilities | read `references/third-party-components.md` |
 | **Structuring app code** — when to split into modules vs keep in one file, helper functions, and clean project organization patterns | read `references/code-organization.md` |
 | **Environment and dependency setup** — Python environment management, installing packages, and configuring the development environment for Streamlit apps | read `references/environment-setup.md` |
-| **Streamlit CLI and configuration** — `streamlit run`, `streamlit config`, `.streamlit/config.toml` (script-level and project-level), port settings, and server options | read `references/cli.md` |
-| **ASGI/server integration** — `st.App`, custom routes/middleware/lifespan, `uvicorn app:app`, direct `python app.py` launchers with `App.run()`, and mounting Streamlit in FastAPI/Starlette | read `references/server-asgi.md` |
+| **Streamlit CLI and configuration** — `streamlit run`, `streamlit config`, looking up docstrings (`streamlit docs <command>`), `.streamlit/config.toml` (script-level and project-level), port settings, and server options | read `references/cli.md` |
+| **Advanced server configuration** — `st.App`, ASGI entry points, custom HTTP routes, middleware, lifespan hooks, programmatic secrets, exception handlers, and FastAPI/Starlette mounting | read `references/server-asgi.md` |
 
 **Fallback — "this widget doesn't exist in Streamlit":**
 

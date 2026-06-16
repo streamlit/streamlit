@@ -44,6 +44,8 @@ Markdown is supported in most places where text is rendered. Streamlit has three
 **No Markdown** — Text displays literally:
 - `st.text()`, `st.json()`, `st.dataframe()` / `st.data_editor()` cells, `st.selectbox` / `st.multiselect` options, input placeholders, `st.Page` titles, chart/map labels
 
+**Exception:** `st.dataframe()` / `st.data_editor()` cells configured with `st.column_config.MarkdownColumn` show plain text in the cell, but render Markdown in an overlay when the cell is clicked (raw HTML disabled, links sanitized).
+
 ## GitHub-flavored Markdown
 
 Standard GFM syntax works as expected. Headings automatically get anchor links for navigation.

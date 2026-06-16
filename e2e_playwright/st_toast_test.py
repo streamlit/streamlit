@@ -32,6 +32,9 @@ def test_default_toast_rendering(
     toasts.nth(2).hover()
 
     expect(toasts.nth(2)).to_contain_text("🐶This is a default toast message")
+    # Verify close button is accessible
+    close_button = toasts.nth(2).get_by_role("button", name="Close")
+    expect(close_button).to_be_visible()
     assert_snapshot(toasts.nth(2), name="toast-default")
 
 
@@ -49,7 +52,7 @@ def test_collapsed_toast_rendering(
 
     expect(toasts.nth(1)).to_contain_text(
         "🦄Random toast message that is a really really really really really really "
-        "really long message, going wayview moreClose"
+        "really long message, going way past the 3 line limitview more"
     )
     assert_snapshot(toasts.nth(1), name="toast-collapsed")
 
@@ -66,13 +69,13 @@ def test_expanded_toast_rendering(
     expect(toasts).to_have_count(3)
     toasts.nth(1).hover()
 
-    expand = themed_app.get_by_text("view more")
-    expect(expand).to_have_count(1)
+    expand = toasts.nth(1).get_by_text("view more")
+    expect(expand).to_be_visible()
     expand.click()
 
     expect(toasts.nth(1)).to_contain_text(
         "🦄Random toast message that is a really really really really really really "
-        "really long message, going way past the 3 line limitview lessClose"
+        "really long message, going way past the 3 line limitview less"
     )
     reset_hovering(themed_app)
     assert_snapshot(toasts.nth(1), name="toast-expanded")
@@ -90,7 +93,7 @@ def test_toast_with_material_icon_rendering(
     expect(toasts).to_have_count(3)
     toasts.nth(0).hover()
 
-    expect(toasts.nth(0)).to_contain_text("cabinYour edited image was saved!Close")
+    expect(toasts.nth(0)).to_contain_text("cabinYour edited image was saved!")
     assert_snapshot(toasts.nth(0), name="toast-material-icon")
 
 
@@ -113,9 +116,9 @@ def test_toast_above_dialog(app: Page, assert_snapshot: ImageCompareFunction):
 
     toasts = app.get_by_test_id("stToast")
     expect(toasts).to_have_count(1)
-    expect(toasts.nth(0)).to_contain_text("🎉Toast above dialogClose")
-    toaster = app.get_by_test_id("stToastContainer")
-    assert_snapshot(toaster, name="toast-above-dialog")
+    expect(toasts.nth(0)).to_contain_text("🎉Toast above dialog")
+    dialog = app.get_by_role("dialog")
+    assert_snapshot(dialog, name="toast-above-dialog")
 
 
 def test_toast_duration(app: Page):

@@ -25,6 +25,7 @@ import pytest
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.element_tree import _format_value_for_widget
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -816,6 +817,110 @@ def test_format_func():
     assert at.select_slider("s").value == (2, 5)
 
     assert not at.exception
+
+
+def test_format_func_accepts_formatted_labels():
+    """Selection widgets accept already-formatted labels via format_func (#9476)."""
+    expected_inventories = [
+        {"id_inventory": 1, "description": "Inventory 1"},
+        {"id_inventory": 2, "description": "Inventory 2"},
+        {"id_inventory": 3, "description": "Inventory 3"},
+    ]
+
+    def script():
+        import streamlit as st
+
+        inventories = [
+            {"id_inventory": 1, "description": "Inventory 1"},
+            {"id_inventory": 2, "description": "Inventory 2"},
+            {"id_inventory": 3, "description": "Inventory 3"},
+        ]
+
+        selected_items = st.multiselect(
+            "Multi inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="multi_inventory",
+        )
+        st.button(
+            "Run multi",
+            disabled=not selected_items,
+            key="multi_button",
+            on_click=lambda: st.session_state.update(multi_clicked=True),
+        )
+
+        selected_item = st.selectbox(
+            "Single inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="single_inventory",
+        )
+        st.button(
+            "Run single",
+            disabled=selected_item["description"] == "Inventory 1",
+            key="single_button",
+        )
+
+        st.radio(
+            "Radio inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="radio_inventory",
+        )
+
+        st.segmented_control(
+            "Segmented inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="segmented_inventory",
+        )
+
+    at = AppTest.from_function(script).run()
+
+    at.multiselect("multi_inventory").set_value(["Inventory 1"])
+    at = at.button("multi_button").click().run()
+
+    assert at.session_state.multi_clicked
+    assert at.multiselect("multi_inventory").value == [expected_inventories[0]]
+    assert at.multiselect("multi_inventory").indices == [0]
+    assert not at.button("multi_button").disabled
+
+    at = at.selectbox("single_inventory").set_value("Inventory 2").run()
+
+    assert at.selectbox("single_inventory").value == expected_inventories[1]
+    assert at.selectbox("single_inventory").index == 1
+    assert not at.button("single_button").disabled
+
+    at = at.radio("radio_inventory").set_value("Inventory 3").run()
+
+    assert at.radio("radio_inventory").value == expected_inventories[2]
+    assert at.radio("radio_inventory").index == 2
+
+    at = at.segmented_control("segmented_inventory").set_value("Inventory 1").run()
+
+    assert at.segmented_control("segmented_inventory").value == expected_inventories[0]
+    assert not at.exception
+
+
+def test_format_value_for_widget_error_semantics():
+    """_format_value_for_widget falls back only for string labels, else re-raises."""
+
+    def format_func(value: dict[str, str]) -> str:
+        return value["description"]
+
+    # Raw option formats normally.
+    assert format_func({"description": "Inventory 1"}) == "Inventory 1"
+    assert (
+        _format_value_for_widget(format_func, {"description": "Inventory 1"})
+        == "Inventory 1"
+    )
+
+    # Formatted string label is accepted.
+    assert _format_value_for_widget(format_func, "Inventory 1") == "Inventory 1"
+
+    # Non-string value with a raising format_func is a real bug and must propagate.
+    with pytest.raises(TypeError):
+        _format_value_for_widget(format_func, 123)
 
 
 def test_select_slider():

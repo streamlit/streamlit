@@ -279,10 +279,6 @@ class App:
     """ASGI-compatible Streamlit application.
 
     .. warning::
-        This feature is experimental and may change or be removed in future
-        versions without warning. Use at your own risk.
-
-    .. warning::
         Hosting multiple ``App`` instances with different ``script_path`` values
         in the same process is not supported. The first ``App`` constructed in a
         process pins the script-level config directory (via the process-global
@@ -585,7 +581,10 @@ class App:
 
         bootstrap.load_config_options(config_overrides)
         bootstrap._prepare_asgi_app_run_context(
-            launcher_path, script_args, config_overrides
+            launcher_path,
+            script_args,
+            config_overrides,
+            server_mode="starlette-app-direct",
         )
 
         UvicornRunner(self).run()

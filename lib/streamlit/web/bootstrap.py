@@ -19,7 +19,7 @@ import mimetypes
 import os
 import signal
 import sys
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
 from streamlit.logger import get_logger
@@ -346,13 +346,15 @@ def _prepare_asgi_app_run_context(
     main_script_path: str,
     args: list[str],
     flag_options: dict[str, Any],
+    *,
+    server_mode: Literal["starlette-app", "starlette-app-direct"] = "starlette-app",
 ) -> None:
     """Apply process-level setup shared by st.App launch modes."""
     _fix_sys_path(main_script_path)
     _fix_sys_argv(main_script_path, args)
     _install_config_watchers(flag_options)
 
-    config._server_mode = "starlette-app"
+    config._server_mode = server_mode
 
     report_watchdog_availability()
 
