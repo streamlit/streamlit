@@ -117,7 +117,7 @@ test = [
   # httpx2 is used by starlette's TestClient (>=1.2); httpx is still required
   # by authlib's httpx_client integration used in the auth route tests.
   "httpx>=0.24.1",
-  "httpx2>=2.0.0",
+  "httpx2>=2.4.0",
   # Playwright and E2E test dependencies:
   # We pin playwright to a minor version to avoid new browser versions breaking our CI.
   "playwright==1.60.*",
