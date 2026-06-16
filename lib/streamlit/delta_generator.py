@@ -534,7 +534,8 @@ class DeltaGenerator(
                         "sequential fragment rerun instead."
                     )
 
-            dg = _redirect_for_outside_write(dg, ts, ctx)
+            if ts.fragment_id:
+                dg = _redirect_for_outside_write(dg, ts, ctx)
 
         # Warn if an element is being changed but the user isn't running the streamlit server.
         _maybe_print_use_warning()
@@ -623,8 +624,9 @@ class DeltaGenerator(
             return dg
 
         ctx = get_script_run_ctx()
-        if ctx:
-            dg = _redirect_for_outside_write(dg, ThreadState.get(), ctx)
+        ts = ThreadState.get()
+        if ctx and ts.fragment_id:
+            dg = _redirect_for_outside_write(dg, ts, ctx)
 
         # The redirect only ever returns a DG with a cursor and root container
         # (the guard above for the original dg, or a freshly built wrapper), but
