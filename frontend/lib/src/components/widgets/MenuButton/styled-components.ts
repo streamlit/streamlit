@@ -15,6 +15,9 @@
  */
 
 import styled from "@emotion/styled"
+import { Menu, MenuItem, Popover } from "react-aria-components"
+
+import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 
 export const StyledMenuButtonLabelContainer = styled.div<{
   $hideChevron?: boolean
@@ -49,14 +52,67 @@ export const StyledMenuOptionIcon = styled.span(({ theme }) => ({
   color: theme.colors.bodyText,
 }))
 
-export const StyledMenuItem = styled.li(({ theme }) => ({
+export const StyledMenuPopover = styled(Popover)(({ theme }) => ({
+  ...getPopoverContainerStyle(theme),
+  // Override default border-radius with xl to match the original design
+  borderTopLeftRadius: theme.radii.xl,
+  borderTopRightRadius: theme.radii.xl,
+  borderBottomRightRadius: theme.radii.xl,
+  borderBottomLeftRadius: theme.radii.xl,
+  marginRight: theme.spacing.lg,
+  marginBottom: theme.spacing.lg,
+  maxHeight: "70vh",
+  overflow: "auto",
+  // NOTE: z-index cannot be set here — React Aria's useOverlayPosition
+  // hard-codes `zIndex: 100000` as an inline style which overrides CSS classes.
+  // The actual z-index override is passed via the `style` prop in MenuButton.tsx.
+}))
+
+export const StyledMenuList = styled(Menu)(({ theme }) => ({
+  backgroundColor: theme.colors.bgColor,
+  paddingTop: theme.spacing.threeXS,
+  paddingBottom: theme.spacing.threeXS,
+  paddingLeft: theme.spacing.xs,
+  paddingRight: theme.spacing.xs,
+  outline: "none",
+  boxShadow: "none",
+  margin: 0,
+  // Ensure the list fills the popover width
+  minWidth: "100%",
+}))
+
+export const StyledMenuListItem = styled(MenuItem)(({ theme }) => ({
+  // Merges original StyledMenuItem (li) + StyledHighlightWrapper (div) into one element.
+  // StyledMenuItem provided margins; StyledHighlightWrapper provided the padding,
+  // height, border-radius, and highlight background.
   display: "flex",
   alignItems: "center",
   marginTop: theme.spacing.twoXS,
   marginBottom: theme.spacing.twoXS,
-  padding: 0,
+  paddingLeft: theme.spacing.sm,
+  paddingRight: theme.spacing.sm,
+  height: theme.sizes.elementHighlightHeight,
   background: "transparent",
   cursor: "pointer",
   listStyle: "none",
   minWidth: theme.sizes.minMenuWidth,
+  borderTopLeftRadius: theme.radii.md2,
+  borderTopRightRadius: theme.radii.md2,
+  borderBottomRightRadius: theme.radii.md2,
+  borderBottomLeftRadius: theme.radii.md2,
+  outline: "none",
+  transition: "background 50ms ease",
+
+  "&[data-focused]": {
+    background: theme.colors.darkenedBgMix15,
+  },
+
+  "&[data-hovered]:not([data-disabled])": {
+    background: theme.colors.darkenedBgMix15,
+  },
+
+  "&[data-disabled]": {
+    cursor: "not-allowed",
+    opacity: 0.5,
+  },
 }))

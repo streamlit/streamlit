@@ -97,6 +97,23 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
+def _format_value_for_widget(format_func: Callable[[Any], str], value: Any) -> str:
+    """Format a widget value into its option label.
+
+    AppTest supports setting widget values with either the raw option or the
+    formatted label. The latter matches what the production frontend sends to
+    the backend, but may raise when passed directly to ``format_func`` if the
+    function expects a raw option. To support formatted labels without hiding
+    real ``format_func`` bugs, only string values fall back to themselves.
+    """
+    try:
+        return format_func(value)
+    except builtins.Exception:
+        if isinstance(value, str):
+            return value
+        raise
+
+
 @dataclass
 class InitialValue:
     """Used to represent the initial value of a widget."""
@@ -846,9 +863,11 @@ class ButtonGroup(Widget, Generic[T]):
             # Single-select: value is a single item or None
             if value is None:
                 return []
-            return [format_func(value)]
+            return [_format_value_for_widget(format_func, value)]
         # Multi-select: value is a list
-        return [format_func(v) for v in cast("list[T]", value)]
+        return [
+            _format_value_for_widget(format_func, v) for v in cast("list[T]", value)
+        ]
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
@@ -1273,12 +1292,13 @@ class Multiselect(Widget, Generic[T]):
     @property
     def indices(self) -> Sequence[int]:
         """The indices of the currently selected values from the options. (list)"""  # noqa: D400
-        return [self.options.index(self.format_func(v)) for v in self.value]
+        return [self.options.index(v) for v in self.values]
 
     @property
     def values(self) -> Sequence[str]:
         """The currently selected values from the options. (list)"""  # noqa: D400
-        return [self.format_func(v) for v in self.value]
+        format_func = self.format_func
+        return [_format_value_for_widget(format_func, v) for v in self.value]
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
@@ -1410,7 +1430,8 @@ class Radio(Widget, Generic[T]):
         """The index of the current selection. (int)"""  # noqa: D400
         if self.value is None:
             return None
-        return self.options.index(self.format_func(self.value))
+        formatted_value = _format_value_for_widget(self.format_func, self.value)
+        return self.options.index(formatted_value)
 
     @property
     def value(self) -> T | None:
@@ -1471,7 +1492,8 @@ class Selectbox(Widget, Generic[T]):
 
         if len(self.options) == 0:
             return 0
-        return self.options.index(self.format_func(self.value))
+        formatted_value = _format_value_for_widget(self.format_func, self.value)
+        return self.options.index(formatted_value)
 
     @property
     def value(self) -> T | None:

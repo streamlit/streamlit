@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import {
@@ -28,6 +28,7 @@ import {
   mockSessionInfo,
   mockTheme,
   NavigationContextProps,
+  toastQueue,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
@@ -140,6 +141,28 @@ describe("AppView element", () => {
     const appViewContainer = screen.getByTestId("stAppViewContainer")
     expect(appViewContainer).toBeInTheDocument()
     expect(appViewContainer).toHaveClass("stAppViewContainer")
+  })
+
+  it("renders the toast container when toasts are present", () => {
+    render(<AppView {...getProps()} />)
+
+    // ToastRegion only renders when there are visible toasts
+    expect(screen.queryByTestId("stToastContainer")).not.toBeInTheDocument()
+
+    // Add a toast and verify the container appears
+    act(() => {
+      toastQueue.add({ body: "test toast" }, { timeout: undefined })
+    })
+    const toastContainer = screen.getByTestId("stToastContainer")
+    expect(toastContainer).toBeInTheDocument()
+    expect(toastContainer).toHaveClass("stToastContainer")
+
+    // Clean up
+    act(() => {
+      toastQueue.visibleToasts.forEach((t: { key: string }) =>
+        toastQueue.close(t.key)
+      )
+    })
   })
 
   it("does not render a sidebar when there are no elements and only one page", () => {
