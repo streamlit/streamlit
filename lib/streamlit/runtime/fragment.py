@@ -264,15 +264,18 @@ class MemoryFragmentStorage(FragmentStorage):
             seen_ids.add(parent_id)
             current = parent_id
 
-    def _remove(self, fragment_id: str) -> None:
+    def _remove(
+        self, fragment_id: str, *, evict_wrappers: bool = True
+    ) -> None:
         del self._fragments[fragment_id]
         self._parent_by_id.pop(fragment_id, None)
         self._registration_sequence_by_id.pop(fragment_id, None)
-        self._outside_wrappers = {
-            key: wrapper
-            for key, wrapper in self._outside_wrappers.items()
-            if key[0] != fragment_id
-        }
+        if evict_wrappers:
+            self._outside_wrappers = {
+                key: wrapper
+                for key, wrapper in self._outside_wrappers.items()
+                if key[0] != fragment_id
+            }
 
     def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
         with self._lock:
@@ -281,8 +284,13 @@ class MemoryFragmentStorage(FragmentStorage):
 
             for fragment_id in list(self._fragments):
                 if fragment_id not in new_fragment_ids:
-                    self._remove(fragment_id)
+                    self._remove(fragment_id, evict_wrappers=False)
 
+            # Drop ALL wrappers unconditionally, including those belonging to
+            # fragments that survived the loop above. On a full app rerun the
+            # main script recreates outside containers as new DG objects, so
+            # every wrapper record — even one for a retained fragment — holds a
+            # stale DG with an already-advanced cursor.
             self._outside_wrappers.clear()
 
     def lookup(self, key: str) -> Fragment:
