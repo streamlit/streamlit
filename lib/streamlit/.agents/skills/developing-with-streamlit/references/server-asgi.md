@@ -74,6 +74,10 @@ if __name__ == "__main__":
     app.run(config={"server.port": 8502, "server.address": "0.0.0.0"})
 ```
 
+This pairs well with inline script dependencies when launched with `uv run app.py`:
+the wrapper can declare `streamlit` and any launcher-only dependencies in a PEP 723
+`script` metadata block at the top of the file.
+
 Use this pattern only for launcher modules such as `app = st.App("streamlit_app.py")`.
 Avoid same-file launchers like `app = st.App(__file__)`: Streamlit executes app scripts
 in a fake `__main__` module, so an `if __name__ == "__main__": app.run()` block inside
