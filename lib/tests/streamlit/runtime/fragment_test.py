@@ -1245,6 +1245,10 @@ def test_fragment_decorator_handles_pep649_annotations() -> None:
         ("order_fragment_ids", ([],), {}),
         ("delete", ("key",), {}),
         ("contains", ("key",), {}),
+        ("register_outside_wrapper", ("frag", "container", object()), {}),
+        ("get_outside_wrapper", ("frag", "container"), {}),
+        ("outside_wrappers_for", ("frag",), {}),
+        ("evict_outside_wrappers_created_by", ("frag",), {}),
     ],
 )
 def test_fragment_storage_abstract_methods_raise_not_implemented(
