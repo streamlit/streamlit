@@ -320,10 +320,8 @@ class DeltaGenerator(
         self._parent = parent
         self._block_type = block_type
 
-        # The fragment active when this container was created (``None`` when
-        # created outside any fragment, including root containers built at app
-        # init). Stamped by `_block` and read back at outside-wrapper creation
-        # to drive per-fragment wrapper eviction.
+        # The fragment that created this container, used for per-fragment
+        # wrapper eviction. None when created outside any fragment.
         self._creating_fragment_id: str | None = None
 
         # If this an `st.form` block, this will get filled in.
