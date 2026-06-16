@@ -57,12 +57,20 @@ _LOGGER: Final = get_logger(__name__)
 
 @dataclass
 class _OutsideWrapper:
-    """A cached implicit wrapper interposed between an outside container and a
-    fragment's writes. ``creation_delta_path`` and ``block_proto`` are retained
-    so the wrapper's ``add_block`` delta can be re-emitted on each fragment
-    rerun. ``creating_fragment_id`` is the fragment whose scope created the
-    outside container (``None`` for the main script); it drives per-fragment
-    eviction when that scope reruns.
+    """Cached implicit wrapper between an outside container and a fragment's writes.
+
+    Attributes
+    ----------
+    delta_generator : DeltaGenerator
+        The wrapper DeltaGenerator that the fragment writes into.
+    creation_delta_path : list[int]
+        The delta path at which the wrapper was originally created, retained so
+        the wrapper's ``add_block`` delta can be re-emitted on each fragment rerun.
+    block_proto : Block_pb2.Block
+        The Block proto for the wrapper, also retained for re-emission.
+    creating_fragment_id : str | None
+        The fragment whose scope created the outside container (``None`` for the
+        main script). Drives per-fragment eviction when that scope reruns.
     """
 
     delta_generator: DeltaGenerator
