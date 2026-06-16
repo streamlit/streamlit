@@ -2,7 +2,7 @@ THE FOLLOWING SETS FORTH ATTRIBUTION NOTICES FOR THIRD PARTY SOFTWARE THAT MAY B
 
 -----
 
-The following software may be included in this product: @babel/code-frame, @babel/generator, @babel/helper-module-imports, @babel/helper-string-parser, @babel/helper-validator-identifier, @babel/runtime, @babel/template, @babel/traverse, @babel/types. A copy of the source code may be downloaded from https://github.com/babel/babel.git (@babel/code-frame), https://github.com/babel/babel.git (@babel/generator), https://github.com/babel/babel.git (@babel/helper-module-imports), https://github.com/babel/babel.git (@babel/helper-string-parser), https://github.com/babel/babel.git (@babel/helper-validator-identifier), https://github.com/babel/babel.git (@babel/runtime), https://github.com/babel/babel.git (@babel/template), https://github.com/babel/babel.git (@babel/traverse), https://github.com/babel/babel.git (@babel/types). This software contains the following license and notice below:
+The following software may be included in this product: @babel/code-frame, @babel/generator, @babel/helper-globals, @babel/helper-module-imports, @babel/helper-string-parser, @babel/helper-validator-identifier, @babel/runtime, @babel/template, @babel/traverse, @babel/types. A copy of the source code may be downloaded from https://github.com/babel/babel.git (@babel/code-frame), https://github.com/babel/babel.git (@babel/generator), https://github.com/babel/babel.git (@babel/helper-globals), https://github.com/babel/babel.git (@babel/helper-module-imports), https://github.com/babel/babel.git (@babel/helper-string-parser), https://github.com/babel/babel.git (@babel/helper-validator-identifier), https://github.com/babel/babel.git (@babel/runtime), https://github.com/babel/babel.git (@babel/template), https://github.com/babel/babel.git (@babel/traverse), https://github.com/babel/babel.git (@babel/types). This software contains the following license and notice below:
 
 MIT License
 
@@ -618,9 +618,9 @@ Apache License
 
 -----
 
-The following software may be included in this product: @jridgewell/gen-mapping, @jridgewell/set-array. A copy of the source code may be downloaded from https://github.com/jridgewell/gen-mapping (@jridgewell/gen-mapping), https://github.com/jridgewell/set-array (@jridgewell/set-array). This software contains the following license and notice below:
+The following software may be included in this product: @jridgewell/gen-mapping, @jridgewell/sourcemap-codec, @jridgewell/trace-mapping. A copy of the source code may be downloaded from git+https://github.com/jridgewell/sourcemaps.git (@jridgewell/gen-mapping), git+https://github.com/jridgewell/sourcemaps.git (@jridgewell/sourcemap-codec), git+https://github.com/jridgewell/sourcemaps.git (@jridgewell/trace-mapping). This software contains the following license and notice below:
 
-Copyright 2022 Justin Ridgewell <jridgewell@google.com>
+Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -645,30 +645,6 @@ SOFTWARE.
 The following software may be included in this product: @jridgewell/resolve-uri. A copy of the source code may be downloaded from https://github.com/jridgewell/resolve-uri. This software contains the following license and notice below:
 
 Copyright 2019 Justin Ridgewell <jridgewell@google.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
------
-
-The following software may be included in this product: @jridgewell/sourcemap-codec, @jridgewell/trace-mapping. A copy of the source code may be downloaded from git+https://github.com/jridgewell/sourcemaps.git (@jridgewell/sourcemap-codec), git+https://github.com/jridgewell/sourcemaps.git (@jridgewell/trace-mapping). This software contains the following license and notice below:
-
-Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -2276,7 +2252,7 @@ THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: ansi-regex, ansi-styles, callsites, chalk, globals, has-flag, is-finite, is-fullwidth-code-point, parent-module, path-exists, path-type, resolve-from, skin-tone, string-width, strip-ansi, supports-color. A copy of the source code may be downloaded from git+https://github.com/chalk/ansi-regex.git (ansi-regex), git+https://github.com/chalk/ansi-styles.git (ansi-styles), git+https://github.com/sindresorhus/callsites.git (callsites), git+https://github.com/chalk/chalk.git (chalk), git+https://github.com/sindresorhus/globals.git (globals), git+https://github.com/sindresorhus/has-flag.git (has-flag), git+https://github.com/sindresorhus/is-finite.git (is-finite), git+https://github.com/sindresorhus/is-fullwidth-code-point.git (is-fullwidth-code-point), git+https://github.com/sindresorhus/parent-module.git (parent-module), git+https://github.com/sindresorhus/path-exists.git (path-exists), git+https://github.com/sindresorhus/path-type.git (path-type), git+https://github.com/sindresorhus/resolve-from.git (resolve-from), git+https://github.com/sindresorhus/skin-tone.git (skin-tone), git+https://github.com/sindresorhus/string-width.git (string-width), git+https://github.com/chalk/strip-ansi.git (strip-ansi), git+https://github.com/chalk/supports-color.git (supports-color). This software contains the following license and notice below:
+The following software may be included in this product: ansi-regex, ansi-styles, callsites, chalk, has-flag, is-finite, is-fullwidth-code-point, parent-module, path-exists, path-type, resolve-from, skin-tone, string-width, strip-ansi, supports-color. A copy of the source code may be downloaded from git+https://github.com/chalk/ansi-regex.git (ansi-regex), git+https://github.com/chalk/ansi-styles.git (ansi-styles), git+https://github.com/sindresorhus/callsites.git (callsites), git+https://github.com/chalk/chalk.git (chalk), git+https://github.com/sindresorhus/has-flag.git (has-flag), git+https://github.com/sindresorhus/is-finite.git (is-finite), git+https://github.com/sindresorhus/is-fullwidth-code-point.git (is-fullwidth-code-point), git+https://github.com/sindresorhus/parent-module.git (parent-module), git+https://github.com/sindresorhus/path-exists.git (path-exists), git+https://github.com/sindresorhus/path-type.git (path-type), git+https://github.com/sindresorhus/resolve-from.git (resolve-from), git+https://github.com/sindresorhus/skin-tone.git (skin-tone), git+https://github.com/sindresorhus/string-width.git (string-width), git+https://github.com/chalk/strip-ansi.git (strip-ansi), git+https://github.com/chalk/supports-color.git (supports-color). This software contains the following license and notice below:
 
 MIT License
 
