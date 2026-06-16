@@ -107,6 +107,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Streamlit CLI and configuration** — `streamlit run`, `streamlit config`, looking up docstrings (`streamlit docs <command>`), `.streamlit/config.toml` (script-level and project-level), port settings, and server options | read `references/cli.md` |
 | **Advanced server configuration** — `st.App`, ASGI entry points, custom HTTP routes, middleware, lifespan hooks, programmatic secrets, exception handlers, and FastAPI/Starlette mounting | read `references/server-asgi.md` |
 | **Handling failures gracefully** — wrapping risky calls (APIs, queries, file/parse, input conversion) in `try/except`, showing `st.error`/`st.warning` + `st.stop()` instead of a raw traceback, and validating input | read `references/error-handling.md` |
+| **Requiring users to sign in** — `st.login`/`st.logout`/`st.user` with OIDC, gating on `st.user.is_logged_in`, and `[auth]` secrets configuration (not a hand-rolled password gate) | read `references/authentication.md` |
 
 **Fallback — "this widget doesn't exist in Streamlit":**
 
