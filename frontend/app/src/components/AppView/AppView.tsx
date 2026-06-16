@@ -23,6 +23,8 @@ import {
   useState,
 } from "react"
 
+import { type QueuedToast } from "react-aria-components/Toast"
+
 import Header from "@streamlit/app/src/components/Header/Header"
 import LogoComponent from "@streamlit/app/src/components/Logo/LogoComponent"
 import TopNav from "@streamlit/app/src/components/Navigation/TopNav"
@@ -44,9 +46,11 @@ import {
   ElementNode,
   FileUploadClient,
   IGuestToHostMessage,
+  isCustomToastContent,
   NavigationContext,
   Profiler,
   SidebarConfigContext,
+  type StreamlitToastContent,
   StreamlitToastItem,
   StyledToastRegion,
   ThemeContext,
@@ -449,7 +453,19 @@ function AppView(props: AppViewProps): ReactElement {
         data-testid="stToastContainer"
         className="stToastContainer"
       >
-        {({ toast }) => <StreamlitToastItem toast={toast} />}
+        {({ toast }) =>
+          isCustomToastContent(toast.content) ? (
+            // App-level custom toast (e.g. the install-skills nudge): the
+            // framework supplies the content; `close` dismisses it.
+            <>
+              {toast.content.render(toast, () => toastQueue.close(toast.key))}
+            </>
+          ) : (
+            <StreamlitToastItem
+              toast={toast as QueuedToast<StreamlitToastContent>}
+            />
+          )
+        }
       </StyledToastRegion>
       {hasEventElements && (
         <Profiler id="Event">

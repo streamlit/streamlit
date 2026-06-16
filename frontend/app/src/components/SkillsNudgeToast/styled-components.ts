@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { CSSObject, keyframes } from "@emotion/react"
+import { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 
-import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
+import { EmotionTheme } from "@streamlit/lib"
 
 /**
  * Shared reset + interaction styles for the toast's borderless buttons (the
- * close ✕ and the secondary text links), so their hover/focus behavior stays
+ * close ✕ and the secondary text link), so their hover/focus behavior stays
  * in sync.
  */
 const nudgeButtonBase = (theme: EmotionTheme): CSSObject => ({
@@ -46,64 +46,6 @@ const nudgeButtonBase = (theme: EmotionTheme): CSSObject => ({
     cursor: "not-allowed",
   },
 })
-
-/**
- * Fixed, top-right notification injected by Streamlit (not the app author) to
- * recommend installing the bundled agent skills during local development.
- * Mirrors the elevation/spacing of the native ``st.toast`` so it feels native.
- */
-export const StyledSkillsNudgeToast = styled.div(({ theme }) => {
-  const slideIn = keyframes({
-    from: { opacity: 0, transform: `translateX(${theme.spacing.threeXL})` },
-    to: { opacity: 1, transform: "translateX(0)" },
-  })
-  return {
-    position: "fixed",
-    top: theme.spacing.xl,
-    right: theme.spacing.xl,
-    zIndex: theme.zIndices.toast,
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: theme.spacing.lg,
-    width: `calc(${theme.sizes.toastWidth} + ${theme.spacing.threeXL})`,
-    maxWidth: `calc(100vw - 2 * ${theme.spacing.xl})`,
-    paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.lg,
-    paddingLeft: theme.spacing.twoXL,
-    paddingRight: theme.spacing.twoXL,
-    borderRadius: theme.radii.default,
-    backgroundColor: theme.colors.bgColor,
-    // Subtle elevation matching st.toast: darken slightly on light themes,
-    // brighten on dark themes — no hard border needed.
-    filter: hasLightBackgroundColor(theme)
-      ? "brightness(0.98)"
-      : "brightness(1.2)",
-    color: theme.colors.bodyText,
-    boxShadow: theme.shadows.popover,
-    fontSize: theme.fontSizes.sm,
-    lineHeight: theme.lineHeights.base,
-    animation: `${slideIn} 0.2s ease-out`,
-    "@media (prefers-reduced-motion: reduce)": {
-      animation: "none",
-    },
-  }
-})
-
-export const StyledSkillsNudgeIcon = styled.div(({ theme }) => ({
-  display: "flex",
-  flexShrink: 0,
-  marginTop: theme.spacing.threeXS,
-}))
-
-export const StyledSkillsNudgeContent = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  flex: 1,
-  alignItems: "flex-start",
-  gap: theme.spacing.sm,
-  minWidth: theme.spacing.none,
-}))
 
 /** Close (✕) button in the top-right corner that snoozes the nudge. */
 export const StyledSkillsNudgeClose = styled.button(({ theme }) => ({
@@ -138,8 +80,8 @@ export const StyledSkillsNudgeActions = styled.div(({ theme }) => ({
 }))
 
 /**
- * Quiet text-link button used for the secondary "Not right now" / "Don't show
- * again" dismiss actions, matching the native toast "view more" affordance.
+ * Quiet text-link button used for the secondary "Don't show again" dismiss
+ * action, matching the native toast "view more" affordance.
  */
 export const StyledSkillsNudgeLink = styled.button(({ theme }) => ({
   ...nudgeButtonBase(theme),

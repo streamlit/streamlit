@@ -110,6 +110,7 @@ import {
   SessionInfo,
   sortThemeInputKeys,
   ThemeConfig,
+  toastQueue,
   toExportedTheme,
   WidgetStateManager,
 } from "@streamlit/lib"
@@ -241,8 +242,6 @@ interface State {
   autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
   scriptChangedOnDisk: boolean
-  // Whether to show the framework "install skills" nudge toast (local dev only)
-  showSkillsNudge: boolean
 }
 
 const INITIAL_SCRIPT_RUN_ID = "<null>"
@@ -312,11 +311,12 @@ export class App extends PureComponent<Props, State> {
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
 
-  // Whether we've already logged a skills-nudge impression for this page load.
-  // `handleInitialization` re-runs on websocket reconnect, so without this the
-  // same nudge would log multiple `skillsNudgeShown` events and inflate the
-  // adoption funnel. Reset only by a full page reload (a new App instance).
-  private skillsNudgeImpressionTracked: boolean = false
+  // Whether the skills-install nudge has been shown this page load.
+  // `handleInitialization` re-runs on websocket reconnect, so this guards
+  // against enqueuing a duplicate nudge and against logging multiple
+  // `skillsNudgeShown` events (which would inflate the adoption funnel). Reset
+  // only by a full page reload (a new App instance).
+  private skillsNudgeShown: boolean = false
 
   public constructor(props: Props) {
     super(props)
@@ -388,7 +388,6 @@ export class App extends PureComponent<Props, State> {
       inputsDisabled: false,
       navigationPosition: Navigation.Position.SIDEBAR,
       scriptChangedOnDisk: false,
-      showSkillsNudge: false,
     }
 
     this.connectionManager = null
@@ -1503,16 +1502,15 @@ export class App extends PureComponent<Props, State> {
       isLocalhost() &&
       localStorageAvailable() &&
       !this.isSkillsNudgeDismissed() &&
-      !this.isSkillsNudgeSnoozed()
+      !this.isSkillsNudgeSnoozed() &&
+      // `handleInitialization` re-runs on reconnect; show + log the impression
+      // only once per page load so a reconnect can't enqueue a duplicate nudge
+      // or inflate the funnel's numerator.
+      !this.skillsNudgeShown
     ) {
-      this.setState({ showSkillsNudge: true })
-      // `handleInitialization` re-runs on reconnect; only log the impression
-      // the first time the nudge is shown this page load so the funnel's
-      // numerator isn't inflated by connection churn.
-      if (!this.skillsNudgeImpressionTracked) {
-        this.skillsNudgeImpressionTracked = true
-        this.trackSkillsNudge("skillsNudgeShown")
-      }
+      this.skillsNudgeShown = true
+      this.showSkillsNudge()
+      this.trackSkillsNudge("skillsNudgeShown")
     }
   }
 
@@ -1584,7 +1582,7 @@ export class App extends PureComponent<Props, State> {
       })
   }
 
-  /** Close (✕): snooze the nudge for ~24h, then hide it. */
+  /** Close (✕): snooze the nudge for ~24h. The toast closes itself. */
   private readonly handleSkillsNudgeSnooze = (): void => {
     if (localStorageAvailable()) {
       window.localStorage.setItem(
@@ -1593,30 +1591,44 @@ export class App extends PureComponent<Props, State> {
       )
     }
     this.trackSkillsNudge("skillsNudgeSnoozed")
-    this.hideSkillsNudge()
   }
 
   /**
    * "Don't show again": dismiss permanently by writing both the browser
    * localStorage flag and the server-side marker, so it won't show again from
-   * either signal.
+   * either signal. The toast closes itself.
    */
   private readonly handleSkillsNudgeDontShowAgain = (): void => {
     this.setSkillsNudgeDismissed()
-    // Best-effort durable suppression: hide immediately and persist the
-    // server-side marker. The localStorage flag already suppresses the nudge
-    // in this browser, so a failed marker write only means a fresh browser
-    // could see it again — log it rather than failing the dismissal.
+    // Best-effort durable suppression: the localStorage flag already suppresses
+    // the nudge in this browser, so a failed marker write only means a fresh
+    // browser could see it again — log it rather than failing the dismissal.
     this.backendOperationClient.requestDismissSkillsNudge().catch(error => {
       LOG.warn("Failed to persist skills nudge dismissal", error)
     })
     this.trackSkillsNudge("skillsNudgeDontShowAgain")
-    this.hideSkillsNudge()
   }
 
-  /** Hide the nudge (also used to auto-dismiss after a successful install). */
-  private readonly hideSkillsNudge = (): void => {
-    this.setState({ showSkillsNudge: false })
+  /**
+   * Enqueue the framework "install skills" nudge into the shared toast queue
+   * (the same react-aria queue/shell that backs ``st.toast``). Persistent (no
+   * auto-timeout); the toast dismisses itself on install / snooze / don't-show.
+   */
+  private readonly showSkillsNudge = (): void => {
+    toastQueue.add(
+      {
+        render: (toast, close) => (
+          <SkillsNudgeToast
+            toast={toast}
+            close={close}
+            onInstall={this.handleSkillsNudgeInstall}
+            onSnooze={this.handleSkillsNudgeSnooze}
+            onDontShowAgain={this.handleSkillsNudgeDontShowAgain}
+          />
+        ),
+      },
+      { timeout: undefined }
+    )
   }
 
   /**
@@ -2709,14 +2721,6 @@ export class App extends PureComponent<Props, State> {
               }
             />
             {renderedDialog}
-            {this.state.showSkillsNudge && (
-              <SkillsNudgeToast
-                onInstall={this.handleSkillsNudgeInstall}
-                onSnooze={this.handleSkillsNudgeSnooze}
-                onDontShowAgain={this.handleSkillsNudgeDontShowAgain}
-                onDismiss={this.hideSkillsNudge}
-              />
-            )}
           </StyledApp>
         </Hotkeys>
       </StreamlitContextProvider>
