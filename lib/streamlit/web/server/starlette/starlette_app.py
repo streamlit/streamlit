@@ -591,13 +591,15 @@ class App:
 
         streamlit_config._main_script_path = launcher_path
 
-        # __init__ cached _resolved_script_path against the cwd (because
-        # _main_script_path was unset at construction time). Now that the
-        # launcher module is the script-level anchor, re-resolve so a relative
-        # script_path resolves against the launcher's directory (matching
-        # `streamlit run`) rather than the cwd captured during __init__.
-        self._resolved_script_path = None
-        self._resolved_script_path = self._resolve_script_path()
+        if has_launcher:
+            # __init__ cached _resolved_script_path against the cwd (because
+            # _main_script_path was unset at construction time). Now that the
+            # launcher module is the script-level anchor, re-resolve so a
+            # relative script_path resolves against the launcher's directory
+            # (matching `streamlit run`) rather than the cwd captured during
+            # __init__.
+            self._resolved_script_path = None
+            self._resolved_script_path = self._resolve_script_path()
 
         bootstrap.load_config_options(config_overrides)
         bootstrap._prepare_asgi_app_run_context(

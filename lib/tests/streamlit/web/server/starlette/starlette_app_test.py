@@ -1538,6 +1538,36 @@ class TestAppRun:
             expected_path, [], {}, server_mode="starlette-app-direct"
         )
 
+    def test_run_preserves_cached_relative_script_path_when_no_launcher(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """App.run should not re-anchor relative paths without a launcher file."""
+        from streamlit import config
+
+        script_dir = tmp_path / "sub"
+        script_dir.mkdir()
+        script = script_dir / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_server_mode", config._server_mode)
+        monkeypatch.setattr(sys, "argv", ["-c"])
+
+        app = App("sub/dashboard.py")
+        expected_path = script.resolve()
+        assert app._resolve_script_path() == expected_path
+
+        with (
+            patch("streamlit.web.bootstrap.load_config_options"),
+            patch("streamlit.web.bootstrap._prepare_asgi_app_run_context"),
+            patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
+        ):
+            app.run()
+
+        assert config._main_script_path == str(expected_path)
+        assert app._resolve_script_path() == expected_path
+
     def test_run_rejects_when_runtime_already_exists(
         self, tmp_path: Path, reset_runtime: None
     ) -> None:
