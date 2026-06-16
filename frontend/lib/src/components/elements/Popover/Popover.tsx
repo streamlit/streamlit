@@ -117,18 +117,17 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
-  // Track whether the popover was just opened, so we can skip the opening
-  // pointerdown event in the outside-click handler. Without this flag, the
-  // capture-phase listener can catch the same pointerdown that triggered
-  // handleToggle and immediately close the popover.
-  const justOpenedRef = useRef(false)
+  // Timestamp of the last open action — used by the outside-click handler to
+  // ignore clicks that occur in the same tick as opening (can happen in test
+  // environments where useEffect flushes synchronously within the same event).
+  const openedAtRef = useRef(0)
 
   // Handle popover toggle with optimistic updates
   const handleToggle = useCallback((): void => {
     const newOpen = !open
 
     if (newOpen) {
-      justOpenedRef.current = true
+      openedAtRef.current = Date.now()
     }
 
     setOpen(newOpen)
@@ -179,7 +178,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // Ref for the popover body used in the outside-click handler below.
   const popoverBodyRef = useRef<HTMLElement>(null)
 
-  // Custom dismissal via capture-phase DOM listeners.
+  // Custom dismissal via document-level DOM listeners.
   //
   // isNonModal disables React Aria's ariaHideOutside, which would otherwise
   // mark every element outside the popover as `inert`. In webkit (Safari),
@@ -198,10 +197,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     if (!open) return
 
     const handleClick = (e: MouseEvent): void => {
-      if (justOpenedRef.current) {
-        justOpenedRef.current = false
-        return
-      }
+      // In test environments (JSDOM), act() flushes useEffect synchronously,
+      // so this listener can be live during the same click that opened the
+      // popover. The timestamp guard prevents that click from closing it.
+      if (Date.now() - openedAtRef.current < 50) return
       const target = e.target as Node
       if (
         !triggerRef.current?.contains(target) &&
