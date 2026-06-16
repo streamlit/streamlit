@@ -212,9 +212,22 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
+        // If a widget inside the popover has an open sub-overlay (e.g.
+        // selectbox dropdown, date picker), let it handle Escape first —
+        // only the innermost overlay should close per ARIA pattern.
+        const active = document.activeElement
+        if (
+          active &&
+          popoverBodyRef.current?.contains(active) &&
+          active.getAttribute("aria-expanded") === "true"
+        ) {
+          return
+        }
+
         e.stopPropagation()
         e.preventDefault()
         handleClose()
+        triggerRef.current?.querySelector<HTMLButtonElement>("button")?.focus()
       }
     }
 

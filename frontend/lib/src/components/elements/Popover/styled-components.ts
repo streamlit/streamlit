@@ -35,7 +35,7 @@ export const StyledPopoverBody = styled(RAPopover)<{
     overflow: "auto",
     maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2 * ${theme.spacing.lg})`,
     minWidth: $stretchWidth
-      ? `${Math.max($calculatedWidth, 160) / 16}rem`
+      ? `max(${$calculatedWidth}px, 10rem)`
       : theme.sizes.minPopupWidth,
     backgroundColor: theme.colors.bgColor,
     zIndex: getOverlayZIndex(theme),
