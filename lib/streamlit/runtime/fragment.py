@@ -412,8 +412,6 @@ def _reset_outside_wrappers(
     collect the wrapper as stale. Resetting the cursor returns its index to 0 so
     the fragment's children overwrite in place instead of accumulating.
     """
-    # Deferred: delta_generator imports FragmentStorage under TYPE_CHECKING,
-    # so a top-level import here would create a circular dependency.
     from streamlit.delta_generator import _enqueue_add_block
 
     for wrapper in fragment_storage.outside_wrappers_for(fragment_id):
