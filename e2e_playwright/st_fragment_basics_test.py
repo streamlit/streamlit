@@ -15,19 +15,22 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
+    expect_no_exception,
+    get_element_by_key,
     select_selectbox_option,
 )
 
 
 def get_uuids(app: Page) -> tuple[str, str]:
-    expect(app.get_by_test_id("stMarkdown")).to_have_count(2)
+    basics = get_element_by_key(app, "fragment_basics")
+    expect(basics.get_by_test_id("stMarkdown")).to_have_count(2)
 
-    text_in_fragment = app.get_by_test_id("stMarkdown").first.text_content()
-    text_outside_fragment = app.get_by_test_id("stMarkdown").last.text_content()
+    text_in_fragment = basics.get_by_test_id("stMarkdown").first.text_content()
+    text_outside_fragment = basics.get_by_test_id("stMarkdown").last.text_content()
 
     assert text_in_fragment is not None
     assert text_outside_fragment is not None
@@ -38,10 +41,11 @@ def get_uuids(app: Page) -> tuple[str, str]:
 def expect_only_fragment_uuid_changed(
     app: Page, old_text_in_fragment: str, old_text_outside_fragment: str
 ):
-    expect(app.get_by_test_id("stMarkdown").first).not_to_have_text(
+    basics = get_element_by_key(app, "fragment_basics")
+    expect(basics.get_by_test_id("stMarkdown").first).not_to_have_text(
         old_text_in_fragment
     )
-    expect(app.get_by_test_id("stMarkdown").last).to_have_text(
+    expect(basics.get_by_test_id("stMarkdown").last).to_have_text(
         old_text_outside_fragment
     )
 
@@ -230,9 +234,181 @@ def test_full_app_rerun(app: Page):
     app.keyboard.press("r")
     wait_for_app_run(app)
 
-    expect(app.get_by_test_id("stMarkdown").first).not_to_have_text(
+    basics = get_element_by_key(app, "fragment_basics")
+    expect(basics.get_by_test_id("stMarkdown").first).not_to_have_text(
         old_text_in_fragment
     )
-    expect(app.get_by_test_id("stMarkdown").last).not_to_have_text(
+    expect(basics.get_by_test_id("stMarkdown").last).not_to_have_text(
         old_text_outside_fragment
+    )
+
+
+def test_fragment_interleaved_with_main_writes_in_outside_container(app: Page):
+    """A fragment and the main script interleave writes into one outside container.
+
+    The main-script header and footer keep their slots across fragment reruns while
+    the fragment's content updates in place (no reordering, no duplication).
+    """
+    container = get_element_by_key(app, "outside_interleaved")
+    markdowns = container.get_by_test_id("stMarkdown")
+    expect(markdowns).to_have_count(3)
+    expect(markdowns.first).to_have_text("interleaved header")
+    expect(markdowns.last).to_have_text("interleaved footer")
+
+    fragment_markdown = markdowns.filter(has_text="interleaved fragment:")
+    old_fragment_text = fragment_markdown.text_content()
+
+    click_button(app, "rerun interleaved")
+
+    expect(fragment_markdown).not_to_have_text(old_fragment_text or "")
+    expect(markdowns.first).to_have_text("interleaved header")
+    expect(markdowns.last).to_have_text("interleaved footer")
+    # The wrapper's element count must stay constant (regression guard for the
+    # stale-cursor "Bad delta path index" crash).
+    expect(container.get_by_test_id("stMarkdown")).to_have_count(3)
+
+    click_button(app, "rerun interleaved")
+    expect(container.get_by_test_id("stMarkdown")).to_have_count(3)
+
+    expect_no_exception(app)
+
+
+def test_two_fragments_write_into_same_outside_container(app: Page):
+    """Two fragments write into the same outside container via distinct wrappers.
+
+    Rerunning one fragment updates only its own content; the other fragment's
+    content and the interleaved non-fragment writes keep their position.
+    """
+    container = get_element_by_key(app, "two_fragments_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    expect(markdowns).to_have_count(5)
+    expect(markdowns.first).to_have_text("two-fragments header")
+    expect(markdowns.last).to_have_text("two-fragments footer")
+
+    first_markdown = markdowns.filter(has_text="first writer fragment:")
+    second_markdown = markdowns.filter(has_text="second writer fragment:")
+    old_first_text = first_markdown.text_content()
+    old_second_text = second_markdown.text_content()
+
+    click_button(app, "rerun first writer")
+
+    expect(first_markdown).not_to_have_text(old_first_text or "")
+    expect(second_markdown).to_have_text(old_second_text or "")
+    expect(markdowns.first).to_have_text("two-fragments header")
+    expect(markdowns.last).to_have_text("two-fragments footer")
+    expect(container.get_by_test_id("stMarkdown")).to_have_count(5)
+
+    expect_no_exception(app)
+
+
+def test_fragment_writes_into_sidebar(app: Page):
+    """A fragment writes into the sidebar via a ``with`` block and directly.
+
+    The main-script header and footer keep their slots while the fragment's
+    content updates in place across reruns.
+    """
+    sidebar = app.get_by_test_id("stSidebar")
+    markdowns = sidebar.get_by_test_id("stMarkdown")
+    expect(markdowns).to_have_count(4)
+    expect(markdowns.first).to_have_text("sidebar header")
+    expect(markdowns.last).to_have_text("sidebar footer")
+
+    with_block_markdown = markdowns.filter(has_text="sidebar with-block:")
+    direct_markdown = markdowns.filter(has_text="sidebar direct:")
+    old_with_block_text = with_block_markdown.text_content()
+    old_direct_text = direct_markdown.text_content()
+
+    click_button(app, "rerun sidebar")
+
+    expect(with_block_markdown).not_to_have_text(old_with_block_text or "")
+    expect(direct_markdown).not_to_have_text(old_direct_text or "")
+    expect(markdowns.first).to_have_text("sidebar header")
+    expect(markdowns.last).to_have_text("sidebar footer")
+    expect(sidebar.get_by_test_id("stMarkdown")).to_have_count(4)
+
+    expect_no_exception(app)
+
+
+def test_fragment_writes_into_bottom_container(app: Page):
+    """A fragment writes directly into the bottom container.
+
+    The main-script header and footer keep their slots while the fragment's
+    content updates in place across reruns.
+    """
+    bottom = app.get_by_test_id("stBottom")
+    markdowns = bottom.get_by_test_id("stMarkdown")
+    expect(markdowns).to_have_count(3)
+    expect(markdowns.first).to_have_text("bottom header")
+    expect(markdowns.last).to_have_text("bottom footer")
+
+    fragment_markdown = markdowns.filter(has_text="bottom fragment:")
+    old_fragment_text = fragment_markdown.text_content()
+
+    click_button(app, "rerun bottom")
+
+    expect(fragment_markdown).not_to_have_text(old_fragment_text or "")
+    expect(markdowns.first).to_have_text("bottom header")
+    expect(markdowns.last).to_have_text("bottom footer")
+    expect(bottom.get_by_test_id("stMarkdown")).to_have_count(3)
+
+    expect_no_exception(app)
+
+
+def test_fragment_fills_empty_placeholder(app: Page):
+    """The ``outside.empty()`` placeholder is claimed during the full run and filled
+    by the fragment, updating in place across reruns.
+    """
+    container = get_element_by_key(app, "empty_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    expect(markdowns).to_have_count(2)
+    expect(markdowns.first).to_have_text("empty-pattern header")
+
+    placeholder_markdown = markdowns.filter(has_text="empty placeholder:")
+    old_placeholder_text = placeholder_markdown.text_content()
+
+    click_button(app, "rerun empty pattern")
+
+    expect(placeholder_markdown).not_to_have_text(old_placeholder_text or "")
+    expect(markdowns.first).to_have_text("empty-pattern header")
+    expect(container.get_by_test_id("stMarkdown")).to_have_count(2)
+
+    expect_no_exception(app)
+
+
+def test_fragment_nested_container_in_outside_container(app: Page):
+    """A fragment creates a nested container inside an outside container and writes
+    into it, updating in place across reruns without duplicating elements.
+    """
+    container = get_element_by_key(app, "nested_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    expect(markdowns).to_have_count(2)
+    expect(markdowns.first).to_have_text("nested header")
+
+    fragment_markdown = markdowns.filter(has_text="nested fragment:")
+    old_fragment_text = fragment_markdown.text_content()
+
+    click_button(app, "rerun nested")
+
+    expect(fragment_markdown).not_to_have_text(old_fragment_text or "")
+    expect(markdowns.first).to_have_text("nested header")
+    expect(container.get_by_test_id("stMarkdown")).to_have_count(2)
+
+    expect_no_exception(app)
+
+
+def test_outside_container_transparent_wrapper(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """The transparent wrapper adds no border or padding: the fragment's content is a
+    direct flex item of the outside container alongside the non-fragment writes.
+    """
+    container = get_element_by_key(app, "visual_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    expect(markdowns).to_have_count(3)
+    expect(markdowns.nth(0)).to_have_text("visual header")
+    expect(markdowns.nth(1)).to_have_text("visual fragment")
+    expect(markdowns.nth(2)).to_have_text("visual footer")
+
+    assert_snapshot(
+        container, name="st_fragment_basics-outside_container_transparent_wrapper"
     )
