@@ -23,6 +23,7 @@ from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
 
+from streamlit.cursor import RunningCursor
 from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import (
     FragmentHandledException,
@@ -411,7 +412,8 @@ def _reset_outside_wrappers(
     ClearStaleNodeVisitor keeps it; resetting the cursor makes the fragment's
     children redraw from index 0 instead of accumulating.
     """
-    from streamlit.cursor import RunningCursor
+    # Deferred: delta_generator imports FragmentStorage under TYPE_CHECKING,
+    # so a top-level import here would create a circular dependency.
     from streamlit.delta_generator import _enqueue_add_block
 
     for wrapper in fragment_storage.outside_wrappers_for(fragment_id):
