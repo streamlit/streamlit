@@ -204,15 +204,31 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert self._storage.outside_wrappers_for("frag_b") == [wrapper_b]
         assert self._storage.outside_wrappers_for("missing") == []
 
-    def test_clear_drops_outside_wrappers_even_when_fragment_retained(self):
-        """clear() empties wrappers even when the fragment id is retained."""
+    def test_clear_retains_outside_wrappers(self):
+        """clear() (called at the end of a full run) preserves wrappers so that
+        the fragment reruns that follow can reuse them.
+        """
         wrapper = self._make_wrapper("dg-1")
         self._storage.register_outside_wrapper("some_key", "container", wrapper)
 
         self._storage.clear(new_fragment_ids=frozenset({"some_key"}))
 
-        # The fragment closure survives, but its wrapper does not.
         assert self._storage.contains("some_key")
+        assert self._storage.get_outside_wrapper("some_key", "container") is wrapper
+
+    def test_clear_outside_wrappers_drops_all_records(self):
+        """clear_outside_wrappers() (called at the start of a full run) empties
+        every wrapper record, including those for retained fragments.
+        """
+        self._storage.register_outside_wrapper(
+            "frag_a", "container", self._make_wrapper("dg-a")
+        )
+        self._storage.register_outside_wrapper(
+            "frag_b", "container", self._make_wrapper("dg-b")
+        )
+
+        self._storage.clear_outside_wrappers()
+
         assert self._storage._outside_wrappers == {}
 
     def test_evict_outside_wrappers_created_by_filters_on_creating_fragment(self):
@@ -1315,6 +1331,38 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
     ):
         _app(element_producer)
 
+    def test_standalone_rerun_reuses_wrapper_after_full_run_clear(self):
+        """A standalone fragment rerun reuses the wrapper created during the full
+        run, even though the full run ends with ``clear()``.
+
+        Regression for the wrapper lifecycle: clearing wrappers at the end of a
+        full run left the next standalone rerun with no reserved slot, raising
+        "could not reserve a stable position".
+        """
+        ctx = self.script_run_ctx
+        outside = st.container()
+
+        @fragment
+        def writer():
+            with outside:
+                st.markdown("fragment content")
+
+        writer()
+
+        storage = ctx.fragment_storage
+        fragment_id = next(iter(storage._fragments))
+        assert len(storage.outside_wrappers_for(fragment_id)) == 1
+
+        # End of the full run: stale fragment cleanup must keep the wrapper.
+        storage.clear(new_fragment_ids=frozenset({fragment_id}))
+        assert len(storage.outside_wrappers_for(fragment_id)) == 1
+
+        # Standalone fragment rerun reuses the wrapper without raising and
+        # without registering a second one.
+        ctx.fragment_ids_this_run = [fragment_id]
+        storage._fragments[fragment_id]()
+        assert len(storage.outside_wrappers_for(fragment_id)) == 1
+
 
 @pytest.mark.skipif(
     sys.version_info < (3, 14),
@@ -1387,6 +1435,7 @@ def test_fragment_decorator_handles_pep649_annotations() -> None:
         ("get_outside_wrapper", ("frag", "container"), {}),
         ("outside_wrappers_for", ("frag",), {}),
         ("evict_outside_wrappers_created_by", ("frag",), {}),
+        ("clear_outside_wrappers", (), {}),
     ],
 )
 def test_fragment_storage_abstract_methods_raise_not_implemented(
