@@ -89,8 +89,10 @@ ELEMENT_COMMANDS: set[str] = {
 }
 
 # Public commands intentionally omitted from the api-reference.md skill doc
-# (e.g. deprecated commands we don't want agents to use in new code).
-API_REFERENCE_EXCLUSIONS: set[str] = {"cache"}
+# (e.g. internal commands not meant for app authors). Add a command here only
+# if it should stay out of the reference; deprecated commands are still
+# documented (with a deprecation note), so they don't belong in this set.
+API_REFERENCE_EXCLUSIONS: set[str] = set()
 
 
 class StreamlitTest(unittest.TestCase):
