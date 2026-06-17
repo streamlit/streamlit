@@ -507,13 +507,6 @@ class DeltaGenerator(
         dg = self._active_dg
 
         ctx = get_script_run_ctx()
-        if ctx and ThreadState.get().fragment_id and _writes_directly_to_sidebar(dg):
-            raise StreamlitAPIException(
-                "Calling `st.sidebar` in a function wrapped with `st.fragment` is not "
-                "supported. To write elements to the sidebar with a fragment, call your "
-                "fragment function inside a `with st.sidebar` context manager."
-            )
-
         if ctx:
             ts = ThreadState.get()
             if ts.is_parallel_worker:
@@ -743,12 +736,6 @@ class DeltaGenerator(
             return clear_msg
 
         return create_transient_element, clear_transient_element
-
-
-def _writes_directly_to_sidebar(dg: DeltaGenerator) -> bool:
-    in_sidebar = any(a._root_container == RootContainer.SIDEBAR for a in dg._ancestors)
-    has_container = bool(list(dg._ancestor_block_types))
-    return in_sidebar and not has_container
 
 
 def _is_inside_fragment_path(
