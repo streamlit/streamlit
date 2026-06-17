@@ -168,15 +168,8 @@ def test_keeps_selection_with_identity_dependent_format_func(app: Page):
     option class is redefined every rerun, so a format_func that looks options up
     in a dict used to raise on the stored deepcopy and revert the selection.
     """
-    selectbox_input = get_selectbox_input(
-        app, "selectbox 24 (custom objects with identity-dependent format_func)"
-    )
-
-    selectbox_input.click()
-    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_role("option").nth(
-        1
-    ).click()
-    wait_for_app_run(app)
+    label = "selectbox 24 (custom objects with identity-dependent format_func)"
+    select_selectbox_option(app, label, "II (two)")
 
     # The selection must reflect the second option, not revert to the first.
     expect_markdown(app, "value 24: two")
