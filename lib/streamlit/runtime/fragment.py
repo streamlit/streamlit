@@ -41,7 +41,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
     get_script_run_ctx,
 )
-from streamlit.runtime.outside_wrapper import _OutsideWrapper
+from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import get_object_name
 from streamlit.util import calc_hash
@@ -174,7 +174,7 @@ class FragmentStorage(Protocol):
 
     @abstractmethod
     def register_outside_wrapper(
-        self, fragment_id: str, container_id: str, wrapper: _OutsideWrapper
+        self, fragment_id: str, container_id: str, wrapper: OutsideContainerWrapper
     ) -> None:
         """Store the implicit wrapper for a (fragment, outside container) pair."""
         raise NotImplementedError
@@ -182,12 +182,12 @@ class FragmentStorage(Protocol):
     @abstractmethod
     def get_outside_wrapper(
         self, fragment_id: str, container_id: str
-    ) -> _OutsideWrapper | None:
+    ) -> OutsideContainerWrapper | None:
         """Return the cached wrapper for a (fragment, outside container) pair."""
         raise NotImplementedError
 
     @abstractmethod
-    def outside_wrappers_for(self, fragment_id: str) -> list[_OutsideWrapper]:
+    def outside_wrappers_for(self, fragment_id: str) -> list[OutsideContainerWrapper]:
         """Return all wrapper records belonging to the given fragment."""
         raise NotImplementedError
 
@@ -220,7 +220,7 @@ class MemoryFragmentStorage(FragmentStorage):
         self._parent_by_id: dict[str, str | None] = {}
         self._registration_sequence_by_id: dict[str, int] = {}
         self._registration_sequence = 0
-        self._outside_wrappers: dict[tuple[str, str], _OutsideWrapper] = {}
+        self._outside_wrappers: dict[tuple[str, str], OutsideContainerWrapper] = {}
 
     def _iter_ancestor_ids(self, fragment_id: str) -> Iterator[str]:
         """Yield ancestors from the immediate parent outward.
@@ -359,18 +359,18 @@ class MemoryFragmentStorage(FragmentStorage):
             return key in self._fragments
 
     def register_outside_wrapper(
-        self, fragment_id: str, container_id: str, wrapper: _OutsideWrapper
+        self, fragment_id: str, container_id: str, wrapper: OutsideContainerWrapper
     ) -> None:
         with self._lock:
             self._outside_wrappers[fragment_id, container_id] = wrapper
 
     def get_outside_wrapper(
         self, fragment_id: str, container_id: str
-    ) -> _OutsideWrapper | None:
+    ) -> OutsideContainerWrapper | None:
         with self._lock:
             return self._outside_wrappers.get((fragment_id, container_id))
 
-    def outside_wrappers_for(self, fragment_id: str) -> list[_OutsideWrapper]:
+    def outside_wrappers_for(self, fragment_id: str) -> list[OutsideContainerWrapper]:
         with self._lock:
             return [
                 wrapper
