@@ -23,7 +23,6 @@ from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
 
-from streamlit.cursor import RunningCursor
 from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import (
     FragmentHandledException,
@@ -412,6 +411,7 @@ def _reset_outside_wrappers(
     collect the wrapper as stale. Resetting the cursor returns its index to 0 so
     the fragment's children overwrite in place instead of accumulating.
     """
+    from streamlit.cursor import RunningCursor
     from streamlit.delta_generator import _enqueue_add_block
 
     for wrapper in fragment_storage.outside_wrappers_for(fragment_id):
