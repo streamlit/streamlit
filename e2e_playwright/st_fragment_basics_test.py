@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
@@ -25,12 +25,17 @@ from e2e_playwright.shared.app_utils import (
 )
 
 
-def get_uuids(app: Page) -> tuple[str, str]:
-    basics = get_element_by_key(app, "fragment_basics")
-    expect(basics.get_by_test_id("stMarkdown")).to_have_count(2)
+def _in_fragment_markdown(app: Page) -> Locator:
+    return app.get_by_test_id("stMarkdown").filter(has_text="inside fragment:")
 
-    text_in_fragment = basics.get_by_test_id("stMarkdown").first.text_content()
-    text_outside_fragment = basics.get_by_test_id("stMarkdown").last.text_content()
+
+def _outside_fragment_markdown(app: Page) -> Locator:
+    return app.get_by_test_id("stMarkdown").filter(has_text="outside: fragment")
+
+
+def get_uuids(app: Page) -> tuple[str, str]:
+    text_in_fragment = _in_fragment_markdown(app).text_content()
+    text_outside_fragment = _outside_fragment_markdown(app).text_content()
 
     assert text_in_fragment is not None
     assert text_outside_fragment is not None
@@ -41,13 +46,8 @@ def get_uuids(app: Page) -> tuple[str, str]:
 def expect_only_fragment_uuid_changed(
     app: Page, old_text_in_fragment: str, old_text_outside_fragment: str
 ):
-    basics = get_element_by_key(app, "fragment_basics")
-    expect(basics.get_by_test_id("stMarkdown").first).not_to_have_text(
-        old_text_in_fragment
-    )
-    expect(basics.get_by_test_id("stMarkdown").last).to_have_text(
-        old_text_outside_fragment
-    )
+    expect(_in_fragment_markdown(app)).not_to_have_text(old_text_in_fragment)
+    expect(_outside_fragment_markdown(app)).to_have_text(old_text_outside_fragment)
 
 
 def test_button_in_fragment(app: Page):
@@ -234,13 +234,8 @@ def test_full_app_rerun(app: Page):
     app.keyboard.press("r")
     wait_for_app_run(app)
 
-    basics = get_element_by_key(app, "fragment_basics")
-    expect(basics.get_by_test_id("stMarkdown").first).not_to_have_text(
-        old_text_in_fragment
-    )
-    expect(basics.get_by_test_id("stMarkdown").last).not_to_have_text(
-        old_text_outside_fragment
-    )
+    expect(_in_fragment_markdown(app)).not_to_have_text(old_text_in_fragment)
+    expect(_outside_fragment_markdown(app)).not_to_have_text(old_text_outside_fragment)
 
 
 def test_fragment_interleaved_with_main_writes_in_outside_container(app: Page):
