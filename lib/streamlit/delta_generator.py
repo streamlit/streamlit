@@ -416,6 +416,7 @@ class DeltaGenerator(
             block_type=self._block_type,
         )
         dg._form_data = deepcopy(self._form_data)
+        dg._creating_fragment_id = self._creating_fragment_id
         return dg
 
     @property
@@ -625,9 +626,9 @@ class DeltaGenerator(
             return dg
 
         ctx = get_script_run_ctx()
-        ts = ThreadState.get()
+        ts = ThreadState.get() if ctx else None
         if (
-            ctx
+            ts
             and ts.fragment_id
             and _needs_outside_wrapper(dg, ts, ctx.fragment_storage)
         ):
@@ -665,7 +666,7 @@ class DeltaGenerator(
         # Blocks inherit their parent form ids.
         # NOTE: Container form ids aren't set in proto.
         block_dg._form_data = FormData(current_form_id(dg))
-        block_dg._creating_fragment_id = ThreadState.get().fragment_id if ctx else None
+        block_dg._creating_fragment_id = ts.fragment_id if ts else None
 
         # Must be called to increment this cursor's index.
         parent_cursor.get_locked_cursor()
