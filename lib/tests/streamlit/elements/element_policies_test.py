@@ -272,7 +272,7 @@ class CheckWidget(ElementPoliciesTest):
         key = "my_key"
         default_value = 5
         check_widget_policies(dg, key, on_change, default_value=default_value)
-        patched_check_fragment_path_policy.assert_called_once()
+        patched_check_fragment_path_policy.assert_not_called()
         patched_check_cache_replay_rules.assert_called_once()
         patched_check_callback_rules.assert_called_once_with(dg, on_change)
         patched_check_session_state_rules.assert_called_once_with(
@@ -289,7 +289,7 @@ class CheckWidget(ElementPoliciesTest):
         check_widget_policies(
             MagicMock(), None, None, enable_check_callback_rules=False
         )
-        patched_check_fragment_path_policy.assert_called_once()
+        patched_check_fragment_path_policy.assert_not_called()
         patched_check_cache_replay_rules.assert_called_once()
         patched_check_callback_rules.assert_not_called()
         patched_check_session_state_rules.assert_called_once()
@@ -304,7 +304,7 @@ class CheckWidget(ElementPoliciesTest):
         dg = MagicMock()
         key = "my_key"
         check_widget_policies(dg, key, None, writes_allowed=False)
-        patched_check_fragment_path_policy.assert_called_once()
+        patched_check_fragment_path_policy.assert_not_called()
         patched_check_cache_replay_rules.assert_called_once()
         patched_check_callback_rules.assert_called_once()
         patched_check_session_state_rules.assert_called_once_with(
