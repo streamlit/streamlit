@@ -775,6 +775,13 @@ class ScriptRunner:
                                 )
 
                     else:
+                        # Drop wrappers from the previous run before the main
+                        # script recreates its outside containers as new DG
+                        # objects. Clearing here (rather than after the script
+                        # body) lets the wrappers created during this run survive
+                        # for the fragment reruns that follow it.
+                        self._fragment_storage.clear_outside_wrappers()
+
                         # Expect parallel_coordinator to be initialized;
                         # cast makes this clear to the type checker.
                         coordinator = cast(
