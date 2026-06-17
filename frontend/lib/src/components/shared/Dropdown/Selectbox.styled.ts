@@ -149,7 +149,7 @@ export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
     backgroundColor: $isInSidebar
       ? theme.colors.secondaryBg
       : theme.colors.bgColor,
-    zIndex: theme.zIndices.popup,
+    zIndex: theme.zIndices.modalPopover,
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     width: "var(--trigger-width)",
     maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,

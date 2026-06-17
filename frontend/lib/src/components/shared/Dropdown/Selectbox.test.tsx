@@ -20,6 +20,7 @@ import { userEvent } from "@testing-library/user-event"
 import { streamlit } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
+import { zIndices } from "~lib/theme/primitives/zIndices"
 import * as MobileUtil from "~lib/util/isMobile"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
@@ -124,6 +125,16 @@ describe("Selectbox widget", () => {
     options.forEach((option, index) => {
       expect(option).toHaveTextContent(props.options[index])
     })
+  })
+
+  it("renders the dropdown above dialog portals", async () => {
+    const user = userEvent.setup()
+    render(<Selectbox {...props} />)
+
+    await openDropdown(user)
+
+    const dropdown = screen.getByTestId("stSelectboxVirtualDropdown")
+    expect(dropdown).toHaveStyle(`z-index: ${zIndices.modalPopover}`)
   })
 
   it("could be disabled", () => {

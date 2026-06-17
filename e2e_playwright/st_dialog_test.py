@@ -46,6 +46,10 @@ def open_dialog_without_images(app: Page):
     click_button(app, "Open Dialog without Images")
 
 
+def open_dialog_with_selectbox(app: Page):
+    click_button(app, "Open Selectbox Dialog")
+
+
 def open_dialog_with_icon(app: Page):
     click_button(app, "Open Dialog with Icon")
 
@@ -202,6 +206,18 @@ def test_dialog_reopens_properly_after_close(app: Page):
         wait_for_app_run(app, wait_delay=250)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
+
+
+def test_selectbox_dropdown_in_dialog_is_clickable(app: Page):
+    open_dialog_with_selectbox(app)
+
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(1)
+
+    main_dialog.get_by_label("Dialog selectbox").click()
+    app.get_by_role("option", name="Beta").click()
+
+    expect(main_dialog).to_contain_text("Selected: Beta")
 
 
 def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Page):

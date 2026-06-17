@@ -62,6 +62,20 @@ if st.button("Open Dialog without Images"):
     simple_dialog()
 
 
+@st.dialog("Dialog with Selectbox")
+def selectbox_dialog() -> None:
+    choice = st.selectbox(
+        "Dialog selectbox",
+        ["Alpha", "Beta", "Gamma"],
+        key="dialog-selectbox",
+    )
+    st.write(f"Selected: {choice}")
+
+
+if st.button("Open Selectbox Dialog"):
+    selectbox_dialog()
+
+
 @st.dialog("Dialog with Icon", icon="🌟")
 def dialog_with_icon() -> None:
     st.write("This dialog title renders a star icon.")
