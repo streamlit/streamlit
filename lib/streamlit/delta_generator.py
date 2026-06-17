@@ -816,8 +816,10 @@ def _get_or_create_outside_wrapper(
     if cached is not None:
         return cached.delta_generator
 
-    # No wrapper yet. During a standalone fragment rerun the outside container's
-    # creating scope is not executing, so we cannot safely allocate a new slot.
+    # fragment_ids_this_run is non-empty only during a standalone fragment
+    # rerun (not a full app rerun). In that case the outside container's
+    # creating scope hasn't run, so its cursor hasn't been allocated — we
+    # can't reserve a new slot without corrupting the delta tree.
     if ctx.fragment_ids_this_run:
         raise StreamlitAPIException(
             "A fragment tried to write to a container created outside the "
@@ -836,9 +838,8 @@ def _get_or_create_outside_wrapper(
 
     creation_delta_path = list(parent_cursor.delta_path)
 
-    # Inherit the cursor type from the outside container. st.empty() uses a
-    # LockedCursor; the wrapper must also lock so writes replace in place and honor
-    # the single-element contract.
+    # Match the outside container's cursor type. st.empty() uses a LockedCursor,
+    # so the wrapper must also lock to preserve single-element semantics.
     parent_path = (*parent_cursor.parent_path, parent_cursor.index)
     if parent_cursor.is_locked:
         wrapper_cursor: Cursor = cursor.LockedCursor(
