@@ -178,7 +178,6 @@ def check_widget_policies(
     enable_check_callback_rules: bool = True,
 ) -> None:
     """Check all widget policies for the given DeltaGenerator."""
-    check_fragment_path_policy(dg)
     check_cache_replay_rules()
     if enable_check_callback_rules:
         check_callback_rules(dg, on_change)
