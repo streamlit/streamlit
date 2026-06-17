@@ -27,7 +27,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
+    from collections.abc import Coroutine, Iterator
     from typing import Any
 
 from streamlit import config
@@ -1125,9 +1125,20 @@ class TestServerLifecycle:
 class TestUvicornRunner:
     """Tests for UvicornRunner class (sync blocking runner for st.App mode)."""
 
-    def test_run_starts_uvicorn_server_with_bound_socket(self) -> None:
+    @pytest.fixture(autouse=True)
+    def _mock_print_url(self) -> Iterator[mock.MagicMock]:
+        """Avoid real URL/network probing in runner unit tests."""
+        with patch("streamlit.web.bootstrap._print_url") as print_url:
+            yield print_url
+
+    def test_run_starts_uvicorn_server_with_bound_socket(
+        self, _mock_print_url: mock.MagicMock
+    ) -> None:
         """Test that run() starts uvicorn with a Streamlit-bound socket."""
         mock_socket = mock.MagicMock(spec=socket.socket)
+
+        async def asgi_app(_scope: object, _receive: object, _send: object) -> None:
+            pass
 
         with (
             patch("socket.has_ipv6", True),
@@ -1146,16 +1157,17 @@ class TestUvicornRunner:
             uvicorn_instance = mock.MagicMock()
             uvicorn_server_cls.return_value = uvicorn_instance
 
-            runner = UvicornRunner("myapp:app")
+            runner = UvicornRunner(asgi_app)
             runner.run()
 
             bind_socket.assert_called_once()
             assert bind_socket.call_args[0][0] == "::"
             assert bind_socket.call_args[0][1] == 8502
             uvicorn_config = uvicorn_server_cls.call_args[0][0]
-            assert uvicorn_config.app == "myapp:app"
+            assert uvicorn_config.app is asgi_app
             assert uvicorn_config.host == "::"
             assert uvicorn_config.port == 8502
+            _mock_print_url.assert_called_once_with(is_running_hello=False)
             uvicorn_instance.run.assert_called_once_with(sockets=[mock_socket])
             mock_socket.close.assert_called_once()
 

@@ -50,12 +50,63 @@ uvicorn asgi_app:app --host 0.0.0.0 --port 8501
 
 `st.App` is the official import path for the ASGI entry point.
 
+## Direct Python launchers with `App.run()`
+
+For shareable ASGI launchers that should run with `python app.py`, `uv run app.py`,
+or `uvx --with streamlit python app.py`, call `App.run()` under a main guard in
+the wrapper:
+
+```python
+# app.py
+import streamlit as st
+
+app = st.App("streamlit_app.py")
+
+if __name__ == "__main__":
+    app.run()
+```
+
+Use `app.run(config={...})` for programmatic config overrides that would otherwise be
+passed as `streamlit run` flags:
+
+```python
+if __name__ == "__main__":
+    app.run(config={"server.port": 8502, "server.address": "0.0.0.0"})
+```
+
+This pairs well with inline script dependencies when launched with `uv run app.py`:
+the wrapper can declare `streamlit` and any launcher-only dependencies in a PEP 723
+`script` metadata block at the top of the file.
+
+```python
+# /// script
+# dependencies = [
+#   "streamlit",
+# ]
+# ///
+
+import streamlit as st
+
+app = st.App("streamlit_app.py")
+
+if __name__ == "__main__":
+    app.run()
+```
+
+Use this pattern only for launcher modules such as `app = st.App("streamlit_app.py")`.
+Avoid same-file launchers like `app = st.App(__file__)`: Streamlit executes app scripts
+in a fake `__main__` module, so an `if __name__ == "__main__": app.run()` block inside
+the Streamlit script can run again during app execution.
+
 ## Script paths
 
 The `script_path` argument points to the Streamlit UI script, not the ASGI wrapper.
 
 Relative paths are resolved differently depending on how the app starts:
 - With `streamlit run asgi_app.py`, relative paths resolve from the script passed to `streamlit run`.
+- With `App.run()` direct launchers (`python asgi_app.py`, `uv run asgi_app.py`,
+  or `uvx --with streamlit python asgi_app.py`), relative paths resolve from the
+  launcher module.
 - With `uvicorn asgi_app:app`, relative paths resolve from the current working directory.
 
 Use an absolute path if the wrapper may be imported from different working directories.
