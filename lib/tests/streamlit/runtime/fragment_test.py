@@ -26,6 +26,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.cursor import LockedCursor, RunningCursor
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.errors import (
@@ -35,12 +36,14 @@ from streamlit.errors import (
     StreamlitFragmentWidgetsNotAllowedOutsideError,
 )
 from streamlit.proto.Block_pb2 import Block
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.fragment import (
     FragmentStorage,
     MemoryFragmentStorage,
     _check_not_parallel_worker,
     _dispatch_parallel_fragment,
     _fragment,
+    _reset_outside_wrappers,
     _run_parallel_fragment,
     fragment,
 )
@@ -536,6 +539,132 @@ def test_shallow_copy_raises_type_error() -> None:
 
     with pytest.raises(TypeError, match="does not support copy"):
         copy.copy(storage)
+
+
+class ResetOutsideWrappersTest(unittest.TestCase):
+    """Tests for _reset_outside_wrappers, called before a fragment reruns."""
+
+    def _make_wrapper(
+        self,
+        cursor: object,
+        *,
+        creating_fragment_id: str | None = None,
+        creation_delta_path: list[int] | None = None,
+    ) -> OutsideContainerWrapper:
+        delta_generator = types.SimpleNamespace(_cursor=cursor)
+        return OutsideContainerWrapper(
+            delta_generator=delta_generator,  # type: ignore[arg-type]
+            creation_delta_path=creation_delta_path or [0, 1],
+            block_proto=Block(),
+            creating_fragment_id=creating_fragment_id,
+        )
+
+    @patch("streamlit.delta_generator._enqueue_add_block")
+    def test_reemits_add_block_and_resets_running_cursor(
+        self, mock_enqueue: MagicMock
+    ) -> None:
+        """A RunningCursor wrapper is re-emitted and its cursor reset to index 0."""
+        storage = MemoryFragmentStorage()
+        cursor = RunningCursor(RootContainer.MAIN)
+        cursor.get_locked_cursor()
+        cursor.get_locked_cursor()
+        assert cursor.index == 2
+        wrapper = self._make_wrapper(cursor, creation_delta_path=[0, 3])
+        storage.register_outside_wrapper("frag", "container", wrapper)
+
+        _reset_outside_wrappers(storage, "frag")
+
+        mock_enqueue.assert_called_once_with([0, 3], wrapper.block_proto)
+        assert cursor.index == 0
+
+    @patch("streamlit.delta_generator._enqueue_add_block")
+    def test_locked_cursor_reemitted_but_not_reset(
+        self, mock_enqueue: MagicMock
+    ) -> None:
+        """A LockedCursor (st.empty) wrapper is re-emitted but never reset."""
+        storage = MemoryFragmentStorage()
+        cursor = LockedCursor(RootContainer.MAIN, index=0)
+        wrapper = self._make_wrapper(cursor, creation_delta_path=[0, 4])
+        storage.register_outside_wrapper("frag", "container", wrapper)
+
+        _reset_outside_wrappers(storage, "frag")
+
+        mock_enqueue.assert_called_once_with([0, 4], wrapper.block_proto)
+        # The LockedCursor has no reset method; reaching here without an
+        # AttributeError confirms it was skipped, and the index is untouched.
+        assert wrapper.delta_generator._cursor is cursor
+        assert cursor.index == 0
+
+    def test_repeated_reruns_keep_delta_paths_stable(self) -> None:
+        """Resetting between runs prevents element accumulation in the wrapper."""
+        storage = MemoryFragmentStorage()
+        cursor = RunningCursor(RootContainer.MAIN, (0, 3))
+        wrapper = self._make_wrapper(cursor)
+        storage.register_outside_wrapper("frag", "container", wrapper)
+
+        def write_three() -> list[list[int]]:
+            return [cursor.get_locked_cursor().delta_path for _ in range(3)]
+
+        first_run = write_three()
+        with patch("streamlit.delta_generator._enqueue_add_block"):
+            _reset_outside_wrappers(storage, "frag")
+        second_run = write_three()
+
+        assert second_run == first_run
+        # Without the reset the second run would start where the first left off
+        # (index 3), reproducing the original "Bad delta path index" growth.
+        assert second_run[0][-1] == 0
+
+    @patch("streamlit.delta_generator._enqueue_add_block")
+    def test_eviction_before_reset_skips_evicted_wrapper(
+        self, mock_enqueue: MagicMock
+    ) -> None:
+        """Evicting a writer's wrapper first means reset never re-emits it."""
+        storage = MemoryFragmentStorage()
+        created_by_a = self._make_wrapper(
+            RunningCursor(RootContainer.MAIN),
+            creating_fragment_id="A",
+            creation_delta_path=[0, 1],
+        )
+        created_by_b = self._make_wrapper(
+            RunningCursor(RootContainer.MAIN),
+            creating_fragment_id="B",
+            creation_delta_path=[0, 2],
+        )
+        storage.register_outside_wrapper("A", "container_a", created_by_a)
+        storage.register_outside_wrapper("A", "container_b", created_by_b)
+
+        # Mirror the rerun branch order: evict, then reset.
+        storage.evict_outside_wrappers_created_by("A")
+        _reset_outside_wrappers(storage, "A")
+
+        emitted_paths = [call.args[0] for call in mock_enqueue.call_args_list]
+        assert emitted_paths == [[0, 2]]
+
+    def test_parent_rerun_evicts_nested_wrapper_but_standalone_survives(self) -> None:
+        """A nested wrapper against a parent's container survives the nested
+        fragment's own reruns but is dropped when the parent reruns.
+        """
+        storage = MemoryFragmentStorage()
+        wrapper = self._make_wrapper(
+            RunningCursor(RootContainer.MAIN),
+            creating_fragment_id="P",
+            creation_delta_path=[0, 5],
+        )
+        storage.register_outside_wrapper("F", "p_container", wrapper)
+
+        # F reruns standalone: its wrapper against P's container survives and is
+        # re-emitted.
+        storage.evict_outside_wrappers_created_by("F")
+        assert storage.outside_wrappers_for("F") == [wrapper]
+        with patch("streamlit.delta_generator._enqueue_add_block") as mock_enqueue:
+            _reset_outside_wrappers(storage, "F")
+        emitted_paths = [call.args[0] for call in mock_enqueue.call_args_list]
+        assert emitted_paths == [[0, 5]]
+
+        # P reruns and rebuilds the container, so F's wrapper is evicted.
+        storage.evict_outside_wrappers_created_by("P")
+        assert storage.outside_wrappers_for("F") == []
 
 
 class FragmentTest(unittest.TestCase):

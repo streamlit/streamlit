@@ -402,6 +402,28 @@ class MemoryFragmentStorage(FragmentStorage):
         )
 
 
+def _reset_outside_wrappers(
+    fragment_storage: FragmentStorage, fragment_id: str
+) -> None:
+    """Re-emit and reset every wrapper belonging to a fragment before it reruns.
+
+    Re-emitting refreshes the wrapper block's scriptRunId so the frontend's
+    ClearStaleNodeVisitor keeps it; resetting the cursor makes the fragment's
+    children redraw from index 0 instead of accumulating.
+    """
+    from streamlit.cursor import RunningCursor
+    from streamlit.delta_generator import _enqueue_add_block
+
+    for wrapper in fragment_storage.outside_wrappers_for(fragment_id):
+        _enqueue_add_block(wrapper.creation_delta_path, wrapper.block_proto)
+
+        wrapper_cursor = wrapper.delta_generator._cursor
+        if not isinstance(wrapper_cursor, RunningCursor):
+            # LockedCursor (st.empty wrappers) always points at index 0.
+            continue
+        wrapper_cursor.reset()
+
+
 def _fragment(
     func: F | None = None,
     *,
@@ -465,6 +487,13 @@ def _fragment(
                 # fragment was declared.
                 ctx.cursors = deepcopy(cursors_snapshot)
                 context_dg_stack.set(deepcopy(dg_stack_snapshot))
+
+                # Drop wrappers for the containers this fragment rebuilds, then
+                # re-emit and reset the ones it writes through. Eviction first, so
+                # reset never re-emits a wrapper whose container is about to be
+                # superseded by this run.
+                ctx.fragment_storage.evict_outside_wrappers_created_by(fragment_id)
+                _reset_outside_wrappers(ctx.fragment_storage, fragment_id)
 
             # Always add the fragment id to new_fragment_ids. For full app runs
             # we need to add them anyways and for fragment runs we add them
