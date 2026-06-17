@@ -33,7 +33,6 @@ from streamlit.errors import (
     FragmentHandledException,
     FragmentStorageKeyError,
     StreamlitAPIException,
-    StreamlitFragmentWidgetsNotAllowedOutsideError,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -1196,7 +1195,6 @@ def _run_fragment_writes_to_outside_container_app(
     @fragment
     def _some_method():
         st.write("Hello")
-        # this is forbidden
         with outside_container:
             element_producer()
 
@@ -1213,7 +1211,6 @@ def _run_fragment_writes_to_nested_outside_container_app(
     @fragment
     def _some_method():
         st.write("Hello")
-        # this is forbidden
         with outside_container:
             element_producer()
 
@@ -1230,7 +1227,6 @@ def _run_fragment_writes_to_nested_outside_container_app2(
     @fragment
     def _some_method():
         st.write("Hello")
-        # this is forbidden
         with outside_container, st.container():
             element_producer()
 
@@ -1248,7 +1244,6 @@ def _run_fragment_writes_to_nested_outside_container_app3(
     def _some_method():
         st.write("Hello")
         with st.container():
-            # this is forbidden
             with outside_container:
                 element_producer()
 
@@ -1323,7 +1318,7 @@ def get_test_tuples(
     ]
 
 
-class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
+class FragmentWritesToOutsidePathTest(DeltaGeneratorTestCase):
     # Suppress unawaited coroutine warning from MagicMock(spec=Runtime). This occurs
     # when rich's exception formatter accesses auto-created AsyncMock attributes.
     pytestmark = pytest.mark.filterwarnings(
@@ -1331,27 +1326,11 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
     )
 
     @parameterized.expand(
-        get_test_tuples(outside_container_writing_apps, WIDGET_ELEMENTS)
-    )
-    def test_write_element_outside_container_raises_exception_for_widgets(
-        self,
-        _: str,  # the test name argument used by pytest
-        _app: Callable[[Callable[[], DeltaGenerator]], None],
-        _element_producer: ELEMENT_PRODUCER,
-    ):
-        with pytest.raises(FragmentHandledException) as ex:
-            _app(_element_producer)
-
-        inner_exception = ex.value.__cause__ or ex.value.__context__
-
-        assert isinstance(
-            inner_exception, StreamlitFragmentWidgetsNotAllowedOutsideError
+        get_test_tuples(
+            outside_container_writing_apps, WIDGET_ELEMENTS + NON_WIDGET_ELEMENTS
         )
-
-    @parameterized.expand(
-        get_test_tuples(outside_container_writing_apps, NON_WIDGET_ELEMENTS)
     )
-    def test_write_element_outside_container_succeeds_for_nonwidgets(
+    def test_write_element_outside_container_succeeds_for_all(
         self,
         _: str,  # the test name argument used by pytest
         _app: Callable[[Callable[[], DeltaGenerator]], None],
