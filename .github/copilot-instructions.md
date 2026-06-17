@@ -100,3 +100,12 @@ Selection of `make` commands for development (run in the repo root):
 - **E2E Tests**: Test the entire app logic end-to-end with Playwright. Located at `e2e_playwright/<name>_test.py` with app code in `e2e_playwright/<name>.py`. User-facing features should be covered by E2E tests (e.g., parameters and commands in the public `st.` API).
 - **(Python) Type Tests**: Verify public API typing with mypy `assert_type`. Located at `lib/tests/streamlit/typing/<command>_types.py`.
 - Prefer running specific tests / test scripts for newly added tests instead the entire test suite.
+
+## Cursor Cloud specific instructions
+
+These notes apply to the Cursor Cloud Agent VM. The startup update script runs `make init` (deps + protobufs) from this repo; the toolchain below is baked into the VM snapshot, so you normally don't need to reinstall anything.
+
+- **Node version gotcha:** This repo requires Node 24 (`.nvmrc`), but the VM has a daemon-provided `node` v22 at `/exec-daemon/node` that sits early in `PATH` and would otherwise shadow nvm. To fix this globally, Node 24 (`node`/`npm`/`npx`/`corepack`) and `uv`/`uvx` are symlinked into `/usr/local/cargo/bin` (the first `PATH` entry). If `node --version` ever shows v22, re-point those symlinks at `~/.nvm/versions/node/v24*/bin`.
+- **Don't use `make all-dev` / `pre-commit install` here.** Cursor sets `git config core.hooksPath`, so `pre-commit install` fails with "Cowardly refusing to install hooks with `core.hooksPath` set". Do **not** unset `core.hooksPath`. Use `make init` for dependency/protobuf refresh; pre-commit hooks are not needed for running, testing, or building.
+- **Running the app:** `make debug <script.py>` starts the Python backend + Vite dev server and prints the App URL (default `http://localhost:3001`, backend `http://localhost:8501`). Logs land in `work-tmp/debug/latest/{backend,frontend}.log`. The first `make debug` builds the non-app frontend workspace packages on demand (no full `make frontend` needed).
+- `protoc` is installed system-wide (apt) and the Makefile's "Python version is not detected / `python: command not found`" line is a harmless version-check warning — all Python runs go through `uv run`.
