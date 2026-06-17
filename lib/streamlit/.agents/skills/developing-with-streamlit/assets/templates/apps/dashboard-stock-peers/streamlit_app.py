@@ -150,7 +150,7 @@ with top_left_cell:
         "Stock tickers",
         options=STOCKS,
         default=DEFAULT_STOCKS,
-        key="stocks",  # becomes the URL param name (?stocks=...)
+        key="stocks",  # repeated params: ?stocks=AAPL&stocks=MSFT
         bind="query-params",
         placeholder="Choose stocks to compare. Example: NVDA",
         accept_new_options=True,

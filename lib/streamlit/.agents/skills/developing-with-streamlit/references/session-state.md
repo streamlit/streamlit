@@ -57,7 +57,8 @@ st.write(f"Sorting by: {sort}")
 # BAD: hand-rolled plumbing. More code, an extra rerun to guard, it conflicts
 # with bind= (a bound param can't be set/deleted via st.query_params), and it
 # crashes on an unexpected URL value — .index(default) raises ValueError if a
-# user opens ?sort=Foo. bind="query-params" tolerates unknown values for you.
+# user opens ?sort=Foo. With bind="query-params", an unknown URL value just
+# falls back to the default instead of raising.
 default = st.query_params.get("sort", "Relevance")
 sort = st.selectbox("Sort order", ["Relevance", "Newest", "Price"],
                     index=["Relevance", "Newest", "Price"].index(default))
@@ -69,7 +70,8 @@ Notes:
 - When the value equals the default, the param is dropped from the URL to keep it clean.
 - A bound param can't be set or deleted through `st.query_params` — change it programmatically via `st.session_state[key]` instead. Do not mix `bind=` with manual `st.query_params` reads/writes.
 - Still render the value (e.g. `st.write(f"Sorting by: {sort}")`) if the app needs to show the current selection.
-- Supported on `st.radio`, `st.selectbox`, `st.multiselect`, `st.segmented_control`, `st.pills`, `st.slider`, `st.select_slider`, `st.checkbox`, `st.toggle`, `st.number_input`, `st.color_picker`, and the text/date/time inputs.
+- Works on input widgets generally. It's **not** supported on trigger/button widgets (`st.button`, `st.download_button`, `st.form_submit_button`) or on selections from `st.dataframe`/charts — assume any other input widget supports it. (Listing the exceptions rather than every supported widget keeps this from going stale as new widgets ship.)
+- Multi-page apps: query params belong to the app URL, not an individual page, so a bound value persists in the URL across `st.navigation` page switches and is shared app-wide. If two pages bind widgets to the same `key=`, they share that value — use distinct keys per page when you don't want it to carry over.
 
 ## Widget input constraints are mostly client-side
 
