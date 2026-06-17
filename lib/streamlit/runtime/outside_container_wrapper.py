@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class _OutsideWrapper:
+class OutsideContainerWrapper:
     """Cached implicit wrapper between an outside container and a fragment's writes.
 
     Attributes

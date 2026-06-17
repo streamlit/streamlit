@@ -44,7 +44,7 @@ from streamlit.runtime.fragment import (
     _run_parallel_fragment,
     fragment,
 )
-from streamlit.runtime.outside_wrapper import _OutsideWrapper
+from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
@@ -157,10 +157,10 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
     def _make_wrapper(
         self, dg_id: str, *, creating_fragment_id: str | None = None
-    ) -> _OutsideWrapper:
+    ) -> OutsideContainerWrapper:
         delta_generator = MagicMock()
         delta_generator._id = dg_id
-        return _OutsideWrapper(
+        return OutsideContainerWrapper(
             delta_generator=delta_generator,
             creation_delta_path=[0, 1],
             block_proto=Block(),
