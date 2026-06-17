@@ -789,8 +789,8 @@ def _needs_outside_wrapper(
     if _is_inside_fragment_path(cursor_path, ts.delta_path):
         return False
 
-    # Pass through if the DG already lives inside one of this fragment's wrappers
-    # (e.g. a nested container created via outer.container()).
+    # If this DG is a descendant of a wrapper already created for this
+    # fragment, the write is already isolated — no additional wrapper needed.
     wrapper_dg_ids = {
         wrapper.delta_generator._id
         for wrapper in fragment_storage.outside_wrappers_for(ts.fragment_id)
