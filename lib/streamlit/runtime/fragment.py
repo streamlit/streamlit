@@ -41,7 +41,6 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
     get_script_run_ctx,
 )
-from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import get_object_name
 from streamlit.util import calc_hash
@@ -50,6 +49,7 @@ if TYPE_CHECKING:
     from datetime import timedelta
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
 
 _LOGGER: Final = get_logger(__name__)
 
