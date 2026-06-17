@@ -305,13 +305,29 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         delta = self.get_delta_from_queue()
         assert delta.fragment_id == "my_fragment_id"
 
-    def test_enqueue_explodes_if_fragment_writes_to_sidebar(self):
+    def test_fragment_writing_directly_to_sidebar_is_redirected_to_wrapper(self):
         ctx = get_script_run_ctx()
-        ThreadState.update(fragment_id="my_fragment_id")
-        ctx.fragment_ids_this_run = ["my_fragment_id"]
+        ThreadState.update(fragment_id="my_fragment_id", delta_path=(0, 1, 2))
+        self.addCleanup(lambda: ThreadState.update(fragment_id=None, delta_path=None))
 
-        exc = "is not supported"
-        with pytest.raises(StreamlitAPIException, match=exc):
+        get_dg_singleton_instance().sidebar_dg._enqueue("text", TextProto())
+
+        wrappers = ctx.fragment_storage.outside_wrappers_for("my_fragment_id")
+        assert len(wrappers) == 1
+
+    def test_parallel_worker_writing_directly_to_sidebar_raises(self):
+        ThreadState.update(
+            fragment_id="my_fragment_id",
+            delta_path=(0, 1, 2),
+            is_parallel_worker=True,
+        )
+        self.addCleanup(
+            lambda: ThreadState.update(
+                fragment_id=None, delta_path=None, is_parallel_worker=False
+            )
+        )
+
+        with pytest.raises(StreamlitAPIException, match="parallel"):
             get_dg_singleton_instance().sidebar_dg._enqueue("text", TextProto())
 
     def test_enqueue_can_write_to_container_in_sidebar(self):
