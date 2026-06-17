@@ -596,6 +596,53 @@ class TestValidateAndSyncValueWithOptions(unittest.TestCase):
         assert value is deepcopied_value
         assert needs_reset is False
 
+    def test_format_func_raising_on_object_keeps_value(self):
+        """A non-string value whose format_func raises is kept, not reset.
+
+        Reproduces https://github.com/streamlit/streamlit/issues/15618 where a
+        stale deepcopy from a previous run makes an identity-dependent
+        format_func raise, which previously reset the selection to the default.
+        """
+
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        options = [MyOption("a"), MyOption("b")]
+        # A separate object simulates a stale value from a previous run; the
+        # dict lookup below raises because it is keyed on the current options.
+        stale_value = MyOption("b")
+        lookup = {options[0]: "A", options[1]: "B"}
+
+        def format_func(x: Any) -> str:
+            return lookup[x]
+
+        value, needs_reset = validate_and_sync_value_with_options(
+            stale_value, options, 0, None, format_func=format_func
+        )
+
+        assert value is stale_value
+        assert needs_reset is False
+
+    def test_format_func_raising_on_string_resets_to_default(self):
+        """A leftover string whose format_func raises still resets to default."""
+
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        options = [MyOption("a"), MyOption("b")]
+
+        def format_func(x: Any) -> str:
+            return x.value
+
+        value, needs_reset = validate_and_sync_value_with_options(
+            "leftover_string", options, 0, None, format_func=format_func
+        )
+
+        assert value is options[0]
+        assert needs_reset is True
+
 
 class TestValidateAndSyncRangeValueWithOptions(unittest.TestCase):
     """Test class for validate_and_sync_range_value_with_options utility function."""
@@ -769,6 +816,35 @@ class TestValidateAndSyncRangeValueWithOptions(unittest.TestCase):
         # Should reset to default because first value is invalid
         assert value == (original_options[0], original_options[2])
         assert needs_reset is True
+
+    def test_format_func_raising_on_objects_keeps_range(self) -> None:
+        """A range of non-string values whose format_func raises is kept.
+
+        Range analogue of https://github.com/streamlit/streamlit/issues/15618.
+        """
+
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        stale_start = MyOption("a")
+        stale_end = MyOption("c")
+        lookup = {opt: opt.value for opt in options}
+
+        def format_func(x: Any) -> str:
+            return lookup[x]
+
+        value, needs_reset = validate_and_sync_range_value_with_options(
+            (stale_start, stale_end),
+            options,
+            [0],
+            None,
+            format_func=format_func,
+        )
+
+        assert value == (stale_start, stale_end)
+        assert needs_reset is False
 
 
 class TestValidateAndSyncMultiselectValueWithOptions(unittest.TestCase):
@@ -963,3 +1039,30 @@ class TestValidateMultiselectWithCustomObjects(unittest.TestCase):
         assert len(values) == 1
         assert values[0].value == "b"
         assert needs_reset is True
+
+    def test_format_func_raising_on_object_keeps_value(self):
+        """Non-string values whose format_func raises are kept, not filtered.
+
+        Multiselect analogue of https://github.com/streamlit/streamlit/issues/15618.
+        """
+
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        options = [MyOption("a"), MyOption("b")]
+        stale_value = MyOption("b")
+        lookup = {options[0]: "A", options[1]: "B"}
+
+        def format_func(x):
+            return lookup[x]
+
+        values, needs_reset = validate_and_sync_multiselect_value_with_options(
+            [stale_value],
+            options,
+            None,
+            format_func=format_func,
+        )
+
+        assert values == [stale_value]
+        assert needs_reset is False

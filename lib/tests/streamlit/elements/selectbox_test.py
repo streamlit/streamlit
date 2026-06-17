@@ -580,6 +580,44 @@ def test_selectbox_preserves_custom_value_with_accept_new_options():
     assert at.text[0].value == "Selected: B"
 
 
+def test_selectbox_keeps_selection_with_identity_dependent_format_func():
+    """Selection persists when format_func does an identity-dependent lookup.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15618.
+    The option class is defined at module scope (redefined every rerun), so the
+    stored deepcopy is an instance of a previous run's class. A format_func that
+    looks the option up in a dict keyed on the current options raises for that
+    stale instance, which previously reset the selection to the first option.
+    """
+
+    def script():
+        from dataclasses import dataclass
+
+        import streamlit as st
+
+        @dataclass(frozen=True)
+        class MyDataClass:
+            id: int
+            name: str
+
+        a = MyDataClass(1, "one")
+        b = MyDataClass(2, "two")
+        lookup = {a: "I", b: "II"}
+
+        def format_func(option: MyDataClass) -> str:
+            _ = lookup[option]
+            return option.name
+
+        selected = st.selectbox("selectbox", [a, b], format_func=format_func, key="sb")
+        st.text(f"Selected: {selected.name}")
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "Selected: one"
+
+    at = at.selectbox[0].set_value("two").run()
+    assert at.text[0].value == "Selected: two"
+
+
 def test_selectbox_enum_coercion():
     """Test E2E Enum Coercion on a selectbox.
 

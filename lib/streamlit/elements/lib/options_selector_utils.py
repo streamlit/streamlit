@@ -374,10 +374,17 @@ def validate_and_sync_value_with_options(
     formatted_options_set = {format_func(o) for o in opt}
     try:
         formatted_value = format_func(current_value)
+    except Exception:
+        # format_func raised on the current value. A non-string value reaching
+        # this point is a still-valid selection whose format_func depends on
+        # object identity/class (e.g. a dict lookup) and that was stored as a
+        # deepcopy from an earlier run, so keep it. Only a leftover raw string
+        # (from an option that no longer exists) is treated as invalid.
+        if not isinstance(current_value, str):
+            return current_value, False
+    else:
         if formatted_value in formatted_options_set:
             return current_value, False
-    except Exception:  # noqa: S110
-        pass  # format_func failed - value is invalid, fall through to reset
 
     # Value not in options - reset to default
     if default_index is not None and len(opt) > 0:
@@ -441,11 +448,13 @@ def validate_and_sync_multiselect_value_with_options(
     for value in current_values:
         try:
             formatted_value = format_func(value)
-        except Exception:  # noqa: S112
-            # format_func failed on this value (e.g., a string value from a previous
-            # session when format_func expects an object with specific attributes).
-            # In this case, the value is definitely not valid since the current options
-            # can be formatted successfully.
+        except Exception:
+            # A non-string value that can't be formatted is a still-valid
+            # selection whose format_func depends on object identity/class and
+            # was stored as a deepcopy from an earlier run, so keep it. A
+            # leftover raw string (from a removed option) is filtered out.
+            if not isinstance(value, str):
+                valid_values.append(value)
             continue
 
         if formatted_value in formatted_options_set:
@@ -502,9 +511,14 @@ def validate_and_sync_range_value_with_options(
     def is_valid(val: Any) -> bool:
         """Check if a value exists in options via format_func comparison."""
         try:
-            return format_func(val) in formatted_options_set
+            formatted = format_func(val)
         except Exception:
-            return False
+            # A non-string value that can't be formatted is a still-valid
+            # selection whose format_func depends on object identity/class and
+            # was stored as a deepcopy from an earlier run. A leftover raw
+            # string (from a removed option) is invalid.
+            return not isinstance(val, str)
+        return formatted in formatted_options_set
 
     def get_default_range() -> tuple[T, T]:
         """Get the default range value."""
