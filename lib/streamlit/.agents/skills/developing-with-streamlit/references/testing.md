@@ -29,6 +29,8 @@ assert not at.exception
 
 Reach for Playwright only when you must verify the actual rendered DOM, CSS, or custom-component JavaScript. For "does my app compute and display the right thing," `AppTest` is the right tool.
 
+**Test pure logic with plain pytest — not AppTest.** If a function doesn't touch `st.*` (data transforms, parsing, calculations), factor it out and unit-test it directly with pytest. Reserve `AppTest` for the app's *UI* behavior: widget interaction, what renders, session state. Don't wrap pure logic in a Streamlit script just to exercise it.
+
 ## Creating an AppTest
 
 Three constructors, all returning an `AppTest` you then `.run()`:
@@ -170,6 +172,10 @@ def test_status_filter():
     assert len(result) == 2
     assert (result["status"] == "Active").all()
 ```
+
+## What AppTest can't simulate
+
+`AppTest` covers widget interaction and the elements your script produces, but it does **not** reproduce every front-end interaction. In particular, **selections on `st.dataframe` and charts** (click-to-select rows, Altair/Plotly selection events) can't be triggered through `AppTest` — there's no setter for them, so you can't assert on what a user's on-chart selection would return. The same applies to anything that only exists in the rendered browser: custom-component JavaScript, CSS, and scroll/resize behavior. Cover those with Playwright e2e tests instead.
 
 ## References
 
