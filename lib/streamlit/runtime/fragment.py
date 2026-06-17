@@ -199,6 +199,17 @@ class FragmentStorage(Protocol):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def clear_outside_wrappers(self) -> None:
+        """Drop every stored wrapper record.
+
+        Called at the start of a full app run, before the main script recreates
+        its outside containers as new DG objects. Wrappers must survive a full
+        run so the fragment reruns that follow it can reuse them, so clearing
+        happens before — not after — the script body executes.
+        """
+        raise NotImplementedError
+
 
 # NOTE: Ideally, we'd like to add a MemoryFragmentStorageStatProvider implementation to
 # keep track of memory usage due to fragments, but doing something like this ends up
@@ -258,13 +269,6 @@ class MemoryFragmentStorage(FragmentStorage):
             for fragment_id in list(self._fragments):
                 if fragment_id not in new_fragment_ids:
                     self._remove(fragment_id, evict_wrappers=False)
-
-            # Drop ALL wrappers unconditionally, including those belonging to
-            # fragments that survived the loop above. On a full app rerun the
-            # main script recreates outside containers as new DG objects, so
-            # every wrapper record — even one for a retained fragment — holds a
-            # stale DG with an already-advanced cursor.
-            self._outside_wrappers.clear()
 
     def lookup(self, key: str) -> Fragment:
         try:
@@ -388,6 +392,10 @@ class MemoryFragmentStorage(FragmentStorage):
                 for key, wrapper in self._outside_wrappers.items()
                 if wrapper.creating_fragment_id != fragment_id
             }
+
+    def clear_outside_wrappers(self) -> None:
+        with self._lock:
+            self._outside_wrappers.clear()
 
     def __deepcopy__(self, memo: dict[int, object]) -> NoReturn:
         raise TypeError(
