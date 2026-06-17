@@ -590,8 +590,8 @@ class ResetOutsideWrappersTest(unittest.TestCase):
         _reset_outside_wrappers(storage, "frag")
 
         mock_enqueue.assert_called_once_with([0, 4], wrapper.block_proto)
-        # The LockedCursor has no reset method; reaching here without an
-        # AttributeError confirms it was skipped, and the index is untouched.
+        # LockedCursor has no reset(); the isinstance check skips it.
+        # Verify cursor identity is preserved and index unchanged.
         assert wrapper.delta_generator._cursor is cursor
         assert cursor.index == 0
 
@@ -642,8 +642,8 @@ class ResetOutsideWrappersTest(unittest.TestCase):
         assert emitted_paths == [[0, 2]]
 
     def test_parent_rerun_evicts_nested_wrapper_but_standalone_survives(self) -> None:
-        """A nested wrapper against a parent's container survives the nested
-        fragment's own reruns but is dropped when the parent reruns.
+        """A wrapper for a parent's outside container survives the child
+        fragment's reruns but is evicted when the parent reruns.
         """
         storage = MemoryFragmentStorage()
         wrapper = self._make_wrapper(

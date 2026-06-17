@@ -187,12 +187,12 @@ class TestRunningCursor:
         assert len(cursor.transient_elements) == 0
 
     def test_reset_returns_to_initial_position(self):
-        """Test that reset() returns index to 0 and clears transient state."""
+        """reset() returns index to 0 and clears transient state."""
         cursor = RunningCursor(RootContainer.MAIN, (1, 2))
         cursor.get_locked_cursor()
         cursor.get_locked_cursor()
         cursor.get_transient_cursor()
-        cursor.transient_elements[0] = "element"  # Simulate adding element
+        cursor.transient_elements[0] = "element"
         assert cursor.index == 2
         assert len(cursor.transient_elements) == 1
 
