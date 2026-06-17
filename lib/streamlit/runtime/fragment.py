@@ -408,9 +408,9 @@ def _reset_outside_wrappers(
 ) -> None:
     """Re-emit and reset every wrapper belonging to a fragment before it reruns.
 
-    Re-emitting refreshes the wrapper block's scriptRunId so the frontend's
-    ClearStaleNodeVisitor keeps it; resetting the cursor makes the fragment's
-    children redraw from index 0 instead of accumulating.
+    Re-emitting sends a fresh add_block delta so the frontend doesn't garbage-
+    collect the wrapper as stale. Resetting the cursor returns its index to 0 so
+    the fragment's children overwrite in place instead of accumulating.
     """
     # Deferred: delta_generator imports FragmentStorage under TYPE_CHECKING,
     # so a top-level import here would create a circular dependency.
@@ -490,10 +490,10 @@ def _fragment(
                 ctx.cursors = deepcopy(cursors_snapshot)
                 context_dg_stack.set(deepcopy(dg_stack_snapshot))
 
-                # Drop wrappers for the containers this fragment rebuilds, then
-                # re-emit and reset the ones it writes through. Eviction first, so
-                # reset never re-emits a wrapper whose container is about to be
-                # superseded by this run.
+                # Evict wrappers whose outside containers will be rebuilt by this
+                # fragment, then re-emit and reset the surviving wrappers. Order
+                # matters: eviction must happen first so we don't re-emit a wrapper
+                # that's about to be replaced.
                 ctx.fragment_storage.evict_outside_wrappers_created_by(fragment_id)
                 _reset_outside_wrappers(ctx.fragment_storage, fragment_id)
 
