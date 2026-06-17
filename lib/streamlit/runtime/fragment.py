@@ -648,24 +648,25 @@ def fragment(
     When Streamlit element commands are called directly in a fragment, the
     elements are cleared and redrawn on each fragment rerun, just like all
     elements are redrawn on each app rerun. The rest of the app is persisted
-    during a fragment rerun. When a fragment renders elements into externally
-    created containers, the elements will not be cleared with each fragment
-    rerun. Instead, elements will accumulate in those containers with each
-    fragment rerun, until the next app rerun.
+    during a fragment rerun.
 
-    Calling ``st.sidebar`` in a fragment is not supported. To write elements to
-    the sidebar with a fragment, call your fragment function inside a
-    ``with st.sidebar`` context manager.
+    A fragment can also write or render widgets into a container created
+    outside of it, including directly to ``st.sidebar`` or ``st.bottom``. The
+    fragment's writes to that outside container are cleared and redrawn in
+    place on each fragment rerun, while content written to the same container
+    outside of the fragment keeps its position and is unaffected. Interacting
+    with a widget that a fragment rendered into an outside container reruns the
+    writing fragment, not the full app.
+
+    To populate an outside container from a fragment on a standalone fragment
+    rerun, the container must first be written to during the initial or full
+    app run. A common pattern is to claim the slot during the full run (for
+    example, ``placeholder = outside.empty()``) and fill it from the fragment.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these
     interactions are additive across multiple fragment reruns. You are
     responsible for handling any side effects of that behavior.
-
-    .. warning::
-
-        - Fragments can only contain widgets in their main body. Fragments
-          can't render widgets to externally created containers.
 
     Parameters
     ----------
