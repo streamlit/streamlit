@@ -47,17 +47,19 @@ Without the `st.stop()`, execution falls through to `st.dataframe(df)` with `df`
 
 ## Validate user input before using it
 
-Guard inputs for empty/`None` and out-of-range values up front, and explain what's needed — don't let a downstream call throw on bad input.
+Guard inputs for empty/`None` and out-of-range values up front, and explain what's needed — don't let a downstream call throw on bad input. Match the message to the situation: a field the user simply hasn't filled in yet warrants a neutral `st.info` prompt, not an alarming `st.warning`. Reserve `st.warning`/`st.error` for input that's genuinely invalid.
 
 ```python
 # BAD: empty name crashes the lookup with a traceback
 name = st.text_input("Customer name")
 record = lookup_customer(name)  # raises on ""
 
-# GOOD: validate, message, stop
+# GOOD: absent input isn't an error — prompt neutrally with st.info, then stop.
+# (Save st.warning / st.error for input that's actually wrong, like the
+# conversion failure below.)
 name = st.text_input("Customer name")
 if not name:
-    st.warning("Enter a customer name to continue.")
+    st.info("Enter a customer name to continue.")
     st.stop()
 
 record = lookup_customer(name)
@@ -121,6 +123,31 @@ st.dataframe(df)
 st.line_chart(df)
 ```
 
+## Errors inside cached functions
+
+An exception raised inside an `@st.cache_data` or `@st.cache_resource` function is **not** cached — it propagates to the caller, and re-raises on every rerun until the inputs change or the call finally succeeds. So guard the *call site*, not the cached body, and don't assume a failure gets memoized away.
+
+```python
+@st.cache_data
+def load_prices(ticker: str) -> pd.DataFrame:
+    resp = requests.get(f"https://api.example.com/prices/{ticker}", timeout=10)
+    resp.raise_for_status()        # let it raise on a real failure
+    return pd.DataFrame(resp.json())
+
+# GOOD: handle the failure where you CALL the cached function.
+try:
+    prices = load_prices(ticker)
+except requests.RequestException:
+    st.error("Couldn't load prices. Try again shortly.")
+    st.stop()
+```
+
+Don't wrap the body in a `try/except` that returns a sentinel (e.g. an empty DataFrame) just to avoid raising — Streamlit caches that sentinel and keeps serving it. Let the function raise; catch at the call site.
+
+## App-wide handler (st.App)
+
+The patterns above handle *expected* failures locally. For a catch-all over anything that slips through — to log it or show a branded fallback instead of the default traceback — register an app-wide handler via `st.App(on_script_error=...)`. See [server-asgi.md](server-asgi.md#error-handling).
+
 ## References
 
 - [st.error](https://docs.streamlit.io/develop/api-reference/status/st.error)
@@ -128,3 +155,4 @@ st.line_chart(df)
 - [st.exception](https://docs.streamlit.io/develop/api-reference/status/st.exception)
 - [st.stop](https://docs.streamlit.io/develop/api-reference/execution-flow/st.stop)
 - [st.connection](https://docs.streamlit.io/develop/api-reference/connections/st.connection)
+- [st.cache_data](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_data)
