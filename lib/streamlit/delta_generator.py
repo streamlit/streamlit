@@ -777,10 +777,11 @@ def _needs_outside_wrapper(
     if ts.is_parallel_worker or not ts.fragment_id or not ts.delta_path:
         return False
 
-    # Only SIDEBAR and BOTTOM roots need a wrapper: a fragment writing directly to
-    # them interleaves with main-script content in the same shared container. MAIN
-    # is unreachable here (a fragment's own scope writes to it via the fragment
-    # path) and EVENT needs no positional isolation.
+    # Sidebar and bottom are shared containers — both the main script and
+    # fragments append to them, so a wrapper is needed to isolate the
+    # fragment's content. Main is unreachable here (fragments write into
+    # their own sub-container, not the root). Event containers are
+    # single-owner.
     if dg._is_top_level:
         return dg._root_container in {RootContainer.SIDEBAR, RootContainer.BOTTOM}
 
