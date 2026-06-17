@@ -632,11 +632,11 @@ class DeltaGenerator(
         ):
             dg = _get_or_create_outside_wrapper(dg, ts, ctx)
 
-        # The redirect only ever returns a DG with a cursor and root container
-        # (the guard above for the original dg, or a freshly built wrapper), but
-        # reassigning dg drops the narrowing, so re-resolve them explicitly.
+        # Reassigning dg above drops the type narrowing from the None-guard.
         parent_cursor = cast("Cursor", dg._cursor)
         root_container = cast("int", dg._root_container)
+
+        # Snapshot delta_path before get_locked_cursor() advances the index.
         block_delta_path = list(parent_cursor.delta_path)
 
         # Normally we'd return a new DeltaGenerator that uses the locked cursor
