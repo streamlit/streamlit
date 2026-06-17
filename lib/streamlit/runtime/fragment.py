@@ -20,7 +20,6 @@ import threading
 from abc import abstractmethod
 from collections.abc import Callable, Iterator
 from copy import deepcopy
-from dataclasses import dataclass
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
 
@@ -42,6 +41,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
     get_script_run_ctx,
 )
+from streamlit.runtime.outside_wrapper import _OutsideWrapper
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import get_object_name
 from streamlit.util import calc_hash
@@ -50,33 +50,8 @@ if TYPE_CHECKING:
     from datetime import timedelta
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.proto import Block_pb2
 
 _LOGGER: Final = get_logger(__name__)
-
-
-@dataclass
-class _OutsideWrapper:
-    """Cached implicit wrapper between an outside container and a fragment's writes.
-
-    Attributes
-    ----------
-    delta_generator : DeltaGenerator
-        The wrapper DeltaGenerator that the fragment writes into.
-    creation_delta_path : list[int]
-        The delta path at which the wrapper was originally created, retained so
-        the wrapper's ``add_block`` delta can be re-emitted on each fragment rerun.
-    block_proto : Block_pb2.Block
-        The Block proto for the wrapper, also retained for re-emission.
-    creating_fragment_id : str | None
-        The fragment whose scope created the outside container (``None`` for the
-        main script). Drives per-fragment eviction when that scope reruns.
-    """
-
-    delta_generator: DeltaGenerator
-    creation_delta_path: list[int]
-    block_proto: Block_pb2.Block
-    creating_fragment_id: str | None
 
 
 def _check_not_parallel_worker(api_name: str) -> None:

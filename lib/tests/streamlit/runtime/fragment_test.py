@@ -41,10 +41,10 @@ from streamlit.runtime.fragment import (
     _check_not_parallel_worker,
     _dispatch_parallel_fragment,
     _fragment,
-    _OutsideWrapper,
     _run_parallel_fragment,
     fragment,
 )
+from streamlit.runtime.outside_wrapper import _OutsideWrapper
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
