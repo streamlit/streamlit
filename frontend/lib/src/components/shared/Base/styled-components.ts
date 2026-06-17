@@ -36,9 +36,9 @@ export const Box = styled.div<{
  * class overrides a non-!important inline style, placing overlays above all
  * fixed UI. Apply this to every styled component wrapping RAC's Popover.
  *
- * @see Selectbox StyledPopover
- * @see Popover StyledPopoverBody
- * @see MenuButton StyledMenuPopover
+ * @see StyledPopover — Selectbox.styled.ts
+ * @see StyledPopoverBody — Popover/styled-components.ts
+ * @see StyledMenuPopover — MenuButton/styled-components.ts
  */
 export const getOverlayZIndex = (theme: EmotionTheme): string =>
   `${theme.zIndices.popup} !important`

@@ -136,9 +136,9 @@ export const StyledPrimaryButton = styled(
     backgroundColor: darken(theme.colors.primary, 0.15),
     borderColor: darken(theme.colors.primary, 0.15),
   },
+  // Keep the "pressed" look while the controlled overlay (popover/menu) is open.
   "&:active, &[aria-expanded='true']": {
     backgroundColor: theme.colors.primary,
-    // Keep the border darker when clicked so that the button looks "pressed"
     borderColor: darken(theme.colors.primary, 0.15),
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {

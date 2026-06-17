@@ -115,11 +115,15 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     )
   }, [widgetId, element.open])
 
+  // Measure the trigger container's width so the portalled popover body can
+  // match it when stretchWidth is true. A ResizeObserver is required because
+  // the popover is portalled to document.body (no CSS parent-child sizing).
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
   // Timestamp of the last open action — used by the outside-click handler to
-  // ignore clicks that occur in the same tick as opening (can happen in test
-  // environments where useEffect flushes synchronously within the same event).
+  // ignore clicks that occur in the same tick as opening. In production
+  // browsers useEffect is async so the listener isn't live during the opening
+  // click, but in JSDOM act() flushes synchronously within the same event.
   const openedAtRef = useRef(0)
 
   // Handle popover toggle with optimistic updates
@@ -175,7 +179,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // outside BaseButtonTooltip is always rendered once and correctly positioned.
   const triggerRef = useRef<HTMLDivElement>(null)
 
-  // Ref for the popover body used in the outside-click handler below.
   const popoverBodyRef = useRef<HTMLElement>(null)
 
   // Custom dismissal via document-level DOM listeners.
