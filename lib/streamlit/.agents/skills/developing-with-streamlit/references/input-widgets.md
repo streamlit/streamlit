@@ -1,7 +1,7 @@
 
 # Streamlit input widgets
 
-The right widget for the value you're collecting. This covers value-entry widgets — where the user types or picks a number, date, string, or triggers an action. For choosing from a fixed set of options (single/multi-select), see [selection-widgets.md](selection-widgets.md).
+The right widget for the value you're collecting. This covers value-entry widgets — where the user types or picks a number, date, time, or string. For choosing from a fixed set of options (single/multi-select), see [selection-widgets.md](selection-widgets.md). For buttons and other triggers (action menus, downloads, links), see the trigger-widgets reference.
 
 The core rule: match the widget to the data type. Don't collect numbers, dates, or times through `st.text_input` and parse the string yourself — that crashes on bad input and gives you no bounds or validation. Use a widget that returns the right Python type directly.
 
@@ -16,7 +16,6 @@ The core rule: match the widget to the data type. Don't collect numbers, dates, 
 | Date + time together | `st.datetime_input` | `datetime` |
 | Free text | `st.text_input` / `st.text_area` | `str` |
 | Secret / password entry | `st.text_input(type="password")` | `str` |
-| An action | `st.button` | `bool` (transient) |
 
 ## Numbers: st.number_input
 
@@ -75,6 +74,8 @@ start, end = st.date_input("Reporting period", value=(date(2026, 1, 1), date(202
 
 `st.time_input` returns a `datetime.time` (use `step` to set the granularity). `st.datetime_input` (recent — Streamlit 1.57+) collects a date and time together and returns a single `datetime`, replacing the old two-widget pattern.
 
+**Gotcha — `st.datetime_input`'s `format` is DATE-ONLY.** It accepts exactly `"YYYY/MM/DD"` (default), `"DD/MM/YYYY"`, or `"MM/DD/YYYY"`, optionally using `.` or `-` as the separator. It does NOT take a time component: `format="YYYY-MM-DD HH:mm"` raises `StreamlitAPIException` and crashes the app on render. To change the time granularity use `step=` (a `datetime.timedelta` or an int number of seconds, between 60s and 23h), not `format`. If you don't need a custom date display, omit `format` entirely.
+
 ## Free text: st.text_input / st.text_area
 
 `st.text_input` for one line, `st.text_area` for multi-line. Use `placeholder` for a hint, `max_chars` to cap length.
@@ -92,24 +93,9 @@ api_key = st.text_input("API key", type="password")
 
 A masked text input is *not* authentication — it only hides characters on screen. For real sign-in (identity, protected pages), use `st.login` / `st.user`; see [multipage-apps.md](multipage-apps.md).
 
-## Actions: st.button
+## Actions and triggers
 
-`st.button` is the fundamental action trigger. It returns `True` only on the single rerun where the click happened, then goes back to `False` — the value is transient, not remembered across reruns.
-
-```python
-# BAD: assumes the button "stays clicked" — this branch only runs once,
-# then the panel vanishes on the next interaction
-if st.button("Show details"):
-    show_panel()  # disappears as soon as anything else triggers a rerun
-
-# GOOD: use the click to set persistent state, then read the state
-if st.button("Show details"):
-    st.session_state.show = True
-if st.session_state.get("show"):
-    show_panel()
-```
-
-Use the click to fire an action (save, send, recompute) or to flip a value in `st.session_state`; never rely on the boolean surviving to the next run. See [session-state.md](session-state.md) for the persistence patterns. Style emphasis with `type="primary"` and add a leading glyph with `icon=":material/save:"`.
+For buttons and button-like trigger widgets — `st.button`, action/toolbar menus (`st.menu_button`), file downloads (`st.download_button`), and URL links (`st.link_button`) — see the trigger-widgets reference. They fire an action on click rather than holding a value, so they live in their own reference.
 
 ## Batching inputs
 
@@ -124,5 +110,4 @@ Every widget interaction triggers a full rerun by default. To collect several in
 - [st.datetime_input](https://docs.streamlit.io/develop/api-reference/widgets/st.datetime_input)
 - [st.text_input](https://docs.streamlit.io/develop/api-reference/widgets/st.text_input)
 - [st.text_area](https://docs.streamlit.io/develop/api-reference/widgets/st.text_area)
-- [st.button](https://docs.streamlit.io/develop/api-reference/widgets/st.button)
 - [st.form](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form)
