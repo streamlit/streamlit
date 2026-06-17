@@ -110,6 +110,7 @@ from streamlit.proto import Block_pb2
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching
+from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
 from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -806,8 +807,6 @@ def _get_or_create_outside_wrapper(
     """Return the cached wrapper DG, creating one on first write, or raise on a
     standalone rerun that has no reserved slot.
     """
-    from streamlit.runtime.fragment import _OutsideWrapper
-
     fragment_storage = ctx.fragment_storage
     fragment_id = cast("str", ts.fragment_id)
     container_id = dg._id
@@ -864,7 +863,7 @@ def _get_or_create_outside_wrapper(
     fragment_storage.register_outside_wrapper(
         fragment_id,
         container_id,
-        _OutsideWrapper(
+        OutsideContainerWrapper(
             wrapper_dg,
             creation_delta_path,
             block_proto,

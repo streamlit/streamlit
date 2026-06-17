@@ -48,7 +48,8 @@ from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.runtime.fragment import MemoryFragmentStorage, _OutsideWrapper
+from streamlit.runtime.fragment import MemoryFragmentStorage
+from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     FragmentThreadState,
@@ -1421,7 +1422,7 @@ class NeedsOutsideWrapperTest(DeltaGeneratorTestCase):
         self.fragment_storage.register_outside_wrapper(
             "frag",
             "container-id",
-            _OutsideWrapper(
+            OutsideContainerWrapper(
                 wrapper_dg, [0, 0], Block_pb2.Block(), creating_fragment_id=None
             ),
         )
