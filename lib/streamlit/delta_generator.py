@@ -535,9 +535,7 @@ class DeltaGenerator(
                         "sequential fragment rerun instead."
                     )
 
-            if ts.fragment_id and _needs_outside_wrapper(
-                dg, ts, ctx.fragment_storage
-            ):
+            if ts.fragment_id and _needs_outside_wrapper(dg, ts, ctx.fragment_storage):
                 dg = _get_or_create_outside_wrapper(dg, ts, ctx)
 
         # Warn if an element is being changed but the user isn't running the streamlit server.
@@ -628,8 +626,10 @@ class DeltaGenerator(
 
         ctx = get_script_run_ctx()
         ts = ThreadState.get()
-        if ctx and ts.fragment_id and _needs_outside_wrapper(
-            dg, ts, ctx.fragment_storage
+        if (
+            ctx
+            and ts.fragment_id
+            and _needs_outside_wrapper(dg, ts, ctx.fragment_storage)
         ):
             dg = _get_or_create_outside_wrapper(dg, ts, ctx)
 
