@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import os
+import re
 import statistics
 import subprocess
 import sys
@@ -87,6 +88,10 @@ ELEMENT_COMMANDS: set[str] = {
     command for command, _ in WIDGET_ELEMENTS + NON_WIDGET_ELEMENTS + CONTAINER_ELEMENTS
 }
 
+# Public commands intentionally omitted from the api-reference.md skill doc
+# (e.g. deprecated commands we don't want agents to use in new code).
+API_REFERENCE_EXCLUSIONS: set[str] = {"cache"}
+
 
 class StreamlitTest(unittest.TestCase):
     """Test Streamlit.__init__.py."""
@@ -155,6 +160,55 @@ class StreamlitTest(unittest.TestCase):
             if not k.startswith("_") and not isinstance(v, type(st))
         }
         assert api == ELEMENT_COMMANDS.union(NON_ELEMENT_COMMANDS)
+
+    def test_api_reference_doc_covers_public_api(self):
+        """Test that the api-reference.md skill doc stays in sync with the API.
+
+        The reference tables are hand-maintained, so this guards against them
+        silently drifting when new public commands or ``st.column_config``
+        helpers are added. Only names are checked, not their descriptions.
+        """
+        dirname = os.path.dirname(__file__)
+        lib_dir = os.path.abspath(os.path.join(dirname, "..", ".."))
+        reference_path = os.path.join(
+            lib_dir,
+            "streamlit",
+            ".agents",
+            "skills",
+            "developing-with-streamlit",
+            "references",
+            "api-reference.md",
+        )
+        with open(reference_path, encoding="utf-8") as f:
+            reference = f.read()
+
+        # Top-level public commands (mirrors test_public_api).
+        top_level_api = {
+            k
+            for k, v in st.__dict__.items()
+            if not k.startswith("_") and not isinstance(v, type(st))
+        }
+        documented = set(re.findall(r"`st\.([A-Za-z_]+)`", reference))
+        missing = top_level_api - documented - API_REFERENCE_EXCLUSIONS
+        assert not missing, (
+            "These public st commands are missing from api-reference.md: "
+            f"{sorted(missing)}. Add them to the reference or, if intentionally "
+            "omitted, to API_REFERENCE_EXCLUSIONS."
+        )
+
+        # st.column_config helpers. ``annotations`` is the leaked
+        # ``from __future__ import annotations`` symbol, not a real helper.
+        column_config_api = {
+            k for k in dir(st.column_config) if not k.startswith("_")
+        } - {"annotations"}
+        documented_column_config = set(
+            re.findall(r"`st\.column_config\.([A-Za-z_]+)`", reference)
+        )
+        missing_column_config = column_config_api - documented_column_config
+        assert not missing_column_config, (
+            "These st.column_config helpers are missing from api-reference.md: "
+            f"{sorted(missing_column_config)}."
+        )
 
     def test_pydoc(self):
         """Test that we can run pydoc on the streamlit package"""

@@ -1,6 +1,6 @@
 # Streamlit API reference
 
-Use this as a quick orientation for public top-level `st` commands. The table covers callable `st.<command>(...)` entries exposed by the local Streamlit namespace when this reference was written.
+Use this as a quick orientation for the public top-level `st` API. The tables below cover the public `st.<command>(...)` commands, `st.column_config` helpers, and related namespace objects exposed by the local Streamlit namespace when this reference was written.
 
 Treat summaries as starting points, not complete usage docs. Before using unfamiliar parameters, deprecated options, callbacks, return values, or command-specific edge cases, inspect the local docstring and signature.
 
@@ -43,10 +43,9 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.bar_chart` | Display a bar chart from data. It is a native chart command for straightforward categorical or binned comparisons. |
 | `st.bokeh_chart` | Display an interactive Bokeh chart. Use when the app already uses Bokeh or needs Bokeh-specific chart features. |
 | `st.button` | Display a button widget. It returns `True` on the rerun triggered by a click and supports callbacks through `on_click`. |
-| `st.cache` | Legacy caching decorator. Do not use in new code; prefer `st.cache_data` for serializable data and `st.cache_resource` for shared resources. |
 | `st.cache_data` | Decorator for caching functions that return data. Use it for serializable data-loading or computation results, and use `st.cache_data.clear()` when caches need to be cleared. |
 | `st.cache_resource` | Decorator for caching shared resources. Use it for objects such as database connections, ML models, clients, or other expensive process-wide resources. |
-| `st.camera_input` | Display a webcam input widget. It returns an uploaded image-like object when the user takes a picture. |
+| `st.camera_input` | Display a webcam input widget. It returns an `UploadedFile` with the captured image when the user takes a picture, and `None` before then. |
 | `st.caption` | Display small caption text. Use for secondary text, notes, or metadata beneath primary content. |
 | `st.chat_input` | Display a chat input widget. It is designed for conversational apps and returns the submitted message or uploaded files depending on configuration. |
 | `st.chat_message` | Insert a chat message container. Use it with `with` blocks to render messages from users, assistants, or named speakers. |
@@ -77,7 +76,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.graphviz_chart` | Display a graph using Graphviz/dagre-d3 rendering. Use it for directed graphs, diagrams, and node-edge visualizations. |
 | `st.header` | Display text in header formatting. Use it for major sections below the page title. |
 | `st.help` | Display help for a Python object. It renders docstrings, signatures, and related information inside the app. |
-| `st.html` | Insert HTML into the app. Use it for static markup and styling; for interactive JavaScript-backed UI, use `st.components.v2.component()` instead. |
+| `st.html` | Insert HTML into the app for static markup and styling. JavaScript is ignored by default (opt in with `unsafe_allow_javascript=True`); for interactive components that exchange data with Python, use `st.components.v2.component()` instead. |
 | `st.iframe` | Embed content in an iframe. Use it to show an external page or embedded resource in a bounded frame. |
 | `st.image` | Display an image or list of images. Accepts paths, URLs, bytes, arrays, and image-like objects. |
 | `st.info` | Display an informational message. Use it for neutral guidance, context, or non-blocking status. |
@@ -91,7 +90,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.map` | Display a map with a scatterplot overlay. Use it for latitude/longitude data when a simple geographic visualization is enough. |
 | `st.markdown` | Display Markdown-formatted text. It supports Streamlit-specific extensions such as colored text, badges, icons, and limited HTML when enabled. |
 | `st.menu_button` | Display a dropdown menu button widget. Use it when a compact button should expose a small set of actions or options. |
-| `st.metric` | Display a metric with an optional delta indicator. Use it for KPIs, headline numbers, and dashboard summaries. |
+| `st.metric` | Display a metric with an optional delta indicator and optional inline sparkline (`chart_data`). Use it for KPIs, headline numbers, and dashboard summaries. |
 | `st.multiselect` | Display a widget that lets users select multiple options. It returns a list of selected values. |
 | `st.navigation` | Configure pages for a multipage app. It returns the currently selected page object, which the app should run. |
 | `st.number_input` | Display a numeric input widget. It supports integer and floating-point values, bounds, steps, and formatting. |
@@ -111,7 +110,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.select_slider` | Display a slider widget backed by a discrete list of options. Use it when options are ordered but not necessarily numeric. |
 | `st.selectbox` | Display a dropdown select widget. Use it for selecting one item from a medium or large set. |
 | `st.set_option` | Set a Streamlit configuration option at runtime. Use sparingly because not all options are safe or meaningful to change after startup. |
-| `st.set_page_config` | Configure default page settings such as title, icon, layout, sidebar state, and menu items. Call it once near the top of the app before rendering other elements. |
+| `st.set_page_config` | Configure default page settings such as title, icon, layout, sidebar state, and menu items. Can be called multiple times in a run; calls are additive and override only the parameters you specify. |
 | `st.slider` | Display a slider widget. Use it for numeric ranges, dates, times, or other ordered values. |
 | `st.snow` | Draw a celebratory snowfall animation. Use sparingly for lightweight success or celebration effects. |
 | `st.space` | Add vertical or horizontal space. Use it for small layout adjustments instead of empty Markdown strings. |
@@ -155,6 +154,7 @@ Use these in the `column_config` parameter of `st.dataframe` or `st.data_editor`
 | `st.column_config.LineChartColumn` | Configure a column as a line-chart sparkline. Use it for compact per-row trends without the filled area of an area chart. |
 | `st.column_config.LinkColumn` | Configure a column as clickable links. Use it for URLs, optionally with validation and display text behavior. |
 | `st.column_config.ListColumn` | Configure a column to display list-like values. Use it for arrays or repeated values that should render as structured list content. |
+| `st.column_config.MarkdownColumn` | Configure a column for Markdown content. Cells show plain text, and clicking a cell opens an overlay that renders the Markdown (with an editor in `st.data_editor`). |
 | `st.column_config.MultiselectColumn` | Configure an editable column with multiselect controls. Use it when each row can contain multiple choices from a known set. |
 | `st.column_config.NumberColumn` | Configure a numeric column. Use it for integers, floats, currencies, percentages, min/max bounds, step sizes, and numeric formatting. |
 | `st.column_config.ProgressColumn` | Configure a numeric column as progress bars. Use it for percentages, completion values, scores, or bounded progress-like quantities. |
