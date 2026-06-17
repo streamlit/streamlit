@@ -54,6 +54,25 @@ st.write(f"outside: fragment {uuid4()}")
 
 # --- Scenarios for fragments writing into containers created outside of them. ---
 
+# A static outside container (no changing content) used to snapshot the transparent
+# wrapper: its children must be direct flex items of the outside container with no
+# extra border or padding introduced by the wrapper. Declared early so the fixed
+# st.bottom container can't overlap it in the snapshot.
+visual_container = st.container(key="visual_container")
+with visual_container:
+    st.markdown("visual header")
+
+
+@st.fragment
+def visual_fragment():
+    with visual_container:
+        st.markdown("visual fragment")
+
+
+visual_fragment()
+with visual_container:
+    st.markdown("visual footer")
+
 # A single outside container that receives a main-script header before the fragment
 # runs, the fragment's own writes, and a main-script footer after the fragment runs.
 # The header and footer must keep their slots across fragment reruns, while the
