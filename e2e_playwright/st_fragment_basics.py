@@ -46,9 +46,9 @@ def my_big_fragment():
     st.write(f"inside fragment: {uuid4()}")
 
 
-with st.container(key="fragment_basics"):
-    my_big_fragment()
-    st.write(f"outside: fragment {uuid4()}")
+my_big_fragment()
+
+st.write(f"outside: fragment {uuid4()}")
 
 
 
