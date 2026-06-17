@@ -152,7 +152,9 @@ def test_radio_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
     radio = app.get_by_test_id("stRadio").get_by_test_id("stRadioOption").nth(1)
-    radio.scroll_into_view_if_needed()
+    # Center the option in the viewport so the fixed st.bottom container can't
+    # cover it (a bottom-edge-aligned target gets intercepted by the bar).
+    radio.evaluate("element => element.scrollIntoView({ block: 'center' })")
     radio.click(force=True)
     wait_for_app_run(app)
 
