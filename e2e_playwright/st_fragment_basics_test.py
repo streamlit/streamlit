@@ -172,7 +172,7 @@ def test_radio_in_fragment(app: Page):
 
     radio = app.get_by_test_id("stRadio").get_by_test_id("stRadioOption").nth(1)
     radio.evaluate("el => el.scrollIntoView({ block: 'center' })")
-    radio.click(force=True)
+    radio.click()
     wait_for_app_run(app)
 
     expect_only_fragment_uuid_changed(
