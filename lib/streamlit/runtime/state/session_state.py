@@ -984,6 +984,22 @@ class SessionState:
         """Return a list of serialized widget values for each widget with a value."""
         return self._new_widget_state.as_widget_states()
 
+    def get_serialized_widget_value(self, widget_id: str) -> WidgetStateProto | None:
+        """Return the serialized protobuf value for a widget, or None.
+
+        The value is serialized with the widget's currently-registered
+        serializer, which is consistent with the stored value even when a later
+        run has redefined option classes. This lets callers recover a widget's
+        canonical wire value (e.g. a select widget's formatted label) without
+        re-running a potentially identity-dependent format_func on a value that
+        was stored during an earlier run.
+
+        Must be called before the widget is re-registered this run (i.e. before
+        the metadata is swapped to the current run's serializer) to recover the
+        previous run's label.
+        """
+        return self._new_widget_state.get_serialized(widget_id)
+
     def _get_widget_id(self, k: str) -> str:
         """Turns a value that might be a widget id or a user provided key into
         an appropriate widget id.
