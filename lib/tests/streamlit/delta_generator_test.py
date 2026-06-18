@@ -1516,6 +1516,27 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
             outside.markdown("hi")
         assert "could not reserve a stable position" in str(exc_info.value)
 
+    def test_fragment_rerun_allows_wrapper_for_container_created_by_running_fragment(
+        self,
+    ) -> None:
+        """During a fragment rerun, if the target container was created by one
+        of the running fragments (e.g. a parent), a new wrapper is allowed.
+        This supports nested fragments writing into parent-owned containers.
+        """
+        self._enter_fragment(fragment_id="parent_frag")
+        inside_container = st.container()
+        ThreadState.update(fragment_id=None, delta_path=None)
+
+        self.script_run_ctx.fragment_ids_this_run = ["parent_frag"]
+        self._enter_fragment(fragment_id="child_frag")
+
+        inside_container.markdown("child write")
+
+        wrapper = self.script_run_ctx.fragment_storage.get_outside_wrapper(
+            "child_frag", inside_container._id
+        )
+        assert wrapper is not None
+
     def test_empty_outside_container_produces_locked_wrapper(self) -> None:
         """An st.empty() outside container produces a locked wrapper cursor."""
         outside = st.empty()
@@ -1629,7 +1650,9 @@ class NonFragmentBlockPathWrapperFreeTest(DeltaGeneratorTestCase):
         assert wrappers == []
 
         msg = self.get_message_from_queue()
-        assert msg.metadata.delta_path == make_delta_path(RootContainer.MAIN, (0,), 0)
+        assert msg.metadata.delta_path == make_delta_path(
+            RootContainer.MAIN, (0,), 0
+        )
 
     def test_columns_outside_fragment_has_no_wrappers(self) -> None:
         """The outside-write detection in _block must be a no-op for

@@ -818,10 +818,14 @@ def _get_or_create_outside_wrapper(
         return cached.delta_generator
 
     # fragment_ids_this_run is non-empty only during a standalone fragment
-    # rerun (not a full app rerun). In that case the outside container's
-    # creating scope hasn't run, so its cursor hasn't been allocated — we
-    # can't reserve a new slot without corrupting the delta tree.
-    if ctx.fragment_ids_this_run:
+    # rerun (not a full app rerun). If the container was created by one of
+    # the currently-running fragments, its cursor is valid and we can safely
+    # allocate a new wrapper (e.g. a child fragment writing into a container
+    # owned by its parent fragment during the parent's rerun). Otherwise the
+    # container's creating scope hasn't run, so we can't reserve a slot.
+    if ctx.fragment_ids_this_run and (
+        dg._creating_fragment_id not in ctx.fragment_ids_this_run
+    ):
         raise StreamlitAPIException(
             "A fragment tried to write to a container created outside the "
             "fragment, but that container was not written to during the initial "
