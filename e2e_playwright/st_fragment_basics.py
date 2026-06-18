@@ -189,3 +189,31 @@ def nested_fragment():
 
 
 nested_fragment()
+
+
+# A fragment writing a variable number of elements into an outside container,
+# with a main-script footer after the fragment. Shrinking the count must garbage-
+# collect the removed elements (no stale rows), while growing must not overwrite
+# the footer.
+shrink_container = st.container(key="shrink_container")
+with shrink_container:
+    st.markdown("shrink header")
+
+if "shrink_count" not in st.session_state:
+    st.session_state.shrink_count = 5
+
+
+@st.fragment
+def shrink_fragment():
+    if st.button("shrink rows", key="shrink_rows"):
+        st.session_state.shrink_count = 2
+    if st.button("grow rows", key="grow_rows"):
+        st.session_state.shrink_count = 5
+    with shrink_container:
+        for i in range(st.session_state.shrink_count):
+            st.markdown(f"shrink row {i}")
+
+
+shrink_fragment()
+with shrink_container:
+    st.markdown("shrink footer")
