@@ -72,7 +72,7 @@ def _is_watchdog_available() -> bool:
 
 @functools.cache
 def _report_wsl_polling_once() -> None:
-    """Inform the user that WSL uses poll-based file watching (printed once)."""
+    """Inform the user that WSL uses poll-based file watching."""
     cli_util.print_to_cli(_WSL_POLLING_INFO, fg="blue")
 
 
