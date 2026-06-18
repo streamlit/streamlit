@@ -16,7 +16,7 @@
 
 import { ReactElement } from "react"
 
-import { screen } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
@@ -390,5 +390,40 @@ describe("BlockNodeRenderer transparent blocks", () => {
     const { container } = renderWithContexts(makeBlockNodeComponent(node))
 
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it("nested block inside transparent wrapper inherits parent layout", () => {
+    const column = makeColumn(0.5)
+    const transparentBlock = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [column],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const horizontalBlock = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [transparentBlock],
+      new BlockProto({
+        allowEmpty: true,
+        flexContainer: {
+          gapConfig: { gapSize: streamlit.GapSize.SMALL },
+          direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        },
+      })
+    )
+    const root = makeVerticalBlock([horizontalBlock])
+
+    renderWithContexts(makeVerticalBlockComponent(root))
+
+    const hBlock = screen.getByTestId("stHorizontalBlock")
+    expect(hBlock).toHaveAttribute("direction", "row")
+
+    // Column renders as a flex child of the horizontal block —
+    // the transparent wrapper contributes no intervening DOM.
+    const columnEl = within(hBlock).getByTestId("stColumn")
+    expect(columnEl).toBeVisible()
+
+    // Only the root and the column's inner vertical block exist;
+    // the transparent wrapper does not add another.
+    expect(screen.getAllByTestId("stVerticalBlock")).toHaveLength(2)
   })
 })
