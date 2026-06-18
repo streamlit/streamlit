@@ -52,6 +52,24 @@ st.altair_chart(chart)
 - Interactive tooltips
 - Layered visualizations
 
+## Charts native can't do — escalate
+
+Native charts share a single y-axis and can't express every shape. When the request needs something they can't do, escalate to **Altair** (bundled with Streamlit — no extra install) rather than forcing a native chart to approximate it; reach for Plotly only if your app already uses it. The most common trigger is **two series on very different scales** (e.g. revenue in the thousands vs. a 0–100% rate), which needs a **secondary y-axis** — on a single `st.line_chart` the smaller series flattens against the bottom. Other cases: combo charts (bars + line), pie/donut, treemaps, sankey.
+
+```python
+# BAD: both series on one axis — margin (0-100) is invisible next to revenue (thousands)
+st.line_chart(df, x="month", y=["revenue", "margin"])
+
+# GOOD: secondary axis in Altair — two layered marks with independent y-scales
+import altair as alt
+
+base = alt.Chart(df).encode(x="month:O")
+revenue = base.mark_bar().encode(y=alt.Y("revenue:Q", title="Revenue"))
+margin = base.mark_line(color="red").encode(y=alt.Y("margin:Q", title="Margin (%)"))
+chart = alt.layer(revenue, margin).resolve_scale(y="independent")
+st.altair_chart(chart)
+```
+
 ## Deprecated: `use_container_width`
 
 **Do not use `use_container_width`.** It is deprecated — Streamlit elements now stretch to fill their container by default. Use the `width` parameter instead: `width="stretch"` (equivalent to `use_container_width=True`) or `width="content"` (equivalent to `use_container_width=False`). Remove `use_container_width` when you see it, and never add it to new code.
