@@ -662,7 +662,15 @@ def create_upload_routes(
         file_id = request.path_params["file_id"]
 
         if not runtime.is_active_session(session_id):
-            raise HTTPException(status_code=400, detail="Invalid session_id")
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Invalid session_id. This is likely caused by a multi-replica "
+                    "deployment without sticky sessions / session affinity. See "
+                    "https://docs.streamlit.io/develop/concepts/architecture/"
+                    "architecture#websockets-and-session-management"
+                ),
+            )
 
         max_size_bytes = (  # maxUploadSize is in megabytes
             config.get_option("server.maxUploadSize") * 1024 * 1024
