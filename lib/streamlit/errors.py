@@ -554,13 +554,6 @@ class BidiComponentUnserializableDataError(LocalizableStreamlitException):
 
 
 # policies
-class StreamlitFragmentWidgetsNotAllowedOutsideError(LocalizableStreamlitException):
-    """Exception raised when the fragment attempts to write to an element outside of its container."""
-
-    def __init__(self) -> None:
-        super().__init__("Fragments cannot write widgets to outside containers.")
-
-
 class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
     """Exception raised a `on_change` callback is set on any element in a form except for
     the `st.form_submit_button`.
