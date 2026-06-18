@@ -97,10 +97,7 @@ export const StyledMenuListItem = styled(MenuItem)(({ theme }) => ({
   cursor: "pointer",
   listStyle: "none",
   minWidth: theme.sizes.minMenuWidth,
-  borderTopLeftRadius: theme.radii.md2,
-  borderTopRightRadius: theme.radii.md2,
-  borderBottomRightRadius: theme.radii.md2,
-  borderBottomLeftRadius: theme.radii.md2,
+  borderRadius: theme.radii.md2,
   outline: "none",
   transition: "background 50ms ease",
 
