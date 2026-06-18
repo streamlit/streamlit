@@ -10,7 +10,7 @@ How you structure your app affects usability more than you think.
 | `st.container` | You need a general-purpose group of elements, a bordered section, a horizontal row, custom alignment, fixed height, scrolling, or out-of-order insertion of multiple elements. |
 | `st.columns` | You need a simple proportional grid, such as two-column comparisons or up to four KPI cards. |
 | `st.sidebar` | You need app-level navigation, global filters, settings, or small app metadata that should stay separate from the main content. |
-| `st.tabs` | You need multiple peer views of related content, and users should switch between them without leaving the page. All tab content is computed by default. |
+| `st.tabs` | You need multiple peer views of related content, and users should switch between them without leaving the page. All tab content is computed by default; for lazy execution where only the selected tab runs, use `on_change="rerun"` (or a callable) and check each tab's `.open` property. |
 | `st.expander` | You need optional details, advanced settings, explanations, or diagnostic output that should not dominate the main view. |
 | `st.status` | You need to show progress, logs, or multi-step work in a collapsible status block that can update from running to complete or error. |
 | `st.popover` | You need compact on-demand controls, filters, or secondary actions without changing page layout. |
