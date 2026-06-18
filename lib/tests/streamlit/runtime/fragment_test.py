@@ -551,6 +551,10 @@ def test_shallow_copy_raises_type_error() -> None:
 class ResetOutsideWrappersTest(unittest.TestCase):
     """Tests for _reset_outside_wrappers, called before a fragment reruns."""
 
+    def setUp(self) -> None:
+        # ThreadState.scoped() requires an initialized FragmentThreadState.
+        ThreadState.initialize()
+
     def _make_wrapper(
         self,
         cursor: object,
@@ -672,6 +676,32 @@ class ResetOutsideWrappersTest(unittest.TestCase):
         # P reruns and rebuilds the container, so F's wrapper is evicted.
         storage.evict_outside_wrappers_created_by("P")
         assert storage.outside_wrappers_for("F") == []
+
+    def test_reemission_carries_writing_fragment_id(self) -> None:
+        """Without the fragment_id, the re-emitted wrapper block loses its
+        identity on the frontend and ClearStaleNodeVisitor can't garbage-collect
+        children that weren't re-emitted (the stale-on-shrink bug).
+        """
+        storage = MemoryFragmentStorage()
+        wrapper = self._make_wrapper(
+            RunningCursor(RootContainer.MAIN), creation_delta_path=[0, 3]
+        )
+        storage.register_outside_wrapper("frag", "container", wrapper)
+
+        seen_fragment_ids: list[str | None] = []
+
+        def _capture(*_args: object, **_kwargs: object) -> None:
+            seen_fragment_ids.append(ThreadState.get().fragment_id)
+
+        with patch(
+            "streamlit.delta_generator._enqueue_add_block", side_effect=_capture
+        ):
+            _reset_outside_wrappers(storage, "frag")
+
+        assert seen_fragment_ids == ["frag"]
+        # The scope is restored after re-emission, so the surrounding thread
+        # state is left untouched.
+        assert ThreadState.get().fragment_id is None
 
 
 class FragmentTest(unittest.TestCase):

@@ -13,21 +13,29 @@
 # limitations under the License.
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
+    expect_no_exception,
+    get_element_by_key,
     select_selectbox_option,
 )
 
 
-def get_uuids(app: Page) -> tuple[str, str]:
-    expect(app.get_by_test_id("stMarkdown")).to_have_count(2)
+def _in_fragment_markdown(app: Page) -> Locator:
+    return app.get_by_test_id("stMarkdown").filter(has_text="inside fragment:")
 
-    text_in_fragment = app.get_by_test_id("stMarkdown").first.text_content()
-    text_outside_fragment = app.get_by_test_id("stMarkdown").last.text_content()
+
+def _outside_fragment_markdown(app: Page) -> Locator:
+    return app.get_by_test_id("stMarkdown").filter(has_text="outside: fragment")
+
+
+def get_uuids(app: Page) -> tuple[str, str]:
+    text_in_fragment = _in_fragment_markdown(app).text_content()
+    text_outside_fragment = _outside_fragment_markdown(app).text_content()
 
     assert text_in_fragment is not None
     assert text_outside_fragment is not None
@@ -38,12 +46,8 @@ def get_uuids(app: Page) -> tuple[str, str]:
 def expect_only_fragment_uuid_changed(
     app: Page, old_text_in_fragment: str, old_text_outside_fragment: str
 ):
-    expect(app.get_by_test_id("stMarkdown").first).not_to_have_text(
-        old_text_in_fragment
-    )
-    expect(app.get_by_test_id("stMarkdown").last).to_have_text(
-        old_text_outside_fragment
-    )
+    expect(_in_fragment_markdown(app)).not_to_have_text(old_text_in_fragment)
+    expect(_outside_fragment_markdown(app)).to_have_text(old_text_outside_fragment)
 
 
 def test_button_in_fragment(app: Page):
@@ -148,7 +152,9 @@ def test_radio_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
     radio = app.get_by_test_id("stRadio").get_by_test_id("stRadioOption").nth(1)
-    radio.scroll_into_view_if_needed()
+    # Center the option in the viewport so the fixed st.bottom container can't
+    # cover it (a bottom-edge-aligned target gets intercepted by the bar).
+    radio.evaluate("element => element.scrollIntoView({ block: 'center' })")
     radio.click(force=True)
     wait_for_app_run(app)
 
@@ -230,9 +236,39 @@ def test_full_app_rerun(app: Page):
     app.keyboard.press("r")
     wait_for_app_run(app)
 
-    expect(app.get_by_test_id("stMarkdown").first).not_to_have_text(
-        old_text_in_fragment
-    )
-    expect(app.get_by_test_id("stMarkdown").last).not_to_have_text(
-        old_text_outside_fragment
-    )
+    expect(_in_fragment_markdown(app)).not_to_have_text(old_text_in_fragment)
+    expect(_outside_fragment_markdown(app)).not_to_have_text(old_text_outside_fragment)
+
+
+def test_fragment_shrink_clears_stale_outside_elements(app: Page):
+    """A fragment that reruns with fewer elements in an outside container must
+    garbage-collect the removed elements, while growth keeps the footer in place.
+    """
+    container = get_element_by_key(app, "shrink_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    # header + 5 rows + footer.
+    expect(markdowns).to_have_count(7)
+    expect(markdowns.first).to_have_text("shrink header")
+    expect(markdowns.last).to_have_text("shrink footer")
+    expect(markdowns.filter(has_text="shrink row 4")).to_have_count(1)
+
+    click_button(app, "shrink rows")
+
+    # header + 2 rows + footer; rows 2-4 must be gone (the stale-on-shrink bug).
+    expect(markdowns).to_have_count(4)
+    expect(markdowns.first).to_have_text("shrink header")
+    expect(markdowns.last).to_have_text("shrink footer")
+    expect(markdowns.filter(has_text="shrink row 0")).to_have_count(1)
+    expect(markdowns.filter(has_text="shrink row 1")).to_have_count(1)
+    expect(markdowns.filter(has_text="shrink row 2")).to_have_count(0)
+    expect(markdowns.filter(has_text="shrink row 4")).to_have_count(0)
+
+    click_button(app, "grow rows")
+
+    # Growing back must restore all rows without overwriting the footer.
+    expect(markdowns).to_have_count(7)
+    expect(markdowns.first).to_have_text("shrink header")
+    expect(markdowns.last).to_have_text("shrink footer")
+    expect(markdowns.filter(has_text="shrink row 4")).to_have_count(1)
+
+    expect_no_exception(app)
