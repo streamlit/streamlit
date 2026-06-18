@@ -25,7 +25,7 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 | Streamlit logo | `:streamlit:` | `:streamlit:` | ✓ |
 | Material icon | `:material/icon_name:` | `:material/check_circle:` | ✓ |
 | Colored text | `:color[text]` | `:red[Error]` | ✓ |
-| Custom hex/CSS color | `:color[text]{foreground="..."}` | `:color[Important]{foreground="#E03131"}` | ✓ |
+| Custom hex/CSS color | `:color[text]{foreground="..." background="..."}` | `:color[Important]{foreground="#E03131" background="#FFF5F5"}` | ✓ |
 | Colored background | `:color-background[text]` | `:blue-background[Info]` | ✓ |
 | Badge | `:color-badge[text]` | `:green-badge[Success]` | ✓ |
 | Small text | `:small[text]` | `:small[footnote]` | ✓ |
@@ -84,7 +84,7 @@ st.markdown(":green-badge[Active] :red-badge[Inactive]")  # Inline badges
 
 Note: `rainbow` is not supported for backgrounds or badges. Standalone badges also available via `st.badge()`.
 
-Stick to the predefined palette above whenever possible — it adapts to the theme. For an exact hex or CSS color when the design truly requires one, add the `{foreground="..."}` modifier to the `:color[...]` directive (e.g. `:color[Important]{foreground="#E03131"}`) rather than raw HTML / `unsafe_allow_html`.
+Stick to the predefined palette above whenever possible — it adapts to the theme. For an exact hex or CSS color when the design truly requires one, add a `{foreground="..." background="..."}` modifier to the `:color[...]` directive (both keys are optional; e.g. `:color[Important]{foreground="#E03131"}` or `:color[Note]{background="#FFF3BF"}`) rather than raw HTML / `unsafe_allow_html`.
 
 ## Material icons
 
