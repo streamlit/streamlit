@@ -307,8 +307,6 @@ class WriteMixin:
                   - Uses ``st.help()``.
                 * - Altair chart
                   - Uses ``st.altair_chart()``.
-                * - Bokeh figure
-                  - Uses ``st.bokeh_chart()``.
                 * - Graphviz graph
                   - Uses ``st.graphviz_chart()``.
                 * - Keras model
@@ -473,9 +471,6 @@ class WriteMixin:
             elif type_util.is_plotly_chart(arg):
                 flush_buffer()
                 self.dg.plotly_chart(arg)
-            elif type_util.is_type(arg, "bokeh.plotting.figure.Figure"):
-                flush_buffer()
-                self.dg.bokeh_chart(arg)
             elif type_util.is_graphviz_chart(arg):
                 flush_buffer()
                 self.dg.graphviz_chart(arg)

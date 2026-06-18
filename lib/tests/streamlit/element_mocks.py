@@ -248,13 +248,6 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     """),
     ),
     ("pyplot", lambda: st.pyplot(plt.figure())),
-    (
-        "bokeh_chart",
-        lambda: (
-            # Ignore bokeh chart since it requires outdated dependencies:
-            st.write("")
-        ),
-    ),
     # utilities
     ("help", lambda: st.help("Hello")),
     ("echo", lambda: st.echo()),

@@ -48,7 +48,6 @@ from streamlit.delta_generator_singletons import (
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.balloons import BalloonsMixin
-from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.empty import EmptyMixin
@@ -189,7 +188,6 @@ class DeltaGenerator(
     AlertMixin,
     AudioInputMixin,
     BalloonsMixin,
-    BokehMixin,
     ButtonMixin,
     ButtonGroupMixin,
     CameraInputMixin,
