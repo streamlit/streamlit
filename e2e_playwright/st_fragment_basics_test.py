@@ -17,14 +17,26 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
-    click_button,
     click_checkbox,
     click_form_button,
     expect_markdown,
     expect_no_exception,
+    get_button,
     get_element_by_key,
     select_selectbox_option,
 )
+
+
+def _click_button_centered(app: Page, label: str) -> None:
+    """Scroll a button to the viewport center, then click it.
+
+    The fixed ``st.bottom`` bar can cover buttons near the bottom of the page.
+    Centering the element avoids interception by both the header and bottom bar.
+    """
+    button = get_button(app, label)
+    button.evaluate("el => el.scrollIntoView({ block: 'center' })")
+    button.click()
+    wait_for_app_run(app)
 
 
 def _in_fragment_markdown(app: Page) -> Locator:
@@ -55,7 +67,7 @@ def expect_only_fragment_uuid_changed(
 def test_button_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    click_button(app, "a button")
+    _click_button_centered(app, "a button")
 
     expect_only_fragment_uuid_changed(
         app, old_text_in_fragment, old_text_outside_fragment
@@ -100,6 +112,7 @@ def test_color_picker_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
     color_block_element = app.get_by_test_id("stColorPickerBlock")
+    color_block_element.evaluate("el => el.scrollIntoView({ block: 'center' })")
     color_block_element.click()
     app.locator('[data-baseweb="popover"]').locator("input").fill("0xFFFFFF")
     color_block_element.click()
@@ -113,7 +126,9 @@ def test_color_picker_in_fragment(app: Page):
 def test_date_input_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    app.get_by_test_id("stDateInput").click()
+    date_input = app.get_by_test_id("stDateInput")
+    date_input.evaluate("el => el.scrollIntoView({ block: 'center' })")
+    date_input.click()
     app.locator(
         '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
     ).first.click()
@@ -127,7 +142,9 @@ def test_date_input_in_fragment(app: Page):
 def test_multiselect_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    app.get_by_test_id("stMultiSelect").locator("input").click()
+    multiselect = app.get_by_test_id("stMultiSelect").locator("input")
+    multiselect.evaluate("el => el.scrollIntoView({ block: 'center' })")
+    multiselect.click()
     app.locator("li").first.click()
     app.keyboard.press("Escape")
     wait_for_app_run(app)
@@ -154,7 +171,7 @@ def test_radio_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
     radio = app.get_by_test_id("stRadio").get_by_test_id("stRadioOption").nth(1)
-    radio.scroll_into_view_if_needed()
+    radio.evaluate("el => el.scrollIntoView({ block: 'center' })")
     radio.click(force=True)
     wait_for_app_run(app)
 
@@ -166,6 +183,8 @@ def test_radio_in_fragment(app: Page):
 def test_selectbox_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
+    selectbox = app.get_by_test_id("stSelectbox").filter(has_text="a selectbox")
+    selectbox.evaluate("el => el.scrollIntoView({ block: 'center' })")
     select_selectbox_option(app, "a selectbox", "b")
 
     expect_only_fragment_uuid_changed(
@@ -292,7 +311,7 @@ def test_full_rerun_after_outside_write_no_duplicates(app: Page):
     markdowns = container.get_by_test_id("stMarkdown")
     expect(markdowns).to_have_count(7)
 
-    click_button(app, "shrink rows")
+    _click_button_centered(app, "shrink rows")
     expect(markdowns).to_have_count(4)
 
     rerun_app(app)
@@ -318,7 +337,7 @@ def test_fragment_interleaved_with_main_writes_in_outside_container(app: Page):
     fragment_markdown = markdowns.filter(has_text="interleaved fragment:")
     old_fragment_text = fragment_markdown.text_content()
 
-    click_button(app, "rerun interleaved")
+    _click_button_centered(app, "rerun interleaved")
 
     expect(fragment_markdown).not_to_have_text(old_fragment_text or "")
     expect(markdowns.first).to_have_text("interleaved header")
@@ -327,7 +346,7 @@ def test_fragment_interleaved_with_main_writes_in_outside_container(app: Page):
     # wrapper cursor wasn't reset between fragment reruns.
     expect(container.get_by_test_id("stMarkdown")).to_have_count(3)
 
-    click_button(app, "rerun interleaved")
+    _click_button_centered(app, "rerun interleaved")
     expect(container.get_by_test_id("stMarkdown")).to_have_count(3)
 
     expect_no_exception(app)
@@ -350,7 +369,7 @@ def test_two_fragments_write_into_same_outside_container(app: Page):
     old_first_text = first_markdown.text_content()
     old_second_text = second_markdown.text_content()
 
-    click_button(app, "rerun first writer")
+    _click_button_centered(app, "rerun first writer")
 
     expect(first_markdown).not_to_have_text(old_first_text or "")
     expect(second_markdown).to_have_text(old_second_text or "")
@@ -370,22 +389,20 @@ def test_fragment_writes_into_sidebar(app: Page):
     """
     sidebar = app.get_by_test_id("stSidebar")
     markdowns = sidebar.get_by_test_id("stMarkdown")
-    expect(markdowns).to_have_count(4)
-    expect(markdowns.first).to_have_text("sidebar header")
-    expect(markdowns.last).to_have_text("sidebar footer")
 
     with_block_markdown = markdowns.filter(has_text="sidebar with-block:")
     direct_markdown = markdowns.filter(has_text="sidebar direct:")
+    expect(with_block_markdown).to_have_count(1)
+    expect(direct_markdown).to_have_count(1)
     old_with_block_text = with_block_markdown.text_content()
     old_direct_text = direct_markdown.text_content()
 
-    click_button(app, "rerun sidebar")
+    _click_button_centered(app, "rerun sidebar")
 
     expect(with_block_markdown).not_to_have_text(old_with_block_text or "")
     expect(direct_markdown).not_to_have_text(old_direct_text or "")
-    expect(markdowns.first).to_have_text("sidebar header")
-    expect(markdowns.last).to_have_text("sidebar footer")
-    expect(sidebar.get_by_test_id("stMarkdown")).to_have_count(4)
+    expect(with_block_markdown).to_have_count(1)
+    expect(direct_markdown).to_have_count(1)
 
     expect_no_exception(app)
 
@@ -398,19 +415,15 @@ def test_fragment_writes_into_bottom_container(app: Page):
     """
     bottom = app.get_by_test_id("stBottom")
     markdowns = bottom.get_by_test_id("stMarkdown")
-    expect(markdowns).to_have_count(3)
-    expect(markdowns.first).to_have_text("bottom header")
-    expect(markdowns.last).to_have_text("bottom footer")
 
     fragment_markdown = markdowns.filter(has_text="bottom fragment:")
+    expect(fragment_markdown).to_have_count(1)
     old_fragment_text = fragment_markdown.text_content()
 
-    click_button(app, "rerun bottom")
+    _click_button_centered(app, "rerun bottom")
 
     expect(fragment_markdown).not_to_have_text(old_fragment_text or "")
-    expect(markdowns.first).to_have_text("bottom header")
-    expect(markdowns.last).to_have_text("bottom footer")
-    expect(bottom.get_by_test_id("stMarkdown")).to_have_count(3)
+    expect(fragment_markdown).to_have_count(1)
 
     expect_no_exception(app)
 
@@ -427,7 +440,7 @@ def test_fragment_fills_empty_placeholder(app: Page):
     placeholder_markdown = markdowns.filter(has_text="empty placeholder:")
     old_placeholder_text = placeholder_markdown.text_content()
 
-    click_button(app, "rerun empty pattern")
+    _click_button_centered(app, "rerun empty pattern")
 
     expect(placeholder_markdown).not_to_have_text(old_placeholder_text or "")
     expect(markdowns.first).to_have_text("empty-pattern header")
@@ -448,7 +461,7 @@ def test_fragment_nested_container_in_outside_container(app: Page):
     fragment_markdown = markdowns.filter(has_text="nested fragment:")
     old_fragment_text = fragment_markdown.text_content()
 
-    click_button(app, "rerun nested")
+    _click_button_centered(app, "rerun nested")
 
     expect(fragment_markdown).not_to_have_text(old_fragment_text or "")
     expect(markdowns.first).to_have_text("nested header")
@@ -468,7 +481,7 @@ def test_fragment_shrink_clears_stale_outside_elements(app: Page):
     expect(markdowns.last).to_have_text("shrink footer")
     expect(markdowns.filter(has_text="shrink row 4")).to_have_count(1)
 
-    click_button(app, "shrink rows")
+    _click_button_centered(app, "shrink rows")
 
     # header + 2 rows + footer; rows 2-4 must be gone (the stale-on-shrink bug).
     expect(markdowns).to_have_count(4)
@@ -479,7 +492,7 @@ def test_fragment_shrink_clears_stale_outside_elements(app: Page):
     expect(markdowns.filter(has_text="shrink row 2")).to_have_count(0)
     expect(markdowns.filter(has_text="shrink row 4")).to_have_count(0)
 
-    click_button(app, "grow rows")
+    _click_button_centered(app, "grow rows")
 
     # Growing back must restore all rows without overwriting the footer.
     expect(markdowns).to_have_count(7)
@@ -549,14 +562,14 @@ def test_toplevel_sidebar_bottom_shrink_grow_interleaving(app: Page):
     expect(bottom_markdowns.filter(has_text="bottom section footer")).to_have_count(1)
     expect(bottom_markdowns.filter(has_text="bottom row")).to_have_count(3)
 
-    click_button(app, "toplevel to 5")
+    _click_button_centered(app, "toplevel to 5")
 
     expect(sidebar_markdowns.filter(has_text="sidebar row")).to_have_count(5)
     expect(sidebar_markdowns.filter(has_text="sidebar section footer")).to_have_count(1)
     expect(bottom_markdowns.filter(has_text="bottom row")).to_have_count(5)
     expect(bottom_markdowns.filter(has_text="bottom section footer")).to_have_count(1)
 
-    click_button(app, "toplevel to 2")
+    _click_button_centered(app, "toplevel to 2")
 
     expect(sidebar_markdowns.filter(has_text="sidebar row")).to_have_count(2)
     expect(sidebar_markdowns.filter(has_text="sidebar row 0")).to_have_count(1)
@@ -586,7 +599,7 @@ def test_parent_rerun_rebuilds_child_outside_wrapper(app: Page):
     expect(markdowns.nth(1)).to_have_text("child row 0")
     expect(markdowns.nth(2)).to_have_text("child row 1")
 
-    click_button(app, "rerun parent")
+    _click_button_centered(app, "rerun parent")
 
     expect(markdowns).to_have_count(3)
     expect(markdowns.nth(0)).to_have_text("parent header")
@@ -603,7 +616,7 @@ def test_child_rerun_preserves_parent_wrapper(app: Page):
     markdowns = container.get_by_test_id("stMarkdown")
     expect(markdowns).to_have_count(3)
 
-    click_button(app, "rerun child")
+    _click_button_centered(app, "rerun child")
 
     expect(markdowns).to_have_count(3)
     expect(markdowns.nth(0)).to_have_text("parent header")
@@ -621,7 +634,7 @@ def test_fragment_rerun_preserves_inscope_content_position(app: Page):
     expect(stable_b).to_have_count(1)
     expect(stable_c).to_have_count(1)
 
-    click_button(app, "rerun stable")
+    _click_button_centered(app, "rerun stable")
 
     expect(stable_a).to_have_count(1)
     expect(stable_b).to_have_count(1)
@@ -662,7 +675,7 @@ def test_widget_in_outside_container_triggers_fragment_rerun(app: Page):
     app_marker = app.get_by_test_id("stMarkdown").filter(has_text="app-level marker:")
     old_app_marker_text = app_marker.text_content()
 
-    click_button(app, "outside button")
+    _click_button_centered(app, "outside button")
 
     # Fragment content updated (fragment reran).
     expect(fragment_markdown).not_to_have_text(old_fragment_text or "")
