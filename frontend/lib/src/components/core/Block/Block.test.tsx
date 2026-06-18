@@ -18,16 +18,35 @@ import { ReactElement } from "react"
 
 import { screen } from "@testing-library/react"
 
-import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
+import {
+  Block as BlockProto,
+  Element,
+  ForwardMsgMetadata,
+  streamlit,
+} from "@streamlit/protobuf"
 
-import { BlockNode } from "~lib/AppNode"
+import { BlockNode, ElementNode } from "~lib/AppNode"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
+import {
+  blockContainsChart,
+  BlockNodeRenderer,
+  FlexBoxContainer,
+  VerticalBlock,
+} from "./Block"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
+
+function makeElementNode(element: Element): ElementNode {
+  return new ElementNode(
+    element,
+    ForwardMsgMetadata.create(),
+    "",
+    FAKE_SCRIPT_HASH
+  )
+}
 
 function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
   return new BlockNode(
@@ -339,5 +358,39 @@ describe("BlockNodeRenderer CSS key class placement", () => {
 
     const innerBlock = screen.getByTestId("stVerticalBlock")
     expect(innerBlock.className).not.toContain("st-key-")
+  })
+})
+
+describe("blockContainsChart", () => {
+  const chartElement = (): ElementNode =>
+    makeElementNode(new Element({ vegaLiteChart: {} }))
+  const textElement = (): ElementNode =>
+    makeElementNode(new Element({ text: { body: "hello" } }))
+
+  const blockWith = (children: BlockNode["children"]): BlockNode =>
+    new BlockNode(FAKE_SCRIPT_HASH, children, new BlockProto())
+
+  it("returns true when a direct child is a chart", () => {
+    expect(
+      blockContainsChart(blockWith([textElement(), chartElement()]))
+    ).toBe(true)
+  })
+
+  it("returns true when a chart is nested in a child block", () => {
+    expect(blockContainsChart(blockWith([blockWith([chartElement()])]))).toBe(
+      true
+    )
+  })
+
+  it("returns false when there is no chart in the subtree", () => {
+    expect(
+      blockContainsChart(
+        blockWith([textElement(), blockWith([textElement()])])
+      )
+    ).toBe(false)
+  })
+
+  it("returns false for an empty block", () => {
+    expect(blockContainsChart(blockWith([]))).toBe(false)
   })
 })
