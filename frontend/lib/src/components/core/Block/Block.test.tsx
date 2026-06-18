@@ -326,7 +326,8 @@ describe("BlockNodeRenderer CSS key class placement", () => {
       [],
       new BlockProto({
         allowEmpty: true,
-        popover: { label: "test popover" },
+        // open: true so the popover body is mounted and stVerticalBlock is in the DOM
+        popover: { label: "test popover", open: true },
         id: "$$ID-abc123-my_popover",
       })
     )

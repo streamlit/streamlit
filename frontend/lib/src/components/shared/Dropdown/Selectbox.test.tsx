@@ -134,7 +134,7 @@ describe("Selectbox widget", () => {
     await openDropdown(user)
 
     const dropdown = screen.getByTestId("stSelectboxVirtualDropdown")
-    expect(dropdown).toHaveStyle(`z-index: ${zIndices.modalPopover}`)
+    expect(dropdown).toHaveStyle(`z-index: ${zIndices.popup} !important`)
   })
 
   it("could be disabled", () => {

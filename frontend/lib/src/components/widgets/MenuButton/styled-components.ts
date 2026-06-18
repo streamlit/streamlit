@@ -17,7 +17,10 @@
 import styled from "@emotion/styled"
 import { Menu, MenuItem, Popover } from "react-aria-components"
 
-import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
+import {
+  getOverlayZIndex,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 
 export const StyledMenuButtonLabelContainer = styled.div<{
   $hideChevron?: boolean
@@ -63,9 +66,7 @@ export const StyledMenuPopover = styled(Popover)(({ theme }) => ({
   marginBottom: theme.spacing.lg,
   maxHeight: "70vh",
   overflow: "auto",
-  // NOTE: z-index cannot be set here — React Aria's useOverlayPosition
-  // hard-codes `zIndex: 100000` as an inline style which overrides CSS classes.
-  // The actual z-index override is passed via the `style` prop in MenuButton.tsx.
+  zIndex: getOverlayZIndex(theme),
 }))
 
 export const StyledMenuList = styled(Menu)(({ theme }) => ({
