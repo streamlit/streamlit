@@ -108,29 +108,6 @@ with shrink_container:
     st.markdown("shrink footer")
 
 
-# Nested fragments sharing a container: the child writes into a container
-# declared by the parent. Used to test parent-rerun and child-rerun stability.
-@st.fragment
-def parent_fragment():
-    parent_container = st.container(key="parent_owned_container")
-    with parent_container:
-        st.markdown("parent header")
-    st.button("rerun parent", key="rerun_parent")
-
-    @st.fragment
-    def child_fragment():
-        with parent_container:
-            st.markdown("child row 0")
-            st.markdown("child row 1")
-        st.button("rerun child", key="rerun_child")
-
-    child_fragment()
-
-
-parent_fragment()
-st.markdown("after parent fragment")
-
-
 # A fragment with several in-scope elements and a rerun button.
 @st.fragment
 def stable_content_fragment():
