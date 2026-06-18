@@ -659,9 +659,7 @@ def fragment(
     writing fragment, not the full app.
 
     To populate an outside container from a fragment, the container must first
-    receive at least one write during the initial full app run. A common
-    pattern is to reserve the position during the full run (e.g.,
-    ``placeholder = my_container.empty()``) and fill it from the fragment.
+    receive at least one write during the initial full app run.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these
