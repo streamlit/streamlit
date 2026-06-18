@@ -190,7 +190,7 @@ class StreamlitTest(unittest.TestCase):
             for k, v in st.__dict__.items()
             if not k.startswith("_") and not isinstance(v, type(st))
         }
-        documented = set(re.findall(r"`st\.([A-Za-z_]+)`", reference))
+        documented = set(re.findall(r"`st\.([A-Za-z0-9_]+)`", reference))
         missing = top_level_api - documented - API_REFERENCE_EXCLUSIONS
         assert not missing, (
             "These public st commands are missing from api-reference.md: "
@@ -212,12 +212,25 @@ class StreamlitTest(unittest.TestCase):
             k for k in dir(st.column_config) if not k.startswith("_")
         } - {"annotations"}
         documented_column_config = set(
-            re.findall(r"`st\.column_config\.([A-Za-z_]+)`", reference)
+            re.findall(r"`st\.column_config\.([A-Za-z0-9_]+)`", reference)
         )
         missing_column_config = column_config_api - documented_column_config
         assert not missing_column_config, (
             "These st.column_config helpers are missing from api-reference.md: "
             f"{sorted(missing_column_config)}."
+        )
+
+        # Reverse direction for ``st.column_config`` so removed or renamed
+        # helpers documented in the reference are caught.
+        phantom_column_config = {
+            name
+            for name in documented_column_config
+            if not hasattr(st.column_config, name)
+        }
+        assert not phantom_column_config, (
+            "These st.column_config helpers are documented in api-reference.md "
+            f"but no longer exist: {sorted(phantom_column_config)}. Remove or fix "
+            "them."
         )
 
     def test_pydoc(self):
