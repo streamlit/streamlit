@@ -17,6 +17,7 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
+    click_button,
     click_checkbox,
     click_form_button,
     expect_markdown,
