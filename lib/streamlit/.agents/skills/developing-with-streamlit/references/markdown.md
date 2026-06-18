@@ -27,7 +27,7 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 | Colored text | `:color[text]` | `:red[Error]` | ✓ |
 | Colored background | `:color-background[text]` | `:blue-background[Info]` | ✓ |
 | Badge | `:color-badge[text]` | `:green-badge[Success]` | ✓ |
-| Shimmer | `:shimmer[text]` | `:shimmer[Loading...]` | ✓ |
+| Shimmer animation | `:shimmer[text]` | `:shimmer[Loading...]` | ✓ |
 | Small text | `:small[text]` | `:small[footnote]` | ✓ |
 | LaTeX (inline) | `$formula$` | `$ax^2 + bx + c$` | ✓ |
 | LaTeX (block) | `$$formula$$` | `$$\int_0^1 x^2 dx$$` | ✗ |
