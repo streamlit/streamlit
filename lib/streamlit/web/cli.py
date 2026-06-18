@@ -208,11 +208,18 @@ def _resolve_streamlit_command(command_name: str) -> tuple[str, Any] | None:
         if not part or part.startswith("_") or part not in dir(obj):
             return None
         try:
+            # Resolve the attribute statically so computed attributes (e.g. the
+            # ``st.context.headers`` property) are not evaluated.
             static_obj = inspect.getattr_static(obj, part)
-        except AttributeError:
+        except Exception:
             return None
 
-        if isinstance(static_obj, property):
+        # Computed attributes (properties and getset descriptors, mirroring
+        # ``help._is_computed_property``) can only be the final part, since
+        # traversing into them would require evaluating them. Keep the
+        # descriptor itself so its docstring can be displayed without invoking
+        # it.
+        if isinstance(static_obj, property) or inspect.isgetsetdescriptor(static_obj):
             if index != len(parts) - 1:
                 return None
             obj = static_obj

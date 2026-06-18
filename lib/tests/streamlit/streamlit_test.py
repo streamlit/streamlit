@@ -198,6 +198,14 @@ class StreamlitTest(unittest.TestCase):
             "omitted, to API_REFERENCE_EXCLUSIONS."
         )
 
+        # Reverse direction: every documented top-level ``st.<name>`` entry must
+        # still exist on ``st`` so renamed, removed, or typo'd rows are caught.
+        phantom = {name for name in documented if not hasattr(st, name)}
+        assert not phantom, (
+            "These commands are documented in api-reference.md but no longer "
+            f"exist on the public st API: {sorted(phantom)}. Remove or fix them."
+        )
+
         # st.column_config helpers. ``annotations`` is the leaked
         # ``from __future__ import annotations`` symbol, not a real helper.
         column_config_api = {
