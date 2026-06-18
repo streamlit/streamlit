@@ -418,18 +418,25 @@ def _reset_outside_wrappers(
     Re-emitting sends a fresh add_block delta so the frontend doesn't garbage-
     collect the wrapper as stale. Resetting the cursor returns its index to 0 so
     the fragment's children overwrite in place instead of accumulating.
+
+    Each re-emitted delta carries ``fragment_id`` so the frontend's
+    ``ClearStaleNodeVisitor`` can recognize the wrapper as fragment-owned and
+    garbage-collect children that weren't re-emitted — otherwise a fragment
+    that shrinks its element count leaves stale children behind.
     """
     from streamlit.cursor import RunningCursor
     from streamlit.delta_generator import _enqueue_add_block
 
-    for wrapper in fragment_storage.outside_wrappers_for(fragment_id):
-        _enqueue_add_block(wrapper.creation_delta_path, wrapper.block_proto)
+    # See docstring — tag wrappers with fragment_id for stale-child GC.
+    with ThreadState.scoped(fragment_id=fragment_id):
+        for wrapper in fragment_storage.outside_wrappers_for(fragment_id):
+            _enqueue_add_block(wrapper.creation_delta_path, wrapper.block_proto)
 
-        wrapper_cursor = wrapper.delta_generator._cursor
-        if not isinstance(wrapper_cursor, RunningCursor):
-            # LockedCursor (st.empty wrappers) always points at index 0.
-            continue
-        wrapper_cursor.reset()
+            wrapper_cursor = wrapper.delta_generator._cursor
+            if not isinstance(wrapper_cursor, RunningCursor):
+                # LockedCursor (st.empty wrappers) always points at index 0.
+                continue
+            wrapper_cursor.reset()
 
 
 def _fragment(
