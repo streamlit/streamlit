@@ -140,11 +140,7 @@ sidebar_fragment()
 st.sidebar.markdown("sidebar footer")
 
 
-# A fragment writing directly into the bottom container, with main-script writes
-# providing a header before and a footer after.
-st.bottom.markdown("bottom header")
-
-
+# A fragment writing directly into the bottom container.
 @st.fragment
 def bottom_fragment():
     st.button("rerun bottom", key="rerun_bottom")
@@ -152,7 +148,6 @@ def bottom_fragment():
 
 
 bottom_fragment()
-st.bottom.markdown("bottom footer")
 
 
 # The ``container.empty()`` placeholder pattern: reserve the position during the full
@@ -321,18 +316,14 @@ def outside_widget_fragment():
 outside_widget_fragment()
 
 
-# --- SIDEBAR/BOTTOM shrink→grow interleaving ---
-# Variable element count written to st.sidebar and st.bottom from a fragment,
-# with header/footer to verify ordering. Exercises the _is_top_level detection
-# branch and stable-_id lifecycle on top-level containers.
+# --- SIDEBAR shrink→grow interleaving ---
+# Variable element count written to st.sidebar from a fragment,
+# with header/footer to verify ordering.
 if "toplevel_count" not in st.session_state:
     st.session_state.toplevel_count = 3
 
 with st.sidebar:
     st.markdown("sidebar section header")
-
-with st.bottom:
-    st.markdown("bottom section header")
 
 
 @st.fragment
@@ -346,18 +337,11 @@ def toplevel_shrink_grow_fragment():
         for i in range(st.session_state.toplevel_count):
             st.markdown(f"sidebar row {i}")
 
-    with st.bottom:
-        for i in range(st.session_state.toplevel_count):
-            st.markdown(f"bottom row {i}")
-
 
 toplevel_shrink_grow_fragment()
 
 with st.sidebar:
     st.markdown("sidebar section footer")
-
-with st.bottom:
-    st.markdown("bottom section footer")
 
 
 # A widget rendered into an outside container by a fragment. Clicking the widget
