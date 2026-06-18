@@ -15,7 +15,7 @@
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.conftest import rerun_app, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
@@ -286,6 +286,26 @@ def test_form_inside_fragment_submits_correctly(app: Page):
     ).to_have_count(1)
 
 
+def test_full_rerun_after_outside_write_no_duplicates(app: Page):
+    """After interacting with a fragment that writes outside, a full rerun must
+    not produce duplicated wrapper content (guards clear_outside_wrappers).
+    """
+    container = get_element_by_key(app, "shrink_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    expect(markdowns).to_have_count(7)
+
+    click_button(app, "shrink rows")
+    expect(markdowns).to_have_count(4)
+
+    rerun_app(app)
+    expect(markdowns).to_have_count(7)
+    expect(markdowns.first).to_have_text("shrink header")
+    expect(markdowns.last).to_have_text("shrink footer")
+    # No duplicated rows after the full rerun.
+    expect(markdowns.filter(has_text="shrink row 0")).to_have_count(1)
+    expect_no_exception(app)
+
+
 def test_fragment_shrink_clears_stale_outside_elements(app: Page):
     """A fragment that reruns with fewer elements in an outside container must
     garbage-collect the removed elements, while growth keeps the footer in place.
@@ -317,4 +337,154 @@ def test_fragment_shrink_clears_stale_outside_elements(app: Page):
     expect(markdowns.last).to_have_text("shrink footer")
     expect(markdowns.filter(has_text="shrink row 4")).to_have_count(1)
 
+    expect_no_exception(app)
+
+
+def test_outside_container_widget_triggers_fragment_only_rerun(app: Page):
+    """Clicking a widget written by a fragment into an outside container must
+    trigger a fragment-only rerun — the main-script marker stays unchanged.
+    """
+    _, old_text_outside_fragment = get_uuids(app)
+    fragment_marker = app.get_by_test_id("stMarkdown").filter(
+        has_text="outside_widget_fragment ran:"
+    )
+    old_fragment_text = fragment_marker.text_content()
+    assert old_fragment_text is not None
+
+    # Click the button rendered in the outside container.
+    container = get_element_by_key(app, "outside_widget_container")
+    container.get_by_role("button", name="outside container btn").click()
+    wait_for_app_run(app)
+
+    # Fragment re-ran (its UUID changed).
+    expect(fragment_marker).not_to_have_text(old_fragment_text)
+    # Main script did NOT re-run.
+    expect(_outside_fragment_markdown(app)).to_have_text(old_text_outside_fragment)
+    expect_no_exception(app)
+
+
+def test_sidebar_widget_triggers_fragment_only_rerun(app: Page):
+    """Clicking a widget written by a fragment into the sidebar must trigger
+    a fragment-only rerun — the main-script marker stays unchanged.
+    """
+    _, old_text_outside_fragment = get_uuids(app)
+    fragment_marker = app.get_by_test_id("stMarkdown").filter(
+        has_text="outside_widget_fragment ran:"
+    )
+    old_fragment_text = fragment_marker.text_content()
+    assert old_fragment_text is not None
+
+    sidebar = app.get_by_test_id("stSidebar")
+    sidebar.get_by_role("button", name="sidebar btn").click()
+    wait_for_app_run(app)
+
+    expect(fragment_marker).not_to_have_text(old_fragment_text)
+    expect(_outside_fragment_markdown(app)).to_have_text(old_text_outside_fragment)
+    expect_no_exception(app)
+
+
+def test_toplevel_sidebar_bottom_shrink_grow_interleaving(app: Page):
+    """Fragments writing variable element counts into st.sidebar and st.bottom
+    must garbage-collect stale rows on shrink and preserve header/footer ordering
+    on grow. Exercises the _is_top_level detection branch.
+    """
+    sidebar = app.get_by_test_id("stSidebar")
+    bottom_block = app.get_by_test_id("stBottomBlockContainer")
+
+    sidebar_markdowns = sidebar.get_by_test_id("stMarkdown")
+    bottom_markdowns = bottom_block.get_by_test_id("stMarkdown")
+
+    # Initial state: sidebar has header + 3 rows + footer = 5 markdowns
+    # (plus "sidebar header" from the outside_widget_fragment section = 6 total)
+    expect(sidebar_markdowns.filter(has_text="sidebar section header")).to_have_count(1)
+    expect(sidebar_markdowns.filter(has_text="sidebar section footer")).to_have_count(1)
+    expect(sidebar_markdowns.filter(has_text="sidebar row")).to_have_count(3)
+
+    # bottom: header + 3 rows + footer
+    expect(bottom_markdowns.filter(has_text="bottom section header")).to_have_count(1)
+    expect(bottom_markdowns.filter(has_text="bottom section footer")).to_have_count(1)
+    expect(bottom_markdowns.filter(has_text="bottom row")).to_have_count(3)
+
+    # Grow to 5
+    click_button(app, "toplevel to 5")
+
+    expect(sidebar_markdowns.filter(has_text="sidebar row")).to_have_count(5)
+    expect(sidebar_markdowns.filter(has_text="sidebar section footer")).to_have_count(1)
+    expect(bottom_markdowns.filter(has_text="bottom row")).to_have_count(5)
+    expect(bottom_markdowns.filter(has_text="bottom section footer")).to_have_count(1)
+
+    # Shrink to 2 — stale rows must be gone
+    click_button(app, "toplevel to 2")
+
+    expect(sidebar_markdowns.filter(has_text="sidebar row")).to_have_count(2)
+    expect(sidebar_markdowns.filter(has_text="sidebar row 0")).to_have_count(1)
+    expect(sidebar_markdowns.filter(has_text="sidebar row 1")).to_have_count(1)
+    expect(sidebar_markdowns.filter(has_text="sidebar row 2")).to_have_count(0)
+    expect(sidebar_markdowns.filter(has_text="sidebar section header")).to_have_count(1)
+    expect(sidebar_markdowns.filter(has_text="sidebar section footer")).to_have_count(1)
+
+    expect(bottom_markdowns.filter(has_text="bottom row")).to_have_count(2)
+    expect(bottom_markdowns.filter(has_text="bottom row 0")).to_have_count(1)
+    expect(bottom_markdowns.filter(has_text="bottom row 1")).to_have_count(1)
+    expect(bottom_markdowns.filter(has_text="bottom row 2")).to_have_count(0)
+    expect(bottom_markdowns.filter(has_text="bottom section header")).to_have_count(1)
+    expect(bottom_markdowns.filter(has_text="bottom section footer")).to_have_count(1)
+
+    expect_no_exception(app)
+
+
+def test_parent_rerun_rebuilds_child_outside_wrapper(app: Page):
+    """Rerunning a parent fragment that owns a container used by a child
+    fragment must rebuild the wrapper cleanly — one copy of each child
+    element, no duplicates, no exceptions.
+    """
+    container = get_element_by_key(app, "parent_owned_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    expect(markdowns).to_have_count(3)
+    expect(markdowns.nth(0)).to_have_text("parent header")
+    expect(markdowns.nth(1)).to_have_text("child row 0")
+    expect(markdowns.nth(2)).to_have_text("child row 1")
+
+    click_button(app, "rerun parent")
+
+    expect(markdowns).to_have_count(3)
+    expect(markdowns.nth(0)).to_have_text("parent header")
+    expect(markdowns.nth(1)).to_have_text("child row 0")
+    expect(markdowns.nth(2)).to_have_text("child row 1")
+    expect_no_exception(app)
+
+
+def test_child_rerun_preserves_parent_wrapper(app: Page):
+    """Rerunning only the child fragment must preserve its outside wrapper
+    content without duplicating or losing elements.
+    """
+    container = get_element_by_key(app, "parent_owned_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    expect(markdowns).to_have_count(3)
+
+    click_button(app, "rerun child")
+
+    expect(markdowns).to_have_count(3)
+    expect(markdowns.nth(0)).to_have_text("parent header")
+    expect(markdowns.nth(1)).to_have_text("child row 0")
+    expect(markdowns.nth(2)).to_have_text("child row 1")
+    expect_no_exception(app)
+
+
+def test_fragment_rerun_preserves_inscope_content_position(app: Page):
+    """A fragment rerun must keep in-scope elements in the same count and
+    order, proving evict+reset don't disturb the fragment's own delta tree.
+    """
+    stable_a = app.get_by_test_id("stMarkdown").filter(has_text="stable item A")
+    stable_b = app.get_by_test_id("stMarkdown").filter(has_text="stable item B")
+    stable_c = app.get_by_test_id("stMarkdown").filter(has_text="stable item C")
+    expect(stable_a).to_have_count(1)
+    expect(stable_b).to_have_count(1)
+    expect(stable_c).to_have_count(1)
+
+    click_button(app, "rerun stable")
+
+    expect(stable_a).to_have_count(1)
+    expect(stable_b).to_have_count(1)
+    expect(stable_c).to_have_count(1)
     expect_no_exception(app)

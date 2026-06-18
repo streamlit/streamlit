@@ -106,3 +106,99 @@ def shrink_fragment():
 shrink_fragment()
 with shrink_container:
     st.markdown("shrink footer")
+
+
+# A parent fragment that declares a container and a nested child fragment
+# that writes into it. Rerunning the parent rebuilds the container; the child's
+# wrapper must be recreated cleanly with no stale/duplicate nodes.
+@st.fragment
+def parent_fragment():
+    parent_container = st.container(key="parent_owned_container")
+    with parent_container:
+        st.markdown("parent header")
+    st.button("rerun parent", key="rerun_parent")
+
+    @st.fragment
+    def child_fragment():
+        with parent_container:
+            st.markdown("child row 0")
+            st.markdown("child row 1")
+        st.button("rerun child", key="rerun_child")
+
+    child_fragment()
+
+
+parent_fragment()
+st.markdown("after parent fragment")
+
+
+# A fragment with several in-scope elements that reruns via a button click.
+# Verifies that evict+reset don't disturb the fragment's own delta tree.
+@st.fragment
+def stable_content_fragment():
+    st.markdown("stable item A")
+    st.markdown("stable item B")
+    st.markdown("stable item C")
+    st.button("rerun stable", key="rerun_stable")
+
+
+stable_content_fragment()
+
+
+# --- Outside-container widget triggers fragment-only rerun ---
+# A fragment writes a button into an outside container and into the sidebar.
+# Clicking either button must trigger only a fragment rerun (the main-script
+# marker stays unchanged).
+outside_widget_container = st.container(key="outside_widget_container")
+
+with st.sidebar:
+    st.markdown("sidebar header")
+
+
+@st.fragment
+def outside_widget_fragment():
+    outside_widget_container.button("outside container btn", key="outside_btn")
+    st.sidebar.button("sidebar btn", key="sidebar_btn")
+    st.markdown(f"outside_widget_fragment ran: {uuid4()}")
+
+
+outside_widget_fragment()
+
+
+# --- SIDEBAR/BOTTOM shrink→grow interleaving ---
+# Variable element count written to st.sidebar and st.bottom from a fragment,
+# with header/footer to verify ordering. Exercises the _is_top_level detection
+# branch and stable-_id lifecycle on top-level containers.
+if "toplevel_count" not in st.session_state:
+    st.session_state.toplevel_count = 3
+
+with st.sidebar:
+    st.markdown("sidebar section header")
+
+with st.bottom:
+    st.markdown("bottom section header")
+
+
+@st.fragment
+def toplevel_shrink_grow_fragment():
+    if st.button("toplevel to 5", key="toplevel_grow"):
+        st.session_state.toplevel_count = 5
+    if st.button("toplevel to 2", key="toplevel_shrink"):
+        st.session_state.toplevel_count = 2
+
+    with st.sidebar:
+        for i in range(st.session_state.toplevel_count):
+            st.markdown(f"sidebar row {i}")
+
+    with st.bottom:
+        for i in range(st.session_state.toplevel_count):
+            st.markdown(f"bottom row {i}")
+
+
+toplevel_shrink_grow_fragment()
+
+with st.sidebar:
+    st.markdown("sidebar section footer")
+
+with st.bottom:
+    st.markdown("bottom section footer")

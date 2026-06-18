@@ -686,6 +686,23 @@ class ResetOutsideWrappersTest(unittest.TestCase):
         storage.evict_outside_wrappers_created_by("P")
         assert storage.outside_wrappers_for("F") == []
 
+    @patch("streamlit.delta_generator._enqueue_add_block")
+    def test_empty_registry_emits_no_add_block(self, mock_enqueue: MagicMock) -> None:
+        """A fragment with no outside wrappers produces zero add_block deltas.
+
+        Proves evict+reset are true wire no-ops on the hot path when a
+        fragment does no outside writes.
+        """
+        storage = MemoryFragmentStorage()
+        storage.register("frag", lambda: None)
+        # No wrappers registered — the common case for fragments that
+        # don't write to outside containers.
+
+        storage.evict_outside_wrappers_created_by("frag")
+        _reset_outside_wrappers(storage, "frag")
+
+        mock_enqueue.assert_not_called()
+
     def test_reemission_carries_writing_fragment_id(self) -> None:
         """Without the fragment_id, the re-emitted wrapper block loses its
         identity on the frontend and ClearStaleNodeVisitor can't garbage-collect
@@ -1360,6 +1377,32 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         element_producer: ELEMENT_PRODUCER,
     ):
         _app(element_producer)
+
+    def test_fragment_rerun_no_outside_writes_emits_same_delta_count(self):
+        """A fragment rerun with no outside wrappers emits the same delta count
+        as the initial run, proving evict+reset are wire no-ops on the hot path.
+        """
+        ctx = self.script_run_ctx
+
+        @fragment
+        def writer():
+            st.markdown("inside fragment")
+
+        # Initial (full-app) run.
+        writer()
+        initial_delta_count = len(self.get_all_deltas_from_queue())
+        assert initial_delta_count > 0
+
+        # Fragment rerun.
+        storage = ctx.fragment_storage
+        fragment_id = next(iter(storage._fragments))
+        ctx.fragment_ids_this_run = [fragment_id]
+        self.clear_queue()
+
+        storage._fragments[fragment_id]()
+        rerun_delta_count = len(self.get_all_deltas_from_queue())
+
+        assert rerun_delta_count == initial_delta_count
 
     def test_standalone_rerun_reuses_wrapper_after_full_run_clear(self):
         """A standalone fragment rerun reuses the wrapper created during the full
