@@ -287,21 +287,22 @@ def test_form_inside_fragment_submits_correctly(app: Page):
     """An st.form inside a fragment batches widget values and only applies
     them on submit.
     """
-    expect_markdown(app, "not submitted")
+    form_status = app.get_by_test_id("stMarkdown").filter(has_text="not submitted")
+    form_status.scroll_into_view_if_needed()
+    expect(form_status).to_have_count(1)
 
     name_input = app.get_by_role("textbox", name="Name")
+    name_input.scroll_into_view_if_needed()
     name_input.fill("Alice")
     name_input.press("Enter")
 
-    expect_markdown(app, "not submitted")
+    expect(form_status).to_have_count(1)
 
     click_form_button(app, "Submit form")
 
-    expect_markdown(app, "submitted: Alice")
-
-    expect(
-        app.get_by_test_id("stMarkdown").filter(has_text="submitted:")
-    ).to_have_count(1)
+    submitted = app.get_by_test_id("stMarkdown").filter(has_text="submitted:")
+    expect(submitted).to_have_count(1)
+    expect(submitted).to_have_text("submitted: Alice")
 
 
 def test_full_rerun_after_outside_write_no_duplicates(app: Page):
