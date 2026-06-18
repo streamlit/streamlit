@@ -17,6 +17,7 @@ How you structure your app affects usability more than you think.
 | `@st.dialog` | You need a focused modal flow, such as confirmation, short editing, or settings that should temporarily interrupt the main page. |
 | `st.form` | You need to batch multiple widget inputs and rerun only when the user submits. |
 | `st.empty` | You need a placeholder that can be filled, replaced, or cleared later, including inserting elements out of order. |
+| `st.chat_message` | You need a message container with chat-specific styling and avatars. See `chat-ui.md` for chat interface patterns. |
 | `st.bottom` | You need content pinned to the bottom of the main app area, commonly persistent chat input or bottom action controls. |
 | `st.space` | You need explicit vertical or horizontal spacing inside the current layout direction. |
 
@@ -204,5 +205,7 @@ st.container(height=300)
 - [st.form](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form)
 - [st.empty](https://docs.streamlit.io/develop/api-reference/layout/st.empty)
 - [Insert elements out of order](https://docs.streamlit.io/knowledge-base/using-streamlit/insert-elements-out-of-order)
+- [st.chat_message](https://docs.streamlit.io/develop/api-reference/chat/st.chat_message)
+- [Chat UI reference](chat-ui.md)
 - [st.bottom](https://docs.streamlit.io/develop/api-reference/layout/st.bottom)
 - [st.space](https://docs.streamlit.io/develop/api-reference/layout/st.space)
