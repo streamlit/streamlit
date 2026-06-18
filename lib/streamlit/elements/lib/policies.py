@@ -129,13 +129,12 @@ def check_cache_replay_rules() -> None:
 
 
 def check_fragment_path_policy(dg: DeltaGenerator) -> None:
-    """Ensures that the current widget is not written outside of the
-    fragment's delta path.
+    """Raise if a widget is written outside the fragment's delta path.
 
-    Should be called by ever element that acts as a widget.
-    We don't allow writing widgets from within a widget to the outside path
-    because it can lead to unexpected behavior. For elements, this is okay
-    because they do not trigger a re-run.
+    Not currently called in production — outside-container writes are now
+    handled via wrapper redirection in ``DeltaGenerator._enqueue``. Retained
+    for potential future use as a stricter opt-in policy (e.g. parallel
+    fragment workers that disallow outside writes).
     """
 
     ctx = get_script_run_ctx()
