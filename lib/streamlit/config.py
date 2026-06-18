@@ -2933,14 +2933,37 @@ If cross origin resource sharing is required, please disable server.enableXsrfPr
             """
         )
 
-    # Validate the XSRF cookie SameSite value.
+    # Validate the XSRF cookie SameSite value. We explicitly require a string
+    # so that a non-string value (e.g. a None from TOML "null") is rejected
+    # instead of being coerced via str() into a valid-looking "none".
     xsrf_cookie_same_site = get_option("server.xsrfCookieSameSite")
-    if str(xsrf_cookie_same_site).lower() not in {"lax", "strict", "none"}:
+    if not isinstance(
+        xsrf_cookie_same_site, str
+    ) or xsrf_cookie_same_site.lower() not in {"lax", "strict", "none"}:
         raise RuntimeError(
             "Invalid value for config option server.xsrfCookieSameSite: "
             f'"{xsrf_cookie_same_site}". '
             'Valid values are "lax", "strict", and "none".'
         )
+
+    # Warn about combinations where SameSite="none" silently has no effect or
+    # requires additional setup, to avoid hard-to-debug misconfigurations.
+    if xsrf_cookie_same_site.lower() == "none":
+        if not get_option("server.enableXsrfProtection"):
+            logger.warning(
+                "The config option 'server.xsrfCookieSameSite=\"none\"' has no "
+                "effect because 'server.enableXsrfProtection' is false, so no "
+                "XSRF cookie is set."
+            )
+        elif not get_option("server.sslCertFile"):
+            logger.warning(
+                "The config option 'server.xsrfCookieSameSite=\"none\"' marks "
+                "the XSRF cookie as 'Secure', so your app must be served over "
+                "HTTPS (either directly via 'server.sslCertFile' or through a "
+                "TLS-terminating proxy). Otherwise, browsers will drop the "
+                "cookie and cross-origin embedding (e.g. st.file_uploader in an "
+                "iframe) will not work."
+            )
 
 
 def _set_development_mode() -> None:

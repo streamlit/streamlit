@@ -332,6 +332,34 @@ class TestEnsureXsrfCookie:
         assert "SameSite=Strict" in cookie_headers[0]
         assert "Secure" not in cookie_headers[0]
 
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.sslCertFile": None,
+            "server.xsrfCookieSameSite": None,
+        }
+    )
+    def test_non_string_same_site_falls_back_to_lax(self) -> None:
+        """A non-string SameSite value falls back to Lax without forcing Secure.
+
+        This guards against a None config (e.g. TOML null) being coerced into
+        SameSite=None with a forced Secure flag.
+        """
+        request = MagicMock()
+        request.cookies = {}
+        response = Response()
+
+        _ensure_xsrf_cookie(request, response)
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 1
+        assert "SameSite=Lax" in cookie_headers[0]
+        assert "Secure" not in cookie_headers[0]
+
 
 class TestSetUnquotedCookie:
     """Tests for _set_unquoted_cookie function."""

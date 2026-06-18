@@ -248,8 +248,14 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
         token_bytes, timestamp
     )
 
+    # Only normalize actual strings; any unexpected value (e.g. None) falls
+    # back to the safe "Lax" default rather than being coerced into "none".
+    xsrf_cookie_same_site = config.get_option("server.xsrfCookieSameSite")
     same_site = _SAME_SITE_HEADER_VALUES.get(
-        str(config.get_option("server.xsrfCookieSameSite")).lower(), "Lax"
+        xsrf_cookie_same_site.lower()
+        if isinstance(xsrf_cookie_same_site, str)
+        else "lax",
+        "Lax",
     )
     # Browsers only accept SameSite=None cookies that are also Secure, so force
     # Secure in that case. This is what lets the XSRF cookie (and therefore

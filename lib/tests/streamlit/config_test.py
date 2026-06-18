@@ -844,6 +844,44 @@ class ConfigTest(unittest.TestCase):
         ):
             config._check_conflicts()
 
+    def test_check_conflicts_xsrf_cookie_same_site_none_value(self):
+        """A None xsrfCookieSameSite value must be rejected, not coerced to "none"."""
+        config._set_option("server.xsrfCookieSameSite", None, "test")
+        with pytest.raises(
+            RuntimeError,
+            match=r"Invalid value for config option server.xsrfCookieSameSite",
+        ):
+            config._check_conflicts()
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_xsrf_cookie_same_site_none_warns_without_ssl(
+        self, get_logger
+    ):
+        """SameSite="none" without SSL must warn about the HTTPS requirement."""
+        config._set_option("server.xsrfCookieSameSite", "none", "test")
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", True, "test")
+        config._set_option("global.developmentMode", False, "test")
+        config._set_option("server.sslCertFile", None, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        warnings = " ".join(str(call) for call in mock_logger.warning.call_args_list)
+        assert "xsrfCookieSameSite" in warnings
+        assert "HTTPS" in warnings
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_xsrf_cookie_same_site_none_warns_when_xsrf_disabled(
+        self, get_logger
+    ):
+        """SameSite="none" with XSRF protection disabled must warn it has no effect."""
+        config._set_option("server.xsrfCookieSameSite", "none", "test")
+        config._set_option("server.enableXsrfProtection", False, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        warnings = " ".join(str(call) for call in mock_logger.warning.call_args_list)
+        assert "xsrfCookieSameSite" in warnings
+        assert "no effect" in warnings
+
     def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")
         config._set_option("browser.serverPort", 1234, "test")
