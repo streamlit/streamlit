@@ -1,6 +1,6 @@
 # Streamlit API reference
 
-Use this as a quick orientation for the public top-level `st` API. The tables below cover the public `st.<command>(...)` commands, `st.column_config` helpers, and related namespace objects exposed by the local Streamlit namespace when this reference was written.
+Use this as a quick orientation for the public top-level `st` API. The table below covers the public `st.<command>(...)` commands, common top-level objects, `st.column_config` helpers, and public namespaces exposed by the local Streamlit namespace when this reference was written.
 
 Treat summaries as starting points, not complete usage docs. Before using unfamiliar parameters, deprecated options, callbacks, return values, or command-specific edge cases, inspect the local docstring and signature.
 
@@ -28,10 +28,11 @@ streamlit docs st.button
 
 Run this command with the Streamlit installation relevant to the code being edited. For example, use the active virtual environment, the project's package runner, or the repo's development environment so the docs match that Streamlit version. If `COMMAND` is omitted, `streamlit docs` opens the documentation website in a browser instead of printing command docs.
 
-## Public `st` commands
+## Public `st` API
 
-| Command | Summary |
-|---------|---------|
+| API | Summary |
+|-----|---------|
+| **Top-level commands** | |
 | `st.App` | ASGI-compatible Streamlit application wrapper. Use when embedding Streamlit in an ASGI server and verify the current docstring for exact setup and parameters. |
 | `st.Page` | Configure a page for `st.navigation` in a multipage app. It creates a page object from a Python file or callable with optional title, icon, URL path, default status, and visibility. |
 | `st.altair_chart` | Display a chart using Vega-Altair. Use when native charts are not expressive enough and you need Altair's encodings, layers, tooltips, or interactions. |
@@ -135,13 +136,15 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.warning` | Display a warning message. Use it for cautionary or recoverable conditions that need attention. |
 | `st.write` | Display one or more objects using Streamlit's automatic type-based rendering. Use it for quick output, mixed content, and exploratory apps. |
 | `st.write_stream` | Stream a generator, iterable, or stream-like sequence to the app. Use it for token streams, incremental text, or progressively produced output. |
-
-## Public `st.column_config` helpers
-
-Use these in the `column_config` parameter of `st.dataframe` or `st.data_editor`.
-
-| Helper | Summary |
-|--------|---------|
+| **Top-level objects** | |
+| `st.bottom` | Bottom-pinned container for the main app area. Use it as a container object, not as a function. |
+| `st.context` | Read-only proxy for user session context. Exposes `headers`, `cookies`, `theme` (`theme.type`), `timezone`, `timezone_offset`, `locale`, `url`, `ip_address`, and `is_embedded`. |
+| `st.query_params` | Mutable proxy for the browser URL query parameters. Use it to read or update URL state. |
+| `st.secrets` | Dict-like access to secrets loaded from `secrets.toml`. Use it for credentials and configuration that should not be hard-coded. |
+| `st.session_state` | Per-session mutable state proxy. Use it to persist values across reruns and coordinate widgets, callbacks, and app logic. |
+| `st.sidebar` | Sidebar container that exposes most element methods as `st.sidebar.<command>()` and supports `with st.sidebar:` blocks. |
+| `st.user` | Read-only dict-like proxy for current user information. Values depend on the hosting and authentication configuration. |
+| **`st.column_config` helpers** | |
 | `st.column_config.AreaChartColumn` | Configure a column as an area-chart sparkline. Use it for compact per-row trends where filled areas are clearer than plain numbers. |
 | `st.column_config.AudioColumn` | Configure a column to render audio players. Use it for audio URLs, paths, or media values that users should be able to play inline. |
 | `st.column_config.BarChartColumn` | Configure a column as a bar-chart sparkline. Use it for compact per-row comparisons or small sequences of numeric values. |
@@ -163,17 +166,6 @@ Use these in the `column_config` parameter of `st.dataframe` or `st.data_editor`
 | `st.column_config.TextColumn` | Configure a text column. Use it for strings with optional validation, length bounds, and text-specific display or editing behavior. |
 | `st.column_config.TimeColumn` | Configure a column for time values. Use it for time-of-day display or editing with optional formatting and bounds. |
 | `st.column_config.VideoColumn` | Configure a column to render video players. Use it for video URLs, paths, or media values that users should be able to play inline. |
-
-## Related public namespace objects
-
-| Object | Summary |
-|--------|---------|
-| `st.bottom` | Bottom-pinned container for the main app area. Use it as a container object, not as a function. |
-| `st.column_config` | Namespace of column configuration helpers for `st.dataframe` and `st.data_editor`. See the dedicated table above and inspect helpers such as `st.column_config.NumberColumn` for exact parameters. |
+| **Public namespaces** | |
+| `st.column_config` | Namespace of column configuration helpers for `st.dataframe` and `st.data_editor`. See the `st.column_config` helper rows above and inspect helpers such as `st.column_config.NumberColumn` for exact parameters. |
 | `st.components` | Namespace for custom components. Prefer `st.components.v2.component()` for new HTML/JS components; `st.components.v1` is deprecated for new work. |
-| `st.context` | Read-only proxy for user session context. Exposes `headers`, `cookies`, `theme` (`theme.type`), `timezone`, `timezone_offset`, `locale`, `url`, `ip_address`, and `is_embedded`. |
-| `st.query_params` | Mutable proxy for the browser URL query parameters. Use it to read or update URL state. |
-| `st.secrets` | Dict-like access to secrets loaded from `secrets.toml`. Use it for credentials and configuration that should not be hard-coded. |
-| `st.session_state` | Per-session mutable state proxy. Use it to persist values across reruns and coordinate widgets, callbacks, and app logic. |
-| `st.sidebar` | Sidebar container that exposes most element methods as `st.sidebar.<command>()` and supports `with st.sidebar:` blocks. |
-| `st.user` | Read-only dict-like proxy for current user information. Values depend on the hosting and authentication configuration. |
