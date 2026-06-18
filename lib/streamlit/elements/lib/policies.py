@@ -20,13 +20,10 @@ from streamlit import config, errors, logger, runtime
 from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.errors import (
     StreamlitAPIWarning,
-    StreamlitFragmentWidgetsNotAllowedOutsideError,
     StreamlitInvalidFormCallbackError,
     StreamlitValueAssignmentNotAllowedError,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
-    ThreadState,
-    get_script_run_ctx,
     in_cached_function,
 )
 from streamlit.runtime.state import WidgetCallback, get_session_state
@@ -126,45 +123,6 @@ def check_cache_replay_rules() -> None:
         # We use an exception here to show a proper stack trace
         # that indicates to the user where the issue is.
         exception(CachedWidgetWarning())
-
-
-def check_fragment_path_policy(dg: DeltaGenerator) -> None:
-    """Raise if a widget is written outside the fragment's delta path.
-
-    Not currently called in production — outside-container writes are now
-    handled via wrapper redirection in ``DeltaGenerator._enqueue``. Retained
-    for potential future use as a stricter opt-in policy (e.g. parallel
-    fragment workers that disallow outside writes).
-    """
-
-    ctx = get_script_run_ctx()
-    if ctx is None:
-        return
-
-    ts = ThreadState.get()
-    if ts.fragment_id is None:
-        return
-
-    current_fragment_delta_path = ts.delta_path
-    if current_fragment_delta_path is None:
-        return
-
-    current_cursor = dg._active_dg._cursor
-    if current_cursor is None:
-        return
-
-    current_cursor_delta_path = current_cursor.delta_path
-
-    # the elements delta path cannot be smaller than the fragment's delta path if it is
-    # inside of the fragment
-    if len(current_cursor_delta_path) < len(current_fragment_delta_path):
-        raise StreamlitFragmentWidgetsNotAllowedOutsideError()
-
-    # all path indices of the fragment-path must occur in the inner-elements delta path,
-    # otherwise it is outside of the fragment container
-    for index, path_index in enumerate(current_fragment_delta_path):
-        if current_cursor_delta_path[index] != path_index:
-            raise StreamlitFragmentWidgetsNotAllowedOutsideError()
 
 
 def check_widget_policies(
