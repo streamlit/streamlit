@@ -207,7 +207,7 @@ def test_text_area_in_fragment(app: Page):
 def test_text_input_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    first_text_input_field = app.get_by_test_id("stTextInput").locator("input")
+    first_text_input_field = app.get_by_test_id("stTextInput").first.locator("input")
     first_text_input_field.fill("hello world")
     first_text_input_field.press("Enter")
     wait_for_app_run(app)
@@ -248,7 +248,7 @@ def test_full_app_rerun(app: Page):
 
 def test_fragment_widget_persists_across_full_app_rerun(app: Page):
     """A widget inside a fragment retains its value after a full app rerun."""
-    slider = app.get_by_test_id("stSlider").get_by_role("slider")
+    slider = app.get_by_role("slider", name="Fragment slider")
     slider.press("ArrowRight")
     wait_for_app_run(app)
 
@@ -275,7 +275,7 @@ def test_form_inside_fragment_submits_correctly(app: Page):
     """
     expect_markdown(app, "not submitted")
 
-    name_input = app.get_by_test_id("stTextInput").locator("input")
+    name_input = app.get_by_role("textbox", name="Name")
     name_input.fill("Alice")
     name_input.press("Enter")
 
