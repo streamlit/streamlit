@@ -257,9 +257,8 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
         else "lax",
         "Lax",
     )
-    # Browsers only accept SameSite=None cookies that are also Secure, so force
-    # Secure in that case. This is what lets the XSRF cookie (and therefore
-    # st.file_uploader) work when the app is embedded in a cross-origin iframe.
+    # Browsers reject SameSite=None cookies without the Secure flag, so force
+    # Secure in that case.
     secure = bool(config.get_option("server.sslCertFile")) or same_site == "None"
 
     _set_unquoted_cookie(

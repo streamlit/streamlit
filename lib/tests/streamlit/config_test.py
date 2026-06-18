@@ -844,7 +844,7 @@ class ConfigTest(unittest.TestCase):
         ):
             config._check_conflicts()
 
-    def test_check_conflicts_xsrf_cookie_same_site_none_value(self):
+    def test_check_conflicts_xsrf_cookie_same_site_rejects_python_none(self):
         """A None xsrfCookieSameSite value must be rejected, not coerced to "none"."""
         config._set_option("server.xsrfCookieSameSite", None, "test")
         with pytest.raises(
@@ -885,7 +885,7 @@ class ConfigTest(unittest.TestCase):
 
     @patch("streamlit.web.server.server_util.is_xsrf_enabled", return_value=True)
     @patch("streamlit.logger.get_logger")
-    def test_check_conflicts_xsrf_cookie_same_site_none_no_effect_respects_auth(
+    def test_check_conflicts_xsrf_cookie_same_site_none_skips_no_effect_warning_when_auth_enables_xsrf(
         self, get_logger, _mock_is_xsrf_enabled
     ):
         """SameSite="none" must not warn "no effect" when XSRF is enabled via auth.

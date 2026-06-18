@@ -384,7 +384,7 @@ class TestSetUnquotedCookie:
         assert "Secure" not in cookie_headers[0]
 
     def test_sets_custom_same_site(self) -> None:
-        """Test that a custom SameSite value is reflected in the header."""
+        """A custom SameSite value is reflected in the Set-Cookie header."""
 
         response = Response()
 

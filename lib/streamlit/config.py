@@ -2952,10 +2952,10 @@ If cross origin resource sharing is required, please disable server.enableXsrfPr
     # Warn about combinations where SameSite="none" silently has no effect or
     # requires additional setup, to avoid hard-to-debug misconfigurations.
     if xsrf_cookie_same_site.lower() == "none":
-        # is_xsrf_enabled() mirrors the runtime check used when setting the
-        # cookie: XSRF protection (and thus the XSRF cookie) can also be enabled
-        # implicitly by an [auth] section in secrets, not just by
-        # server.enableXsrfProtection. Import locally to avoid a circular import.
+        # XSRF protection can also be enabled implicitly by an [auth] section
+        # in secrets, not just server.enableXsrfProtection — use
+        # is_xsrf_enabled() to check both paths. Imported locally to avoid
+        # a circular import.
         from streamlit.web.server.server_util import is_xsrf_enabled
 
         if not is_xsrf_enabled():
