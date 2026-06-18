@@ -393,6 +393,40 @@ def test_fragment_nested_container_in_outside_container(app: Page):
     expect_no_exception(app)
 
 
+def test_fragment_shrink_clears_stale_outside_elements(app: Page):
+    """A fragment that reruns with fewer elements in an outside container must
+    garbage-collect the removed elements, while growth keeps the footer in place.
+    """
+    container = get_element_by_key(app, "shrink_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    # header + 5 rows + footer.
+    expect(markdowns).to_have_count(7)
+    expect(markdowns.first).to_have_text("shrink header")
+    expect(markdowns.last).to_have_text("shrink footer")
+    expect(markdowns.filter(has_text="shrink row 4")).to_have_count(1)
+
+    click_button(app, "shrink rows")
+
+    # header + 2 rows + footer; rows 2-4 must be gone (the stale-on-shrink bug).
+    expect(markdowns).to_have_count(4)
+    expect(markdowns.first).to_have_text("shrink header")
+    expect(markdowns.last).to_have_text("shrink footer")
+    expect(markdowns.filter(has_text="shrink row 0")).to_have_count(1)
+    expect(markdowns.filter(has_text="shrink row 1")).to_have_count(1)
+    expect(markdowns.filter(has_text="shrink row 2")).to_have_count(0)
+    expect(markdowns.filter(has_text="shrink row 4")).to_have_count(0)
+
+    click_button(app, "grow rows")
+
+    # Growing back must restore all rows without overwriting the footer.
+    expect(markdowns).to_have_count(7)
+    expect(markdowns.first).to_have_text("shrink header")
+    expect(markdowns.last).to_have_text("shrink footer")
+    expect(markdowns.filter(has_text="shrink row 4")).to_have_count(1)
+
+    expect_no_exception(app)
+
+
 def test_outside_container_transparent_wrapper(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
