@@ -1,7 +1,7 @@
 
 # Streamlit input widgets
 
-The right widget for the value you're collecting. This covers value-entry widgets — where the user types or picks a number, date, time, or string. For choosing from a fixed set of options (single/multi-select), see [selection-widgets.md](selection-widgets.md). For buttons and other triggers (action menus, downloads, links), see the trigger-widgets reference.
+The right widget for the value you're collecting. This covers value-entry widgets — where the user types or picks a number, date, time, or string. For choosing from a fixed set of options (single/multi-select), see [selection-widgets.md](selection-widgets.md). For buttons and other triggers (action menus, downloads, links), see [trigger-widgets.md](trigger-widgets.md).
 
 The core rule: match the widget to the data type. Don't collect numbers, dates, or times through `st.text_input` and parse the string yourself — that crashes on bad input and gives you no bounds or validation. Use a widget that returns the right Python type directly.
 
@@ -19,7 +19,7 @@ The core rule: match the widget to the data type. Don't collect numbers, dates, 
 
 ## Numbers: st.number_input
 
-Use it for any numeric entry. Always set `min_value`, `max_value`, and `step` so the value stays in range, and use `format` for currency or percent display.
+Use it for any numeric entry. Always set `min_value`, `max_value`, and `step` so the value stays in range.
 
 ```python
 # BAD: text input parsed to int — crashes on "twenty", no bounds
@@ -29,11 +29,11 @@ age = int(st.text_input("Age"))
 age = st.number_input("Age", min_value=0, max_value=120, step=1)
 ```
 
-`format` is a printf-style string controlling display only (the return value is still a number):
+`format` is a printf-style spec for display only (the return value is still a number), and support is narrow: the formatted output must itself parse as a number. A bare numeric spec like `"%d"` or `"%.2f"` works, but a currency or suffix string like `"$%.2f"` or `"%.1f%%"` raises `StreamlitInvalidNumberFormatError`. For a currency or unit affordance, pair a plain numeric format with an `icon` (and put a `%` in the label):
 
 ```python
-price = st.number_input("Price", min_value=0.0, step=0.50, format="$%.2f")
-rate = st.number_input("Rate", min_value=0.0, max_value=100.0, format="%.1f%%")
+price = st.number_input("Price", min_value=0.0, step=0.50, format="%.2f", icon=":material/attach_money:")
+rate = st.number_input("Rate (%)", min_value=0.0, max_value=100.0, format="%.1f")
 ```
 
 The return type follows `min_value`/`step`: integer args give an `int`, float args give a `float`.
@@ -74,7 +74,7 @@ start, end = st.date_input("Reporting period", value=(date(2026, 1, 1), date(202
 
 `st.time_input` returns a `datetime.time` (use `step` to set the granularity). `st.datetime_input` (recent — Streamlit 1.57+) collects a date and time together and returns a single `datetime`, replacing the old two-widget pattern.
 
-**Gotcha — `st.datetime_input`'s `format` is DATE-ONLY.** It accepts exactly `"YYYY/MM/DD"` (default), `"DD/MM/YYYY"`, or `"MM/DD/YYYY"`, optionally using `.` or `-` as the separator. It does NOT take a time component: `format="YYYY-MM-DD HH:mm"` raises `StreamlitAPIException` and crashes the app on render. To change the time granularity use `step=` (a `datetime.timedelta` or an int number of seconds, between 60s and 23h), not `format`. If you don't need a custom date display, omit `format` entirely.
+**Gotcha — `st.datetime_input`'s `format` is DATE-ONLY.** It accepts exactly `"YYYY/MM/DD"` (default), `"DD/MM/YYYY"`, or `"MM/DD/YYYY"`, optionally using `.` or `-` as the separator. It does NOT take a time component: `format="YYYY-MM-DD HH:mm"` raises `StreamlitAPIException`. To change the time granularity use `step=` (a `datetime.timedelta` or an int number of seconds, between 60s and 23h), not `format`. If you don't need a custom date display, omit `format` entirely.
 
 ## Free text: st.text_input / st.text_area
 
@@ -91,11 +91,11 @@ bio = st.text_area("Bio", placeholder="A few sentences about yourself", max_char
 api_key = st.text_input("API key", type="password")
 ```
 
-A masked text input is *not* authentication — it only hides characters on screen. For real sign-in (identity, protected pages), use `st.login` / `st.user`; see [multipage-apps.md](multipage-apps.md).
+A masked text input is *not* authentication — it only hides characters on screen. For real sign-in (identity, protected pages), use `st.login` / `st.user`; see [authentication.md](authentication.md).
 
 ## Actions and triggers
 
-For buttons and button-like trigger widgets — `st.button`, action/toolbar menus (`st.menu_button`), file downloads (`st.download_button`), and URL links (`st.link_button`) — see the trigger-widgets reference. They fire an action on click rather than holding a value, so they live in their own reference.
+For buttons and button-like trigger widgets — `st.button`, action/toolbar menus (`st.menu_button`), file downloads (`st.download_button`), and URL links (`st.link_button`) — see [trigger-widgets.md](trigger-widgets.md). They fire an action on click rather than holding a value, so they live in their own reference.
 
 ## Batching inputs
 
