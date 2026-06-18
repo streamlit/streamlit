@@ -7,11 +7,47 @@ redirected through implicit `Transparent` wrapper blocks.
 **Branch under test:** `cursor/outside-container-writes-enabled-07e6`
 **Spec reference:** `specs/2026-06-03-outside-container-writes/tech-spec.md` (PR #15413, merged)
 **Test method:** Live apps via `make debug` + Playwright (Chromium, headless), backend/frontend log inspection.
-**Date:** 2026-06-17
+**Date:** 2026-06-17 (initial), **re-tested 2026-06-18 after fix.**
 
 ---
 
-## Summary
+## Re-test update (2026-06-18) — Bug 1 fixed ✅
+
+The fix commit `7d72c9f7e6 [fix] Clear stale fragment elements on outside-container
+shrink (#15626)` was merged in and **all scenarios were re-run against the updated
+backend** (the change is in `lib/streamlit/runtime/fragment.py`, requiring a `make debug`
+restart). **Bug 1 is resolved across all container types**, with no regressions:
+
+| App | Before fix | After fix |
+|-----|------------|-----------|
+| `qa_core` | 29/30 | **30/30** ✅ |
+| `qa_roots` | 16/18 | **18/18** ✅ |
+| `qa_runevery` | 7/7 | **7/7** ✅ |
+| `qa_regression` | 7/7 | **7/7** ✅ |
+| `qa_dynamic` | 3/3 | **3/3** ✅ |
+
+- Captured `st.container()` shrink 12→5 now shows exactly `many element 0..4 of 5` with
+  **no** stale `of 12` rows (`FIXED_shrink_no_stale.png`).
+- `st.sidebar` shrink 6→3 now shows only `sidebar direct 0..2 of 3`, no stale `of 6`
+  (`FIXED_sidebar_shrink_no_stale.png`).
+- `st.bottom` shrink 4→2 leaves no stale elements (`stale=0`).
+- Growth, footer preservation, `run_every` (no accumulation), in-scope baseline, and the
+  blocked cases (`parallel=True`, dynamic container) all continue to pass.
+
+**Root cause (per fix PR):** on a standalone fragment rerun, `_reset_outside_wrappers`
+re-emitted each wrapper's `add_block` delta **outside** the
+`ThreadState.scoped(fragment_id=...)` context, so the re-emitted wrapper `BlockNode` lost
+its `fragmentId` on the frontend and `ClearStaleNodeVisitor` never recursed to drop stale
+children. The fix wraps the re-emission loop in the scoped `fragment_id`. The fix also
+adds e2e coverage (`test_fragment_shrink_clears_stale_outside_elements`), closing the
+coverage gap noted below.
+
+**Updated overall assessment: PASS.** Confidence: high. The original findings below are
+retained for historical reference.
+
+---
+
+## Summary (original, 2026-06-17)
 
 **Overall assessment: FAIL (one significant correctness bug).** Confidence: **high.**
 
@@ -46,15 +82,15 @@ A total of **18 distinct scenarios** were exercised with Playwright verification
 | S9 | Nested container: fragment writes to `st.columns` inside an outside container; no column accumulation on rerun | `qa_core.py` | ✅ PASS |
 | S10 | `st.empty()` as the outside container — replace semantics (exactly one element) | `qa_core.py` | ✅ PASS |
 | S11a | Many elements (12) into an outside container; footer preserved | `qa_core.py` | ✅ PASS |
-| S11b | **Shrink** 12 → 5 elements (stale leftovers must be removed) | `qa_core.py` | ❌ **FAIL** |
+| S11b | **Shrink** 12 → 5 elements (stale leftovers must be removed) | `qa_core.py` | ❌ FAIL → ✅ **PASS (after fix)** |
 | S11c | **Growth** 5 → 12 elements; footer not overwritten | `qa_core.py` | ✅ PASS |
 | S12 | `st.form` with widgets inside an outside container; submit works | `qa_core.py` | ✅ PASS |
 | S13 | Main script + fragment interleaving — stable ordering (header/fragment/middle/fragment/footer) | `qa_core.py` | ✅ PASS |
 | S4 | Fragment writes to `st.sidebar` **directly** (`st.sidebar.markdown`); growth keeps footer | `qa_roots.py` | ✅ PASS |
-| S4s | Sidebar direct writes **shrink** 6 → 3 (stale must be removed) | `qa_roots.py` | ❌ **FAIL** |
+| S4s | Sidebar direct writes **shrink** 6 → 3 (stale must be removed) | `qa_roots.py` | ❌ FAIL → ✅ **PASS (after fix)** |
 | S5 | Fragment writes to `st.sidebar` via `with st.sidebar:` | `qa_roots.py` | ✅ PASS |
 | S6 | Fragment writes to `st.bottom`; growth keeps footer | `qa_roots.py` | ✅ PASS |
-| S6s | Bottom writes **shrink** 4 → 2 (stale must be removed) | `qa_roots.py` | ❌ **FAIL** |
+| S6s | Bottom writes **shrink** 4 → 2 (stale must be removed) | `qa_roots.py` | ❌ FAIL → ✅ **PASS (after fix)** |
 | S8 | `run_every=1s` fragment writing to an outside container — no accumulation, content updates, footer preserved | `qa_runevery.py` | ✅ PASS |
 | S14 | Regression: normal in-scope fragment still works | `qa_regression.py` | ✅ PASS |
 | S15 | Regression: `run_every` for in-scope writes | `qa_runevery.py` | ✅ PASS |
@@ -69,7 +105,11 @@ A total of **18 distinct scenarios** were exercised with Playwright verification
 
 ## Bugs found
 
-### Bug 1 — Shrinking a fragment's element count in an outside container leaves stale elements (HIGH)
+### Bug 1 — Shrinking a fragment's element count in an outside container leaves stale elements (HIGH) — ✅ FIXED in `7d72c9f7e6` (#15626)
+
+> **Status: RESOLVED.** Re-tested 2026-06-18 — shrink now correctly clears stale elements
+> for captured `st.container()`, `st.sidebar`, and `st.bottom`. See the "Re-test update"
+> section at the top. The description below documents the original defect.
 
 **Severity:** High — functional correctness defect that directly violates the spec's
 stated testing-plan invariant and the PR's own acceptance criteria. It silently shows
