@@ -315,8 +315,8 @@ class DeltaGenerator(
         self._parent = parent
         self._block_type = block_type
 
-        # The fragment that created this container, used for per-fragment
-        # wrapper eviction. None when created outside any fragment.
+        # Tracks which fragment's scope created this container. Used to clear
+        # cached outside-write wrappers when that fragment reruns.
         self._creating_fragment_id: str | None = None
 
         # If this an `st.form` block, this will get filled in.
