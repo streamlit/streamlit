@@ -185,25 +185,6 @@ def nested_fragment():
 nested_fragment()
 
 
-# A static outside container (no changing content) used to snapshot the transparent
-# wrapper: its children must be direct flex items of the outside container with no
-# extra border or padding introduced by the wrapper.
-visual_container = st.container(key="visual_container")
-with visual_container:
-    st.markdown("visual header")
-
-
-@st.fragment
-def visual_fragment():
-    with visual_container:
-        st.markdown("visual fragment")
-
-
-visual_fragment()
-with visual_container:
-    st.markdown("visual footer")
-
-
 # A fragment with a keyed slider to verify widget values persist across full reruns.
 @st.fragment
 def widget_persistence_fragment():
