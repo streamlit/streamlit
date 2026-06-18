@@ -180,6 +180,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
   const popoverBodyRef = useRef<HTMLDivElement>(null)
 
+  // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
+  // fully replaced with FloatingPortal here because Popover has no collection
+  // system dependency — it renders arbitrary children, not ComboBox items.
   const { refs, floatingStyles } = useFloatingOverlay({
     open,
     placement: "bottom-start",
@@ -300,6 +303,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             ref={setFloatingRef}
             data-testid="stPopoverBody"
             role="dialog"
+            aria-label={element.label}
             style={floatingStyles}
             $stretchWidth={stretchWidth}
             $calculatedWidth={calculatedWidth}

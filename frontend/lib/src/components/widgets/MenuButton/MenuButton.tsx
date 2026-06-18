@@ -43,7 +43,9 @@ import {
   isMenuStyleIconLabel,
 } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -72,6 +74,7 @@ export interface Props {
 function MenuButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, fragmentId } = props
 
+  const theme = useEmotionTheme()
   const [isOpen, setIsOpen] = useState(false)
   const instanceId = useId()
   // Anchor ref on the outer container — mirrors the original anchorRef pattern,
@@ -82,10 +85,13 @@ function MenuButton(props: Props): ReactElement {
   // to distinguish clicks on portal-rendered menu items from true outside clicks.
   const popoverRef = useRef<HTMLDivElement>(null)
 
+  // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
+  // fully replaced with FloatingPortal here because Menu is a self-contained
+  // collection root — it doesn't need to be a child of any other RAC component.
   const { refs, floatingStyles } = useFloatingOverlay({
     open: isOpen,
     placement: "bottom-start",
-    offsetPx: 4,
+    offsetPx: convertRemToPx(theme.spacing.twoXS),
   })
 
   // Custom dismissal via capture-phase DOM listeners.
@@ -141,6 +147,17 @@ function MenuButton(props: Props): ReactElement {
     [refs]
   )
 
+  // Merge the reference ref with our local containerRef for dismissal logic.
+  const setReferenceRef = useCallback(
+    (node: HTMLDivElement | null): void => {
+      ;(
+        containerRef as React.MutableRefObject<HTMLDivElement | null>
+      ).current = node
+      refs.setReference(node)
+    },
+    [refs]
+  )
+
   const kind = BUTTON_TYPE_TO_KIND[element.type] ?? BaseButtonKind.SECONDARY
 
   const menuItems = useMemo(
@@ -173,12 +190,7 @@ function MenuButton(props: Props): ReactElement {
 
   return (
     <Box
-      ref={node => {
-        ;(
-          containerRef as React.MutableRefObject<HTMLDivElement | null>
-        ).current = node
-        refs.setReference(node)
-      }}
+      ref={setReferenceRef}
       className="stMenuButton"
       data-testid="stMenuButton"
     >

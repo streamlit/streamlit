@@ -42,6 +42,7 @@ import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLa
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import { convertRemToPx } from "~lib/theme/utils"
 import {
   filterSelectOptions,
   getSelectFilterMode,
@@ -129,10 +130,16 @@ const Selectbox: FC<Props> = ({
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
 
+  // Floating UI provides scroll-tracking via autoUpdate. Unlike Popover and
+  // MenuButton, we cannot replace RAC's <Popover> with FloatingPortal because
+  // ComboBox's collection system requires ListBoxItems to be inside RAC's own
+  // Popover to discover them and assign role="option". Instead, Floating UI's
+  // position is applied via the style prop and CSS !important overrides
+  // neutralize RAC's imperative style writes (see Selectbox.styled.ts).
   const { refs, floatingStyles } = useFloatingOverlay({
     open: true,
     placement: "bottom-start",
-    offsetPx: 0,
+    offsetPx: convertRemToPx(theme.spacing.twoXS),
     flipOptions: isInSidebar ? false : undefined,
     matchTriggerWidth: true,
   })
@@ -494,7 +501,6 @@ const Selectbox: FC<Props> = ({
             data-testid="stSelectboxVirtualDropdown"
             placement="bottom left"
             isNonModal
-            shouldFlip={!isInSidebar}
             $isInSidebar={isInSidebar}
             offset={0}
             style={floatingStyles}

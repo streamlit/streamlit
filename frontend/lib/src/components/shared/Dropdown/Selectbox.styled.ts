@@ -155,7 +155,6 @@ export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
     zIndex: getOverlayZIndex(theme),
     maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
     overflow: "hidden",
-    marginTop: theme.spacing.twoXS,
     // Override RAC's useOverlayPosition imperative style writes.
     // Floating UI provides position/transform via the style prop.
 

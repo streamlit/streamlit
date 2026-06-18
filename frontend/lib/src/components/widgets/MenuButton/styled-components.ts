@@ -58,8 +58,6 @@ export const StyledMenuOptionIcon = styled.span(({ theme }) => ({
 export const StyledMenuPopover = styled.div(({ theme }) => ({
   ...getPopoverContainerStyle(theme),
   borderRadius: theme.radii.xl,
-  marginRight: theme.spacing.lg,
-  marginBottom: theme.spacing.lg,
   maxHeight: "70vh",
   overflow: "auto",
   zIndex: getOverlayZIndex(theme),
