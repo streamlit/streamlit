@@ -261,6 +261,7 @@ ignore = [
   "RUF052",  # Checks for dummy variables that are used.
   "RUF067",  # Checks for non empty __init__ modules.
   "RUF075",  # Checks for context managers that don't catch exceptions (new preview rule in ruff 0.15.14).
+  "RUF076",  # Checks for autouse=True in pytest.fixture decorators (new rule in ruff 0.15.17; autouse is intentional in our fixtures).
   "SIM105",  # Enforces use of contextlib.suppress.
   "SIM108",  # Enforces ternary operators instead of if-else.
   "SIM115",  # Enforces context manager for opening files.
