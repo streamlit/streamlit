@@ -108,9 +108,8 @@ with shrink_container:
     st.markdown("shrink footer")
 
 
-# A parent fragment that declares a container and a nested child fragment
-# that writes into it. Rerunning the parent rebuilds the container; the child's
-# wrapper must be recreated cleanly with no stale/duplicate nodes.
+# Nested fragments sharing a container: the child writes into a container
+# declared by the parent. Used to test parent-rerun and child-rerun stability.
 @st.fragment
 def parent_fragment():
     parent_container = st.container(key="parent_owned_container")
@@ -132,8 +131,7 @@ parent_fragment()
 st.markdown("after parent fragment")
 
 
-# A fragment with several in-scope elements that reruns via a button click.
-# Verifies that evict+reset don't disturb the fragment's own delta tree.
+# A fragment with several in-scope elements and a rerun button.
 @st.fragment
 def stable_content_fragment():
     st.markdown("stable item A")

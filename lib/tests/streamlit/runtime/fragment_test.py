@@ -688,15 +688,9 @@ class ResetOutsideWrappersTest(unittest.TestCase):
 
     @patch("streamlit.delta_generator._enqueue_add_block")
     def test_empty_registry_emits_no_add_block(self, mock_enqueue: MagicMock) -> None:
-        """A fragment with no outside wrappers produces zero add_block deltas.
-
-        Proves evict+reset are true wire no-ops on the hot path when a
-        fragment does no outside writes.
-        """
+        """A fragment with no outside wrappers produces zero add_block deltas."""
         storage = MemoryFragmentStorage()
         storage.register("frag", lambda: None)
-        # No wrappers registered — the common case for fragments that
-        # don't write to outside containers.
 
         storage.evict_outside_wrappers_created_by("frag")
         _reset_outside_wrappers(storage, "frag")
@@ -1379,8 +1373,8 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         _app(element_producer)
 
     def test_fragment_rerun_no_outside_writes_emits_same_delta_count(self):
-        """A fragment rerun with no outside wrappers emits the same delta count
-        as the initial run, proving evict+reset are wire no-ops on the hot path.
+        """A fragment rerun with no outside wrappers emits the same number of
+        deltas as the initial run.
         """
         ctx = self.script_run_ctx
 

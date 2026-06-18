@@ -287,8 +287,8 @@ def test_form_inside_fragment_submits_correctly(app: Page):
 
 
 def test_full_rerun_after_outside_write_no_duplicates(app: Page):
-    """After interacting with a fragment that writes outside, a full rerun must
-    not produce duplicated wrapper content (guards clear_outside_wrappers).
+    """After interacting with a fragment that writes to an outside container,
+    a full app rerun must not produce duplicated content.
     """
     container = get_element_by_key(app, "shrink_container")
     markdowns = container.get_by_test_id("stMarkdown")
@@ -434,9 +434,8 @@ def test_toplevel_sidebar_bottom_shrink_grow_interleaving(app: Page):
 
 
 def test_parent_rerun_rebuilds_child_outside_wrapper(app: Page):
-    """Rerunning a parent fragment that owns a container used by a child
-    fragment must rebuild the wrapper cleanly — one copy of each child
-    element, no duplicates, no exceptions.
+    """Rerunning a parent fragment that owns a container written to by a
+    child fragment must preserve exactly one copy of each child element.
     """
     container = get_element_by_key(app, "parent_owned_container")
     markdowns = container.get_by_test_id("stMarkdown")
@@ -455,7 +454,7 @@ def test_parent_rerun_rebuilds_child_outside_wrapper(app: Page):
 
 
 def test_child_rerun_preserves_parent_wrapper(app: Page):
-    """Rerunning only the child fragment must preserve its outside wrapper
+    """Rerunning only the child fragment must preserve its outside-container
     content without duplicating or losing elements.
     """
     container = get_element_by_key(app, "parent_owned_container")
@@ -472,9 +471,7 @@ def test_child_rerun_preserves_parent_wrapper(app: Page):
 
 
 def test_fragment_rerun_preserves_inscope_content_position(app: Page):
-    """A fragment rerun must keep in-scope elements in the same count and
-    order, proving evict+reset don't disturb the fragment's own delta tree.
-    """
+    """A fragment rerun must keep in-scope elements in the same count and order."""
     stable_a = app.get_by_test_id("stMarkdown").filter(has_text="stable item A")
     stable_b = app.get_by_test_id("stMarkdown").filter(has_text="stable item B")
     stable_c = app.get_by_test_id("stMarkdown").filter(has_text="stable item C")
