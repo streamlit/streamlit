@@ -30,6 +30,7 @@ from streamlit.elements.lib.options_selector_utils import (
     index_,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
+    resolve_value_against_options,
     validate_and_sync_multiselect_value_with_options,
     validate_and_sync_range_value_with_options,
     validate_and_sync_value_with_options,
@@ -963,3 +964,75 @@ class TestValidateMultiselectWithCustomObjects(unittest.TestCase):
         assert len(values) == 1
         assert values[0].value == "b"
         assert needs_reset is True
+
+
+class TestResolveValueAgainstOptions:
+    """Tests for the label-based resolver used by the selectbox (Option B)."""
+
+    def test_none_value_returns_unchanged(self) -> None:
+        """A None current value is returned as-is without a reset."""
+        value, reset = resolve_value_against_options(
+            None, None, ["a", "b"], {"a": 0, "b": 1}, 0, None
+        )
+        assert value is None
+        assert reset is False
+
+    def test_label_in_options_returns_current_instance(self) -> None:
+        """A serialized label that maps returns the current option instance.
+
+        The returned object must be the current option (by identity), not the
+        passed-in (potentially stale) ``current_value``.
+        """
+
+        class Stale:  # noqa: B903
+            def __init__(self, name: str):
+                self.name = name
+
+        options = ["A", "B"]
+        stale = Stale("b")
+        value, reset = resolve_value_against_options(
+            "b", stale, options, {"a": 0, "b": 1}, 0, None
+        )
+        assert value is options[1]
+        assert reset is False
+
+    def test_label_not_in_options_resets_to_default(self) -> None:
+        """A label that is no longer among the options resets to the default.
+
+        Covers the model-swap case: the stored value belongs to a different
+        data model, so its label is absent from the new options.
+        """
+
+        class Stale:  # noqa: B903
+            def __init__(self, name: str):
+                self.name = name
+
+        options = ["X", "Y"]
+        stale = Stale("a")
+        value, reset = resolve_value_against_options(
+            "a", stale, options, {"x": 0, "y": 1}, 0, None
+        )
+        assert value == "X"
+        assert reset is True
+        # The stale object must not be returned.
+        assert value is not stale
+
+    def test_no_default_index_resets_to_none(self) -> None:
+        """When the label is invalid and there is no default index, reset to None."""
+        value, reset = resolve_value_against_options(
+            "missing", "missing", ["a", "b"], {"a": 0, "b": 1}, None, None
+        )
+        assert value is None
+        assert reset is True
+
+    def test_missing_serialized_label_falls_back_to_format_func(self) -> None:
+        """With no serialized label, validation falls back to format_func.
+
+        The fallback path keeps a value whose format_func output is in options.
+        """
+        options = ["a", "b", "c"]
+        value, reset = resolve_value_against_options(
+            None, "b", options, {"a": 0, "b": 1, "c": 2}, 0, None
+        )
+        assert value == "b"
+        assert reset is False
