@@ -394,6 +394,83 @@ def validate_and_sync_value_with_options(
     return new_value, True
 
 
+def resolve_value_against_options(
+    serialized_value: str | None,
+    current_value: T | None,
+    opt: Sequence[T],
+    formatted_option_to_option_index: dict[str, int],
+    default_index: int | None,
+    key: str | int | None,
+    format_func: Callable[[Any], str] = str,
+) -> tuple[T | None, bool]:
+    """Validate the current selection using its serialized label.
+
+    Unlike :func:`validate_and_sync_value_with_options`, this does not re-run
+    ``format_func`` on ``current_value`` to decide membership. Instead it uses
+    ``serialized_value`` -- the widget's canonical formatted label, recovered
+    from the stored widget state -- and looks it up directly in
+    ``formatted_option_to_option_index``. On a hit, the matching *current*
+    option instance is returned (never a stale deepcopy). On a miss, the value
+    is reset to the default.
+
+    This avoids the failure mode where ``format_func`` performs an identity- or
+    class-dependent operation (e.g. a dict lookup) and raises when handed a
+    value that was deepcopied from an earlier run.
+
+    Falls back to :func:`validate_and_sync_value_with_options` when no
+    serialized label is available (e.g. the first render, or a programmatic
+    ``st.session_state`` assignment that stored an object directly).
+
+    Parameters
+    ----------
+    serialized_value
+        The widget's stored formatted label, or ``None`` if unavailable.
+    current_value
+        The current widget value (used for the empty check and fallback).
+    opt
+        The sequence of valid options.
+    formatted_option_to_option_index
+        Mapping from formatted option labels to their index in ``opt``.
+    default_index
+        The default index to reset to if the value is invalid.
+    key
+        The widget key for session state updates.
+    format_func
+        Only used by the fallback path.
+
+    Returns
+    -------
+    tuple[T | None, bool]
+        A tuple of (validated_value, value_was_reset).
+    """
+    if current_value is None:
+        return current_value, False
+
+    if serialized_value is None:
+        # No label to validate against (first render or programmatic set) -
+        # fall back to the format_func-based comparison.
+        return validate_and_sync_value_with_options(
+            current_value, opt, default_index, key, format_func
+        )
+
+    option_index = formatted_option_to_option_index.get(serialized_value)
+    if option_index is not None and 0 <= option_index < len(opt):
+        # The label maps to a current option. Return that instance so the value
+        # always belongs to the current run, never a stale deepcopy.
+        return opt[option_index], False
+
+    # Label is not among the current options - reset to default.
+    if default_index is not None and len(opt) > 0:
+        new_value: T | None = opt[default_index]
+    else:
+        new_value = None
+
+    if key is not None:
+        get_session_state().reset_state_value(str(key), new_value)
+
+    return new_value, True
+
+
 def validate_and_sync_multiselect_value_with_options(
     current_values: list[T] | list[T | str],
     opt: Sequence[T],

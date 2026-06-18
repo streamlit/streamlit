@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+from enum import Enum
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -36,6 +37,7 @@ from streamlit.elements.lib.options_selector_utils import (
     SelectWidgetFilterMode,
     create_mappings,
     maybe_coerce_enum,
+    resolve_value_against_options,
     validate_and_sync_value_with_options,
     validate_select_widget_filter_mode,
 )
@@ -683,6 +685,25 @@ class SelectboxMixin:
             default_option_index=index,
             format_func=format_func,
         )
+
+        # Recover the selection's canonical formatted label from the stored
+        # widget state *before* register_widget swaps in this run's serializer.
+        # Serializing here uses the previous run's serializer, which is
+        # consistent with the stored value, so it yields the correct label even
+        # when the option classes were redefined this run. This lets validation
+        # avoid re-running format_func on a value that may be a deepcopy from an
+        # earlier run (see resolve_value_against_options).
+        stored_serialized_label: str | None = None
+        if not accept_new_options:
+            stored_proto = get_session_state().get_serialized_widget_value(
+                selectbox_proto.id
+            )
+            if (
+                stored_proto is not None
+                and stored_proto.WhichOneof("value") == "string_value"
+            ):
+                stored_serialized_label = stored_proto.string_value
+
         widget_state = register_widget(
             selectbox_proto.id,
             on_change_handler=on_change,
@@ -706,13 +727,27 @@ class SelectboxMixin:
         if accept_new_options:
             current_value = widget_state.value
             value_needs_reset = False
-        else:
-            # Validate the current value against the new options.
-            # If the value is no longer valid (not in options), reset to default.
-            # This handles the case where options change dynamically and the
-            # previously selected value is no longer available.
+        elif isinstance(widget_state.value, Enum):
+            # Enum values are governed by runner.enumCoercion (already applied
+            # above via maybe_coerce_enum); keep the format_func-based validation
+            # so that coercion="off" still returns the stored value as-is.
             current_value, value_needs_reset = validate_and_sync_value_with_options(
                 widget_state.value, opt, index, key, format_func
+            )
+        else:
+            # Validate the current value against the new options using its
+            # serialized label instead of re-running format_func on the stored
+            # value. If the label is no longer among the options, reset to
+            # default. This handles dynamic option changes and avoids reverting
+            # the selection when format_func depends on object identity/class.
+            current_value, value_needs_reset = resolve_value_against_options(
+                stored_serialized_label,
+                widget_state.value,
+                opt,
+                formatted_option_to_option_index,
+                index,
+                key,
+                format_func,
             )
 
         if value_needs_reset or widget_state.value_changed:
