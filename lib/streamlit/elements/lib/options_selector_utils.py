@@ -376,10 +376,18 @@ def validate_and_sync_value_with_options(
         formatted_value = format_func(current_value)
     except Exception:
         # format_func raised on the current value. A non-string value reaching
-        # this point is a still-valid selection whose format_func depends on
-        # object identity/class (e.g. a dict lookup) and that was stored as a
-        # deepcopy from an earlier run, so keep it. Only a leftover raw string
-        # (from an option that no longer exists) is treated as invalid.
+        # this point is treated as a still-valid selection whose format_func
+        # depends on object identity/class (e.g. a dict lookup) and that was
+        # stored as a deepcopy from an earlier run, so keep it. Only a leftover
+        # raw string (from an option that no longer exists) is treated as
+        # invalid.
+        #
+        # Note the intentional asymmetry: this keeps the value even if it is no
+        # longer a member of the current options (e.g. the options were replaced
+        # with a different data model whose format_func can't handle the old
+        # type). Preserving a likely-valid selection is preferred over silently
+        # resetting it, so the caller may receive a value not in the current
+        # options.
         if not isinstance(current_value, str):
             return current_value, False
     else:
@@ -449,10 +457,16 @@ def validate_and_sync_multiselect_value_with_options(
         try:
             formatted_value = format_func(value)
         except Exception:
-            # A non-string value that can't be formatted is a still-valid
-            # selection whose format_func depends on object identity/class and
-            # was stored as a deepcopy from an earlier run, so keep it. A
-            # leftover raw string (from a removed option) is filtered out.
+            # A non-string value that can't be formatted is treated as a
+            # still-valid selection whose format_func depends on object
+            # identity/class and was stored as a deepcopy from an earlier run,
+            # so keep it. A leftover raw string (from a removed option) is
+            # filtered out.
+            #
+            # Note the intentional asymmetry: a kept value may no longer be a
+            # member of the current options (e.g. the options were replaced with
+            # a different data model). Preserving a likely-valid selection is
+            # preferred over silently dropping it.
             if not isinstance(value, str):
                 valid_values.append(value)
             continue
@@ -513,10 +527,15 @@ def validate_and_sync_range_value_with_options(
         try:
             formatted = format_func(val)
         except Exception:
-            # A non-string value that can't be formatted is a still-valid
-            # selection whose format_func depends on object identity/class and
-            # was stored as a deepcopy from an earlier run. A leftover raw
-            # string (from a removed option) is invalid.
+            # A non-string value that can't be formatted is treated as a
+            # still-valid selection whose format_func depends on object
+            # identity/class and was stored as a deepcopy from an earlier run. A
+            # leftover raw string (from a removed option) is invalid.
+            #
+            # Note the intentional asymmetry: a kept value may no longer be a
+            # member of the current options (e.g. the options were replaced with
+            # a different data model). Preserving a likely-valid selection is
+            # preferred over silently resetting it.
             return not isinstance(val, str)
         return formatted in formatted_options_set
 
