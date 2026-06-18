@@ -792,6 +792,7 @@ class ConfigTest(unittest.TestCase):
                 "server.enableWebsocketCompression",
                 "server.websocketPingInterval",
                 "server.enableXsrfProtection",
+                "server.xsrfCookieSameSite",
                 "server.fileWatcherType",
                 "server.folderWatchBlacklist",
                 "server.folderWatchList",
@@ -827,6 +828,21 @@ class ConfigTest(unittest.TestCase):
         mock_logger = get_logger()
         config._check_conflicts()
         mock_logger.warning.assert_called_once()
+
+    @parameterized.expand(["lax", "strict", "none", "Lax", "STRICT", "None"])
+    def test_check_conflicts_xsrf_cookie_same_site_valid(self, value):
+        """Valid (case-insensitive) xsrfCookieSameSite values must not raise."""
+        config._set_option("server.xsrfCookieSameSite", value, "test")
+        config._check_conflicts()
+
+    def test_check_conflicts_xsrf_cookie_same_site_invalid(self):
+        """An invalid xsrfCookieSameSite value must raise a clear error."""
+        config._set_option("server.xsrfCookieSameSite", "invalid", "test")
+        with pytest.raises(
+            RuntimeError,
+            match=r"Invalid value for config option server.xsrfCookieSameSite",
+        ):
+            config._check_conflicts()
 
     def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")

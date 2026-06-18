@@ -1017,6 +1017,36 @@ _create_option(
 )
 
 _create_option(
+    "server.xsrfCookieSameSite",
+    description="""
+        Controls the SameSite attribute of the cookie Streamlit uses for
+        Cross-Site Request Forgery (XSRF) protection. This only affects the
+        XSRF cookie; authentication cookies always use SameSite=Lax.
+
+        Allowed values:
+        - "lax" (default): The XSRF cookie is sent on same-site requests and
+          top-level cross-site navigations. This is the recommended, secure
+          default and matches the previous behavior.
+        - "strict": The XSRF cookie is only sent on same-site requests.
+        - "none": The XSRF cookie is sent on all requests, including cross-site
+          requests. This is required when embedding a Streamlit app in an
+          iframe hosted on a different origin (for example, to make
+          ``st.file_uploader`` work inside a cross-origin iframe). Browsers
+          only accept ``SameSite=None`` cookies that also have the ``Secure``
+          attribute, so Streamlit sets ``Secure`` automatically in this case.
+          This means your app must be served over HTTPS (either directly or via
+          a TLS-terminating proxy), otherwise browsers will drop the cookie.
+
+        Note: Setting this to "none" relaxes the browser's SameSite-based CSRF
+        mitigation, so protection then relies on Streamlit's XSRF token
+        validation together with the CORS origin allowlist. Only use "none" if
+        you understand this tradeoff.
+    """,
+    default_val="lax",
+    type_=str,
+)
+
+_create_option(
     "server.maxUploadSize",
     description="""
         Max size, in megabytes, for files uploaded with the file_uploader.
@@ -2901,6 +2931,15 @@ cross-origin resource sharing.
 
 If cross origin resource sharing is required, please disable server.enableXsrfProtection.
             """
+        )
+
+    # Validate the XSRF cookie SameSite value.
+    xsrf_cookie_same_site = get_option("server.xsrfCookieSameSite")
+    if str(xsrf_cookie_same_site).lower() not in {"lax", "strict", "none"}:
+        raise RuntimeError(
+            "Invalid value for config option server.xsrfCookieSameSite: "
+            f'"{xsrf_cookie_same_site}". '
+            'Valid values are "lax", "strict", and "none".'
         )
 
 
