@@ -521,9 +521,8 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 
   const language = match?.[1] || ""
 
-  // Handle mermaid code blocks specially (case-insensitive).
-  // During streaming, show syntax-highlighted code to avoid flickering/errors
-  // from partial diagram source. After streaming completes, render the diagram.
+  // Handle mermaid code blocks: render as a diagram unless streaming
+  // (see StreamingContext for rationale).
   if (!inline && language.toLowerCase() === "mermaid" && !isStreaming) {
     return (
       <ErrorBoundary>

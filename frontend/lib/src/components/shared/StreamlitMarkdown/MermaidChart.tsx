@@ -84,7 +84,6 @@ const DIAGRAM_TYPE_MAP: Record<string, string> = {
 
 /**
  * Extracts the diagram type from mermaid source to generate descriptive alt text.
- * Parses the first line to identify the diagram type keyword.
  */
 function getDiagramTypeFromSource(source: string): string {
   const firstLine = source.trim().split("\n")[0].trim().toLowerCase()
@@ -104,7 +103,7 @@ function getDiagramTypeFromSource(source: string): string {
  *   accTitle: A short title for the diagram
  *   accDescr: A longer description (can be single line or multi-line with braces)
  *
- * @returns Object with extracted title and description, or undefined if not present
+ * @returns Object with optional title and description properties
  */
 function extractAccessibilityInfo(source: string): {
   title?: string
@@ -141,7 +140,6 @@ function extractAccessibilityInfo(source: string): {
 function getAltText(source: string): string {
   const { title, description } = extractAccessibilityInfo(source)
 
-  // Prefer user-provided accessibility info
   if (title && description) {
     return `${title}: ${description}`
   }
@@ -152,7 +150,6 @@ function getAltText(source: string): string {
     return description
   }
 
-  // Fall back to diagram type
   return `Mermaid ${getDiagramTypeFromSource(source)}`
 }
 
@@ -444,7 +441,6 @@ const MermaidChart = memo(function MermaidChart({
     let isCancelled = false
     let committedToState = false
 
-    // Increment counter for each effect run to generate a unique ID
     renderCounterRef.current += 1
     const renderNum = renderCounterRef.current
 
@@ -486,7 +482,7 @@ const MermaidChart = memo(function MermaidChart({
 
         const finalSvg = prepareResponsiveSvg(svg)
 
-        // Create blob URL for rendering via <img> tag (browser-enforced security sandboxing)
+        // Create blob URL for rendering via <img> tag.
         const blob = new Blob([finalSvg], {
           type: "image/svg+xml;charset=utf-8",
         })
@@ -532,9 +528,6 @@ const MermaidChart = memo(function MermaidChart({
     }
   }, [svgBlobUrl])
 
-  /**
-   * Copy the mermaid source code to clipboard.
-   */
   const handleCopySource = useCallback((): void => {
     copyToClipboard(source)
   }, [copyToClipboard, source])
@@ -548,7 +541,6 @@ const MermaidChart = memo(function MermaidChart({
       return
     }
 
-    // Mark this URL as in-use for download to prevent cleanup effect from revoking it.
     downloadingBlobUrlRef.current = svgBlobUrl
 
     // Clear the download marker and revoke the URL if it's no longer the
@@ -643,7 +635,6 @@ const MermaidChart = memo(function MermaidChart({
   }
 
   // Render the SVG via an <img> tag with blob URL.
-  // This provides browser-enforced security sandboxing - no script execution possible.
   return (
     <ErrorBoundary>
       <StyledToolbarElementContainer

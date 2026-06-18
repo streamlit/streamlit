@@ -106,18 +106,14 @@ def test_toolbar_copy_source(app: Page):
     mermaid_chart = fullscreen_frame.get_by_test_id("stMermaidChart")
     expect(mermaid_chart.locator("img")).to_be_visible()
 
-    # Toolbar should be hidden initially (opacity 0)
     expect(toolbar).not_to_have_css("opacity", "1")
 
-    # Hover to show toolbar
     fullscreen_frame.hover()
     expect(toolbar).to_have_css("opacity", "1")
 
-    # Click copy button
     copy_button = toolbar.get_by_role("button", name="Copy to clipboard")
     copy_button.click()
 
-    # Button label should change to indicate success
     expect(toolbar.get_by_role("button", name="Copied")).to_be_visible()
 
 
@@ -129,13 +125,10 @@ def test_toolbar_download_png(app: Page):
     mermaid_chart = fullscreen_frame.get_by_test_id("stMermaidChart")
     expect(mermaid_chart.locator("img")).to_be_visible()
 
-    # Toolbar should be hidden initially (opacity 0)
     expect(toolbar).not_to_have_css("opacity", "1")
 
-    # Hover to show toolbar
     fullscreen_frame.hover()
     expect(toolbar).to_have_css("opacity", "1")
 
-    # Verify the download button is visible and can be clicked
     download_button = toolbar.get_by_role("button", name="Download as PNG")
     download_button.click()

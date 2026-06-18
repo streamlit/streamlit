@@ -28,10 +28,8 @@ if TYPE_CHECKING:
     # st.mermaid_chart return type tests
     # =====================================================================
 
-    # Basic mermaid chart - returns DeltaGenerator
     assert_type(mermaid_chart("graph TD\n    A --> B"), DeltaGenerator)
 
-    # Mermaid chart with flowchart
     assert_type(
         mermaid_chart("""
 graph TD
@@ -42,7 +40,6 @@ graph TD
         DeltaGenerator,
     )
 
-    # Mermaid chart with sequence diagram
     assert_type(
         mermaid_chart("""
 sequenceDiagram
@@ -54,7 +51,6 @@ sequenceDiagram
         DeltaGenerator,
     )
 
-    # Mermaid chart with pie chart
     assert_type(
         mermaid_chart("""
 pie title Pets
@@ -64,11 +60,7 @@ pie title Pets
         DeltaGenerator,
     )
 
-    # Mermaid chart with width="stretch"
+    # Width variants
     assert_type(mermaid_chart("graph TD\n    A --> B", width="stretch"), DeltaGenerator)
-
-    # Mermaid chart with width="content"
     assert_type(mermaid_chart("graph TD\n    A --> B", width="content"), DeltaGenerator)
-
-    # Mermaid chart with pixel width
     assert_type(mermaid_chart("graph TD\n    A --> B", width=100), DeltaGenerator)
