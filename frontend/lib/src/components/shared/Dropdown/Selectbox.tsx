@@ -41,6 +41,7 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import {
   filterSelectOptions,
   getSelectFilterMode,
@@ -127,6 +128,14 @@ const Selectbox: FC<Props> = ({
 }) => {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+
+  const { refs, floatingStyles } = useFloatingOverlay({
+    open: true,
+    placement: "bottom-start",
+    offsetPx: 0,
+    flipOptions: isInSidebar ? false : undefined,
+    matchTriggerWidth: true,
+  })
 
   // Locally committed value (last value sent to Streamlit). Re-synced from
   // propValue when the backend pushes an update (form-clear, session state, etc.).
@@ -330,8 +339,9 @@ const Selectbox: FC<Props> = ({
   // Open on pointer-click. With menuTrigger="manual", opening on pointerDown
   // (before focus) avoids a timing gap where focus arrives first with no open action.
   const handleInputPointerDown = useCallback((): void => {
+    if (selectDisabled) return
     openDropdownRef.current?.()
-  }, [])
+  }, [selectDisabled])
 
   /**
    * Capture-phase keydown — fires before RAC's handler:
@@ -343,6 +353,7 @@ const Selectbox: FC<Props> = ({
    */
   const handleInputKeyDownCapture = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
+      if (selectDisabled) return
       if (
         isFilterNone &&
         (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") &&
@@ -371,7 +382,7 @@ const Selectbox: FC<Props> = ({
         commitSelection(null)
       }
     },
-    [clearable, commitSelection, isFilterNone]
+    [clearable, commitSelection, isFilterNone, selectDisabled]
   )
 
   /**
@@ -447,7 +458,7 @@ const Selectbox: FC<Props> = ({
             openRef={openDropdownRef}
             closeRef={closeDropdownRef}
           />
-          <StyledGroup>
+          <StyledGroup ref={refs.setReference}>
             <StyledInput
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}
@@ -479,12 +490,14 @@ const Selectbox: FC<Props> = ({
             </StyledOpenButton>
           </StyledGroup>
           <StyledPopover
+            ref={refs.setFloating}
             data-testid="stSelectboxVirtualDropdown"
             placement="bottom left"
             isNonModal
             shouldFlip={!isInSidebar}
             $isInSidebar={isInSidebar}
             offset={0}
+            style={floatingStyles}
           >
             <StyledListBox
               aria-label={label ?? "Selectbox options"}

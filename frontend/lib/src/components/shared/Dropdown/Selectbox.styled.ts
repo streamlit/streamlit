@@ -141,21 +141,31 @@ export const StyledClearButton = styled(Button)(({ theme }) => ({
  * Popover that positions the options list below the trigger group.
  * Uses the shared popover container style (border-radius, border, shadow)
  * and constrains the max height to match other Streamlit dropdowns.
+ *
+ * Positioning is handled by Floating UI (applied via the style prop) rather
+ * than React Aria's useOverlayPosition. The !important overrides neutralize
+ * RAC's imperative inline style writes so Floating UI's transform takes over.
  */
 export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
   ({ theme, $isInSidebar }) => ({
     ...getPopoverContainerStyle(theme),
-    // In the main panel bgColor is the page background; in the sidebar bgColor
-    // and secondaryBg are swapped, so we mirror the BaseWeb `menuFill` logic.
     backgroundColor: $isInSidebar
       ? theme.colors.secondaryBg
       : theme.colors.bgColor,
     zIndex: getOverlayZIndex(theme),
-    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-    width: "var(--trigger-width)",
     maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
     overflow: "hidden",
     marginTop: theme.spacing.twoXS,
+    // Override RAC's useOverlayPosition imperative style writes.
+    // Floating UI provides position/transform via the style prop.
+
+    ...({
+      position: "fixed !important",
+      top: "0 !important",
+      left: "0 !important",
+      right: "auto !important",
+      bottom: "auto !important",
+    } as Record<string, string>),
   })
 )
 
