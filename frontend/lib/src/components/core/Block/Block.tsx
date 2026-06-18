@@ -287,9 +287,8 @@ export const BlockNodeRenderer = (
     notNullOrUndefined(node.deltaBlock.dialog) ||
     notNullOrUndefined(node.deltaBlock.popover)
 
-  // Transparent blocks reserve a slot in the element tree for backend cursor
-  // bookkeeping but have zero visual or DOM footprint. Render children directly;
-  // they inherit direction, width, and flex context from the outside container.
+  // Transparent blocks group elements in the backend tree without adding DOM.
+  // Children render directly in the parent's flex context.
   if (node.deltaBlock.transparent) {
     return (
       <ChildRenderer

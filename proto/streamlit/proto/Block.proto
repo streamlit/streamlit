@@ -184,10 +184,8 @@ message Block {
     AvatarType avatar_type = 3;
   }
 
-  // A layout-transparent wrapper block with no visual treatment (no padding,
-  // border, or gap). Renders as a plain unstyled grouping with no DOM node of
-  // its own. Used to group elements into a single tree node without affecting
-  // the user-visible layout.
+  // A layout-transparent wrapper block. Produces no DOM node — children
+  // render directly in the parent container's flex context.
   message Transparent {}
 
   // Next ID: 18

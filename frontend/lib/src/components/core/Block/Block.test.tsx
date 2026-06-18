@@ -392,7 +392,7 @@ describe("BlockNodeRenderer transparent blocks", () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it("nested block inside transparent wrapper inherits parent layout", () => {
+  it("column inside transparent wrapper renders directly in parent horizontal block", () => {
     const column = makeColumn(0.5)
     const transparentBlock = new BlockNode(
       FAKE_SCRIPT_HASH,
@@ -414,16 +414,14 @@ describe("BlockNodeRenderer transparent blocks", () => {
 
     renderWithContexts(makeVerticalBlockComponent(root))
 
-    const hBlock = screen.getByTestId("stHorizontalBlock")
-    expect(hBlock).toHaveAttribute("direction", "row")
+    const horizontalBlockEl = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlockEl).toHaveAttribute("direction", "row")
 
-    // Column renders as a flex child of the horizontal block —
-    // the transparent wrapper contributes no intervening DOM.
-    const columnEl = within(hBlock).getByTestId("stColumn")
+    // Column is a direct descendant of the horizontal block — no transparent wrapper DOM.
+    const columnEl = within(horizontalBlockEl).getByTestId("stColumn")
     expect(columnEl).toBeVisible()
 
-    // Only the root and the column's inner vertical block exist;
-    // the transparent wrapper does not add another.
+    // Transparent wrapper adds no extra stVerticalBlock.
     expect(screen.getAllByTestId("stVerticalBlock")).toHaveLength(2)
   })
 })
