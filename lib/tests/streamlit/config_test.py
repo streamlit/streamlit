@@ -869,9 +869,10 @@ class ConfigTest(unittest.TestCase):
         assert "xsrfCookieSameSite" in warnings
         assert "HTTPS" in warnings
 
+    @patch("streamlit.web.server.server_util.is_xsrf_enabled", return_value=False)
     @patch("streamlit.logger.get_logger")
     def test_check_conflicts_xsrf_cookie_same_site_none_warns_when_xsrf_disabled(
-        self, get_logger
+        self, get_logger, _mock_is_xsrf_enabled
     ):
         """SameSite="none" with XSRF protection disabled must warn it has no effect."""
         config._set_option("server.xsrfCookieSameSite", "none", "test")
@@ -881,6 +882,27 @@ class ConfigTest(unittest.TestCase):
         warnings = " ".join(str(call) for call in mock_logger.warning.call_args_list)
         assert "xsrfCookieSameSite" in warnings
         assert "no effect" in warnings
+
+    @patch("streamlit.web.server.server_util.is_xsrf_enabled", return_value=True)
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_xsrf_cookie_same_site_none_no_effect_respects_auth(
+        self, get_logger, _mock_is_xsrf_enabled
+    ):
+        """SameSite="none" must not warn "no effect" when XSRF is enabled via auth.
+
+        is_xsrf_enabled() can be True (e.g. via an [auth] secrets section) even
+        when server.enableXsrfProtection is false; the XSRF cookie is then still
+        set, so SameSite="none" does take effect.
+        """
+        config._set_option("server.xsrfCookieSameSite", "none", "test")
+        config._set_option("server.enableXsrfProtection", False, "test")
+        config._set_option("server.sslCertFile", None, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        warnings = " ".join(str(call) for call in mock_logger.warning.call_args_list)
+        assert "no effect" not in warnings
+        # It should still warn about the HTTPS/Secure requirement.
+        assert "HTTPS" in warnings
 
     def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")
