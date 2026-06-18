@@ -305,7 +305,7 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         delta = self.get_delta_from_queue()
         assert delta.fragment_id == "my_fragment_id"
 
-    def test_fragment_writing_directly_to_sidebar_is_redirected_to_wrapper(self):
+    def test_fragment_sidebar_write_is_redirected_to_wrapper(self):
         ctx = get_script_run_ctx()
         ThreadState.update(fragment_id="my_fragment_id", delta_path=(0, 1, 2))
         self.addCleanup(lambda: ThreadState.update(fragment_id=None, delta_path=None))

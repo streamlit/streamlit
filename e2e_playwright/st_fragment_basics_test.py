@@ -362,7 +362,8 @@ def test_two_fragments_write_into_same_outside_container(app: Page):
 
 
 def test_fragment_writes_into_sidebar(app: Page):
-    """A fragment writes into the sidebar via a ``with`` block and directly.
+    """A fragment writes into the sidebar via ``with st.sidebar:`` and via
+    ``st.sidebar.markdown(...)``.
 
     The main-script header and footer keep their slots while the fragment's
     content updates in place across reruns.
@@ -509,8 +510,8 @@ def test_fragment_rerun_preserves_inscope_content_position(app: Page):
 def test_outside_container_transparent_wrapper(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """The transparent wrapper adds no border or padding: the fragment's content is a
-    direct flex item of the outside container alongside the non-fragment writes.
+    """The transparent wrapper block adds no visible border or padding — the
+    fragment's content appears inline with non-fragment content in the same container.
     """
     container = get_element_by_key(app, "visual_container")
     markdowns = container.get_by_test_id("stMarkdown")

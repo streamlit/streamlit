@@ -658,10 +658,10 @@ def fragment(
     with a widget that a fragment rendered into an outside container reruns the
     writing fragment, not the full app.
 
-    To populate an outside container from a fragment on a standalone fragment
-    rerun, the container must first be written to during a full app run. A
-    common pattern is to claim the slot during the full run (for
-    example, ``placeholder = outside.empty()``) and fill it from the fragment.
+    To populate an outside container from a fragment, the container must first
+    receive at least one write during the initial full app run. A common
+    pattern is to reserve the position during the full run (e.g.,
+    ``placeholder = my_container.empty()``) and fill it from the fragment.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these

@@ -53,8 +53,9 @@ st.write(f"outside: fragment {uuid4()}")
 
 # --- Scenarios for fragments writing into containers created outside of them. ---
 
-# Static outside container for snapshotting the transparent wrapper's visual
-# output. Declared early so the fixed st.bottom bar can't overlap it.
+# Container for the visual snapshot test — fragments write through an invisible
+# wrapper block that must add no visible border or padding. Placed before the
+# st.bottom scenarios to avoid overlap.
 visual_container = st.container(key="visual_container")
 with visual_container:
     st.markdown("visual header")
@@ -154,8 +155,8 @@ bottom_fragment()
 st.bottom.markdown("bottom footer")
 
 
-# The ``outside.empty()`` placeholder pattern: claim the slot during the full run, then
-# fill it from the fragment on each rerun.
+# The ``container.empty()`` placeholder pattern: reserve the position during the full
+# run, then fill it from the fragment on each rerun.
 empty_container = st.container(key="empty_container")
 with empty_container:
     st.markdown("empty-pattern header")

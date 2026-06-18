@@ -1318,7 +1318,7 @@ def get_test_tuples(
     ]
 
 
-class FragmentWritesToOutsidePathTest(DeltaGeneratorTestCase):
+class FragmentWritesToOutsideContainerTest(DeltaGeneratorTestCase):
     # Suppress unawaited coroutine warning from MagicMock(spec=Runtime). This occurs
     # when rich's exception formatter accesses auto-created AsyncMock attributes.
     pytestmark = pytest.mark.filterwarnings(
@@ -1330,7 +1330,7 @@ class FragmentWritesToOutsidePathTest(DeltaGeneratorTestCase):
             outside_container_writing_apps, WIDGET_ELEMENTS + NON_WIDGET_ELEMENTS
         )
     )
-    def test_write_element_outside_container_succeeds_for_all(
+    def test_write_widget_or_element_outside_container_succeeds(
         self,
         _: str,  # the test name argument used by pytest
         _app: Callable[[Callable[[], DeltaGenerator]], None],
