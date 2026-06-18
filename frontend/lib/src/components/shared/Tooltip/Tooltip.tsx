@@ -346,12 +346,15 @@ function TriggerArea({
 
   const { focusWithinProps } = useFocusWithin({
     onFocusWithin() {
-      state?.open(false)
+      state?.open(true)
     },
     onBlurWithin() {
       state?.close(true)
     },
   })
+
+  const { tabIndex: _tabIndex, ...restFocusableProps } =
+    focusableProps as Record<string, unknown>
 
   return (
     <Tag
@@ -359,7 +362,7 @@ function TriggerArea({
       style={style}
       data-testid={testId}
       className={className}
-      {...focusableProps}
+      {...restFocusableProps}
       {...focusWithinProps}
     >
       {children}
