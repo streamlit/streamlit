@@ -1020,13 +1020,16 @@ _create_option(
     "server.xsrfCookieSameSite",
     description="""
         Controls the SameSite attribute of the cookie Streamlit uses for
-        Cross-Site Request Forgery (XSRF) protection. This only affects the
-        XSRF cookie; authentication cookies always use SameSite=Lax.
+        Cross-Site Request Forgery (XSRF) protection. This only has an effect
+        when XSRF protection is enabled (via ``server.enableXsrfProtection`` or
+        an ``[auth]`` section in your secrets); otherwise no XSRF cookie is set.
+        It does not affect authentication cookies, which always use
+        SameSite=Lax.
 
         Allowed values:
         - "lax" (default): The XSRF cookie is sent on same-site requests and
           top-level cross-site navigations. This is the recommended, secure
-          default and matches the previous behavior.
+          default.
         - "strict": The XSRF cookie is only sent on same-site requests.
         - "none": The XSRF cookie is sent on all requests, including cross-site
           requests. This is required when embedding a Streamlit app in an
