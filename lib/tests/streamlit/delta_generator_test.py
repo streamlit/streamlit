@@ -1611,3 +1611,46 @@ class CreatingFragmentIdDeepCopyTest(DeltaGeneratorTestCase):
         copied = deepcopy(dg)
 
         assert copied._creating_fragment_id is None
+
+
+class NonFragmentBlockPathWrapperFreeTest(DeltaGeneratorTestCase):
+    """Block commands (st.container, st.columns) must not trigger outside-write
+    redirection when no fragment is active."""
+
+    def test_container_outside_fragment_has_no_wrappers(self) -> None:
+        """The outside-write detection in _block must be a no-op when no
+        fragment is running.
+        """
+        container = st.container()
+        container.markdown("inside container")
+
+        storage = self.script_run_ctx.fragment_storage
+        wrappers = storage.outside_wrappers_for("")
+        assert wrappers == []
+
+        msg = self.get_message_from_queue()
+        assert msg.metadata.delta_path == make_delta_path(
+            RootContainer.MAIN, (0,), 0
+        )
+
+    def test_columns_outside_fragment_has_no_wrappers(self) -> None:
+        """The outside-write detection in _block must be a no-op for
+        st.columns when no fragment is running.
+        """
+        col1, col2 = st.columns(2)
+        col1.markdown("left")
+        col2.markdown("right")
+
+        storage = self.script_run_ctx.fragment_storage
+        assert storage.outside_wrappers_for("") == []
+
+        left_msg = self.get_message_from_queue(-2)
+        right_msg = self.get_message_from_queue(-1)
+        # columns() creates a horizontal block at (0,), then column blocks
+        # at (0,0) and (0,1) inside it.
+        assert left_msg.metadata.delta_path == make_delta_path(
+            RootContainer.MAIN, (0, 0), 0
+        )
+        assert right_msg.metadata.delta_path == make_delta_path(
+            RootContainer.MAIN, (0, 1), 0
+        )
