@@ -522,3 +522,33 @@ def test_outside_container_transparent_wrapper(
     assert_snapshot(
         container, name="st_fragment_basics-outside_container_transparent_wrapper"
     )
+
+
+def test_widget_in_outside_container_triggers_fragment_rerun(app: Page):
+    """Clicking a widget that a fragment rendered into an outside container reruns
+    only the fragment, not the full app.
+    """
+    container = get_element_by_key(app, "widget_outside_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    expect(markdowns.first).to_have_text("widget-outside header")
+    expect(markdowns.last).to_have_text("widget-outside footer")
+
+    fragment_markdown = markdowns.filter(has_text="widget-outside fragment:")
+    old_fragment_text = fragment_markdown.text_content()
+
+    app_marker = app.get_by_test_id("stMarkdown").filter(has_text="app-level marker:")
+    old_app_marker_text = app_marker.text_content()
+
+    click_button(app, "outside button")
+
+    # Fragment content updated (fragment reran).
+    expect(fragment_markdown).not_to_have_text(old_fragment_text or "")
+    # The button's conditional output appeared.
+    expect(markdowns.filter(has_text="button clicked:")).to_have_count(1)
+    # App-level marker unchanged (no full rerun).
+    expect(app_marker).to_have_text(old_app_marker_text or "")
+    # Header and footer preserved.
+    expect(markdowns.first).to_have_text("widget-outside header")
+    expect(markdowns.last).to_have_text("widget-outside footer")
+
+    expect_no_exception(app)

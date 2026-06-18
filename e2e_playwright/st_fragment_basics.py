@@ -275,3 +275,84 @@ def stable_content_fragment():
 
 
 stable_content_fragment()
+
+
+# --- Outside-container widget triggers fragment-only rerun ---
+# A fragment writes a button into an outside container and into the sidebar.
+# Clicking either button must trigger only a fragment rerun (the main-script
+# marker stays unchanged).
+outside_widget_container = st.container(key="outside_widget_container")
+
+with st.sidebar:
+    st.markdown("sidebar header")
+
+
+@st.fragment
+def outside_widget_fragment():
+    outside_widget_container.button("outside container btn", key="outside_btn")
+    st.sidebar.button("sidebar btn", key="sidebar_btn")
+    st.markdown(f"outside_widget_fragment ran: {uuid4()}")
+
+
+outside_widget_fragment()
+
+
+# --- SIDEBAR/BOTTOM shrink→grow interleaving ---
+# Variable element count written to st.sidebar and st.bottom from a fragment,
+# with header/footer to verify ordering. Exercises the _is_top_level detection
+# branch and stable-_id lifecycle on top-level containers.
+if "toplevel_count" not in st.session_state:
+    st.session_state.toplevel_count = 3
+
+with st.sidebar:
+    st.markdown("sidebar section header")
+
+with st.bottom:
+    st.markdown("bottom section header")
+
+
+@st.fragment
+def toplevel_shrink_grow_fragment():
+    if st.button("toplevel to 5", key="toplevel_grow"):
+        st.session_state.toplevel_count = 5
+    if st.button("toplevel to 2", key="toplevel_shrink"):
+        st.session_state.toplevel_count = 2
+
+    with st.sidebar:
+        for i in range(st.session_state.toplevel_count):
+            st.markdown(f"sidebar row {i}")
+
+    with st.bottom:
+        for i in range(st.session_state.toplevel_count):
+            st.markdown(f"bottom row {i}")
+
+
+toplevel_shrink_grow_fragment()
+
+with st.sidebar:
+    st.markdown("sidebar section footer")
+
+with st.bottom:
+    st.markdown("bottom section footer")
+
+
+# A widget rendered into an outside container by a fragment. Clicking the widget
+# must trigger only a fragment rerun (not a full app rerun).
+widget_outside_container = st.container(key="widget_outside_container")
+with widget_outside_container:
+    st.markdown("widget-outside header")
+
+
+@st.fragment
+def widget_outside_fragment():
+    with widget_outside_container:
+        if st.button("outside button", key="outside_button"):
+            st.markdown(f"button clicked: {uuid4()}")
+        st.markdown(f"widget-outside fragment: {uuid4()}")
+
+
+widget_outside_fragment()
+with widget_outside_container:
+    st.markdown("widget-outside footer")
+
+st.markdown(f"app-level marker: {uuid4()}")
