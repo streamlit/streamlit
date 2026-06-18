@@ -32,6 +32,7 @@ from e2e_playwright.shared.app_utils import (
     get_date_input,
     get_element_by_key,
     reset_focus,
+    reset_hovering,
 )
 
 NUM_DATE_INPUTS = 22
@@ -363,6 +364,7 @@ def test_single_date_input_error_state(
     error_icon = first_date_input.get_by_test_id("stTooltipErrorHoverTarget")
     expect(error_icon).to_be_visible()
     # Hover over the error tooltip target
+    reset_hovering(themed_app)
     error_icon.hover()
     # Check that the expected error tooltip message is shown
     tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
@@ -399,6 +401,7 @@ def test_range_date_input_start_error_state(
     error_icon = fifth_date_input.get_by_test_id("stTooltipErrorHoverTarget")
     expect(error_icon).to_be_visible()
     # Hover over the error tooltip target
+    reset_hovering(themed_app)
     error_icon.hover()
     # Check that the expected error tooltip message for start date error is shown
     tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
@@ -432,6 +435,7 @@ def test_range_date_input_end_error_state(themed_app: Page):
     error_icon = fifth_date_input.get_by_test_id("stTooltipErrorHoverTarget")
     expect(error_icon).to_be_visible()
     # Hover over the error tooltip target
+    reset_hovering(themed_app)
     error_icon.hover()
     # Check that the expected error tooltip message for end date error is shown
     tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
