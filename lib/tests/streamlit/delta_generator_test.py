@@ -1629,9 +1629,7 @@ class NonFragmentBlockPathWrapperFreeTest(DeltaGeneratorTestCase):
         assert wrappers == []
 
         msg = self.get_message_from_queue()
-        assert msg.metadata.delta_path == make_delta_path(
-            RootContainer.MAIN, (0,), 0
-        )
+        assert msg.metadata.delta_path == make_delta_path(RootContainer.MAIN, (0,), 0)
 
     def test_columns_outside_fragment_has_no_wrappers(self) -> None:
         """The outside-write detection in _block must be a no-op for

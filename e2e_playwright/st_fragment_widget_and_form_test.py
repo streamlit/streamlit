@@ -30,9 +30,9 @@ def test_fragment_widget_persists_across_full_app_rerun(app: Page):
 
     expect_markdown(app, "slider value: 51")
 
-    old_app_uuid = app.get_by_test_id("stMarkdown").filter(
-        has_text="app uuid:"
-    ).text_content()
+    old_app_uuid = (
+        app.get_by_test_id("stMarkdown").filter(has_text="app uuid:").text_content()
+    )
     assert old_app_uuid is not None
 
     click_button(app, "Trigger full rerun")
