@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 import styled from "@emotion/styled"
 import { Check, Close, Edit } from "@emotion-icons/material-outlined"
@@ -237,41 +237,18 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
     onFinishedEditing(undefined, [0, 0])
   }, [onFinishedEditing])
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  // Register a document-level capture-phase Escape handler that fires before
-  // React Aria's tooltip capture listener. React Aria's useTooltipTrigger adds
-  // a document capture keydown listener (with stopPropagation) when a tooltip
-  // is open, which blocks the event from reaching React's delegated system.
-  // Our listener is added at editor mount (before the tooltip opens after its
-  // delay), so it gets priority by addEventListener ordering.
-  useEffect(() => {
-    if (!isEditing) return
-
-    const handleCaptureEscape = (e: KeyboardEvent): void => {
-      if (
-        e.key === "Escape" &&
-        document.activeElement === textareaRef.current
-      ) {
-        handleCancel()
-      }
-    }
-
-    document.addEventListener("keydown", handleCaptureEscape, true)
-    return () => {
-      document.removeEventListener("keydown", handleCaptureEscape, true)
-    }
-  }, [isEditing, handleCancel])
-
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Prevent glide-data-grid from handling these keys
+      e.stopPropagation()
+
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-        // Prevent glide-data-grid from interpreting Ctrl+Enter as a row advance
-        e.stopPropagation()
         handleSave()
+      } else if (e.key === "Escape") {
+        handleCancel()
       }
     },
-    [handleSave]
+    [handleSave, handleCancel]
   )
 
   const handleEnterEdit = useCallback(() => {
@@ -302,7 +279,6 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
             </StyledCellToolbar>
           </StyledToolbarWrapper>
           <StyledTextarea
-            ref={textareaRef}
             value={editValue}
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}

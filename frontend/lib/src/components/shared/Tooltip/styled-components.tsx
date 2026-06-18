@@ -36,18 +36,20 @@ const tooltipFadeIn = keyframes`
 // runs). By that point our useLayoutEffect transform is already applied,
 // so the tooltip reveals at the correct position without any flash.
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values -- !important overrides React Aria's inline styles */
-export const StyledTooltip = styled(RATooltip)(({ theme }) => ({
-  position: "fixed !important" as "fixed",
-  left: "0 !important",
-  top: "0 !important",
-  width: "max-content",
-  zIndex: getOverlayZIndex(theme),
-  pointerEvents: "none",
+export const StyledTooltip = styled(RATooltip)<{ id?: string }>(
+  ({ theme }) => ({
+    position: "fixed !important" as "fixed",
+    left: "0 !important",
+    top: "0 !important",
+    width: "max-content",
+    zIndex: getOverlayZIndex(theme),
+    pointerEvents: "none",
 
-  "&:not([data-placement])": {
-    visibility: "hidden",
-  },
-}))
+    "&:not([data-placement])": {
+      visibility: "hidden",
+    },
+  })
+)
 /* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
 export const StyledWrapper = styled.div({

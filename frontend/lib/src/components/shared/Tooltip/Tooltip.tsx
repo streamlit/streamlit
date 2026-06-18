@@ -23,16 +23,20 @@ import {
   ReactNode,
   type Ref,
   useContext,
+  useEffect,
+  useId,
   useLayoutEffect,
+  useMemo,
   useRef,
 } from "react"
 
-import { useFocusable, useFocusWithin } from "react-aria"
+import { useFocusWithin } from "react-aria"
 import {
   type Placement as RAPlacement,
-  TooltipTrigger,
+  TooltipContext,
   TooltipTriggerStateContext,
 } from "react-aria-components"
+import { useTooltipTriggerState } from "react-stately"
 
 import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 
@@ -309,52 +313,40 @@ interface TriggerAreaProps {
   style: CSSProperties
   testId: string
   className: string
+  ariaDescribedBy: string | undefined
+  disabled: boolean
   children: ReactNode
 }
 
 /**
  * TriggerArea renders the hoverable/focusable wrapper that activates the tooltip.
  *
- * It combines two event-routing strategies:
+ * Hover: onPointerEnter/Leave call state.open(false)/close(false) which use the
+ * delay configured on useTooltipTriggerState.
  *
- * 1. `useFocusable`: reads hover/focus event handlers from the FocusableContext
- *    that TooltipTrigger provides (via FocusableProvider) and merges them onto
- *    the DOM element. This routes onPointerEnter/Leave to the tooltip state.
- *
- * 2. `useFocusWithin`: opens/closes the tooltip when any descendant receives
- *    or loses focus. React Aria's useFocus has a `target === currentTarget`
- *    guard, so the triggerProps.onFocus injected via FocusableContext only
- *    fires when the wrapper itself is the focused element — it never fires
- *    when a child button is tabbed to. useFocusWithin bypasses that guard by
- *    listening to the native focusin/focusout events (which bubble) and
- *    calling state.open/close directly via TooltipTriggerStateContext.
+ * Focus: useFocusWithin opens/closes the tooltip immediately when any descendant
+ * receives or loses focus (bubbling focusin/focusout under the hood).
  */
 function TriggerArea({
   tag: Tag,
   style,
   testId,
   className,
+  ariaDescribedBy,
+  disabled,
   children,
 }: TriggerAreaProps): ReactElement {
   const state = useContext(TooltipTriggerStateContext)
   const triggerRef = useContext(TriggerRefContext)
 
-  const { focusableProps } = useFocusable(
-    { excludeFromTabOrder: true },
-    triggerRef as MutableRefObject<HTMLElement | null>
-  )
-
   const { focusWithinProps } = useFocusWithin({
     onFocusWithin() {
-      state?.open(true)
+      if (!disabled) state?.open(true)
     },
     onBlurWithin() {
       state?.close(true)
     },
   })
-
-  const { tabIndex: _tabIndex, ...restFocusableProps } =
-    focusableProps as Record<string, unknown>
 
   return (
     <Tag
@@ -362,7 +354,11 @@ function TriggerArea({
       style={style}
       data-testid={testId}
       className={className}
-      {...restFocusableProps}
+      aria-describedby={ariaDescribedBy}
+      onPointerEnter={() => {
+        if (!disabled) state?.open(false)
+      }}
+      onPointerLeave={() => state?.close(false)}
       {...focusWithinProps}
     >
       {children}
@@ -382,46 +378,82 @@ function Tooltip({
 }: TooltipProps): ReactElement {
   const triggerRef = useRef<Element | null>(null)
   const raPlacement = REACT_ARIA_PLACEMENT[placement]
+  const tooltipId = useId()
+
+  const state = useTooltipTriggerState({
+    delay: onMouseEnterDelay ?? 200,
+    closeDelay: 300,
+  })
+
+  const tooltipContextValue = useMemo(
+    () => ({ id: tooltipId, triggerRef }) as never,
+    [tooltipId, triggerRef]
+  )
+
+  // Close the tooltip on Escape without stopping event propagation.
+  // React Aria's useTooltipTrigger would register a document capture listener
+  // that calls stopPropagation(), preventing other handlers (e.g. textarea
+  // onKeyDown inside glide-data-grid) from ever seeing the Escape event.
+  // By managing state ourselves, we avoid that behavior entirely.
+  useEffect(() => {
+    if (!state.isOpen) return
+
+    const onEscape = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        state.close(true)
+      }
+    }
+
+    document.addEventListener("keydown", onEscape, true)
+    return () => document.removeEventListener("keydown", onEscape, true)
+  }, [state.isOpen, state])
 
   return (
-    <TriggerRefContext.Provider value={triggerRef}>
-      <TooltipTrigger
-        delay={onMouseEnterDelay ?? 200}
-        closeDelay={300}
-        isDisabled={!content}
-      >
-        <TriggerArea
-          tag={inline ? "span" : "div"}
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            justifyContent: inline ? "flex-end" : "",
-            width: containerWidth ? "100%" : "auto",
-            ...style,
-          }}
-          testId={error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"}
-          className={
-            error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
-          }
-        >
-          {children}
-        </TriggerArea>
-        <StyledTooltip
-          placement={raPlacement}
-          offset={10}
-          shouldFlip
-          containerPadding={8}
-        >
-          <TooltipContentArea
-            className={error ? "stTooltipErrorContent" : "stTooltipContent"}
-            testId={error ? "stTooltipErrorContent" : "stTooltipContent"}
-            placement={raPlacement}
+    <TooltipTriggerStateContext.Provider value={state}>
+      <TriggerRefContext.Provider value={triggerRef}>
+        <TooltipContext.Provider value={tooltipContextValue}>
+          <TriggerArea
+            tag={inline ? "span" : "div"}
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: inline ? "flex-end" : "",
+              width: containerWidth ? "100%" : "auto",
+              ...style,
+            }}
+            testId={
+              error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
+            }
+            className={
+              error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
+            }
+            ariaDescribedBy={state.isOpen ? tooltipId : undefined}
+            disabled={!content}
           >
-            {content}
-          </TooltipContentArea>
-        </StyledTooltip>
-      </TooltipTrigger>
-    </TriggerRefContext.Provider>
+            {children}
+          </TriggerArea>
+          {content ? (
+            <StyledTooltip
+              id={tooltipId}
+              placement={raPlacement}
+              offset={10}
+              shouldFlip
+              containerPadding={8}
+            >
+              <TooltipContentArea
+                className={
+                  error ? "stTooltipErrorContent" : "stTooltipContent"
+                }
+                testId={error ? "stTooltipErrorContent" : "stTooltipContent"}
+                placement={raPlacement}
+              >
+                {content}
+              </TooltipContentArea>
+            </StyledTooltip>
+          ) : null}
+        </TooltipContext.Provider>
+      </TriggerRefContext.Provider>
+    </TooltipTriggerStateContext.Provider>
   )
 }
 
