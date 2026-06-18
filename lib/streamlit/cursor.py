@@ -109,8 +109,8 @@ class SparseList(Generic[T]):
 class Cursor:
     """A pointer to a delta location in the app.
 
-    When adding an element to the app, you should always call
-    get_locked_cursor() on that element's respective Cursor.
+    Subclasses provide `lock_element()` and `open_block()` to reserve
+    positions in the element tree.
 
     Parameters
     ----------
@@ -167,7 +167,10 @@ class Cursor:
     def transient_index(self) -> int:
         return 0 if self._transient_index is None else self._transient_index
 
-    def get_locked_cursor(self) -> LockedCursor:
+    def lock_element(self) -> LockedCursor:
+        raise NotImplementedError()
+
+    def open_block(self) -> RunningCursor:
         raise NotImplementedError()
 
     def get_transient_cursor(self) -> Cursor:
@@ -190,7 +193,7 @@ class RunningCursor(Cursor):
         """A moving pointer to a delta location in the app.
 
         RunningCursors auto-increment to the next available location when you
-        call get_locked_cursor() on them.
+        call lock_element() or open_block() on them.
 
         Parameters
         ----------
@@ -226,18 +229,30 @@ class RunningCursor(Cursor):
     def is_locked(self) -> bool:
         return False
 
-    def get_locked_cursor(self) -> LockedCursor:
-        locked_cursor = LockedCursor(
-            root_container=self._root_container,
-            parent_path=self._parent_path,
-            index=self._index,
-        )
-
+    def _advance(self) -> None:
+        """Increment index and reset transient state."""
         self._index += 1
         self._transient_index = None
         self._transient_elements = SparseList[Element]()
 
-        return locked_cursor
+    def lock_element(self) -> LockedCursor:
+        """Reserve the current position for an element and advance."""
+        locked = LockedCursor(
+            root_container=self._root_container,
+            parent_path=self._parent_path,
+            index=self._index,
+        )
+        self._advance()
+        return locked
+
+    def open_block(self) -> RunningCursor:
+        """Create a child cursor for a new block and advance."""
+        child = RunningCursor(
+            root_container=self._root_container,
+            parent_path=(*self._parent_path, self._index),
+        )
+        self._advance()
+        return child
 
 
 class LockedCursor(Cursor):
@@ -252,7 +267,7 @@ class LockedCursor(Cursor):
         """A locked pointer to a location in the app.
 
         LockedCursors always point to the same location, even when you call
-        get_locked_cursor() on them.
+        lock_element() on them.
 
         Parameters
         ----------
@@ -289,5 +304,16 @@ class LockedCursor(Cursor):
     def is_locked(self) -> bool:
         return True
 
-    def get_locked_cursor(self) -> LockedCursor:
+    def lock_element(self) -> LockedCursor:
         return self
+
+    def open_block(self) -> RunningCursor:
+        """Create a child RunningCursor from this locked position.
+
+        Used when _block() is called on a DeltaGenerator that has a
+        LockedCursor (e.g., a DG returned from _enqueue as output_dg).
+        """
+        return RunningCursor(
+            root_container=self._root_container,
+            parent_path=(*self._parent_path, self._index),
+        )

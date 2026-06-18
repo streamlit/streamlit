@@ -15,6 +15,35 @@
  */
 
 import styled from "@emotion/styled"
+import { Popover as RAPopover } from "react-aria-components"
+
+import { getOverlayZIndex } from "~lib/components/shared/Base/styled-components"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
+
+export const StyledPopoverBody = styled(RAPopover)<{
+  $stretchWidth?: boolean
+  $calculatedWidth?: number
+}>(({ theme, $stretchWidth, $calculatedWidth = 0 }) => {
+  const isLight = hasLightBackgroundColor(theme)
+  return {
+    boxSizing: "border-box",
+    borderRadius: theme.radii.xl,
+    border: `${theme.sizes.borderWidth} solid ${isLight ? theme.colors.bgColor : theme.colors.borderColor}`,
+    boxShadow: isLight ? theme.shadows.popover : theme.shadows.none,
+    padding: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+    maxHeight: "70vh",
+    overflow: "auto",
+    maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2 * ${theme.spacing.lg})`,
+    minWidth: $stretchWidth
+      ? `max(${$calculatedWidth}px, 10rem)`
+      : theme.sizes.minPopupWidth,
+    backgroundColor: theme.colors.bgColor,
+    zIndex: getOverlayZIndex(theme),
+    [`@media (max-width: ${theme.breakpoints.sm})`]: {
+      maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
+    },
+  }
+})
 
 export const StyledPopoverLabelContainer = styled.div<{
   $hideChevron?: boolean
@@ -22,14 +51,6 @@ export const StyledPopoverLabelContainer = styled.div<{
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.threeXS,
-  // This is a hacky way to offset the "padding" of the expansion svg
-  // icon. Reason is that we want to use the same padding to the right side
-  // as the text on the left side. The alternative would be to overwrite the
-  // right padding of the button, which would also be hacky and involve slightly
-  // more logic.
-  // If the padding of the icon changes, this value needs to be adjusted.
-  // Also, if we want to apply the same adjustment for other elements, we should
-  // consider putting this into a theme variable or creating a shared styled component.
   // The SVG icon we are using seems to have an internal padding of around 25%.
   // Only apply when the chevron is visible.
   marginRight: $hideChevron ? 0 : `calc(-${theme.iconSizes.lg} * 0.25)`,

@@ -676,6 +676,18 @@ def fragment(
     return _fragment(func, run_every=run_every, parallel=parallel)
 
 
+def _prepare_dg_stack_for_worker(
+    dg_stack: tuple[DeltaGenerator, ...],
+) -> tuple[DeltaGenerator, ...]:
+    """Deep-copy the DG stack for dispatch to a parallel worker thread.
+
+    The deepcopy creates independent cursor state (separate _index, parent_path,
+    etc.) so the worker doesn't race with the main thread. Each worker operates
+    in its own cursor space within a pre-allocated container.
+    """
+    return deepcopy(dg_stack)
+
+
 def _dispatch_parallel_fragment(
     ctx: ScriptRunContext,
     fragment_id: str,
@@ -703,7 +715,7 @@ def _dispatch_parallel_fragment(
         return
 
     with st.container():
-        dg_stack_with_container = deepcopy(context_dg_stack.get())
+        dg_stack_with_container = _prepare_dg_stack_for_worker(context_dg_stack.get())
 
     coordinator.submit(
         _run_parallel_fragment,

@@ -825,8 +825,9 @@ _create_option(
         completely.
 
         Allowed values:
-        - "auto"     : Streamlit will attempt to use the watchdog module, and
-                       falls back to polling if watchdog isn't available.
+        - "auto"     : Streamlit will attempt to use the watchdog module and
+                       falls back to polling if watchdog isn't available. In WSL
+                       environments, polling is always used for compatibility.
         - "watchdog" : Force Streamlit to use the watchdog module.
         - "poll"     : Force Streamlit to always use polling.
         - "none"     : Streamlit will not watch files.

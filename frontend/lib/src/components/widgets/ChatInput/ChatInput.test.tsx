@@ -28,6 +28,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import {
   createDirectoryFiles,
   createFileWithPath,
+  createTestFile,
   render,
 } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -88,6 +89,21 @@ const mockChatInputValue = (text: string): IChatInputValue => {
     },
   }
 }
+
+const mockClipboardData = ({
+  files = [],
+  items = [],
+  text = "",
+}: {
+  files?: File[]
+  items?: Partial<DataTransferItem>[]
+  text?: string
+}): DataTransfer =>
+  ({
+    files,
+    items,
+    getData: vi.fn(() => text),
+  }) as unknown as DataTransfer
 
 const createMockWaveformController = (): WaveformController => ({
   state: "idle",
@@ -579,6 +595,155 @@ describe("ChatInput widget", () => {
 
     const submitButton = screen.getByTestId("stChatInputSubmitButton")
     expect(submitButton).toBeEnabled()
+  })
+
+  it("uploads pasted files when file uploads are enabled", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      acceptFile: ChatInputProto.AcceptFile.SINGLE,
+      maxUploadSizeMb: 50,
+    })
+    render(<ChatInput {...props} />)
+
+    const file = createTestFile("pasted.txt", "clipboard content")
+    const textarea = screen.getByTestId("stChatInputTextArea")
+
+    await user.click(textarea)
+    await user.paste(mockClipboardData({ files: [file] }))
+
+    await waitFor(() => {
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledWith(
+        expect.objectContaining({ id: props.element.id }),
+        file.name,
+        file,
+        expect.any(Function),
+        expect.any(AbortSignal)
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stFileChipName")).toHaveTextContent(
+        "pasted.txt"
+      )
+    })
+  })
+
+  it("uploads only the first pasted file in single-file mode", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      acceptFile: ChatInputProto.AcceptFile.SINGLE,
+      maxUploadSizeMb: 50,
+    })
+    render(<ChatInput {...props} />)
+
+    const firstFile = createTestFile("first.txt", "first content")
+    const secondFile = createTestFile("second.txt", "second content")
+    const textarea = screen.getByTestId("stChatInputTextArea")
+
+    await user.click(textarea)
+    await user.paste(mockClipboardData({ files: [firstFile, secondFile] }))
+
+    await waitFor(() => {
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledWith(
+        expect.objectContaining({ id: props.element.id }),
+        firstFile.name,
+        firstFile,
+        expect.any(Function),
+        expect.any(AbortSignal)
+      )
+    })
+
+    expect(props.uploadClient.uploadFile).not.toHaveBeenCalledWith(
+      expect.anything(),
+      secondFile.name,
+      secondFile,
+      expect.anything(),
+      expect.anything()
+    )
+  })
+
+  it("does not upload pasted files when file uploads are disabled", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<ChatInput {...props} />)
+
+    const file = createTestFile("ignored.txt")
+    const textarea = screen.getByTestId("stChatInputTextArea")
+
+    await user.click(textarea)
+    await user.paste(mockClipboardData({ files: [file] }))
+
+    expect(props.uploadClient.fetchFileURLs).not.toHaveBeenCalled()
+    expect(props.uploadClient.uploadFile).not.toHaveBeenCalled()
+  })
+
+  it("uploads pasted files from clipboard items", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      acceptFile: ChatInputProto.AcceptFile.SINGLE,
+      maxUploadSizeMb: 50,
+    })
+    render(<ChatInput {...props} />)
+
+    const file = createTestFile("pasted-from-item.png")
+    const textarea = screen.getByTestId("stChatInputTextArea")
+
+    await user.click(textarea)
+    await user.paste(
+      mockClipboardData({
+        items: [
+          {
+            kind: "file",
+            getAsFile: vi.fn(() => file),
+          },
+        ],
+      })
+    )
+
+    await waitFor(() => {
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledWith(
+        expect.objectContaining({ id: props.element.id }),
+        file.name,
+        file,
+        expect.any(Function),
+        expect.any(AbortSignal)
+      )
+    })
+  })
+
+  it("does not upload when clipboard has no files", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      acceptFile: ChatInputProto.AcceptFile.SINGLE,
+      maxUploadSizeMb: 50,
+    })
+    render(<ChatInput {...props} />)
+
+    const textarea = screen.getByTestId("stChatInputTextArea")
+
+    await user.click(textarea)
+    await user.paste(mockClipboardData({}))
+
+    expect(props.uploadClient.fetchFileURLs).not.toHaveBeenCalled()
+    expect(props.uploadClient.uploadFile).not.toHaveBeenCalled()
+  })
+
+  it("preserves text paste behavior when file uploads are enabled", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      acceptFile: ChatInputProto.AcceptFile.SINGLE,
+      maxUploadSizeMb: 50,
+    })
+    render(<ChatInput {...props} />)
+
+    const textarea = screen.getByTestId("stChatInputTextArea")
+
+    await user.click(textarea)
+    await user.paste("pasted text")
+
+    expect(textarea).toHaveTextContent("pasted text")
+    expect(props.uploadClient.fetchFileURLs).not.toHaveBeenCalled()
+    expect(props.uploadClient.uploadFile).not.toHaveBeenCalled()
   })
 
   it("displays directory upload instructions correctly", () => {

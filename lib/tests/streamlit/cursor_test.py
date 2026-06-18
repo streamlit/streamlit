@@ -145,18 +145,18 @@ class TestRunningCursor:
         assert not cursor.is_locked
         assert len(cursor.transient_elements) == 0
 
-    def test_get_locked_cursor(self):
-        """Test get_locked_cursor from RunningCursor."""
+    def test_lock_element(self):
+        """Test lock_element from RunningCursor."""
         cursor = RunningCursor(RootContainer.MAIN)
 
         # First lock
-        locked1 = cursor.get_locked_cursor()
+        locked1 = cursor.lock_element()
         assert isinstance(locked1, LockedCursor)
         assert locked1.index == 0
         assert cursor.index == 1
 
         # Second lock
-        locked2 = cursor.get_locked_cursor()
+        locked2 = cursor.lock_element()
         assert locked2.index == 1
         assert cursor.index == 2
 
@@ -173,18 +173,35 @@ class TestRunningCursor:
         cursor.get_transient_cursor()
         assert cursor.transient_index == 1
 
-    def test_locked_cursor_resets_transient(self):
-        """Test that get_locked_cursor resets transient state."""
+    def test_lock_element_resets_transient(self):
+        """Test that lock_element resets transient state."""
         cursor = RunningCursor(RootContainer.MAIN)
         cursor.get_transient_cursor()
         cursor.transient_elements[0] = "element"  # Simulate adding element
         assert cursor.transient_index == 0
         assert len(cursor.transient_elements) == 1
 
-        cursor.get_locked_cursor()
+        cursor.lock_element()
         # Should be reset
         assert cursor.transient_index == 0
         assert len(cursor.transient_elements) == 0
+
+    def test_open_block(self):
+        """Test open_block creates a child cursor and advances."""
+        cursor = RunningCursor(RootContainer.MAIN, parent_path=(1,))
+        assert cursor.index == 0
+
+        child = cursor.open_block()
+        assert isinstance(child, RunningCursor)
+        assert child.root_container == RootContainer.MAIN
+        assert child.parent_path == (1, 0)
+        assert child.index == 0
+        assert cursor.index == 1
+
+        child2 = cursor.open_block()
+        assert child2.parent_path == (1, 1)
+        assert child2.index == 0
+        assert cursor.index == 2
 
 
 class TestCursorBase:
@@ -221,11 +238,17 @@ class TestCursorBase:
         with pytest.raises(NotImplementedError):
             _ = cursor.is_locked
 
-    def test_get_locked_cursor_raises_not_implemented(self) -> None:
-        """Test that get_locked_cursor on base Cursor raises NotImplementedError."""
+    def test_lock_element_raises_not_implemented(self) -> None:
+        """Test that lock_element on base Cursor raises NotImplementedError."""
         cursor = Cursor()
         with pytest.raises(NotImplementedError):
-            cursor.get_locked_cursor()
+            cursor.lock_element()
+
+    def test_open_block_raises_not_implemented(self) -> None:
+        """Test that open_block on base Cursor raises NotImplementedError."""
+        cursor = Cursor()
+        with pytest.raises(NotImplementedError):
+            cursor.open_block()
 
 
 class TestLockedCursor:
@@ -237,10 +260,19 @@ class TestLockedCursor:
         assert cursor.index == 5
         assert cursor.is_locked
 
-    def test_get_locked_cursor(self):
-        """Test get_locked_cursor from LockedCursor."""
+    def test_lock_element_returns_self(self):
+        """Test lock_element from LockedCursor returns itself."""
         cursor = LockedCursor(RootContainer.MAIN, index=5)
 
-        locked = cursor.get_locked_cursor()
+        locked = cursor.lock_element()
         assert locked == cursor
         assert cursor.index == 5  # Index doesn't change
+
+    def test_open_block_returns_child_cursor(self):
+        """Test open_block from LockedCursor returns a child RunningCursor."""
+        cursor = LockedCursor(RootContainer.MAIN, parent_path=(1,), index=3)
+        child = cursor.open_block()
+        assert isinstance(child, RunningCursor)
+        assert child.root_container == RootContainer.MAIN
+        assert child.parent_path == (1, 3)
+        assert child.index == 0
