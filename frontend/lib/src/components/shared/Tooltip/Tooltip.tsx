@@ -60,15 +60,14 @@ export enum Placement {
 /**
  * Maps Streamlit's Placement enum to React Aria placement strings.
  *
- * TOP_LEFT and TOP_RIGHT both map to "top" (centered above the trigger).
- * React Aria flips to "bottom" automatically when there is not enough space
- * above (shouldFlip defaults to true).
+ * React Aria flips to the opposite side automatically when there is not
+ * enough space (shouldFlip defaults to true).
  */
 const REACT_ARIA_PLACEMENT: Record<Placement, RAPlacement> = {
   [Placement.AUTO]: "top",
   [Placement.TOP]: "top",
-  [Placement.TOP_LEFT]: "top",
-  [Placement.TOP_RIGHT]: "top",
+  [Placement.TOP_LEFT]: "top start",
+  [Placement.TOP_RIGHT]: "top end",
   [Placement.BOTTOM]: "bottom",
   [Placement.BOTTOM_LEFT]: "bottom left",
   [Placement.BOTTOM_RIGHT]: "bottom right",
@@ -116,32 +115,34 @@ function computeTooltipTransform(
   viewportWidth: number,
   viewportHeight: number
 ): { x: number; y: number } {
-  const primaryAxis = (placement as string).split(" ")[0]
+  const parts = (placement as string).split(" ")
+  const primaryAxis = parts[0]
+  const secondaryAxis = parts[1]
   let x: number
   let y: number
 
   if (primaryAxis === "bottom") {
     y = triggerRect.bottom + TOOLTIP_OFFSET
-    x = triggerRect.left + triggerRect.width / 2 - overlayW / 2
+    x = computeCrossAxisX(triggerRect, overlayW, secondaryAxis)
     if (y + overlayH > viewportHeight - TOOLTIP_PADDING) {
       y = triggerRect.top - overlayH - TOOLTIP_OFFSET
     }
   } else if (primaryAxis === "left") {
     x = triggerRect.left - overlayW - TOOLTIP_OFFSET
-    y = triggerRect.top + triggerRect.height / 2 - overlayH / 2
+    y = computeCrossAxisY(triggerRect, overlayH, secondaryAxis)
     if (x < TOOLTIP_PADDING) {
       x = triggerRect.right + TOOLTIP_OFFSET
     }
   } else if (primaryAxis === "right") {
     x = triggerRect.right + TOOLTIP_OFFSET
-    y = triggerRect.top + triggerRect.height / 2 - overlayH / 2
+    y = computeCrossAxisY(triggerRect, overlayH, secondaryAxis)
     if (x + overlayW > viewportWidth - TOOLTIP_PADDING) {
       x = triggerRect.left - overlayW - TOOLTIP_OFFSET
     }
   } else {
     // "top" (default) and "auto"
     y = triggerRect.top - overlayH - TOOLTIP_OFFSET
-    x = triggerRect.left + triggerRect.width / 2 - overlayW / 2
+    x = computeCrossAxisX(triggerRect, overlayW, secondaryAxis)
     if (y < TOOLTIP_PADDING) {
       y = triggerRect.bottom + TOOLTIP_OFFSET
     }
@@ -157,6 +158,34 @@ function computeTooltipTransform(
   )
 
   return { x, y }
+}
+
+function computeCrossAxisX(
+  triggerRect: DOMRect,
+  overlayW: number,
+  secondary: string | undefined
+): number {
+  if (secondary === "start" || secondary === "left") {
+    return triggerRect.left
+  }
+  if (secondary === "end" || secondary === "right") {
+    return triggerRect.right - overlayW
+  }
+  return triggerRect.left + triggerRect.width / 2 - overlayW / 2
+}
+
+function computeCrossAxisY(
+  triggerRect: DOMRect,
+  overlayH: number,
+  secondary: string | undefined
+): number {
+  if (secondary === "top" || secondary === "start") {
+    return triggerRect.top
+  }
+  if (secondary === "bottom" || secondary === "end") {
+    return triggerRect.bottom - overlayH
+  }
+  return triggerRect.top + triggerRect.height / 2 - overlayH / 2
 }
 
 interface TooltipContentAreaProps {
@@ -317,7 +346,7 @@ function TriggerArea({
 
   const { focusWithinProps } = useFocusWithin({
     onFocusWithin() {
-      state?.open(true)
+      state?.open(false)
     },
     onBlurWithin() {
       state?.close(true)
