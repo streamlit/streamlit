@@ -138,6 +138,15 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         with pytest.raises(FragmentStorageKeyError):
             self._storage.delete("nonexistent_key")
 
+    def test_delete_evicts_fragment_wrappers(self):
+        """delete() evicts all wrappers belonging to the deleted fragment."""
+        wrapper = self._make_wrapper("dg-1")
+        self._storage.register_outside_wrapper("some_key", "container", wrapper)
+
+        self._storage.delete("some_key")
+
+        assert self._storage.outside_wrappers_for("some_key") == []
+
     def test_clear(self):
         self._set_fragment("some_other_key", value="some_other_fragment")
         assert len(self._storage._fragments) == 2

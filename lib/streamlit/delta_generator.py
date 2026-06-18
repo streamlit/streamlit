@@ -315,6 +315,10 @@ class DeltaGenerator(
         self._parent = parent
         self._block_type = block_type
 
+        # The fragment that created this container, used for per-fragment
+        # wrapper eviction. None when created outside any fragment.
+        self._creating_fragment_id: str | None = None
+
         # If this an `st.form` block, this will get filled in.
         self._form_data: FormData | None = None
 
@@ -406,6 +410,7 @@ class DeltaGenerator(
             block_type=self._block_type,
         )
         dg._form_data = deepcopy(self._form_data)
+        dg._creating_fragment_id = self._creating_fragment_id
         return dg
 
     @property
