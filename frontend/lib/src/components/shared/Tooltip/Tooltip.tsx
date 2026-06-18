@@ -27,9 +27,8 @@ import {
   useRef,
 } from "react"
 
-import { useFocusWithin } from "react-aria"
+import { useFocusable, useFocusWithin } from "react-aria"
 import {
-  Focusable,
   type Placement as RAPlacement,
   TooltipTrigger,
   TooltipTriggerStateContext,
@@ -289,21 +288,17 @@ interface TriggerAreaProps {
  *
  * It combines two event-routing strategies:
  *
- * 1. `Focusable` (from react-aria-components): forwards hover event handlers
- *    (onPointerEnter/Leave) from FocusableContext into the DOM element.
- *    TooltipTrigger injects these handlers via FocusableProvider context;
- *    a plain div/span would ignore them entirely.
+ * 1. `useFocusable`: reads hover/focus event handlers from the FocusableContext
+ *    that TooltipTrigger provides (via FocusableProvider) and merges them onto
+ *    the DOM element. This routes onPointerEnter/Leave to the tooltip state.
  *
  * 2. `useFocusWithin`: opens/closes the tooltip when any descendant receives
- *    or loses focus.  React Aria's useFocus has a `target === currentTarget`
+ *    or loses focus. React Aria's useFocus has a `target === currentTarget`
  *    guard, so the triggerProps.onFocus injected via FocusableContext only
  *    fires when the wrapper itself is the focused element — it never fires
- *    when a child button is tabbed to.  useFocusWithin bypasses that guard by
+ *    when a child button is tabbed to. useFocusWithin bypasses that guard by
  *    listening to the native focusin/focusout events (which bubble) and
  *    calling state.open/close directly via TooltipTriggerStateContext.
- *
- * The TriggerRefContext ref is attached to the Tag element. Focusable uses
- * mergeRefs() under the hood (React 18 compatible), so both refs are called.
  */
 function TriggerArea({
   tag: Tag,
@@ -315,6 +310,11 @@ function TriggerArea({
   const state = useContext(TooltipTriggerStateContext)
   const triggerRef = useContext(TriggerRefContext)
 
+  const { focusableProps } = useFocusable(
+    { excludeFromTabOrder: true },
+    triggerRef as MutableRefObject<HTMLElement | null>
+  )
+
   const { focusWithinProps } = useFocusWithin({
     onFocusWithin() {
       state?.open(true)
@@ -325,19 +325,16 @@ function TriggerArea({
   })
 
   return (
-    <Focusable excludeFromTabOrder>
-      <Tag
-        // Focusable wraps cloneElement with mergeRefs, so both this ref and
-        // Focusable's internal ref are called safely in React 18.
-        ref={triggerRef as Ref<HTMLDivElement>}
-        style={style}
-        data-testid={testId}
-        className={className}
-        {...focusWithinProps}
-      >
-        {children}
-      </Tag>
-    </Focusable>
+    <Tag
+      ref={triggerRef as Ref<HTMLDivElement>}
+      style={style}
+      data-testid={testId}
+      className={className}
+      {...focusableProps}
+      {...focusWithinProps}
+    >
+      {children}
+    </Tag>
   )
 }
 

@@ -1186,12 +1186,16 @@ st.write("Hello")
 })
 
 describe("CustomCodeTag Element", () => {
+  beforeAll(async () => {
+    await import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
+  }, 30_000)
+
   it("should render without crashing", async () => {
     const props = getCustomCodeTagProps()
     render(<CustomCodeTag {...props} />)
 
     const stCode = await screen.findByTestId("stCode")
-    expect(stCode).toBeInTheDocument()
+    expect(stCode).toBeVisible()
   })
 
   it("should render as plaintext", async () => {

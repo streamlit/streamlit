@@ -15,13 +15,26 @@
  */
 
 import "@testing-library/jest-dom/vitest"
-import { configure } from "@testing-library/react"
-import { vi } from "vitest"
+import { act, configure } from "@testing-library/react"
+import { setInteractionModality } from "react-aria/private/interactions/useFocusVisible"
+import { beforeEach, vi } from "vitest"
 import "vitest-canvas-mock"
 
 // Bump the default timeout for async utilities to 5 seconds (default is 1000ms)
 // due to the slower machine speeds in our CI environment.
 configure({ asyncUtilTimeout: 5_000 })
+
+// React Aria's useTooltipTrigger checks getInteractionModality() === "pointer"
+// in onHoverStart. In JSDOM there's no ambient mouse movement, so modality is
+// never "pointer" by default. Set it directly before each test without rendering
+// a React root (renderHook interferes with React.lazy/Suspense resolution).
+// Wrapped in act() because setInteractionModality triggers change handlers that
+// may update React state in test files with mounted useFocusVisible hooks.
+beforeEach(() => {
+  act(() => {
+    setInteractionModality("pointer")
+  })
+})
 
 // In the event a sub-library uses the jest global, we need to make sure it's
 // aliased to the vi global. An example is timers using dom testing library
