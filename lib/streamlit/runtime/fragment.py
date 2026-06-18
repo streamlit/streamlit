@@ -650,7 +650,7 @@ def fragment(
     elements are redrawn on each app rerun. The rest of the app is persisted
     during a fragment rerun.
 
-    A fragment can also write or render widgets into a container created
+    A fragment can also write elements and widgets into a container created
     outside of it, including directly to ``st.sidebar`` or ``st.bottom``. The
     fragment's writes to that outside container are cleared and redrawn in
     place on each fragment rerun, while content written to the same container
@@ -659,8 +659,8 @@ def fragment(
     writing fragment, not the full app.
 
     To populate an outside container from a fragment on a standalone fragment
-    rerun, the container must first be written to during the initial or full
-    app run. A common pattern is to claim the slot during the full run (for
+    rerun, the container must first be written to during a full app run. A
+    common pattern is to claim the slot during the full run (for
     example, ``placeholder = outside.empty()``) and fill it from the fragment.
 
     Fragment code can interact with Session State, imported modules, and
