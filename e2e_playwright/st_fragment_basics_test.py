@@ -490,6 +490,128 @@ def test_fragment_shrink_clears_stale_outside_elements(app: Page):
     expect_no_exception(app)
 
 
+def test_outside_container_widget_triggers_fragment_only_rerun(app: Page):
+    """Clicking a widget written by a fragment into an outside container must
+    trigger a fragment-only rerun — the main-script marker stays unchanged.
+    """
+    _, old_text_outside_fragment = get_uuids(app)
+    fragment_marker = app.get_by_test_id("stMarkdown").filter(
+        has_text="outside_widget_fragment ran:"
+    )
+    old_fragment_text = fragment_marker.text_content()
+    assert old_fragment_text is not None
+
+    container = get_element_by_key(app, "outside_widget_container")
+    container.get_by_role("button", name="outside container btn").click()
+    wait_for_app_run(app)
+
+    expect(fragment_marker).not_to_have_text(old_fragment_text)
+    expect(_outside_fragment_markdown(app)).to_have_text(old_text_outside_fragment)
+    expect_no_exception(app)
+
+
+def test_sidebar_widget_triggers_fragment_only_rerun(app: Page):
+    """Clicking a widget written by a fragment into the sidebar must trigger
+    a fragment-only rerun — the main-script marker stays unchanged.
+    """
+    _, old_text_outside_fragment = get_uuids(app)
+    fragment_marker = app.get_by_test_id("stMarkdown").filter(
+        has_text="outside_widget_fragment ran:"
+    )
+    old_fragment_text = fragment_marker.text_content()
+    assert old_fragment_text is not None
+
+    sidebar = app.get_by_test_id("stSidebar")
+    sidebar.get_by_role("button", name="sidebar btn").click()
+    wait_for_app_run(app)
+
+    expect(fragment_marker).not_to_have_text(old_fragment_text)
+    expect(_outside_fragment_markdown(app)).to_have_text(old_text_outside_fragment)
+    expect_no_exception(app)
+
+
+def test_toplevel_sidebar_bottom_shrink_grow_interleaving(app: Page):
+    """Fragments writing variable element counts into st.sidebar and st.bottom
+    must garbage-collect stale rows on shrink and preserve header/footer ordering
+    on grow.
+    """
+    sidebar = app.get_by_test_id("stSidebar")
+    bottom_block = app.get_by_test_id("stBottomBlockContainer")
+
+    sidebar_markdowns = sidebar.get_by_test_id("stMarkdown")
+    bottom_markdowns = bottom_block.get_by_test_id("stMarkdown")
+
+    expect(sidebar_markdowns.filter(has_text="sidebar section header")).to_have_count(1)
+    expect(sidebar_markdowns.filter(has_text="sidebar section footer")).to_have_count(1)
+    expect(sidebar_markdowns.filter(has_text="sidebar row")).to_have_count(3)
+
+    expect(bottom_markdowns.filter(has_text="bottom section header")).to_have_count(1)
+    expect(bottom_markdowns.filter(has_text="bottom section footer")).to_have_count(1)
+    expect(bottom_markdowns.filter(has_text="bottom row")).to_have_count(3)
+
+    click_button(app, "toplevel to 5")
+
+    expect(sidebar_markdowns.filter(has_text="sidebar row")).to_have_count(5)
+    expect(sidebar_markdowns.filter(has_text="sidebar section footer")).to_have_count(1)
+    expect(bottom_markdowns.filter(has_text="bottom row")).to_have_count(5)
+    expect(bottom_markdowns.filter(has_text="bottom section footer")).to_have_count(1)
+
+    click_button(app, "toplevel to 2")
+
+    expect(sidebar_markdowns.filter(has_text="sidebar row")).to_have_count(2)
+    expect(sidebar_markdowns.filter(has_text="sidebar row 0")).to_have_count(1)
+    expect(sidebar_markdowns.filter(has_text="sidebar row 1")).to_have_count(1)
+    expect(sidebar_markdowns.filter(has_text="sidebar row 2")).to_have_count(0)
+    expect(sidebar_markdowns.filter(has_text="sidebar section header")).to_have_count(1)
+    expect(sidebar_markdowns.filter(has_text="sidebar section footer")).to_have_count(1)
+
+    expect(bottom_markdowns.filter(has_text="bottom row")).to_have_count(2)
+    expect(bottom_markdowns.filter(has_text="bottom row 0")).to_have_count(1)
+    expect(bottom_markdowns.filter(has_text="bottom row 1")).to_have_count(1)
+    expect(bottom_markdowns.filter(has_text="bottom row 2")).to_have_count(0)
+    expect(bottom_markdowns.filter(has_text="bottom section header")).to_have_count(1)
+    expect(bottom_markdowns.filter(has_text="bottom section footer")).to_have_count(1)
+
+    expect_no_exception(app)
+
+
+def test_parent_rerun_rebuilds_child_outside_wrapper(app: Page):
+    """Rerunning a parent fragment that owns a container written to by a
+    child fragment must preserve exactly one copy of each child element.
+    """
+    container = get_element_by_key(app, "parent_owned_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    expect(markdowns).to_have_count(3)
+    expect(markdowns.nth(0)).to_have_text("parent header")
+    expect(markdowns.nth(1)).to_have_text("child row 0")
+    expect(markdowns.nth(2)).to_have_text("child row 1")
+
+    click_button(app, "rerun parent")
+
+    expect(markdowns).to_have_count(3)
+    expect(markdowns.nth(0)).to_have_text("parent header")
+    expect(markdowns.nth(1)).to_have_text("child row 0")
+    expect(markdowns.nth(2)).to_have_text("child row 1")
+    expect_no_exception(app)
+
+
+def test_child_rerun_preserves_parent_wrapper(app: Page):
+    """Rerunning only the child fragment must preserve its outside-container
+    content without duplicating or losing elements.
+    """
+    container = get_element_by_key(app, "parent_owned_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    expect(markdowns).to_have_count(3)
+
+    click_button(app, "rerun child")
+
+    expect(markdowns).to_have_count(3)
+    expect(markdowns.nth(0)).to_have_text("parent header")
+    expect(markdowns.nth(1)).to_have_text("child row 0")
+    expect(markdowns.nth(2)).to_have_text("child row 1")
+    expect_no_exception(app)
+
+
 def test_fragment_rerun_preserves_inscope_content_position(app: Page):
     """A fragment rerun must keep in-scope elements in the same count and order."""
     stable_a = app.get_by_test_id("stMarkdown").filter(has_text="stable item A")
