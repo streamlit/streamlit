@@ -722,6 +722,58 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         )
         assert result is not None
 
+    def test_register_widget_persist_state_requires_key(self) -> None:
+        """persist_state requires a user key so the value can be preserved."""
+        with pytest.raises(
+            errors.StreamlitAPIException, match="must have a unique 'key' parameter"
+        ):
+            register_widget(
+                element_id="$$ID-some_hash-None",  # No user key (ends with -None)
+                ctx=None,
+                on_change_handler=None,
+                args=None,
+                kwargs=None,
+                deserializer=lambda x: x,
+                serializer=lambda x: x,
+                value_type="string_value",
+                persist_state="session",
+            )
+
+    def test_register_widget_invalid_persist_state_raises(self) -> None:
+        """Invalid persist_state values raise StreamlitInvalidPersistStateError."""
+        with pytest.raises(
+            errors.StreamlitInvalidPersistStateError,
+            match="Invalid `persist_state` value",
+        ):
+            register_widget(
+                element_id="$$ID-some_hash-my_widget_key",
+                ctx=None,
+                on_change_handler=None,
+                args=None,
+                kwargs=None,
+                deserializer=lambda x: x if x is not None else "default",
+                serializer=lambda x: x,
+                value_type="string_value",
+                persist_state="forever",
+            )
+
+    def test_register_widget_persist_state_none_is_noop(self) -> None:
+        """persist_state=None does not record any persisted-id tracking."""
+        register_widget(
+            element_id="$$ID-some_hash-my_widget_key",
+            ctx=self.script_run_ctx,
+            on_change_handler=None,
+            args=None,
+            kwargs=None,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            persist_state=None,
+        )
+        session_state = self.script_run_ctx.session_state._state
+        assert session_state._persisted_widget_ids == {}
+        assert session_state._persisted_widget_pages == {}
+
 
 @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
 class WidgetUserKeyTests(DeltaGeneratorTestCase):
