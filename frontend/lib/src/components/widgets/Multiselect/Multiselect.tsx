@@ -378,6 +378,7 @@ const Multiselect: FC<Props> = props => {
           noResultsMsg={getNoResultsMsg}
           filterOptions={filterOptions}
           closeOnSelect={false}
+          escapeClearsValue={false}
           ignoreCase={false}
           overrides={{
             DropdownContainer: {
