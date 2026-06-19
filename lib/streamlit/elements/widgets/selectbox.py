@@ -717,13 +717,13 @@ class SelectboxMixin:
             )
         else:
             # Validate the current value against the new options using its
-            # serialized label (recovered during register_widget) instead of
-            # re-running format_func on the stored value. If the label is no
+            # incoming serialized label (captured during register_widget) instead
+            # of re-running format_func on the stored value. If the label is no
             # longer among the options, reset to default. This handles dynamic
             # option changes and avoids reverting the selection when format_func
             # depends on object identity/class.
             current_value, value_needs_reset = resolve_value_against_options(
-                widget_state.serialized_value,
+                widget_state.incoming_serialized_value,
                 widget_state.value,
                 opt,
                 formatted_option_to_option_index,
