@@ -80,11 +80,6 @@ class SafeSessionState:
         with self._lock:
             return self._state.get_widget_states()
 
-    def get_serialized_widget_value(self, widget_id: str) -> WidgetStateProto | None:
-        """Return the serialized protobuf value for a widget, or None."""
-        with self._lock:
-            return self._state.get_serialized_widget_value(widget_id)
-
     def is_new_state_value(self, user_key: str) -> bool:
         with self._lock:
             return self._state.is_new_state_value(user_key)

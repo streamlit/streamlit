@@ -984,22 +984,6 @@ class SessionState:
         """Return a list of serialized widget values for each widget with a value."""
         return self._new_widget_state.as_widget_states()
 
-    def get_serialized_widget_value(self, widget_id: str) -> WidgetStateProto | None:
-        """Return the serialized protobuf value for a widget, or None.
-
-        The value is serialized with the widget's currently-registered
-        serializer, which is consistent with the stored value even when a later
-        run has redefined option classes. This lets callers recover a widget's
-        canonical wire value (e.g. a select widget's formatted label) without
-        re-running a potentially identity-dependent format_func on a value that
-        was stored during an earlier run.
-
-        Must be called before the widget is re-registered this run (i.e. before
-        the metadata is swapped to the current run's serializer) to recover the
-        previous run's label.
-        """
-        return self._new_widget_state.get_serialized(widget_id)
-
     def _get_widget_id(self, k: str) -> str:
         """Turns a value that might be a widget id or a user provided key into
         an appropriate widget id.
@@ -1023,6 +1007,20 @@ class SessionState:
             if the frontend needs to be updated with the current value.
         """
         widget_id = metadata.id
+
+        # Capture the stored wire value *before* swapping in this run's
+        # serializer. For string widgets this recovers the canonical label using
+        # the previous run's serializer (consistent with the stored value), so
+        # widgets can validate against current options without re-running a
+        # potentially identity-dependent format_func on a stale value.
+        prior_serialized_value: str | None = None
+        if metadata.value_type == "string_value":
+            prior_proto = self._new_widget_state.get_serialized(widget_id)
+            if (
+                prior_proto is not None
+                and prior_proto.WhichOneof("value") == "string_value"
+            ):
+                prior_serialized_value = prior_proto.string_value
 
         self._set_widget_metadata(metadata)
         if user_key is not None:
@@ -1122,7 +1120,9 @@ class SessionState:
             user_key is not None and self.is_new_state_value(user_key)
         ) or restored_bound_value
 
-        return RegisterWidgetResult(widget_value, widget_value_changed)
+        return RegisterWidgetResult(
+            widget_value, widget_value_changed, prior_serialized_value
+        )
 
     def _handle_query_param_binding(
         self, metadata: WidgetMetadata[T], user_key: str, widget_id: str

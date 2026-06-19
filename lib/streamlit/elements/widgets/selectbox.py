@@ -685,25 +685,6 @@ class SelectboxMixin:
             default_option_index=index,
             format_func=format_func,
         )
-
-        # Recover the selection's canonical formatted label from the stored
-        # widget state *before* register_widget swaps in this run's serializer.
-        # Serializing here uses the previous run's serializer, which is
-        # consistent with the stored value, so it yields the correct label even
-        # when the option classes were redefined this run. This lets validation
-        # avoid re-running format_func on a value that may be a deepcopy from an
-        # earlier run (see resolve_value_against_options).
-        stored_serialized_label: str | None = None
-        if not accept_new_options:
-            stored_proto = get_session_state().get_serialized_widget_value(
-                selectbox_proto.id
-            )
-            if (
-                stored_proto is not None
-                and stored_proto.WhichOneof("value") == "string_value"
-            ):
-                stored_serialized_label = stored_proto.string_value
-
         widget_state = register_widget(
             selectbox_proto.id,
             on_change_handler=on_change,
@@ -736,12 +717,13 @@ class SelectboxMixin:
             )
         else:
             # Validate the current value against the new options using its
-            # serialized label instead of re-running format_func on the stored
-            # value. If the label is no longer among the options, reset to
-            # default. This handles dynamic option changes and avoids reverting
-            # the selection when format_func depends on object identity/class.
+            # serialized label (recovered during register_widget) instead of
+            # re-running format_func on the stored value. If the label is no
+            # longer among the options, reset to default. This handles dynamic
+            # option changes and avoids reverting the selection when format_func
+            # depends on object identity/class.
             current_value, value_needs_reset = resolve_value_against_options(
-                stored_serialized_label,
+                widget_state.serialized_value,
                 widget_state.value,
                 opt,
                 formatted_option_to_option_index,
