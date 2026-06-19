@@ -346,6 +346,8 @@ EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION = {
     "key",
     # bind controls URL syncing, not widget identity
     "bind",
+    # persist_state controls server-side value retention, not widget identity
+    "persist_state",
 }
 
 

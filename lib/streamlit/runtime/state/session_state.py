@@ -983,6 +983,15 @@ class SessionState:
         # Re-add preserved query-param-bound values under user keys.
         self._old_state.update(bound_preserved)
 
+        # When a widget remounts under a new id this run (e.g. after a page
+        # switch) but its user key was just preserved from a stale widget, seed
+        # the active widget's value directly. Otherwise the freshly defaulted
+        # new widget-id entry would shadow the preserved user-key value.
+        for user_key, value in bound_preserved.items():
+            active_id = self._key_id_mapper.get_id_from_key(user_key, None)
+            if active_id is not None and active_id in active_widget_ids:
+                self._new_widget_state.set_from_value(active_id, value)
+
         # Remove query param bindings and URL params for stale widgets.
         # For fragment runs, preserve widgets outside the running fragment(s).
         # Note: For MPA page transitions, query param filtering is performed
