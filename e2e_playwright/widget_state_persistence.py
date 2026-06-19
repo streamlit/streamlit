@@ -32,6 +32,8 @@ def _render_widgets() -> None:
     _render_value("session_text", "session_text")
     _render_value("plain_text", "plain_text")
 
+    st.button("Rerun", key="rerun")
+
 
 def page_1() -> None:
     st.header("Page 1")
