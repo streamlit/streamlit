@@ -136,6 +136,11 @@ const Selectbox: FC<Props> = ({
   // Popover to discover them and assign role="option". Instead, Floating UI's
   // position is applied via the style prop and CSS !important overrides
   // neutralize RAC's imperative style writes (see Selectbox.styled.ts).
+  //
+  // open is always true because whileElementsMounted already gates autoUpdate
+  // on both refs being mounted — the actual ComboBox open state is irrelevant
+  // here since the floating element only exists in the DOM when RAC's Popover
+  // renders it (i.e. when the dropdown is open).
   const { refs, floatingStyles } = useFloatingOverlay({
     open: true,
     placement: "bottom-start",

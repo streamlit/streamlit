@@ -156,7 +156,11 @@ export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
     maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
     overflow: "hidden",
     // Override RAC's useOverlayPosition imperative style writes.
-    // Floating UI provides position/transform via the style prop.
+    // Floating UI with strategy:"fixed" positions via transform: translate(x,y)
+    // while emitting top:0/left:0 as the origin. These !important overrides
+    // pin RAC's top/left to 0 so the transform controls placement. If a future
+    // Floating UI version switches to direct top/left positioning instead of
+    // transform, these overrides would need to be removed.
 
     ...({
       position: "fixed !important",
