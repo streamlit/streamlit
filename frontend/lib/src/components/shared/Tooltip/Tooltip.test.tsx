@@ -164,4 +164,38 @@ describe("Tooltip element", () => {
     })
     expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
   })
+
+  it("does not swallow Escape from other handlers while tooltip is open", async () => {
+    const outerKeyDown = vi.fn()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+    render(
+      // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+      <div onKeyDown={outerKeyDown}>
+        <Tooltip {...getProps()}>
+          <button>trigger</button>
+        </Tooltip>
+      </div>
+    )
+
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+
+    // Open the tooltip via hover
+    await user.hover(tooltipTarget)
+    act(() => {
+      vi.advanceTimersByTime(0)
+    })
+    expect(screen.getByTestId("stTooltipContent")).toBeInTheDocument()
+
+    // Focus the button inside and press Escape
+    await user.click(screen.getByRole("button", { name: "trigger" }))
+    await user.keyboard("{Escape}")
+
+    // The outer handler must still receive the Escape event — this is the
+    // core bugfix: React Aria's useTooltipTrigger previously called
+    // stopPropagation() on Escape in a capture listener, swallowing it.
+    expect(outerKeyDown).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "Escape" })
+    )
+  })
 })

@@ -16,6 +16,9 @@
 
 import "@testing-library/jest-dom/vitest"
 import { act, configure } from "@testing-library/react"
+// FRAGILE: This imports from a private react-aria module path. It may break on
+// minor/patch upgrades. If React Aria exposes setInteractionModality publicly in
+// a future version, migrate to the public API.
 import { setInteractionModality } from "react-aria/private/interactions/useFocusVisible"
 import { beforeEach, vi } from "vitest"
 import "vitest-canvas-mock"

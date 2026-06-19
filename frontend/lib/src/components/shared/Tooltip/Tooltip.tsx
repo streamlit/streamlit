@@ -400,18 +400,21 @@ function Tooltip({
   // that calls stopPropagation(), preventing other handlers (e.g. textarea
   // onKeyDown inside glide-data-grid) from ever seeing the Escape event.
   // By managing state ourselves, we avoid that behavior entirely.
+  const escapeStateRef = useRef(state)
+  escapeStateRef.current = state
+
   useEffect(() => {
     if (!state.isOpen) return
 
     const onEscape = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
-        state.close(true)
+        escapeStateRef.current.close(true)
       }
     }
 
     document.addEventListener("keydown", onEscape, true)
     return () => document.removeEventListener("keydown", onEscape, true)
-  }, [state.isOpen, state])
+  }, [state.isOpen])
 
   return (
     <TooltipTriggerStateContext.Provider value={state}>
