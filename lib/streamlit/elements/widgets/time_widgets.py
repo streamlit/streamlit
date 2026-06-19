@@ -52,6 +52,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -672,6 +673,7 @@ class TimeWidgetsMixin:
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> time:
         pass
 
@@ -691,6 +693,7 @@ class TimeWidgetsMixin:
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> time | None:
         pass
 
@@ -710,6 +713,7 @@ class TimeWidgetsMixin:
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> time | None:
         r"""Display a time input widget.
 
@@ -832,6 +836,16 @@ class TimeWidgetsMixin:
             is ``None``, an empty query parameter (e.g., ``?my_key=``)
             clears the widget.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved while the widget isn't rendered
+            on the same page, but is cleared when the user switches pages. If
+            this is ``"session"``, the value is preserved for the entire
+            session, including across page switches. This requires ``key`` to
+            be set.
+
         Returns
         -------
         datetime.time or None
@@ -881,6 +895,7 @@ class TimeWidgetsMixin:
             step=step,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -899,6 +914,7 @@ class TimeWidgetsMixin:
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> time | None:
         key = to_key(key)
@@ -972,6 +988,7 @@ class TimeWidgetsMixin:
             ctx=ctx,
             value_type="string_value",
             bind=bind,
+            persist_state=persist_state,
             clearable=(parsed_time is None),
         )
 
@@ -1009,6 +1026,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> datetime | None: ...
 
     @overload
@@ -1030,6 +1048,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> datetime: ...
 
     @gather_metrics("datetime_input")
@@ -1051,6 +1070,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> datetime | None:
         r"""Display a date and time input widget.
 
@@ -1197,6 +1217,16 @@ class TimeWidgetsMixin:
             the URL. If ``value`` is ``None``, an empty query parameter
             (e.g., ``?my_key=``) clears the widget.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved while the widget isn't rendered
+            on the same page, but is cleared when the user switches pages. If
+            this is ``"session"``, the value is preserved for the entire
+            session, including across page switches. This requires ``key`` to
+            be set.
+
         Returns
         -------
         datetime.datetime or None
@@ -1252,6 +1282,7 @@ class TimeWidgetsMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -1273,6 +1304,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> datetime | None:
         key = to_key(key)
@@ -1388,6 +1420,7 @@ class TimeWidgetsMixin:
             ctx=ctx,
             value_type="string_array_value",
             bind=bind,
+            persist_state=persist_state,
             clearable=(default_value is None),
         )
 
@@ -1440,6 +1473,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> date: ...
 
     @overload
@@ -1460,6 +1494,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> date | None: ...
 
     @overload
@@ -1482,6 +1517,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> DateWidgetRangeReturn: ...
 
     @gather_metrics("date_input")
@@ -1502,6 +1538,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> DateWidgetReturn:
         r"""Display a date input widget.
 
@@ -1655,6 +1692,16 @@ class TimeWidgetsMixin:
             parameters (e.g.,
             ``?vacation=2025-01-01&vacation=2025-01-31``).
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved while the widget isn't rendered
+            on the same page, but is cleared when the user switches pages. If
+            this is ``"session"``, the value is preserved for the entire
+            session, including across page switches. This requires ``key`` to
+            be set.
+
         Returns
         -------
         datetime.date or a tuple with 0-2 dates or None
@@ -1729,6 +1776,7 @@ class TimeWidgetsMixin:
             format=format,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -1749,6 +1797,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
@@ -1878,6 +1927,7 @@ class TimeWidgetsMixin:
             ctx=ctx,
             value_type="string_array_value",
             bind=bind,
+            persist_state=persist_state,
             clearable=(parsed_values.value is None),
         )
 
