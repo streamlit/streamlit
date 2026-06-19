@@ -81,3 +81,11 @@ if TYPE_CHECKING:
     assert_type(
         selectbox("foo", ["a", "b"], index=None, bind="query-params"), str | None
     )
+
+    # Check persist_state parameter
+    assert_type(selectbox("foo", ["a", "b"], persist_state="page"), str)
+    assert_type(selectbox("foo", [1, 2, 3], persist_state="session"), int)
+    assert_type(selectbox("foo", ["a", "b"], persist_state=None), str)
+    assert_type(
+        selectbox("foo", ["a", "b"], index=None, persist_state="session"), str | None
+    )
