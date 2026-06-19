@@ -395,38 +395,36 @@ def validate_and_sync_value_with_options(
 
 
 def resolve_value_against_options(
-    serialized_value: str | None,
     current_value: T | None,
     opt: Sequence[T],
     formatted_option_to_option_index: dict[str, int],
     default_index: int | None,
     key: str | int | None,
     format_func: Callable[[Any], str] = str,
+    incoming_serialized_value: str | None = None,
 ) -> tuple[T | None, bool]:
-    """Validate the current selection using its serialized label.
+    """Validate the current value against options, resetting if it's invalid.
 
-    Unlike :func:`validate_and_sync_value_with_options`, this does not re-run
-    ``format_func`` on ``current_value`` to decide membership. Instead it uses
-    ``serialized_value`` -- the widget's canonical formatted label, recovered
-    from the stored widget state -- and looks it up directly in
-    ``formatted_option_to_option_index``. On a hit, the matching *current*
-    option instance is returned (never a stale deepcopy). On a miss, the value
-    is reset to the default.
+    Membership is decided primarily by ``format_func``: the value is valid if
+    its formatted label is among the options. This preserves correct behavior
+    when ``format_func`` changes between runs or when the value was set
+    programmatically.
 
-    This avoids the failure mode where ``format_func`` performs an identity- or
-    class-dependent operation (e.g. a dict lookup) and raises when handed a
-    value that was deepcopied from an earlier run.
+    If ``format_func`` raises on ``current_value`` -- which happens when it
+    performs an identity- or class-dependent operation (e.g. a dict lookup) and
+    the value is a deepcopy stored from an earlier run -- the stored wire label
+    ``incoming_serialized_value`` is used instead to decide membership. On a
+    match, the matching *current* option instance is returned so the value
+    always belongs to the current run rather than a stale deepcopy.
 
-    Falls back to :func:`validate_and_sync_value_with_options` when no
-    serialized label is available (e.g. the first render, or a programmatic
-    ``st.session_state`` assignment that stored an object directly).
+    Has the same session-state side effect as
+    :func:`validate_and_sync_value_with_options`: when the value is reset and a
+    key is provided, session state is updated with the new value.
 
     Parameters
     ----------
-    serialized_value
-        The widget's stored formatted label, or ``None`` if unavailable.
     current_value
-        The current widget value (used for the empty check and fallback).
+        The current widget value to validate.
     opt
         The sequence of valid options.
     formatted_option_to_option_index
@@ -436,7 +434,10 @@ def resolve_value_against_options(
     key
         The widget key for session state updates.
     format_func
-        Only used by the fallback path.
+        Function to format options for comparison.
+    incoming_serialized_value
+        The widget's stored wire label, used as a fallback identity when
+        ``format_func`` raises on ``current_value``. ``None`` if unavailable.
 
     Returns
     -------
@@ -446,20 +447,24 @@ def resolve_value_against_options(
     if current_value is None:
         return current_value, False
 
-    if serialized_value is None:
-        # No label to validate against (first render or programmatic set) -
-        # fall back to the format_func-based comparison.
-        return validate_and_sync_value_with_options(
-            current_value, opt, default_index, key, format_func
+    try:
+        formatted_value = format_func(current_value)
+        if formatted_value in formatted_option_to_option_index:
+            return current_value, False
+    except Exception:
+        # format_func can't handle the stored value (e.g. it's identity- or
+        # class-dependent and the value is a deepcopy from an earlier run). Use
+        # the stored wire label as the identity instead, and return the current
+        # option instance so we never hand back a stale deepcopy.
+        option_index = (
+            formatted_option_to_option_index.get(incoming_serialized_value)
+            if incoming_serialized_value is not None
+            else None
         )
+        if option_index is not None and 0 <= option_index < len(opt):
+            return opt[option_index], False
 
-    option_index = formatted_option_to_option_index.get(serialized_value)
-    if option_index is not None and 0 <= option_index < len(opt):
-        # The label maps to a current option. Return that instance so the value
-        # always belongs to the current run, never a stale deepcopy.
-        return opt[option_index], False
-
-    # Label is not among the current options - reset to default.
+    # Value not in options - reset to default.
     if default_index is not None and len(opt) > 0:
         new_value: T | None = opt[default_index]
     else:

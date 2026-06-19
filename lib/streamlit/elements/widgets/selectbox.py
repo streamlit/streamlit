@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-from enum import Enum
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -38,7 +37,6 @@ from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
     maybe_coerce_enum,
     resolve_value_against_options,
-    validate_and_sync_value_with_options,
     validate_select_widget_filter_mode,
 )
 from streamlit.elements.lib.policies import (
@@ -708,28 +706,21 @@ class SelectboxMixin:
         if accept_new_options:
             current_value = widget_state.value
             value_needs_reset = False
-        elif isinstance(widget_state.value, Enum):
-            # Enum values are governed by runner.enumCoercion (already applied
-            # above via maybe_coerce_enum); keep the format_func-based validation
-            # so that coercion="off" still returns the stored value as-is.
-            current_value, value_needs_reset = validate_and_sync_value_with_options(
-                widget_state.value, opt, index, key, format_func
-            )
         else:
-            # Validate the current value against the new options using its
-            # incoming serialized label (captured during register_widget) instead
-            # of re-running format_func on the stored value. If the label is no
-            # longer among the options, reset to default. This handles dynamic
-            # option changes and avoids reverting the selection when format_func
-            # depends on object identity/class.
+            # Validate the current value against the new options. Membership is
+            # decided by format_func; if format_func raises on the stored value
+            # (e.g. it depends on object identity/class and the value is a
+            # deepcopy from an earlier run), the stored wire label captured during
+            # register_widget is used as a fallback identity instead. This handles
+            # dynamic option changes without reverting the selection.
             current_value, value_needs_reset = resolve_value_against_options(
-                widget_state.incoming_serialized_value,
                 widget_state.value,
                 opt,
                 formatted_option_to_option_index,
                 index,
                 key,
                 format_func,
+                widget_state.incoming_serialized_value,
             )
 
         if value_needs_reset or widget_state.value_changed:
