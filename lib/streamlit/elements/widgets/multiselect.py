@@ -59,7 +59,7 @@ from streamlit.errors import (
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import BindOption, register_widget
+from streamlit.runtime.state import BindOption, PersistStateOption, register_widget
 from streamlit.type_util import (
     is_iterable,
 )
@@ -211,6 +211,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[T]: ...
 
     @overload
@@ -234,6 +235,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[T | str]: ...
 
     @overload
@@ -257,6 +259,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[T] | list[T | str]: ...
 
     @gather_metrics("multiselect")
@@ -280,6 +283,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[T] | list[T | str]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -449,6 +453,16 @@ class MultiSelectMixin:
             are truncated. When ``accept_new_options`` is ``True``, any
             value is accepted.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved while the widget isn't rendered
+            on the same page, but is cleared when the user switches pages. If
+            this is ``"session"``, the value is preserved for the entire
+            session, including across page switches. This requires ``key`` to
+            be set.
+
         Returns
         -------
         list
@@ -526,6 +540,7 @@ class MultiSelectMixin:
             filter_mode=filter_mode,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -549,6 +564,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)
@@ -651,6 +667,7 @@ class MultiSelectMixin:
             ctx=ctx,
             value_type="string_array_value",
             bind=bind,
+            persist_state=persist_state,
             # Multiselect is always clearable: users can always remove all
             # selections, so ?key= (empty URL param) should clear to [].
             clearable=True,

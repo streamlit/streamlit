@@ -170,7 +170,7 @@ def register_widget(
 
     # Validate persist_state value and key requirement.
     if persist_state is not None:
-        if persist_state not in ("page", "session"):
+        if persist_state not in {"page", "session"}:
             raise StreamlitInvalidPersistStateError(persist_state)
         if user_key_from_element_id(element_id) is None:
             raise StreamlitAPIException(

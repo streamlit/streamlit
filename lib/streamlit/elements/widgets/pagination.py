@@ -30,7 +30,12 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Pagination_pb2 import Pagination as PaginationProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import BindOption, get_session_state, register_widget
+from streamlit.runtime.state import (
+    BindOption,
+    PersistStateOption,
+    get_session_state,
+    register_widget,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -74,6 +79,7 @@ class PaginationMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> int:
         r"""Display a pagination widget for navigating through pages of content.
 
@@ -149,6 +155,16 @@ class PaginationMixin:
             parameter name. This enables shareable URLs that preserve the
             widget's state. If ``bind`` is set, ``key`` is required.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved while the widget isn't rendered
+            on the same page, but is cleared when the user switches pages. If
+            this is ``"session"``, the value is preserved for the entire
+            session, including across page switches. This requires ``key`` to
+            be set.
+
         Returns
         -------
         int
@@ -208,6 +224,7 @@ class PaginationMixin:
             kwargs=kwargs,
             disabled=disabled,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -224,6 +241,7 @@ class PaginationMixin:
         kwargs: WidgetKwargs | None,
         disabled: bool,
         bind: BindOption,
+        persist_state: PersistStateOption,
         ctx: ScriptRunContext | None,
     ) -> int:
 
@@ -301,6 +319,7 @@ class PaginationMixin:
             ctx=ctx,
             value_type="int_value",
             bind=bind,
+            persist_state=persist_state,
             # Pagination always has a valid page (1 to num_pages), never empty
             clearable=False,
         )

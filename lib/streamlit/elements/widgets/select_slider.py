@@ -54,6 +54,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -174,6 +175,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> tuple[T, T]: ...
 
     @overload
@@ -193,6 +195,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T: ...
 
     @gather_metrics("select_slider")
@@ -212,6 +215,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | tuple[T, T]:
         r"""
         Display a slider widget to select items from a list.
@@ -343,6 +347,16 @@ class SelectSliderMixin:
             from the URL. Range select sliders use repeated parameters
             (e.g., ``?color=red&color=blue``).
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved while the widget isn't rendered
+            on the same page, but is cleared when the user switches pages. If
+            this is ``"session"``, the value is preserved for the entire
+            session, including across page switches. This requires ``key`` to
+            be set.
+
         Returns
         -------
         any value or tuple of any value
@@ -409,6 +423,7 @@ class SelectSliderMixin:
             ctx=ctx,
             width=width,
             bind=bind,
+            persist_state=persist_state,
         )
 
     def _select_slider(
@@ -427,6 +442,7 @@ class SelectSliderMixin:
         ctx: ScriptRunContext | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | tuple[T, T]:
         key = to_key(key)
 
@@ -521,6 +537,7 @@ class SelectSliderMixin:
             ctx=ctx,
             value_type="string_array_value",
             bind=bind,
+            persist_state=persist_state,
             # Select sliders always have a value (no empty/cleared state in
             # the UI), so disallow empty URL params (e.g., ?key=).
             clearable=False,

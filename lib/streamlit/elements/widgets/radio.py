@@ -48,6 +48,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -156,6 +157,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> None: ...
 
     @overload
@@ -177,6 +179,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T: ...
 
     @overload
@@ -198,6 +201,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | None: ...
 
     @gather_metrics("radio")
@@ -219,6 +223,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | None:
         r"""Display a radio button widget.
 
@@ -349,6 +354,16 @@ class RadioMixin:
             from the URL. If ``index`` is ``None``, an empty query
             parameter (e.g., ``?my_key=``) clears the widget.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved while the widget isn't rendered
+            on the same page, but is cleared when the user switches pages. If
+            this is ``"session"``, the value is preserved for the entire
+            session, including across page switches. This requires ``key`` to
+            be set.
+
         Returns
         -------
         any
@@ -412,6 +427,7 @@ class RadioMixin:
             captions=captions,
             label_visibility=label_visibility,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
             width=width,
         )
@@ -433,6 +449,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         captions: Sequence[str] | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
     ) -> T | None:
@@ -533,6 +550,7 @@ class RadioMixin:
             ctx=ctx,
             value_type="string_value",
             bind=bind,
+            persist_state=persist_state,
             # Clearable when index=None: the widget can be in an empty state,
             # so ?key= (empty URL param) should clear the widget to None.
             clearable=(index is None),
