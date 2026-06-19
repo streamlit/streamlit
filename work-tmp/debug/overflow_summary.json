@@ -1,0 +1,166 @@
+{
+  "normal": {
+    "width": 1440,
+    "n_charts": 108,
+    "n_overflowing": 31,
+    "worst_overflow_px": 1019,
+    "sections_with_overflow": {
+      "C \u00b7 4 columns \u00b7 use_container_width=False": {
+        "n": 4,
+        "n_overflow": 4,
+        "max_overflow_px": 92
+      },
+      "C \u00b7 5 columns \u00b7 use_container_width=False": {
+        "n": 5,
+        "n_overflow": 5,
+        "max_overflow_px": 157
+      },
+      "E \u00b7 4 columns \u00b7 metric + chart card \u00b7 ucw=False": {
+        "n": 4,
+        "n_overflow": 4,
+        "max_overflow_px": 108
+      },
+      "J \u00b7 2 columns \u00b7 compound charts \u00b7 DEFAULT width": {
+        "n": 2,
+        "n_overflow": 2,
+        "max_overflow_px": 689
+      },
+      "J \u00b7 3 columns \u00b7 compound charts \u00b7 DEFAULT width": {
+        "n": 3,
+        "n_overflow": 3,
+        "max_overflow_px": 905
+      },
+      "J \u00b7 4 columns \u00b7 compound charts \u00b7 DEFAULT width": {
+        "n": 4,
+        "n_overflow": 4,
+        "max_overflow_px": 1013
+      },
+      "K \u00b7 2 columns \u00b7 compound charts \u00b7 width=stretch": {
+        "n": 2,
+        "n_overflow": 2,
+        "max_overflow_px": 689
+      },
+      "K \u00b7 3 columns \u00b7 compound charts \u00b7 width=stretch": {
+        "n": 3,
+        "n_overflow": 3,
+        "max_overflow_px": 905
+      },
+      "K \u00b7 4 columns \u00b7 compound charts \u00b7 width=stretch": {
+        "n": 4,
+        "n_overflow": 4,
+        "max_overflow_px": 1019
+      }
+    }
+  },
+  "narrow": {
+    "width": 900,
+    "n_charts": 108,
+    "n_overflowing": 41,
+    "worst_overflow_px": 1154,
+    "sections_with_overflow": {
+      "C \u00b7 2 columns \u00b7 use_container_width=False": {
+        "n": 2,
+        "n_overflow": 2,
+        "max_overflow_px": 38
+      },
+      "C \u00b7 3 columns \u00b7 use_container_width=False": {
+        "n": 3,
+        "n_overflow": 3,
+        "max_overflow_px": 164
+      },
+      "C \u00b7 4 columns \u00b7 use_container_width=False": {
+        "n": 4,
+        "n_overflow": 4,
+        "max_overflow_px": 227
+      },
+      "C \u00b7 5 columns \u00b7 use_container_width=False": {
+        "n": 5,
+        "n_overflow": 5,
+        "max_overflow_px": 265
+      },
+      "E \u00b7 2 columns \u00b7 metric + chart card \u00b7 ucw=False": {
+        "n": 2,
+        "n_overflow": 2,
+        "max_overflow_px": 54
+      },
+      "E \u00b7 3 columns \u00b7 metric + chart card \u00b7 ucw=False": {
+        "n": 3,
+        "n_overflow": 3,
+        "max_overflow_px": 180
+      },
+      "E \u00b7 4 columns \u00b7 metric + chart card \u00b7 ucw=False": {
+        "n": 4,
+        "n_overflow": 4,
+        "max_overflow_px": 243
+      },
+      "J \u00b7 2 columns \u00b7 compound charts \u00b7 DEFAULT width": {
+        "n": 2,
+        "n_overflow": 2,
+        "max_overflow_px": 959
+      },
+      "J \u00b7 3 columns \u00b7 compound charts \u00b7 DEFAULT width": {
+        "n": 3,
+        "n_overflow": 3,
+        "max_overflow_px": 1085
+      },
+      "J \u00b7 4 columns \u00b7 compound charts \u00b7 DEFAULT width": {
+        "n": 4,
+        "n_overflow": 4,
+        "max_overflow_px": 1148
+      },
+      "K \u00b7 2 columns \u00b7 compound charts \u00b7 width=stretch": {
+        "n": 2,
+        "n_overflow": 2,
+        "max_overflow_px": 959
+      },
+      "K \u00b7 3 columns \u00b7 compound charts \u00b7 width=stretch": {
+        "n": 3,
+        "n_overflow": 3,
+        "max_overflow_px": 1085
+      },
+      "K \u00b7 4 columns \u00b7 compound charts \u00b7 width=stretch": {
+        "n": 4,
+        "n_overflow": 4,
+        "max_overflow_px": 1154
+      }
+    }
+  },
+  "very_narrow": {
+    "width": 600,
+    "n_charts": 108,
+    "n_overflowing": 18,
+    "worst_overflow_px": 759,
+    "sections_with_overflow": {
+      "J \u00b7 2 columns \u00b7 compound charts \u00b7 DEFAULT width": {
+        "n": 2,
+        "n_overflow": 2,
+        "max_overflow_px": 753
+      },
+      "J \u00b7 3 columns \u00b7 compound charts \u00b7 DEFAULT width": {
+        "n": 3,
+        "n_overflow": 3,
+        "max_overflow_px": 753
+      },
+      "J \u00b7 4 columns \u00b7 compound charts \u00b7 DEFAULT width": {
+        "n": 4,
+        "n_overflow": 4,
+        "max_overflow_px": 753
+      },
+      "K \u00b7 2 columns \u00b7 compound charts \u00b7 width=stretch": {
+        "n": 2,
+        "n_overflow": 2,
+        "max_overflow_px": 753
+      },
+      "K \u00b7 3 columns \u00b7 compound charts \u00b7 width=stretch": {
+        "n": 3,
+        "n_overflow": 3,
+        "max_overflow_px": 753
+      },
+      "K \u00b7 4 columns \u00b7 compound charts \u00b7 width=stretch": {
+        "n": 4,
+        "n_overflow": 4,
+        "max_overflow_px": 759
+      }
+    }
+  }
+}
