@@ -291,9 +291,18 @@ function TooltipContentArea({
       capture: true,
     })
 
+    // Recompute when geometry changes anywhere in the document. We observe
+    // both the trigger (catches its own size changes) and document.body
+    // (catches position shifts from sibling/ancestor layout changes that don't
+    // resize the trigger itself, e.g. content above it growing).
+    const resizeObserver = new ResizeObserver(applyPosition)
+    resizeObserver.observe(triggerEl)
+    resizeObserver.observe(document.body)
+
     return () => {
       cancelAnimationFrame(raf)
       window.removeEventListener("scroll", applyPosition, { capture: true })
+      resizeObserver.disconnect()
     }
   }, [placement, triggerRef, viewportWidth, viewportHeight])
 
@@ -328,6 +337,11 @@ interface TriggerAreaProps {
  *
  * Focus: useFocusWithin opens/closes the tooltip immediately when any descendant
  * receives or loses focus (bubbling focusin/focusout under the hood).
+ *
+ * onPointerLeave only closes the tooltip if focus is not currently held within
+ * the trigger. This prevents a keyboard user's tooltip from dismissing when a
+ * mouse passes over and leaves the trigger area while focus is still held,
+ * regardless of whether focus or hover came first.
  */
 function TriggerArea({
   tag: Tag,
@@ -340,12 +354,15 @@ function TriggerArea({
 }: TriggerAreaProps): ReactElement {
   const state = useContext(TooltipTriggerStateContext)
   const triggerRef = useContext(TriggerRefContext)
+  const hasFocusWithinRef = useRef(false)
 
   const { focusWithinProps } = useFocusWithin({
     onFocusWithin() {
+      hasFocusWithinRef.current = true
       if (!disabled) state?.open(true)
     },
     onBlurWithin() {
+      hasFocusWithinRef.current = false
       state?.close(true)
     },
   })
@@ -360,7 +377,11 @@ function TriggerArea({
       onPointerEnter={() => {
         if (!disabled) state?.open(false)
       }}
-      onPointerLeave={() => state?.close(false)}
+      onPointerLeave={() => {
+        if (!hasFocusWithinRef.current) {
+          state?.close(false)
+        }
+      }}
       {...focusWithinProps}
     >
       {children}
@@ -441,13 +462,12 @@ function Tooltip({
             {children}
           </TriggerArea>
           {content ? (
-            <StyledTooltip
-              id={tooltipId}
-              placement={raPlacement}
-              offset={TOOLTIP_OFFSET}
-              shouldFlip
-              containerPadding={TOOLTIP_PADDING}
-            >
+            // We bypass React Aria's useOverlayPosition entirely (see
+            // styled-components.tsx: left/top: 0 !important) and compute our
+            // own position via computeTooltipTransform in TooltipContentArea.
+            // RATooltip is kept for its portal, role="tooltip", exit-animation
+            // lifecycle, and aria-hidden management on sibling overlays.
+            <StyledTooltip id={tooltipId} placement={raPlacement}>
               <TooltipContentArea
                 className={
                   error ? "stTooltipErrorContent" : "stTooltipContent"

@@ -33,6 +33,10 @@ configure({ asyncUtilTimeout: 5_000 })
 // a React root (renderHook interferes with React.lazy/Suspense resolution).
 // Wrapped in act() because setInteractionModality triggers change handlers that
 // may update React state in test files with mounted useFocusVisible hooks.
+//
+// This is safe to apply globally: it only affects React Aria's internal modality
+// variable (which gates hover-triggered tooltip opening), NOT the browser's
+// :focus-visible heuristic. Tests asserting :focus-visible styling are unaffected.
 beforeEach(() => {
   act(() => {
     setInteractionModality("pointer")
