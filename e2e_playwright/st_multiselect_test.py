@@ -301,11 +301,10 @@ def test_multiselect_esc_in_popover_preserves_selection(app: Page):
     Regression test for issue #15637.
     """
     popover_container = open_popover(app, "Popover with multiselect")
-    expect_text(
-        popover_container, "value esc popover: ['Green', 'Yellow', 'Red', 'Blue']"
-    )
+    multiselect = popover_container.get_by_test_id("stMultiSelect")
+    expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(4)
 
-    _get_multiselect_input(popover_container, "multiselect esc popover").click()
+    multiselect.locator("input").first.click()
     # First ESC closes the open dropdown.
     app.keyboard.press("Escape")
     # Second ESC closes the popover; it must not clear the selection.
@@ -314,11 +313,8 @@ def test_multiselect_esc_in_popover_preserves_selection(app: Page):
 
     # Reopen the popover and verify the selection is preserved.
     popover_container = open_popover(app, "Popover with multiselect")
-    expect(
-        popover_container.get_by_test_id("stMultiSelect").locator(
-            'span[data-baseweb="tag"]'
-        )
-    ).to_have_count(4)
+    multiselect = popover_container.get_by_test_id("stMultiSelect")
+    expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(4)
     expect_text(
         popover_container, "value esc popover: ['Green', 'Yellow', 'Red', 'Blue']"
     )
