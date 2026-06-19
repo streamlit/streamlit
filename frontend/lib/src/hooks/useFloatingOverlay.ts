@@ -38,6 +38,7 @@ interface UseFloatingOverlayOptions {
 }
 
 const SHIFT_VIEWPORT_PADDING = 8
+const EMPTY_MIDDLEWARE: Middleware[] = []
 
 /**
  * Shared Floating UI positioning hook for overlay components (Popover,
@@ -54,7 +55,7 @@ export function useFloatingOverlay(
     flipOptions,
     shiftOptions,
     matchTriggerWidth,
-    extraMiddleware = [],
+    extraMiddleware = EMPTY_MIDDLEWARE,
   } = options
 
   const middleware: Array<Middleware | false | undefined> = [
