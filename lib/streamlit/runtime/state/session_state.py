@@ -29,6 +29,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
+    Literal,
     TypeAlias,
     cast,
 )
@@ -441,6 +442,17 @@ class SessionState:
     # stale-widget cleanup time.
     _query_param_bound_widget_ids: set[str] = field(default_factory=set)
 
+    # Widget IDs that registered with persist_state, mapped to their scope.
+    # Like _query_param_bound_widget_ids, this is a durable snapshot that
+    # survives MPA page-transition sequencing.
+    _persisted_widget_ids: dict[str, Literal["page", "session"]] = field(
+        default_factory=dict
+    )
+
+    # For persist_state="page" widgets: the page script hash at registration
+    # time. Used to drop the value when the user navigates to a different page.
+    _persisted_widget_pages: dict[str, str] = field(default_factory=dict)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -467,6 +479,8 @@ class SessionState:
         self._new_widget_state.clear()
         self._key_id_mapper.clear()
         self._query_param_bound_widget_ids.clear()
+        self._persisted_widget_ids.clear()
+        self._persisted_widget_pages.clear()
 
     @property
     def filtered_state(self) -> dict[str, Any]:
@@ -915,11 +929,25 @@ class SessionState:
         # (which holds the value from the previous compaction).  We must read it
         # through the full lookup chain before _new_widget_state is cleaned.
         wid_key_map = self._key_id_mapper.id_key_mapping
+
+        def _should_preserve(widget_id: str) -> bool:
+            """True if a stale keyed widget's value should be carried forward."""
+            if widget_id in self._query_param_bound_widget_ids:
+                return True
+            scope = self._persisted_widget_ids.get(widget_id)
+            if scope == "session":
+                return True
+            if scope == "page":
+                return (
+                    self._persisted_widget_pages.get(widget_id) == ctx.page_script_hash
+                )
+            return False
+
         bound_preserved: dict[str, Any] = {}
         for key in self._old_state:
             if (
                 is_element_id(key)
-                and key in self._query_param_bound_widget_ids
+                and _should_preserve(key)
                 and key in wid_key_map
                 and _is_stale_widget(
                     self._new_widget_state.widget_metadata.get(key),
@@ -970,6 +998,16 @@ class SessionState:
         # This prevents unbounded growth across long sessions with many stale
         # widget IDs while preserving currently mapped keyed widgets.
         self._query_param_bound_widget_ids.intersection_update(wid_key_map.keys())
+        self._persisted_widget_ids = {
+            wid: scope
+            for wid, scope in self._persisted_widget_ids.items()
+            if wid in wid_key_map
+        }
+        self._persisted_widget_pages = {
+            wid: page_hash
+            for wid, page_hash in self._persisted_widget_pages.items()
+            if wid in wid_key_map
+        }
 
     def _get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
         """Return the metadata for a widget id from the current widget state."""
@@ -1024,6 +1062,21 @@ class SessionState:
             # Widget stopped using bind — clean up any stale binding
             self._query_param_bound_widget_ids.discard(widget_id)
             self.query_params.unbind_and_clear_param(widget_id)
+
+        # Track persist_state registrations (server-side only, no URL involved).
+        if metadata.persist_state is not None and user_key is not None:
+            self._persisted_widget_ids[widget_id] = metadata.persist_state
+            if metadata.persist_state == "page":
+                ctx = get_script_run_ctx()
+                self._persisted_widget_pages[widget_id] = (
+                    ctx.page_script_hash if ctx is not None else ""
+                )
+            else:
+                self._persisted_widget_pages.pop(widget_id, None)
+        elif metadata.persist_state is None and user_key is not None:
+            # Widget stopped persisting — drop any stale tracking.
+            self._persisted_widget_ids.pop(widget_id, None)
+            self._persisted_widget_pages.pop(widget_id, None)
 
         if (
             widget_id not in self

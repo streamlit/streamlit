@@ -315,6 +315,17 @@ class StreamlitInvalidBindValueError(LocalizableStreamlitException):
         )
 
 
+class StreamlitInvalidPersistStateError(LocalizableStreamlitException):
+    """Exception raised when an invalid value is specified for the persist_state parameter."""
+
+    def __init__(self, persist_state_value: Any) -> None:
+        super().__init__(
+            'Invalid `persist_state` value: "{persist_state_value}". '
+            'Supported values are: `"page"`, `"session"`, or `None`.',
+            persist_state_value=persist_state_value,
+        )
+
+
 # st.multiselect
 class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
     """Exception raised when there are more default selections specified than the max allowable selections."""
