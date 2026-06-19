@@ -259,7 +259,11 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
     darkMode: !isLightTheme,
     theme: "base",
     fontFamily: theme.genericFonts.bodyFont,
-    fontSize: convertRemToPx(theme.fontSizes.md),
+    // Slightly smaller than the body font size. Because the SVG is displayed in
+    // a sandboxed <img> (which can't access the app's web font), the browser
+    // falls back to a system font whose wider metrics can clip labels; the
+    // smaller size keeps text within its boxes.
+    fontSize: convertRemToPx(theme.fontSizes.sm),
     // Use SVG text elements instead of HTML foreignObject for labels.
     // HTML labels can extend beyond the calculated viewBox, causing
     // text clipping when rendered as an image.
@@ -278,7 +282,7 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
       background: theme.colors.bgColor,
       mainBkg: theme.colors.secondaryBg,
       fontFamily: theme.genericFonts.bodyFont,
-      fontSize: `${convertRemToPx(theme.fontSizes.md)}px`,
+      fontSize: `${convertRemToPx(theme.fontSizes.sm)}px`,
       lineColor: theme.colors.fadedText60,
       textColor: theme.colors.bodyText,
 
