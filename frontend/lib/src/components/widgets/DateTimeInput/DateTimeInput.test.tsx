@@ -270,7 +270,7 @@ describe("DateTimeInput widget", () => {
       expect(errorIcon).toBeVisible()
 
       // Hover to see error message
-      setInteractionModality("pointer")
+      act(() => setInteractionModality("pointer"))
       await user.hover(errorIcon)
       expect(
         await screen.findByText(/Date and time set outside allowed range/i)

@@ -196,7 +196,7 @@ describe("DateInput widget", () => {
     expect(errorIcon).toBeVisible()
 
     // Hover over the error icon to trigger the tooltip
-    setInteractionModality("pointer")
+    act(() => setInteractionModality("pointer"))
     await user.hover(errorIcon)
 
     const tooltip = await screen.findByTestId("stTooltipErrorContent")
@@ -224,7 +224,7 @@ describe("DateInput widget", () => {
     expect(errorIcon).toBeVisible()
 
     // Hover over the error icon to trigger the tooltip
-    setInteractionModality("pointer")
+    act(() => setInteractionModality("pointer"))
     await user.hover(errorIcon)
 
     const tooltip = await screen.findByTestId("stTooltipErrorContent")
@@ -252,7 +252,7 @@ describe("DateInput widget", () => {
     expect(errorIcon).toBeVisible()
 
     // Hover over the error icon to trigger the tooltip
-    setInteractionModality("pointer")
+    act(() => setInteractionModality("pointer"))
     await user.hover(errorIcon)
 
     const tooltip = await screen.findByTestId("stTooltipErrorContent")

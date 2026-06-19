@@ -32,7 +32,9 @@ import {
 
 import { useFocusWithin } from "react-aria"
 import {
+  type ContextValue,
   type Placement as RAPlacement,
+  type TooltipProps as RATooltipProps,
   TooltipContext,
   TooltipTriggerStateContext,
 } from "react-aria-components"
@@ -144,7 +146,7 @@ function computeTooltipTransform(
       x = triggerRect.left - overlayW - TOOLTIP_OFFSET
     }
   } else {
-    // "top" (default) and "auto"
+    // "top" (default)
     y = triggerRect.top - overlayH - TOOLTIP_OFFSET
     x = computeCrossAxisX(triggerRect, overlayW, secondaryAxis)
     if (y < TOOLTIP_PADDING) {
@@ -386,8 +388,11 @@ function Tooltip({
   })
 
   const tooltipContextValue = useMemo(
-    () => ({ id: tooltipId, triggerRef }) as never,
-    [tooltipId, triggerRef]
+    () =>
+      ({
+        triggerRef,
+      }) as ContextValue<RATooltipProps, HTMLDivElement>,
+    [triggerRef]
   )
 
   // Close the tooltip on Escape without stopping event propagation.
@@ -436,9 +441,9 @@ function Tooltip({
             <StyledTooltip
               id={tooltipId}
               placement={raPlacement}
-              offset={10}
+              offset={TOOLTIP_OFFSET}
               shouldFlip
-              containerPadding={8}
+              containerPadding={TOOLTIP_PADDING}
             >
               <TooltipContentArea
                 className={
