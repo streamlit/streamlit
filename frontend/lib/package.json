@@ -56,6 +56,7 @@
     "@glideapps/glide-data-grid": "6.0.4-alpha24",
     "@glideapps/glide-data-grid-cells": "6.0.4-alpha24",
     "@glideapps/glide-data-grid-source": "6.0.4-alpha24",
+    "@internationalized/date": "^3.12.2",
     "@loaders.gl/core": "^4.4.3",
     "@loaders.gl/csv": "^4.4.3",
     "@loaders.gl/gltf": "^4.4.3",

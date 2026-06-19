@@ -14,21 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useContext } from "react"
+import { memo, ReactElement, useCallback } from "react"
 
-import { ChevronDown } from "baseui/icon"
-import { StyledClearIcon } from "baseui/input/styled-components"
-import { TimePicker as UITimePicker } from "baseui/timepicker"
+import { Cancel } from "@emotion-icons/material-rounded"
+import { Time } from "@internationalized/date"
+import { TimeField } from "react-aria-components"
 
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import {
-  getBorderColor,
-  getPopoverContainerStyle,
-} from "~lib/components/shared/Base/styled-components"
-import { createHighlightListItem } from "~lib/components/shared/Highlight/createHighlightListItem"
-import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
@@ -36,8 +29,6 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
-import { convertRemToPx } from "~lib/theme/utils"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -45,19 +36,39 @@ import {
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
-  StyledClearIconContainer,
-  StyledTimeDropdownListItem,
+  StyledClearButton,
+  StyledTimeFieldContainer,
+  StyledTimeFieldInput,
+  StyledTimeInputWrapper,
+  StyledTimeSegment,
 } from "./styled-components"
-
-const TimeDropdownListItem = createHighlightListItem(
-  StyledTimeDropdownListItem
-)
 
 export interface Props {
   disabled: boolean
   element: TimeInputProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
+}
+
+/**
+ * Maps a step value (in seconds) to a React Aria TimeField granularity.
+ *
+ * Only "hour" and "minute" granularities are used because the wire format
+ * is always HH:MM — seconds have never been stored or displayed.
+ */
+function stepToGranularity(stepSeconds: number): "hour" | "minute" {
+  return stepSeconds % 3600 === 0 ? "hour" : "minute"
+}
+
+/** Converts an HH:MM wire-format string to a React Aria Time object. */
+function stringToTime(value: string): Time {
+  const [hours, minutes] = value.split(":").map(Number)
+  return new Time(hours, minutes)
+}
+
+/** Converts a React Aria Time object back to the HH:MM wire format. */
+function timeToString(value: Time): string {
+  return `${String(value.hour).padStart(2, "0")}:${String(value.minute).padStart(2, "0")}`
 }
 
 function TimeInput({
@@ -88,169 +99,27 @@ function TimeInput({
     queryParamBinding,
     formClearBehavior: "resetValueOnly",
   })
-  const isInSidebar = useContext(IsSidebarContext)
+
   const theme = useEmotionTheme()
-  const scrollbarGutterSize = useScrollbarGutterSize()
-  const { innerHeight: windowHeight } = useWindowDimensionsContext()
-
-  // Calculate if the time dropdown will have a scrollbar
-  const step = element.step ? Number(element.step) : 900 // step in seconds, defaults to 900s (15 minutes)
-  const numTimeOptions = Math.ceil(86400 / step) // 86400 seconds in a day
-  const itemHeight = convertRemToPx(theme.sizes.dropdownItemHeight)
-  const maxDropdownHeight = Math.min(
-    convertRemToPx(theme.sizes.maxDropdownHeight),
-    windowHeight * 0.7 // 70vh constraint on popover body
-  )
-  const hasScrollbar = numTimeOptions * itemHeight > maxDropdownHeight
-  const effectiveGutterSize = hasScrollbar ? scrollbarGutterSize : 0
-
+  const step = element.step ? Number(element.step) : 900
   const clearable = isNullOrUndefined(element.default) && !disabled
 
-  const selectOverrides = {
-    Select: {
-      props: {
-        disabled,
-
-        overrides: {
-          ControlContainer: {
-            style: ({ $isFocused }: { $isFocused: boolean }) => {
-              const borderColor = getBorderColor(theme.colors, $isFocused)
-              return {
-                height: theme.sizes.minElementHeight,
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: theme.sizes.borderWidth,
-                borderRightWidth: theme.sizes.borderWidth,
-                borderTopWidth: theme.sizes.borderWidth,
-                borderBottomWidth: theme.sizes.borderWidth,
-
-                borderTopColor: borderColor,
-                borderRightColor: borderColor,
-                borderBottomColor: borderColor,
-                borderLeftColor: borderColor,
-              }
-            },
-          },
-
-          IconsContainer: {
-            style: () => ({
-              paddingRight: theme.spacing.sm,
-            }),
-          },
-
-          ValueContainer: {
-            style: () => ({
-              lineHeight: theme.lineHeights.inputWidget,
-              // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              paddingRight: theme.spacing.sm,
-              paddingLeft: theme.sizes.tagMarginInsideBorder,
-              paddingBottom: theme.spacing.sm,
-              paddingTop: theme.spacing.sm,
-              marginLeft: theme.spacing.sm,
-            }),
-          },
-
-          SingleValue: {
-            style: {
-              fontWeight: theme.fontWeights.normal,
-              // Remove left margin that used to offset input (2px)
-              marginLeft: theme.spacing.none,
-            },
-            props: {
-              "data-testid": "stTimeInputTimeDisplay",
-            },
-          },
-
-          Dropdown: {
-            style: () => ({
-              paddingTop: theme.spacing.none,
-              paddingBottom: theme.spacing.none,
-              paddingLeft: theme.spacing.none,
-              paddingRight: theme.spacing.none,
-              // Shadow is on DropdownContainer, remove from dropdown
-              boxShadow: "none",
-              // Dropdown handles scrolling so baseui can scroll to
-              // the selected item on open via its rootRef
-              maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
-            }),
-          },
-          DropdownContainer: {
-            style: () => ({
-              ...getPopoverContainerStyle(theme),
-
-              // Clip children (scrollbar) to border-radius
-              overflow: "hidden",
-            }),
-          },
-
-          DropdownListItem: {
-            component: TimeDropdownListItem,
-          },
-
-          Popover: {
-            props: {
-              ignoreBoundary: isInSidebar,
-              popoverMargin: convertRemToPx(theme.spacing.twoXS),
-              overrides: {
-                Body: {
-                  style: () => ({
-                    overflow: "hidden",
-                    // Set CSS variable for adjustForGutter in list items
-                    "--scrollbar-gutter-size": `${effectiveGutterSize}px`,
-                  }),
-                },
-              },
-            },
-          },
-
-          Placeholder: {
-            style: () => ({
-              color: theme.colors.fadedText60,
-              // Position absolute so Input can overlay it
-              position: "absolute",
-            }),
-          },
-
-          Input: {
-            style: {
-              // Input overlays Placeholder - position relative + zIndex ensures
-              // input is clickable above the absolutely positioned placeholder
-              position: "relative",
-              zIndex: theme.zIndices.priority,
-            },
-          },
-
-          SelectArrow: {
-            component: ChevronDown,
-
-            props: {
-              overrides: {
-                Svg: {
-                  style: () => ({
-                    width: theme.iconSizes.lg,
-                    height: theme.iconSizes.lg,
-                  }),
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  }
-
   const handleChange = useCallback(
-    (newDate: Date | null): void => {
-      const newValue: string | null =
-        newDate === null ? null : dateToString(newDate)
-
-      setValueWithSource({ value: newValue, fromUi: true })
+    (newTime: Time | null): void => {
+      // Suppress null mid-edit events for non-clearable widgets to avoid
+      // resetting the backend value while the user is still typing.
+      if (newTime === null && !clearable) return
+      setValueWithSource({
+        value: newTime ? timeToString(newTime) : null,
+        fromUi: true,
+      })
     },
-    [setValueWithSource]
+    [clearable, setValueWithSource]
   )
 
   const handleClear = useCallback((): void => {
-    handleChange(null)
-  }, [handleChange])
+    setValueWithSource({ value: null, fromUi: true })
+  }, [setValueWithSource])
 
   return (
     <div className="stTimeInput" data-testid="stTimeInput">
@@ -265,43 +134,35 @@ function TimeInput({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <UITimePicker
-        format="24"
-        step={step} // step in seconds, defaults to 900s (15 minutes)
-        value={isNullOrUndefined(value) ? undefined : stringToDate(value)}
-        onChange={handleChange}
-        overrides={selectOverrides}
-        nullable={clearable}
-        creatable
-        aria-label={element.label}
-      />
-      {clearable &&
-        !isNullOrUndefined(value) && (
-          // The time picker doesn't have a built-in clearable functionality.
-          // Therefore, we are adding the clear button here.
-          <StyledClearIconContainer
+      <StyledTimeFieldContainer>
+        <StyledTimeInputWrapper
+          data-testid="stTimeInputTimeDisplay"
+          data-disabled={disabled || undefined}
+        >
+          <TimeField
+            aria-label={element.label}
+            value={isNullOrUndefined(value) ? null : stringToTime(value)}
+            onChange={handleChange}
+            granularity={stepToGranularity(step)}
+            hourCycle={24}
+            shouldForceLeadingZeros
+            isDisabled={disabled}
+          >
+            <StyledTimeFieldInput>
+              {segment => <StyledTimeSegment segment={segment} />}
+            </StyledTimeFieldInput>
+          </TimeField>
+        </StyledTimeInputWrapper>
+        {clearable && !isNullOrUndefined(value) && (
+          <StyledClearButton
             onClick={handleClear}
+            aria-label="Clear time"
             data-testid="stTimeInputClearButton"
           >
-            <StyledClearIcon
-              overrides={{
-                Svg: {
-                  style: {
-                    color: theme.colors.grayTextColor,
-                    // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
-                    padding: theme.spacing.threeXS,
-                    height: theme.sizes.clearIconSize,
-                    width: theme.sizes.clearIconSize,
-                    ":hover": {
-                      fill: theme.colors.bodyText,
-                    },
-                  },
-                },
-              }}
-              $isFocusVisible={false}
-            />
-          </StyledClearIconContainer>
+            <Cancel size={theme.iconSizes.base} aria-hidden="true" />
+          </StyledClearButton>
         )}
+      </StyledTimeFieldContainer>
     </div>
   )
 }
@@ -337,26 +198,6 @@ function updateWidgetMgrState(
     { fromUi: vws.fromUi },
     fragmentId
   )
-}
-
-function dateToString(value: Date): string {
-  const hours = value.getHours().toString().padStart(2, "0")
-  const minutes = value.getMinutes().toString().padStart(2, "0")
-
-  return `${hours}:${minutes}`
-}
-
-function stringToDate(value: string | null): Date | null {
-  if (value === null) {
-    return null
-  }
-  const [hours, minutes] = value.split(":").map(Number)
-  const date = new Date()
-
-  date.setHours(hours)
-  date.setMinutes(minutes)
-
-  return date
 }
 
 export default memo(TimeInput)

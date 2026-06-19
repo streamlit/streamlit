@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, screen, within } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -50,7 +50,6 @@ describe("TimeInput widget", () => {
     const props = getProps()
     render(<TimeInput {...props} />)
     const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
-
     expect(timeDisplay).toBeInTheDocument()
   })
 
@@ -127,55 +126,54 @@ describe("TimeInput widget", () => {
     const widgetLabel = screen.getByTestId("stWidgetLabel")
     expect(widgetLabel).toHaveAttribute("disabled")
 
+    // React Aria sets data-disabled on the DateInput container when isDisabled
     const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
-    expect(timeDisplay).toHaveAttribute("disabled")
+    expect(timeDisplay).toHaveAttribute("data-disabled")
   })
 
   it("has the correct default value", () => {
     const props = getProps()
     render(<TimeInput {...props} />)
 
-    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
-    expect(timeDisplay).toHaveTextContent("12:45")
+    // React Aria renders hour and minute as individual spinbutton segments.
+    // aria-valuenow holds the numeric value for each.
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    expect(hourSegment).toHaveAttribute("aria-valuenow", "12")
+    expect(minuteSegment).toHaveAttribute("aria-valuenow", "45")
   })
 
-  it("opens dropdown and shows time options", async () => {
-    const user = userEvent.setup()
+  it("shows only hour and minute segments (no seconds)", () => {
     const props = getProps()
     render(<TimeInput {...props} />)
 
-    // Open the dropdown
-    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
-    await user.click(timeDisplay)
-
-    // Check that the dropdown is open and shows time options
-    const dropdown = screen.getByRole("listbox")
-    expect(dropdown).toBeVisible()
-
-    // Check that the currently selected time is present in the dropdown
-    // and has aria-selected set to true
-    const selectedTime = within(dropdown).getByText("12:45")
-    expect(selectedTime).toHaveAttribute("aria-selected", "true")
-
-    // Check that other time options are also present/visible (based on 15-minute steps)
-    // with aria-selected set to false
-    const alternateOption1 = within(dropdown).getByText("12:30")
-    const alternateOption2 = within(dropdown).getByText("13:00")
-    expect(alternateOption1).toBeVisible()
-    expect(alternateOption1).toHaveAttribute("aria-selected", "false")
-    expect(alternateOption2).toBeVisible()
-    expect(alternateOption2).toHaveAttribute("aria-selected", "false")
+    // Default step=900s (divisible by 60) → granularity="minute" → 2 spinbuttons
+    const segments = screen.getAllByRole("spinbutton")
+    expect(segments).toHaveLength(2)
   })
 
-  it("has a 24 format", () => {
+  it("shows only the hour segment when step is divisible by 3600", () => {
+    const props = getProps({ step: 3600 })
+    render(<TimeInput {...props} />)
+
+    const segments = screen.getAllByRole("spinbutton")
+    expect(segments).toHaveLength(1)
+  })
+
+  it("has 24-hour format", () => {
     const props = getProps()
     render(<TimeInput {...props} />)
 
-    // Finds the input node by aria-label
-    const inputNode = screen.getByLabelText(
-      "Selected 12:45. Select a time, 24-hour format."
+    // With hourCycle=24 there should be no AM/PM (dayPeriod) segment
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
+    const dayPeriodSegment = timeDisplay.querySelector(
+      '[data-type="dayPeriod"]'
     )
-    expect(inputNode).toBeInTheDocument()
+    expect(dayPeriodSegment).toBeNull()
+
+    // The hour spinbutton should have a 0–23 range
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    expect(hourSegment).toHaveAttribute("aria-valuemin", "0")
+    expect(hourSegment).toHaveAttribute("aria-valuemax", "23")
   })
 
   it("sets the widget value on change", async () => {
@@ -184,79 +182,82 @@ describe("TimeInput widget", () => {
     vi.spyOn(props.widgetMgr, "setStringValue")
 
     render(<TimeInput {...props} />)
-    // Div containing the selected time as a value prop and as text
-    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
 
-    // Change the widget value
-    if (timeDisplay) {
-      // Select the time input dropdown
-      await user.click(timeDisplay)
-      // Arrow up from 12:45 to 12:30 (since step in 15 min intervals)
-      await user.keyboard("{ArrowUp}")
-      // Hit enter to select the new time
-      await user.keyboard("{Enter}")
-    }
+    // Decrement the hour segment from 12 to 11
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("{ArrowDown}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      "12:30",
+      "11:45",
       { fromUi: true },
       undefined
     )
-
-    expect(timeDisplay).toHaveAttribute("value", "12:30")
-    expect(timeDisplay).toHaveTextContent("12:30")
   })
 
   it("resets its value when form is cleared", async () => {
     const user = userEvent.setup()
-    // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     vi.spyOn(props.widgetMgr, "setStringValue")
 
     render(<TimeInput {...props} />)
-    // Div containing the selected time as a value prop and as text
-    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
 
-    // Change the widget value
-    if (timeDisplay) {
-      // Select the time input dropdown
-      await user.click(timeDisplay)
-      // Arrow down twice from 12:45 to 13:15 (since step in 15 min intervals)
-      await user.keyboard("{ArrowDown}{ArrowDown}")
-      // Hit enter to select the new time
-      await user.keyboard("{Enter}")
-    }
+    // Change the hour from 12 to 11
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("{ArrowDown}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      "13:15",
+      "11:45",
       { fromUi: true },
       undefined
     )
 
-    expect(timeDisplay).toHaveAttribute("value", "13:15")
-    expect(timeDisplay).toHaveTextContent("13:15")
-
-    // "Submit" the form
+    // Submit the form
     act(() => {
       props.widgetMgr.submitForm("form", undefined)
     })
 
-    // Our widget should be reset, and the widgetMgr should be updated
+    // Widget should reset to the default value
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.default,
-      {
-        fromUi: true,
-      },
+      { fromUi: true },
       undefined
     )
 
-    expect(timeDisplay).toHaveAttribute("value", "12:45")
-    expect(timeDisplay).toHaveTextContent("12:45")
+    // Segments should reflect the reset value
+    const [hourAfter, minuteAfter] = screen.getAllByRole("spinbutton")
+    expect(hourAfter).toHaveAttribute("aria-valuenow", "12")
+    expect(minuteAfter).toHaveAttribute("aria-valuenow", "45")
+  })
+
+  it("does not commit null for non-clearable widget when a segment is cleared mid-edit", async () => {
+    const user = userEvent.setup()
+    // Widget with a default is non-clearable
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+
+    // Clear the spy's mount call
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    // Backspace clears a segment, which causes React Aria to fire onChange(null)
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("{Backspace}")
+
+    // The null guard must prevent setStringValue from being called with null
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalledWith(
+      props.element,
+      null,
+      expect.any(Object),
+      expect.anything()
+    )
   })
 })
 
@@ -321,20 +322,16 @@ describe("TimeInput query param binding", () => {
 })
 
 describe("TimeInput clearable behavior", () => {
-  it("clears the value when clear button is clicked", async () => {
+  it("shows clear button and clears the value when clicked", async () => {
     const user = userEvent.setup()
-    // The clear button only renders when `clearable` (i.e. no default) and a
-    // value has been selected, so we pick one via the combobox first.
     const props = getProps({ default: undefined })
     vi.spyOn(props.widgetMgr, "setStringValue")
+    // Simulate a pre-existing value (e.g., set via query param or previous interaction)
+    vi.spyOn(props.widgetMgr, "getStringValue").mockReturnValue("12:00")
     render(<TimeInput {...props} />)
 
-    expect(screen.queryByTestId("stTimeInputClearButton")).toBeNull()
-
-    await user.click(screen.getByRole("combobox"))
-    await user.keyboard("{ArrowDown}{Enter}")
-
-    const clearButton = await screen.findByTestId("stTimeInputClearButton")
+    // Clear button should be visible because the widget has a value but no default
+    const clearButton = screen.getByTestId("stTimeInputClearButton")
     expect(clearButton).toBeVisible()
 
     await user.click(clearButton)
@@ -347,20 +344,11 @@ describe("TimeInput clearable behavior", () => {
     )
   })
 
-  it("does not render clear button when widget has a default", async () => {
-    const user = userEvent.setup()
+  it("does not render clear button when widget has a default", () => {
     const props = getProps({ default: "10:30" })
     render(<TimeInput {...props} />)
 
-    // Clear button should not be present at initial render
-    expect(screen.queryByTestId("stTimeInputClearButton")).toBeNull()
-
-    // Open the combobox and select a different value
-    await user.click(screen.getByRole("combobox"))
-    await user.keyboard("{ArrowDown}{Enter}")
-
-    // Clear button should still not be present after interaction
-    // (clearable is false when a default is set)
+    // Clear button must not be present when clearable is false
     expect(screen.queryByTestId("stTimeInputClearButton")).toBeNull()
   })
 
@@ -372,7 +360,8 @@ describe("TimeInput clearable behavior", () => {
     })
     render(<TimeInput {...props} />)
 
-    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
-    expect(timeDisplay).toHaveTextContent("16:00")
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    expect(hourSegment).toHaveAttribute("aria-valuenow", "16")
+    expect(minuteSegment).toHaveAttribute("aria-valuenow", "0")
   })
 })
