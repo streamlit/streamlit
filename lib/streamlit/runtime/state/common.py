@@ -55,6 +55,11 @@ WidgetCallback: TypeAlias = Callable[..., None]
 # Currently only supports binding to query params
 BindOption: TypeAlias = Literal["query-params"] | None
 
+# Type for the persist_state parameter on widgets.
+# "page" keeps the widget value while it is not rendered on the same page.
+# "session" keeps it for the whole session, including across page switches.
+PersistStateOption: TypeAlias = Literal["page", "session"] | None
+
 # A deserializer receives the value from whatever field is set on the
 # WidgetState proto, and returns a regular python value. A serializer
 # receives a regular python value, and returns something suitable for
@@ -153,6 +158,11 @@ class WidgetMetadata(Generic[T]):
 
     # Optional binding for the widget's value to external state (e.g. query params)
     bind: BindOption = None
+
+    # Optional server-side persistence of the widget's value when it is not
+    # rendered. "page" keeps the value while on the same page; "session" keeps it
+    # for the whole session, including across page switches. None disables it.
+    persist_state: PersistStateOption = None
 
     # The list of valid formatted option strings for selection widgets.
     # When set, _seed_widget_from_url validates URL values against this list and
