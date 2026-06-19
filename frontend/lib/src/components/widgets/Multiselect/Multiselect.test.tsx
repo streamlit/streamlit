@@ -311,6 +311,32 @@ describe("Multiselect widget", () => {
     })
   })
 
+  it("does not clear the selection when pressing Escape", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    const multiSelect = screen.getByRole("combobox")
+    // Open the dropdown.
+    await user.click(multiSelect)
+    // The first Escape closes the dropdown; the second Escape would clear the
+    // value when baseweb's escapeClearsValue default is left enabled.
+    await user.keyboard("{Escape}")
+    await user.keyboard("{Escape}")
+
+    // The default selection ("a") is preserved.
+    const selections = screen.getAllByRole("button")
+    expect(selections[0]).toHaveTextContent("a")
+    // The value was never reset to an empty array.
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+      props.element,
+      [],
+      { fromUi: true },
+      undefined
+    )
+  })
+
   it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const user = userEvent.setup()
