@@ -60,6 +60,7 @@ from streamlit.web.server.starlette.starlette_server_config import (
 
 if TYPE_CHECKING:
     import uvicorn
+    from starlette.types import ASGIApp
 
     from streamlit.runtime import Runtime
 
@@ -515,7 +516,7 @@ class UvicornRunner:
     >>> runner.run()  # Blocks until server exits
     """
 
-    def __init__(self, app: str) -> None:
+    def __init__(self, app: str | ASGIApp) -> None:
         self._app = app
 
     def run(self) -> None:
@@ -532,6 +533,9 @@ class UvicornRunner:
                 "uvicorn is required for running st.App. "
                 "Install it with: pip install uvicorn"
             ) from exc
+
+        # Imported lazily to avoid a circular import at module load time.
+        from streamlit.web import bootstrap
 
         if _server_address_is_unix_socket():
             raise RuntimeError("Unix sockets are not supported with st.App currently.")
@@ -550,8 +554,6 @@ class UvicornRunner:
                 config.set_option(
                     "server.port", port, ConfigOption.STREAMLIT_DEFINITION
                 )
-
-            # TODO(lukasmasuch): Print the URL with the selected port.
 
             try:
                 _LOGGER.debug(
@@ -583,6 +585,9 @@ class UvicornRunner:
                         config.set_option(
                             "server.port", port, ConfigOption.STREAMLIT_DEFINITION
                         )
+
+                    # Print the app URL now that the final port is known.
+                    bootstrap._print_url(is_running_hello=False)
 
                     server = uvicorn.Server(uvicorn_config)
                     server.run(sockets=[server_socket])

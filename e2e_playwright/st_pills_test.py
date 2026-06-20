@@ -323,6 +323,60 @@ def test_dynamic_pills_props(app: Page, assert_snapshot: ImageCompareFunction):
     expect_prefixed_markdown(app, "Initial pills value:", "mango")
 
 
+# --- Dynamic format_func tests (gh-15493 regression) ---
+
+
+def test_dynamic_format_func_preserves_selection_and_suppresses_callback(
+    app: Page,
+):
+    """Changing format_func alone must not fire on_change or deselect the pill.
+
+    Regression test for gh-15493: when format_func changes (e.g. a language
+    switch) with the same raw options, the on_change callback must NOT fire and
+    the pill must remain visually selected at the new translated label.
+
+    Steps
+    -----
+    1. EN mode: verify "apple" pill is selected, callback_count == 0.
+    2. Click "Switch to ES": same raw options, format_func now maps A -> manzana.
+       - Pill must show "manzana" as selected (visual fix).
+       - callback_count must still be 0 (primary bug fix).
+    3. Click "naranja" (option B): callback fires once, value must be "B" (raw
+       option key), not the formatted string "naranja".
+    """
+    dynamic_fmt_section = get_element_by_key(app, "dynamic_fmt_pills")
+    expect(dynamic_fmt_section).to_be_visible()
+
+    # Step 1: EN mode - "apple" is selected, no callback yet
+    apple_btn = get_pill_button(dynamic_fmt_section, "apple")
+    expect(apple_btn).to_have_attribute("data-selected", "true")
+    expect_text(app, "dynamic_fmt_pills value: A")
+    expect_text(app, "dynamic_fmt_callback_count: 0")
+
+    # Step 2: switch to ES by clicking the button - format_func changes, options don't
+    click_button(app, "Switch to ES")
+
+    # "manzana" (translated "apple") must be selected - no deselection flash
+    manzana_btn = get_pill_button(dynamic_fmt_section, "manzana")
+    expect(manzana_btn).to_have_attribute("data-selected", "true")
+    # Negative assertion: "apple" must not appear in the widget (labels changed)
+    expect(dynamic_fmt_section).not_to_contain_text("apple")
+    # Primary bug fix: callback must NOT have fired
+    expect_text(app, "dynamic_fmt_callback_count: 0")
+    expect_text(app, "dynamic_fmt_pills value: A")
+
+    # Step 3: user selects "naranja" (option B) - callback should fire once
+    get_pill_button(dynamic_fmt_section, "naranja").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "dynamic_fmt_callback_count: 1")
+    # The callback value must be the original option key "B", not the display string
+    expect_text(app, "dynamic_fmt_last_value: B")
+    expect_text(app, "dynamic_fmt_pills value: B")
+    naranja_btn = get_pill_button(dynamic_fmt_section, "naranja")
+    expect(naranja_btn).to_have_attribute("data-selected", "true")
+
+
 # --- Query parameter binding tests ---
 
 

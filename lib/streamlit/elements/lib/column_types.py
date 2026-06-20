@@ -82,6 +82,7 @@ ColumnType: TypeAlias = Literal[
     "progress",
     "multiselect",
     "json",
+    "markdown",
 ]
 
 ButtonType: TypeAlias = Literal["primary", "secondary", "tertiary"]
@@ -255,6 +256,10 @@ class JsonColumnConfig(TypedDict):
     type: Literal["json"]
 
 
+class MarkdownColumnConfig(TypedDict):
+    type: Literal["markdown"]
+
+
 class ButtonColumnConfig(TypedDict):
     type: Literal["button"]
     button_type: NotRequired[ButtonType | None]
@@ -378,6 +383,7 @@ class ColumnConfig(TypedDict, total=False):
         | VideoColumnConfig
         | MultiselectColumnConfig
         | JsonColumnConfig
+        | MarkdownColumnConfig
         | ButtonColumnConfig
         | None
     )
@@ -3118,6 +3124,131 @@ def JsonColumn(
         pinned=pinned,
         alignment=alignment,
         type_config=JsonColumnConfig(type="json"),
+    )
+
+
+@gather_metrics("column_config.MarkdownColumn")
+def MarkdownColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
+    default: str | None = None,
+) -> ColumnConfig:
+    r"""Configure a markdown column in ``st.dataframe`` or ``st.data_editor``.
+
+    This column type displays cell values as plain text within the table cells.
+    When a cell is clicked, the content is shown in an overlay where the markdown
+    is rendered. The overlay supports the same Markdown directives as described
+    in the ``body`` parameter of ``st.markdown``. This command needs to be used
+    in the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
+    When used with ``st.data_editor``, editing will be enabled through a text
+    editor overlay.
+
+    Parameters
+    ----------
+    label : str or None
+        The label shown at the top of the column. If this is ``None``
+        (default), the column name is used.
+
+    width : "small", "medium", "large", int, or None
+        The display width of the column. If this is ``None`` (default), the
+        column will be sized to fit the cell contents. Otherwise, this can be
+        one of the following:
+
+        - ``"small"``: 75px wide
+        - ``"medium"``: 200px wide
+        - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
+
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
+
+    disabled : bool or None
+        Whether editing should be disabled for this column. If this is ``None``
+        (default), Streamlit will enable editing wherever possible.
+
+        If a column has mixed types, it may become uneditable regardless of
+        ``disabled``.
+
+    required : bool or None
+        Whether edited cells in the column need to have a value. If this is
+        ``False`` (default), the user can submit empty values for this column.
+        If this is ``True``, an edited cell in this column can only be
+        submitted if its value is not ``None``, and a new row will only be
+        submitted after the user fills in this column.
+
+    pinned : bool or None
+        Whether the column is pinned. A pinned column will stay visible on the
+        left side no matter where the user scrolls. If this is ``None``
+        (default), Streamlit will decide: index columns are pinned, and data
+        columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), text is left-aligned.
+
+    default : str or None
+        Specifies the default value in this column when a new row is added by
+        the user. This defaults to ``None``.
+
+    Examples
+    --------
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "description": [
+                    "# Title\\n\\nThis is **bold** text",
+                    "## Subtitle\\n\\n- Item 1\\n- Item 2",
+                    "Regular text with `code`",
+                ],
+            }
+        )
+
+        st.dataframe(
+            data_df,
+            column_config={
+                "description": st.column_config.MarkdownColumn(
+                    "Description",
+                    help="Markdown formatted text",
+                    width="large",
+                ),
+            },
+            hide_index=True,
+        )
+
+    .. output::
+        https://doc-markdown-column.streamlit.app/
+        height: 300px
+    """
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        disabled=disabled,
+        required=required,
+        pinned=pinned,
+        alignment=alignment,
+        default=default,
+        type_config=MarkdownColumnConfig(type="markdown"),
     )
 
 

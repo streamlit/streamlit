@@ -176,13 +176,93 @@ def main_version() -> None:
     main()
 
 
-@main.command("docs")
-def main_docs() -> None:
-    """Show help in browser."""
-    click.echo("Showing help page in browser...")
-    from streamlit import cli_util
+def _resolve_streamlit_command(command_name: str) -> tuple[str, Any] | None:
+    """Resolve a public Streamlit command name to its object.
 
-    cli_util.open_browser("https://docs.streamlit.io")
+    Supports the notations ``st.number_input``, ``number_input``, and
+    ``streamlit.number_input``, as well as dotted namespace members such as
+    ``st.column_config.NumberColumn``.
+
+    Returns a tuple of the normalized display name (e.g. ``st.number_input``)
+    and the resolved object, or ``None`` if no matching public command exists.
+    """
+    import streamlit as st
+
+    name = command_name.strip()
+    # Strip a single leading "st." or "streamlit." prefix (exclusively).
+    if name.startswith("streamlit."):
+        name = name.removeprefix("streamlit.")
+    elif name.startswith("st."):
+        name = name.removeprefix("st.")
+    if not name:
+        return None
+
+    obj: Any = st
+    for part in name.split("."):
+        # Only resolve genuine public attributes. The ``part in dir(obj)`` check
+        # guards against objects (e.g. ``DeltaGenerator``) whose ``__getattr__``
+        # synthesizes placeholder callables for unknown names, which would
+        # otherwise resolve falsely.
+        if not part or part.startswith("_") or part not in dir(obj):
+            return None
+        try:
+            obj = getattr(obj, part)
+        except Exception:
+            return None
+
+    return f"st.{name}", obj
+
+
+def _format_command_docs(display_name: str, obj: Any) -> str:
+    """Format the signature and docstring of a resolved command as plain text."""
+    from streamlit.elements import help as help_utils
+
+    signature = help_utils._get_signature(obj)
+    docstring = help_utils._get_docstring(obj)
+
+    header = f"{display_name}{signature}" if signature else display_name
+    if docstring:
+        return f"{header}\n\n{docstring}"
+    return header
+
+
+@main.command("docs")
+@click.argument("command", required=False)
+def main_docs(command: str | None = None) -> None:
+    r"""Look up a Streamlit command, or open the docs in your browser.
+
+    If COMMAND is omitted, the documentation website is opened in your browser.
+
+    If COMMAND is provided, the signature and docstring of the matching public
+    Streamlit command are printed. COMMAND can be written with or without the
+    ``st.`` (or ``streamlit.``) prefix, and can reference namespace members
+    such as ``st.column_config.NumberColumn``.
+
+    \b
+    Examples:
+        $ streamlit docs                              # Open docs in browser
+        $ streamlit docs st.number_input
+        $ streamlit docs number_input
+        $ streamlit docs streamlit.number_input
+        $ streamlit docs st.column_config.NumberColumn
+    """
+    if command is None:
+        click.echo("Showing help page in browser...")
+        from streamlit import cli_util
+
+        cli_util.open_browser("https://docs.streamlit.io")
+        return
+
+    resolved = _resolve_streamlit_command(command)
+    if resolved is None:
+        raise click.BadArgumentUsage(
+            f"No public Streamlit command found matching {command!r}.\n"
+            "Provide a command such as 'st.number_input', 'number_input', or "
+            "'st.column_config.NumberColumn'."
+        )
+
+    display_name, obj = resolved
+    click.echo(_format_command_docs(display_name, obj))
 
 
 @main.command("hello")

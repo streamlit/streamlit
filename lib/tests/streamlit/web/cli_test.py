@@ -491,10 +491,91 @@ class CliTest(unittest.TestCase):
             assert args[1] == "--version"
 
     def test_docs_command(self):
-        """Tests the docs command opens the browser"""
+        """Tests the docs command without an argument opens the browser"""
         with patch("streamlit.cli_util.open_browser") as mock_open_browser:
             self.runner.invoke(cli, ["docs"])
             mock_open_browser.assert_called_once_with("https://docs.streamlit.io")
+
+    @parameterized.expand(
+        [
+            ("st.number_input",),
+            ("number_input",),
+            ("streamlit.number_input",),
+        ]
+    )
+    def test_docs_command_lookup_notations(self, command: str):
+        """Tests the docs command looks up a command across all notations."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            result = self.runner.invoke(cli, ["docs", command])
+
+        assert result.exit_code == 0
+        # The signature header is normalized to the ``st.`` prefix.
+        assert "st.number_input(" in result.output
+        # The docstring is included.
+        assert "Display a numeric input widget." in result.output
+        # Looking up a command should never open the browser.
+        mock_open_browser.assert_not_called()
+
+    def test_docs_command_namespace_member(self):
+        """Tests the docs command resolves nested namespace members."""
+        result = self.runner.invoke(cli, ["docs", "st.column_config.NumberColumn"])
+
+        assert result.exit_code == 0
+        assert "st.column_config.NumberColumn(" in result.output
+        assert "Configure a number column" in result.output
+
+    def test_docs_command_namespace(self):
+        """Tests the docs command returns the docstring of a namespace."""
+        result = self.runner.invoke(cli, ["docs", "st.column_config"])
+
+        assert result.exit_code == 0
+        assert result.output.startswith("st.column_config")
+        assert "Column types that can be configured" in result.output
+
+    def test_docs_command_unknown_command(self):
+        """Tests the docs command errors out for unknown commands."""
+        result = self.runner.invoke(cli, ["docs", "not_a_real_command"])
+
+        assert result.exit_code != 0
+        assert "No public Streamlit command found" in result.output
+
+    @parameterized.expand([("",), ("   ",), ("st.",)])
+    def test_docs_command_empty_argument(self, command: str):
+        """Tests the docs command errors out for empty/prefix-only arguments."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            result = self.runner.invoke(cli, ["docs", command])
+
+        assert result.exit_code != 0
+        assert "No public Streamlit command found" in result.output
+        mock_open_browser.assert_not_called()
+
+    def test_docs_command_nested_lookup_does_not_crash(self):
+        """Tests that traversing into objects with custom __getattr__ fails gracefully."""
+        # st.secrets.<key> raises a non-AttributeError; it should yield the
+        # friendly error instead of an uncaught traceback.
+        result = self.runner.invoke(cli, ["docs", "st.secrets.does_not_exist"])
+
+        assert result.exit_code != 0
+        assert "No public Streamlit command found" in result.output
+
+    def test_docs_command_rejects_private_attribute(self):
+        """Tests the docs command does not expose private attributes."""
+        result = self.runner.invoke(cli, ["docs", "st._main"])
+
+        assert result.exit_code != 0
+        assert "No public Streamlit command found" in result.output
+
+    def test_docs_command_rejects_synthesized_placeholder(self):
+        """Tests that unknown members on DeltaGenerator do not resolve falsely.
+
+        ``DeltaGenerator.__getattr__`` synthesizes a placeholder callable for
+        unknown names, so ``st.sidebar.not_a_real_command`` must error instead
+        of printing a generic ``(*args, **kwargs)`` signature.
+        """
+        result = self.runner.invoke(cli, ["docs", "st.sidebar.not_a_real_command"])
+
+        assert result.exit_code != 0
+        assert "No public Streamlit command found" in result.output
 
     def test_hello_command(self):
         """Tests the hello command runs the hello script in streamlit"""

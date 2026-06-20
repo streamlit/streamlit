@@ -1,7 +1,7 @@
 
 # Using Markdown in Streamlit
 
-Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labels, help tooltips, metrics, `st.table()` cells, and more. Beyond standard GitHub-flavored Markdown, Streamlit adds colored text, badges, icons, and LaTeX.
+Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labels, help tooltips, metrics, `st.table()` cells, and more. Beyond standard GitHub-flavored Markdown, Streamlit adds colored text, badges, icons, shimmer text, and LaTeX.
 
 ## Quick reference
 
@@ -27,6 +27,7 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 | Colored text | `:color[text]` | `:red[Error]` | ✓ |
 | Colored background | `:color-background[text]` | `:blue-background[Info]` | ✓ |
 | Badge | `:color-badge[text]` | `:green-badge[Success]` | ✓ |
+| Shimmer animation | `:shimmer[text]` | `:shimmer[Loading...]` | ✓ |
 | Small text | `:small[text]` | `:small[footnote]` | ✓ |
 | LaTeX (inline) | `$formula$` | `$ax^2 + bx + c$` | ✓ |
 | LaTeX (block) | `$$formula$$` | `$$\int_0^1 x^2 dx$$` | ✗ |
@@ -43,6 +44,8 @@ Markdown is supported in most places where text is rendered. Streamlit has three
 
 **No Markdown** — Text displays literally:
 - `st.text()`, `st.json()`, `st.dataframe()` / `st.data_editor()` cells, `st.selectbox` / `st.multiselect` options, input placeholders, `st.Page` titles, chart/map labels
+
+**Exception:** `st.dataframe()` / `st.data_editor()` cells configured with `st.column_config.MarkdownColumn` show plain text in the cell, but render Markdown in an overlay when the cell is clicked (raw HTML disabled, links sanitized).
 
 ## GitHub-flavored Markdown
 
