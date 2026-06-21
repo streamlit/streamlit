@@ -605,6 +605,19 @@ class DeltaGenerator(
         block_type = block_proto.WhichOneof("type")
 
         if dg._root_container is None or dg._cursor is None:
+            # Return a properly-typed DeltaGenerator even in bare mode
+            # so that DeltaGenerator subclasses (e.g., GridContainer)
+            # can still have their methods called.
+            if dg_type is not None and not isinstance(dg, dg_type):
+                return cast(
+                    "DeltaGenerator",
+                    dg_type(
+                        root_container=None,
+                        cursor=None,
+                        parent=dg._parent,
+                        block_type=block_type,
+                    ),
+                )
             return dg
 
         msg = ForwardMsg()

@@ -52,6 +52,8 @@ import {
   StyledColumn,
   StyledFlexContainerBlock,
   StyledFlexContainerBlockProps,
+  StyledGridCell,
+  StyledGridContainerBlock,
   StyledLayoutWrapper,
 } from "./styled-components"
 import {
@@ -225,6 +227,148 @@ export const FlexBoxContainer = (
   )
 }
 
+interface GridContainerProps extends BaseBlockProps {
+  node: BlockNode
+}
+
+/**
+ * Renders a CSS Grid container with its children wrapped in grid cells.
+ */
+const GridContainer = (props: GridContainerProps): ReactElement => {
+  const {
+    node,
+    widgetsDisabled,
+    disableFullscreenMode,
+    endpoints,
+    widgetMgr,
+    uploadClient,
+    componentRegistry,
+  } = props
+
+  // Handle cycling of colors for dividers (same as ChildRenderer):
+  assignDividerColor(node, useEmotionTheme())
+
+  const parentContext = useContext(FlexContext)
+  const gridConfig = node.deltaBlock.gridContainer
+
+  const userKey = getKeyFromId(node.deltaBlock.id)
+
+  // Extract grid configuration with defaults
+  const maxColumns = gridConfig?.maxColumns ?? 0
+  // In auto mode (maxColumns=0), we need a positive min width; in fixed mode, 0 is valid
+  const rawMinColumnWidthPx = gridConfig?.minColumnWidthPx ?? 0
+  const minColumnWidthPx =
+    maxColumns === 0 && rawMinColumnWidthPx === 0 ? 200 : rawMinColumnWidthPx
+  const rowGap = gridConfig?.rowGapConfig?.gapSize ?? streamlit.GapSize.SMALL
+  const columnGap =
+    gridConfig?.columnGapConfig?.gapSize ?? streamlit.GapSize.SMALL
+  const verticalAlignment =
+    gridConfig?.verticalAlignment ??
+    BlockProto.GridContainer.VerticalAlignment.TOP
+  const showCellBorder = gridConfig?.showCellBorder ?? false
+  const cellHeightMode =
+    gridConfig?.cellHeightMode ??
+    BlockProto.GridContainer.CellHeightMode.CONTENT
+  const cellHeightPx = gridConfig?.cellHeightConfig?.pixelHeight ?? undefined
+  const dense = gridConfig?.dense ?? true
+
+  // Collect child elements and their grid cell configurations.
+  // Use individual props as dependencies instead of the props object
+  // to ensure stable memoization (widgetMgr etc. are stable singletons).
+  const childrenWithCells = useMemo(() => {
+    const visitor = new RenderNodeVisitor({
+      node,
+      widgetsDisabled,
+      disableFullscreenMode,
+      endpoints,
+      widgetMgr,
+      uploadClient,
+      componentRegistry,
+    })
+
+    return (node.children ?? []).map(childNode => {
+      // Get grid cell config from BlockNode children
+      let columnSpan: number | undefined
+      let rowSpan: number | undefined
+      let nodeId: string | undefined
+
+      if (childNode instanceof BlockNode) {
+        nodeId = childNode.deltaBlock.id || undefined
+        if (childNode.deltaBlock.gridCell) {
+          const gridCell = childNode.deltaBlock.gridCell
+          if (gridCell.columnSpan && gridCell.columnSpan > 1) {
+            columnSpan = gridCell.columnSpan
+          }
+          if (gridCell.rowSpan && gridCell.rowSpan > 1) {
+            rowSpan = gridCell.rowSpan
+          }
+        }
+      }
+
+      // Render the child element using the return value from accept()
+      // instead of indexing into reactElements, since the visitor may
+      // push 0, 1, or multiple elements per node (e.g., transient nodes).
+      const childElement = childNode.accept(visitor)
+
+      return {
+        element: childElement,
+        nodeId,
+        columnSpan,
+        rowSpan,
+      }
+    })
+  }, [
+    node,
+    widgetsDisabled,
+    disableFullscreenMode,
+    endpoints,
+    widgetMgr,
+    uploadClient,
+    componentRegistry,
+  ])
+
+  // Determine if grid has fixed cell height for overflow handling
+  const hasFixedHeight =
+    cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED
+
+  // Wrap each child in a StyledGridCell with span information.
+  // Use nodeId for stable React keys to avoid incorrect reuse when elements
+  // are inserted/removed. Fall back to index if nodeId unavailable.
+  const wrappedChildren = childrenWithCells.map((child, index) => (
+    <StyledGridCell
+      key={child.nodeId ?? index}
+      verticalAlignment={verticalAlignment}
+      showBorder={showCellBorder}
+      hasFixedHeight={hasFixedHeight}
+      columnSpan={child.columnSpan}
+      rowSpan={child.rowSpan}
+    >
+      <FlexContextProvider
+        direction={Direction.VERTICAL}
+        parentContext={parentContext}
+      >
+        {child.element}
+      </FlexContextProvider>
+    </StyledGridCell>
+  ))
+
+  return (
+    <StyledGridContainerBlock
+      maxColumns={maxColumns}
+      minColumnWidthPx={minColumnWidthPx}
+      rowGap={rowGap}
+      columnGap={columnGap}
+      cellHeightMode={cellHeightMode}
+      cellHeightPx={cellHeightPx}
+      dense={dense}
+      className={classNames("stGrid", convertKeyToClassName(userKey))}
+      data-testid="stGrid"
+    >
+      {wrappedChildren}
+    </StyledGridContainerBlock>
+  )
+}
+
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
 }
@@ -250,6 +394,7 @@ export const BlockNodeRenderer = (
     }
   } else if (
     node.deltaBlock.type === "flexContainer" ||
+    node.deltaBlock.type === "gridContainer" ||
     node.deltaBlock.column ||
     node.deltaBlock.expandable
   ) {
@@ -305,6 +450,10 @@ export const BlockNodeRenderer = (
 
   if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
     containerElement = <FlexBoxContainer {...childProps} />
+  }
+
+  if (node.deltaBlock.gridContainer) {
+    containerElement = <GridContainer {...childProps} />
   }
 
   if (node.deltaBlock.dialog) {

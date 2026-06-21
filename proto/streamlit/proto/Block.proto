@@ -33,6 +33,7 @@ message Block {
     Popover popover = 10;
     Dialog dialog = 11;
     FlexContainer flex_container = 13;
+    GridContainer grid_container = 17;
   }
 
   bool allow_empty = 8;
@@ -40,6 +41,10 @@ message Block {
   optional streamlit.HeightConfig height_config = 14;
   optional streamlit.WidthConfig width_config = 15;
   optional bool autoscroll = 16;
+
+  // Grid cell configuration for blocks that are direct children of a GridContainer.
+  // When set, the block spans the specified number of columns and rows.
+  optional GridCell grid_cell = 18;
 
   message Vertical {
     bool border = 1;
@@ -183,5 +188,51 @@ message Block {
     AvatarType avatar_type = 3;
   }
 
-  // Next ID: 17
+  message GridContainer {
+    // Number of columns. 0 means auto mode (columns determined by min_column_width_px).
+    int32 max_columns = 1;
+
+    // Minimum column width in pixels. Used for auto mode or to set minimum width per column.
+    uint32 min_column_width_px = 2;
+
+    // Gap configuration for row and column gaps.
+    streamlit.GapConfig row_gap_config = 3;
+    streamlit.GapConfig column_gap_config = 4;
+
+    // Vertical alignment of content within grid cells.
+    enum VerticalAlignment {
+      TOP = 0;
+      CENTER = 1;
+      BOTTOM = 2;
+    }
+    VerticalAlignment vertical_alignment = 5;
+
+    // Whether to show a border around each cell.
+    bool show_cell_border = 6;
+
+    // Cell height mode.
+    enum CellHeightMode {
+      CONTENT = 0;
+      EQUAL = 1;
+      FIXED = 2;
+    }
+    CellHeightMode cell_height_mode = 7;
+
+    // Optional fixed cell height configuration (used when cell_height_mode is FIXED).
+    optional streamlit.HeightConfig cell_height_config = 8;
+
+    // Whether to use dense packing mode (grid-auto-flow: dense).
+    // When true, the grid fills gaps by reordering items.
+    bool dense = 9;
+  }
+
+  message GridCell {
+    // Number of columns this cell spans.
+    uint32 column_span = 1;
+
+    // Number of rows this cell spans.
+    uint32 row_span = 2;
+  }
+
+  // Next ID: 19
 }

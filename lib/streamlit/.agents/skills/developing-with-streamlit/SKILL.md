@@ -93,7 +93,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Making an app look polished** — icons (Material Symbols), spacing, color accents, visual hierarchy, and small design touches that elevate quality | read `references/design.md` |
 | **Choosing the right selection widget** — when to use `st.selectbox` vs `st.radio` vs `st.pills` vs `st.segmented_control` vs `st.multiselect`, including modern replacements for deprecated patterns | read `references/selection-widgets.md` |
 | **Custom themes, colors, and CSS styling** — configuring colors in `.streamlit/config.toml`, reading the active theme at runtime via `st.context.theme`, and targeting widgets with `st.markdown` CSS injection | read `references/theme.md` |
-| **Page structure and layout** — `st.columns`, `st.tabs`, `st.sidebar`, `st.container`, `st.expander`, responsive layout patterns, and when to use each container type | read `references/layouts.md` |
+| **Page structure and layout** — `st.columns`, `st.grid`, `st.tabs`, `st.sidebar`, `st.container`, `st.expander`, responsive layout patterns, and when to use each container type | read `references/layouts.md` |
 | **Displaying or editing tabular data** — `st.dataframe` column configuration, `st.data_editor` for editable tables, chart selection, and best practices for large datasets | read `references/data-display.md` |
 | **Multi-page app architecture** — `st.navigation`, `st.Page`, page routing, shared state across pages, and structuring apps with multiple views | read `references/multipage-apps.md` |
 | **Persisting values across reruns** — `st.session_state`, widget keys, callbacks (`on_change`, `on_click`), and patterns for stateful interactions | read `references/session-state.md` |

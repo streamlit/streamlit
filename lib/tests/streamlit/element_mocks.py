@@ -267,4 +267,5 @@ CONTAINER_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("form", lambda: st.form("Form")),
     ("empty", lambda: st.empty()),
     ("dialog", lambda: st.dialog("Dialog")),
+    ("grid", lambda: st.grid()),
 ]
