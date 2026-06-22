@@ -2260,6 +2260,61 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
         assert self.session_state._persisted_widget_ids == {kept_widget_id: "session"}
         assert stale_widget_id not in self.session_state._persisted_widget_pages
 
+    def test_persist_state_page_drops_carried_value_on_remount_other_page(
+        self,
+    ) -> None:
+        """A "page" value preserved on one page is dropped when the widget
+        remounts on a different page, and the frontend is told to reset."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "page")
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(set())
+
+        assert self.session_state._persisted_page_value_pages["my_widget"] == (
+            "page_1_hash"
+        )
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_2_hash"),
+        ):
+            result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+
+    def test_persist_state_page_keeps_carried_value_on_remount_same_page(
+        self,
+    ) -> None:
+        """A "page" value preserved on a page is kept when the widget remounts
+        on the same page."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "page")
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(set())
+            result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
