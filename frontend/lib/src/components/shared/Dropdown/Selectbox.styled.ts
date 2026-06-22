@@ -26,6 +26,7 @@ import {
 
 import {
   getBorderColor,
+  getOverlayZIndex,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
 import type { EmotionTheme } from "~lib/theme/types"
@@ -149,7 +150,7 @@ export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
     backgroundColor: $isInSidebar
       ? theme.colors.secondaryBg
       : theme.colors.bgColor,
-    zIndex: theme.zIndices.popup,
+    zIndex: getOverlayZIndex(theme),
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     width: "var(--trigger-width)",
     maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,

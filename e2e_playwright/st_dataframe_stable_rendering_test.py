@@ -35,15 +35,20 @@ def test_dataframe_renders_without_crashing(app: Page):
     # it for a couple of page reloads.
     # Also, even if there are crashes, its not gurunteed that they will
     # happen in our CI environment.
+    #
+    # Note: one dataframe lives inside a st.popover. Popovers use lazy mounting
+    # (content is only added to the DOM when the popover is open), so only 7 of
+    # the 8 dataframes are visible at page load. The popover dataframe's crash
+    # behavior is covered by st_popover_test.py (popover 4 contains a dataframe).
     for _ in range(5):
         dataframe_elements = app.get_by_test_id("stDataFrame")
-        expect(dataframe_elements).to_have_count(8)
+        expect(dataframe_elements).to_have_count(7)
         expect(app.get_by_test_id("stAlertContainer")).not_to_be_attached()
 
         # Set use_container_width to False:
         click_toggle(app, "use_container_width")
         dataframe_elements = app.get_by_test_id("stDataFrame")
-        expect(dataframe_elements).to_have_count(8)
+        expect(dataframe_elements).to_have_count(7)
         expect(app.get_by_test_id("stAlertContainer")).not_to_be_attached()
 
         # Reload the page:
