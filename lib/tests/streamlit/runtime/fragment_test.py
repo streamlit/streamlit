@@ -32,7 +32,6 @@ from streamlit.errors import (
     FragmentHandledException,
     FragmentStorageKeyError,
     StreamlitAPIException,
-    StreamlitFragmentWidgetsNotAllowedOutsideError,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.fragment import (
@@ -1137,7 +1136,14 @@ def get_test_tuples(
     ]
 
 
-class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
+class FragmentWriteToOutsideContainerTest(DeltaGeneratorTestCase):
+    """Tests that fragments can write widgets to containers declared outside their scope.
+
+    This behavior was previously disallowed but is now supported via element-level
+    fragment clearing on the frontend. The is_parallel_worker guard in delta_generator.py
+    still blocks external writes during parallel fragment execution.
+    """
+
     # Suppress unawaited coroutine warning from MagicMock(spec=Runtime). This occurs
     # when rich's exception formatter accesses auto-created AsyncMock attributes.
     pytestmark = pytest.mark.filterwarnings(
@@ -1147,20 +1153,15 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         get_test_tuples(outside_container_writing_apps, WIDGET_ELEMENTS)
     )
-    def test_write_element_outside_container_raises_exception_for_widgets(
+    def test_write_widget_outside_container_succeeds(
         self,
         _: str,  # the test name argument used by pytest
         _app: Callable[[Callable[[], DeltaGenerator]], None],
         _element_producer: ELEMENT_PRODUCER,
     ):
-        with pytest.raises(FragmentHandledException) as ex:
-            _app(_element_producer)
-
-        inner_exception = ex.value.__cause__ or ex.value.__context__
-
-        assert isinstance(
-            inner_exception, StreamlitFragmentWidgetsNotAllowedOutsideError
-        )
+        """Verify widgets can be written to outside containers without exception."""
+        # This should not raise - fragments can now write widgets to outside containers
+        _app(_element_producer)
 
     @parameterized.expand(
         get_test_tuples(outside_container_writing_apps, NON_WIDGET_ELEMENTS)

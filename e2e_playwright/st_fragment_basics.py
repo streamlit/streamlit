@@ -49,3 +49,29 @@ def my_big_fragment():
 my_big_fragment()
 
 st.write(f"outside: fragment {uuid4()}")
+
+# --- Outside container tests ---
+# Fragments can write widgets to containers declared outside their scope.
+
+outside_container = st.container()
+
+
+@st.fragment
+def fragment_with_outside_widget():
+    outside_container.button("Outside Button", key="outside_btn")
+    st.write(f"outside container fragment: {uuid4()}")
+
+
+fragment_with_outside_widget()
+
+multi_container = st.container()
+
+
+@st.fragment
+def multi_outside_widget_fragment():
+    multi_container.button("Outside Alpha", key="outside_alpha")
+    multi_container.button("Outside Beta", key="outside_beta")
+    st.write(f"multi outside fragment: {uuid4()}")
+
+
+multi_outside_widget_fragment()
