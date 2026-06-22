@@ -186,7 +186,6 @@ badge = _main.badge
 balloons = _main.balloons
 bar_chart = _main.bar_chart
 _bidi_component = _main._bidi_component
-bokeh_chart = _main.bokeh_chart
 button = _main.button
 caption = _main.caption
 camera_input = _main.camera_input

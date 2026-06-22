@@ -17,7 +17,10 @@
 import styled from "@emotion/styled"
 import { Menu, MenuItem, Popover } from "react-aria-components"
 
-import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
+import {
+  getOverlayZIndex,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 
 export const StyledMenuButtonLabelContainer = styled.div<{
   $hideChevron?: boolean
@@ -55,17 +58,12 @@ export const StyledMenuOptionIcon = styled.span(({ theme }) => ({
 export const StyledMenuPopover = styled(Popover)(({ theme }) => ({
   ...getPopoverContainerStyle(theme),
   // Override default border-radius with xl to match the original design
-  borderTopLeftRadius: theme.radii.xl,
-  borderTopRightRadius: theme.radii.xl,
-  borderBottomRightRadius: theme.radii.xl,
-  borderBottomLeftRadius: theme.radii.xl,
+  borderRadius: theme.radii.xl,
   marginRight: theme.spacing.lg,
   marginBottom: theme.spacing.lg,
   maxHeight: "70vh",
   overflow: "auto",
-  // NOTE: z-index cannot be set here — React Aria's useOverlayPosition
-  // hard-codes `zIndex: 100000` as an inline style which overrides CSS classes.
-  // The actual z-index override is passed via the `style` prop in MenuButton.tsx.
+  zIndex: getOverlayZIndex(theme),
 }))
 
 export const StyledMenuList = styled(Menu)(({ theme }) => ({
@@ -96,10 +94,7 @@ export const StyledMenuListItem = styled(MenuItem)(({ theme }) => ({
   cursor: "pointer",
   listStyle: "none",
   minWidth: theme.sizes.minMenuWidth,
-  borderTopLeftRadius: theme.radii.md2,
-  borderTopRightRadius: theme.radii.md2,
-  borderBottomRightRadius: theme.radii.md2,
-  borderBottomLeftRadius: theme.radii.md2,
+  borderRadius: theme.radii.md2,
   outline: "none",
   transition: "background 50ms ease",
 

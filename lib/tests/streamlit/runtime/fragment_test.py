@@ -586,8 +586,8 @@ class ResetOutsideWrappersTest(unittest.TestCase):
         """A RunningCursor wrapper is re-emitted and its cursor reset to index 0."""
         storage = MemoryFragmentStorage()
         cursor = RunningCursor(RootContainer.MAIN)
-        cursor.get_locked_cursor()
-        cursor.get_locked_cursor()
+        cursor.lock_element()
+        cursor.lock_element()
         assert cursor.index == 2
         wrapper = self._make_wrapper(cursor, creation_delta_path=[0, 3])
         storage.register_outside_wrapper("frag", "container", wrapper)
@@ -623,7 +623,7 @@ class ResetOutsideWrappersTest(unittest.TestCase):
         storage.register_outside_wrapper("frag", "container", wrapper)
 
         def write_three() -> list[list[int]]:
-            return [cursor.get_locked_cursor().delta_path for _ in range(3)]
+            return [cursor.lock_element().delta_path for _ in range(3)]
 
         first_run = write_three()
         with patch("streamlit.delta_generator._enqueue_add_block"):
