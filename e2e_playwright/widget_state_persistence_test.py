@@ -36,6 +36,13 @@ def _expect_value(app: Page, key: str, expected: str) -> None:
     expect(get_element_by_key(app, f"{key}_value")).to_have_text(f"{key}: {expected}")
 
 
+def _expect_input_value(app: Page, label: str, expected: str) -> None:
+    # Assert the value actually rendered in the widget UI, not just the
+    # st.session_state readout — a remounted widget must adopt the preserved
+    # value rather than fall back to its default.
+    expect(get_text_input(app, label).locator("input").first).to_have_value(expected)
+
+
 def _navigate(app: Page, page_name: str) -> None:
     app.get_by_test_id("stSidebarNav").get_by_text(page_name, exact=True).click()
     wait_for_app_run(app)
@@ -59,8 +66,47 @@ def test_persist_state_retains_value_when_not_rendered(app: Page) -> None:
     _expect_value(app, "plain_text", "UNSET")
 
 
+def test_persist_state_restores_widget_value_on_remount(app: Page) -> None:
+    """A persisted widget shows its value again after a hide/show cycle, and a
+    follow-up rerun does not reset it back to the default.
+    """
+    click_checkbox(app, "Show widgets")
+    _fill_text_input(app, "Page-scoped", "page_value")
+    _fill_text_input(app, "Session-scoped", "session_value")
+
+    # Hide then show the widgets to force an unmount/remount.
+    click_checkbox(app, "Show widgets")
+    click_checkbox(app, "Show widgets")
+
+    # The remounted widgets must render the preserved values, not their default.
+    _expect_input_value(app, "Page-scoped", "page_value")
+    _expect_input_value(app, "Session-scoped", "session_value")
+
+    # A follow-up rerun must not clobber the restored values.
+    click_button(app, "Rerun")
+    _expect_input_value(app, "Page-scoped", "page_value")
+    _expect_input_value(app, "Session-scoped", "session_value")
+
+
+def test_session_scoped_value_restored_after_page_switch(app: Page) -> None:
+    """A persist_state="session" value survives an A -> B -> A page switch and
+    is restored on the re-rendered widget.
+    """
+    click_checkbox(app, "Show widgets")
+    _fill_text_input(app, "Session-scoped", "session_value")
+
+    _navigate(app, "Page 2")
+    expect(app.get_by_role("heading", name="Page 2")).to_be_visible()
+    _navigate(app, "Page 1")
+    expect(app.get_by_role("heading", name="Page 1")).to_be_visible()
+
+    _expect_input_value(app, "Session-scoped", "session_value")
+
+
 def test_page_scoped_value_does_not_leak_across_pages(app: Page) -> None:
-    """A persist_state="page" value is dropped after switching pages."""
+    """A persist_state="page" value is dropped after switching pages and is not
+    restored when returning to the originating page.
+    """
     click_checkbox(app, "Show widgets")
     _fill_text_input(app, "Page-scoped", "page_value")
 
@@ -70,6 +116,12 @@ def test_page_scoped_value_does_not_leak_across_pages(app: Page) -> None:
 
     # The page-scoped value from Page 1 must not carry over to Page 2.
     expect(get_element_by_key(app, "page_text_value")).not_to_contain_text("page_value")
+    _expect_input_value(app, "Page-scoped", "")
+
+    # Returning to Page 1 must not resurrect the dropped page-scoped value.
+    _navigate(app, "Page 1")
+    expect(app.get_by_role("heading", name="Page 1")).to_be_visible()
+    _expect_input_value(app, "Page-scoped", "")
 
 
 def test_persist_state_does_not_touch_query_params(app: Page) -> None:
