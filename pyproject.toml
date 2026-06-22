@@ -150,7 +150,7 @@ integration = [
   "dask",
   "duckdb",
   # Used for testing of st.connection:
-  "sqlalchemy[mypy]>=2.0.0",
+  "sqlalchemy[mypy]>=2.0.51",
   # Used by audio test:
   "scipy>=1.7.3",
   # Used to ensure pydantic is supported:
