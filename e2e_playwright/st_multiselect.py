@@ -339,6 +339,13 @@ esc_multi = st.multiselect(
 )
 st.text(f"value esc: {esc_multi}")
 
+esc_multi_no_default = st.multiselect(
+    "multiselect esc no default",
+    esc_colors,
+    key="multiselect_esc_no_default",
+)
+st.text(f"value esc no default: {esc_multi_no_default}")
+
 with st.popover("Popover with multiselect"):
     esc_multi_popover = st.multiselect(
         "multiselect esc popover",
