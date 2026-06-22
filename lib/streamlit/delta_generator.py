@@ -48,7 +48,6 @@ from streamlit.delta_generator_singletons import (
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.balloons import BalloonsMixin
-from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.empty import EmptyMixin
@@ -195,7 +194,6 @@ class DeltaGenerator(
     AlertMixin,
     AudioInputMixin,
     BalloonsMixin,
-    BokehMixin,
     ButtonMixin,
     ButtonGroupMixin,
     CameraInputMixin,
@@ -571,9 +569,7 @@ class DeltaGenerator(
         if msg_was_enqueued:
             # Get a DeltaGenerator that is locked to the current element
             # position.
-            new_cursor = (
-                dg._cursor.get_locked_cursor() if dg._cursor is not None else None
-            )
+            new_cursor = dg._cursor.lock_element() if dg._cursor is not None else None
 
             output_dg = DeltaGenerator(
                 root_container=dg._root_container,
@@ -632,16 +628,12 @@ class DeltaGenerator(
         parent_cursor = cast("Cursor", dg._cursor)
         root_container = cast("int", dg._root_container)
 
-        # Snapshot delta_path before get_locked_cursor() advances the index.
+        # Snapshot delta_path before open_block() advances the parent cursor.
         block_delta_path = list(parent_cursor.delta_path)
 
-        # Normally we'd return a new DeltaGenerator that uses the locked cursor
-        # below. But in this case we want to return a DeltaGenerator that uses
-        # a brand new cursor for this new block we're creating.
-        block_cursor = cursor.RunningCursor(
-            root_container=root_container,
-            parent_path=(*parent_cursor.parent_path, parent_cursor.index),
-        )
+        # Create a child cursor for this new block. open_block() also advances
+        # the parent cursor, so we capture delta_path above before this call.
+        block_cursor = parent_cursor.open_block()
 
         # `dg_type` param added for st.status container. It allows us to
         # instantiate DeltaGenerator subclasses from the function.
@@ -662,8 +654,7 @@ class DeltaGenerator(
         block_dg._form_data = FormData(current_form_id(dg))
         block_dg._creating_fragment_id = ts.fragment_id if ts else None
 
-        # Must be called to increment this cursor's index.
-        parent_cursor.get_locked_cursor()
+        # open_block() already advanced the parent cursor, so we only emit here.
         _enqueue_add_block(block_delta_path, block_proto)
 
         caching.save_block_message(
@@ -851,7 +842,7 @@ def _get_or_create_outside_wrapper(
 
     _enqueue_add_block(creation_delta_path, block_proto)
     # Advance the outside container's cursor exactly once, at creation time.
-    parent_cursor.get_locked_cursor()
+    parent_cursor.lock_element()
 
     fragment_storage.register_outside_wrapper(
         fragment_id,

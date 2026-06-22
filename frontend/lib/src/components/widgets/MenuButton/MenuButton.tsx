@@ -42,7 +42,6 @@ import {
   isMenuStyleIconLabel,
 } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -76,7 +75,6 @@ function MenuButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, fragmentId } = props
 
   const [isOpen, setIsOpen] = useState(false)
-  const theme = useEmotionTheme()
   const instanceId = useId()
   // Anchor ref on the outer container — mirrors the original anchorRef pattern,
   // avoiding the ref duplication issue that occurs when BaseButtonTooltip
@@ -210,12 +208,6 @@ function MenuButton(props: Props): ReactElement {
         // tests because the target element is marked inert by the overlay.
         // Outside-click and Escape dismissal are handled by the useEffect above.
         isNonModal
-        // React Aria's useOverlayPosition hard-codes `zIndex: 100000` as an
-        // inline style, which overrides CSS class rules. Passing the z-index
-        // via `style` prop instead — RAC merges user style AFTER its internal
-        // style, so this wins. Must exceed theme.zIndices.header (999990) so
-        // the portal is always above the app toolbar and sidebar overlays.
-        style={{ zIndex: theme.zIndices.popup }}
         shouldCloseOnInteractOutside={NEVER_CLOSE}
         offset={4}
         placement="bottom start"

@@ -93,6 +93,14 @@ _ROUTE_UPLOAD_FILE: Final = f"{BASE_ROUTE_UPLOAD_FILE}/{{session_id}}/{{file_id}
 _ROUTE_COMPONENTS_V1: Final = f"{BASE_ROUTE_COMPONENT}/{{path:path}}"
 _ROUTE_COMPONENTS_V2: Final = f"{BASE_ROUTE_CORE}/bidi-components/{{path:path}}"
 
+# Mapping of the (lowercase) server.xsrfCookieSameSite config values to their
+# canonical Set-Cookie "SameSite" attribute values.
+_SAME_SITE_HEADER_VALUES: Final = {
+    "lax": "Lax",
+    "strict": "Strict",
+    "none": "None",
+}
+
 # App static files
 _ROUTE_APP_STATIC: Final = "app/static/{path:path}"
 
@@ -207,7 +215,9 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
     bytes and timestamp are preserved. Otherwise, a new token is generated.
 
     The cookie is only set if XSRF protection is enabled in the configuration.
-    The Secure flag is added when SSL is configured.
+    The SameSite attribute is controlled by server.xsrfCookieSameSite. The
+    Secure flag is added when SSL is configured, and is always added when
+    SameSite is "none" (browsers require Secure for SameSite=None).
 
     Note: The XSRF cookie intentionally does NOT have the HttpOnly flag. This
     is required for the double-submit cookie pattern: JavaScript reads the
@@ -238,11 +248,25 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
         token_bytes, timestamp
     )
 
+    # Only normalize actual strings; any unexpected value (e.g. None) falls
+    # back to the safe "Lax" default rather than being coerced into "none".
+    xsrf_cookie_same_site = config.get_option("server.xsrfCookieSameSite")
+    same_site = _SAME_SITE_HEADER_VALUES.get(
+        xsrf_cookie_same_site.lower()
+        if isinstance(xsrf_cookie_same_site, str)
+        else "lax",
+        "Lax",
+    )
+    # Browsers reject SameSite=None cookies without the Secure flag, so force
+    # Secure in that case.
+    secure = bool(config.get_option("server.sslCertFile")) or same_site == "None"
+
     _set_unquoted_cookie(
         response,
         XSRF_COOKIE_NAME,
         cookie_value,
-        secure=bool(config.get_option("server.sslCertFile")),
+        same_site=same_site,
+        secure=secure,
     )
 
 
@@ -251,6 +275,7 @@ def _set_unquoted_cookie(
     cookie_name: str,
     cookie_value: str,
     *,
+    same_site: str = "Lax",
     secure: bool,
 ) -> None:
     """Set a cookie without URL-encoding or quoting the value.
@@ -263,8 +288,10 @@ def _set_unquoted_cookie(
 
     Cookie flags set:
     - Path=/: Available to all paths
-    - SameSite=Lax: Protects against CSRF while allowing top-level navigations
-    - Secure (conditional): Added when SSL is configured
+    - SameSite: Controlled by the `same_site` argument. "Lax" (the default)
+      protects against CSRF while allowing top-level navigations; "None" enables
+      cross-origin (iframe) usage and requires Secure.
+    - Secure (conditional): Added when SSL is configured or `secure` is True.
 
     HttpOnly is intentionally NOT set for XSRF cookies because JavaScript must
     read the cookie value to include it in request headers (double-submit pattern).
@@ -277,6 +304,9 @@ def _set_unquoted_cookie(
         The name of the cookie.
     cookie_value
         The raw cookie value (will not be URL-encoded or quoted).
+    same_site
+        The SameSite attribute value to use (e.g. "Lax", "Strict", or "None").
+        Defaults to "Lax".
     secure
         Whether to add the Secure flag (should be True when using HTTPS).
     """
@@ -285,7 +315,7 @@ def _set_unquoted_cookie(
         [
             f"{cookie_name}={cookie_value}",
             "Path=/",
-            "SameSite=Lax",
+            f"SameSite={same_site}",
             *(["Secure"] if secure else []),
         ]
     )
@@ -662,7 +692,15 @@ def create_upload_routes(
         file_id = request.path_params["file_id"]
 
         if not runtime.is_active_session(session_id):
-            raise HTTPException(status_code=400, detail="Invalid session_id")
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Invalid session_id. This is likely caused by a multi-replica "
+                    "deployment without sticky sessions / session affinity. See "
+                    "https://docs.streamlit.io/develop/concepts/architecture/"
+                    "architecture#websockets-and-session-management"
+                ),
+            )
 
         max_size_bytes = (  # maxUploadSize is in megabytes
             config.get_option("server.maxUploadSize") * 1024 * 1024

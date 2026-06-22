@@ -85,19 +85,20 @@ function Form(props: Props): ReactElement {
   // Determine if we need to show the "missing submit button" warning.
   // If we have a submit button, we don't show the warning, of course.
   // If we *don't* have a submit button, then we only mutate the showWarning
-  // flag when our scriptRunState is NOT_RUNNING. (If the script is still
-  // running, there might be an incoming SubmitButton delta that we just
-  // haven't seen yet.)
+  // flag after render when the script is not running. This gives child
+  // FormSubmitButton components a chance to register themselves first.
   const [showWarning, setShowWarning] = useState(false)
 
-  if (hasSubmitButton && showWarning) {
-    setShowWarning(false)
-  } else if (!hasSubmitButton && !showWarning && scriptNotRunning) {
-    setShowWarning(true)
-  }
+  useEffect(() => {
+    if (hasSubmitButton) {
+      setShowWarning(false)
+    } else if (scriptNotRunning) {
+      setShowWarning(true)
+    }
+  }, [hasSubmitButton, scriptNotRunning])
 
   let submitWarning: ReactElement | undefined
-  if (showWarning) {
+  if (showWarning && !hasSubmitButton) {
     submitWarning = (
       <StyledErrorContainer>
         <AlertElement body={MISSING_SUBMIT_BUTTON_WARNING} kind={Kind.ERROR} />

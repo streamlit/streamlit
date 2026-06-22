@@ -828,19 +828,6 @@ def test_write_stream_chunk_attribute_error_raises(
         st.write_stream(stream)
 
 
-def test_write_bokeh_figure_routes_to_bokeh_chart() -> None:
-    """Route bokeh figures to ``DeltaGenerator.bokeh_chart``."""
-
-    class FakeBokehFigure:
-        pass
-
-    with patch("streamlit.type_util.is_type") as is_type:
-        is_type.side_effect = make_is_type_mock("bokeh.plotting.figure.Figure")
-        with patch("streamlit.delta_generator.DeltaGenerator.bokeh_chart") as p:
-            st.write(FakeBokehFigure())
-            p.assert_called_once()
-
-
 def test_write_pydeck_routes_to_pydeck_chart() -> None:
     """Route pydeck Deck objects to ``DeltaGenerator.pydeck_chart``."""
     import pydeck as pdk

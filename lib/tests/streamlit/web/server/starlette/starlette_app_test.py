@@ -640,6 +640,28 @@ def test_upload_put_adds_file(
     assert stored.data == b"payload"
 
 
+def test_upload_put_inactive_session_explains_session_affinity(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Test that inactive session uploads explain multi-replica deployments."""
+    client, _ = starlette_client
+
+    response = client.put(
+        "_stcore/upload_file/inactive-session/fileid",
+        files={"file": ("foo.txt", b"payload", "text/plain")},
+    )
+
+    assert response.status_code == 400
+    assert "Invalid session_id" in response.text
+    assert "multi-replica deployment without sticky sessions / session affinity" in (
+        response.text
+    )
+    assert (
+        "https://docs.streamlit.io/develop/concepts/architecture/"
+        "architecture#websockets-and-session-management"
+    ) in response.text
+
+
 def test_upload_put_enforces_max_size(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
