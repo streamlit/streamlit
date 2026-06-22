@@ -93,7 +93,7 @@ test = [
   # pytest >= 9.1.0 is causing issues and is not yet supported.
   "pytest>=9.0.3,<9.1.0",
   "pytest-cov",
-  "hypothesis>=6.17.4",
+  "hypothesis>=6.155.3",
   "parameterized",
   "requests-mock",
   "testfixtures",
