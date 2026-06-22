@@ -27,14 +27,8 @@ const tooltipFadeIn = keyframes`
 `
 
 // Pin the overlay to the viewport origin so React Aria's inline left/top
-// values have no visual effect. TooltipContentArea applies the correct
-// position via a JS-computed transform (translate) using getBoundingClientRect(),
-// which is immune to StrictMode double-runs, ResizeObserver cascades, and
-// CSS-transform ancestors in Streamlit's DOM.
-//
-// Stay hidden until React Aria sets data-placement (after updatePosition()
-// runs). By that point our useLayoutEffect transform is already applied,
-// so the tooltip reveals at the correct position without any flash.
+// values have no visual effect. Floating UI positions via transform: translate()
+// applied through the style prop, overriding RAC's useOverlayPosition.
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values -- !important overrides React Aria's inline styles */
 export const StyledTooltip = styled(RATooltip)<{ id?: string }>(
   ({ theme }) => ({
@@ -44,10 +38,6 @@ export const StyledTooltip = styled(RATooltip)<{ id?: string }>(
     width: "max-content",
     zIndex: getOverlayZIndex(theme),
     pointerEvents: "none",
-
-    "&:not([data-placement])": {
-      visibility: "hidden",
-    },
   })
 )
 /* eslint-enable streamlit-custom/no-hardcoded-theme-values */
@@ -81,9 +71,6 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
   overflow: "auto",
   padding: `${theme.spacing.xs} ${theme.spacing.md}`,
 
-  // Fade in after a brief delay. The tooltip is hidden via the overlay's
-  // &:not([data-placement]) rule until React Aria finishes positioning, so
-  // this animation provides a smooth reveal from the correct final position.
   animation: `${tooltipFadeIn} 120ms ease-in 50ms both`,
 
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
