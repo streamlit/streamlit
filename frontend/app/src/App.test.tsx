@@ -6837,8 +6837,9 @@ describe("Skills install nudge", () => {
   })
 
   afterEach(() => {
-    // The nudge renders into the shared (module-level) toast queue; clear it so
-    // it can't leak into the next test, flushing the exit-animation timer.
+    // Drain any app toasts a test enqueued into the shared (module-level)
+    // queue so they can't leak into the next test, flushing exit-animation
+    // timers. (The nudge itself is no longer a queued toast.)
     act(() => {
       toastQueue.visibleToasts.forEach(t => toastQueue.close(t.key))
     })
@@ -7119,5 +7120,31 @@ describe("Skills install nudge", () => {
     // Both stores are written: the browser flag AND the server-side marker.
     expect(window.localStorage.getItem("stSkillsNudgeDismissed")).toBe("true")
     expect(dismissSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("stays visible while an app toast comes and goes (coexistence)", () => {
+    renderApp(getProps())
+    sendRecommendingNewSession()
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+
+    // The app fires its own st.toast. It must coexist with the nudge, not
+    // replace or suppress it — the nudge outranks transient app toasts.
+    act(() => {
+      toastQueue.add({ body: "app toast message" }, { timeout: 4000 })
+    })
+    expect(screen.getByText("app toast message")).toBeVisible()
+    // The nudge is still there alongside the app toast.
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+
+    // The app toast expires on its own timer; the persistent nudge outlives it
+    // (it never fades on a timer and is only dismissed by an explicit action).
+    act(() => {
+      vi.advanceTimersByTime(8000)
+    })
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+    expect(screen.queryByText("app toast message")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
   })
 })

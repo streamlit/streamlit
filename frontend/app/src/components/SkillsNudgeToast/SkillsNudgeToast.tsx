@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useCallback, useEffect, useRef, useState } from "react"
-
-import { type QueuedToast } from "react-aria-components/Toast"
+import { ReactElement, useCallback, useEffect, useState } from "react"
 
 import {
   BaseButton,
@@ -24,15 +22,14 @@ import {
   BaseButtonSize,
   DynamicIcon,
   StyledMessageWrapper,
-  StyledToast,
   StyledToastWrapper,
-  type ToastContent,
   useEmotionTheme,
 } from "@streamlit/lib"
 
 import {
   StyledSkillsNudgeActions,
   StyledSkillsNudgeBody,
+  StyledSkillsNudgeCard,
   StyledSkillsNudgeClose,
   StyledSkillsNudgeError,
   StyledSkillsNudgeHeading,
@@ -45,10 +42,6 @@ const SUCCESS_AUTO_DISMISS_MS = 3000
 type NudgeStatus = "idle" | "installing" | "success" | "error"
 
 export interface SkillsNudgeToastProps {
-  /** The queued toast this nudge renders into (provides the react-aria shell). */
-  toast: QueuedToast<ToastContent>
-  /** Dismiss this toast from the shared queue. */
-  close: () => void
   /**
    * Perform the one-click install. Resolves with an optional detail message
    * (e.g. where the skills were installed) on success, and rejects with an
@@ -59,31 +52,33 @@ export interface SkillsNudgeToastProps {
   onSnooze: () => void
   /** Permanently dismiss the nudge (localStorage + server-side marker). */
   onDontShowAgain: () => void
+  /**
+   * Remove the nudge from view. Called after snooze / don't-show-again and by
+   * the success auto-dismiss. The owner (App) controls visibility, so this
+   * just hides the card; it does not itself persist any preference.
+   */
+  onClose: () => void
 }
 
 /**
- * The framework "install skills" nudge, rendered into the shared toast region
- * (the same react-aria queue/shell that backs ``st.toast``) so it inherits the
- * native toast's positioning, elevation, animation, and accessibility. This is
- * distinct from the app-author ``st.toast`` API: it is injected by Streamlit,
- * not the script, and offers a one-click install of the bundled agent skills.
+ * The framework "install skills" nudge: a standalone, persistent call-to-action
+ * card (distinct from the app-author ``st.toast`` API) that offers a one-click
+ * install of the bundled agent skills. It shares the toast surface's look (via
+ * ``getToastCardStyle``) but is intentionally NOT a queued toast: it must
+ * outrank and outlive transient app toasts and stay put until the developer
+ * acts on it, so it is pinned above the toast region rather than competing
+ * inside the queue.
  */
 function SkillsNudgeToast({
-  toast,
-  close,
   onInstall,
   onSnooze,
   onDontShowAgain,
+  onClose,
 }: Readonly<SkillsNudgeToastProps>): ReactElement {
   const theme = useEmotionTheme()
   const [status, setStatus] = useState<NudgeStatus>("idle")
   const [errorMessage, setErrorMessage] = useState("")
   const [successDetail, setSuccessDetail] = useState("")
-
-  // The toast region hands us a fresh `close` on every render; keep the latest
-  // in a ref so the success auto-dismiss timer below isn't reset each render.
-  const closeRef = useRef(close)
-  closeRef.current = close
 
   const handleInstall = useCallback(() => {
     setStatus("installing")
@@ -102,38 +97,38 @@ function SkillsNudgeToast({
   }, [onInstall])
 
   // Auto-dismiss shortly after a successful install so the confirmation is
-  // visible but the toast does not linger.
+  // visible but the card does not linger. Idle/error states never auto-dismiss
+  // (the nudge persists until the developer acts on it). `onClose` is a stable
+  // bound handler from App, so this effect re-runs only on a status change.
   useEffect(() => {
     if (status !== "success") {
       return undefined
     }
     // eslint-disable-next-line no-restricted-globals -- Timed auto-dismiss of a transient confirmation.
-    const timeoutId = setTimeout(
-      () => closeRef.current(),
-      SUCCESS_AUTO_DISMISS_MS
-    )
+    const timeoutId = setTimeout(onClose, SUCCESS_AUTO_DISMISS_MS)
     return () => clearTimeout(timeoutId)
-  }, [status])
+  }, [status, onClose])
 
   const handleSnooze = useCallback(() => {
     onSnooze()
-    close()
-  }, [onSnooze, close])
+    onClose()
+  }, [onSnooze, onClose])
 
   const handleDontShowAgain = useCallback(() => {
     onDontShowAgain()
-    close()
-  }, [onDontShowAgain, close])
+    onClose()
+  }, [onDontShowAgain, onClose])
 
   const isInstalling = status === "installing"
   const isSuccess = status === "success"
   const isError = status === "error"
 
   return (
-    <StyledToast
-      toast={toast}
+    <StyledSkillsNudgeCard
       data-testid="stSkillsNudge"
       className="stSkillsNudge"
+      role="status"
+      aria-live="polite"
     >
       <StyledToastWrapper>
         <DynamicIcon
@@ -156,7 +151,7 @@ function SkillsNudgeToast({
           ) : (
             <>
               <StyledSkillsNudgeHeading>
-                Help agents write better Streamlit apps
+                Help agents write better Streamlit
               </StyledSkillsNudgeHeading>
               <StyledSkillsNudgeBody>
                 Install the official Streamlit skills so AI coding assistants
@@ -199,7 +194,7 @@ function SkillsNudgeToast({
           <DynamicIcon iconValue=":material/close:" size="base" />
         </StyledSkillsNudgeClose>
       )}
-    </StyledToast>
+    </StyledSkillsNudgeCard>
   )
 }
 

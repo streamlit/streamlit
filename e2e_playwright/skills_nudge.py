@@ -16,3 +16,8 @@ import streamlit as st
 
 st.title("Skills nudge e2e")
 st.write("App used to e2e-test the install-skills nudge toast.")
+
+# Lets the test fire a regular st.toast on demand, to verify it coexists with
+# (and does not displace) the persistent install-skills nudge.
+if st.button("Show toast"):
+    st.toast("App toast message")

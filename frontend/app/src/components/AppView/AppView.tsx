@@ -23,8 +23,6 @@ import {
   useState,
 } from "react"
 
-import { type QueuedToast } from "react-aria-components/Toast"
-
 import Header from "@streamlit/app/src/components/Header/Header"
 import LogoComponent from "@streamlit/app/src/components/Logo/LogoComponent"
 import TopNav from "@streamlit/app/src/components/Navigation/TopNav"
@@ -46,11 +44,9 @@ import {
   ElementNode,
   FileUploadClient,
   IGuestToHostMessage,
-  isCustomToastContent,
   NavigationContext,
   Profiler,
   SidebarConfigContext,
-  type StreamlitToastContent,
   StreamlitToastItem,
   StyledToastRegion,
   ThemeContext,
@@ -75,6 +71,7 @@ import {
   StyledMainContent,
   StyledSidebarBlockContainer,
   StyledStickyBottomContainer,
+  StyledToastColumn,
 } from "./styled-components"
 
 /**
@@ -138,6 +135,14 @@ export interface AppViewProps {
   disableFullscreenMode?: boolean
 
   componentRegistry: ComponentRegistry
+
+  /**
+   * The framework "install skills" nudge, when it should be shown. Rendered
+   * pinned above the toast region so it dominates and outlives app toasts. The
+   * owner (App) builds the element and controls its visibility; AppView only
+   * positions it.
+   */
+  skillsNudge?: React.ReactNode
 }
 
 /**
@@ -162,6 +167,7 @@ function AppView(props: AppViewProps): ReactElement {
     showToolbar,
     disableFullscreenMode,
     componentRegistry,
+    skillsNudge,
   } = props
 
   useEffect(() => {
@@ -447,26 +453,17 @@ function AppView(props: AppViewProps): ReactElement {
           )}
         </Component>
       </StyledMainContent>
-      <StyledToastRegion
-        queue={toastQueue}
-        aria-label="Notifications"
-        data-testid="stToastContainer"
-        className="stToastContainer"
-      >
-        {({ toast }) =>
-          isCustomToastContent(toast.content) ? (
-            // App-level custom toast (e.g. the install-skills nudge): the
-            // framework supplies the content; `close` dismisses it.
-            <>
-              {toast.content.render(toast, () => toastQueue.close(toast.key))}
-            </>
-          ) : (
-            <StreamlitToastItem
-              toast={toast as QueuedToast<StreamlitToastContent>}
-            />
-          )
-        }
-      </StyledToastRegion>
+      <StyledToastColumn data-testid="stToastColumn">
+        {skillsNudge}
+        <StyledToastRegion
+          queue={toastQueue}
+          aria-label="Notifications"
+          data-testid="stToastContainer"
+          className="stToastContainer"
+        >
+          {({ toast }) => <StreamlitToastItem toast={toast} />}
+        </StyledToastRegion>
+      </StyledToastColumn>
       {hasEventElements && (
         <Profiler id="Event">
           <StyledEventBlockContainer className="stEvent" data-testid="stEvent">

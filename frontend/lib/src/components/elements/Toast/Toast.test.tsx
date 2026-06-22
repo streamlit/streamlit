@@ -18,10 +18,7 @@ import { ReactElement } from "react"
 
 import { act, RenderResult, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import {
-  type QueuedToast,
-  UNSTABLE_ToastRegion as ToastRegion,
-} from "react-aria-components/Toast"
+import { UNSTABLE_ToastRegion as ToastRegion } from "react-aria-components/Toast"
 import { MockInstance, vi } from "vitest"
 
 import { Toast as ToastProto } from "@streamlit/protobuf"
@@ -32,7 +29,7 @@ import { render } from "~lib/test_util"
 
 import { StreamlitToastItem } from "./StreamlitToastItem"
 import Toast, { ToastProps } from "./Toast"
-import { type StreamlitToastContent, toastQueue } from "./toastQueue"
+import { toastQueue } from "./toastQueue"
 
 const createContainer = (): ReactElement => (
   <ToastRegion
@@ -40,11 +37,7 @@ const createContainer = (): ReactElement => (
     aria-label="Notifications"
     data-testid="stToastContainer"
   >
-    {({ toast }) => (
-      <StreamlitToastItem
-        toast={toast as QueuedToast<StreamlitToastContent>}
-      />
-    )}
+    {({ toast }) => <StreamlitToastItem toast={toast} />}
   </ToastRegion>
 )
 

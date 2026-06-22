@@ -14,10 +14,31 @@
  * limitations under the License.
  */
 
-import { CSSObject } from "@emotion/react"
+import { CSSObject, keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
 
-import { EmotionTheme } from "@streamlit/lib"
+import { EmotionTheme, getToastCardStyle } from "@streamlit/lib"
+
+/**
+ * The standalone nudge card. Shares the toast surface's look via
+ * ``getToastCardStyle`` (so it stays visually matched to ``st.toast`` without
+ * being routed through the toast queue) and adds a slide-in entrance that
+ * honors ``prefers-reduced-motion``. Positioning is supplied by the toast
+ * column it is pinned to in ``AppView``.
+ */
+export const StyledSkillsNudgeCard = styled.div(({ theme }) => {
+  const slideIn = keyframes({
+    from: { opacity: 0, transform: `translateX(${theme.spacing.threeXL})` },
+    to: { opacity: 1, transform: "translateX(0)" },
+  })
+  return {
+    ...getToastCardStyle(theme),
+    animation: `${slideIn} 0.2s ease-out`,
+    "@media (prefers-reduced-motion: reduce)": {
+      animation: "none",
+    },
+  }
+})
 
 /**
  * Shared reset + interaction styles for the toast's borderless buttons (the

@@ -68,12 +68,12 @@ def app_server(
 def test_skills_nudge_shows_and_dismisses(
     app: Page, assert_snapshot: ImageCompareFunction
 ) -> None:
-    """The nudge appears in local dev with an agent but no skills, can be
-    permanently dismissed, and stays gone after a reload.
+    """The nudge appears in local dev with an agent but no skills, coexists with
+    app toasts, can be permanently dismissed, and stays gone after a reload.
     """
     nudge = app.get_by_test_id("stSkillsNudge")
     expect(nudge).to_be_visible()
-    expect(nudge).to_contain_text("Help agents write better Streamlit apps")
+    expect(nudge).to_contain_text("Help agents write better Streamlit")
     expect(nudge.get_by_role("button", name="Install")).to_be_visible()
     expect(nudge.get_by_role("button", name="Don't show again")).to_be_visible()
     # The close (✕) control exposes an accessible "Dismiss" name.
@@ -82,7 +82,20 @@ def test_skills_nudge_shows_and_dismisses(
     # Snapshot the idle toast before any interaction mutates its state.
     assert_snapshot(nudge, name="skills_nudge-idle")
 
-    # Permanently dismiss; the toast disappears immediately.
+    # The nudge coexists with regular app toasts: firing an st.toast must not
+    # displace or hide the persistent nudge. Trigger one from the app script.
+    app.get_by_role("button", name="Show toast").click()
+    toast = app.get_by_test_id("stToast").filter(has_text="App toast message")
+    expect(toast).to_be_visible()
+    # The nudge is still there alongside the app toast (it is not replaced).
+    expect(nudge).to_be_visible()
+
+    # The app toast auto-dismisses on its own timer; the nudge persists (it
+    # never fades on a timer — only an explicit action dismisses it).
+    expect(toast).not_to_be_visible()
+    expect(nudge).to_be_visible()
+
+    # Permanently dismiss; the nudge disappears immediately.
     nudge.get_by_role("button", name="Don't show again").click()
     expect(nudge).not_to_be_visible()
 

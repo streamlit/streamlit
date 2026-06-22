@@ -238,3 +238,24 @@ export const StyledMainContent = styled.div(({ theme }) => ({
     position: "relative",
   },
 }))
+
+/**
+ * Fixed top-right column that stacks the framework "install skills" nudge (when
+ * shown) above the ``st.toast`` region. The nudge is pinned to the top of this
+ * column so it always outranks app toasts, which flow in below it and expire on
+ * their own timers — letting the persistent nudge coexist with, and visually
+ * dominate, transient app notifications. Carries the fixed positioning that
+ * would otherwise live on ``StyledToastRegion`` so both children share one
+ * anchor and never overlap.
+ */
+export const StyledToastColumn = styled.div(({ theme }) => ({
+  position: "fixed",
+  top: theme.sizes.headerHeight,
+  right: 0,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-end",
+  zIndex: theme.zIndices.toast,
+  marginLeft: theme.spacing.lg,
+  marginRight: theme.spacing.lg,
+}))

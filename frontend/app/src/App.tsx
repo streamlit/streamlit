@@ -111,7 +111,6 @@ import {
   SessionInfo,
   sortThemeInputKeys,
   ThemeConfig,
-  toastQueue,
   toExportedTheme,
   WidgetStateManager,
 } from "@streamlit/lib"
@@ -243,6 +242,11 @@ interface State {
   autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
   scriptChangedOnDisk: boolean
+  // Whether the framework "install skills" nudge is currently shown. Set once
+  // per page load in handleInitialization when the server recommends it (and
+  // the localhost / dismissal / snooze gates pass), and cleared when the
+  // developer installs, snoozes (✕), or picks "Don't show again".
+  showSkillsNudge: boolean
 }
 
 export const LOG = getLogger("App")
@@ -387,6 +391,7 @@ export class App extends PureComponent<Props, State> {
       inputsDisabled: false,
       navigationPosition: Navigation.Position.SIDEBAR,
       scriptChangedOnDisk: false,
+      showSkillsNudge: false,
     }
 
     this.connectionManager = null
@@ -1508,7 +1513,7 @@ export class App extends PureComponent<Props, State> {
       !this.skillsNudgeShown
     ) {
       this.skillsNudgeShown = true
-      this.showSkillsNudge()
+      this.setState({ showSkillsNudge: true })
       this.trackSkillsNudge("skillsNudgeShown")
     }
   }
@@ -1569,7 +1574,7 @@ export class App extends PureComponent<Props, State> {
       .requestInstallSkills()
       .then(result => {
         // Mark dismissed so the nudge doesn't reappear after a successful
-        // install. The toast shows its own success confirmation.
+        // install. The card shows its own success confirmation.
         this.setSkillsNudgeDismissed()
         this.trackSkillsNudge("skillsNudgeInstallSucceeded")
         return result.detail ?? undefined
@@ -1581,7 +1586,7 @@ export class App extends PureComponent<Props, State> {
       })
   }
 
-  /** Close (✕): snooze the nudge for ~24h. The toast closes itself. */
+  /** Close (✕): snooze the nudge for ~24h. The card removes itself via onClose. */
   private readonly handleSkillsNudgeSnooze = (): void => {
     if (localStorageAvailable()) {
       window.localStorage.setItem(
@@ -1595,7 +1600,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * "Don't show again": dismiss permanently by writing both the browser
    * localStorage flag and the server-side marker, so it won't show again from
-   * either signal. The toast closes itself.
+   * either signal. The card removes itself via onClose.
    */
   private readonly handleSkillsNudgeDontShowAgain = (): void => {
     this.setSkillsNudgeDismissed()
@@ -1609,25 +1614,13 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Enqueue the framework "install skills" nudge into the shared toast queue
-   * (the same react-aria queue/shell that backs ``st.toast``). Persistent (no
-   * auto-timeout); the toast dismisses itself on install / snooze / don't-show.
+   * Remove the nudge from view. Called by the nudge card after a snooze /
+   * "Don't show again" and by its post-install auto-dismiss. Only toggles
+   * visibility; the persistence (localStorage / server marker) is handled by
+   * the snooze / don't-show-again / install handlers.
    */
-  private readonly showSkillsNudge = (): void => {
-    toastQueue.add(
-      {
-        render: (toast, close) => (
-          <SkillsNudgeToast
-            toast={toast}
-            close={close}
-            onInstall={this.handleSkillsNudgeInstall}
-            onSnooze={this.handleSkillsNudgeSnooze}
-            onDontShowAgain={this.handleSkillsNudgeDontShowAgain}
-          />
-        ),
-      },
-      { timeout: undefined }
-    )
+  private readonly handleSkillsNudgeClose = (): void => {
+    this.setState({ showSkillsNudge: false })
   }
 
   /**
@@ -2665,6 +2658,16 @@ export class App extends PureComponent<Props, State> {
               showToolbar={showToolbar}
               disableFullscreenMode={libConfig.disableFullscreenMode}
               componentRegistry={this.componentRegistry}
+              skillsNudge={
+                this.state.showSkillsNudge ? (
+                  <SkillsNudgeToast
+                    onInstall={this.handleSkillsNudgeInstall}
+                    onSnooze={this.handleSkillsNudgeSnooze}
+                    onDontShowAgain={this.handleSkillsNudgeDontShowAgain}
+                    onClose={this.handleSkillsNudgeClose}
+                  />
+                ) : undefined
+              }
               topRightContent={
                 <>
                   {!hideTopBar && (

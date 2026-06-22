@@ -165,6 +165,38 @@ describe("AppView element", () => {
     })
   })
 
+  it("pins the skills nudge above the toast region and coexists with toasts", () => {
+    render(
+      <AppView
+        {...getProps({
+          skillsNudge: <div data-testid="stSkillsNudge">nudge</div>,
+        })}
+      />
+    )
+
+    const column = screen.getByTestId("stToastColumn")
+    const nudge = screen.getByTestId("stSkillsNudge")
+    expect(nudge).toBeVisible()
+    // The nudge is the first child of the column, so it sits above any toasts.
+    expect(column.firstElementChild).toBe(nudge)
+
+    // An app toast renders alongside the nudge, not in place of it.
+    act(() => {
+      toastQueue.add({ body: "coexisting toast" }, { timeout: undefined })
+    })
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+    expect(screen.getByText("coexisting toast")).toBeVisible()
+    // The nudge still leads the column even after the toast region mounts.
+    expect(column.firstElementChild).toBe(nudge)
+
+    // Clean up
+    act(() => {
+      toastQueue.visibleToasts.forEach((t: { key: string }) =>
+        toastQueue.close(t.key)
+      )
+    })
+  })
+
   it("does not render a sidebar when there are no elements and only one page", () => {
     render(<AppView {...getProps()} />)
 
