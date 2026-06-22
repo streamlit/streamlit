@@ -42,10 +42,10 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.badge` | Display a colored badge with an icon and label. Useful for compact status, category, or metadata indicators. |
 | `st.balloons` | Draw a celebratory balloon animation. Use sparingly for success moments or lightweight feedback. |
 | `st.bar_chart` | Display a bar chart from data. It is a native chart command for straightforward categorical or binned comparisons. |
-| `st.bokeh_chart` | Display an interactive Bokeh chart. Use when the app already uses Bokeh or needs Bokeh-specific chart features. |
+| `st.bokeh_chart` | No-op compatibility command for the removed Bokeh integration. Use the `streamlit-bokeh` component instead: https://github.com/streamlit/streamlit-bokeh. |
 | `st.button` | Display a button widget. It returns `True` on the rerun triggered by a click and supports callbacks through `on_click`. |
 | `st.cache` | Deprecated caching decorator, kept only as an alias for the newer caches. Do not use in new code; prefer `st.cache_data` for serializable data and `st.cache_resource` for shared resources. |
-| `st.cache_data` | Decorator for caching functions that return data. Use it for serializable data-loading or computation results, and use `st.cache_data.clear()` when caches need to be cleared. |
+| `st.cache_data` | Decorator for caching functions that return data. Use it for serializable data-loading or computation results. |
 | `st.cache_resource` | Decorator for caching shared resources. Use it for objects such as database connections, ML models, clients, or other expensive process-wide resources. |
 | `st.camera_input` | Display a webcam input widget. It returns an `UploadedFile` with the captured image when the user takes a picture, and `None` before then. |
 | `st.caption` | Display small caption text. Use for secondary text, notes, or metadata beneath primary content. |
