@@ -2442,6 +2442,84 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
         assert result.value == "custom_value"
         assert result.value_changed is False
 
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_true_when_persisted_value_restored(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A remounted persist_state widget tells the frontend to adopt the
+        preserved value instead of the element default."""
+        widget_id = "$$ID-hash-my_widget"
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
+        metadata = _create_persist_state_metadata(widget_id, "session")
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_false_for_non_persisted_remount(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A plain (persist_state=None) widget does not signal value_changed
+        on remount, so the restore behavior is specific to persisted widgets."""
+        widget_id = "$$ID-hash-my_widget"
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
+        metadata = _create_persist_state_metadata(widget_id, None)
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value_changed is False
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_true_after_full_preserve_cycle(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """After a persist_state widget is preserved while unmounted, remounting
+        it returns value_changed=True so the frontend adopts the kept value."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "session")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(set())
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_true_for_programmatic_set_in_old_state(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A programmatic value compacted into old state under the user key is
+        pushed to a persisted widget on its first mount this run."""
+        widget_id = "$$ID-hash-my_widget"
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
+        metadata = _create_persist_state_metadata(widget_id, "page")
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
 
 class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
     """Tests conditional remount behavior for bound vs unbound widgets."""

@@ -1158,15 +1158,35 @@ class SessionState:
             else:
                 self.query_params.discard_param_no_forward_msg(user_key)
 
+        # A persist_state widget that resolves to a non-default value carried
+        # over from a previous run (preserved while unmounted, or a programmatic
+        # set that has since been compacted into old state) must tell the
+        # frontend to adopt the backend value when the widget (re)mounts.
+        # Otherwise the freshly mounted widget renders at its default and the
+        # next rerun overwrites the preserved value with that default.
+        restored_persisted_value = False
+        if (
+            metadata.persist_state is not None
+            and user_key is not None
+            and not self.is_new_state_value(user_key)
+            and widget_id not in self._new_widget_state
+            and (widget_id in self._old_state or user_key in self._old_state)
+        ):
+            default_value = metadata.deserializer(None)
+            if widget_value != default_value:
+                restored_persisted_value = True
+
         # widget_value_changed indicates to the caller that the widget's
         # current value is different from what is in the frontend.
-        # Also true when a preserved bound value was restored to the URL —
+        # Also true when a preserved bound or persisted value was restored —
         # the frontend is rendering the widget for the first time on this page
         # and needs to be told to use the backend's resolved value instead of
         # the widget's default.
         widget_value_changed = (
-            user_key is not None and self.is_new_state_value(user_key)
-        ) or restored_bound_value
+            (user_key is not None and self.is_new_state_value(user_key))
+            or restored_bound_value
+            or restored_persisted_value
+        )
 
         return RegisterWidgetResult(widget_value, widget_value_changed)
 
