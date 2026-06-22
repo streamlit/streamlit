@@ -303,10 +303,11 @@ def test_multiselect_esc_without_default_clears_selection(app: Page):
     select_for_multiselect(app, "multiselect esc no default", "Red", False)
     expect_text(app, "value esc no default: ['Green', 'Red']")
 
+    multiselect_input = _get_multiselect_input(app, "multiselect esc no default")
     # First ESC closes the open dropdown.
-    app.keyboard.press("Escape")
+    multiselect_input.press("Escape")
     # Second ESC (dropdown already closed) clears the selection.
-    app.keyboard.press("Escape")
+    multiselect_input.press("Escape")
     wait_for_app_run(app)
 
     expect(
