@@ -33,7 +33,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | API | Summary |
 |-----|---------|
 | **Top-level commands** | |
-| `st.App` | ASGI-compatible Streamlit application. Use when embedding Streamlit in an ASGI server and verify the current docstring for exact setup and parameters. |
+| `st.App` | ASGI-compatible Streamlit application. Use it for advanced server configuration, including custom routes, startup and shutdown lifecycle hooks, custom middleware, custom exception handlers, FastAPI integration, and programmatic secrets. |
 | `st.Page` | Configure a page for `st.navigation` in a multipage app. It creates a page object from a Python file or callable with optional title, icon, URL path, default status, and visibility. |
 | `st.altair_chart` | Display a chart using the Vega-Altair library. Use it when native charts are not expressive enough and you need Altair's encodings, layers, tooltips, or interactions. |
 | `st.area_chart` | Display an area chart. Use it for common area-chart cases with Streamlit-managed rendering. |
@@ -44,8 +44,8 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.bar_chart` | Display a bar chart. Use it for straightforward categorical or binned comparisons. |
 | `st.button` | Display a button widget. It returns `True` on the rerun triggered by a click and supports callbacks through `on_click`. |
 | `st.cache` | Legacy caching decorator (deprecated). Do not use in new code; prefer `st.cache_data` for serializable data and `st.cache_resource` for shared resources. |
-| `st.cache_data` | Implements the public `st.cache_data` API: the `@st.cache_data` decorator and `st.cache_data.clear()`. Use it for serializable data-loading or computation results. |
-| `st.cache_resource` | Implements the public `st.cache_resource` API: the `@st.cache_resource` decorator and `st.cache_resource.clear()`. Use it for shared resources such as database connections, ML models, clients, or other expensive process-wide objects. |
+| `st.cache_data` | Cache the return value of a function. Use it for expensive computations or data-loading steps that return serializable data; each caller receives a copy of the cached value. |
+| `st.cache_resource` | Cache a shared resource returned by a function. Use it for global objects such as database connections, ML models, or clients that should be reused across reruns and sessions. |
 | `st.camera_input` | Display a widget that returns pictures from the user's webcam. It returns an `UploadedFile` with the captured image when the user takes a picture, and `None` before then. |
 | `st.caption` | Display text in small font. Use it for secondary text, notes, or metadata beneath primary content. |
 | `st.chat_input` | Display a chat input widget. It is designed for conversational apps and returns the submitted message or uploaded files depending on configuration. |
