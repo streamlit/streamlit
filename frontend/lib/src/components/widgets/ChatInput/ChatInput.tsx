@@ -100,7 +100,19 @@ import {
 } from "./styled-components"
 
 type SubmittedRunScope = {
+  /** The fragment that owns the chat input, or null for a page-level widget. */
   fragmentId: string | null
+  /**
+   * The scriptRunId that was active when the message was submitted. The run we
+   * trigger always receives a new id once it starts, so this lets us ignore the
+   * completion of whatever run happened to be active at submit time and avoid
+   * re-enabling the widget too early.
+   */
+  scriptRunIdAtSubmit: string
+  /**
+   * The scriptRunFinishedSequence at submit time. We only react to run
+   * completions that are reported after this baseline.
+   */
   scriptRunFinishedSequence: number
 }
 
@@ -159,9 +171,9 @@ function ChatInput({
   const acceptAudio = element.acceptAudio ?? false
 
   const {
-    fragmentIdsThisRun,
     scriptRunFinishedFragmentIds,
     scriptRunFinishedSequence,
+    scriptRunId,
     scriptRunState,
     stopScript,
   } = useContext(ScriptRunContext)
@@ -381,48 +393,54 @@ function ChatInput({
     [submittedRunScope]
   )
 
-  // Reset submission tracking once a newer scriptFinished signal arrives for the
-  // run this chat input triggered. The sequence guard avoids resetting too early:
-  // right after submit the context can still be NOT_RUNNING (with an unchanged
-  // sequence) until the rerun request is processed. We re-enable the widget when:
-  //   - the matching full-script or fragment run completes (also covers the case
-  //     where the handler calls st.rerun() and a follow-up run starts at once), or
-  //   - the app goes idle without that run reporting completion (safety net).
+  // Reset submission tracking once the run this chat input triggered reports
+  // completion. We only act on a scriptFinished that:
+  //   1. is reported after the submission (sequence guard), and
+  //   2. belongs to a run that started after the submission. The run we trigger
+  //      always gets a new scriptRunId once it starts, so ignoring the id that
+  //      was active at submit time prevents re-enabling the widget when an
+  //      unrelated run that was already in flight finishes.
+  // We then re-enable when the completion matches our run: the same fragment, or
+  // any full-script run (which supersedes pending fragment work and also covers
+  // st.rerun(), stops, and compilation errors that report no fragment ids).
   useEffect(() => {
     if (
       submittedRunScope === undefined ||
-      scriptRunFinishedSequence <= submittedRunScope.scriptRunFinishedSequence
+      scriptRunFinishedSequence <=
+        submittedRunScope.scriptRunFinishedSequence ||
+      scriptRunId === submittedRunScope.scriptRunIdAtSubmit
     ) {
       return
     }
 
     if (
-      scriptRunState === ScriptRunState.NOT_RUNNING ||
-      submittedRunMatchesFragmentIds(scriptRunFinishedFragmentIds)
+      submittedRunMatchesFragmentIds(scriptRunFinishedFragmentIds) ||
+      scriptRunFinishedFragmentIds.length === 0
     ) {
       setSubmittedRunScope(undefined)
     }
   }, [
     scriptRunFinishedFragmentIds,
     scriptRunFinishedSequence,
-    scriptRunState,
+    scriptRunId,
     submittedRunMatchesFragmentIds,
     submittedRunScope,
     setSubmittedRunScope,
   ])
 
-  // submit_mode state: determine if widget is in running mode and which button to show
+  // submit_mode state: determine if widget is in running mode and which button to show.
+  // In "disable" and "stop" modes, the widget enters running mode the moment the
+  // user submits (submittedRunScope is set) and stays there until the run it
+  // triggered completes. We intentionally do not wait for scriptRunState to flip
+  // to RUNNING/RERUN_REQUESTED: widget submissions send the rerun request
+  // directly without first moving the app into RERUN_REQUESTED, which would
+  // otherwise leave a window where the input stays enabled (and shows no stop
+  // button) until the server reports the run.
   const stopRequested = scriptRunState === ScriptRunState.STOP_REQUESTED
-  const submittedRunIsPending =
-    scriptRunState === ScriptRunState.RERUN_REQUESTED || stopRequested
-  const submittedRunIsActive =
-    scriptRunState === ScriptRunState.RUNNING &&
-    submittedRunMatchesFragmentIds(fragmentIdsThisRun)
   const isInRunningMode =
     !disabled &&
     submittedRunScope !== undefined &&
-    submitMode !== ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT &&
-    (submittedRunIsPending || submittedRunIsActive)
+    submitMode !== ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT
   // Once the user has requested a stop, the stop button has done its job: revert
   // to the (disabled) send button so the click is acknowledged immediately,
   // even if the script keeps running until a blocking call returns.
@@ -625,6 +643,7 @@ function ChatInput({
         // to null so the run-scope matcher treats them as full-script runs.
         setSubmittedRunScope({
           fragmentId: fragmentId || null,
+          scriptRunIdAtSubmit: scriptRunId,
           scriptRunFinishedSequence,
         })
       }
@@ -651,6 +670,7 @@ function ChatInput({
       fragmentId,
       autoExpand,
       submitMode,
+      scriptRunId,
       scriptRunFinishedSequence,
       setSubmittedRunScope,
     ]
@@ -892,7 +912,7 @@ function ChatInput({
     showStopButton ? (
       <StyledSendIconButton
         onClick={stopScript}
-        disabled={false}
+        disabled={disabled}
         data-testid="stChatInputStopButton"
         aria-label="Stop script"
         primary

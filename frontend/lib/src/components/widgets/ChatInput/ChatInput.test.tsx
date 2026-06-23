@@ -1141,6 +1141,33 @@ describe("ChatInput widget", () => {
       expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
     })
 
+    it("disables input immediately on submit before the server reports the run", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLE,
+      })
+
+      // The app is idle: widget submissions send the rerun request directly
+      // without first moving the app into RERUN_REQUESTED/RUNNING.
+      renderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+        },
+      })
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      expect(chatInput).not.toBeDisabled()
+
+      // Submit without simulating any scriptRunState change. The input must be
+      // disabled right away so no further messages can be submitted in the
+      // window before the server reports the run.
+      await user.type(chatInput, "Hello{enter}")
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
+      })
+    })
+
     it("keeps running state across chat input remounts", async () => {
       const user = userEvent.setup()
       const props = getProps({
@@ -1307,25 +1334,31 @@ describe("ChatInput widget", () => {
       const chatInput = screen.getByTestId("stChatInputTextArea")
       await user.type(chatInput, "Hello{enter}")
 
-      // Simulate RUNNING state
+      // Simulate the triggered run starting (it gets a fresh scriptRunId).
       rerenderWithContexts(<ChatInput {...props} />, {
         scriptRunContext: {
           scriptRunState: ScriptRunState.RUNNING,
+          scriptRunId: "triggered-run",
         },
       })
 
       // Verify textarea is disabled during running
       expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
 
-      // Simulate script completion (back to NOT_RUNNING)
+      // Simulate the triggered run finishing (scriptFinished bumps the sequence).
       rerenderWithContexts(<ChatInput {...props} />, {
         scriptRunContext: {
           scriptRunState: ScriptRunState.NOT_RUNNING,
+          scriptRunId: "triggered-run",
+          scriptRunFinishedSequence: 1,
+          scriptRunFinishedFragmentIds: [],
         },
       })
 
       // Verify textarea is re-enabled
-      expect(screen.getByTestId("stChatInputTextArea")).not.toBeDisabled()
+      await waitFor(() => {
+        expect(screen.getByTestId("stChatInputTextArea")).not.toBeDisabled()
+      })
     })
 
     it("re-enables input after the submitted run finishes early for st.rerun", async () => {
@@ -1349,13 +1382,18 @@ describe("ChatInput widget", () => {
       rerenderWithContexts(<ChatInput {...props} />, {
         scriptRunContext: {
           scriptRunState: ScriptRunState.RUNNING,
+          scriptRunId: "triggered-run",
         },
       })
       expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
 
+      // The triggered run finishes early to make room for a follow-up rerun
+      // (st.rerun): scriptFinished bumps the sequence even though the app is
+      // already heading into the next run.
       rerenderWithContexts(<ChatInput {...props} />, {
         scriptRunContext: {
           scriptRunState: ScriptRunState.RERUN_REQUESTED,
+          scriptRunId: "triggered-run",
           scriptRunFinishedSequence: 1,
           scriptRunFinishedFragmentIds: [],
         },
@@ -1387,15 +1425,17 @@ describe("ChatInput widget", () => {
       rerenderWithContexts(<ChatInput {...props} />, {
         scriptRunContext: {
           scriptRunState: ScriptRunState.RUNNING,
-          fragmentIdsThisRun: [],
+          scriptRunId: "page-run",
         },
       })
       expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
 
+      // An unrelated fragment run (different scriptRunId) finishes. Its
+      // completion must not re-enable a page-level input.
       rerenderWithContexts(<ChatInput {...props} />, {
         scriptRunContext: {
           scriptRunState: ScriptRunState.RUNNING,
-          fragmentIdsThisRun: [],
+          scriptRunId: "other-fragment-run",
           scriptRunFinishedSequence: 1,
           scriptRunFinishedFragmentIds: ["other-fragment"],
         },
@@ -1428,17 +1468,71 @@ describe("ChatInput widget", () => {
       rerenderWithContexts(<ChatInput {...props} />, {
         scriptRunContext: {
           scriptRunState: ScriptRunState.RUNNING,
+          scriptRunId: "chat-fragment-run",
           fragmentIdsThisRun: ["chat-fragment"],
         },
       })
       expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
 
+      // The fragment run we triggered finishes (matching fragment id, new
+      // scriptRunId), so the input re-enables.
       rerenderWithContexts(<ChatInput {...props} />, {
         scriptRunContext: {
           scriptRunState: ScriptRunState.RUNNING,
+          scriptRunId: "chat-fragment-run",
           fragmentIdsThisRun: [],
           scriptRunFinishedSequence: 1,
           scriptRunFinishedFragmentIds: ["chat-fragment"],
+        },
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stChatInputTextArea")).not.toBeDisabled()
+      })
+    })
+
+    it("stays disabled when the run active at submit time finishes", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLE,
+      })
+
+      // A different run is already in flight when the user submits.
+      const { rerenderWithContexts } = renderWithContexts(
+        <ChatInput {...props} />,
+        {
+          scriptRunContext: {
+            scriptRunState: ScriptRunState.RUNNING,
+            scriptRunId: "in-flight-run",
+          },
+        }
+      )
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "Hello{enter}")
+      expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
+
+      // The run that was active at submit time finishes. Because it keeps the
+      // same scriptRunId, it must not be mistaken for the run we triggered, so
+      // the input stays disabled.
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+          scriptRunId: "in-flight-run",
+          scriptRunFinishedSequence: 1,
+          scriptRunFinishedFragmentIds: [],
+        },
+      })
+      expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
+
+      // Once our own run starts (new scriptRunId) and finishes, the input
+      // re-enables.
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+          scriptRunId: "triggered-run",
+          scriptRunFinishedSequence: 2,
+          scriptRunFinishedFragmentIds: [],
         },
       })
 
