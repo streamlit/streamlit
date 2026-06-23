@@ -22,6 +22,7 @@ import {
   RenderResult,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react"
 import userEvent, {
   PointerEventsCheckLevel,
@@ -7090,6 +7091,7 @@ describe("Skills install nudge", () => {
     expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeShown",
+      surface: "toast",
     })
   })
 
@@ -7114,10 +7116,12 @@ describe("Skills install nudge", () => {
     // (containerized/remote) slice of the agent-harness audience.
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeSuppressedNonLocal:private",
+      surface: "toast",
     })
     // And no (false) impression is logged.
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeShown",
+      surface: "toast",
     })
   })
 
@@ -7166,6 +7170,7 @@ describe("Skills install nudge", () => {
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeShown",
+      surface: "toast",
     })
   })
 
@@ -7191,6 +7196,7 @@ describe("Skills install nudge", () => {
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeShown",
+      surface: "toast",
     })
   })
 
@@ -7250,6 +7256,7 @@ describe("Skills install nudge", () => {
 
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstall",
+      surface: "toast",
     })
   })
 
@@ -7269,10 +7276,12 @@ describe("Skills install nudge", () => {
     expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallSucceeded",
+      surface: "toast",
     })
     // The failure outcome must not be reported on success.
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallFailed",
+      surface: "toast",
     })
     expect(installSpy).toHaveBeenCalledTimes(1)
   })
@@ -7296,9 +7305,11 @@ describe("Skills install nudge", () => {
     expect(screen.queryByText("Skills installed")).not.toBeInTheDocument()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallFailed",
+      surface: "toast",
     })
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallSucceeded",
+      surface: "toast",
     })
   })
 
@@ -7320,9 +7331,11 @@ describe("Skills install nudge", () => {
     // funnel) — and surfaced with a reassuring, retry-friendly message.
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallDropped",
+      surface: "toast",
     })
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallFailed",
+      surface: "toast",
     })
     expect(screen.getByText(/Lost connection during install/)).toBeVisible()
     expect(screen.getByRole("button", { name: "Retry" })).toBeVisible()
@@ -7343,6 +7356,7 @@ describe("Skills install nudge", () => {
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeSnoozed",
+      surface: "toast",
     })
     expect(window.localStorage.getItem("stSkillsNudgeSnoozedAt")).toBeTruthy()
   })
@@ -7367,6 +7381,7 @@ describe("Skills install nudge", () => {
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeDontShowAgain",
+      surface: "toast",
     })
     // Both stores are written: the browser flag AND the server-side marker.
     expect(window.localStorage.getItem("stSkillsNudgeDismissed")).toBe("true")
@@ -7397,5 +7412,229 @@ describe("Skills install nudge", () => {
     })
     expect(screen.queryByText("app toast message")).not.toBeInTheDocument()
     expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+  })
+
+  it("shows the in-error callout alongside the toast and tracks the errorCallout surface", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const installSpy = vi
+      .spyOn(BackendOperationClient.prototype, "requestInstallSkills")
+      .mockResolvedValue({ detail: "Installed to .agents/skills" })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendForwardMessage("sessionStatusChanged", {
+      runOnSave: false,
+      scriptIsRunning: true,
+    })
+    sendRecommendingNewSession()
+    sendForwardMessage("navigation", {
+      appPages: [
+        {
+          pageScriptHash: "page_script_hash",
+          pageName: "streamlit app",
+          urlPathname: "streamlit_app",
+          isDefault: true,
+        },
+      ],
+      pageScriptHash: "page_script_hash",
+      position: Navigation.Position.SIDEBAR,
+      sections: [],
+    })
+
+    // Render an error in the app body (an uncaught-style exception element).
+    sendForwardMessage(
+      "delta",
+      {
+        type: "newElement",
+        newElement: {
+          type: "exception",
+          exception: {
+            type: "RuntimeError",
+            message: "boom",
+            stackTrace: ["line 1", "line 2"],
+            isWarning: false,
+          },
+        },
+      },
+      { deltaPath: [0, 0], activeScriptHash: "hash1" }
+    )
+
+    // The proactive toast and the in-error callout coexist — they are visually
+    // distinct and the in-context offer at the error is worth the small overlap.
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+    const callout = await screen.findByTestId("stSkillsInstallCallout")
+    expect(callout).toBeVisible()
+    // The callout's impression is attributed to the error-callout surface.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+      surface: "errorCallout",
+    })
+
+    await user.click(
+      within(callout).getByRole("button", { name: "Install skills" })
+    )
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstall",
+      surface: "errorCallout",
+    })
+    expect(installSpy).toHaveBeenCalledTimes(1)
+  })
+
+  /** Connect, mark the script running, recommend skills, and select a page. */
+  const connectRunRecommendNavigate = (): void => {
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendForwardMessage("sessionStatusChanged", {
+      runOnSave: false,
+      scriptIsRunning: true,
+    })
+    sendRecommendingNewSession()
+    sendForwardMessage("navigation", {
+      appPages: [
+        {
+          pageScriptHash: "page_script_hash",
+          pageName: "streamlit app",
+          urlPathname: "streamlit_app",
+          isDefault: true,
+        },
+      ],
+      pageScriptHash: "page_script_hash",
+      position: Navigation.Position.SIDEBAR,
+      sections: [],
+    })
+  }
+
+  /** Render an uncaught-style exception element into the app body. */
+  const sendErrorElement = (deltaPath: number[] = [0, 0]): void => {
+    sendForwardMessage(
+      "delta",
+      {
+        type: "newElement",
+        newElement: {
+          type: "exception",
+          exception: {
+            type: "RuntimeError",
+            message: "boom",
+            stackTrace: ["line 1"],
+            isWarning: false,
+          },
+        },
+      },
+      { deltaPath, activeScriptHash: "hash1" }
+    )
+  }
+
+  it("does not show the in-error callout in an embedded app", async () => {
+    // Embedded (?embed=true) apps are chromeless; neither surface should show
+    // even on an error. This specifically guards the callout's !isEmbed gate
+    // (embedding does not affect the exception box's own localhost link gate).
+    vi.mocked(isEmbed).mockReturnValue(true)
+    renderApp(getProps())
+    connectRunRecommendNavigate()
+    sendErrorElement()
+
+    await screen.findByTestId("stException")
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not show the in-error callout when not on localhost", async () => {
+    mockWindowLocation("myapp.streamlit.app")
+    renderApp(getProps())
+    connectRunRecommendNavigate()
+    sendErrorElement()
+
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not re-offer the callout after skills are installed this session", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockResolvedValue({ detail: "Installed to .agents/skills" })
+    renderApp(getProps())
+    connectRunRecommendNavigate()
+    sendErrorElement([0, 0])
+
+    // Install from the callout (which shows alongside the toast).
+    const callout = await screen.findByTestId("stSkillsInstallCallout")
+    await user.click(
+      within(callout).getByRole("button", { name: "Install skills" })
+    )
+    await act(async () => {
+      await Promise.resolve()
+    })
+    // The success confirmation lingers, then the callout removes itself.
+    act(() => {
+      vi.advanceTimersByTime(2500)
+    })
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+
+    // A later error in the same session must NOT re-offer the install — the
+    // skills are already installed (the server only re-detects next session).
+    sendErrorElement([0, 1])
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+  })
+
+  it("logs the errorCallout impression only once even when the error remounts", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    connectRunRecommendNavigate()
+    sendErrorElement([0, 0])
+    await screen.findByTestId("stSkillsInstallCallout")
+
+    const shownCount = (): number =>
+      (metricsManager.enqueue as ReturnType<typeof vi.fn>).mock.calls.filter(
+        ([event, payload]) =>
+          event === "menuClick" &&
+          payload?.label === "skillsNudgeShown" &&
+          payload?.surface === "errorCallout"
+      ).length
+    expect(shownCount()).toBe(1)
+
+    // Replace the error with a non-error element so the callout unmounts...
+    sendForwardMessage(
+      "delta",
+      {
+        type: "newElement",
+        newElement: { type: "text", text: { body: "ok" } },
+      },
+      { deltaPath: [0, 0], activeScriptHash: "hash1" }
+    )
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("stSkillsInstallCallout")
+      ).not.toBeInTheDocument()
+    )
+
+    // ...then bring the error back so the callout remounts. The impression must
+    // NOT be logged again (once per page load, like the toast).
+    sendErrorElement([0, 0])
+    await screen.findByTestId("stSkillsInstallCallout")
+    expect(shownCount()).toBe(1)
   })
 })

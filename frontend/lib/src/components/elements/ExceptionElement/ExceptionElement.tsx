@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useContext } from "react"
+import { memo, ReactElement, useCallback, useContext, useState } from "react"
 
 import { Config, Exception as ExceptionProto } from "@streamlit/protobuf"
 import { isLocalhost } from "@streamlit/utils"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import {
+  SkillsInstallContext,
+  useSkillsCalloutSlot,
+} from "~lib/components/core/SkillsInstallContext"
 import { StyledCode } from "~lib/components/elements/CodeBlock/styled-components"
 import AlertContainer, {
   Kind,
@@ -29,6 +33,7 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/Streamli
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { notNullOrUndefined } from "~lib/util/utils"
 
+import SkillsInstallCallout from "./SkillsInstallCallout"
 import {
   StyledExceptionCopyButton,
   StyledExceptionLinks,
@@ -126,6 +131,23 @@ function ExceptionElement({
     (showErrorLinks === Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO &&
       isLocalhost())
 
+  // Offer a one-click "install Streamlit skills" CTA on genuine errors in local
+  // development, using the same surface as the AI help links above. Warnings
+  // (st.exception of a Warning) are excluded — only real errors. At most one
+  // callout shows app-wide, enforced by claiming a single shared slot. The slot
+  // is sticky once claimed, so the callout isn't yanked when a successful
+  // install flips the recommendation off — it dismisses itself after confirming.
+  const skillsInstall = useContext(SkillsInstallContext)
+  const skillsCalloutEligible =
+    shouldShowLinks && !element.isWarning && skillsInstall.enabled
+  const ownsSkillsCalloutSlot = useSkillsCalloutSlot(skillsCalloutEligible)
+  const [skillsCalloutDismissed, setSkillsCalloutDismissed] = useState(false)
+  const handleSkillsCalloutDismiss = useCallback(
+    () => setSkillsCalloutDismissed(true),
+    []
+  )
+  const showSkillsCallout = ownsSkillsCalloutSlot && !skillsCalloutDismissed
+
   const formattedExceptionShort = `${element.type}: ${element.message}`
   const formattedExceptionFull = `${formattedExceptionShort}\n\n${element.stackTrace?.join(
     "\n"
@@ -170,6 +192,13 @@ function ExceptionElement({
                 Ask ChatGPT
               </a>
             </StyledExceptionLinks>
+          )}
+          {showSkillsCallout && (
+            <SkillsInstallCallout
+              onInstall={skillsInstall.onInstall}
+              onShown={skillsInstall.onShown}
+              onDismiss={handleSkillsCalloutDismiss}
+            />
           )}
         </StyledExceptionWrapper>
       </AlertContainer>
