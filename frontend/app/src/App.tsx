@@ -237,6 +237,21 @@ interface State {
   // the localhost / dismissal / snooze gates pass), and cleared when the
   // developer installs, snoozes (✕), or picks "Don't show again".
   showSkillsNudge: boolean
+
+  /**
+   * Whether the server recommended installing the bundled agent skills this
+   * session (agent present, skills not installed, not headless, no permanent
+   * dismissal marker). Drives the in-error "install skills" callout, which
+   * gates on it every render — independent of the one-shot toast logic above.
+   */
+  recommendSkillsInstall: boolean
+
+  /**
+   * Set once skills are installed this session (from any surface). The server
+   * only re-detects an install on a new session, so this hides the in-error
+   * callout (and any further nudge) for the rest of the current session.
+   */
+  skillsInstalledThisSession: boolean
 }
 
 export const LOG = getLogger("App")
@@ -311,6 +326,12 @@ export class App extends PureComponent<Props, State> {
   // only by a full page reload (a new App instance).
   private skillsNudgeShown: boolean = false
 
+  // Same once-per-page-load guard for the in-error callout's impression: the
+  // callout remounts whenever its error box remounts (across reruns), but the
+  // adoption funnel should count one "shown" per session per surface — matching
+  // the toast above — so a recurring error can't inflate the errorCallout count.
+  private errorCalloutShown: boolean = false
+
   public constructor(props: Props) {
     super(props)
 
@@ -382,6 +403,8 @@ export class App extends PureComponent<Props, State> {
       navigationPosition: Navigation.Position.SIDEBAR,
       scriptChangedOnDisk: false,
       showSkillsNudge: false,
+      recommendSkillsInstall: false,
+      skillsInstalledThisSession: false,
     }
 
     this.connectionManager = null
@@ -1494,6 +1517,13 @@ export class App extends PureComponent<Props, State> {
     // (?embed=true) apps: they're meant to be chromeless, so a CTA card pinned
     // over the host page's content is inappropriate (and the developer can't
     // act on it inside someone else's page anyway).
+    // Store the server's recommendation so the in-error "install skills"
+    // callout (a separate, non-dismissable surface) can gate on it every
+    // render, independent of the one-shot toast-impression logic below.
+    this.setState({
+      recommendSkillsInstall: Boolean(initialize.recommendSkillsInstall),
+    })
+
     if (
       initialize.recommendSkillsInstall &&
       isLocalhost() &&
@@ -1508,7 +1538,7 @@ export class App extends PureComponent<Props, State> {
     ) {
       this.skillsNudgeShown = true
       this.setState({ showSkillsNudge: true })
-      this.trackSkillsNudge("skillsNudgeShown")
+      this.trackSkillsNudge("skillsNudgeShown", "toast")
     } else if (
       initialize.skillsNudgeSuppressedLocality &&
       !this.skillsNudgeShown
@@ -1520,7 +1550,8 @@ export class App extends PureComponent<Props, State> {
       // the agent-harness audience the conservative loopback gate excludes.
       this.skillsNudgeShown = true
       this.trackSkillsNudge(
-        `skillsNudgeSuppressedNonLocal:${initialize.skillsNudgeSuppressedLocality}`
+        `skillsNudgeSuppressedNonLocal:${initialize.skillsNudgeSuppressedLocality}`,
+        "toast"
       )
     }
   }
@@ -1528,17 +1559,22 @@ export class App extends PureComponent<Props, State> {
   /**
    * Record a skills-nudge interaction for telemetry. Routed through the
    * existing ``menuClick`` event (like the deploy button), so it is only sent
-   * when usage stats are enabled.
+   * when usage stats are enabled. ``surface`` attributes the event to the UI
+   * that emitted it (the nudge ``toast`` vs the in-error ``errorCallout``) so
+   * the shown → installed funnel can be sliced per surface.
    */
-  private readonly trackSkillsNudge = (label: string): void => {
-    this.metricsMgr.enqueue("menuClick", { label })
+  private readonly trackSkillsNudge = (
+    label: string,
+    surface: "toast" | "errorCallout"
+  ): void => {
+    this.metricsMgr.enqueue("menuClick", { label, surface })
   }
 
   /** Install the bundled skills via a backend operation (no script rerun). */
-  private readonly handleSkillsNudgeInstall = (): Promise<
-    string | undefined
-  > => {
-    this.trackSkillsNudge("skillsNudgeInstall")
+  private readonly handleSkillsNudgeInstall = (
+    surface: "toast" | "errorCallout"
+  ): Promise<string | undefined> => {
+    this.trackSkillsNudge("skillsNudgeInstall", surface)
     return this.backendOperationClient
       .requestInstallSkills()
       .then(result => {
@@ -1547,7 +1583,11 @@ export class App extends PureComponent<Props, State> {
         // — no need to also write the permanent "don't show again" flag here,
         // which would conflate "installed" with a permanent opt-out. The card
         // shows its own success confirmation and auto-dismisses.
-        this.trackSkillsNudge("skillsNudgeInstallSucceeded")
+        this.trackSkillsNudge("skillsNudgeInstallSucceeded", surface)
+        // Within this session the server won't re-run detection, so suppress
+        // any further install offer (notably the in-error callout, which can
+        // recur on every error) now that skills are installed.
+        this.setState({ skillsInstalledThisSession: true })
         return result.detail ?? undefined
       })
       .catch((error: unknown) => {
@@ -1557,19 +1597,46 @@ export class App extends PureComponent<Props, State> {
         // which would over-count the funnel — and surface a reassuring,
         // retry-friendly message; re-install is idempotent.
         if (isSkillsNudgeDroppedConnection(error)) {
-          this.trackSkillsNudge("skillsNudgeInstallDropped")
+          this.trackSkillsNudge("skillsNudgeInstallDropped", surface)
           throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
         }
-        this.trackSkillsNudge("skillsNudgeInstallFailed")
-        // Re-throw so the toast renders its error state.
+        this.trackSkillsNudge("skillsNudgeInstallFailed", surface)
+        // Re-throw so the card / callout renders its error state.
         throw error
       })
+  }
+
+  /** Toast's Install button — installs and tags telemetry with the toast surface. */
+  private readonly handleToastInstall = (): Promise<string | undefined> => {
+    return this.handleSkillsNudgeInstall("toast")
+  }
+
+  /**
+   * In-error callout's Install button — installs and tags telemetry with the
+   * errorCallout surface. Stable reference so the SkillsInstallContext value
+   * doesn't change every render.
+   */
+  private readonly handleErrorCalloutInstall = (): Promise<
+    string | undefined
+  > => {
+    return this.handleSkillsNudgeInstall("errorCallout")
+  }
+
+  /** Record the in-error callout's impression (tagged with the errorCallout surface). */
+  private readonly handleErrorCalloutShown = (): void => {
+    // Once per page load (see `errorCalloutShown`) so reruns that remount the
+    // error box don't re-log the impression.
+    if (this.errorCalloutShown) {
+      return
+    }
+    this.errorCalloutShown = true
+    this.trackSkillsNudge("skillsNudgeShown", "errorCallout")
   }
 
   /** Close (✕): snooze the nudge for ~24h. The card removes itself via onClose. */
   private readonly handleSkillsNudgeSnooze = (): void => {
     setSkillsNudgeSnoozed()
-    this.trackSkillsNudge("skillsNudgeSnoozed")
+    this.trackSkillsNudge("skillsNudgeSnoozed", "toast")
   }
 
   /**
@@ -1585,7 +1652,7 @@ export class App extends PureComponent<Props, State> {
     this.backendOperationClient.requestDismissSkillsNudge().catch(error => {
       LOG.warn("Failed to persist skills nudge dismissal", error)
     })
-    this.trackSkillsNudge("skillsNudgeDontShowAgain")
+    this.trackSkillsNudge("skillsNudgeDontShowAgain", "toast")
   }
 
   /**
@@ -2599,6 +2666,26 @@ export class App extends PureComponent<Props, State> {
         resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
         showErrorLinks={this.state.showErrorLinks}
         backendOperationClient={this.backendOperationClient}
+        // In-error "install skills" callout. Gated on the server's
+        // recommendation plus localhost/embed (consistent with the exception
+        // box's own AI-links gate), not-yet-installed-this-session, and not
+        // permanently dismissed. `localStorageAvailable()` matches the toast's
+        // fail-closed behavior: without storage we can't remember a dismissal,
+        // so don't offer something the user can't make stick. It may show
+        // ALONGSIDE the proactive nudge toast: the two are visually distinct,
+        // an unaddressed toast coinciding with an error is rare, and the
+        // in-context offer at the error is worth the small redundancy.
+        // Installing or "don't show again" from either surface suppresses both.
+        skillsInstallEnabled={
+          this.state.recommendSkillsInstall &&
+          isLocalhost() &&
+          !isEmbed() &&
+          localStorageAvailable() &&
+          !this.state.skillsInstalledThisSession &&
+          !isSkillsNudgeDismissed()
+        }
+        onInstallSkills={this.handleErrorCalloutInstall}
+        onSkillsCalloutShown={this.handleErrorCalloutShown}
       >
         <Hotkeys
           keyName="r,c,esc"
@@ -2636,7 +2723,7 @@ export class App extends PureComponent<Props, State> {
               skillsNudge={
                 this.state.showSkillsNudge ? (
                   <SkillsNudgeToast
-                    onInstall={this.handleSkillsNudgeInstall}
+                    onInstall={this.handleToastInstall}
                     onSnooze={this.handleSkillsNudgeSnooze}
                     onDontShowAgain={this.handleSkillsNudgeDontShowAgain}
                     onClose={this.handleSkillsNudgeClose}

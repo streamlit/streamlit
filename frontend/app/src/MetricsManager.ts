@@ -252,6 +252,12 @@ export class MetricsManager {
 
     if (evName === "menuClick") {
       eventProto.label = data.label as string
+      // Optional surface dimension (e.g. "toast", "errorCallout") attributing
+      // the click to the UI surface that emitted it. Left unset for menu
+      // clicks that don't provide one.
+      if (data.surface) {
+        eventProto.surface = data.surface
+      }
     } else if (evName === "pageProfile") {
       return new MetricsEvent({ ...eventProto, ...data })
     }

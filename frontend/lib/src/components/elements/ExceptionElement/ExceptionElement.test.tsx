@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { MockInstance } from "vitest"
 
 import { Config, Exception as ExceptionProto } from "@streamlit/protobuf"
@@ -127,6 +128,152 @@ describe("ExceptionElement Element", () => {
       expect(screen.queryByText("Copy")).not.toBeInTheDocument()
       expect(screen.queryByText("Ask Google")).not.toBeInTheDocument()
       expect(screen.queryByText("Ask ChatGPT")).not.toBeInTheDocument()
+    })
+  })
+
+  describe("Skills install callout", () => {
+    const SHOW_LINKS = Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
+
+    it("shows the callout on an error when enabled and links are shown", () => {
+      renderWithContexts(<ExceptionElement {...getProps()} />, {
+        libConfigContext: { showErrorLinks: SHOW_LINKS },
+        skillsInstallContext: { enabled: true },
+      })
+      expect(screen.getByTestId("stSkillsInstallCallout")).toBeVisible()
+    })
+
+    it("records the impression once when shown", () => {
+      const onShown = vi.fn()
+      renderWithContexts(<ExceptionElement {...getProps()} />, {
+        libConfigContext: { showErrorLinks: SHOW_LINKS },
+        skillsInstallContext: { enabled: true, onShown },
+      })
+      expect(onShown).toHaveBeenCalledTimes(1)
+    })
+
+    it("hides the callout when not enabled", () => {
+      renderWithContexts(<ExceptionElement {...getProps()} />, {
+        libConfigContext: { showErrorLinks: SHOW_LINKS },
+        skillsInstallContext: { enabled: false },
+      })
+      expect(
+        screen.queryByTestId("stSkillsInstallCallout")
+      ).not.toBeInTheDocument()
+    })
+
+    it("hides the callout for warnings even when enabled", () => {
+      renderWithContexts(
+        <ExceptionElement {...getProps({ isWarning: true })} />,
+        {
+          libConfigContext: { showErrorLinks: SHOW_LINKS },
+          skillsInstallContext: { enabled: true },
+        }
+      )
+      expect(
+        screen.queryByTestId("stSkillsInstallCallout")
+      ).not.toBeInTheDocument()
+    })
+
+    it("hides the callout when error links are suppressed", () => {
+      renderWithContexts(<ExceptionElement {...getProps()} />, {
+        libConfigContext: {
+          showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE,
+        },
+        skillsInstallContext: { enabled: true },
+      })
+      expect(
+        screen.queryByTestId("stSkillsInstallCallout")
+      ).not.toBeInTheDocument()
+    })
+
+    it("shows at most one callout when several errors are on screen", () => {
+      renderWithContexts(
+        <>
+          <ExceptionElement {...getProps()} />
+          <ExceptionElement {...getProps()} />
+        </>,
+        {
+          libConfigContext: { showErrorLinks: SHOW_LINKS },
+          skillsInstallContext: { enabled: true },
+        }
+      )
+      // Both error boxes render, but only the first claims the single slot.
+      expect(screen.getAllByTestId("stException")).toHaveLength(2)
+      expect(screen.getAllByTestId("stSkillsInstallCallout")).toHaveLength(1)
+    })
+
+    it("installs via the callout inside the error box", async () => {
+      const user = userEvent.setup()
+      const onInstall = vi
+        .fn()
+        .mockResolvedValue("Installed to .agents/skills")
+      renderWithContexts(<ExceptionElement {...getProps()} />, {
+        libConfigContext: { showErrorLinks: SHOW_LINKS },
+        skillsInstallContext: { enabled: true, onInstall },
+      })
+
+      await user.click(screen.getByRole("button", { name: "Install skills" }))
+      expect(onInstall).toHaveBeenCalledTimes(1)
+    })
+
+    it("confirms then removes itself from the error after a successful install", async () => {
+      vi.useFakeTimers()
+      try {
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+        const onInstall = vi
+          .fn()
+          .mockResolvedValue("Installed to .agents/skills")
+        renderWithContexts(<ExceptionElement {...getProps()} />, {
+          libConfigContext: { showErrorLinks: SHOW_LINKS },
+          skillsInstallContext: { enabled: true, onInstall },
+        })
+
+        await user.click(
+          screen.getByRole("button", { name: "Install skills" })
+        )
+        await act(async () => {
+          await Promise.resolve()
+        })
+        // The success confirmation shows (and the install action is gone)...
+        expect(screen.getByText(/Skills installed/)).toBeVisible()
+        expect(
+          screen.queryByRole("button", { name: "Install skills" })
+        ).not.toBeInTheDocument()
+
+        // ...then the whole callout removes itself from the error box, even
+        // though it's still on screen (it isn't yanked mid-confirmation).
+        act(() => {
+          vi.advanceTimersByTime(2500)
+        })
+        expect(
+          screen.queryByTestId("stSkillsInstallCallout")
+        ).not.toBeInTheDocument()
+        // The error itself stays put.
+        expect(screen.getByTestId("stException")).toBeVisible()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("frees the single slot on unmount so a later error box can claim it", () => {
+      const { rerenderWithContexts } = renderWithContexts(
+        <ExceptionElement {...getProps()} />,
+        {
+          libConfigContext: { showErrorLinks: SHOW_LINKS },
+          skillsInstallContext: { enabled: true },
+        }
+      )
+      expect(screen.getAllByTestId("stSkillsInstallCallout")).toHaveLength(1)
+
+      // The error box goes away (e.g. a rerun clears it): the slot is released.
+      rerenderWithContexts(<div data-testid="placeholder" />)
+      expect(
+        screen.queryByTestId("stSkillsInstallCallout")
+      ).not.toBeInTheDocument()
+
+      // A fresh error box can then claim the freed slot (no permanent lock-out).
+      rerenderWithContexts(<ExceptionElement {...getProps()} />)
+      expect(screen.getAllByTestId("stSkillsInstallCallout")).toHaveLength(1)
     })
   })
 })
