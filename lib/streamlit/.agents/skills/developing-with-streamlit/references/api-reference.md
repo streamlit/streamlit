@@ -138,12 +138,12 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.write_stream` | Stream a generator, iterable, or stream-like sequence to the app. Use it for token streams, incremental text, or progressively produced output. |
 | **Top-level objects** | |
 | `st.bottom` | Bottom-pinned container for the main app area. Use it as a container object, not as a function. |
-| `st.context` | Read-only proxy for user session context. Exposes `headers`, `cookies`, `theme` (`theme.type`), `timezone`, `timezone_offset`, `locale`, `url`, `ip_address`, and `is_embedded`. |
-| `st.query_params` | Mutable proxy for the browser URL query parameters. Use it to read or update URL state. |
+| `st.context` | Read-only access to user session context. Exposes `headers`, `cookies`, `theme` (`theme.type`), `timezone`, `timezone_offset`, `locale`, `url`, `ip_address`, and `is_embedded`. |
+| `st.query_params` | Mutable mapping for the browser URL query parameters. Use it to read or update URL state. |
 | `st.secrets` | Dict-like access to secrets loaded from `secrets.toml`. Use it for credentials and configuration that should not be hard-coded. |
-| `st.session_state` | Per-session mutable state proxy. Use it to persist values across reruns and share state between widgets and app logic. |
+| `st.session_state` | Per-session mutable mapping for app state. Use it to persist values across reruns and share state between widgets and app logic. |
 | `st.sidebar` | Sidebar container that exposes most element methods as `st.sidebar.<command>()` and supports `with st.sidebar:` blocks. |
-| `st.user` | Read-only dict-like proxy for current user information. Values depend on the hosting and authentication configuration. |
+| `st.user` | Read-only dict-like object for current user information. Values depend on the hosting and authentication configuration. |
 | **`st.column_config` helpers** | |
 | `st.column_config.AreaChartColumn` | Configure an area chart column in `st.dataframe` or `st.data_editor`. Use it for compact per-row trends where filled areas are clearer than plain numbers. |
 | `st.column_config.AudioColumn` | Configure an audio column in `st.dataframe` or `st.data_editor`. Use it for audio URLs, paths, or media values that users should be able to play inline. |
