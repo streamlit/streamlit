@@ -53,7 +53,7 @@ they:
 
 ```python
 def skeleton(
-    height: int | Literal["stretch"] = 100,
+    height: int | Literal["stretch"] | None = None,
     *,
     width: int | Literal["stretch"] = "stretch",
 ) -> SkeletonPlaceholder:
@@ -75,9 +75,10 @@ def skeleton(
 
     Parameters
     ----------
-    height : int or "stretch"
+    height : int, "stretch", or None
         Height of the skeleton in pixels, or ``"stretch"`` to fill the
-        available vertical space. Defaults to ``100``.
+        available vertical space. If ``None`` (default), the skeleton uses a
+        default height equal to the standard input widget height.
 
     width : int or "stretch"
         Width of the skeleton in pixels, or ``"stretch"`` to fill the
@@ -203,6 +204,7 @@ way and the simpler alternatives that were weighed.
 
 | Parameter | Value | Behavior |
 |-----------|-------|----------|
+| `height` | `None` (default) | Uses the standard widget height, resolved on the frontend as a `rem` value (`theme.sizes.minElementHeight`, currently `2.5rem`) |
 | `height` | `int` | Fixed height in pixels |
 | `height` | `"stretch"` | Fills available vertical space (requires bounded container) |
 | `width` | `int` | Fixed width in pixels |
