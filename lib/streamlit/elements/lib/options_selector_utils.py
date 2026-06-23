@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from enum import Enum, EnumMeta
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
@@ -24,13 +25,14 @@ from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
 from streamlit.runtime.state import get_session_state
-from streamlit.runtime.state.common import RegisterWidgetResult
 from streamlit.type_util import (
     check_python_comparable,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Sequence
+
+    from streamlit.runtime.state.common import RegisterWidgetResult
 
 _LOGGER: Final = logger.get_logger(__name__)
 
@@ -250,9 +252,11 @@ def maybe_coerce_enum(
         if coerce_class is None:
             return register_widget_result
 
-    return RegisterWidgetResult(
-        _coerce_enum(register_widget_result.value, coerce_class),
-        register_widget_result.value_changed,
+    # Use replace so other fields (e.g. incoming_serialized_value) are preserved
+    # rather than dropped when only the value is coerced.
+    return replace(
+        register_widget_result,
+        value=_coerce_enum(register_widget_result.value, coerce_class),
     )
 
 
@@ -297,12 +301,13 @@ def maybe_coerce_enum_sequence(
         if coerce_class is None:
             return register_widget_result
 
-    # Return a new RegisterWidgetResult with the coerced enum values sequence
-    return RegisterWidgetResult(
-        type(register_widget_result.value)(
+    # Return a new RegisterWidgetResult with the coerced enum values sequence.
+    # Use replace so other fields (e.g. incoming_serialized_value) are preserved.
+    return replace(
+        register_widget_result,
+        value=type(register_widget_result.value)(
             _coerce_enum(val, coerce_class) for val in register_widget_result.value
         ),
-        register_widget_result.value_changed,
     )
 
 

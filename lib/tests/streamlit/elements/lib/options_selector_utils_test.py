@@ -447,6 +447,34 @@ class TestEnumCoercion:
             is tuple_result
         )
 
+    def test_maybe_coerce_enum_preserves_incoming_serialized_value(self):
+        """Coercing an Enum value must not drop other RegisterWidgetResult fields.
+
+        Otherwise the wire label needed for the identity-dependent format_func
+        fallback is lost for Enum selectboxes.
+        """
+
+        class EnumA(enum.Enum):
+            A = enum.auto()
+            B = enum.auto()
+
+        result = RegisterWidgetResult(EnumA.A, False, incoming_serialized_value="A")
+        coerced = maybe_coerce_enum(result, EnumA, list(EnumA))
+        assert coerced.value is EnumA.A
+        assert coerced.incoming_serialized_value == "A"
+
+    def test_maybe_coerce_enum_sequence_preserves_incoming_serialized_value(self):
+        """Coercing an Enum sequence must not drop other RegisterWidgetResult fields."""
+
+        class EnumA(enum.Enum):
+            A = enum.auto()
+            B = enum.auto()
+
+        result = RegisterWidgetResult([EnumA.A], False, incoming_serialized_value="A")
+        coerced = maybe_coerce_enum_sequence(result, EnumA, list(EnumA))
+        assert coerced.value == [EnumA.A]
+        assert coerced.incoming_serialized_value == "A"
+
 
 class TestCreateMappings:
     """Test class for create_mappings utility function."""
