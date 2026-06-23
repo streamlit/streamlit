@@ -66,7 +66,7 @@ jobs:
           exit 1
       - name: Checkout Streamlit code (ref input)
         if: inputs.ref != ''
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -74,7 +74,7 @@ jobs:
           fetch-depth: 0
       - name: Checkout Streamlit code (PR head)
         if: inputs.ref == '' && github.event_name == 'pull_request'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.head_ref }}

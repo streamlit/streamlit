@@ -129,6 +129,11 @@ streamlit help
 
 # Open documentation in browser
 streamlit docs
+
+# Look up the signature and docstring of a command
+streamlit docs st.number_input
+streamlit docs number_input
+streamlit docs st.column_config.NumberColumn
 ```
 
 ### Project scaffolding

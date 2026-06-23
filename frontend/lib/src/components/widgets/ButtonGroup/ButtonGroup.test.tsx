@@ -490,6 +490,70 @@ describe("ButtonGroup widget", () => {
       undefined
     )
   })
+
+  it("resets to default when options change and stored value is stale", () => {
+    // Simulate EN options: "apple" and "orange"
+    const enOptions = [
+      ButtonGroupProto.Option.create({ content: "apple" }),
+      ButtonGroupProto.Option.create({ content: "orange" }),
+    ]
+    // Simulate ES options: "manzana" and "naranja" (same raw keys, new display strings)
+    const esOptions = [
+      ButtonGroupProto.Option.create({ content: "manzana" }),
+      ButtonGroupProto.Option.create({ content: "naranja" }),
+    ]
+
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: vi.fn(),
+      formsDataChanged: vi.fn(),
+    })
+
+    const enElement = ButtonGroupProto.create({
+      id: "fruit-widget",
+      clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+      default: [0], // first option is the default ("apple" / "manzana")
+      disabled: false,
+      options: enOptions,
+      style: ButtonGroupProto.Style.PILLS,
+    })
+
+    // Pre-populate widgetMgr with the EN-formatted selection so the component
+    // starts with a stale value when it next renders with ES options.
+    widgetMgr.setStringArrayValue(
+      enElement,
+      ["apple"],
+      { fromUi: false },
+      undefined
+    )
+
+    const baseProps: Props = {
+      element: enElement,
+      disabled: false,
+      widgetMgr,
+      widthConfig: { useContent: true },
+    }
+
+    vi.spyOn(widgetMgr, "setStringArrayValue")
+
+    const { rerender } = render(<ButtonGroup {...baseProps} />)
+
+    // Re-render with ES options — the stored "apple" no longer matches any option
+    const esElement = ButtonGroupProto.create({
+      ...enElement,
+      options: esOptions,
+    })
+
+    rerender(<ButtonGroup {...baseProps} element={esElement} />)
+
+    // The stale-value effect should have fired and reset widgetMgr to the
+    // ES default (index 0 = "manzana") so the widget is visually consistent.
+    expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      esElement,
+      ["manzana"],
+      { fromUi: false },
+      undefined
+    )
+  })
 })
 
 describe("ButtonGroup query param binding", () => {

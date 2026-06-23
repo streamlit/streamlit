@@ -24,7 +24,7 @@ import pytest
 from streamlit.elements.lib import utils
 from streamlit.proto.ChatInput_pb2 import ChatInput
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility as LabelVisibilityProto
-from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
+from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.runtime.state.common import TESTING_KEY
 
 
@@ -73,13 +73,12 @@ def test_get_chat_input_accept_file_proto_value_invalid() -> None:
 def test_register_element_id_falsy_returns_early(element_id: Any) -> None:
     """Verify falsy element_id returns without registering."""
     mock_ctx = MagicMock()
-    mock_ctx.widget_user_keys_this_run = ThreadSafeSet()
-    mock_ctx.widget_ids_this_run = ThreadSafeSet()
+    mock_ctx.shared = SharedRunState()
 
     utils._register_element_id(mock_ctx, "test_element", element_id)
 
-    assert len(mock_ctx.widget_user_keys_this_run.snapshot()) == 0
-    assert len(mock_ctx.widget_ids_this_run.snapshot()) == 0
+    assert len(mock_ctx.shared.widget_user_keys_this_run.snapshot()) == 0
+    assert len(mock_ctx.shared.widget_ids_this_run.snapshot()) == 0
 
 
 @patch("streamlit.elements.lib.utils.config.get_option")

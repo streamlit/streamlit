@@ -49,7 +49,7 @@ These agents are the **single source of truth** for agent instructions:
 1. Create the agent file in this directory
 2. Add the new file to `.claude/.gitignore` (allowlist pattern: `!agents/<name>.md`)
 3. Create a matching command in `.claude/commands/` and add it to `.claude/.gitignore`
-4. Add a Codex config in `.codex/agents/` and update `.codex/config.toml`
+4. Add a Codex config in `.codex/agents/` (auto-discovered by Codex via `.codex/config.toml`; no edit to `config.toml` needed)
 5. Run `uv run scripts/generate_agent_rules.py` to regenerate Cursor/Copilot rules
 
 **When modifying an existing agent:**

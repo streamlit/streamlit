@@ -12,21 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Bokeh unit test."""
+"""The thread attribute name under which the active ScriptRunContext is stored.
 
-from unittest.mock import patch
+This is a dependency-free leaf module so that both ``script_run_context`` and
+``parallel_coordinator`` can share the constant without importing each other.
+"""
 
-import streamlit as st
-from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from __future__ import annotations
 
+from typing import Final
 
-class BokehTest(DeltaGeneratorTestCase):
-    """Test ability to marshall bokeh_chart protos."""
-
-    @patch("streamlit.elements.bokeh_chart.show_deprecation_warning")
-    def test_calling_bokeh_chart_shows_deprecation_warning(
-        self, patched_show_deprecation_warning
-    ):
-        st.bokeh_chart(None)
-
-        patched_show_deprecation_warning.assert_called_once()
+SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"

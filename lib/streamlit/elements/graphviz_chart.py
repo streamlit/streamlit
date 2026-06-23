@@ -54,7 +54,7 @@ class GraphvizMixin:
 
         .. Important::
             You must install ``graphviz>=0.19.0`` to use this command. You can
-            install all charting dependencies (except Bokeh) as an extra with
+            install all charting dependencies as an extra with
             Streamlit:
 
             .. code-block:: shell

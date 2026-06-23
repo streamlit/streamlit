@@ -49,3 +49,32 @@ def my_big_fragment():
 my_big_fragment()
 
 st.write(f"outside: fragment {uuid4()}")
+
+
+# A fragment with a keyed slider to verify widget values persist across full reruns.
+@st.fragment
+def widget_persistence_fragment():
+    val = st.slider("Fragment slider", 0, 100, 50, key="frag_slider")
+    st.markdown(f"slider value: {val}")
+
+
+widget_persistence_fragment()
+
+st.markdown(f"app uuid: {uuid4()}")
+st.button("Trigger full rerun", key="full_rerun_btn")
+
+
+# A form inside a fragment to verify form submission works correctly.
+@st.fragment
+def form_fragment():
+    with st.form("frag_form"):
+        user_input = st.text_input("Name", key="form_name")
+        submitted = st.form_submit_button("Submit form")
+
+    if submitted:
+        st.markdown(f"submitted: {user_input}")
+    else:
+        st.markdown("not submitted")
+
+
+form_fragment()

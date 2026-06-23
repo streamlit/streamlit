@@ -34,6 +34,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitFragmentWidgetsNotAllowedOutsideError,
 )
+from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.fragment import (
     FragmentStorage,
     MemoryFragmentStorage,
@@ -43,13 +44,14 @@ from streamlit.runtime.fragment import (
     _run_parallel_fragment,
     fragment,
 )
+from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
-from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
+from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
@@ -136,6 +138,15 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         with pytest.raises(FragmentStorageKeyError):
             self._storage.delete("nonexistent_key")
 
+    def test_delete_evicts_fragment_wrappers(self):
+        """delete() evicts all wrappers belonging to the deleted fragment."""
+        wrapper = self._make_wrapper("dg-1")
+        self._storage.register_outside_wrapper("some_key", "container", wrapper)
+
+        self._storage.delete("some_key")
+
+        assert self._storage.outside_wrappers_for("some_key") == []
+
     def test_clear(self):
         self._set_fragment("some_other_key", value="some_other_fragment")
         assert len(self._storage._fragments) == 2
@@ -152,6 +163,85 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert len(self._storage._fragments) == 1
         assert self._storage._fragments["some_key"] == "some_fragment"
         assert "some_other_key" not in self._storage._parent_by_id
+
+    def _make_wrapper(
+        self, dg_id: str, *, creating_fragment_id: str | None = None
+    ) -> OutsideContainerWrapper:
+        delta_generator = MagicMock()
+        delta_generator._id = dg_id
+        return OutsideContainerWrapper(
+            delta_generator=delta_generator,
+            creation_delta_path=[0, 1],
+            block_proto=Block(),
+            creating_fragment_id=creating_fragment_id,
+        )
+
+    def test_register_and_get_outside_wrapper(self):
+        """register_outside_wrapper then get_outside_wrapper returns the record."""
+        wrapper = self._make_wrapper("dg-1", creating_fragment_id="creator")
+        self._storage.register_outside_wrapper("frag", "container", wrapper)
+
+        stored = self._storage.get_outside_wrapper("frag", "container")
+        assert stored is wrapper
+        assert stored.creating_fragment_id == "creator"
+
+    def test_get_outside_wrapper_missing_returns_none(self):
+        """A missing (fragment, container) key returns None."""
+        assert self._storage.get_outside_wrapper("frag", "container") is None
+
+    def test_outside_wrappers_for_isolates_fragments(self):
+        """outside_wrappers_for returns only the matching fragment's records."""
+        wrapper_a = self._make_wrapper("dg-a")
+        wrapper_b = self._make_wrapper("dg-b")
+        self._storage.register_outside_wrapper("frag_a", "container", wrapper_a)
+        self._storage.register_outside_wrapper("frag_b", "container", wrapper_b)
+
+        wrappers_a = self._storage.outside_wrappers_for("frag_a")
+        assert [w.delta_generator._id for w in wrappers_a] == ["dg-a"]
+        assert self._storage.outside_wrappers_for("frag_b") == [wrapper_b]
+        assert self._storage.outside_wrappers_for("missing") == []
+
+    def test_clear_drops_outside_wrappers_even_when_fragment_retained(self):
+        """clear() empties wrappers even when the fragment id is retained."""
+        wrapper = self._make_wrapper("dg-1")
+        self._storage.register_outside_wrapper("some_key", "container", wrapper)
+
+        self._storage.clear(new_fragment_ids=frozenset({"some_key"}))
+
+        # The fragment closure survives, but its wrapper does not.
+        assert self._storage.contains("some_key")
+        assert self._storage._outside_wrappers == {}
+
+    def test_evict_outside_wrappers_created_by_filters_on_creating_fragment(self):
+        """evict_outside_wrappers_created_by drops only records created by the id."""
+        created_by_a = self._make_wrapper("dg-a", creating_fragment_id="creator_a")
+        created_by_b = self._make_wrapper("dg-b", creating_fragment_id="creator_b")
+        main_script = self._make_wrapper("dg-main", creating_fragment_id=None)
+        self._storage.register_outside_wrapper("writer", "container_a", created_by_a)
+        self._storage.register_outside_wrapper("writer", "container_b", created_by_b)
+        self._storage.register_outside_wrapper("writer", "container_main", main_script)
+
+        self._storage.evict_outside_wrappers_created_by("creator_a")
+
+        remaining = self._storage.outside_wrappers_for("writer")
+        assert created_by_a not in remaining
+        assert created_by_b in remaining
+        assert main_script in remaining
+
+    def test_remove_drops_removed_fragments_own_wrappers(self):
+        """Removing a fragment drops its own wrappers, even stable-root ones."""
+        self._set_fragment("outer")
+        self._set_fragment("inner", parent_fragment_id="outer")
+        inner_wrapper = self._make_wrapper("dg-inner", creating_fragment_id=None)
+        outer_wrapper = self._make_wrapper("dg-outer", creating_fragment_id=None)
+        self._storage.register_outside_wrapper("inner", "container", inner_wrapper)
+        self._storage.register_outside_wrapper("outer", "container", outer_wrapper)
+
+        self._storage.clear_stale_descendants("outer", frozenset({"outer"}))
+
+        assert not self._storage.contains("inner")
+        assert self._storage.outside_wrappers_for("inner") == []
+        assert self._storage.outside_wrappers_for("outer") == [outer_wrapper]
 
     def test_clear_stale_descendants_removes_orphan_nested(self):
         """Descendants of root not re-registered this run are removed."""
@@ -525,7 +615,7 @@ class FragmentTest(unittest.TestCase):
         ctx = MagicMock()
         ctx.cursors = {}
         ctx.fragment_ids_this_run = []
-        ctx.new_fragment_ids = ThreadSafeSet()
+        ctx.shared = SharedRunState()
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
@@ -634,7 +724,7 @@ class FragmentTest(unittest.TestCase):
         ctx = MagicMock()
         ctx.cursors = {}
         ctx.fragment_ids_this_run = []
-        ctx.new_fragment_ids = ThreadSafeSet()
+        ctx.shared = SharedRunState()
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
@@ -649,11 +739,11 @@ class FragmentTest(unittest.TestCase):
             curr_dg_stack = context_dg_stack.get()
             curr_dg_stack[0].my_random_field += 1
 
-        assert len(ctx.new_fragment_ids.snapshot()) == 0
+        assert len(ctx.shared.new_fragment_ids.snapshot()) == 0
         my_fragment()
 
         # Verify that `my_fragment`'s id was added to the `new_fragment_id`s set.
-        assert len(ctx.new_fragment_ids.snapshot()) == 1
+        assert len(ctx.shared.new_fragment_ids.snapshot()) == 1
 
         # Reach inside our MemoryFragmentStorage internals to pull out our saved
         # fragment.
@@ -1164,6 +1254,10 @@ def test_fragment_decorator_handles_pep649_annotations() -> None:
         ("order_fragment_ids", ([],), {}),
         ("delete", ("key",), {}),
         ("contains", ("key",), {}),
+        ("register_outside_wrapper", ("frag", "container", object()), {}),
+        ("get_outside_wrapper", ("frag", "container"), {}),
+        ("outside_wrappers_for", ("frag",), {}),
+        ("evict_outside_wrappers_created_by", ("frag",), {}),
     ],
 )
 def test_fragment_storage_abstract_methods_raise_not_implemented(
@@ -1234,7 +1328,7 @@ def test_parallel_fragment_dispatches_to_coordinator(
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
     ctx.fragment_ids_this_run = None
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     mock_coordinator = MagicMock()
     ctx.parallel_coordinator = mock_coordinator
@@ -1261,7 +1355,7 @@ def test_parallel_fragment_returns_none(
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
     ctx.fragment_ids_this_run = None
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     ctx.parallel_coordinator = MagicMock()
     patched_get_script_run_ctx.return_value = ctx
@@ -1292,7 +1386,7 @@ def test_parallel_fragment_sequential_during_fragment_rerun(
     ctx.fragment_storage = MagicMock()
     # Non-empty ⇒ fragment rerun path; mocked stand-in ID is irrelevant to the assertion.
     ctx.fragment_ids_this_run = ["some_fragment_id"]
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     mock_coordinator = MagicMock()
     ctx.parallel_coordinator = mock_coordinator
@@ -1324,7 +1418,7 @@ def test_wrapped_fragment_skips_container_when_pre_allocated(
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
     ctx.fragment_ids_this_run = None
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     patched_get_script_run_ctx.return_value = ctx
 
@@ -1362,7 +1456,7 @@ def test_wrapped_fragment_clears_skip_signal_after_use(
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
     ctx.fragment_ids_this_run = None
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     patched_get_script_run_ctx.return_value = ctx
 
@@ -1396,7 +1490,7 @@ def test_nested_sequential_fragment_creates_own_container(
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
     ctx.fragment_ids_this_run = None
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     patched_get_script_run_ctx.return_value = ctx
 
@@ -1497,7 +1591,7 @@ def test_nested_parallel_fragment_dispatches_from_worker() -> None:
     mock_ctx = MagicMock()
     mock_ctx.fragment_storage = MemoryFragmentStorage()
     mock_ctx.fragment_ids_this_run = None
-    mock_ctx.new_fragment_ids = ThreadSafeSet()
+    mock_ctx.shared = SharedRunState()
     mock_ctx.cursors = {}
     mock_ctx.parallel_coordinator = mock_coordinator
 
@@ -1531,7 +1625,7 @@ def test_dispatch_restores_calling_thread_dg_stack(
     """After dispatch, calling thread's dg_stack doesn't contain the pre-allocated container."""
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.parallel_coordinator = MagicMock()
     patched_get_script_run_ctx.return_value = ctx
 
@@ -1559,7 +1653,7 @@ def test_worker_dg_stack_points_at_pre_allocated_container(
     """
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     mock_coordinator = MagicMock()
     ctx.parallel_coordinator = mock_coordinator
     patched_get_script_run_ctx.return_value = ctx
@@ -1573,7 +1667,8 @@ def test_worker_dg_stack_points_at_pre_allocated_container(
     _dispatch_parallel_fragment(ctx, "test_fragment_id", wrapped_fragment)
 
     call_args = mock_coordinator.submit.call_args[0]
-    dg_stack_snapshot = call_args[3]
+    assert call_args[1] is ctx
+    dg_stack_snapshot = call_args[4]
     assert len(dg_stack_snapshot) == original_len + 1
 
 
@@ -1590,7 +1685,7 @@ def test_run_every_parallel_fragment_reruns_sequentially(
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
     ctx.fragment_ids_this_run = None
-    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.shared = SharedRunState()
     ctx.cursors = {}
     mock_coordinator = MagicMock()
     ctx.parallel_coordinator = mock_coordinator
@@ -1631,7 +1726,7 @@ def test_sequential_fragment_inside_parallel_worker_creates_own_container() -> N
     mock_ctx = MagicMock()
     mock_ctx.fragment_storage = MemoryFragmentStorage()
     mock_ctx.fragment_ids_this_run = None
-    mock_ctx.new_fragment_ids = ThreadSafeSet()
+    mock_ctx.shared = SharedRunState()
     mock_ctx.cursors = {}
     mock_ctx.parallel_coordinator = mock_coordinator
 
@@ -1675,7 +1770,7 @@ def test_skip_signal_isolation_inner_fragment_sees_none_after_outer_consumes(
     mock_ctx = MagicMock()
     mock_ctx.fragment_storage = MemoryFragmentStorage()
     mock_ctx.fragment_ids_this_run = None
-    mock_ctx.new_fragment_ids = ThreadSafeSet()
+    mock_ctx.shared = SharedRunState()
     mock_ctx.cursors = {}
     patched_get_script_run_ctx.return_value = mock_ctx
 
@@ -1726,7 +1821,7 @@ def test_parallel_fragment_nested_inside_rerun_executes_sequentially() -> None:
     mock_ctx = MagicMock()
     mock_ctx.fragment_storage = MemoryFragmentStorage()
     mock_ctx.fragment_ids_this_run = ["outer_id"]
-    mock_ctx.new_fragment_ids = ThreadSafeSet()
+    mock_ctx.shared = SharedRunState()
     mock_ctx.cursors = {}
     mock_coordinator = MagicMock()
     mock_ctx.parallel_coordinator = mock_coordinator
@@ -1762,7 +1857,7 @@ def test_rerun_exception_propagates_from_nested_fragment_inside_worker() -> None
     mock_ctx = MagicMock()
     mock_ctx.fragment_storage = MemoryFragmentStorage()
     mock_ctx.fragment_ids_this_run = None
-    mock_ctx.new_fragment_ids = ThreadSafeSet()
+    mock_ctx.shared = SharedRunState()
     mock_ctx.cursors = {}
     mock_ctx.parallel_coordinator = mock_coordinator
 

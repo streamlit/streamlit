@@ -205,6 +205,62 @@ describe("Sidebar Component", () => {
       await user.hover(screen.getByTestId("stSidebarHeader"))
       expect(collapseButton).toHaveStyle("visibility: visible")
     })
+
+    it("removes the collapse button entirely when sidebar is locked on desktop", async () => {
+      const user = userEvent.setup()
+      // Default viewport is 1024px (desktop) — lock is fully in effect
+      renderSidebar(
+        {},
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.LOCKED,
+          },
+          navigationContext: { appPages: SAMPLE_PAGES },
+        }
+      )
+
+      // Button must not be in the DOM at all — locked desktop sidebar cannot be collapsed
+      expect(
+        screen.queryByTestId("stSidebarCollapseButton")
+      ).not.toBeInTheDocument()
+
+      // Confirm it also stays absent after hover (no interaction can reveal it)
+      await user.hover(screen.getByTestId("stSidebarHeader"))
+      expect(
+        screen.queryByTestId("stSidebarCollapseButton")
+      ).not.toBeInTheDocument()
+    })
+
+    it("shows the collapse button on mobile even when sidebar is locked", async () => {
+      // Set a mobile viewport before rendering so the WindowDimensionsProvider's
+      // useLayoutEffect measures it on mount and the component renders with innerWidth=500.
+      Object.defineProperty(window, "innerWidth", {
+        value: 500,
+        writable: true,
+        configurable: true,
+      })
+      const user = userEvent.setup()
+      renderSidebar(
+        {},
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.LOCKED,
+          },
+          navigationContext: { appPages: SAMPLE_PAGES },
+        }
+      )
+
+      // Button must be present — lock degrades on mobile so users aren't trapped
+      await user.hover(screen.getByTestId("stSidebarHeader"))
+      expect(screen.getByTestId("stSidebarCollapseButton")).toBeInTheDocument()
+
+      // Restore desktop viewport
+      Object.defineProperty(window, "innerWidth", {
+        value: 1024,
+        writable: true,
+        configurable: true,
+      })
+    })
   })
 
   describe("Sidebar Navigation", () => {

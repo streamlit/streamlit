@@ -221,6 +221,9 @@ const generateSpec = (
  * Preprocesses the element to generate the VegaLite spec.
  * It stabilizes some of the references (e.g. selectionMode and spec)
  * and avoids further processing if unnecessary.
+ *
+ * Returns the processed element along with a `baseSpecKey` that is stable
+ * across container dimension changes (for use with native Vega resize API).
  */
 export const useVegaElementPreprocessor = (
   element: VegaLiteChartElement,
@@ -228,7 +231,7 @@ export const useVegaElementPreprocessor = (
   containerHeight: number,
   useContainerWidth: boolean,
   useContainerHeight: boolean
-): VegaLiteChartElement => {
+): VegaLiteChartElement & { baseSpecKey: string } => {
   const theme = useEmotionTheme()
 
   const {
@@ -249,6 +252,82 @@ export const useVegaElementPreprocessor = (
     return inputSelectionMode
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep comparison via serialized key
   }, [selectionModeKey])
+
+  // The structural spec generated with neutral (0) container dimensions. This is
+  // only recomputed when non-dimension inputs change, keeping it stable across
+  // container resizes.
+  const baseSpec = useMemo(
+    () =>
+      generateSpec(
+        inputSpec,
+        useContainerWidth,
+        useContainerHeight,
+        vegaLiteTheme,
+        selectionMode,
+        theme,
+        0, // Use 0 for container dimensions
+        0
+      ),
+    [
+      inputSpec,
+      useContainerWidth,
+      useContainerHeight,
+      vegaLiteTheme,
+      selectionMode,
+      theme,
+    ]
+  )
+
+  // Stable key that changes only when non-dimension parts of the spec change,
+  // OR when fixed (non-container-driven) dimensions change.
+  // Container-driven dimensions are excluded because they change frequently during
+  // resize and we handle those via Vega's native resize API for better performance.
+  // Fixed dimensions (from the spec itself) are included because they represent
+  // intentional user-specified sizes that should trigger a view recreation.
+  // We also include useContainerWidth/useContainerHeight booleans in the key because
+  // transitioning to/from container-driven sizing (e.g., entering fullscreen) requires
+  // a full view recreation to properly apply the new dimensions.
+  // Concat compositions (vconcat/hconcat/concat) bake per-child dimensions at
+  // view-creation time, which Vega's native resize API cannot update. For these
+  // charts we include the container dimensions in the key so a container-driven
+  // dimension change triggers a full view recreation (preserving correct
+  // resizing), instead of the native-resize fast path used for single-view charts.
+  const isConcatComposition =
+    "vconcat" in baseSpec || "hconcat" in baseSpec || "concat" in baseSpec
+  // Only concat compositions need container dimensions baked into the key. For
+  // single-view charts these stay `undefined`, so the memo below does not
+  // recompute on every resize (the native resize fast-path handles those).
+  const concatWidth =
+    isConcatComposition && useContainerWidth ? containerWidth : undefined
+  const concatHeight =
+    isConcatComposition && useContainerHeight ? containerHeight : undefined
+
+  const baseSpecKey = useMemo(() => {
+    // Only strip dimensions that are container-driven.
+    // Fixed dimensions from the spec should be included in the key.
+    const specForKey = { ...baseSpec }
+    if (useContainerWidth) {
+      delete specForKey.width
+    }
+    if (useContainerHeight) {
+      delete specForKey.height
+    }
+    // Include the sizing mode flags so that transitioning to/from
+    // container-driven sizing triggers a view recreation.
+    return JSON.stringify({
+      spec: specForKey,
+      useContainerWidth,
+      useContainerHeight,
+      concatWidth,
+      concatHeight,
+    })
+  }, [
+    baseSpec,
+    useContainerWidth,
+    useContainerHeight,
+    concatWidth,
+    concatHeight,
+  ])
 
   const spec = useMemo(
     () =>
@@ -286,5 +365,6 @@ export const useVegaElementPreprocessor = (
     data,
     datasets,
     useContainerWidth,
+    baseSpecKey,
   }
 }

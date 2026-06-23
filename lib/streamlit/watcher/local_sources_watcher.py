@@ -239,7 +239,7 @@ class LocalSourcesWatcher:
         except Exception as ex:
             # If we don't have permission to read this file, or if the file
             # doesn't exist, don't even add it to watchers.
-            _LOGGER.warning("Failed to watch file %s: %s", filepath, exc_info=ex)
+            _LOGGER.warning("Failed to watch file %s", filepath, exc_info=ex)
             return
 
     def _deregister_watcher(self, filepath: str) -> None:

@@ -213,7 +213,7 @@ class StreamlitInvalidSidebarStateError(LocalizableStreamlitException):
 
     def __init__(self, initial_sidebar_state: str) -> None:
         super().__init__(
-            '`initial_sidebar_state` must be `"auto"`, `"expanded"`, `"collapsed"`, '
+            '`initial_sidebar_state` must be `"auto"`, `"expanded"`, `"collapsed"`, `"locked"`, '
             'or a positive integer for width in pixels (got `"{initial_sidebar_state}"`)',
             initial_sidebar_state=initial_sidebar_state,
         )

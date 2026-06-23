@@ -246,9 +246,9 @@ def test_menu_button_short_options(app: Page, assert_snapshot: ImageCompareFunct
     expect(menu_body).to_be_visible()
 
     # Check that short options are visible (not exact match due to markdown rendering)
-    expect(menu_body.locator("li").filter(has_text="A")).to_be_visible()
-    expect(menu_body.locator("li").filter(has_text="B")).to_be_visible()
-    expect(menu_body.locator("li").filter(has_text="C")).to_be_visible()
+    expect(menu_body.get_by_role("menuitem").filter(has_text="A")).to_be_visible()
+    expect(menu_body.get_by_role("menuitem").filter(has_text="B")).to_be_visible()
+    expect(menu_body.get_by_role("menuitem").filter(has_text="C")).to_be_visible()
 
     # Menu should be narrower than default
     assert_snapshot(menu_body, name="st_menu_button-short_options")

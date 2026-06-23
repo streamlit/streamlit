@@ -135,17 +135,32 @@ with col3:
 
 prog_tabs = st.tabs(["Alpha", "Beta", "Gamma"], key="prog_tabs", on_change="rerun")
 
+if "prog_tab_counts" not in st.session_state:
+    st.session_state.prog_tab_counts = {"Alpha": 0, "Beta": 0, "Gamma": 0}
+
 if prog_tabs[0].open:
     with prog_tabs[0]:
         st.write("Alpha tab content")
+        if st.button("Increment Alpha", key="inc_alpha"):
+            st.session_state.prog_tab_counts["Alpha"] += 1
 
 if prog_tabs[1].open:
     with prog_tabs[1]:
         st.write("Beta tab content")
+        if st.button("Increment Beta", key="inc_beta"):
+            st.session_state.prog_tab_counts["Beta"] += 1
 
 if prog_tabs[2].open:
     with prog_tabs[2]:
         st.write("Gamma tab content")
+        if st.button("Increment Gamma", key="inc_gamma"):
+            st.session_state.prog_tab_counts["Gamma"] += 1
+
+st.write(
+    f"Prog tab counts - Alpha: {st.session_state.prog_tab_counts['Alpha']}, "
+    f"Beta: {st.session_state.prog_tab_counts['Beta']}, "
+    f"Gamma: {st.session_state.prog_tab_counts['Gamma']}"
+)
 # Key-only (no on_change) — should NOT trigger reruns on tab switch
 # ============================================================================
 

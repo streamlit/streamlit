@@ -50,7 +50,7 @@ class PyplotMixin:
 
         .. Important::
             You must install ``matplotlib>=3.0.0`` to use this command. You can
-            install all charting dependencies (except Bokeh) as an extra with
+            install all charting dependencies as an extra with
             Streamlit:
 
             .. code-block:: shell
