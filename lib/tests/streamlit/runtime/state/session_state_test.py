@@ -2292,6 +2292,70 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
         assert result.value == "default"
         assert result.value_changed is True
 
+    def test_persist_state_page_drops_value_when_other_page_skips_widget(
+        self,
+    ) -> None:
+        """A "page" value is dropped after navigating to a page that does not
+        render the widget, and stays dropped when the widget remounts back on
+        its origin page even if the frontend resends the stale value."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "page")
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+
+        # Navigate to a page that does not render the widget.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_2_hash"),
+        ):
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert widget_id in self.session_state._page_scoped_widget_ids_to_reset
+        assert "my_widget" not in self.session_state._old_state
+
+        # Return to the origin page; the frontend resends the cached value for
+        # the reused widget id, which must be discarded.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+        assert widget_id not in self.session_state._page_scoped_widget_ids_to_reset
+
+    def test_persist_state_page_same_page_hide_not_marked_for_reset(self) -> None:
+        """Hiding a "page" widget on its own page preserves the value and does
+        not flag it for a frontend reset."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "page")
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert widget_id not in self.session_state._page_scoped_widget_ids_to_reset
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+
     def test_persist_state_page_keeps_carried_value_on_remount_same_page(
         self,
     ) -> None:

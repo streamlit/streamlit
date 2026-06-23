@@ -458,6 +458,12 @@ class SessionState:
     # registration on a different page drop the value instead of adopting it.
     _persisted_page_value_pages: dict[str, str] = field(default_factory=dict)
 
+    # Widget IDs of persist_state="page" widgets whose value was dropped because
+    # the session navigated to a page that does not own the value. The frontend
+    # may still hold and resend the dropped value for the reused widget id, so
+    # the next registration must discard that value and fall back to the default.
+    _page_scoped_widget_ids_to_reset: set[str] = field(default_factory=set)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -487,6 +493,7 @@ class SessionState:
         self._persisted_widget_ids.clear()
         self._persisted_widget_pages.clear()
         self._persisted_page_value_pages.clear()
+        self._page_scoped_widget_ids_to_reset.clear()
 
     @property
     def filtered_state(self) -> dict[str, Any]:
@@ -976,6 +983,23 @@ class SessionState:
                 else:
                     self._persisted_page_value_pages.pop(user_key, None)
 
+        # A stale "page"-scoped widget whose owned page differs from the current
+        # page is being dropped because of a page switch. Record the widget id so
+        # its next registration discards the value the frontend may still resend
+        # for the reused widget id, even if that registration happens back on the
+        # originating page.
+        for wid, scope in self._persisted_widget_ids.items():
+            if (
+                scope == "page"
+                and self._persisted_widget_pages.get(wid) != ctx.page_script_hash
+                and _is_stale_widget(
+                    self._new_widget_state.widget_metadata.get(wid),
+                    active_widget_ids,
+                    ctx.fragment_ids_this_run,
+                )
+            ):
+                self._page_scoped_widget_ids_to_reset.add(wid)
+
         self._new_widget_state.remove_stale_widgets(
             active_widget_ids,
             ctx.fragment_ids_this_run,
@@ -1039,6 +1063,7 @@ class SessionState:
             for key, page_hash in self._persisted_page_value_pages.items()
             if key in self._old_state
         }
+        self._page_scoped_widget_ids_to_reset.intersection_update(wid_key_map.keys())
 
     def _get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
         """Return the metadata for a widget id from the current widget state."""
@@ -1139,15 +1164,26 @@ class SessionState:
                     dropped_page_scoped_value = self._drop_widget_value(
                         widget_id, user_key
                     )
+                # The value was dropped on a page switch while this page did not
+                # render the widget. Discard any value the frontend resends so the
+                # widget falls back to its default, even back on its origin page.
+                if widget_id in self._page_scoped_widget_ids_to_reset:
+                    self._page_scoped_widget_ids_to_reset.discard(widget_id)
+                    dropped_page_scoped_value = (
+                        self._drop_widget_value(widget_id, user_key)
+                        or dropped_page_scoped_value
+                    )
                 self._persisted_widget_pages[widget_id] = current_page_hash
             else:
                 self._persisted_widget_pages.pop(widget_id, None)
                 self._persisted_page_value_pages.pop(user_key, None)
+                self._page_scoped_widget_ids_to_reset.discard(widget_id)
         elif metadata.persist_state is None and user_key is not None:
             # Widget stopped persisting — drop any stale tracking.
             self._persisted_widget_ids.pop(widget_id, None)
             self._persisted_widget_pages.pop(widget_id, None)
             self._persisted_page_value_pages.pop(user_key, None)
+            self._page_scoped_widget_ids_to_reset.discard(widget_id)
 
         if (
             widget_id not in self

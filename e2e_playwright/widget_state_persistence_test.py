@@ -124,6 +124,36 @@ def test_page_scoped_value_does_not_leak_across_pages(app: Page) -> None:
     _expect_input_value(app, "Page-scoped", "")
 
 
+def test_page_scoped_value_dropped_when_other_page_skips_widget(app: Page) -> None:
+    """A persist_state="page" widget rendered on Page 1 only is dropped after an
+    A -> B -> A switch (Page 2 never renders it), while a session-scoped widget
+    in the same flow is preserved and a non-persisted one is dropped.
+    """
+    click_checkbox(app, "Show widgets")
+    _fill_text_input(app, "Page 1 page-scoped", "page_value")
+    _fill_text_input(app, "Page 1 session-scoped", "session_value")
+    _fill_text_input(app, "Page 1 not persisted", "plain_value")
+
+    # Page 2 does not render the Page 1-only widgets.
+    _navigate(app, "Page 2")
+    expect(app.get_by_role("heading", name="Page 2")).to_be_visible()
+    # The Page 1-only widgets must not be present on Page 2.
+    expect(get_text_input(app, "Page 1 page-scoped")).to_have_count(0)
+
+    _navigate(app, "Page 1")
+    expect(app.get_by_role("heading", name="Page 1")).to_be_visible()
+
+    # The page-scoped widget must fall back to its default on return.
+    _expect_input_value(app, "Page 1 page-scoped", "")
+    _expect_value(app, "p1_page_text", "UNSET")
+    # The session-scoped widget must keep its value across the page switch.
+    _expect_input_value(app, "Page 1 session-scoped", "session_value")
+    _expect_value(app, "p1_session_text", "session_value")
+    # The non-persisted widget is also dropped.
+    _expect_input_value(app, "Page 1 not persisted", "")
+    _expect_value(app, "p1_plain_text", "UNSET")
+
+
 def test_persist_state_does_not_touch_query_params(app: Page) -> None:
     """persist_state is server-side only and must not add URL query params."""
     click_checkbox(app, "Show widgets")
