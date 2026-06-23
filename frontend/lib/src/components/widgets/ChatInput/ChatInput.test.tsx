@@ -1096,9 +1096,9 @@ describe("ChatInput widget", () => {
   })
 
   describe("submit_mode behavior", () => {
-    it("shows submit button by default when submitMode is NONE", () => {
+    it("shows submit button by default when submitMode is SUBMIT", () => {
       const props = getProps({
-        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_NONE,
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT,
       })
       render(<ChatInput {...props} />)
 
@@ -1112,10 +1112,10 @@ describe("ChatInput widget", () => {
       ).not.toBeInTheDocument()
     })
 
-    it("disables input after submission when submitMode is DISABLED", async () => {
+    it("disables input after submission when submitMode is DISABLE", async () => {
       const user = userEvent.setup()
       const props = getProps({
-        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLED,
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLE,
       })
 
       const { rerenderWithContexts } = renderWithContexts(
@@ -1138,6 +1138,32 @@ describe("ChatInput widget", () => {
       })
 
       // The textarea should be disabled during the running state
+      expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
+    })
+
+    it("keeps running state across chat input remounts", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLE,
+      })
+
+      const firstRender = renderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+        },
+      })
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "Hello{enter}")
+
+      firstRender.unmount()
+
+      renderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+        },
+      })
+
       expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
     })
 
@@ -1217,10 +1243,55 @@ describe("ChatInput widget", () => {
       expect(stopScriptMock).toHaveBeenCalledTimes(1)
     })
 
+    it("reverts to a disabled submit button once a stop has been requested", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_STOP,
+      })
+
+      const { rerenderWithContexts } = renderWithContexts(
+        <ChatInput {...props} />,
+        {
+          scriptRunContext: {
+            scriptRunState: ScriptRunState.NOT_RUNNING,
+          },
+        }
+      )
+
+      // Type and submit to trigger the running state
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "Hello{enter}")
+
+      // While the run is active, the stop button is shown
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+        },
+      })
+      expect(screen.getByTestId("stChatInputStopButton")).toBeVisible()
+
+      // After the user clicks stop, the app moves to STOP_REQUESTED. The script
+      // may keep running until a blocking call returns, but the stop button has
+      // done its job: it reverts to the (disabled) submit button so the click is
+      // acknowledged immediately, and the textarea stays disabled.
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.STOP_REQUESTED,
+        },
+      })
+
+      expect(
+        screen.queryByTestId("stChatInputStopButton")
+      ).not.toBeInTheDocument()
+      expect(screen.getByTestId("stChatInputSubmitButton")).toBeVisible()
+      expect(screen.getByTestId("stChatInputSubmitButton")).toBeDisabled()
+      expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
+    })
+
     it("re-enables input when script run completes", async () => {
       const user = userEvent.setup()
       const props = getProps({
-        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLED,
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLE,
       })
 
       const { rerenderWithContexts } = renderWithContexts(
@@ -1255,6 +1326,160 @@ describe("ChatInput widget", () => {
 
       // Verify textarea is re-enabled
       expect(screen.getByTestId("stChatInputTextArea")).not.toBeDisabled()
+    })
+
+    it("re-enables input after the submitted run finishes early for st.rerun", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLE,
+      })
+
+      const { rerenderWithContexts } = renderWithContexts(
+        <ChatInput {...props} />,
+        {
+          scriptRunContext: {
+            scriptRunState: ScriptRunState.NOT_RUNNING,
+          },
+        }
+      )
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "Hello{enter}")
+
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+        },
+      })
+      expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
+
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RERUN_REQUESTED,
+          scriptRunFinishedSequence: 1,
+          scriptRunFinishedFragmentIds: [],
+        },
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stChatInputTextArea")).not.toBeDisabled()
+      })
+    })
+
+    it("does not re-enable a page-level input for an unrelated fragment completion", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLE,
+      })
+
+      const { rerenderWithContexts } = renderWithContexts(
+        <ChatInput {...props} />,
+        {
+          scriptRunContext: {
+            scriptRunState: ScriptRunState.NOT_RUNNING,
+          },
+        }
+      )
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "Hello{enter}")
+
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+          fragmentIdsThisRun: [],
+        },
+      })
+      expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
+
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+          fragmentIdsThisRun: [],
+          scriptRunFinishedSequence: 1,
+          scriptRunFinishedFragmentIds: ["other-fragment"],
+        },
+      })
+
+      expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
+    })
+
+    it("re-enables a fragment input when its fragment run finishes", async () => {
+      const user = userEvent.setup()
+      const props = getProps(
+        {
+          submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLE,
+        },
+        { fragmentId: "chat-fragment" }
+      )
+
+      const { rerenderWithContexts } = renderWithContexts(
+        <ChatInput {...props} />,
+        {
+          scriptRunContext: {
+            scriptRunState: ScriptRunState.NOT_RUNNING,
+          },
+        }
+      )
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "Hello{enter}")
+
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+          fragmentIdsThisRun: ["chat-fragment"],
+        },
+      })
+      expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
+
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+          fragmentIdsThisRun: [],
+          scriptRunFinishedSequence: 1,
+          scriptRunFinishedFragmentIds: ["chat-fragment"],
+        },
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stChatInputTextArea")).not.toBeDisabled()
+      })
+    })
+
+    it("lets explicit disabled state take precedence over stop mode", async () => {
+      const user = userEvent.setup()
+      const enabledProps = getProps({
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_STOP,
+      })
+      const disabledProps = getProps({
+        disabled: true,
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_STOP,
+      })
+
+      const { rerenderWithContexts } = renderWithContexts(
+        <ChatInput {...enabledProps} />,
+        {
+          scriptRunContext: {
+            scriptRunState: ScriptRunState.NOT_RUNNING,
+          },
+        }
+      )
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "Hello{enter}")
+
+      rerenderWithContexts(<ChatInput {...disabledProps} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+        },
+      })
+
+      expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
+      expect(
+        screen.queryByTestId("stChatInputStopButton")
+      ).not.toBeInTheDocument()
+      expect(screen.getByTestId("stChatInputSubmitButton")).toBeDisabled()
     })
   })
 })

@@ -66,6 +66,7 @@ import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
+import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { FileSize, sizeConverter } from "~lib/util/FileHelper"
@@ -97,6 +98,11 @@ import {
   StyledToolbarRow,
   StyledWaveformContainer,
 } from "./styled-components"
+
+type SubmittedRunScope = {
+  fragmentId: string | null
+  scriptRunFinishedSequence: number
+}
 
 export interface Props {
   disabled: boolean
@@ -152,8 +158,20 @@ function ChatInput({
 
   const acceptAudio = element.acceptAudio ?? false
 
-  const { scriptRunState, stopScript } = useContext(ScriptRunContext)
-  const [wasSubmitted, setWasSubmitted] = useState(false)
+  const {
+    fragmentIdsThisRun,
+    scriptRunFinishedFragmentIds,
+    scriptRunFinishedSequence,
+    scriptRunState,
+    stopScript,
+  } = useContext(ScriptRunContext)
+  const [submittedRunScope, setSubmittedRunScope] =
+    useWidgetManagerElementState<SubmittedRunScope | undefined>({
+      widgetMgr,
+      id: element.id,
+      key: "submittedRunScope",
+      defaultValue: undefined,
+    })
   const submitMode = element.submitMode
 
   // Cleanup: abort any in-progress uploads on unmount
@@ -350,6 +368,71 @@ function ChatInput({
     ((acceptedFiles: File[], rejectedFiles: never[]) => void) | null
   >(null)
 
+  const submittedRunMatchesFragmentIds = useCallback(
+    (fragmentIds: Array<string>): boolean => {
+      if (submittedRunScope === undefined) {
+        return false
+      }
+
+      return submittedRunScope.fragmentId === null
+        ? fragmentIds.length === 0
+        : fragmentIds.includes(submittedRunScope.fragmentId)
+    },
+    [submittedRunScope]
+  )
+
+  // Reset submission tracking once a newer scriptFinished signal arrives for the
+  // run this chat input triggered. The sequence guard avoids resetting too early:
+  // right after submit the context can still be NOT_RUNNING (with an unchanged
+  // sequence) until the rerun request is processed. We re-enable the widget when:
+  //   - the matching full-script or fragment run completes (also covers the case
+  //     where the handler calls st.rerun() and a follow-up run starts at once), or
+  //   - the app goes idle without that run reporting completion (safety net).
+  useEffect(() => {
+    if (
+      submittedRunScope === undefined ||
+      scriptRunFinishedSequence <= submittedRunScope.scriptRunFinishedSequence
+    ) {
+      return
+    }
+
+    if (
+      scriptRunState === ScriptRunState.NOT_RUNNING ||
+      submittedRunMatchesFragmentIds(scriptRunFinishedFragmentIds)
+    ) {
+      setSubmittedRunScope(undefined)
+    }
+  }, [
+    scriptRunFinishedFragmentIds,
+    scriptRunFinishedSequence,
+    scriptRunState,
+    submittedRunMatchesFragmentIds,
+    submittedRunScope,
+    setSubmittedRunScope,
+  ])
+
+  // submit_mode state: determine if widget is in running mode and which button to show
+  const stopRequested = scriptRunState === ScriptRunState.STOP_REQUESTED
+  const submittedRunIsPending =
+    scriptRunState === ScriptRunState.RERUN_REQUESTED || stopRequested
+  const submittedRunIsActive =
+    scriptRunState === ScriptRunState.RUNNING &&
+    submittedRunMatchesFragmentIds(fragmentIdsThisRun)
+  const isInRunningMode =
+    !disabled &&
+    submittedRunScope !== undefined &&
+    submitMode !== ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT &&
+    (submittedRunIsPending || submittedRunIsActive)
+  // Once the user has requested a stop, the stop button has done its job: revert
+  // to the (disabled) send button so the click is acknowledged immediately,
+  // even if the script keeps running until a blocking call returns.
+  const showStopButton =
+    isInRunningMode &&
+    submitMode === ChatInputProto.SubmitMode.SUBMIT_MODE_STOP &&
+    !stopRequested
+  // In both "disable" and "stop" modes, the textarea should be disabled during run
+  const isDisabledDuringRun = isInRunningMode
+
   // eslint-disable-next-line react-hooks/preserve-manual-memoization -- dropHandlerRef is a ref, setFiles is a stable setter
   const handleRetry = useCallback((fileInfo: UploadFileInfo): void => {
     if (!fileInfo.file || fileInfo.status.type !== "error") {
@@ -466,7 +549,11 @@ function ChatInput({
 
   const handlePaste = useCallback(
     (e: ClipboardEvent<HTMLTextAreaElement>): void => {
-      if (disabled || acceptFile === AcceptFileValue.None) {
+      if (
+        disabled ||
+        isDisabledDuringRun ||
+        acceptFile === AcceptFileValue.None
+      ) {
         return
       }
 
@@ -482,7 +569,7 @@ function ChatInput({
       e.preventDefault()
       dropHandlerRef.current?.(pastedFiles, [])
     },
-    [acceptFile, disabled]
+    [acceptFile, disabled, isDisabledDuringRun]
   )
 
   const { getRootProps, getInputProps } = useDropzone({
@@ -492,6 +579,7 @@ function ChatInput({
       acceptFile === AcceptFileValue.Directory,
     accept: getAccept(element.fileType),
     maxSize: maxFileSize,
+    disabled: disabled || isDisabledDuringRun,
     // Disable the File System Access API to avoid browser-specific issues
     // with drag-and-drop uploads (see issue #6176 and FileDropzone usage).
     useFsAccessApi: false,
@@ -511,7 +599,7 @@ function ChatInput({
       // - audioInfo is provided (audio was just recorded and uploaded)
       // Audio bypasses the dirty check because it's uploaded and submitted
       // immediately without being added to the files state.
-      if ((!dirty && !audioInfo) || disabled) {
+      if ((!dirty && !audioInfo) || disabled || isDisabledDuringRun) {
         return
       }
 
@@ -531,8 +619,14 @@ function ChatInput({
       )
 
       // Track submission for submit_mode behavior
-      if (submitMode !== ChatInputProto.SubmitMode.SUBMIT_MODE_NONE) {
-        setWasSubmitted(true)
+      if (submitMode !== ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT) {
+        // `fragmentId` is an empty string for top-level (non-fragment) widgets
+        // because it comes from a protobuf string field. Normalize falsy values
+        // to null so the run-scope matcher treats them as full-script runs.
+        setSubmittedRunScope({
+          fragmentId: fragmentId || null,
+          scriptRunFinishedSequence,
+        })
       }
 
       // Reset dropzone when files are cleared on submit
@@ -548,6 +642,7 @@ function ChatInput({
     [
       dirty,
       disabled,
+      isDisabledDuringRun,
       value,
       files.length,
       createChatInputWidgetFilesValue,
@@ -556,6 +651,8 @@ function ChatInput({
       fragmentId,
       autoExpand,
       submitMode,
+      scriptRunFinishedSequence,
+      setSubmittedRunScope,
     ]
   )
 
@@ -687,13 +784,18 @@ function ChatInput({
       e.preventDefault()
       e.stopPropagation()
 
-      if (!acceptAudio || disabled || controller.state === "recording") {
+      if (
+        !acceptAudio ||
+        disabled ||
+        isDisabledDuringRun ||
+        controller.state === "recording"
+      ) {
         return
       }
 
       await controller.start()
     },
-    [acceptAudio, disabled, controller]
+    [acceptAudio, disabled, isDisabledDuringRun, controller]
   )
 
   const handleRecordingCancel = useCallback(() => {
@@ -784,25 +886,6 @@ function ChatInput({
       window.removeEventListener("dragleave", handleDragLeave)
     }
   }, [fileDragged, innerWidth, innerHeight])
-
-  // Reset submission tracking when script completes
-  useEffect(() => {
-    if (scriptRunState === ScriptRunState.NOT_RUNNING) {
-      setWasSubmitted(false)
-    }
-  }, [scriptRunState])
-
-  // submit_mode state: determine if widget is in running mode and which button to show
-  const isInRunningMode =
-    wasSubmitted &&
-    submitMode !== ChatInputProto.SubmitMode.SUBMIT_MODE_NONE &&
-    (scriptRunState === ScriptRunState.RUNNING ||
-      scriptRunState === ScriptRunState.RERUN_REQUESTED)
-  const showStopButton =
-    isInRunningMode &&
-    submitMode === ChatInputProto.SubmitMode.SUBMIT_MODE_STOP
-  // In both "disabled" and "stop" modes, the textarea should be disabled during run
-  const isDisabledDuringRun = isInRunningMode
 
   /** Renders the submit or stop button based on submit_mode state. */
   const renderActionButton = (): React.ReactElement =>
@@ -1047,7 +1130,7 @@ function ChatInput({
                   <>
                     <StyledSendIconButton
                       onClick={handleRecordingCancel}
-                      disabled={disabled}
+                      disabled={disabled || isDisabledDuringRun}
                       data-testid="stChatInputCancelButton"
                       aria-label="Cancel recording"
                     >
@@ -1055,7 +1138,9 @@ function ChatInput({
                     </StyledSendIconButton>
                     <StyledSendIconButton
                       onClick={handleRecordingApproveVoid}
-                      disabled={disabled || audioUploading}
+                      disabled={
+                        disabled || isDisabledDuringRun || audioUploading
+                      }
                       data-testid="stChatInputApproveButton"
                       aria-label="Submit recording"
                     >

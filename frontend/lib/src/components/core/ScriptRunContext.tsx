@@ -61,6 +61,22 @@ export interface ScriptRunContextProps {
   fragmentIdsThisRun: Array<string>
 
   /**
+   * Monotonic counter incremented whenever the frontend receives a
+   * scriptFinished message.
+   *
+   * Consumed by: ChatInput
+   */
+  scriptRunFinishedSequence: number
+
+  /**
+   * Fragment IDs associated with the latest scriptFinished message. Empty for
+   * full-script runs.
+   *
+   * Consumed by: ChatInput
+   */
+  scriptRunFinishedFragmentIds: Array<string>
+
+  /**
    * Callback to stop the currently running script.
    * Used by widgets that want to provide a stop button (e.g., st.chat_input
    * with submit_mode="stop").
@@ -84,6 +100,8 @@ export const ScriptRunContext = createContext<ScriptRunContextProps>({
   scriptRunState: ScriptRunState.NOT_RUNNING,
   scriptRunId: INITIAL_SCRIPT_RUN_ID,
   fragmentIdsThisRun: [],
+  scriptRunFinishedSequence: 0,
+  scriptRunFinishedFragmentIds: [],
   stopScript: noop,
 })
 

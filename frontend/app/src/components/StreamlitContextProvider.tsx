@@ -84,6 +84,8 @@ type ScriptRunContextValues = {
   scriptRunState: ScriptRunState
   scriptRunId: string
   fragmentIdsThisRun: Array<string>
+  scriptRunFinishedSequence: number
+  scriptRunFinishedFragmentIds: Array<string>
 }
 
 type FormsContextValues = {
@@ -143,6 +145,8 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   scriptRunState,
   scriptRunId,
   fragmentIdsThisRun,
+  scriptRunFinishedSequence,
+  scriptRunFinishedFragmentIds,
   // FormsContext
   formsData,
   // BackendOperationContext
@@ -237,8 +241,17 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       scriptRunState,
       scriptRunId,
       fragmentIdsThisRun,
+      scriptRunFinishedSequence,
+      scriptRunFinishedFragmentIds,
     }),
-    [stopScript, scriptRunState, scriptRunId, fragmentIdsThisRun]
+    [
+      stopScript,
+      scriptRunState,
+      scriptRunId,
+      fragmentIdsThisRun,
+      scriptRunFinishedSequence,
+      scriptRunFinishedFragmentIds,
+    ]
   )
 
   const formsContextProps: FormsContextProps = useMemo(

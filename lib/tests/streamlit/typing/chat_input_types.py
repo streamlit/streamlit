@@ -290,8 +290,8 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # submit_mode does not affect return type - it's always based on accept_file/accept_audio
-    assert_type(chat_input("Message", submit_mode=None), str | None)
-    assert_type(chat_input("Message", submit_mode="disabled"), str | None)
+    assert_type(chat_input("Message", submit_mode="submit"), str | None)
+    assert_type(chat_input("Message", submit_mode="disable"), str | None)
     assert_type(chat_input("Message", submit_mode="stop"), str | None)
 
     # submit_mode with accept_file still returns ChatInputValue
@@ -300,6 +300,6 @@ if TYPE_CHECKING:
         ChatInputValue | None,
     )
     assert_type(
-        chat_input("Message", accept_audio=True, submit_mode="disabled"),
+        chat_input("Message", accept_audio=True, submit_mode="disable"),
         ChatInputValue | None,
     )

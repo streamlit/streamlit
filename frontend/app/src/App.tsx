@@ -208,6 +208,8 @@ interface State {
   mainScriptHash: string
   latestRunTime: number
   fragmentIdsThisRun: Array<string>
+  scriptRunFinishedSequence: number
+  scriptRunFinishedFragmentIds: Array<string>
   // host communication info
   isOwner: boolean
   hostMenuItems: IMenuItem[]
@@ -342,6 +344,8 @@ export class App extends PureComponent<Props, State> {
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
       fragmentIdsThisRun: [],
+      scriptRunFinishedSequence: 0,
+      scriptRunFinishedFragmentIds: [],
       // Information sent from the host
       isOwner: false,
       hostMenuItems: [],
@@ -1590,6 +1594,14 @@ export class App extends PureComponent<Props, State> {
    * @param status the ScriptFinishedStatus that the script finished with
    */
   handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
+    // Bump a monotonic counter and snapshot the fragment IDs of the run that
+    // just finished, so widgets (e.g. ChatInput) can react to the completion of
+    // the specific full-script or fragment run they triggered.
+    this.setState(prevState => ({
+      scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
+      scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
+    }))
+
     if (
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN ||
@@ -2454,6 +2466,8 @@ export class App extends PureComponent<Props, State> {
         setTheme={this.setAndSendTheme}
         availableThemes={this.props.theme.availableThemes}
         fragmentIdsThisRun={this.state.fragmentIdsThisRun}
+        scriptRunFinishedSequence={this.state.scriptRunFinishedSequence}
+        scriptRunFinishedFragmentIds={this.state.scriptRunFinishedFragmentIds}
         locale={window.navigator.language}
         formsData={this.state.formsData}
         scriptRunState={scriptRunState}

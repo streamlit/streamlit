@@ -318,18 +318,18 @@ if key is None or key == "audio_sample_rate":
             # Play the audio
             st.audio(audio_sample_rate_value.audio)
 
-if key is None or key == "submit_mode_disabled":
+if key is None or key == "submit_mode_disable":
     import time
 
-    submit_mode_disabled_value = st.container().chat_input(
-        "Chat input (submit_mode=disabled)",
-        submit_mode="disabled",
-        key="submit_mode_disabled",
+    submit_mode_disable_value = st.container().chat_input(
+        "Chat input (submit_mode=disable)",
+        submit_mode="disable",
+        key="submit_mode_disable",
     )
-    if submit_mode_disabled_value:
-        st.write(f"submit_mode_disabled - value: {submit_mode_disabled_value}")
+    if submit_mode_disable_value:
+        st.write(f"submit_mode_disable - value: {submit_mode_disable_value}")
         time.sleep(2)
-        st.write("submit_mode_disabled - processing complete")
+        st.write("submit_mode_disable - processing complete")
 
 if key is None or key == "submit_mode_stop":
     import time
@@ -343,3 +343,20 @@ if key is None or key == "submit_mode_stop":
         st.write(f"submit_mode_stop - value: {submit_mode_stop_value}")
         time.sleep(5)
         st.write("submit_mode_stop - processing complete")
+
+if key is None or key == "submit_mode_fragment":
+    import time
+
+    @st.fragment
+    def submit_mode_fragment():
+        fragment_value = st.chat_input(
+            "Chat input (submit_mode=disable in fragment)",
+            submit_mode="disable",
+            key="submit_mode_fragment",
+        )
+        if fragment_value:
+            st.write(f"submit_mode_fragment - value: {fragment_value}")
+            time.sleep(2)
+            st.write("submit_mode_fragment - processing complete")
+
+    submit_mode_fragment()

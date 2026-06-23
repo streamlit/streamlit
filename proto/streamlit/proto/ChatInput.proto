@@ -49,9 +49,9 @@ message ChatInput {
   // Controls widget behavior after submission while the script is running
   enum SubmitMode {
     // Default: widget remains enabled during script execution
-    SUBMIT_MODE_NONE = 0;
+    SUBMIT_MODE_SUBMIT = 0;
     // Widget is disabled after submission until script completes
-    SUBMIT_MODE_DISABLED = 1;
+    SUBMIT_MODE_DISABLE = 1;
     // Submit button transforms into stop button during script execution
     SUBMIT_MODE_STOP = 2;
   }

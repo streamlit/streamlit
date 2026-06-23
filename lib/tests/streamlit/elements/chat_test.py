@@ -1233,8 +1233,8 @@ class ChatInputSubmitModeTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (None, ChatInput.SubmitMode.SUBMIT_MODE_NONE, "none_explicit"),
-            ("disabled", ChatInput.SubmitMode.SUBMIT_MODE_DISABLED, "disabled_str"),
+            ("submit", ChatInput.SubmitMode.SUBMIT_MODE_SUBMIT, "submit"),
+            ("disable", ChatInput.SubmitMode.SUBMIT_MODE_DISABLE, "disable"),
             ("stop", ChatInput.SubmitMode.SUBMIT_MODE_STOP, "stop"),
         ]
     )
@@ -1245,10 +1245,10 @@ class ChatInputSubmitModeTest(DeltaGeneratorTestCase):
         assert c.submit_mode == expected
 
     def test_submit_mode_default(self):
-        """Test that submit_mode defaults to SUBMIT_MODE_NONE when not specified."""
+        """Test that submit_mode defaults to SUBMIT_MODE_SUBMIT when not specified."""
         st.chat_input("Placeholder")
         c = self.get_delta_from_queue().new_element.chat_input
-        assert c.submit_mode == ChatInput.SubmitMode.SUBMIT_MODE_NONE
+        assert c.submit_mode == ChatInput.SubmitMode.SUBMIT_MODE_SUBMIT
 
     def test_submit_mode_invalid(self):
         """Test that invalid submit_mode values raise an error."""

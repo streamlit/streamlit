@@ -556,7 +556,7 @@ class ChatMixin:
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[False] = False,
         disabled: bool = False,
-        submit_mode: Literal["disabled", "stop"] | None = None,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -577,7 +577,7 @@ class ChatMixin:
         accept_audio: Literal[True],
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
-        submit_mode: Literal["disabled", "stop"] | None = None,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -598,7 +598,7 @@ class ChatMixin:
         accept_audio: bool = False,
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
-        submit_mode: Literal["disabled", "stop"] | None = None,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -619,7 +619,7 @@ class ChatMixin:
         accept_audio: bool = False,
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
-        submit_mode: Literal["disabled", "stop"] | None = None,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -736,14 +736,14 @@ class ChatMixin:
             Whether the chat input should be disabled. This defaults to
             ``False``.
 
-        submit_mode : "disabled", "stop", or None
+        submit_mode : "submit", "disable", or "stop"
             Controls widget behavior after the user submits a message while
             the script is running. This can be one of the following values:
 
-            - ``None`` (default): The widget remains fully enabled after
+            - ``"submit"`` (default): The widget remains fully enabled after
               submission. Users can submit new messages while the script
               is running.
-            - ``"disabled"``: The widget is automatically disabled after
+            - ``"disable"``: The widget is automatically disabled after
               the user submits a message and re-enables when the script
               run completes. This prevents users from interrupting ongoing
               operations like LLM streaming.
@@ -752,7 +752,7 @@ class ChatMixin:
               similar to clicking "Stop" in the app's status widget. The
               text area is disabled while the script runs.
 
-            Use ``"disabled"`` to prevent interruptions during streaming
+            Use ``"disable"`` to prevent interruptions during streaming
             responses, or ``"stop"`` to let users cancel long-running
             generations.
 
@@ -946,9 +946,9 @@ class ChatMixin:
                 "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
             )
 
-        if submit_mode not in {None, "disabled", "stop"}:
+        if submit_mode not in {"submit", "disable", "stop"}:
             raise StreamlitAPIException(
-                "The `submit_mode` parameter must be 'disabled', 'stop', or None."
+                "The `submit_mode` parameter must be 'submit', 'disable', or 'stop'."
             )
 
         if max_upload_size is not None and (
@@ -1077,13 +1077,10 @@ class ChatMixin:
         # Map submit_mode to proto enum
         if submit_mode == "stop":
             chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_STOP
-        elif submit_mode == "disabled":
-            chat_input_proto.submit_mode = (
-                ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLED
-            )
+        elif submit_mode == "disable":
+            chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLE
         else:
-            # None -> NONE (default behavior)
-            chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_NONE
+            chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT
 
         if widget_state.value_changed and widget_state.value is not None:
             # Support for programmatically setting the text in the chat input
