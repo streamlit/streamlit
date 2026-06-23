@@ -35,9 +35,26 @@ def _render_widgets() -> None:
     st.button("Rerun", key="rerun")
 
 
+def _render_page_1_only_widgets() -> None:
+    # These widgets are rendered on Page 1 only. Page 2 never renders them, so
+    # a page-scoped value here must be dropped on the page switch even though no
+    # other page re-registers the widget.
+    if st.session_state.get("show"):
+        st.text_input("Page 1 page-scoped", key="p1_page_text", persist_state="page")
+        st.text_input(
+            "Page 1 session-scoped", key="p1_session_text", persist_state="session"
+        )
+        st.text_input("Page 1 not persisted", key="p1_plain_text")
+
+    _render_value("p1_page_text", "p1_page_text")
+    _render_value("p1_session_text", "p1_session_text")
+    _render_value("p1_plain_text", "p1_plain_text")
+
+
 def page_1() -> None:
     st.header("Page 1")
     _render_widgets()
+    _render_page_1_only_widgets()
 
 
 def page_2() -> None:
