@@ -1082,9 +1082,8 @@ describe("AppView element", () => {
       const header = screen.getByTestId("stHeader")
       expect(header).toBeInTheDocument()
       expect(header).not.toHaveStyle({ backgroundColor: "transparent" })
-      // Navigation should be present in the header
-      const allPage2Elements = screen.getAllByText("page2")
-      expect(allPage2Elements.length).toBeGreaterThan(0)
+      // Navigation should be present in the header — top nav section trigger is rendered
+      expect(screen.getByTestId("stTopNavSection")).toBeInTheDocument()
     })
 
     it("header shows logo and sidebar button in embed mode", () => {
@@ -1161,9 +1160,8 @@ describe("AppView element", () => {
       // Header should be visible
       expect(screen.getByTestId("stHeader")).toBeInTheDocument()
 
-      // Navigation should still be shown in embed mode
-      const allPage2Elements = screen.getAllByText("page2")
-      expect(allPage2Elements.length).toBeGreaterThan(0)
+      // Navigation should still be shown in embed mode — top nav section trigger is rendered
+      expect(screen.getByTestId("stTopNavSection")).toBeInTheDocument()
     })
 
     it("header does NOT show toolbar actions in embed mode without show_toolbar", () => {
