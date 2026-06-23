@@ -211,6 +211,14 @@ def _resolve_streamlit_command(command_name: str) -> tuple[str, Any] | None:
             # Resolve the attribute statically so computed attributes (e.g. the
             # ``st.context.headers`` property) are not evaluated.
             static_obj = inspect.getattr_static(obj, part)
+        except AttributeError:
+            # Some public container members are exposed dynamically through
+            # ``__getattr__``. They are already filtered through ``dir(obj)``.
+            try:
+                obj = getattr(obj, part)
+            except Exception:
+                return None
+            continue
         except Exception:
             return None
 

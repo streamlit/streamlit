@@ -524,6 +524,14 @@ class CliTest(unittest.TestCase):
         assert "st.column_config.NumberColumn(" in result.output
         assert "Configure a number column" in result.output
 
+    def test_docs_command_dynamic_container_member(self):
+        """Tests the docs command resolves public members exposed dynamically."""
+        result = self.runner.invoke(cli, ["docs", "st.bottom.button"])
+
+        assert result.exit_code == 0
+        assert "st.bottom.button(" in result.output
+        assert "Display a button widget." in result.output
+
     def test_docs_command_property_member_does_not_evaluate_property(self):
         """Tests the docs command resolves property docs without calling the property."""
         with patch("streamlit.runtime.context.get_script_run_ctx") as mock_get_ctx:
