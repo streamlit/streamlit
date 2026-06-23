@@ -487,7 +487,11 @@ def _fragment(
             if skip_container:
                 ThreadState.update(pre_allocated_container_fragment_id=None)
 
-            with ThreadState.scoped(fragment_id=fragment_id):
+            # Set delta_path initial value to None. When the fragment container
+            # is established below, this will be initialized with the fragment's
+            # delta path. Without this, we would inherit the delta path from the
+            # parent scope.
+            with ThreadState.scoped(fragment_id=fragment_id, delta_path=None):
                 result = None
                 with active_hash_context:
                     container_ctx = (

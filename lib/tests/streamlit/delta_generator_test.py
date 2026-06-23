@@ -33,7 +33,7 @@ from parameterized import parameterized
 import streamlit as st
 import streamlit.runtime.state.widgets as w
 from streamlit import delta_generator
-from streamlit.cursor import LockedCursor, make_delta_path
+from streamlit.cursor import LockedCursor, RunningCursor, make_delta_path
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.utils import compute_and_register_element_id
@@ -43,12 +43,18 @@ from streamlit.errors import (
     StreamlitDuplicateElementKey,
 )
 from streamlit.logger import get_logger
+from streamlit.proto import Block_pb2
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
+from streamlit.runtime.fragment import MemoryFragmentStorage
+from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
-from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    FragmentThreadState,
+    ThreadState,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.streamlit_test import ELEMENT_COMMANDS
 
@@ -1307,6 +1313,305 @@ class ParallelWorkerExternalContainerWriteTest(DeltaGeneratorTestCase):
             ThreadState.update(is_parallel_worker=False, delta_path=())
 
 
+# Outside container writes: detection, wrapper creation, and redirection.
+
+
+def _message_queue(test_case: DeltaGeneratorTestCase) -> list:
+    """Return the queued ForwardMsg protos that carry a delta."""
+    return [msg for msg in test_case.forward_msg_queue._queue if msg.HasField("delta")]
+
+
+class BlockCreationDeltaPathTest(DeltaGeneratorTestCase):
+    """Tests that _block emits add_block messages at the correct delta path."""
+
+    def test_container_add_block_uses_correct_delta_path(self) -> None:
+        """A container at a non-zero index emits its add_block at its own slot,
+        not at the next slot (which would happen if delta_path were read after
+        the cursor was advanced).
+        """
+        st.text("first")
+        st.container()
+
+        msg = self.get_message_from_queue()
+        assert msg.delta.WhichOneof("type") == "add_block"
+        assert msg.metadata.delta_path == make_delta_path(RootContainer.MAIN, (), 1)
+
+    def test_nested_container_delta_paths(self) -> None:
+        """Nested containers emit at paths reflecting their nesting depth."""
+        level3 = st.container().container().container()
+        level3.markdown("hi")
+
+        msg = self.get_message_from_queue()
+        assert msg.metadata.delta_path == make_delta_path(
+            RootContainer.MAIN, (0, 0, 0), 0
+        )
+
+
+class NeedsOutsideWrapperTest(DeltaGeneratorTestCase):
+    """Tests for detecting when a fragment writes to a container declared outside its scope."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.fragment_storage = MemoryFragmentStorage()
+        self.ts = FragmentThreadState(fragment_id="frag", delta_path=(0, 3))
+
+    def _check(self, dg: DeltaGenerator) -> bool:
+        return delta_generator._needs_outside_wrapper(
+            dg, self.ts, self.fragment_storage
+        )
+
+    def test_no_fragment_id_returns_false(self) -> None:
+        """A write outside any fragment never needs a wrapper."""
+        ts = FragmentThreadState(fragment_id=None, delta_path=(0, 3))
+        dg = DeltaGenerator(root_container=RootContainer.SIDEBAR)
+        assert (
+            delta_generator._needs_outside_wrapper(dg, ts, self.fragment_storage)
+            is False
+        )
+
+    def test_no_delta_path_returns_false(self) -> None:
+        """Returns False when delta_path is None (fragment hasn't established its
+        position yet, so detection is not active).
+        """
+        ts = FragmentThreadState(fragment_id="frag", delta_path=None)
+        dg = DeltaGenerator(root_container=RootContainer.SIDEBAR)
+        assert (
+            delta_generator._needs_outside_wrapper(dg, ts, self.fragment_storage)
+            is False
+        )
+
+    def test_sidebar_root_returns_true(self) -> None:
+        """A fragment writing directly to the sidebar root needs a wrapper."""
+        dg = DeltaGenerator(root_container=RootContainer.SIDEBAR)
+        assert self._check(dg) is True
+
+    def test_bottom_root_returns_true(self) -> None:
+        """A fragment writing directly to the bottom root needs a wrapper."""
+        dg = DeltaGenerator(root_container=RootContainer.BOTTOM)
+        assert self._check(dg) is True
+
+    def test_main_root_returns_false(self) -> None:
+        """The main root is reached via the fragment path, not a wrapper."""
+        dg = DeltaGenerator(root_container=RootContainer.MAIN)
+        assert self._check(dg) is False
+
+    def test_event_root_returns_false(self) -> None:
+        """The event root needs no positional isolation."""
+        dg = DeltaGenerator(root_container=RootContainer.EVENT)
+        assert self._check(dg) is False
+
+    def test_write_within_own_fragment_container_returns_false(self) -> None:
+        """A write to a container within the fragment's own scope is not an outside write."""
+        inside_cursor = LockedCursor(
+            root_container=RootContainer.MAIN, parent_path=(3,), index=0
+        )
+        dg = DeltaGenerator(root_container=RootContainer.MAIN, cursor=inside_cursor)
+        assert self._check(dg) is False
+
+    def test_dg_already_inside_wrapper_returns_false(self) -> None:
+        """A nested container created inside an existing wrapper doesn't need a second wrapper."""
+        wrapper_dg = DeltaGenerator(
+            root_container=RootContainer.MAIN,
+            cursor=RunningCursor(root_container=RootContainer.MAIN, parent_path=(0,)),
+            block_type="transparent",
+        )
+        self.fragment_storage.register_outside_wrapper(
+            "frag",
+            "container-id",
+            OutsideContainerWrapper(
+                wrapper_dg, [0, 0], Block_pb2.Block(), creating_fragment_id=None
+            ),
+        )
+        nested_cursor = LockedCursor(
+            root_container=RootContainer.MAIN, parent_path=(9,), index=0
+        )
+        nested_dg = DeltaGenerator(
+            root_container=RootContainer.MAIN,
+            cursor=nested_cursor,
+            parent=wrapper_dg,
+        )
+        assert self._check(nested_dg) is False
+
+    def test_write_to_container_outside_fragment_scope_returns_true(self) -> None:
+        """A write to a container outside the fragment's scope needs a wrapper."""
+        outside_cursor = LockedCursor(
+            root_container=RootContainer.MAIN, parent_path=(9,), index=0
+        )
+        dg = DeltaGenerator(root_container=RootContainer.MAIN, cursor=outside_cursor)
+        assert self._check(dg) is True
+
+
+class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
+    """Tests for wrapper creation and redirection through the public write path."""
+
+    def _enter_fragment(
+        self, fragment_id: str = "frag", delta_path: tuple[int, ...] = (0, 99)
+    ) -> None:
+        ThreadState.update(fragment_id=fragment_id, delta_path=delta_path)
+        self.addCleanup(lambda: ThreadState.update(fragment_id=None, delta_path=None))
+
+    def test_outside_write_emits_transparent_block_then_nested_element(self) -> None:
+        """An outside write inserts a transparent wrapper, then nests the element."""
+        outside = st.container()
+        outside_path = list(outside._cursor.delta_path)
+        self.clear_queue()
+
+        self._enter_fragment()
+        outside.markdown("hi")
+
+        msgs = _message_queue(self)
+        block_msg, element_msg = msgs[0], msgs[1]
+        assert block_msg.delta.add_block.WhichOneof("type") == "transparent"
+        assert list(block_msg.metadata.delta_path) == outside_path
+        assert list(element_msg.metadata.delta_path) == [*outside_path, 0]
+
+    def test_outside_write_registers_single_wrapper(self) -> None:
+        """Repeated writes to the same outside container reuse one wrapper."""
+        outside = st.container()
+        self._enter_fragment()
+
+        outside.markdown("one")
+        outside.markdown("two")
+
+        wrappers = self.script_run_ctx.fragment_storage.outside_wrappers_for("frag")
+        assert len(wrappers) == 1
+
+    def test_nested_container_produces_single_wrapper(self) -> None:
+        """Creating a nested container inside an outside container only allocates one wrapper."""
+        outside = st.container()
+        self._enter_fragment()
+
+        nested = outside.container()
+        nested.markdown("deep")
+
+        wrappers = self.script_run_ctx.fragment_storage.outside_wrappers_for("frag")
+        assert len(wrappers) == 1
+
+    def test_two_fragments_get_distinct_wrappers(self) -> None:
+        """Two fragments writing to one container get two wrappers at two slots."""
+        outside = st.container()
+        storage = self.script_run_ctx.fragment_storage
+
+        ThreadState.update(fragment_id="frag_a", delta_path=(0, 99))
+        outside.markdown("a")
+        ThreadState.update(fragment_id="frag_b", delta_path=(0, 99))
+        outside.markdown("b")
+        ThreadState.update(fragment_id=None, delta_path=None)
+
+        wrapper_a = storage.get_outside_wrapper("frag_a", outside._id)
+        wrapper_b = storage.get_outside_wrapper("frag_b", outside._id)
+        assert wrapper_a is not None
+        assert wrapper_b is not None
+        assert wrapper_a.creation_delta_path != wrapper_b.creation_delta_path
+
+    def test_fragment_only_rerun_without_prior_write_raises(self) -> None:
+        """If the outside container was never written to during a full app run, a
+        fragment-only rerun raises.
+        """
+        outside = st.container()
+        self.script_run_ctx.fragment_ids_this_run = ["frag"]
+        self._enter_fragment()
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            outside.markdown("hi")
+        assert "could not reserve a stable position" in str(exc_info.value)
+
+    def test_fragment_rerun_allows_wrapper_for_container_created_by_running_fragment(
+        self,
+    ) -> None:
+        """During a fragment rerun, if the target container was created by one
+        of the running fragments (e.g. a parent), a new wrapper is allowed.
+        This supports nested fragments writing into parent-owned containers.
+        """
+        self._enter_fragment(fragment_id="parent_frag")
+        inside_container = st.container()
+        ThreadState.update(fragment_id=None, delta_path=None)
+
+        self.script_run_ctx.fragment_ids_this_run = ["parent_frag"]
+        self._enter_fragment(fragment_id="child_frag")
+
+        inside_container.markdown("child write")
+
+        wrapper = self.script_run_ctx.fragment_storage.get_outside_wrapper(
+            "child_frag", inside_container._id
+        )
+        assert wrapper is not None
+
+    def test_empty_outside_container_produces_locked_wrapper(self) -> None:
+        """An st.empty() outside container produces a locked wrapper cursor."""
+        outside = st.empty()
+        self._enter_fragment()
+
+        outside.markdown("hi")
+
+        wrapper = self.script_run_ctx.fragment_storage.get_outside_wrapper(
+            "frag", outside._id
+        )
+        assert wrapper is not None
+        assert wrapper.delta_generator._cursor.is_locked is True
+
+    def test_bottom_root_wrapper_records_no_creating_fragment(self) -> None:
+        """Root containers like bottom aren't created by any fragment, so the wrapper records None."""
+        bottom_dg = get_dg_singleton_instance().bottom_dg
+        self._enter_fragment()
+
+        bottom_dg.markdown("hi")
+
+        wrappers = self.script_run_ctx.fragment_storage.outside_wrappers_for("frag")
+        assert len(wrappers) == 1
+        assert wrappers[0].creating_fragment_id is None
+
+    def test_parallel_worker_needs_no_wrapper(self) -> None:
+        """A parallel worker's write never needs an outside wrapper."""
+        outside = st.container()
+        ts = FragmentThreadState(
+            fragment_id="frag", delta_path=(0, 99), is_parallel_worker=True
+        )
+
+        assert (
+            delta_generator._needs_outside_wrapper(
+                outside, ts, self.script_run_ctx.fragment_storage
+            )
+            is False
+        )
+
+
+class ContainerCreatingFragmentIdTest(DeltaGeneratorTestCase):
+    """Tests for the _creating_fragment_id attribute set on containers."""
+
+    def test_main_script_container_stamped_none(self) -> None:
+        """A container created outside any fragment carries no creating fragment."""
+        container = st.container()
+        assert container._creating_fragment_id is None
+
+    def test_container_stamped_with_active_fragment(self) -> None:
+        """A container created inside a fragment is stamped with that fragment id."""
+        ThreadState.update(fragment_id="parent_frag", delta_path=(0, 1))
+        try:
+            container = st.container()
+        finally:
+            ThreadState.update(fragment_id=None, delta_path=None)
+        assert container._creating_fragment_id == "parent_frag"
+
+    def test_wrapper_records_container_creating_fragment(self) -> None:
+        """When writer_frag writes to a container created by parent_frag, the
+        wrapper records parent_frag as the creator.
+        """
+        ThreadState.update(fragment_id="parent_frag", delta_path=(0, 1))
+        container = st.container()
+        ThreadState.update(fragment_id="writer_frag", delta_path=(0, 99))
+        try:
+            container.markdown("hi")
+        finally:
+            ThreadState.update(fragment_id=None, delta_path=None)
+
+        wrapper = self.script_run_ctx.fragment_storage.get_outside_wrapper(
+            "writer_frag", container._id
+        )
+        assert wrapper is not None
+        assert wrapper.creating_fragment_id == "parent_frag"
+
+
 class CreatingFragmentIdDeepCopyTest(DeltaGeneratorTestCase):
     """Deepcopy must preserve fragment-origin metadata so cached wrappers
     can evict correctly after a container is copied during fragment reruns."""
@@ -1327,3 +1632,44 @@ class CreatingFragmentIdDeepCopyTest(DeltaGeneratorTestCase):
         copied = deepcopy(dg)
 
         assert copied._creating_fragment_id is None
+
+
+class NonFragmentBlockPathWrapperFreeTest(DeltaGeneratorTestCase):
+    """Block commands (st.container, st.columns) must not trigger outside-write
+    redirection when no fragment is active."""
+
+    def test_container_outside_fragment_has_no_wrappers(self) -> None:
+        """The outside-write detection in _block must be a no-op when no
+        fragment is running.
+        """
+        container = st.container()
+        container.markdown("inside container")
+
+        storage = self.script_run_ctx.fragment_storage
+        wrappers = storage.outside_wrappers_for("")
+        assert wrappers == []
+
+        msg = self.get_message_from_queue()
+        assert msg.metadata.delta_path == make_delta_path(RootContainer.MAIN, (0,), 0)
+
+    def test_columns_outside_fragment_has_no_wrappers(self) -> None:
+        """The outside-write detection in _block must be a no-op for
+        st.columns when no fragment is running.
+        """
+        col1, col2 = st.columns(2)
+        col1.markdown("left")
+        col2.markdown("right")
+
+        storage = self.script_run_ctx.fragment_storage
+        assert storage.outside_wrappers_for("") == []
+
+        left_msg = self.get_message_from_queue(-2)
+        right_msg = self.get_message_from_queue(-1)
+        # columns() creates a horizontal block at (0,), then column blocks
+        # at (0,0) and (0,1) inside it.
+        assert left_msg.metadata.delta_path == make_delta_path(
+            RootContainer.MAIN, (0, 0), 0
+        )
+        assert right_msg.metadata.delta_path == make_delta_path(
+            RootContainer.MAIN, (0, 1), 0
+        )

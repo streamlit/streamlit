@@ -55,6 +55,12 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
     types.ModuleType,
 )
 
+# OpenAI Responses API stream event types that carry user-visible text.
+# Other event types (lifecycle, tool-call, etc.) are protocol metadata.
+_OPENAI_RESPONSE_TEXT_EVENT_TYPES: Final = frozenset(
+    {"response.output_text.delta", "response.refusal.delta"}
+)
+
 
 class StreamingOutput(list[Any]):  # noqa: FURB189
     pass
@@ -85,6 +91,9 @@ class WriteMixin:
             If you pass an async generator, Streamlit will internally convert
             it to a sync generator. If the generator depends on a cached object
             with async references, this can raise an error.
+
+            Streamlit natively parses OpenAI streams (both the Chat
+            Completions API and the Responses API) and LangChain streams.
 
             .. note::
                 To use additional LLM libraries, you can create a wrapper to
@@ -219,6 +228,22 @@ class WriteMixin:
                     raise StreamlitAPIException(
                         "Failed to parse the OpenAI ChatCompletionChunk. "
                         "The most likely cause is a change of the chunk object structure "
+                        "due to a recent OpenAI update. You might be able to fix this "
+                        "by downgrading the OpenAI library or upgrading Streamlit. Also, "
+                        "please report this issue to: https://github.com/streamlit/streamlit/issues."
+                    ) from err
+
+            elif type_util.is_openai_response_event(chunk):
+                # Try to convert OpenAI Responses API stream events to a string.
+                try:
+                    if chunk.type in _OPENAI_RESPONSE_TEXT_EVENT_TYPES:
+                        chunk = chunk.delta or ""  # noqa: PLW2901
+                    else:
+                        chunk = ""  # noqa: PLW2901
+                except AttributeError as err:
+                    raise StreamlitAPIException(
+                        "Failed to parse the OpenAI Response stream event. "
+                        "The most likely cause is a change of the event object structure "
                         "due to a recent OpenAI update. You might be able to fix this "
                         "by downgrading the OpenAI library or upgrading Streamlit. Also, "
                         "please report this issue to: https://github.com/streamlit/streamlit/issues."
