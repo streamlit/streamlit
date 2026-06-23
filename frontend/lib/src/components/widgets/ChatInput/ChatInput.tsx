@@ -451,6 +451,19 @@ function ChatInput({
   // In both "disable" and "stop" modes, the textarea should be disabled during run
   const isDisabledDuringRun = isInRunningMode
 
+  // Disabling the textarea makes the browser drop focus from it. When the run
+  // finishes and the widget re-enables, restore focus so the user can keep
+  // typing the next message ("focus is preserved" in the spec). We only do this
+  // for the run-driven disable transition, not when the widget is explicitly
+  // disabled via the `disabled` prop.
+  const wasDisabledDuringRunRef = useRef(false)
+  useEffect(() => {
+    if (wasDisabledDuringRunRef.current && !isDisabledDuringRun && !disabled) {
+      chatInputRef.current?.focus()
+    }
+    wasDisabledDuringRunRef.current = isDisabledDuringRun
+  }, [isDisabledDuringRun, disabled])
+
   // eslint-disable-next-line react-hooks/preserve-manual-memoization -- dropHandlerRef is a ref, setFiles is a stable setter
   const handleRetry = useCallback((fileInfo: UploadFileInfo): void => {
     if (!fileInfo.file || fileInfo.status.type !== "error") {

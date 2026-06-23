@@ -1361,6 +1361,59 @@ describe("ChatInput widget", () => {
       })
     })
 
+    it("restores focus to the input when the run completes", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLE,
+      })
+
+      const { rerenderWithContexts } = renderWithContexts(
+        <ChatInput {...props} />,
+        {
+          scriptRunContext: {
+            scriptRunState: ScriptRunState.NOT_RUNNING,
+          },
+        }
+      )
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "Hello{enter}")
+
+      // The triggered run starts and disables the input.
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+          scriptRunId: "triggered-run",
+        },
+      })
+      expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
+
+      // Move focus elsewhere to mimic the browser dropping focus from the
+      // disabled textarea (jsdom keeps focus on disabled elements).
+      const elsewhere = document.createElement("button")
+      document.body.appendChild(elsewhere)
+      act(() => {
+        elsewhere.focus()
+      })
+      expect(screen.getByTestId("stChatInputTextArea")).not.toHaveFocus()
+
+      // The run finishes and the input re-enables; focus should be restored.
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+          scriptRunId: "triggered-run",
+          scriptRunFinishedSequence: 1,
+          scriptRunFinishedFragmentIds: [],
+        },
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stChatInputTextArea")).toHaveFocus()
+      })
+
+      elsewhere.remove()
+    })
+
     it("re-enables input after the submitted run finishes early for st.rerun", async () => {
       const user = userEvent.setup()
       const props = getProps({
