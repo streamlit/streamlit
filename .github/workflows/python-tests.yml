@@ -95,10 +95,22 @@ jobs:
           RUFF_OUTPUT_FORMAT: github
       - name: Run Type Checkers
         run: make python-types
+      - name: Upgrade to the latest numpy for tests
+        # The dev dependency group caps numpy < 2.5 so mypy can parse its stubs
+        # while we still type-check as Python 3.10 (numpy 2.5+ stubs use Python
+        # 3.12 syntax). Type checking above runs against that capped version,
+        # but users on Python 3.12+ install numpy 2.5+. Upgrade to the latest
+        # numpy available for this Python so the tests below exercise what users
+        # actually run. The UV_NO_SYNC below keeps `uv run` from reverting it.
+        run: uv pip install --upgrade numpy
       - name: Run Python Tests
         run: make python-tests
+        env:
+          UV_NO_SYNC: "1"
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
+        env:
+          UV_NO_SYNC: "1"
       - name: Upload coverage data
         uses: actions/upload-artifact@v7
         with:
@@ -106,40 +118,6 @@ jobs:
           path: ${{ env.COVERAGE_FILE }}
           include-hidden-files: true
           if-no-files-found: ignore
-
-  # The dev dependency group caps numpy < 2.5 so the type checker can parse its
-  # stubs while we still target Python 3.10 (numpy 2.5+ stubs use Python 3.12
-  # syntax). That cap means the py-unit-tests matrix runs against numpy 2.4.x,
-  # but users on Python 3.12+ install numpy 2.5+. This job runs the unit tests
-  # against the latest numpy on the max Python version to catch runtime
-  # regressions that the capped matrix would otherwise miss.
-  py-numpy-latest-tests:
-    needs:
-      - build_info
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Streamlit code
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.ref }}
-          persist-credentials: false
-          submodules: "recursive"
-
-      - name: Setup virtual env
-        uses: ./.github/actions/make_init
-        with:
-          python_version: ${{ needs.build_info.outputs.PYTHON_MAX_VERSION }}
-          # Don't share the cached venv with the type-checked jobs, which pin
-          # numpy < 2.5. This job intentionally tests the latest numpy.
-          use_cached_venv: false
-      - name: Install latest numpy
-        run: uv pip install --upgrade "numpy>=2.5"
-      - name: Run Python Tests
-        run: make python-tests
-      - name: CLI Smoke Tests
-        run: make cli-smoke-tests
 
   py-integration-tests:
     needs:

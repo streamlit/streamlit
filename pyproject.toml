@@ -66,8 +66,8 @@ dev = [
   "mypy==2.1.0",
   # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
   # Streamlit still type-checks as Python 3.10. This only constrains the
-  # type-checked dev environment; the `py-numpy-latest-tests` CI job runs the
-  # test suite against the latest numpy so runtime regressions are still caught.
+  # type-checked dev environment; the py-unit-tests CI jobs upgrade to the
+  # latest numpy before running tests so runtime regressions are still caught.
   "numpy<2.5",
   "mypy-protobuf>=3.2",
   "semver>=3",
