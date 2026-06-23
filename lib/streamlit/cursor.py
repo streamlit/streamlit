@@ -213,6 +213,12 @@ class RunningCursor(Cursor):
         self._parent_path = parent_path
         self._index = 0
 
+    def reset(self) -> None:
+        """Reset this cursor to its initial position (index 0, no transients)."""
+        self._index = 0
+        self._transient_index = None
+        self._transient_elements = SparseList[Element]()
+
     @property
     def root_container(self) -> int:
         return self._root_container

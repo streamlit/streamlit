@@ -13,22 +13,31 @@
 # limitations under the License.
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.conftest import rerun_app, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     click_form_button,
     expect_markdown,
+    expect_no_exception,
+    get_element_by_key,
     select_selectbox_option,
 )
 
 
+def _in_fragment_markdown(app: Page) -> Locator:
+    return app.get_by_test_id("stMarkdown").filter(has_text="inside fragment:")
+
+
+def _outside_fragment_markdown(app: Page) -> Locator:
+    return app.get_by_test_id("stMarkdown").filter(has_text="outside: fragment")
+
+
 def get_uuids(app: Page) -> tuple[str, str]:
-    markdowns = app.get_by_test_id("stMarkdown")
-    in_fragment = markdowns.filter(has_text="inside fragment:")
-    outside_fragment = markdowns.filter(has_text="outside: fragment")
+    in_fragment = _in_fragment_markdown(app)
+    outside_fragment = _outside_fragment_markdown(app)
     expect(in_fragment).to_have_count(1)
     expect(outside_fragment).to_have_count(1)
 
@@ -44,13 +53,8 @@ def get_uuids(app: Page) -> tuple[str, str]:
 def expect_only_fragment_uuid_changed(
     app: Page, old_text_in_fragment: str, old_text_outside_fragment: str
 ):
-    markdowns = app.get_by_test_id("stMarkdown")
-    expect(markdowns.filter(has_text="inside fragment:")).not_to_have_text(
-        old_text_in_fragment
-    )
-    expect(markdowns.filter(has_text="outside: fragment")).to_have_text(
-        old_text_outside_fragment
-    )
+    expect(_in_fragment_markdown(app)).not_to_have_text(old_text_in_fragment)
+    expect(_outside_fragment_markdown(app)).to_have_text(old_text_outside_fragment)
 
 
 def test_button_in_fragment(app: Page):
@@ -237,13 +241,8 @@ def test_full_app_rerun(app: Page):
     app.keyboard.press("r")
     wait_for_app_run(app)
 
-    markdowns = app.get_by_test_id("stMarkdown")
-    expect(markdowns.filter(has_text="inside fragment:")).not_to_have_text(
-        old_text_in_fragment
-    )
-    expect(markdowns.filter(has_text="outside: fragment")).not_to_have_text(
-        old_text_outside_fragment
-    )
+    expect(_in_fragment_markdown(app)).not_to_have_text(old_text_in_fragment)
+    expect(_outside_fragment_markdown(app)).not_to_have_text(old_text_outside_fragment)
 
 
 def test_fragment_widget_persists_across_full_app_rerun(app: Page):
@@ -288,3 +287,74 @@ def test_form_inside_fragment_submits_correctly(app: Page):
     expect(
         app.get_by_test_id("stMarkdown").filter(has_text="submitted:")
     ).to_have_count(1)
+
+
+def test_full_rerun_after_outside_write_no_duplicates(app: Page):
+    """After interacting with a fragment that writes to an outside container,
+    a full app rerun must not produce duplicated content.
+    """
+    container = get_element_by_key(app, "shrink_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    expect(markdowns).to_have_count(7)
+
+    click_button(app, "shrink rows")
+    expect(markdowns).to_have_count(4)
+
+    rerun_app(app)
+    # session_state retains shrink_count=2, so the count stays at 4.
+    expect(markdowns).to_have_count(4)
+    expect(markdowns.first).to_have_text("shrink header")
+    expect(markdowns.last).to_have_text("shrink footer")
+    expect(markdowns.filter(has_text="shrink row 0")).to_have_count(1)
+    expect_no_exception(app)
+
+
+def test_fragment_shrink_clears_stale_outside_elements(app: Page):
+    """A fragment that reruns with fewer elements in an outside container must
+    garbage-collect the removed elements, while growth keeps the footer in place.
+    """
+    container = get_element_by_key(app, "shrink_container")
+    markdowns = container.get_by_test_id("stMarkdown")
+    # header + 5 rows + footer.
+    expect(markdowns).to_have_count(7)
+    expect(markdowns.first).to_have_text("shrink header")
+    expect(markdowns.last).to_have_text("shrink footer")
+    expect(markdowns.filter(has_text="shrink row 4")).to_have_count(1)
+
+    click_button(app, "shrink rows")
+
+    # header + 2 rows + footer; rows 2-4 must be gone (the stale-on-shrink bug).
+    expect(markdowns).to_have_count(4)
+    expect(markdowns.first).to_have_text("shrink header")
+    expect(markdowns.last).to_have_text("shrink footer")
+    expect(markdowns.filter(has_text="shrink row 0")).to_have_count(1)
+    expect(markdowns.filter(has_text="shrink row 1")).to_have_count(1)
+    expect(markdowns.filter(has_text="shrink row 2")).to_have_count(0)
+    expect(markdowns.filter(has_text="shrink row 4")).to_have_count(0)
+
+    click_button(app, "grow rows")
+
+    # Growing back must restore all rows without overwriting the footer.
+    expect(markdowns).to_have_count(7)
+    expect(markdowns.first).to_have_text("shrink header")
+    expect(markdowns.last).to_have_text("shrink footer")
+    expect(markdowns.filter(has_text="shrink row 4")).to_have_count(1)
+
+    expect_no_exception(app)
+
+
+def test_fragment_rerun_preserves_inscope_content_position(app: Page):
+    """A fragment rerun must keep in-scope elements in the same count and order."""
+    stable_a = app.get_by_test_id("stMarkdown").filter(has_text="stable item A")
+    stable_b = app.get_by_test_id("stMarkdown").filter(has_text="stable item B")
+    stable_c = app.get_by_test_id("stMarkdown").filter(has_text="stable item C")
+    expect(stable_a).to_have_count(1)
+    expect(stable_b).to_have_count(1)
+    expect(stable_c).to_have_count(1)
+
+    click_button(app, "rerun stable")
+
+    expect(stable_a).to_have_count(1)
+    expect(stable_b).to_have_count(1)
+    expect(stable_c).to_have_count(1)
+    expect_no_exception(app)

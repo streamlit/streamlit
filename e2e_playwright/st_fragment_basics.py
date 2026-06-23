@@ -78,3 +78,43 @@ def form_fragment():
 
 
 form_fragment()
+
+
+# A fragment writing a variable number of elements into an outside container,
+# with a main-script footer after the fragment. Shrinking the count must garbage-
+# collect the removed elements (no stale rows), while growing must not overwrite
+# the footer.
+shrink_container = st.container(key="shrink_container")
+with shrink_container:
+    st.markdown("shrink header")
+
+if "shrink_count" not in st.session_state:
+    st.session_state.shrink_count = 5
+
+
+@st.fragment
+def shrink_fragment():
+    if st.button("shrink rows", key="shrink_rows"):
+        st.session_state.shrink_count = 2
+    if st.button("grow rows", key="grow_rows"):
+        st.session_state.shrink_count = 5
+    with shrink_container:
+        for i in range(st.session_state.shrink_count):
+            st.markdown(f"shrink row {i}")
+
+
+shrink_fragment()
+with shrink_container:
+    st.markdown("shrink footer")
+
+
+# A fragment with several in-scope elements and a rerun button.
+@st.fragment
+def stable_content_fragment():
+    st.markdown("stable item A")
+    st.markdown("stable item B")
+    st.markdown("stable item C")
+    st.button("rerun stable", key="rerun_stable")
+
+
+stable_content_fragment()

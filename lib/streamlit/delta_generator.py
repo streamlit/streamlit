@@ -626,8 +626,8 @@ class DeltaGenerator(
         ctx = get_script_run_ctx()
         ts = ThreadState.get() if ctx else None
         if (
-            ctx
-            and ts
+            ctx is not None
+            and ts is not None
             and ts.fragment_id
             and _needs_outside_wrapper(dg, ts, ctx.fragment_storage)
         ):

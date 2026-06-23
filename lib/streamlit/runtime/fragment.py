@@ -199,6 +199,17 @@ class FragmentStorage(Protocol):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def clear_outside_wrappers(self) -> None:
+        """Drop every stored wrapper record.
+
+        Called at the start of a full app run, before the main script recreates
+        its outside containers as new DG objects. Wrappers must survive a full
+        run so the fragment reruns that follow it can reuse them, so clearing
+        happens before — not after — the script body executes.
+        """
+        raise NotImplementedError
+
 
 # NOTE: Ideally, we'd like to add a MemoryFragmentStorageStatProvider implementation to
 # keep track of memory usage due to fragments, but doing something like this ends up
@@ -258,13 +269,6 @@ class MemoryFragmentStorage(FragmentStorage):
             for fragment_id in list(self._fragments):
                 if fragment_id not in new_fragment_ids:
                     self._remove(fragment_id, evict_wrappers=False)
-
-            # Drop ALL wrappers unconditionally, including those belonging to
-            # fragments that survived the loop above. On a full app rerun the
-            # main script recreates outside containers as new DG objects, so
-            # every wrapper record — even one for a retained fragment — holds a
-            # stale DG with an already-advanced cursor.
-            self._outside_wrappers.clear()
 
     def lookup(self, key: str) -> Fragment:
         try:
@@ -389,6 +393,10 @@ class MemoryFragmentStorage(FragmentStorage):
                 if wrapper.creating_fragment_id != fragment_id
             }
 
+    def clear_outside_wrappers(self) -> None:
+        with self._lock:
+            self._outside_wrappers.clear()
+
     def __deepcopy__(self, memo: dict[int, object]) -> NoReturn:
         raise TypeError(
             "MemoryFragmentStorage does not support deepcopy; "
@@ -400,6 +408,35 @@ class MemoryFragmentStorage(FragmentStorage):
             "MemoryFragmentStorage does not support copy; "
             "it holds a threading.Lock and shared mutable state."
         )
+
+
+def _reset_outside_wrappers(
+    fragment_storage: FragmentStorage, fragment_id: str
+) -> None:
+    """Re-emit and reset every wrapper belonging to a fragment before it reruns.
+
+    Re-emitting sends a fresh add_block delta so the frontend doesn't garbage-
+    collect the wrapper as stale. Resetting the cursor returns its index to 0 so
+    the fragment's children overwrite in place instead of accumulating.
+
+    Each re-emitted delta carries ``fragment_id`` so the frontend's
+    ``ClearStaleNodeVisitor`` can recognize the wrapper as fragment-owned and
+    garbage-collect children that weren't re-emitted — otherwise a fragment
+    that shrinks its element count leaves stale children behind.
+    """
+    from streamlit.cursor import RunningCursor
+    from streamlit.delta_generator import _enqueue_add_block
+
+    # See docstring — tag wrappers with fragment_id for stale-child GC.
+    with ThreadState.scoped(fragment_id=fragment_id):
+        for wrapper in fragment_storage.outside_wrappers_for(fragment_id):
+            _enqueue_add_block(wrapper.creation_delta_path, wrapper.block_proto)
+
+            wrapper_cursor = wrapper.delta_generator._cursor
+            if not isinstance(wrapper_cursor, RunningCursor):
+                # LockedCursor (st.empty wrappers) always points at index 0.
+                continue
+            wrapper_cursor.reset()
 
 
 def _fragment(
@@ -465,6 +502,13 @@ def _fragment(
                 # fragment was declared.
                 ctx.cursors = deepcopy(cursors_snapshot)
                 context_dg_stack.set(deepcopy(dg_stack_snapshot))
+
+                # Evict wrappers whose outside containers will be rebuilt by this
+                # fragment, then re-emit and reset the surviving wrappers. Order
+                # matters: eviction must happen first so we don't re-emit a wrapper
+                # that's about to be replaced.
+                ctx.fragment_storage.evict_outside_wrappers_created_by(fragment_id)
+                _reset_outside_wrappers(ctx.fragment_storage, fragment_id)
 
             # Always add the fragment id to new_fragment_ids. For full app runs
             # we need to add them anyways and for fragment runs we add them

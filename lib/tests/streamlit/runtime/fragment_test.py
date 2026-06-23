@@ -26,6 +26,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.cursor import LockedCursor, RunningCursor
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.errors import (
@@ -35,12 +36,14 @@ from streamlit.errors import (
     StreamlitFragmentWidgetsNotAllowedOutsideError,
 )
 from streamlit.proto.Block_pb2 import Block
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.fragment import (
     FragmentStorage,
     MemoryFragmentStorage,
     _check_not_parallel_worker,
     _dispatch_parallel_fragment,
     _fragment,
+    _reset_outside_wrappers,
     _run_parallel_fragment,
     fragment,
 )
@@ -201,15 +204,31 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert self._storage.outside_wrappers_for("frag_b") == [wrapper_b]
         assert self._storage.outside_wrappers_for("missing") == []
 
-    def test_clear_drops_outside_wrappers_even_when_fragment_retained(self):
-        """clear() empties wrappers even when the fragment id is retained."""
+    def test_clear_retains_outside_wrappers(self):
+        """clear() (called at the end of a full run) preserves wrappers so that
+        the fragment reruns that follow can reuse them.
+        """
         wrapper = self._make_wrapper("dg-1")
         self._storage.register_outside_wrapper("some_key", "container", wrapper)
 
         self._storage.clear(new_fragment_ids=frozenset({"some_key"}))
 
-        # The fragment closure survives, but its wrapper does not.
         assert self._storage.contains("some_key")
+        assert self._storage.get_outside_wrapper("some_key", "container") is wrapper
+
+    def test_clear_outside_wrappers_drops_all_records(self):
+        """clear_outside_wrappers() (called at the start of a full run) empties
+        every wrapper record, including those for retained fragments.
+        """
+        self._storage.register_outside_wrapper(
+            "frag_a", "container", self._make_wrapper("dg-a")
+        )
+        self._storage.register_outside_wrapper(
+            "frag_b", "container", self._make_wrapper("dg-b")
+        )
+
+        self._storage.clear_outside_wrappers()
+
         assert self._storage._outside_wrappers == {}
 
     def test_evict_outside_wrappers_created_by_filters_on_creating_fragment(self):
@@ -536,6 +555,173 @@ def test_shallow_copy_raises_type_error() -> None:
 
     with pytest.raises(TypeError, match="does not support copy"):
         copy.copy(storage)
+
+
+class ResetOutsideWrappersTest(unittest.TestCase):
+    """Tests for _reset_outside_wrappers, called before a fragment reruns."""
+
+    def setUp(self) -> None:
+        # ThreadState.scoped() requires an initialized FragmentThreadState.
+        ThreadState.initialize()
+
+    def _make_wrapper(
+        self,
+        cursor: object,
+        *,
+        creating_fragment_id: str | None = None,
+        creation_delta_path: list[int] | None = None,
+    ) -> OutsideContainerWrapper:
+        delta_generator = types.SimpleNamespace(_cursor=cursor)
+        return OutsideContainerWrapper(
+            delta_generator=delta_generator,  # type: ignore[arg-type]
+            creation_delta_path=creation_delta_path or [0, 1],
+            block_proto=Block(),
+            creating_fragment_id=creating_fragment_id,
+        )
+
+    @patch("streamlit.delta_generator._enqueue_add_block")
+    def test_reemits_add_block_and_resets_running_cursor(
+        self, mock_enqueue: MagicMock
+    ) -> None:
+        """A RunningCursor wrapper is re-emitted and its cursor reset to index 0."""
+        storage = MemoryFragmentStorage()
+        cursor = RunningCursor(RootContainer.MAIN)
+        cursor.lock_element()
+        cursor.lock_element()
+        assert cursor.index == 2
+        wrapper = self._make_wrapper(cursor, creation_delta_path=[0, 3])
+        storage.register_outside_wrapper("frag", "container", wrapper)
+
+        _reset_outside_wrappers(storage, "frag")
+
+        mock_enqueue.assert_called_once_with([0, 3], wrapper.block_proto)
+        assert cursor.index == 0
+
+    @patch("streamlit.delta_generator._enqueue_add_block")
+    def test_locked_cursor_reemitted_but_not_reset(
+        self, mock_enqueue: MagicMock
+    ) -> None:
+        """A LockedCursor (st.empty) wrapper is re-emitted but never reset."""
+        storage = MemoryFragmentStorage()
+        cursor = LockedCursor(RootContainer.MAIN, index=0)
+        wrapper = self._make_wrapper(cursor, creation_delta_path=[0, 4])
+        storage.register_outside_wrapper("frag", "container", wrapper)
+
+        _reset_outside_wrappers(storage, "frag")
+
+        mock_enqueue.assert_called_once_with([0, 4], wrapper.block_proto)
+        # LockedCursor has no reset(); the isinstance check skips it.
+        # Verify cursor identity is preserved and index unchanged.
+        assert wrapper.delta_generator._cursor is cursor
+        assert cursor.index == 0
+
+    def test_repeated_reruns_keep_delta_paths_stable(self) -> None:
+        """Resetting between runs prevents element accumulation in the wrapper."""
+        storage = MemoryFragmentStorage()
+        cursor = RunningCursor(RootContainer.MAIN, (0, 3))
+        wrapper = self._make_wrapper(cursor)
+        storage.register_outside_wrapper("frag", "container", wrapper)
+
+        def write_three() -> list[list[int]]:
+            return [cursor.lock_element().delta_path for _ in range(3)]
+
+        first_run = write_three()
+        with patch("streamlit.delta_generator._enqueue_add_block"):
+            _reset_outside_wrappers(storage, "frag")
+        second_run = write_three()
+
+        assert second_run == first_run
+        # Without the reset the second run would start where the first left off
+        # (index 3), reproducing the original "Bad delta path index" growth.
+        assert second_run[0][-1] == 0
+
+    @patch("streamlit.delta_generator._enqueue_add_block")
+    def test_eviction_before_reset_skips_evicted_wrapper(
+        self, mock_enqueue: MagicMock
+    ) -> None:
+        """Evicting a writer's wrapper first means reset never re-emits it."""
+        storage = MemoryFragmentStorage()
+        created_by_a = self._make_wrapper(
+            RunningCursor(RootContainer.MAIN),
+            creating_fragment_id="A",
+            creation_delta_path=[0, 1],
+        )
+        created_by_b = self._make_wrapper(
+            RunningCursor(RootContainer.MAIN),
+            creating_fragment_id="B",
+            creation_delta_path=[0, 2],
+        )
+        storage.register_outside_wrapper("A", "container_a", created_by_a)
+        storage.register_outside_wrapper("A", "container_b", created_by_b)
+
+        # Mirror the rerun branch order: evict, then reset.
+        storage.evict_outside_wrappers_created_by("A")
+        _reset_outside_wrappers(storage, "A")
+
+        emitted_paths = [call.args[0] for call in mock_enqueue.call_args_list]
+        assert emitted_paths == [[0, 2]]
+
+    def test_parent_rerun_evicts_nested_wrapper_but_standalone_survives(self) -> None:
+        """A wrapper for a parent's outside container survives the child
+        fragment's reruns but is evicted when the parent reruns.
+        """
+        storage = MemoryFragmentStorage()
+        wrapper = self._make_wrapper(
+            RunningCursor(RootContainer.MAIN),
+            creating_fragment_id="P",
+            creation_delta_path=[0, 5],
+        )
+        storage.register_outside_wrapper("F", "p_container", wrapper)
+
+        # F reruns standalone: its wrapper against P's container survives and is
+        # re-emitted.
+        storage.evict_outside_wrappers_created_by("F")
+        assert storage.outside_wrappers_for("F") == [wrapper]
+        with patch("streamlit.delta_generator._enqueue_add_block") as mock_enqueue:
+            _reset_outside_wrappers(storage, "F")
+        emitted_paths = [call.args[0] for call in mock_enqueue.call_args_list]
+        assert emitted_paths == [[0, 5]]
+
+        # P reruns and rebuilds the container, so F's wrapper is evicted.
+        storage.evict_outside_wrappers_created_by("P")
+        assert storage.outside_wrappers_for("F") == []
+
+    @patch("streamlit.delta_generator._enqueue_add_block")
+    def test_empty_registry_emits_no_add_block(self, mock_enqueue: MagicMock) -> None:
+        """A fragment with no outside wrappers produces zero add_block deltas."""
+        storage = MemoryFragmentStorage()
+        storage.register("frag", lambda: None)
+
+        storage.evict_outside_wrappers_created_by("frag")
+        _reset_outside_wrappers(storage, "frag")
+
+        mock_enqueue.assert_not_called()
+
+    def test_reemission_carries_writing_fragment_id(self) -> None:
+        """Without the fragment_id, the re-emitted wrapper block loses its
+        identity on the frontend and ClearStaleNodeVisitor can't garbage-collect
+        children that weren't re-emitted (the stale-on-shrink bug).
+        """
+        storage = MemoryFragmentStorage()
+        wrapper = self._make_wrapper(
+            RunningCursor(RootContainer.MAIN), creation_delta_path=[0, 3]
+        )
+        storage.register_outside_wrapper("frag", "container", wrapper)
+
+        seen_fragment_ids: list[str | None] = []
+
+        def _capture(*_args: object, **_kwargs: object) -> None:
+            seen_fragment_ids.append(ThreadState.get().fragment_id)
+
+        with patch(
+            "streamlit.delta_generator._enqueue_add_block", side_effect=_capture
+        ):
+            _reset_outside_wrappers(storage, "frag")
+
+        assert seen_fragment_ids == ["frag"]
+        # The scope is restored after re-emission, so the surrounding thread
+        # state is left untouched.
+        assert ThreadState.get().fragment_id is None
 
 
 class FragmentTest(unittest.TestCase):
@@ -1186,6 +1372,64 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
     ):
         _app(element_producer)
 
+    def test_fragment_rerun_no_outside_writes_emits_same_delta_count(self):
+        """A fragment rerun with no outside wrappers emits the same number of
+        deltas as the initial run.
+        """
+        ctx = self.script_run_ctx
+
+        @fragment
+        def writer():
+            st.markdown("inside fragment")
+
+        # Initial (full-app) run.
+        writer()
+        initial_delta_count = len(self.get_all_deltas_from_queue())
+        assert initial_delta_count > 0
+
+        # Fragment rerun.
+        storage = ctx.fragment_storage
+        fragment_id = next(iter(storage._fragments))
+        ctx.fragment_ids_this_run = [fragment_id]
+        self.clear_queue()
+
+        storage._fragments[fragment_id]()
+        rerun_delta_count = len(self.get_all_deltas_from_queue())
+
+        assert rerun_delta_count == initial_delta_count
+
+    def test_standalone_rerun_reuses_wrapper_after_full_run_clear(self):
+        """A standalone fragment rerun reuses the wrapper created during the full
+        run, even though the full run ends with ``clear()``.
+
+        Regression for the wrapper lifecycle: clearing wrappers at the end of a
+        full run left the next standalone rerun with no reserved slot, raising
+        "could not reserve a stable position".
+        """
+        ctx = self.script_run_ctx
+        outside = st.container()
+
+        @fragment
+        def writer():
+            with outside:
+                st.markdown("fragment content")
+
+        writer()
+
+        storage = ctx.fragment_storage
+        fragment_id = next(iter(storage._fragments))
+        assert len(storage.outside_wrappers_for(fragment_id)) == 1
+
+        # End of the full run: stale fragment cleanup must keep the wrapper.
+        storage.clear(new_fragment_ids=frozenset({fragment_id}))
+        assert len(storage.outside_wrappers_for(fragment_id)) == 1
+
+        # Standalone fragment rerun reuses the wrapper without raising and
+        # without registering a second one.
+        ctx.fragment_ids_this_run = [fragment_id]
+        storage._fragments[fragment_id]()
+        assert len(storage.outside_wrappers_for(fragment_id)) == 1
+
 
 @pytest.mark.skipif(
     sys.version_info < (3, 14),
@@ -1258,6 +1502,7 @@ def test_fragment_decorator_handles_pep649_annotations() -> None:
         ("get_outside_wrapper", ("frag", "container"), {}),
         ("outside_wrappers_for", ("frag",), {}),
         ("evict_outside_wrappers_created_by", ("frag",), {}),
+        ("clear_outside_wrappers", (), {}),
     ],
 )
 def test_fragment_storage_abstract_methods_raise_not_implemented(
