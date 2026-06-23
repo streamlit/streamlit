@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { ReactElement, useCallback, useEffect, useState } from "react"
+import {
+  KeyboardEvent,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
 
 import {
   BaseButton,
@@ -123,12 +129,27 @@ function SkillsNudgeToast({
   const isSuccess = status === "success"
   const isError = status === "error"
 
+  // Escape dismisses the card (snooze), mirroring the ✕ — restores the
+  // keyboard-dismiss affordance the react-aria toast region used to provide for
+  // this content. Bubbles from the focused buttons inside the card. Ignored
+  // mid-install so an in-flight request isn't abandoned by a stray keypress.
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "Escape" && !isInstalling && !isSuccess) {
+        event.stopPropagation()
+        handleSnooze()
+      }
+    },
+    [handleSnooze, isInstalling, isSuccess]
+  )
+
   return (
     <StyledSkillsNudgeCard
       data-testid="stSkillsNudge"
       className="stSkillsNudge"
       role="status"
       aria-live="polite"
+      onKeyDown={handleKeyDown}
     >
       <StyledToastWrapper>
         <DynamicIcon

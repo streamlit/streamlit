@@ -54,9 +54,15 @@ export const getToastCardStyle = (theme: EmotionTheme): CSSObject => ({
 })
 
 export const StyledToastRegion = styled(ToastRegion)(({ theme }) => ({
+  position: "fixed",
+  top: theme.sizes.headerHeight,
+  right: 0,
   display: "flex",
   flexDirection: "column",
+  zIndex: theme.zIndices.toast,
   outline: "none",
+  marginLeft: theme.spacing.lg,
+  marginRight: theme.spacing.lg,
   "&[data-focus-visible]": {
     boxShadow: theme.shadows.focusRing,
   },

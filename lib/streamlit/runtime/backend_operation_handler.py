@@ -144,47 +144,45 @@ class DeferredFileHandler(BackendOperationHandler):
 class InstallSkillsHandler(BackendOperationHandler):
     """Handler for one-click "install skills" requests from the in-app nudge."""
 
+    def __init__(self, get_app_dir: Callable[[], str]) -> None:
+        """Initialize with a callable returning the running app's directory.
+
+        The app dir is used both to gate the install (same detection as the
+        nudge) and to resolve the install target, so the offer and the action
+        operate on the same project tree.
+        """
+        self._get_app_dir = get_app_dir
+
     async def handle(
         self,
         request: BackendOperationRequest,
         session_id: str,  # noqa: ARG002
     ) -> BackendOperationResponse:
         """Install the bundled Streamlit skills in project mode."""
-        from streamlit import config
         from streamlit.runtime import metrics_util
         from streamlit.web import skills
 
-        if config.get_option("server.headless"):
-            # Defensive: the nudge is never shown in headless mode, so this
-            # request should not occur. Refuse rather than install.
-            return BackendOperationResponse(
-                request_id=request.request_id,
-                error_msg="Skills install is not available in headless mode.",
-            )
+        app_dir = self._get_app_dir()
 
-        # Defense in depth: the in-app nudge is offered only on localhost, but
-        # that gate lives in the frontend. A request that reaches this handler
-        # on a non-headless, publicly reachable server must not trigger a
-        # server-side install (which writes files and, in the global fallback,
-        # downloads from GitHub). Honor the install only in the same local
-        # agent-development context that surfaces the nudge: refuse when no
-        # agent harness is detected on this host. This reuses the same
-        # detection that gates the recommendation, so the action and the offer
-        # share one source of truth.
-        if not metrics_util.detect_installed_agents():
+        # Gate the action on exactly the same recommendation the nudge was shown
+        # under: should_show_skills_nudge covers not-headless, an agent harness
+        # present, skills not already installed, and no "don't show again"
+        # marker. A request that fails this gate is stale or anomalous (a
+        # replayed BackMsg, a server that should never have offered it) and must
+        # not trigger a server-side install (filesystem writes, and a GitHub
+        # download in the global fallback).
+        if not skills.should_show_skills_nudge(app_dir):
             return BackendOperationResponse(
                 request_id=request.request_id,
                 error_msg="Skills install is not available in this environment.",
             )
 
         try:
-            # Run off the event loop: installing does filesystem I/O (and,
-            # in the global fallback, a network download). The installer
-            # resolves the project root from the server's working directory,
-            # which in the common case (app run from the project/repo root)
-            # matches the app dir the nudge gate detected against.
+            # Run off the event loop: installing does filesystem I/O (and, in
+            # the global fallback, a network download). Resolve the install root
+            # from the app dir so it lands in the tree the nudge detection scans.
             result = await asyncio.to_thread(
-                skills.install_skills, global_mode=False, yes=True
+                skills.install_skills, global_mode=False, yes=True, app_dir=app_dir
             )
         except Exception as ex:
             _LOGGER.warning("One-click skills install failed", exc_info=ex)
@@ -217,7 +215,17 @@ class DismissSkillsNudgeHandler(BackendOperationHandler):
         session_id: str,  # noqa: ARG002
     ) -> BackendOperationResponse:
         """Write the server-side marker so the nudge is no longer shown."""
+        from streamlit import config
         from streamlit.web import skills
+
+        if config.get_option("server.headless"):
+            # The nudge is never shown in headless mode, so a dismissal request
+            # there is anomalous; refuse rather than write a marker file under
+            # the server's config dir (mirrors the install handler's gating).
+            return BackendOperationResponse(
+                request_id=request.request_id,
+                error_msg="Skills nudge is not available in this environment.",
+            )
 
         try:
             await asyncio.to_thread(skills.write_nudge_dismissed_marker)

@@ -194,12 +194,6 @@ class AppSession:
 
         self._debug_last_backmsg_id: str | None = None
 
-        # Cached per-session "recommend installing agent skills" flag. Computed
-        # lazily once (see _should_recommend_skills_install): the frontend only
-        # reads it on the first NewSession of a connection, yet that message is
-        # re-sent on every rerun, so the filesystem detection should not repeat.
-        self._recommend_skills_install: bool | None = None
-
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
         self._backend_operation_dispatcher = self._create_backend_operation_dispatcher()
@@ -226,7 +220,14 @@ class AppSession:
             DeferredFileHandler(lambda: runtime.get_instance().media_file_mgr),
         )
 
-        dispatcher.register("install_skills", InstallSkillsHandler())
+        # Bind the app dir via the ScriptData (not ``self``) so the handler's
+        # closure does not capture the AppSession, which would create a
+        # reference cycle the disconnect ref-leak test guards against.
+        script_data = self._script_data
+        dispatcher.register(
+            "install_skills",
+            InstallSkillsHandler(lambda: os.path.dirname(script_data.main_script_path)),
+        )
         dispatcher.register("dismiss_skills_nudge", DismissSkillsNudgeHandler())
 
         return dispatcher
@@ -876,28 +877,22 @@ class AppSession:
     def _should_recommend_skills_install(self) -> bool:
         """Whether to recommend installing the bundled agent skills.
 
-        Computed once per session and cached. ``_create_new_session_message``
-        runs on every rerun, but the frontend only reads this flag on the first
-        NewSession of a connection, so repeating the filesystem detection each
-        rerun would be wasted work. Passes the app dir the page-profile
-        telemetry uses (``dirname(main_script_path)``) so both share the cached
-        skill-detection result. Guarded so this non-essential nudge can never
-        break session creation (defaults to not recommending on any failure).
+        Recomputed on each NewSession rather than memoized: the heavy
+        filesystem detection is itself cached in ``metrics_util`` (and shared
+        with the page-profile telemetry via the same ``dirname(main_script_path)``
+        key), and that cache is invalidated when skills are installed in-app, so
+        a stale per-session value would otherwise keep recommending the nudge
+        after a successful install. Guarded so this non-essential nudge can
+        never break session creation (defaults to not recommending on failure).
         """
-        if self._recommend_skills_install is None:
-            self._recommend_skills_install = False
-            try:
-                from streamlit.web import skills
+        try:
+            from streamlit.web import skills
 
-                app_dir = os.path.dirname(self._script_data.main_script_path)
-                self._recommend_skills_install = skills.should_show_skills_nudge(
-                    app_dir
-                )
-            except Exception as ex:  # pragma: no cover - defensive
-                _LOGGER.debug(
-                    "Failed to compute skills nudge recommendation", exc_info=ex
-                )
-        return self._recommend_skills_install
+            app_dir = os.path.dirname(self._script_data.main_script_path)
+            return skills.should_show_skills_nudge(app_dir)
+        except Exception as ex:  # pragma: no cover - defensive
+            _LOGGER.debug("Failed to compute skills nudge recommendation", exc_info=ex)
+            return False
 
     def _create_script_finished_message(
         self, status: ForwardMsg.ScriptFinishedStatus.ValueType

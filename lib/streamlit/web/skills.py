@@ -89,14 +89,23 @@ def _discover_skills(source_dir: Path) -> list[str]:
     ]
 
 
-def _find_project_root() -> Path:
+def _find_project_root(start: Path | None = None) -> Path:
     """Find the project root directory for installation.
 
-    1. If cwd or a non-home ancestor has .agents or .claude, use it
+    1. If the start dir or a non-home ancestor has .agents or .claude, use it
     2. Otherwise, walk up to find nearest .git
-    3. Otherwise, use cwd
+    3. Otherwise, use the start dir
+
+    Parameters
+    ----------
+    start
+        Directory to begin the upward search from. Defaults to the current
+        working directory. The in-app installer passes the running app's
+        directory so the install lands in the same tree the nudge detection
+        scans (``app_dir`` or its git root), rather than wherever the server
+        happened to be launched from.
     """
-    cwd = Path.cwd()
+    cwd = start or Path.cwd()
     # Resolve home to handle symlinks/bind mounts reaching home via another path
     resolved_home = Path.home().resolve()
 
@@ -559,6 +568,7 @@ def _install_project_skills(
     *,
     yes: bool = False,
     fallback_to_global: bool = True,
+    app_dir: str | None = None,
 ) -> _InstallResult:
     """Install bundled skills to the current project via symlinks."""
     # Discover bundled skills
@@ -572,8 +582,10 @@ def _install_project_skills(
     if not skills:
         raise click.ClickException("No installable skills found in Streamlit package.")
 
-    # Determine targets
-    project_root = _find_project_root()
+    # Determine targets. The in-app installer passes ``app_dir`` so the project
+    # root resolves from the running app's directory (matching the nudge's skill
+    # detection), instead of the server's working directory.
+    project_root = _find_project_root(Path(app_dir) if app_dir else None)
     target_dirs = _get_project_target_dirs(project_root)
 
     if not _symlinks_supported(project_root, source_skills_dir / skills[0]):
@@ -744,7 +756,9 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
             shutil.rmtree(temp_root, ignore_errors=True)
 
 
-def install_skills(*, global_mode: bool = False, yes: bool = False) -> _InstallResult:
+def install_skills(
+    *, global_mode: bool = False, yes: bool = False, app_dir: str | None = None
+) -> _InstallResult:
     """Install Streamlit AI-agent skills.
 
     Parameters
@@ -754,6 +768,12 @@ def install_skills(*, global_mode: bool = False, yes: bool = False) -> _InstallR
         If False (default), install to project directories via symlinks.
     yes
         If True, skip all confirmation prompts.
+    app_dir
+        Directory of the running app's main script. When provided (the in-app
+        one-click install), the project-mode install resolves its root from this
+        directory so it lands in the same tree the nudge's skill detection scans.
+        Defaults to ``None`` (CLI use), which resolves from the current working
+        directory.
 
     Returns
     -------
@@ -774,7 +794,7 @@ def install_skills(*, global_mode: bool = False, yes: bool = False) -> _InstallR
 
     if global_mode:
         return _install_global_skills(yes=yes)
-    return _install_project_skills(yes=yes)
+    return _install_project_skills(yes=yes, app_dir=app_dir)
 
 
 def _install_location(path: str) -> str:
@@ -783,14 +803,21 @@ def _install_location(path: str) -> str:
     Install display paths are relative to the current working directory when
     possible (e.g. ``.agents/skills/<skill>``), but fall back to an absolute
     path when the resolved project root is an ancestor of the cwd (e.g. running
-    ``streamlit run sub/app.py`` from a subdirectory). The skill target layout
-    is always ``<harness>/skills/<skill>``, so collapse to the final two
-    segments of the parent directory to keep the in-app summary concise in both
-    cases.
+    ``streamlit run sub/app.py`` from a subdirectory). Global installs use a
+    home-relative ``~/.agents/skills/<skill>`` form. The skill target layout is
+    always ``<harness>/skills/<skill>``, so collapse to the final two segments
+    of the parent directory to keep the in-app summary concise — but preserve a
+    leading ``~`` so a global (home) install is not mislabeled as project-local.
     """
     parent = Path(path).parent
-    if len(parent.parts) > 2:
-        return Path(*parent.parts[-2:]).as_posix()
+    parts = parent.parts
+    if parts and parts[0] == "~":
+        # Home-relative global install: keep the ``~`` so the message reads
+        # e.g. "~/.agents/skills" rather than "~/.agents/skills" collapsed to
+        # ".agents/skills" (which looks project-local).
+        return parent.as_posix()
+    if len(parts) > 2:
+        return Path(*parts[-2:]).as_posix()
     return parent.as_posix()
 
 
@@ -798,18 +825,26 @@ def summarize_install(result: _InstallResult) -> str:
     """Return a short, user-facing summary of an install for the in-app nudge.
 
     Reports where skills were newly installed, or that they were already up to
-    date. Used to give the one-click "install skills" toast concrete feedback
-    instead of a generic confirmation. Returns an empty string when there is
-    nothing meaningful to report.
+    date, and flags any skills skipped due to conflicts so a partial install is
+    not silently presented as a complete success. Used to give the one-click
+    "install skills" toast concrete feedback instead of a generic confirmation.
+    Returns an empty string when there is nothing meaningful to report.
     """
+    parts: list[str] = []
     if result.installed:
         # Collapse the per-skill target paths to their distinct parent dirs
         # (e.g. ".agents/skills", ".claude/skills") for a concise message.
         locations = sorted({_install_location(path) for path in result.installed})
-        return "Installed to " + ", ".join(locations)
-    if result.up_to_date:
-        return "Skills are already up to date."
-    return ""
+        parts.append("Installed to " + ", ".join(locations))
+    elif result.up_to_date:
+        parts.append("Skills are already up to date.")
+    if result.skipped:
+        # Surface skipped skills so a mixed result (some installed/up-to-date,
+        # some skipped due to a conflicting file) is not mistaken for "all done".
+        count = len(result.skipped)
+        noun = "skill" if count == 1 else "skills"
+        parts.append(f"{count} {noun} skipped due to conflicts.")
+    return " ".join(parts)
 
 
 def _nudge_dismissed_marker_path() -> Path:

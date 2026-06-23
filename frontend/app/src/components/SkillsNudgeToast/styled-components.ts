@@ -20,25 +20,29 @@ import styled from "@emotion/styled"
 import { EmotionTheme, getToastCardStyle } from "@streamlit/lib"
 
 /**
+ * Slide-in entrance for the nudge card. Defined at module scope (with a literal
+ * start offset rather than a theme token) so the ``@keyframes`` block is
+ * serialized once instead of recreated on every render/theme-eval of the card.
+ */
+const slideIn = keyframes({
+  from: { opacity: 0, transform: "translateX(1.5rem)" },
+  to: { opacity: 1, transform: "translateX(0)" },
+})
+
+/**
  * The standalone nudge card. Shares the toast surface's look via
  * ``getToastCardStyle`` (so it stays visually matched to ``st.toast`` without
  * being routed through the toast queue) and adds a slide-in entrance that
  * honors ``prefers-reduced-motion``. Positioning is supplied by the toast
  * column it is pinned to in ``AppView``.
  */
-export const StyledSkillsNudgeCard = styled.div(({ theme }) => {
-  const slideIn = keyframes({
-    from: { opacity: 0, transform: `translateX(${theme.spacing.threeXL})` },
-    to: { opacity: 1, transform: "translateX(0)" },
-  })
-  return {
-    ...getToastCardStyle(theme),
-    animation: `${slideIn} 0.2s ease-out`,
-    "@media (prefers-reduced-motion: reduce)": {
-      animation: "none",
-    },
-  }
-})
+export const StyledSkillsNudgeCard = styled.div(({ theme }) => ({
+  ...getToastCardStyle(theme),
+  animation: `${slideIn} 0.2s ease-out`,
+  "@media (prefers-reduced-motion: reduce)": {
+    animation: "none",
+  },
+}))
 
 /**
  * Shared reset + interaction styles for the toast's borderless buttons (the

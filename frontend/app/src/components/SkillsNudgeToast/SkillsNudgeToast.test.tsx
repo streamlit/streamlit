@@ -167,4 +167,22 @@ describe("SkillsNudgeToast", () => {
     expect(onDontShowAgain).toHaveBeenCalledTimes(1)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it("snoozes and closes on Escape (keyboard dismissal)", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const onSnooze = vi.fn()
+    const onDontShowAgain = vi.fn()
+    const onClose = vi.fn()
+    renderNudge({ onSnooze, onDontShowAgain, onClose })
+
+    // Escape from a focused control inside the card dismisses it (snooze),
+    // mirroring the ✕ — keyboard users get a quick non-destructive dismissal.
+    screen.getByRole("button", { name: "Install" }).focus()
+    await user.keyboard("{Escape}")
+
+    expect(onSnooze).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+    // Escape snoozes; it must not trigger the permanent dismissal.
+    expect(onDontShowAgain).not.toHaveBeenCalled()
+  })
 })

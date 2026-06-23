@@ -2455,21 +2455,26 @@ def test_create_new_session_message_skips_skills_install_when_not_recommended() 
     assert msg.new_session.initialize.recommend_skills_install is False
 
 
-def test_create_new_session_message_memoizes_skills_recommendation() -> None:
-    """The skills-nudge detection runs once per session, not on every rerun.
+def test_create_new_session_message_recomputes_skills_recommendation() -> None:
+    """The skills-nudge recommendation is recomputed on each NewSession, not
+    memoized for the session's lifetime.
 
-    ``_create_new_session_message`` is re-sent on every SCRIPT_STARTED, but the
-    frontend only reads the flag on the first NewSession, so the filesystem
-    detection must not repeat on each rerun.
+    The heavy filesystem detection is cached in ``metrics_util`` (and that cache
+    is invalidated when skills are installed in-app), so recomputing here is
+    cheap and lets a later NewSession reflect a post-install change instead of a
+    stale "recommend" value.
     """
     session = _create_test_session()
 
     with patch(
-        "streamlit.web.skills.should_show_skills_nudge", return_value=True
+        "streamlit.web.skills.should_show_skills_nudge",
+        side_effect=[True, False],
     ) as mock_should_show:
         first = session._create_new_session_message(page_script_hash="")
         second = session._create_new_session_message(page_script_hash="")
 
-    mock_should_show.assert_called_once_with("/fake")
+    assert mock_should_show.call_count == 2
     assert first.new_session.initialize.recommend_skills_install is True
-    assert second.new_session.initialize.recommend_skills_install is True
+    # The second NewSession reflects the updated detection (e.g. post-install),
+    # not a stale memoized True.
+    assert second.new_session.initialize.recommend_skills_install is False

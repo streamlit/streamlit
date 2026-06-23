@@ -90,6 +90,24 @@ def test_skills_nudge_shows_and_dismisses(
     # The nudge is still there alongside the app toast (it is not replaced).
     expect(nudge).to_be_visible()
 
+    # The toast must be positioned (top-right, beneath the pinned nudge), not
+    # rendered unpositioned at the document origin. The nudge is a standalone
+    # fixed card and the app pushes the toast region down by the nudge's
+    # measured height, so app toasts stack beneath it. Assert the toast sits to
+    # the right and below the nudge's top edge.
+    nudge_box = nudge.bounding_box()
+    toast_box = toast.bounding_box()
+    assert nudge_box is not None
+    assert toast_box is not None
+    # Toast stacks below the nudge's top and shares the right-aligned column.
+    assert toast_box["y"] >= nudge_box["y"], (
+        f"toast (y={toast_box['y']}) should not sit above the nudge "
+        f"(y={nudge_box['y']})"
+    )
+    assert toast_box["x"] > nudge_box["width"], (
+        "toast should be pinned to the right, not at the document origin"
+    )
+
     # The app toast auto-dismisses on its own timer; the nudge persists (it
     # never fades on a timer — only an explicit action dismisses it).
     expect(toast).not_to_be_visible()

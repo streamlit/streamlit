@@ -1551,10 +1551,15 @@ export class App extends PureComponent<Props, State> {
     const snoozedAt = Number(
       window.localStorage.getItem(SKILLS_NUDGE_SNOOZED_AT_KEY)
     )
+    const elapsed = Date.now() - snoozedAt
     return (
       Number.isFinite(snoozedAt) &&
       snoozedAt > 0 &&
-      Date.now() - snoozedAt < SKILLS_NUDGE_SNOOZE_MS
+      // Guard against a future timestamp (e.g. clock skew / a clock set back):
+      // a negative elapsed would otherwise read as "still snoozed" and suppress
+      // the nudge until real time catches up to snoozedAt + window.
+      elapsed >= 0 &&
+      elapsed < SKILLS_NUDGE_SNOOZE_MS
     )
   }
 
@@ -1573,14 +1578,31 @@ export class App extends PureComponent<Props, State> {
     return this.backendOperationClient
       .requestInstallSkills()
       .then(result => {
-        // Mark dismissed so the nudge doesn't reappear after a successful
-        // install. The card shows its own success confirmation.
-        this.setSkillsNudgeDismissed()
+        // The server has re-detected the now-installed skills (it clears its
+        // detection cache), so a later session won't recommend the nudge again
+        // — no need to also write the permanent "don't show again" flag here,
+        // which would conflate "installed" with a permanent opt-out. The card
+        // shows its own success confirmation and auto-dismisses.
         this.trackSkillsNudge("skillsNudgeInstallSucceeded")
         return result.detail ?? undefined
       })
       .catch((error: unknown) => {
         this.trackSkillsNudge("skillsNudgeInstallFailed")
+        // A dropped or timed-out connection during a long install (e.g. the
+        // GitHub global fallback) rejects the request even though the server
+        // install may have completed. Surface a clearer, non-alarming message
+        // than the raw transport error; re-install is idempotent, so retrying
+        // is safe. (Matches BackendOperationClient's rejection messages.)
+        const message = error instanceof Error ? error.message : ""
+        if (
+          message === "Connection closed" ||
+          message === "Request timed out"
+        ) {
+          throw new Error(
+            "Lost connection during install — it may have finished. " +
+              "Reconnect or try again."
+          )
+        }
         // Re-throw so the toast renders its error state.
         throw error
       })

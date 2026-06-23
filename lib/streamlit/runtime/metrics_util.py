@@ -300,7 +300,11 @@ def detect_installed_skills(app_dir: str | None) -> list[str]:
     return list(_detect_installed_skills_cached(app_dir))
 
 
-@lru_cache(maxsize=1)
+# maxsize=2 (not 1) so the two callers' keys can coexist: the page-profile
+# telemetry may pass ``None`` (no script-run context) while the skills nudge
+# passes ``dirname(main_script_path)``. A size-1 cache would let those evict
+# each other and re-walk the filesystem on every alternating call.
+@lru_cache(maxsize=2)
 def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
     try:
         home = os.path.expanduser("~")

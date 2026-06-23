@@ -1659,6 +1659,42 @@ class TestSummarizeInstall:
             == "Installed to .agents/skills, .claude/skills"
         )
 
+    def test_global_install_keeps_tilde_prefix(self) -> None:
+        """A global (home) install keeps its ``~`` so it isn't mislabeled as
+        project-local. (Global fallback display paths are home-relative.)
+        """
+        result = skills._InstallResult(
+            installed=["~/.agents/skills/developing-with-streamlit"]
+        )
+        assert skills.summarize_install(result) == "Installed to ~/.agents/skills"
+
+    def test_reports_skipped_alongside_installed(self) -> None:
+        """A partial install (some installed, some skipped) is not presented as
+        a clean success: the skipped skills are surfaced too.
+        """
+        result = skills._InstallResult(
+            installed=[".agents/skills/foo"],
+            skipped=[".claude/skills/foo (existing file or directory)"],
+        )
+        assert skills.summarize_install(result) == (
+            "Installed to .agents/skills 1 skill skipped due to conflicts."
+        )
+
+    def test_reports_skipped_alongside_up_to_date(self) -> None:
+        """Skipped skills are surfaced even when nothing new was installed, so an
+        up-to-date result with conflicts isn't mistaken for fully installed.
+        """
+        result = skills._InstallResult(
+            up_to_date=[".agents/skills/foo"],
+            skipped=[
+                ".claude/skills/foo (existing symlink)",
+                ".agents/skills/bar (existing file)",
+            ],
+        )
+        assert skills.summarize_install(result) == (
+            "Skills are already up to date. 2 skills skipped due to conflicts."
+        )
+
 
 class TestInstallSkillsReturnsResult:
     """install_skills returns the structured result for callers (e.g. the nudge)."""

@@ -20,6 +20,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -52,6 +53,7 @@ import {
   ThemeContext,
   toastQueue,
   TransientNode,
+  useEmotionTheme,
   useExecuteWhenChanged,
   useWindowDimensionsContext,
   WidgetStateManager,
@@ -70,8 +72,8 @@ import {
   StyledInnerBottomContainer,
   StyledMainContent,
   StyledSidebarBlockContainer,
+  StyledSkillsNudgeAnchor,
   StyledStickyBottomContainer,
-  StyledToastColumn,
 } from "./styled-components"
 
 /**
@@ -169,6 +171,30 @@ function AppView(props: AppViewProps): ReactElement {
     componentRegistry,
     skillsNudge,
   } = props
+
+  const theme = useEmotionTheme()
+
+  // The skills nudge is a standalone fixed card pinned top-right (above the
+  // toast region). react-aria's ToastRegion portals its toasts to the document
+  // body and positions itself, so we can't nest them; instead we measure the
+  // nudge's height and push the toast region down by it, so app toasts stack
+  // beneath the persistent nudge instead of overlapping it. Zero when no nudge.
+  const skillsNudgeRef = useRef<HTMLDivElement>(null)
+  const [skillsNudgeHeight, setSkillsNudgeHeight] = useState(0)
+  const hasSkillsNudge = Boolean(skillsNudge)
+
+  useEffect(() => {
+    const el = skillsNudgeRef.current
+    if (!el) {
+      setSkillsNudgeHeight(0)
+      return undefined
+    }
+    const observer = new ResizeObserver(entries => {
+      setSkillsNudgeHeight(entries[0]?.contentRect.height ?? 0)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasSkillsNudge])
 
   useEffect(() => {
     const listener = (): void => {
@@ -453,17 +479,33 @@ function AppView(props: AppViewProps): ReactElement {
           )}
         </Component>
       </StyledMainContent>
-      <StyledToastColumn data-testid="stToastColumn">
-        {skillsNudge}
-        <StyledToastRegion
-          queue={toastQueue}
-          aria-label="Notifications"
-          data-testid="stToastContainer"
-          className="stToastContainer"
+      {hasSkillsNudge && (
+        <StyledSkillsNudgeAnchor
+          ref={skillsNudgeRef}
+          data-testid="stSkillsNudgeAnchor"
         >
-          {({ toast }) => <StreamlitToastItem toast={toast} />}
-        </StyledToastRegion>
-      </StyledToastColumn>
+          {skillsNudge}
+        </StyledSkillsNudgeAnchor>
+      )}
+      <StyledToastRegion
+        queue={toastQueue}
+        aria-label="Notifications"
+        data-testid="stToastContainer"
+        className="stToastContainer"
+        // Push the toast region below the pinned nudge so app toasts stack
+        // beneath it. The region is otherwise positioned by its own styles
+        // (top = header height); the inline override wins only while a nudge is
+        // shown.
+        style={
+          skillsNudgeHeight > 0
+            ? {
+                top: `calc(${theme.sizes.headerHeight} + ${skillsNudgeHeight}px + ${theme.spacing.sm})`,
+              }
+            : undefined
+        }
+      >
+        {({ toast }) => <StreamlitToastItem toast={toast} />}
+      </StyledToastRegion>
       {hasEventElements && (
         <Profiler id="Event">
           <StyledEventBlockContainer className="stEvent" data-testid="stEvent">

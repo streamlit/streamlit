@@ -182,18 +182,23 @@ def test_install_skills_handler_installs_in_project_mode() -> None:
         installed=[".agents/skills/foo", ".claude/skills/foo"]
     )
     with (
-        patch("streamlit.config.get_option", return_value=False),
-        patch.object(metrics_util, "detect_installed_agents", return_value=["claude"]),
+        patch("streamlit.web.skills.should_show_skills_nudge", return_value=True),
         patch(
             "streamlit.web.skills.install_skills", return_value=install_result
         ) as mock_install,
         patch.object(metrics_util, "clear_installed_skills_cache") as mock_clear,
     ):
         response = asyncio.run(
-            InstallSkillsHandler().handle(_install_skills_request(), "session-id")
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
         )
 
-    mock_install.assert_called_once_with(global_mode=False, yes=True)
+    # Install resolves its root from the app dir so it lands in the tree the
+    # nudge detected against (not the server's cwd).
+    mock_install.assert_called_once_with(
+        global_mode=False, yes=True, app_dir="/app/dir"
+    )
     # The cache is invalidated so a later session doesn't re-show the nudge.
     mock_clear.assert_called_once()
     assert response.request_id == "request-id"
@@ -208,48 +213,55 @@ def test_install_skills_handler_installs_in_project_mode() -> None:
 def test_install_skills_handler_reports_failure() -> None:
     """Install failures are returned via the response's error message."""
     with (
-        patch("streamlit.config.get_option", return_value=False),
-        patch.object(metrics_util, "detect_installed_agents", return_value=["claude"]),
+        patch("streamlit.web.skills.should_show_skills_nudge", return_value=True),
         patch(
             "streamlit.web.skills.install_skills",
             side_effect=click.ClickException("No skills found"),
         ),
     ):
         response = asyncio.run(
-            InstallSkillsHandler().handle(_install_skills_request(), "session-id")
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
         )
 
     assert response.error_msg == "No skills found"
     assert not response.HasField("install_skills")
 
 
+def test_install_skills_handler_refuses_when_not_recommended() -> None:
+    """The install is gated on the same recommendation as the nudge: if
+    ``should_show_skills_nudge`` is false (headless, no agent, already
+    installed, or permanently dismissed), the install is refused and never
+    attempted. (The individual gate conditions are covered in skills_test.py.)
+    """
+    with (
+        patch("streamlit.web.skills.should_show_skills_nudge", return_value=False),
+        patch("streamlit.web.skills.install_skills") as mock_install,
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    mock_install.assert_not_called()
+    assert response.error_msg == "Skills install is not available in this environment."
+    assert not response.HasField("install_skills")
+
+
 def test_install_skills_handler_refuses_in_headless_mode() -> None:
-    """The install is refused (and never attempted) in headless mode."""
+    """End-to-end gate check: with headless on, the real should_show_skills_nudge
+    returns false, so the handler refuses without attempting an install.
+    """
     with (
         patch("streamlit.config.get_option", return_value=True),
         patch("streamlit.web.skills.install_skills") as mock_install,
     ):
         response = asyncio.run(
-            InstallSkillsHandler().handle(_install_skills_request(), "session-id")
-        )
-
-    mock_install.assert_not_called()
-    assert "headless" in response.error_msg
-    assert not response.HasField("install_skills")
-
-
-def test_install_skills_handler_refuses_without_agent() -> None:
-    """Defense in depth: with no agent harness detected (e.g. a request that
-    reaches a non-headless public server), the install is refused and never
-    attempted, mirroring the recommendation gate.
-    """
-    with (
-        patch("streamlit.config.get_option", return_value=False),
-        patch.object(metrics_util, "detect_installed_agents", return_value=[]),
-        patch("streamlit.web.skills.install_skills") as mock_install,
-    ):
-        response = asyncio.run(
-            InstallSkillsHandler().handle(_install_skills_request(), "session-id")
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
         )
 
     mock_install.assert_not_called()
@@ -285,10 +297,13 @@ def test_install_skills_handler_runs_real_installer(tmp_path: Path) -> None:
         patch.object(metrics_util, "clear_installed_skills_cache"),
     ):
         response = asyncio.run(
-            InstallSkillsHandler().handle(_install_skills_request(), "session-id")
+            InstallSkillsHandler(lambda: str(project_dir)).handle(
+                _install_skills_request(), "session-id"
+            )
         )
 
-    # The symlink was actually created in the project directory...
+    # The symlink was actually created in the project directory (resolved from
+    # the app dir the handler was given)...
     installed = project_dir / ".agents" / "skills" / "developing-with-streamlit"
     assert installed.is_symlink()
     # ...and the response reports it back to the nudge for display.
@@ -299,7 +314,10 @@ def test_install_skills_handler_runs_real_installer(tmp_path: Path) -> None:
 
 def test_dismiss_skills_nudge_handler_writes_marker() -> None:
     """Dismissing the nudge persists the marker and acknowledges success."""
-    with patch("streamlit.web.skills.write_nudge_dismissed_marker") as mock_write:
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch("streamlit.web.skills.write_nudge_dismissed_marker") as mock_write,
+    ):
         response = asyncio.run(
             DismissSkillsNudgeHandler().handle(_dismiss_nudge_request(), "session-id")
         )
@@ -310,11 +328,29 @@ def test_dismiss_skills_nudge_handler_writes_marker() -> None:
     assert response.HasField("dismiss_skills_nudge")
 
 
+def test_dismiss_skills_nudge_handler_refuses_in_headless_mode() -> None:
+    """The marker is never written in headless mode (mirrors the install gate)."""
+    with (
+        patch("streamlit.config.get_option", return_value=True),
+        patch("streamlit.web.skills.write_nudge_dismissed_marker") as mock_write,
+    ):
+        response = asyncio.run(
+            DismissSkillsNudgeHandler().handle(_dismiss_nudge_request(), "session-id")
+        )
+
+    mock_write.assert_not_called()
+    assert not response.HasField("dismiss_skills_nudge")
+    assert response.error_msg == "Skills nudge is not available in this environment."
+
+
 def test_dismiss_skills_nudge_handler_reports_failure() -> None:
     """Marker write failures are surfaced as an error response."""
-    with patch(
-        "streamlit.web.skills.write_nudge_dismissed_marker",
-        side_effect=OSError("disk full"),
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch(
+            "streamlit.web.skills.write_nudge_dismissed_marker",
+            side_effect=OSError("disk full"),
+        ),
     ):
         response = asyncio.run(
             DismissSkillsNudgeHandler().handle(_dismiss_nudge_request(), "session-id")
