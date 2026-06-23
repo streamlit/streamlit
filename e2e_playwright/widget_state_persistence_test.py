@@ -130,28 +130,35 @@ def test_page_scoped_value_dropped_when_other_page_skips_widget(app: Page) -> No
     in the same flow is preserved and a non-persisted one is dropped.
     """
     click_checkbox(app, "Show widgets")
-    _fill_text_input(app, "Page 1 page-scoped", "page_value")
-    _fill_text_input(app, "Page 1 session-scoped", "session_value")
-    _fill_text_input(app, "Page 1 not persisted", "plain_value")
+    _fill_text_input(app, "Solo page", "page_value")
+    _fill_text_input(app, "Solo session", "session_value")
+    _fill_text_input(app, "Solo plain", "plain_value")
 
     # Page 2 does not render the Page 1-only widgets.
     _navigate(app, "Page 2")
     expect(app.get_by_role("heading", name="Page 2")).to_be_visible()
     # The Page 1-only widgets must not be present on Page 2.
-    expect(get_text_input(app, "Page 1 page-scoped")).to_have_count(0)
+    expect(
+        app.get_by_test_id("stTextInput").filter(has_text="Solo page")
+    ).to_have_count(0)
 
     _navigate(app, "Page 1")
     expect(app.get_by_role("heading", name="Page 1")).to_be_visible()
 
-    # The page-scoped widget must fall back to its default on return.
-    _expect_input_value(app, "Page 1 page-scoped", "")
-    _expect_value(app, "p1_page_text", "UNSET")
+    # The page-scoped widget must fall back to its default on return, and its
+    # dropped value must not resurface in session_state.
+    _expect_input_value(app, "Solo page", "")
+    expect(get_element_by_key(app, "p1_page_text_value")).not_to_contain_text(
+        "page_value"
+    )
     # The session-scoped widget must keep its value across the page switch.
-    _expect_input_value(app, "Page 1 session-scoped", "session_value")
+    _expect_input_value(app, "Solo session", "session_value")
     _expect_value(app, "p1_session_text", "session_value")
     # The non-persisted widget is also dropped.
-    _expect_input_value(app, "Page 1 not persisted", "")
-    _expect_value(app, "p1_plain_text", "UNSET")
+    _expect_input_value(app, "Solo plain", "")
+    expect(get_element_by_key(app, "p1_plain_text_value")).not_to_contain_text(
+        "plain_value"
+    )
 
 
 def test_persist_state_does_not_touch_query_params(app: Page) -> None:
