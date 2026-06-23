@@ -43,7 +43,10 @@ export type { LibConfigContextProps } from "./components/core/LibConfigContext"
 export { NavigationContext } from "./components/core/NavigationContext"
 export type { NavigationContextProps } from "./components/core/NavigationContext"
 export { PortalProvider } from "./components/core/Portal/PortalProvider"
-export { ScriptRunContext } from "./components/core/ScriptRunContext"
+export {
+  INITIAL_SCRIPT_RUN_ID,
+  ScriptRunContext,
+} from "./components/core/ScriptRunContext"
 export type { ScriptRunContextProps } from "./components/core/ScriptRunContext"
 export { SidebarConfigContext } from "./components/core/SidebarConfigContext"
 export type { SidebarConfigContextProps } from "./components/core/SidebarConfigContext"

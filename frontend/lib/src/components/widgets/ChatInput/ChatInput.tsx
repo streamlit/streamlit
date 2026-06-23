@@ -16,6 +16,7 @@
 
 import {
   ChangeEvent,
+  ClipboardEvent,
   KeyboardEvent,
   memo,
   useCallback,
@@ -76,6 +77,7 @@ import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
 import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
 import { createDropHandler } from "./fileUpload/createDropHandler"
 import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
+import { getPastedFiles } from "./fileUpload/fileUploadUtils"
 import {
   StyledChatAudioWave,
   StyledChatInput,
@@ -453,6 +455,27 @@ function ChatInput({
 
   // Store dropHandler in ref for retry functionality
   dropHandlerRef.current = dropHandler
+
+  const handlePaste = useCallback(
+    (e: ClipboardEvent<HTMLTextAreaElement>): void => {
+      if (disabled || acceptFile === AcceptFileValue.None) {
+        return
+      }
+
+      if (!e.clipboardData) {
+        return
+      }
+
+      const pastedFiles = getPastedFiles(e.clipboardData)
+      if (pastedFiles.length === 0) {
+        return
+      }
+
+      e.preventDefault()
+      dropHandlerRef.current?.(pastedFiles, [])
+    },
+    [acceptFile, disabled]
+  )
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
@@ -835,6 +858,7 @@ function ChatInput({
                 placeholder={placeholder}
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
                 aria-label={placeholder}
                 disabled={disabled}
                 rows={1}
