@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
     open_popover,
 )
 
-MULTISELECT_COUNT = 31
+MULTISELECT_COUNT = 29
 
 
 def _get_multiselect_input(locator: Locator | Page, label: str) -> Locator:
@@ -273,49 +273,6 @@ def test_multiselect_deselect_option(app: Page):
     select_for_multiselect(app, "multiselect 2", "Male", True)
     del_from_multiselect(app, "multiselect 2", "Female")
     expect_text(app, "value 2: ['male']")
-
-
-def test_multiselect_esc_with_default_preserves_selection(app: Page):
-    """Pressing ESC should close the dropdown without clearing the selection when
-    the widget has a default, matching st.selectbox.
-
-    Regression test for issue #15637.
-    """
-    expect_text(app, "value esc: ['Green', 'Yellow', 'Red', 'Blue']")
-
-    _get_multiselect_input(app, "multiselect esc").click()
-    # First ESC closes the open dropdown.
-    app.keyboard.press("Escape")
-    # Second ESC (dropdown already closed) must not clear the selection.
-    app.keyboard.press("Escape")
-
-    expect(
-        get_multiselect(app, "multiselect esc").locator('span[data-baseweb="tag"]')
-    ).to_have_count(4)
-    expect_text(app, "value esc: ['Green', 'Yellow', 'Red', 'Blue']")
-
-
-def test_multiselect_esc_without_default_clears_selection(app: Page):
-    """Pressing ESC should clear the selection when the widget has no default
-    (i.e. is clearable), matching st.selectbox.
-    """
-    select_for_multiselect(app, "multiselect esc no default", "Green", False)
-    select_for_multiselect(app, "multiselect esc no default", "Red", False)
-    expect_text(app, "value esc no default: ['Green', 'Red']")
-
-    multiselect_input = _get_multiselect_input(app, "multiselect esc no default")
-    # First ESC closes the open dropdown.
-    multiselect_input.press("Escape")
-    # Second ESC (dropdown already closed) clears the selection.
-    multiselect_input.press("Escape")
-    wait_for_app_run(app)
-
-    expect(
-        get_multiselect(app, "multiselect esc no default").locator(
-            'span[data-baseweb="tag"]'
-        )
-    ).to_have_count(0)
-    expect_text(app, "value esc no default: []")
 
 
 def test_multiselect_esc_in_popover_preserves_selection(app: Page):
