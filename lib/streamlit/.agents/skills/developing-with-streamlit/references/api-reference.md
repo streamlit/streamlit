@@ -93,8 +93,8 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.menu_button` | Display a dropdown menu button widget. Use it when a compact button should expose a small set of actions or options. |
 | `st.mermaid_chart` | Display a Mermaid diagram. Use it for text-based diagram definitions such as flowcharts, sequence diagrams, class diagrams, and state diagrams. |
 | `st.metric` | Display a metric in big bold font, with an optional indicator of how the metric changed. Use it for KPIs, headline numbers, optional inline sparklines (`chart_data`), and dashboard summaries. |
-| `st.multiselect` | Display a multiselect widget. It starts as empty unless a default is provided and returns a list of selected values. |
-| `st.navigation` | Configure the available pages in a multipage app. It returns the currently selected page object, which the app should run. |
+| `st.multiselect` | Display a multiselect widget. Use it when users can choose multiple items from a list, optionally including new options they enter. |
+| `st.navigation` | Configure the available pages in a multipage app and where the navigation menu appears (`sidebar`, `top`, or `hidden`). It returns the currently selected page object, which the app should run. |
 | `st.number_input` | Display a numeric input widget. It supports integer and floating-point values, bounds, steps, and formatting. |
 | `st.page_link` | Display a link to another page in a multipage app or to an external page. Use it for explicit navigation elements. |
 | `st.pagination` | Display a pagination widget for navigating through pages of content. Use it when a dataset or workflow is split across numbered pages. |
