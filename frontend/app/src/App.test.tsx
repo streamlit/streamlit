@@ -6832,6 +6832,9 @@ describe("Skills install nudge", () => {
     // frozen, which also keeps the snooze-window math below stable.
     vi.useFakeTimers()
     mockWindowLocation("localhost")
+    // The nudge is gated on a non-embedded, top-level app; pin embed off so
+    // each test is explicit (the embedded case is covered by its own test).
+    vi.mocked(isEmbed).mockReturnValue(false)
     window.localStorage.clear()
     window.sessionStorage.clear()
   })
@@ -6938,6 +6941,22 @@ describe("Skills install nudge", () => {
     sendRecommendingNewSession()
 
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+  })
+
+  it("does not show the nudge in an embedded app", () => {
+    // Embedded (?embed=true) apps are chromeless and live inside someone
+    // else's page; a pinned CTA card there is inappropriate, so skip it even
+    // on localhost when the server otherwise recommends the install.
+    vi.mocked(isEmbed).mockReturnValue(true)
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+    })
   })
 
   it("does not show the nudge when localStorage is unavailable", () => {
@@ -7083,7 +7102,7 @@ describe("Skills install nudge", () => {
     const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
     sendRecommendingNewSession()
 
-    await user.click(screen.getByRole("button", { name: "Dismiss" }))
+    await user.click(screen.getByRole("button", { name: "Close" }))
     // Flush the toast's exit-animation timer so it leaves the DOM.
     act(() => {
       vi.runOnlyPendingTimers()

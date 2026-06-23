@@ -80,7 +80,7 @@ describe("SkillsNudgeToast", () => {
     expect(
       screen.getByRole("button", { name: "Don't show again" })
     ).toBeVisible()
-    expect(screen.getByRole("button", { name: "Dismiss" })).toBeVisible()
+    expect(screen.getByRole("button", { name: "Close" })).toBeVisible()
     // No success confirmation should be present initially.
     expect(screen.queryByText("Skills installed")).not.toBeInTheDocument()
   })
@@ -148,7 +148,7 @@ describe("SkillsNudgeToast", () => {
     const onClose = vi.fn()
     renderNudge({ onSnooze, onClose })
 
-    await user.click(screen.getByRole("button", { name: "Dismiss" }))
+    await user.click(screen.getByRole("button", { name: "Close" }))
 
     expect(onSnooze).toHaveBeenCalledTimes(1)
     expect(onClose).toHaveBeenCalledTimes(1)

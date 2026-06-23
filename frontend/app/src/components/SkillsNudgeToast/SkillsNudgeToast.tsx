@@ -208,7 +208,7 @@ function SkillsNudgeToast({
       {!isSuccess && (
         <StyledSkillsNudgeClose
           type="button"
-          aria-label="Dismiss"
+          aria-label="Close"
           onClick={handleSnooze}
           disabled={isInstalling}
         >

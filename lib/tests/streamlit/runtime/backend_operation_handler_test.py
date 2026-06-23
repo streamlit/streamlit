@@ -182,7 +182,8 @@ def test_install_skills_handler_installs_in_project_mode() -> None:
         installed=[".agents/skills/foo", ".claude/skills/foo"]
     )
     with (
-        patch("streamlit.web.skills.should_show_skills_nudge", return_value=True),
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(metrics_util, "detect_installed_agents", return_value=["claude"]),
         patch(
             "streamlit.web.skills.install_skills", return_value=install_result
         ) as mock_install,
@@ -205,7 +206,7 @@ def test_install_skills_handler_installs_in_project_mode() -> None:
     assert response.HasField("install_skills")
     # The result is summarized into a user-facing detail message for the toast.
     assert (
-        response.install_skills.detail == "Installed to .agents/skills, .claude/skills"
+        response.install_skills.detail == "Installed to .agents/skills, .claude/skills."
     )
     assert response.error_msg == ""
 
@@ -213,7 +214,8 @@ def test_install_skills_handler_installs_in_project_mode() -> None:
 def test_install_skills_handler_reports_failure() -> None:
     """Install failures are returned via the response's error message."""
     with (
-        patch("streamlit.web.skills.should_show_skills_nudge", return_value=True),
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(metrics_util, "detect_installed_agents", return_value=["claude"]),
         patch(
             "streamlit.web.skills.install_skills",
             side_effect=click.ClickException("No skills found"),
@@ -229,14 +231,14 @@ def test_install_skills_handler_reports_failure() -> None:
     assert not response.HasField("install_skills")
 
 
-def test_install_skills_handler_refuses_when_not_recommended() -> None:
-    """The install is gated on the same recommendation as the nudge: if
-    ``should_show_skills_nudge`` is false (headless, no agent, already
-    installed, or permanently dismissed), the install is refused and never
-    attempted. (The individual gate conditions are covered in skills_test.py.)
+def test_install_skills_handler_refuses_without_agent_harness() -> None:
+    """The install ACTION is gated on safety, not the nudge's display predicate:
+    with no agent harness present (and not headless) the request is anomalous,
+    so the install is refused and never attempted.
     """
     with (
-        patch("streamlit.web.skills.should_show_skills_nudge", return_value=False),
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(metrics_util, "detect_installed_agents", return_value=[]),
         patch("streamlit.web.skills.install_skills") as mock_install,
     ):
         response = asyncio.run(
@@ -250,9 +252,50 @@ def test_install_skills_handler_refuses_when_not_recommended() -> None:
     assert not response.HasField("install_skills")
 
 
+def test_install_skills_handler_allows_idempotent_retry_when_already_installed() -> (
+    None
+):
+    """Regression: the action must NOT be gated on "skills already installed".
+
+    A retry after a dropped connection whose first attempt completed
+    server-side must succeed (the re-install reports "up to date"), not be
+    refused — otherwise a success is surfaced as an unrecoverable error and
+    logged as a failed install. So with an agent present and not headless, the
+    handler installs even though detection would already report the skills.
+    """
+    up_to_date = skills._InstallResult(up_to_date=[".agents/skills/foo"])
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(metrics_util, "detect_installed_agents", return_value=["claude"]),
+        # Skills already present (the nudge's display predicate would be False)...
+        patch.object(
+            metrics_util,
+            "detect_installed_skills",
+            return_value=["app:claude:developing-with-streamlit"],
+        ),
+        patch(
+            "streamlit.web.skills.install_skills", return_value=up_to_date
+        ) as mock_install,
+        patch.object(metrics_util, "clear_installed_skills_cache"),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    # ...the retry still runs and reports a clean idempotent success.
+    mock_install.assert_called_once_with(
+        global_mode=False, yes=True, app_dir="/app/dir"
+    )
+    assert response.error_msg == ""
+    assert response.HasField("install_skills")
+    assert response.install_skills.detail == "Skills are already up to date."
+
+
 def test_install_skills_handler_refuses_in_headless_mode() -> None:
-    """End-to-end gate check: with headless on, the real should_show_skills_nudge
-    returns false, so the handler refuses without attempting an install.
+    """End-to-end gate check: with headless on, the handler refuses without
+    attempting an install (the nudge is never shown in headless mode).
     """
     with (
         patch("streamlit.config.get_option", return_value=True),
@@ -309,7 +352,7 @@ def test_install_skills_handler_runs_real_installer(tmp_path: Path) -> None:
     # ...and the response reports it back to the nudge for display.
     assert response.error_msg == ""
     assert response.HasField("install_skills")
-    assert response.install_skills.detail == "Installed to .agents/skills"
+    assert response.install_skills.detail == "Installed to .agents/skills."
 
 
 def test_dismiss_skills_nudge_handler_writes_marker() -> None:

@@ -1497,13 +1497,17 @@ export class App extends PureComponent<Props, State> {
 
     // Show the framework "install skills" nudge when the server recommends it
     // (agent present, skills not installed, not headless, no server-side marker)
-    // and we're on localhost, not permanently dismissed, and not snoozed.
-    // Require localStorage: it's where a snooze / "don't show again" is
+    // and we're on localhost, not embedded, not permanently dismissed, and not
+    // snoozed. Require localStorage: it's where a snooze / "don't show again" is
     // remembered browser-side, so if it's unavailable we fail closed and skip
-    // the nudge rather than show one the user can't make stick.
+    // the nudge rather than show one the user can't make stick. Skip embedded
+    // (?embed=true) apps: they're meant to be chromeless, so a CTA card pinned
+    // over the host page's content is inappropriate (and the developer can't
+    // act on it inside someone else's page anyway).
     if (
       initialize.recommendSkillsInstall &&
       isLocalhost() &&
+      !isEmbed() &&
       localStorageAvailable() &&
       !this.isSkillsNudgeDismissed() &&
       !this.isSkillsNudgeSnoozed() &&

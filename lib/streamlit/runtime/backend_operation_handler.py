@@ -159,19 +159,28 @@ class InstallSkillsHandler(BackendOperationHandler):
         session_id: str,  # noqa: ARG002
     ) -> BackendOperationResponse:
         """Install the bundled Streamlit skills in project mode."""
+        from streamlit import config
         from streamlit.runtime import metrics_util
         from streamlit.web import skills
 
         app_dir = self._get_app_dir()
 
-        # Gate the action on exactly the same recommendation the nudge was shown
-        # under: should_show_skills_nudge covers not-headless, an agent harness
-        # present, skills not already installed, and no "don't show again"
-        # marker. A request that fails this gate is stale or anomalous (a
-        # replayed BackMsg, a server that should never have offered it) and must
-        # not trigger a server-side install (filesystem writes, and a GitHub
-        # download in the global fallback).
-        if not skills.should_show_skills_nudge(app_dir):
+        # Gate the ACTION on install *safety*, not on the nudge's display
+        # predicate. Two conditions make a request anomalous and unsafe to honor:
+        #   - headless mode (deployments / CI / SiS): the nudge is never shown
+        #     there, so the request is a replayed/spoofed BackMsg; refuse the
+        #     filesystem writes (and the GitHub download in the global fallback).
+        #   - no agent harness present: nothing would consume the skills.
+        # We deliberately do NOT gate on "skills already installed" (which
+        # should_show_skills_nudge does): re-installing is idempotent (it reports
+        # "up to date"), whereas refusing it would reject a legitimate RETRY
+        # after a dropped connection whose first attempt already completed
+        # server-side — surfacing a success as an unrecoverable error and
+        # logging it as a failed install. Idempotent retry is the correct path.
+        if (
+            config.get_option("server.headless")
+            or not metrics_util.detect_installed_agents()
+        ):
             return BackendOperationResponse(
                 request_id=request.request_id,
                 error_msg="Skills install is not available in this environment.",

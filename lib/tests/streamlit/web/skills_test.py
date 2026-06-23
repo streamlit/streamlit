@@ -1611,7 +1611,7 @@ class TestSummarizeInstall:
         )
         assert (
             skills.summarize_install(result)
-            == "Installed to .agents/skills, .claude/skills"
+            == "Installed to .agents/skills, .claude/skills."
         )
 
     def test_deduplicates_and_sorts_locations(self) -> None:
@@ -1625,7 +1625,7 @@ class TestSummarizeInstall:
         )
         assert (
             skills.summarize_install(result)
-            == "Installed to .agents/skills, .claude/skills"
+            == "Installed to .agents/skills, .claude/skills."
         )
 
     def test_reports_already_up_to_date(self) -> None:
@@ -1638,7 +1638,7 @@ class TestSummarizeInstall:
         result = skills._InstallResult(
             installed=[".agents/skills/foo"], up_to_date=[".claude/skills/foo"]
         )
-        assert skills.summarize_install(result) == "Installed to .agents/skills"
+        assert skills.summarize_install(result) == "Installed to .agents/skills."
 
     def test_empty_result_has_no_summary(self) -> None:
         """An empty result yields no summary text (nothing to report)."""
@@ -1656,7 +1656,7 @@ class TestSummarizeInstall:
         )
         assert (
             skills.summarize_install(result)
-            == "Installed to .agents/skills, .claude/skills"
+            == "Installed to .agents/skills, .claude/skills."
         )
 
     def test_global_install_keeps_tilde_prefix(self) -> None:
@@ -1666,7 +1666,7 @@ class TestSummarizeInstall:
         result = skills._InstallResult(
             installed=["~/.agents/skills/developing-with-streamlit"]
         )
-        assert skills.summarize_install(result) == "Installed to ~/.agents/skills"
+        assert skills.summarize_install(result) == "Installed to ~/.agents/skills."
 
     def test_reports_skipped_alongside_installed(self) -> None:
         """A partial install (some installed, some skipped) is not presented as
@@ -1677,7 +1677,7 @@ class TestSummarizeInstall:
             skipped=[".claude/skills/foo (existing file or directory)"],
         )
         assert skills.summarize_install(result) == (
-            "Installed to .agents/skills 1 skill skipped due to conflicts."
+            "Installed to .agents/skills. 1 skill skipped due to conflicts."
         )
 
     def test_reports_skipped_alongside_up_to_date(self) -> None:
@@ -1719,3 +1719,84 @@ class TestInstallSkillsReturnsResult:
         assert any("developing-with-streamlit" in path for path in result.installed)
         # A fresh install into an empty project skips nothing.
         assert result.skipped == []
+
+
+class TestInstallDetectRoundtrip:
+    """A successful one-click install must land where the nudge's skill
+    detection scans, so ``should_show_skills_nudge`` returns ``False``
+    afterwards and the nudge stops re-appearing — even when the install root is
+    neither the app dir nor the git root.
+
+    This is the regression guard for the install/detection project-root
+    divergence: ``skills._find_project_root`` (install target) and
+    ``metrics_util._find_agent_config_root`` (detection root) must not drift
+    apart. The pre-existing tests only covered the standard ``.git``-at-the-root
+    layout, which masked the bug.
+    """
+
+    @pytest.mark.parametrize("with_git", [True, False])
+    def test_detection_sees_install_in_agent_config_ancestor(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, with_git: bool
+    ) -> None:
+        """Install lands in a ``.claude`` ancestor between the app dir and the
+        (optional) git root; detection must still find it. ``with_git=True`` is
+        the monorepo/per-package case; ``with_git=False`` is the no-git case.
+        """
+        from streamlit.runtime import metrics_util
+
+        _skip_if_symlinks_not_supported(tmp_path)
+
+        # ``resolve()`` the base so the relative install symlink never dangles
+        # through a symlinked ancestor (e.g. macOS /var -> /private/var).
+        base = tmp_path.resolve()
+
+        # Isolated HOME: an agent harness present, but no skills installed there.
+        home = base / "home"
+        (home / ".claude").mkdir(parents=True)
+        monkeypatch.setenv("HOME", str(home))
+
+        # Bundled source skill the installer symlinks to.
+        source_dir = base / "pkg" / ".agents" / "skills"
+        skill_dir = source_dir / "developing-with-streamlit"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("# Skill\n", encoding="utf-8")
+
+        # Layout: per-package ``.claude`` one level in, app nested below it. The
+        # install root (the package) is neither the app dir nor the git root.
+        repo = base / "repo"
+        repo.mkdir()
+        if with_git:
+            (repo / ".git").mkdir()
+        package = repo / "package"
+        (package / ".claude").mkdir(parents=True)
+        app_dir = package / "src"
+        app_dir.mkdir()
+
+        def clear_caches() -> None:
+            metrics_util._detect_installed_skills_cached.cache_clear()
+            metrics_util._detect_installed_agents_cached.cache_clear()
+
+        with (
+            patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
+            # Not headless / welcome message not hidden, so only detection gates.
+            patch("streamlit.config.get_option", return_value=False),
+        ):
+            clear_caches()
+            # Pre-install the nudge is recommended (agent present, no skills).
+            assert skills.should_show_skills_nudge(str(app_dir)) is True
+
+            skills.install_skills(global_mode=False, yes=True, app_dir=str(app_dir))
+
+            # Mimic the in-app handler invalidating the detection cache.
+            metrics_util.clear_installed_skills_cache()
+            clear_caches()
+
+            # The install landed in the package's agent-config dirs...
+            assert (
+                package / ".claude" / "skills" / "developing-with-streamlit"
+            ).exists()
+            # ...and detection now sees it, so the nudge is suppressed. Without
+            # the project-root unification, both of these would be the
+            # pre-install values (empty / True) and the nudge would re-appear.
+            assert metrics_util.detect_installed_skills(str(app_dir)) != []
+            assert skills.should_show_skills_nudge(str(app_dir)) is False

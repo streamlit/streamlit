@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import shutil
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
@@ -45,6 +47,14 @@ def app_server(
     This overrides the default ``app_server`` fixture from ``conftest`` so the
     nudge gating is deterministic regardless of the developer's / CI's real
     home directory.
+
+    The app script is copied into an ISOLATED temp project dir (its own tree:
+    no ``.git``, no ``.agents``/``.claude``, no installed skills) and run from
+    there. The nudge's skill detection scans the app's directory, its git root,
+    and the nearest agent-config ancestor — so running the script in place would
+    make this test depend on the developer's real checkout (e.g. flake/fail for
+    anyone who has the bundled skill installed in this repo). Isolation keeps
+    the only "agent present, no skills" signal coming from the temp HOME.
     """
     home = tmp_path_factory.mktemp("skills_nudge_home")
     # An agent harness is considered "present" when its home config dir exists.
@@ -54,9 +64,17 @@ def app_server(
     streamlit_dir.mkdir()
     (streamlit_dir / "credentials.toml").write_text('[general]\nemail = ""\n')
 
+    # Copy the app script into an isolated project dir and point a shim module
+    # at it; start_app_server resolves the script purely from ``__file__``.
+    project = tmp_path_factory.mktemp("skills_nudge_project")
+    assert request.module.__file__ is not None
+    source_script = request.module.__file__.replace("_test.py", ".py")
+    shutil.copy(source_script, project / "skills_nudge.py")
+    isolated_module = SimpleNamespace(__file__=str(project / "skills_nudge_test.py"))
+
     proc = start_app_server(
         app_port,
-        request.module,
+        isolated_module,  # type: ignore[arg-type]
         # Appended last so they override the headless default in conftest.
         extra_args=["--server.headless", "false"],
         extra_env={"HOME": str(home)},
@@ -76,8 +94,9 @@ def test_skills_nudge_shows_and_dismisses(
     expect(nudge).to_contain_text("Help agents write better Streamlit")
     expect(nudge.get_by_role("button", name="Install")).to_be_visible()
     expect(nudge.get_by_role("button", name="Don't show again")).to_be_visible()
-    # The close (✕) control exposes an accessible "Dismiss" name.
-    expect(nudge.get_by_role("button", name="Dismiss")).to_be_visible()
+    # The close (✕) control exposes an accessible "Close" name (it snoozes the
+    # nudge rather than permanently dismissing it — that's the text link).
+    expect(nudge.get_by_role("button", name="Close")).to_be_visible()
 
     # Snapshot the idle toast before any interaction mutates its state.
     assert_snapshot(nudge, name="skills_nudge-idle")
@@ -104,8 +123,15 @@ def test_skills_nudge_shows_and_dismisses(
         f"toast (y={toast_box['y']}) should not sit above the nudge "
         f"(y={nudge_box['y']})"
     )
-    assert toast_box["x"] > nudge_box["width"], (
-        "toast should be pinned to the right, not at the document origin"
+    # Both the nudge and app toasts are pinned to the same fixed right edge, so
+    # their right edges line up (allowing a small sub-pixel rounding tolerance).
+    # This verifies the toast is positioned in the pinned right column, not
+    # rendered unpositioned at the document origin (x≈0).
+    nudge_right = nudge_box["x"] + nudge_box["width"]
+    toast_right = toast_box["x"] + toast_box["width"]
+    assert abs(toast_right - nudge_right) <= 2, (
+        f"toast right edge ({toast_right}) should align with the nudge's "
+        f"({nudge_right}) — both pinned to the same right column"
     )
 
     # The app toast auto-dismisses on its own timer; the nudge persists (it

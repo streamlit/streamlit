@@ -314,12 +314,22 @@ def _install_skill_symlink(
             result.skipped.append(f"{rel_target_path} (existing file or directory)")
             return True
 
-    # Compute relative symlink target
+    # Compute the relative symlink target from the REAL (symlink-resolved) paths
+    # of both ends. os.path.relpath counts ``..`` levels against the logical
+    # path, but the kernel resolves the resulting relative link against the
+    # link's *physical* location — so a logical path with a depth-changing
+    # symlinked ancestor (macOS /var -> /private/var, container bind-mounts, a
+    # symlinked /home) yields a link that dangles. Resolving both sides first
+    # makes the ``..`` count match the physical layout, so the link always
+    # resolves and the nudge's skill detection can follow it.
     try:
-        rel_source = os.path.relpath(source_path, target_path.parent)
-    except ValueError:
-        # Cross-drive on Windows - use absolute path
-        rel_source = str(source_path)
+        rel_source = os.path.relpath(
+            os.path.realpath(source_path), os.path.realpath(target_path.parent)
+        )
+    except (ValueError, OSError):
+        # Cross-drive on Windows (ValueError) or a resolution error - use the
+        # absolute (resolved) source path, which still resolves correctly.
+        rel_source = os.path.realpath(source_path)
 
     # Create symlink
     try:
@@ -835,7 +845,10 @@ def summarize_install(result: _InstallResult) -> str:
         # Collapse the per-skill target paths to their distinct parent dirs
         # (e.g. ".agents/skills", ".claude/skills") for a concise message.
         locations = sorted({_install_location(path) for path in result.installed})
-        parts.append("Installed to " + ", ".join(locations))
+        # Terminate with a period so a following "N skipped" sentence reads as
+        # two sentences ("Installed to .agents/skills. 1 skill skipped…") rather
+        # than running together.
+        parts.append("Installed to " + ", ".join(locations) + ".")
     elif result.up_to_date:
         parts.append("Skills are already up to date.")
     if result.skipped:

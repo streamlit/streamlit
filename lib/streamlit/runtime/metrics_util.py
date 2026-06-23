@@ -300,6 +300,38 @@ def detect_installed_skills(app_dir: str | None) -> list[str]:
     return list(_detect_installed_skills_cached(app_dir))
 
 
+def _find_agent_config_root(app: str) -> str | None:
+    """Return the nearest ancestor of ``app`` (inclusive) containing a
+    ``.agents`` or ``.claude`` directory, excluding the user's home directory.
+
+    This mirrors the upward walk in ``streamlit.web.skills._find_project_root``,
+    which is where the in-app installer writes project-mode skills. Detection
+    MUST scan that same root: when an agent-config dir sits between ``app`` and
+    the git root (e.g. a per-package ``.claude`` in a monorepo) — or when there
+    is no git root at all — a successful install lands there, but the
+    ``{home, app, repo}`` roots below would never see it, so the install-skills
+    nudge would re-appear forever despite a "successful" install. The
+    install->detect roundtrip test guards the two walks against drifting apart.
+    """
+    try:
+        home = os.path.realpath(os.path.expanduser("~"))
+        current = os.path.abspath(app)
+        for _ in range(_MAX_REPO_ROOT_WALK_DEPTH):
+            if os.path.realpath(current) == home:
+                return None
+            if os.path.isdir(os.path.join(current, ".agents")) or os.path.isdir(
+                os.path.join(current, ".claude")
+            ):
+                return current
+            parent = os.path.dirname(current)
+            if parent == current:
+                return None
+            current = parent
+        return None
+    except OSError:  # pragma: no cover - defensive
+        return None
+
+
 # maxsize=2 (not 1) so the two callers' keys can coexist: the page-profile
 # telemetry may pass ``None`` (no script-run context) while the skills nudge
 # passes ``dirname(main_script_path)``. A size-1 cache would let those evict
@@ -317,6 +349,17 @@ def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
         # handles case-insensitive filesystems (Windows, default macOS).
         if repo is not None and os.path.normcase(repo) != os.path.normcase(app):
             roots["repo"] = repo
+
+        # Also scan the in-app installer's project root (nearest ``.agents`` /
+        # ``.claude`` ancestor) so a successful install is always detected, even
+        # when it lands in a dir that is neither ``app`` nor the git root.
+        project = _find_agent_config_root(app)
+        if project is not None:
+            project_nc = os.path.normcase(project)
+            if project_nc != os.path.normcase(app) and (
+                repo is None or project_nc != os.path.normcase(repo)
+            ):
+                roots["project"] = project
 
         tokens: set[str] = set()
         for location, root in roots.items():
