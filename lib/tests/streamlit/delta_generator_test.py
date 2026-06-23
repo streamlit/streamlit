@@ -1328,47 +1328,34 @@ class ParallelWorkerExternalContainerWriteTest(DeltaGeneratorTestCase):
         finally:
             ThreadState.update(is_parallel_worker=False, delta_path=())
 
-    def test_parallel_worker_write_to_other_root_container_raises_exception(
-        self,
-    ) -> None:
-        """Enqueue raises when a MAIN-fragment worker writes to another container.
+    def test_delta_path_encodes_root_container(self) -> None:
+        """delta_path encodes the root container as its first element.
 
-        delta_path encodes the root container as its first element (see
-        make_delta_path), so a parallel fragment running in MAIN has a
-        fragment_path that starts with RootContainer.MAIN (0), while writes to
-        the sidebar/bottom have cursor paths that start with RootContainer.SIDEBAR
-        (1) / RootContainer.BOTTOM (3). The differing first element guarantees
-        _is_inside_fragment_path returns False, so a cross-container write from a
-        parallel worker is always blocked and can never prefix-collide with the
-        fragment path.
+        This is the invariant that keeps the parallel-worker guard correct across
+        root containers: a MAIN fragment_path and a sidebar/bottom write share
+        their parent_path/index but differ in delta_path[0], so
+        _is_inside_fragment_path can never prefix-match across containers. Tested
+        directly here (rather than through _enqueue) because it's a property of
+        make_delta_path; combined with test_is_inside_fragment_path and
+        test_parallel_worker_write_outside_fragment_raises_exception it covers the
+        cross-container case compositionally. If the root prefix were ever dropped
+        from make_delta_path, this assertion fails.
         """
-        # Fragment at MAIN (0), parent_path (1,), index 2 → delta_path = (0, 1, 2)
-        fragment_path = (0, 1, 2)
-        ThreadState.update(is_parallel_worker=True, delta_path=fragment_path)
+        main = LockedCursor(root_container=RootContainer.MAIN, parent_path=(1,), index=2)
+        sidebar = LockedCursor(
+            root_container=RootContainer.SIDEBAR, parent_path=(1,), index=2
+        )
+        bottom = LockedCursor(
+            root_container=RootContainer.BOTTOM, parent_path=(1,), index=2
+        )
 
-        try:
-            for root_container in (RootContainer.SIDEBAR, RootContainer.BOTTOM):
-                with self.subTest(root_container=root_container):
-                    # A cursor at parent_path (1,), index 2 in another root
-                    # container has the same trailing indices as the fragment but
-                    # a different leading root-container element, e.g. sidebar →
-                    # delta_path = (1, 1, 2), bottom → delta_path = (3, 1, 2).
-                    other_cursor = LockedCursor(
-                        root_container=root_container,
-                        parent_path=(1,),
-                        index=2,
-                    )
-                    other_dg = DeltaGenerator(
-                        root_container=root_container,
-                        cursor=other_cursor,
-                    )
-
-                    with pytest.raises(StreamlitAPIException) as exc_info:
-                        other_dg._enqueue("text", TextProto())
-
-                    assert "outside a parallel fragment" in str(exc_info.value)
-        finally:
-            ThreadState.update(is_parallel_worker=False, delta_path=())
+        assert main.delta_path == [RootContainer.MAIN, 1, 2]
+        assert sidebar.delta_path == [RootContainer.SIDEBAR, 1, 2]
+        assert bottom.delta_path == [RootContainer.BOTTOM, 1, 2]
+        # The only thing distinguishing identical paths in different containers is
+        # the leading root-container element.
+        assert sidebar.delta_path[0] != main.delta_path[0]
+        assert bottom.delta_path[0] != main.delta_path[0]
 
 
 # Outside container writes: detection, wrapper creation, and redirection.
