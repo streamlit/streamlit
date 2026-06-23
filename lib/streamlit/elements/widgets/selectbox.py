@@ -715,8 +715,24 @@ class SelectboxMixin:
                 widget_state.value, opt, index, key, format_func
             )
 
-        if value_needs_reset or widget_state.value_changed:
-            serialized_value = serde.serialize(current_value)
+        # Compute the serialized value (the formatted string shown to the user)
+        serialized_value = serde.serialize(current_value)
+
+        # Detect if the frontend has a stale formatted value.
+        # This happens when format_func output changes for the current selection
+        # (e.g., user renamed an item that format_func reads from session_state).
+        # The frontend's stored string won't match any current formatted option.
+        # We use serialized_ui_value from register_widget which captures the raw
+        # value the frontend sent before deserialization.
+        # Skip this check when accept_new_options=True since custom values won't
+        # be in formatted_option_to_option_index by design.
+        frontend_value_stale = (
+            not accept_new_options
+            and widget_state.serialized_ui_value is not None
+            and widget_state.serialized_ui_value not in formatted_option_to_option_index
+        )
+
+        if value_needs_reset or widget_state.value_changed or frontend_value_stale:
             if serialized_value is not None:
                 selectbox_proto.raw_value = serialized_value
             selectbox_proto.set_value = True

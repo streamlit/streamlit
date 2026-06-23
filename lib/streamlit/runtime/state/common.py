@@ -207,10 +207,16 @@ class RegisterWidgetResult(Generic[T_co]):
         returned from the frontend.
 
         Implies an update to the frontend is needed.
+    serialized_ui_value : Any | None
+        The raw serialized value from the frontend (before deserialization),
+        or None if no value was received from the frontend. This is useful for
+        detecting when the frontend has a stale value that doesn't match the
+        current options (e.g., when format_func output changes dynamically).
     """
 
     value: T_co
     value_changed: bool
+    serialized_ui_value: Any | None = None
 
     @classmethod
     def failure(
@@ -219,7 +225,9 @@ class RegisterWidgetResult(Generic[T_co]):
         """The canonical way to construct a RegisterWidgetResult in cases
         where the true widget value could not be determined.
         """
-        return cls(value=deserializer(None), value_changed=False)
+        return cls(
+            value=deserializer(None), value_changed=False, serialized_ui_value=None
+        )
 
 
 def user_key_from_element_id(element_id: str) -> str | None:

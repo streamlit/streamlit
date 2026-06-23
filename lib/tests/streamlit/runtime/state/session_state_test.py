@@ -455,6 +455,34 @@ class WStateTests(unittest.TestCase):
             # Verify no warning was logged
             mock_logger.warning.assert_not_called()
 
+    def test_get_raw_serialized_returns_proto_when_serialized(self) -> None:
+        """Verify get_raw_serialized returns the proto without triggering deserialization."""
+        assert isinstance(self.wstates.states["widget_id_1"], Serialized)
+        raw = self.wstates.get_raw_serialized("widget_id_1")
+        assert raw is not None
+        assert raw.id == "widget_id_1"
+        assert raw.int_value == 5
+        # State must remain serialized after the call
+        assert isinstance(self.wstates.states["widget_id_1"], Serialized)
+
+    def test_get_raw_serialized_returns_none_when_deserialized(self) -> None:
+        """Verify get_raw_serialized returns None after a value has been accessed."""
+        _ = self.wstates["widget_id_1"]  # Triggers deserialization
+        assert isinstance(self.wstates.states["widget_id_1"], Value)
+        raw = self.wstates.get_raw_serialized("widget_id_1")
+        assert raw is None
+
+    def test_get_raw_serialized_returns_none_for_value_state(self) -> None:
+        """Verify get_raw_serialized returns None for widgets set via set_from_value."""
+        assert isinstance(self.wstates.states["widget_id_2"], Value)
+        raw = self.wstates.get_raw_serialized("widget_id_2")
+        assert raw is None
+
+    def test_get_raw_serialized_returns_none_for_nonexistent(self) -> None:
+        """Verify get_raw_serialized returns None for nonexistent widget IDs."""
+        raw = self.wstates.get_raw_serialized("nonexistent_id")
+        assert raw is None
+
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class SessionStateUpdateTest(DeltaGeneratorTestCase):

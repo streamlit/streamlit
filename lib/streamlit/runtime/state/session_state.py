@@ -261,6 +261,21 @@ class WStates(MutableMapping[str, Any]):
             )
         }
 
+    def get_raw_serialized(self, k: str) -> WidgetStateProto | None:
+        """Get the raw serialized proto for the widget with the given id.
+
+        Unlike get_serialized, this returns the proto ONLY if the value is still
+        in its original Serialized form (not yet accessed/deserialized). Returns
+        None if the widget doesn't exist or has already been deserialized.
+
+        This is useful for detecting stale frontend values without triggering
+        deserialization.
+        """
+        item = self.states.get(k)
+        if item is None or not isinstance(item, Serialized):
+            return None
+        return item.value
+
     def get_serialized(self, k: str) -> WidgetStateProto | None:
         """Get the serialized value of the widget with the given id.
 
@@ -1003,8 +1018,9 @@ class SessionState:
         Returns
         -------
         RegisterWidgetResult[T]
-            Contains the widget's current value, and a bool that will be True
-            if the frontend needs to be updated with the current value.
+            Contains the widget's current value, a bool that will be True
+            if the frontend needs to be updated with the current value,
+            and the raw serialized value from the frontend (if available).
         """
         widget_id = metadata.id
 
@@ -1012,6 +1028,17 @@ class SessionState:
         if user_key is not None:
             # If the widget has a user_key, update its user_key:widget_id mapping
             self._set_key_widget_mapping(widget_id, user_key)
+
+        # Capture the raw serialized value from the frontend BEFORE any access
+        # triggers deserialization. This is useful for detecting stale frontend
+        # values (e.g., when format_func output changes dynamically).
+        serialized_ui_value: Any | None = None
+        raw_proto = self._new_widget_state.get_raw_serialized(widget_id)
+        if raw_proto is not None:
+            # Extract the value from the proto based on value_type
+            value_type = metadata.value_type
+            if value_type is not None and raw_proto.HasField("value"):
+                serialized_ui_value = getattr(raw_proto, value_type, None)
 
         # Handle query param binding
         url_value_seeded = False
@@ -1106,7 +1133,9 @@ class SessionState:
             user_key is not None and self.is_new_state_value(user_key)
         ) or restored_bound_value
 
-        return RegisterWidgetResult(widget_value, widget_value_changed)
+        return RegisterWidgetResult(
+            widget_value, widget_value_changed, serialized_ui_value
+        )
 
     def _handle_query_param_binding(
         self, metadata: WidgetMetadata[T], user_key: str, widget_id: str

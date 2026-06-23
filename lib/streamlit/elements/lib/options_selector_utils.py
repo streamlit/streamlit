@@ -253,6 +253,7 @@ def maybe_coerce_enum(
     return RegisterWidgetResult(
         _coerce_enum(register_widget_result.value, coerce_class),
         register_widget_result.value_changed,
+        register_widget_result.serialized_ui_value,
     )
 
 
@@ -303,6 +304,7 @@ def maybe_coerce_enum_sequence(
             _coerce_enum(val, coerce_class) for val in register_widget_result.value
         ),
         register_widget_result.value_changed,
+        register_widget_result.serialized_ui_value,
     )
 
 
