@@ -2,7 +2,7 @@
 
 Use this as a quick orientation for the public top-level `st` API. The table below covers the public `st.<command>(...)` commands, common top-level objects, `st.column_config` helpers, and public namespaces exposed by the local Streamlit namespace when this reference was written.
 
-Treat summaries as starting points, not complete usage docs. Before using unfamiliar parameters, deprecated options, callbacks, return values, or command-specific edge cases, inspect the local docstring and signature.
+Treat summaries as starting points, not complete usage docs. Before using unfamiliar parameters, deprecated options, return values, or command-specific edge cases, inspect the local docstring and signature.
 
 ## Inspecting local docs from the CLI
 
@@ -42,7 +42,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.badge` | Display a colored badge with an icon and label. Useful for compact status, category, or metadata indicators. |
 | `st.balloons` | Draw celebratory balloons. Use sparingly for success moments or lightweight feedback. |
 | `st.bar_chart` | Display a bar chart. Use it for straightforward categorical or binned comparisons. |
-| `st.button` | Display a button widget. It returns `True` on the rerun triggered by a click and supports callbacks through `on_click`. |
+| `st.button` | Display a button widget. It returns `True` on the script rerun triggered by a click. |
 | `st.cache` | Legacy caching decorator (deprecated). Do not use in new code; prefer `st.cache_data` for serializable data and `st.cache_resource` for shared resources. |
 | `st.cache_data` | Cache the return value of a function. Use it for expensive computations or data-loading steps that return serializable data; each caller receives a copy of the cached value. |
 | `st.cache_resource` | Cache a shared resource returned by a function. Use it for global objects such as database connections, ML models, or clients that should be reused across reruns and sessions. |
@@ -50,7 +50,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.caption` | Display text in small font. Use it for secondary text, notes, or metadata beneath primary content. |
 | `st.chat_input` | Display a chat input widget. It is designed for conversational apps and returns the submitted message or uploaded files depending on configuration. |
 | `st.chat_message` | Insert a chat message container. Use it with `with` blocks to render messages from users, assistants, or named speakers. |
-| `st.checkbox` | Display a checkbox widget. It returns a boolean value and can run an `on_change` callback. |
+| `st.checkbox` | Display a checkbox widget. It returns a boolean value. |
 | `st.code` | Display a code block with optional syntax highlighting. Use it for source code, commands, logs, and other preformatted text. |
 | `st.color_picker` | Display a color picker widget. It returns the selected color as a hex string. |
 | `st.columns` | Insert containers laid out as side-by-side columns. Use it for horizontal layouts and place elements into returned column containers. |
@@ -84,7 +84,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.json` | Display an object or string as a pretty-printed, interactive JSON string. Use it for structured debug output or data inspection. |
 | `st.latex` | Display mathematical expressions formatted as LaTeX. Use it for equations and scientific notation. |
 | `st.line_chart` | Display a line chart. Use it for trends, time series, and ordered numeric values. |
-| `st.link_button` | Display a link button element. Use it when the action is navigation to another URL rather than a Python callback. |
+| `st.link_button` | Display a link button element. Use it when the action is navigation to another URL. |
 | `st.login` | Initiate the login flow for the given provider. Use it with configured auth settings and inspect the local docs for provider-specific behavior. |
 | `st.logo` | Renders a logo in the upper-left corner of your app and its sidebar. Use it for app branding and optional navigation link behavior. |
 | `st.logout` | Logout the current user. Use it with Streamlit's authentication support. |
@@ -141,7 +141,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.context` | Read-only proxy for user session context. Exposes `headers`, `cookies`, `theme` (`theme.type`), `timezone`, `timezone_offset`, `locale`, `url`, `ip_address`, and `is_embedded`. |
 | `st.query_params` | Mutable proxy for the browser URL query parameters. Use it to read or update URL state. |
 | `st.secrets` | Dict-like access to secrets loaded from `secrets.toml`. Use it for credentials and configuration that should not be hard-coded. |
-| `st.session_state` | Per-session mutable state proxy. Use it to persist values across reruns and coordinate widgets, callbacks, and app logic. |
+| `st.session_state` | Per-session mutable state proxy. Use it to persist values across reruns and share state between widgets and app logic. |
 | `st.sidebar` | Sidebar container that exposes most element methods as `st.sidebar.<command>()` and supports `with st.sidebar:` blocks. |
 | `st.user` | Read-only dict-like proxy for current user information. Values depend on the hosting and authentication configuration. |
 | **`st.column_config` helpers** | |
