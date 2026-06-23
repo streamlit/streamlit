@@ -134,6 +134,32 @@ describe("Selectbox widget", () => {
     expect(screen.getByRole("combobox")).toBeDisabled()
   })
 
+  it("does not open the dropdown when disabled and clicked", async () => {
+    const user = userEvent.setup()
+    props = getProps({ disabled: true })
+    render(<Selectbox {...props} />)
+    await user.click(screen.getByRole("combobox"))
+    expect(screen.queryByRole("option")).not.toBeInTheDocument()
+  })
+
+  it("does not open the dropdown when disabled and ArrowDown is pressed", async () => {
+    const user = userEvent.setup()
+    props = getProps({ disabled: true })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.keyboard("{ArrowDown}")
+    expect(screen.queryByRole("option")).not.toBeInTheDocument()
+  })
+
+  it("does not open the dropdown when no options are available", async () => {
+    const user = userEvent.setup()
+    props = getProps({ options: [], value: undefined, placeholder: "" })
+    render(<Selectbox {...props} />)
+    await user.click(screen.getByRole("combobox"))
+    expect(screen.queryByRole("option")).not.toBeInTheDocument()
+  })
+
   it("is able to select an option", async () => {
     const user = userEvent.setup()
     render(<Selectbox {...props} />)

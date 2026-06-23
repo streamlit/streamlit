@@ -25,6 +25,7 @@ import {
   useState,
 } from "react"
 
+import { FloatingPortal } from "@floating-ui/react"
 import { type Key } from "react-aria-components"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
@@ -42,6 +43,9 @@ import {
   isMenuStyleIconLabel,
 } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -60,10 +64,6 @@ const BUTTON_TYPE_TO_KIND: Record<string, BaseButtonKind> = {
   tertiary: BaseButtonKind.TERTIARY,
 }
 
-// Passed to RAC Popover to disable its internal close-on-blur/interact-outside
-// paths. All dismissal is handled by our own capture-phase useEffect instead.
-const NEVER_CLOSE = (): boolean => false
-
 export interface Props {
   disabled: boolean
   element: MenuButtonProto
@@ -74,6 +74,7 @@ export interface Props {
 function MenuButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, fragmentId } = props
 
+  const theme = useEmotionTheme()
   const [isOpen, setIsOpen] = useState(false)
   const instanceId = useId()
   // Anchor ref on the outer container — mirrors the original anchorRef pattern,
@@ -82,19 +83,21 @@ function MenuButton(props: Props): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   // Ref to the popover DOM element — needed by the outside-click handler below
   // to distinguish clicks on portal-rendered menu items from true outside clicks.
-  const popoverRef = useRef<HTMLElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
+
+  // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
+  // fully replaced with FloatingPortal here because Menu is a self-contained
+  // collection root — it doesn't need to be a child of any other RAC component.
+  const { refs, floatingStyles } = useFloatingOverlay({
+    open: isOpen,
+    placement: "bottom-start",
+    offsetPx: convertRemToPx(theme.spacing.twoXS),
+  })
 
   // Custom dismissal via capture-phase DOM listeners.
   //
-  // Why not use RAC's built-in close paths? The popover requires `isNonModal`
-  // to prevent ariaHideOutside from marking the page `inert` (which would block
-  // outside clicks). But `isNonModal` enables useCloseOnScroll inside RAC's
-  // useOverlayPosition — closing the menu whenever a parent container scrolls
-  // (e.g. Playwright auto-scrolling to a button below the fold). It also leaves
-  // shouldCloseOnBlur active, which fires spuriously in Chromium after
-  // autoFocus="first". Rather than fight each path individually, we disable all
-  // RAC close channels (no onOpenChange, shouldCloseOnInteractOutside=false) and
-  // implement the two behaviors we actually need: outside-click and Escape/Tab.
+  // The popover is portalled to document.body, so we implement
+  // outside-click and Escape/Tab dismissal ourselves.
   useEffect(() => {
     if (!isOpen) return
 
@@ -134,6 +137,27 @@ function MenuButton(props: Props): ReactElement {
     }
   }, [isOpen])
 
+  // Merge the floating ref with our local popoverRef for dismissal logic.
+  const setFloatingRef = useCallback(
+    (node: HTMLDivElement | null): void => {
+      refs.setFloating(node)
+      ;(popoverRef as React.MutableRefObject<HTMLDivElement | null>).current =
+        node
+    },
+    [refs]
+  )
+
+  // Merge the reference ref with our local containerRef for dismissal logic.
+  const setReferenceRef = useCallback(
+    (node: HTMLDivElement | null): void => {
+      ;(
+        containerRef as React.MutableRefObject<HTMLDivElement | null>
+      ).current = node
+      refs.setReference(node)
+    },
+    [refs]
+  )
+
   const kind = BUTTON_TYPE_TO_KIND[element.type] ?? BaseButtonKind.SECONDARY
 
   const menuItems = useMemo(
@@ -166,7 +190,7 @@ function MenuButton(props: Props): ReactElement {
 
   return (
     <Box
-      ref={containerRef}
+      ref={setReferenceRef}
       className="stMenuButton"
       data-testid="stMenuButton"
     >
@@ -198,51 +222,48 @@ function MenuButton(props: Props): ReactElement {
           </StyledMenuButtonLabelContainer>
         </BaseButton>
       </BaseButtonTooltip>
-      <StyledMenuPopover
-        ref={popoverRef}
-        triggerRef={containerRef}
-        data-testid="stMenuButtonBody"
-        isOpen={isOpen}
-        // isNonModal prevents ariaHideOutside from adding `inert` to the rest of
-        // the page. Without it, clicking outside the popover would fail in E2E
-        // tests because the target element is marked inert by the overlay.
-        // Outside-click and Escape dismissal are handled by the useEffect above.
-        isNonModal
-        shouldCloseOnInteractOutside={NEVER_CLOSE}
-        offset={4}
-        placement="bottom start"
-      >
-        <StyledMenuList
-          onAction={handleItemSelect}
-          aria-label={extractLeadingMaterialIcon(element.label).text || "Menu"}
-          autoFocus="first"
-        >
-          {menuItems.map(item => {
-            const { icon, text } = extractLeadingMaterialIcon(item.label)
-            return (
-              <StyledMenuListItem
-                key={item.value}
-                id={`${instanceId}${item.value}`}
-                textValue={text}
-              >
-                <StyledMenuOptionLabel>
-                  {icon && (
-                    <StyledMenuOptionIcon aria-hidden="true">
-                      <DynamicIcon iconValue={icon} size="md" />
-                    </StyledMenuOptionIcon>
-                  )}
-                  <StreamlitMarkdown
-                    source={text}
-                    allowHTML={false}
-                    isLabel
-                    disableLinks
-                  />
-                </StyledMenuOptionLabel>
-              </StyledMenuListItem>
-            )
-          })}
-        </StyledMenuList>
-      </StyledMenuPopover>
+      {isOpen && (
+        <FloatingPortal>
+          <StyledMenuPopover
+            ref={setFloatingRef}
+            data-testid="stMenuButtonBody"
+            style={floatingStyles}
+          >
+            <StyledMenuList
+              onAction={handleItemSelect}
+              aria-label={
+                extractLeadingMaterialIcon(element.label).text || "Menu"
+              }
+              autoFocus="first"
+            >
+              {menuItems.map(item => {
+                const { icon, text } = extractLeadingMaterialIcon(item.label)
+                return (
+                  <StyledMenuListItem
+                    key={item.value}
+                    id={`${instanceId}${item.value}`}
+                    textValue={text}
+                  >
+                    <StyledMenuOptionLabel>
+                      {icon && (
+                        <StyledMenuOptionIcon aria-hidden="true">
+                          <DynamicIcon iconValue={icon} size="md" />
+                        </StyledMenuOptionIcon>
+                      )}
+                      <StreamlitMarkdown
+                        source={text}
+                        allowHTML={false}
+                        isLabel
+                        disableLinks
+                      />
+                    </StyledMenuOptionLabel>
+                  </StyledMenuListItem>
+                )
+              })}
+            </StyledMenuList>
+          </StyledMenuPopover>
+        </FloatingPortal>
+      )}
     </Box>
   )
 }

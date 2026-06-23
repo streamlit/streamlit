@@ -79,7 +79,7 @@ jobs:
     steps:
       - name: Checkout Streamlit code
         if: needs.prepare.outputs.checkout_ref != ''
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           persist-credentials: false
@@ -87,7 +87,7 @@ jobs:
           fetch-depth: 2
       - name: Checkout Streamlit code
         if: needs.prepare.outputs.checkout_ref == ''
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: "recursive"

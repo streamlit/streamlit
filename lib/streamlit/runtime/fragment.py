@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from datetime import timedelta
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -171,6 +172,33 @@ class FragmentStorage(Protocol):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def register_outside_wrapper(
+        self, fragment_id: str, container_id: str, wrapper: OutsideContainerWrapper
+    ) -> None:
+        """Store the implicit wrapper for a (fragment, outside container) pair."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_outside_wrapper(
+        self, fragment_id: str, container_id: str
+    ) -> OutsideContainerWrapper | None:
+        """Return the cached wrapper for a (fragment, outside container) pair."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def outside_wrappers_for(self, fragment_id: str) -> list[OutsideContainerWrapper]:
+        """Return all wrapper records belonging to the given fragment."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def evict_outside_wrappers_created_by(self, fragment_id: str) -> None:
+        """Drop every wrapper whose outside container was created by the given
+        fragment's scope. Called when that fragment reruns and is about to rebuild
+        those containers.
+        """
+        raise NotImplementedError
+
 
 # NOTE: Ideally, we'd like to add a MemoryFragmentStorageStatProvider implementation to
 # keep track of memory usage due to fragments, but doing something like this ends up
@@ -192,6 +220,7 @@ class MemoryFragmentStorage(FragmentStorage):
         self._parent_by_id: dict[str, str | None] = {}
         self._registration_sequence_by_id: dict[str, int] = {}
         self._registration_sequence = 0
+        self._outside_wrappers: dict[tuple[str, str], OutsideContainerWrapper] = {}
 
     def _iter_ancestor_ids(self, fragment_id: str) -> Iterator[str]:
         """Yield ancestors from the immediate parent outward.
@@ -210,10 +239,16 @@ class MemoryFragmentStorage(FragmentStorage):
             seen_ids.add(parent_id)
             current = parent_id
 
-    def _remove(self, fragment_id: str) -> None:
+    def _remove(self, fragment_id: str, *, evict_wrappers: bool = True) -> None:
         del self._fragments[fragment_id]
         self._parent_by_id.pop(fragment_id, None)
         self._registration_sequence_by_id.pop(fragment_id, None)
+        if evict_wrappers:
+            self._outside_wrappers = {
+                key: wrapper
+                for key, wrapper in self._outside_wrappers.items()
+                if key[0] != fragment_id
+            }
 
     def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
         with self._lock:
@@ -222,7 +257,14 @@ class MemoryFragmentStorage(FragmentStorage):
 
             for fragment_id in list(self._fragments):
                 if fragment_id not in new_fragment_ids:
-                    self._remove(fragment_id)
+                    self._remove(fragment_id, evict_wrappers=False)
+
+            # Drop ALL wrappers unconditionally, including those belonging to
+            # fragments that survived the loop above. On a full app rerun the
+            # main script recreates outside containers as new DG objects, so
+            # every wrapper record — even one for a retained fragment — holds a
+            # stale DG with an already-advanced cursor.
+            self._outside_wrappers.clear()
 
     def lookup(self, key: str) -> Fragment:
         try:
@@ -315,6 +357,37 @@ class MemoryFragmentStorage(FragmentStorage):
     def contains(self, key: str) -> bool:
         with self._lock:
             return key in self._fragments
+
+    def register_outside_wrapper(
+        self, fragment_id: str, container_id: str, wrapper: OutsideContainerWrapper
+    ) -> None:
+        with self._lock:
+            self._outside_wrappers[fragment_id, container_id] = wrapper
+
+    def get_outside_wrapper(
+        self, fragment_id: str, container_id: str
+    ) -> OutsideContainerWrapper | None:
+        with self._lock:
+            return self._outside_wrappers.get((fragment_id, container_id))
+
+    def outside_wrappers_for(self, fragment_id: str) -> list[OutsideContainerWrapper]:
+        with self._lock:
+            return [
+                wrapper
+                for (
+                    stored_fragment_id,
+                    _container_id,
+                ), wrapper in self._outside_wrappers.items()
+                if stored_fragment_id == fragment_id
+            ]
+
+    def evict_outside_wrappers_created_by(self, fragment_id: str) -> None:
+        with self._lock:
+            self._outside_wrappers = {
+                key: wrapper
+                for key, wrapper in self._outside_wrappers.items()
+                if wrapper.creating_fragment_id != fragment_id
+            }
 
     def __deepcopy__(self, memo: dict[int, object]) -> NoReturn:
         raise TypeError(
@@ -414,7 +487,11 @@ def _fragment(
             if skip_container:
                 ThreadState.update(pre_allocated_container_fragment_id=None)
 
-            with ThreadState.scoped(fragment_id=fragment_id):
+            # Set delta_path initial value to None. When the fragment container
+            # is established below, this will be initialized with the fragment's
+            # delta path. Without this, we would inherit the delta path from the
+            # parent scope.
+            with ThreadState.scoped(fragment_id=fragment_id, delta_path=None):
                 result = None
                 with active_hash_context:
                     container_ctx = (
