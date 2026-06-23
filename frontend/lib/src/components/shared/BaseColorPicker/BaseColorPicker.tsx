@@ -125,12 +125,14 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
 
   const handleToggle = useCallback((): void => {
     if (disabled) return
-    setIsOpen(prev => {
-      if (prev) onColorClose()
-      else openedAtRef.current = Date.now()
-      return !prev
-    })
-  }, [disabled, onColorClose])
+    if (isOpen) {
+      setIsOpen(false)
+      onColorClose()
+    } else {
+      openedAtRef.current = Date.now()
+      setIsOpen(true)
+    }
+  }, [disabled, isOpen, onColorClose])
 
   // Custom dismissal via document-level DOM listeners.
   //
@@ -239,6 +241,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
       </WidgetLabel>
       <StyledColorPreview
         ref={setReferenceRef}
+        type="button"
         disabled={disabled}
         onClick={handleToggle}
         aria-label={`${label} color picker`}

@@ -100,9 +100,10 @@ describe("ColorPicker widget", () => {
     ).toHaveAttribute("aria-expanded", "true")
   })
 
-  it("closes popover when trigger is clicked again", async () => {
+  it("closes popover and calls onChange when trigger is clicked again", async () => {
     const user = userEvent.setup()
-    render(<BaseColorPicker {...getProps()} />)
+    const onChange = vi.fn()
+    render(<BaseColorPicker {...getProps({ onChange })} />)
 
     const trigger = screen.getByRole("button", { name: /label color picker/i })
     await user.click(trigger)
@@ -112,6 +113,7 @@ describe("ColorPicker widget", () => {
     expect(
       screen.queryByTestId("stColorPickerPopover")
     ).not.toBeInTheDocument()
+    expect(onChange).toHaveBeenCalledWith("#000000")
   })
 
   it("closes popover and calls onChange on outside click", async () => {
