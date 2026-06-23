@@ -108,6 +108,8 @@ export const StyledPre = styled.pre<StyledCodeProps>(
       ...codeBlockStyle(theme, wrapLines),
       display: "block",
       paddingRight: theme.spacing.lg,
+      minWidth: "max-content",
+      overflowX: "visible",
     },
 
     // The token can consist of many lines, e.g. a triple-quote string, so
