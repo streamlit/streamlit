@@ -143,6 +143,30 @@ describe("ColorPicker widget", () => {
     expect(onChange).toHaveBeenCalledWith("#000000")
   })
 
+  it("closes popover and calls onChange on Tab key", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<BaseColorPicker {...getProps({ onChange })} />)
+
+    await user.click(
+      screen.getByRole("button", { name: /label color picker/i })
+    )
+    expect(screen.getByTestId("stColorPickerPopover")).toBeVisible()
+
+    // Simulate the realistic flow: user focuses an input inside the picker
+    // (e.g. the hex field), then Tabs away. We click the hex input explicitly
+    // because FloatingFocusManager's initial autofocus uses requestAnimationFrame,
+    // which JSDOM does not run, so focus stays on the trigger after the click.
+    const hexInput = screen.getByRole("textbox")
+    await user.click(hexInput)
+
+    await user.keyboard("{Tab}")
+    expect(
+      screen.queryByTestId("stColorPickerPopover")
+    ).not.toBeInTheDocument()
+    expect(onChange).toHaveBeenCalledWith("#000000")
+  })
+
   it("closes popover and calls onChange on Escape key", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()

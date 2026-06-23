@@ -93,6 +93,9 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
   const openedAtRef = useRef(0)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
+  // Set to true when a Tab keydown is detected so the accompanying focusin
+  // event knows to check whether focus left the popover.
+  const tabbingRef = useRef(false)
   // Keep a ref to the latest draft value so onColorClose stays stable and
   // does not cause the dismissal useEffect to re-register document listeners
   // on every color drag update.
@@ -136,8 +139,8 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
 
   // Custom dismissal via document-level DOM listeners.
   //
-  // The popover is portalled to document.body, so we implement outside-click
-  // and Escape dismissal ourselves.
+  // The popover is portalled to document.body, so we implement outside-click,
+  // Escape, and Tab-out dismissal ourselves.
   //
   // We use `click` (not `pointerdown`) so that a focused input inside the
   // popover fires its blur/change handlers before we close, ensuring the
@@ -166,14 +169,34 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
         setIsOpen(false)
         onColorClose()
         triggerRef.current?.focus()
+      } else if (e.key === "Tab") {
+        // Mark that a Tab is in flight. The focusin listener fires next,
+        // after focus has moved, so it can check whether the destination is
+        // inside or outside the popover and only close in the latter case.
+        tabbingRef.current = true
+      }
+    }
+
+    // focusin fires on the element that just received focus, i.e. after the
+    // Tab key has already moved focus. Checking e.target here correctly
+    // distinguishes Tab-between-inputs-within-the-popover (no-op) from
+    // Tab-out-of-the-popover (close + commit).
+    const handleFocusIn = (e: FocusEvent): void => {
+      if (!tabbingRef.current) return
+      tabbingRef.current = false
+      if (!popoverRef.current?.contains(e.target as Node)) {
+        setIsOpen(false)
+        onColorClose()
       }
     }
 
     document.addEventListener("click", handleClick)
     document.addEventListener("keydown", handleKeyDown, true)
+    document.addEventListener("focusin", handleFocusIn)
     return () => {
       document.removeEventListener("click", handleClick)
       document.removeEventListener("keydown", handleKeyDown, true)
+      document.removeEventListener("focusin", handleFocusIn)
     }
   }, [isOpen, onColorClose])
 
@@ -259,7 +282,11 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
       </StyledColorPreview>
       {isOpen && (
         <FloatingPortal>
-          <FloatingFocusManager context={floatingContext} modal={false}>
+          <FloatingFocusManager
+            context={floatingContext}
+            modal={false}
+            closeOnFocusOut={false}
+          >
             <StyledColorPickerPopover
               ref={setFloatingRef}
               style={floatingStyles}
