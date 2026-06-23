@@ -28,6 +28,12 @@ import {
   StyledPathTooltip,
 } from "./styled-components"
 
+/**
+ * Minimum milliseconds between tooltip open and a dismissal click.
+ * Mirrors the guard in Popover.tsx and must stay in sync with the test mock.
+ */
+export const OPEN_GUARD_MS = 50
+
 export interface JsonPathTooltipProps {
   top: number
   left: number
@@ -59,8 +65,21 @@ function JsonPathTooltip({
 
   // Track when the component mounted so the click-outside handler can ignore
   // the same click that caused the tooltip to appear (timestamp guard mirrors
-  // the pattern in Popover.tsx).
+  // the pattern in Popover.tsx). Set once on mount only — intentionally
+  // separate from the virtual-element effect so coordinate updates (top/left)
+  // do not incorrectly reset the guard window.
   const openedAtRef = useRef(0)
+  useEffect(() => {
+    openedAtRef.current = Date.now()
+  }, [])
+
+  // Stable ref for clearTooltip so the dismissal effect does not need to
+  // re-register document listeners when the parent re-renders and passes a new
+  // function reference.
+  const clearTooltipRef = useRef(clearTooltip)
+  useEffect(() => {
+    clearTooltipRef.current = clearTooltip
+  }, [clearTooltip])
 
   // Ref for the floating body element — needed for click-outside detection.
   const tooltipBodyRef = useRef<HTMLDivElement | null>(null)
@@ -68,10 +87,7 @@ function JsonPathTooltip({
   // Set a floating-ui virtual element from the (top, left) click coordinates.
   // A virtual element satisfies the ReferenceElement interface via
   // getBoundingClientRect, so no invisible DOM anchor div is needed.
-  // Also record the mount time here so the click-outside handler can apply
-  // the timestamp guard against the click that triggered the tooltip.
   useEffect(() => {
-    openedAtRef.current = Date.now()
     refs.setReference({
       getBoundingClientRect: () => ({
         x: left,
@@ -96,19 +112,22 @@ function JsonPathTooltip({
   )
 
   // Document-level click-outside and Escape dismissal.
+  // Deps are empty — listeners are registered once on mount and read stable
+  // refs (openedAtRef, tooltipBodyRef, clearTooltipRef) rather than capturing
+  // props or state directly.
   useEffect(() => {
     const handleClick = (e: MouseEvent): void => {
       // Guard against the click that opened the tooltip closing it immediately.
-      if (Date.now() - openedAtRef.current < 50) return
+      if (Date.now() - openedAtRef.current < OPEN_GUARD_MS) return
       if (!tooltipBodyRef.current?.contains(e.target as Node)) {
-        clearTooltip()
+        clearTooltipRef.current()
       }
     }
 
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
         e.stopPropagation()
-        clearTooltip()
+        clearTooltipRef.current()
       }
     }
 
@@ -118,7 +137,7 @@ function JsonPathTooltip({
       document.removeEventListener("click", handleClick)
       document.removeEventListener("keydown", handleKeyDown, true)
     }
-  }, [clearTooltip])
+  }, [])
 
   const handleCopyPath = useCallback((): void => {
     copyToClipboard(path)

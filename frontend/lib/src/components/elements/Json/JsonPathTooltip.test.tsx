@@ -19,7 +19,10 @@ import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
 
-import JsonPathTooltip, { JsonPathTooltipProps } from "./JsonPathTooltip"
+import JsonPathTooltip, {
+  JsonPathTooltipProps,
+  OPEN_GUARD_MS,
+} from "./JsonPathTooltip"
 
 const mockWriteText = vi.fn()
 Object.assign(navigator, {
@@ -42,6 +45,10 @@ describe("JsonPathTooltip", () => {
   beforeEach(() => {
     mockWriteText.mockReset()
     mockWriteText.mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it("renders the path text", () => {
@@ -91,12 +98,11 @@ describe("JsonPathTooltip", () => {
       </div>
     )
 
-    // Advance Date.now() past the 50ms timestamp guard without a real timeout,
+    // Advance Date.now() past the timestamp guard without a real timeout,
     // avoiding floating-ui flushSync updates outside act().
     const originalNow = Date.now()
-    vi.spyOn(Date, "now").mockReturnValue(originalNow + 100)
+    vi.spyOn(Date, "now").mockReturnValue(originalNow + OPEN_GUARD_MS + 1)
     await user.click(screen.getByRole("button", { name: "outside" }))
-    vi.restoreAllMocks()
 
     expect(clearTooltip).toHaveBeenCalledTimes(1)
   })
@@ -106,11 +112,10 @@ describe("JsonPathTooltip", () => {
     const clearTooltip = vi.fn()
     render(<JsonPathTooltip {...getProps({ clearTooltip })} />)
 
-    // Advance Date.now() past the 50ms timestamp guard.
+    // Advance Date.now() past the timestamp guard.
     const originalNow = Date.now()
-    vi.spyOn(Date, "now").mockReturnValue(originalNow + 100)
+    vi.spyOn(Date, "now").mockReturnValue(originalNow + OPEN_GUARD_MS + 1)
     await user.click(screen.getByRole("button", { name: /copy/i }))
-    vi.restoreAllMocks()
 
     expect(clearTooltip).not.toHaveBeenCalled()
   })
