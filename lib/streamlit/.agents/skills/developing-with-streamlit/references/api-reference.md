@@ -91,7 +91,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.map` | Display a map with a scatterplot overlay. Use it for latitude/longitude data when a simple geographic visualization is enough. |
 | `st.markdown` | Display Markdown-formatted text. It supports Streamlit-specific extensions such as colored text, badges, icons, and limited HTML when enabled. |
 | `st.menu_button` | Display a dropdown menu button widget. Use it when a compact button should expose a small set of actions or options. |
-| `st.mermaid_chart` | Display a Mermaid diagram from a text-based definition. Use it for flowcharts, sequence diagrams, class diagrams, state diagrams, and similar diagrams. |
+| `st.mermaid_chart` | Display a Mermaid diagram. Use it for text-based diagram definitions such as flowcharts, sequence diagrams, class diagrams, and state diagrams. |
 | `st.metric` | Display a metric with an optional delta indicator and optional inline sparkline (`chart_data`). Use it for KPIs, headline numbers, and dashboard summaries. |
 | `st.multiselect` | Display a widget that lets users select multiple options. It returns a list of selected values. |
 | `st.navigation` | Configure pages for a multipage app. It returns the currently selected page object, which the app should run. |
