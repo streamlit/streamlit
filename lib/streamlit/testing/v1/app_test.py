@@ -312,15 +312,22 @@ class AppTest:
             executed via ``.run()``.
         """
         script_path = Path(script_path)
-        if script_path.is_file():
+        # Walk the stack once: the caller of from_file is stack[1]. Always
+        # resolve relative paths against that caller's directory rather than
+        # against the process's cwd, since the latter depends on how the
+        # test runner happened to launch the interpreter and produced
+        # resolution errors against pages/ in #8154.
+        stack = traceback.StackSummary.extract(traceback.walk_stack(None))
+        caller_dir = Path(stack[1].filename).parent
+        relative_candidate = (caller_dir / script_path).resolve()
+        if relative_candidate.is_file():
+            path = relative_candidate
+        elif script_path.is_absolute() and script_path.is_file():
+            # Absolute paths are honoured as-is so existing test setups
+            # that pass absolute file paths keep working.
             path = script_path
         else:
-            # TODO: Make this not super fragile
-            # Attempt to find the test file calling this method, so the
-            # path can be relative to there.
-            stack = traceback.StackSummary.extract(traceback.walk_stack(None))
-            filepath = Path(stack[1].filename)
-            path = filepath.parent / script_path
+            path = relative_candidate
         return AppTest(path, default_timeout=default_timeout)
 
     def _run(
