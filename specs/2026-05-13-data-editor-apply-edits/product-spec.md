@@ -71,7 +71,10 @@ def data_editor(
     data: DataTypes,
     *,
     # ... existing parameters ...
-    apply_edits: Callable[[pd.DataFrame, pd.DataFrame, EditState], pd.DataFrame] | None = None,
+    apply_edits: Callable[
+        [pd.DataFrame, pd.DataFrame, DataEditorEditState],
+        pd.DataFrame,
+    ] | None = None,
 ) -> pd.DataFrame:
 ```
 
@@ -95,7 +98,7 @@ minimal.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `apply_edits` | `Callable[[pd.DataFrame, pd.DataFrame, EditState], pd.DataFrame] \| None` | Callback invoked when edits are present. Receives source dataframe, edited dataframe, and raw edit state. Returns new source dataframe. |
+| `apply_edits` | `Callable[[pd.DataFrame, pd.DataFrame, DataEditorEditState], pd.DataFrame] \| None` | Callback invoked when edits are present. Receives source dataframe first, edited dataframe second, and raw edit state third. Returns new source dataframe. |
 
 **Callback signature:**
 
@@ -103,19 +106,26 @@ minimal.
 def apply_edits(
     source_df: pd.DataFrame,   # Original data passed to st.data_editor
     edited_df: pd.DataFrame,   # Data with edits already applied
-    edits: EditState,          # Raw edit state for fine-grained control
+    edits: DataEditorEditState,  # Raw edit state for fine-grained control
 ) -> pd.DataFrame:
     ...
 ```
+
+**Argument order is intentional**: `source_df` comes before `edited_df` because row positions in
+`edits["deleted_rows"]` and `edits["edited_rows"]` are interpreted against the pre-edit source data.
+Swapping the first two arguments can delete or update the wrong backing records. Public docs and
+examples must show the exact parameter names (`source_df`, `edited_df`, `edits`) prominently. If
+implementation review finds this still too easy to misuse, revisit the event-object alternative in
+the tech spec before shipping.
 
 **Why `source_df` is included**: For database deletes, `deleted_rows: [3, 5]` gives row positions,
 but the callback needs to map these back to primary keys. Without `source_df`, users must close
 over the source dataframe, which the API should not require.
 
-**EditState type:**
+**DataEditorEditState type:**
 
 ```python
-class EditState(TypedDict):
+class DataEditorEditState(TypedDict):
     edited_rows: dict[int, dict[str, Any]]  # row_index -> column_name -> new_value
     added_rows: list[dict[str, Any]]        # list of new row dicts
     deleted_rows: list[int]                 # list of deleted row indices
@@ -127,27 +137,32 @@ class EditState(TypedDict):
 
 **Type export for callback annotation:**
 
-`EditState` is exported from `streamlit.column_config` (alongside `ColumnConfig`) so users can
-type-annotate their callbacks using a stable public API path:
+`DataEditorEditState` should be exported from a stable public typing namespace. Do **not** point
+users at `streamlit.elements.lib.column_types` (internal), and do **not** export it from
+`streamlit.column_config`: that module is for column display/editing configuration, and its public
+`__all__` does not include the internal `ColumnConfig` `TypedDict`.
+
+Recommended implementation path: add a public `streamlit.types` namespace and export the data-editor
+callback type from there:
 
 ```python
-from streamlit.column_config import EditState
+from streamlit.types import DataEditorEditState
 
 def my_callback(
     source_df: pd.DataFrame,
     edited_df: pd.DataFrame,
-    edits: EditState,
+    edits: DataEditorEditState,
 ) -> pd.DataFrame:
     ...
 ```
 
 **Note on naming**: The internal codebase uses `EditingState` for the frontend's positional edit
-buffer. `EditState` is the user-facing alias — same shape, but with int keys (post-conversion) and
-documented as part of the public API. The callback always receives the converted `EditState`, not
-the raw JSON widget state.
+buffer. `DataEditorEditState` is the user-facing alias — same shape, but with int keys
+(post-conversion) and documented as part of the public API. The callback always receives the
+converted `DataEditorEditState`, not the raw JSON widget state.
 
-The type is documented in `EditState` shape (post-conversion with int keys) — static type checkers
-will see `dict[int, dict[str, Any]]` for `edited_rows`, matching the runtime behavior.
+The type is documented in `DataEditorEditState` shape (post-conversion with int keys) — static type
+checkers will see `dict[int, dict[str, Any]]` for `edited_rows`, matching the runtime behavior.
 
 ### Behavior
 
@@ -156,10 +171,10 @@ will see `dict[int, dict[str, Any]]` for `edited_rows`, matching the runtime beh
 | **When called** | On rerun when edits are present (not on every render) |
 | **Input** | `source_df` + `edited_df` + `edits` |
 | **Return value** | New source dataframe; becomes the baseline for *this render*, edit state cleared |
-| **Baseline persistence** | The callback's return value is used for the current render only. For the baseline to persist across reruns, it must be stored externally (session state, database, cache). Button-only reruns with no edits will NOT invoke `apply_edits` — the `data` argument is re-evaluated as the baseline. |
+| **Baseline persistence** | The callback's return value is used for the current render only. For the baseline to persist across reruns, it must be stored externally (session state, database, or a cache that is updated/invalidated after commit). Button-only reruns with no edits will NOT invoke `apply_edits` — the `data` argument is re-evaluated as the baseline. |
 | **Exception** | See "Error Handling" below |
 | **No edits** | Callback not invoked; widget renders source data as-is |
-| **With forms** | Callback invoked on form submit, not on each cell edit |
+| **With forms** | Not supported in the initial release; see "Forms enforcement" below |
 | **Return value of `st.data_editor`** | Callback's result on success; `edited_df` on exception |
 | **`st.session_state[key]`** | Cleared on success; preserved on exception |
 
@@ -196,8 +211,9 @@ st.data_editor(
 )
 ```
 
-Alternatively, use `@st.cache_data(ttl=...)` for database-backed data that refreshes periodically
-(see Example 2 below).
+For database-backed data, store the refreshed baseline in session state or invalidate/update any
+cache immediately after committing edits. A TTL-only cache can serve stale pre-commit data on the
+next non-edit rerun.
 
 ### Examples
 
@@ -242,17 +258,16 @@ def sync_to_database(source_df, edited_df, edits):
     for row in edits["added_rows"]:
         insert_row_in_db(row)
 
-    # Return refreshed data (includes server-side defaults, timestamps)
-    return load_from_database()
+    # Store and return refreshed data (includes server-side defaults, timestamps)
+    refreshed_df = load_from_database()
+    st.session_state.db_df = refreshed_df
+    return refreshed_df
 
-# Cache the initial load to avoid double DB read on each rerun
-# (data argument is evaluated even when callback isn't invoked)
-@st.cache_data(ttl=60)
-def get_initial_data():
-    return load_from_database()
+if "db_df" not in st.session_state:
+    st.session_state.db_df = load_from_database()
 
 st.data_editor(
-    get_initial_data(),
+    st.session_state.db_df,
     key="editor",
     num_rows="dynamic",
     apply_edits=sync_to_database,
@@ -262,17 +277,28 @@ st.data_editor(
 **Example 3: Revert/reset functionality (#6540)**
 
 ```python
-def handle_edits(source_df, edited_df, edits):
-    if st.session_state.get("revert_requested"):
-        st.session_state.revert_requested = False
-        return source_df  # Reject edits, return original
-    return edited_df  # Accept edits
+if "baseline_df" not in st.session_state:
+    st.session_state.baseline_df = load_initial_data()
+if "working_df" not in st.session_state:
+    st.session_state.working_df = st.session_state.baseline_df.copy()
+
+def accept_edits(source_df, edited_df, edits):
+    st.session_state.working_df = edited_df
+    return edited_df
+
+def revert_changes():
+    st.session_state.working_df = st.session_state.baseline_df.copy()
 
 col1, col2 = st.columns(2)
 with col1:
-    st.button("Revert Changes", on_click=lambda: st.session_state.update(revert_requested=True))
+    st.button("Revert Changes", on_click=revert_changes)
 
-st.data_editor(df, key="editor", num_rows="dynamic", apply_edits=handle_edits)
+st.data_editor(
+    st.session_state.working_df,
+    key="editor",
+    num_rows="dynamic",
+    apply_edits=accept_edits,
+)
 ```
 
 **Example 4: Conditional persistence (explicit Save button)**
@@ -317,7 +343,7 @@ commit" workflows.
 | `num_rows` | Works with all modes; most useful for `"add"`, `"delete"`, `"dynamic"` |
 | `disabled` | If all editing disabled, no edits occur, callback not invoked |
 | `column_config` | No interaction; column config affects editing UI, not callback |
-| Forms | Callback invoked on form submit only, edits batched until then |
+| Forms | Not supported in the initial release; `apply_edits` inside `st.form` raises `StreamlitAPIException` |
 | Fragments | Works within fragments; callback runs during fragment rerun |
 
 **`key` requirement enforcement:**
@@ -335,6 +361,14 @@ raise StreamlitAPIException(
     "so edit state can be preserved across reruns."
 )
 ```
+
+**Forms enforcement:**
+
+The initial release should disallow `apply_edits` on `st.data_editor` inside `st.form` and raise
+`StreamlitAPIException`. This preserves the existing forms contract that only
+`st.form_submit_button` can define callbacks inside a form. Supporting forms later requires a
+separate design for ordering relative to `st.form_submit_button(on_click=...)` and for whether
+`apply_edits` is considered a widget callback or a submit-time commit hook.
 
 ### Error Handling
 

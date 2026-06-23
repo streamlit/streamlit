@@ -390,7 +390,6 @@ match the new source values. Use `useExecuteWhenChanged` (per codebase conventio
 // Use useExecuteWhenChanged to run reconciliation on signature change
 // This avoids the extra render cycle of useEffect
 useExecuteWhenChanged(
-  currentSignature,  // Backend-provided data signature from proto
   () => {
     let cleared = false
     editingState.forEachEditedCell((col, row, editCell) => {
@@ -408,7 +407,8 @@ useExecuteWhenChanged(
       // Trigger re-render to show updated source values
       updateNumRows()
     }
-  }
+  },
+  [currentSignature] // Backend-provided data signature from proto
 )
 ```
 
@@ -549,7 +549,7 @@ returned dataframe.
 def apply_edits(
     source_df: pd.DataFrame,
     edited_df: pd.DataFrame,
-    edits: EditState,
+    edits: DataEditorEditState,
 ) -> pd.DataFrame:
     """Called when user edits trigger a rerun.
 
@@ -562,6 +562,12 @@ def apply_edits(
         The new source dataframe. Edit state is cleared; this becomes the new baseline.
     """
 ```
+
+**Argument order**: `source_df` intentionally comes before `edited_df` because positional edit
+metadata (`edited_rows`, `deleted_rows`) is resolved against the pre-edit source dataframe. Public
+docs and implementation examples must use the names `source_df`, `edited_df`, and `edits`
+prominently. If the implementation review finds adjacent dataframe arguments too easy to misuse,
+switch to the event-object alternative below before shipping.
 
 **Why `source_df` is needed**: For database deletes, `deleted_rows: [3, 5]` gives row positions,
 but the callback needs to map these back to primary keys. Without `source_df`, users must close
@@ -601,7 +607,7 @@ st.data_editor(
 class DataEditorEditEvent:
     source_df: pd.DataFrame
     edited_df: pd.DataFrame
-    edits: EditState
+    edits: DataEditorEditState
 
 def apply_edits(event: DataEditorEditEvent) -> pd.DataFrame:
     ...
@@ -619,7 +625,7 @@ signature is recommended for simplicity.
 | Return value | New source dataframe; becomes the baseline, edit state cleared |
 | Exception | See "Failure Behavior" below |
 | No edits | Callback not invoked; widget renders source data as-is |
-| With forms | Callback invoked on form submit, not on each cell edit |
+| With forms | Not supported in the initial release; see compatibility table |
 
 #### 2.4 Failure Behavior
 
@@ -733,17 +739,29 @@ If any step is out of order, the user may see a flash of stale state or require 
 
 3. **Database sync**: `source_df` enables mapping row positions to primary keys for deletes.
 
-4. **Programmatic reset (#6540)**:
+4. **Programmatic reset (#6540)**: Store the accepted working dataframe in session state, and reset
+   that session state value back to the last committed baseline when the user clicks Revert.
+   Button-only reruns do not invoke `apply_edits` when no edits are pending.
 
    ```python
-   def handle_edits(source_df, edited_df, edits):
-       if st.session_state.get("revert_requested"):
-           st.session_state.revert_requested = False
-           return source_df  # Reject edits, return original
-       return edited_df  # Accept edits
+   if "baseline_df" not in st.session_state:
+       st.session_state.baseline_df = load_initial_data()
+   if "working_df" not in st.session_state:
+       st.session_state.working_df = st.session_state.baseline_df.copy()
 
-   st.button("Revert", on_click=lambda: st.session_state.update(revert_requested=True))
-   st.data_editor(df, key="editor", apply_edits=handle_edits)
+   def accept_edits(source_df, edited_df, edits):
+       st.session_state.working_df = edited_df
+       return edited_df
+
+   def revert_changes():
+       st.session_state.working_df = st.session_state.baseline_df.copy()
+
+   st.button("Revert", on_click=revert_changes)
+   st.data_editor(
+       st.session_state.working_df,
+       key="editor",
+       apply_edits=accept_edits,
+   )
    ```
 
 5. **External refresh**: Callback can return freshly-loaded data with server-side changes.
@@ -757,7 +775,7 @@ If any step is out of order, the user may see a flash of stale state or require 
 | `column_config` | Yes | Doesn't affect callback |
 | `disabled` | Yes | No edits = callback not invoked |
 | `column_order` | Yes | Doesn't affect callback |
-| Forms | Yes | Callback invoked on form submit only |
+| Forms | No (initial release) | Preserve the existing forms rule that only `st.form_submit_button` may define callbacks. Providing `apply_edits` inside a form should raise `StreamlitAPIException` until a separate forms-ordering design is approved. |
 | Fragments | Yes | See details below |
 
 **Fragment compatibility details:**
@@ -1070,8 +1088,8 @@ def _normalize_editing_state(editing_state, source_data_hash, current_num_rows):
 
 1. Database sync pattern: callback persists and returns refreshed data
 2. Validation pattern: callback raises, edits preserved, error shown
-3. Revert pattern: callback returns original data, edits discarded
-4. Form integration: callback invoked on form submit only
+3. Revert pattern: button resets session-state working dataframe to committed baseline
+4. Forms enforcement: `apply_edits` inside a form raises `StreamlitAPIException`
 5. **Failure-and-retry flow**: Callback raises → `st.error` shown and edit state preserved →
    user fixes input (edits cell to valid value) → next interaction re-invokes callback
    successfully → edits cleared and clean state rendered (central UX claim of §2.4)
