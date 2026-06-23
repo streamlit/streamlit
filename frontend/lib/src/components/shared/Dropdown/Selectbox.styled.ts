@@ -51,9 +51,9 @@ export const StyledGroup = styled(Group)(({ theme }) => ({
   flexDirection: "row",
   alignItems: "stretch",
   width: "100%",
-  // Use a fixed height (matching the old BaseWeb ControlContainer) so that
-  // subpixel line-height rounding in WebKit/Chromium cannot push the element
-  // 1px over the minimum. overflow:hidden prevents any content from leaking.
+  // Use a fixed height so that subpixel line-height rounding in
+  // WebKit/Chromium cannot push the element 1px over the minimum.
+  // overflow:hidden prevents any content from leaking.
   height: theme.sizes.minElementHeight,
   overflow: "hidden",
   borderLeftWidth: theme.sizes.borderWidth,
@@ -141,21 +141,34 @@ export const StyledClearButton = styled(Button)(({ theme }) => ({
  * Popover that positions the options list below the trigger group.
  * Uses the shared popover container style (border-radius, border, shadow)
  * and constrains the max height to match other Streamlit dropdowns.
+ *
+ * Positioning is handled by Floating UI (applied via the style prop) rather
+ * than React Aria's useOverlayPosition. The !important overrides neutralize
+ * RAC's imperative inline style writes so Floating UI's transform takes over.
  */
 export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
   ({ theme, $isInSidebar }) => ({
     ...getPopoverContainerStyle(theme),
-    // In the main panel bgColor is the page background; in the sidebar bgColor
-    // and secondaryBg are swapped, so we mirror the BaseWeb `menuFill` logic.
     backgroundColor: $isInSidebar
       ? theme.colors.secondaryBg
       : theme.colors.bgColor,
     zIndex: getOverlayZIndex(theme),
-    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-    width: "var(--trigger-width)",
     maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
     overflow: "hidden",
-    marginTop: theme.spacing.twoXS,
+    // Override RAC's useOverlayPosition imperative style writes.
+    // Floating UI with strategy:"fixed" positions via transform: translate(x,y)
+    // while emitting top:0/left:0 as the origin. These !important overrides
+    // pin RAC's top/left to 0 so the transform controls placement. If a future
+    // Floating UI version switches to direct top/left positioning instead of
+    // transform, these overrides would need to be removed.
+
+    ...({
+      position: "fixed !important",
+      top: "0 !important",
+      left: "0 !important",
+      right: "auto !important",
+      bottom: "auto !important",
+    } as Record<string, string>),
   })
 )
 
@@ -184,7 +197,7 @@ interface StyledListBoxItemProps {
  * Individual option row. Provides correct item height and outer inset
  * padding. The hover/focus highlight is applied to the inner
  * `StyledItemHighlight` pill (via the `[data-item-hl]` attribute selector)
- * to match the rounded-pill style of the BaseWeb-based Multiselect.
+ * to match the rounded-pill style of the Multiselect dropdown.
  *
  * The `$isCreatable` variant adds a top separator line to visually separate
  * the "Add: …" option from the normal list.
@@ -203,8 +216,7 @@ export const StyledListBoxItem = styled(ListBoxItem, {
   color: theme.colors.bodyText,
   outline: "none",
   position: "relative",
-  // Delegate the highlight to the inner pill wrapper, matching the
-  // BaseWeb `StyledHighlightWrapper` hover/focus behaviour.
+  // Delegate the highlight to the inner pill wrapper.
   "&[data-hovered] [data-item-hl], &[data-focused] [data-item-hl]": {
     backgroundColor: theme.colors.darkenedBgMix15,
   },
@@ -231,7 +243,7 @@ export const StyledListBoxItem = styled(ListBoxItem, {
  * `StyledHighlightWrapper` from the shared Dropdown styled-components:
  * a rounded pill (`radii.md2`) at `elementHighlightHeight` that receives
  * the hover/focus background, creating the "pill inside a row" visual that
- * matches the BaseWeb-based Multiselect dropdown.
+ * matches the Multiselect dropdown.
  */
 export const StyledItemHighlight = styled.div(({ theme }) => ({
   flexGrow: 1,

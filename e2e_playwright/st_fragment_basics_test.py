@@ -36,8 +36,13 @@ def _outside_fragment_markdown(app: Page) -> Locator:
 
 
 def get_uuids(app: Page) -> tuple[str, str]:
-    text_in_fragment = _in_fragment_markdown(app).text_content()
-    text_outside_fragment = _outside_fragment_markdown(app).text_content()
+    in_fragment = _in_fragment_markdown(app)
+    outside_fragment = _outside_fragment_markdown(app)
+    expect(in_fragment).to_have_count(1)
+    expect(outside_fragment).to_have_count(1)
+
+    text_in_fragment = in_fragment.text_content()
+    text_outside_fragment = outside_fragment.text_content()
 
     assert text_in_fragment is not None
     assert text_outside_fragment is not None
