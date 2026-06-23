@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest-8-cores
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -77,7 +77,7 @@ jobs:
           echo "output_file=${component_lib_tar_gz}" >> $GITHUB_OUTPUT
 
       - name: Checkout streamlit/component-template
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           repository: streamlit/component-template

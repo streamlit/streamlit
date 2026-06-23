@@ -247,6 +247,10 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     }
     """),
     ),
+    (
+        "mermaid_chart",
+        lambda: st.mermaid_chart("graph LR\n    A --> B"),
+    ),
     ("pyplot", lambda: st.pyplot(plt.figure())),
     # utilities
     ("help", lambda: st.help("Hello")),

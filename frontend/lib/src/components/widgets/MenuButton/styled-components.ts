@@ -15,7 +15,7 @@
  */
 
 import styled from "@emotion/styled"
-import { Menu, MenuItem, Popover } from "react-aria-components"
+import { Menu, MenuItem } from "react-aria-components"
 
 import {
   getOverlayZIndex,
@@ -55,12 +55,9 @@ export const StyledMenuOptionIcon = styled.span(({ theme }) => ({
   color: theme.colors.bodyText,
 }))
 
-export const StyledMenuPopover = styled(Popover)(({ theme }) => ({
+export const StyledMenuPopover = styled.div(({ theme }) => ({
   ...getPopoverContainerStyle(theme),
-  // Override default border-radius with xl to match the original design
   borderRadius: theme.radii.xl,
-  marginRight: theme.spacing.lg,
-  marginBottom: theme.spacing.lg,
   maxHeight: "70vh",
   overflow: "auto",
   zIndex: getOverlayZIndex(theme),
