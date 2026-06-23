@@ -314,13 +314,12 @@ export const StyledNavSection = styled.button<StyledNavSectionProps>(
 
 export const StyledTopNavPopoverBody = styled.div(({ theme }) => ({
   ...getPopoverContainerStyle(theme),
+  backgroundColor: theme.colors.bgColor,
   zIndex: getOverlayZIndex(theme),
   maxHeight: "70vh",
   minWidth: "8rem",
   overflow: "auto",
   maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
-  marginRight: theme.spacing.lg,
-  marginBottom: theme.spacing.lg,
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
     maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
   },

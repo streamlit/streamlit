@@ -70,8 +70,9 @@ const TopNavSection = ({
   const theme = useEmotionTheme()
   const showSections = sections.length > 1
 
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const popoverRef = useRef<HTMLDivElement>(null)
+  // useRef<T | null>(null) gives MutableRefObject so .current is directly assignable.
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const popoverRef = useRef<HTMLDivElement | null>(null)
 
   const { refs, floatingStyles } = useFloatingOverlay({
     open,
@@ -81,9 +82,7 @@ const TopNavSection = ({
 
   const setReferenceRef = useCallback(
     (node: HTMLButtonElement | null): void => {
-      ;(
-        triggerRef as React.MutableRefObject<HTMLButtonElement | null>
-      ).current = node
+      triggerRef.current = node
       refs.setReference(node)
     },
     [refs]
@@ -91,8 +90,7 @@ const TopNavSection = ({
 
   const setFloatingRef = useCallback(
     (node: HTMLDivElement | null): void => {
-      ;(popoverRef as React.MutableRefObject<HTMLDivElement | null>).current =
-        node
+      popoverRef.current = node
       refs.setFloating(node)
     },
     [refs]
@@ -103,7 +101,8 @@ const TopNavSection = ({
     if (!open) return
 
     const handlePointerDown = (e: PointerEvent): void => {
-      const target = e.target as Node
+      const target = e.target
+      if (!(target instanceof Node)) return
       if (
         !triggerRef.current?.contains(target) &&
         !popoverRef.current?.contains(target)
@@ -196,9 +195,11 @@ const TopNavSection = ({
     <>
       <StyledNavSection
         ref={setReferenceRef}
+        type="button"
         onClick={() => setOpen(prev => !prev)}
         isOpen={open}
         aria-expanded={open}
+        aria-haspopup="true"
         data-testid="stTopNavSection"
       >
         <StyledNavSectionText>
