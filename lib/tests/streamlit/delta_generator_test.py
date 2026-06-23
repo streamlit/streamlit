@@ -1328,6 +1328,48 @@ class ParallelWorkerExternalContainerWriteTest(DeltaGeneratorTestCase):
         finally:
             ThreadState.update(is_parallel_worker=False, delta_path=())
 
+    def test_parallel_worker_write_to_other_root_container_raises_exception(
+        self,
+    ) -> None:
+        """Enqueue raises when a MAIN-fragment worker writes to another container.
+
+        delta_path encodes the root container as its first element (see
+        make_delta_path), so a parallel fragment running in MAIN has a
+        fragment_path that starts with RootContainer.MAIN (0), while writes to
+        the sidebar/bottom have cursor paths that start with RootContainer.SIDEBAR
+        (1) / RootContainer.BOTTOM (3). The differing first element guarantees
+        _is_inside_fragment_path returns False, so a cross-container write from a
+        parallel worker is always blocked and can never prefix-collide with the
+        fragment path.
+        """
+        # Fragment at MAIN (0), parent_path (1,), index 2 → delta_path = (0, 1, 2)
+        fragment_path = (0, 1, 2)
+        ThreadState.update(is_parallel_worker=True, delta_path=fragment_path)
+
+        try:
+            for root_container in (RootContainer.SIDEBAR, RootContainer.BOTTOM):
+                with self.subTest(root_container=root_container):
+                    # A cursor at parent_path (1,), index 2 in another root
+                    # container has the same trailing indices as the fragment but
+                    # a different leading root-container element, e.g. sidebar →
+                    # delta_path = (1, 1, 2), bottom → delta_path = (3, 1, 2).
+                    other_cursor = LockedCursor(
+                        root_container=root_container,
+                        parent_path=(1,),
+                        index=2,
+                    )
+                    other_dg = DeltaGenerator(
+                        root_container=root_container,
+                        cursor=other_cursor,
+                    )
+
+                    with pytest.raises(StreamlitAPIException) as exc_info:
+                        other_dg._enqueue("text", TextProto())
+
+                    assert "outside a parallel fragment" in str(exc_info.value)
+        finally:
+            ThreadState.update(is_parallel_worker=False, delta_path=())
+
 
 # Outside container writes: detection, wrapper creation, and redirection.
 
