@@ -290,44 +290,65 @@ def detect_installed_skills(app_dir: str | None) -> list[str]:
     """Detect Streamlit-shipped agent skills in well-known locations.
 
     Returns a sorted, deduplicated list of ``"<location>:<harness>:<skill>"``
-    tokens. ``location`` is ``home``, ``app``, or ``repo``; ``harness`` is one
-    of ``agents``, ``claude``, ``codex``, ``copilot``, ``cortex``, ``cursor``,
-    ``gemini``, or ``opencode``; ``skill`` is one of ``_STREAMLIT_SKILL_NAMES``.
-    Never raises: filesystem errors are swallowed and produce an empty list.
+    tokens. ``location`` is ``home``, ``app``, ``repo``, or ``project`` (the
+    in-app installer's resolved root, when distinct from ``app``/``repo``);
+    ``harness`` is one of ``agents``, ``claude``, ``codex``, ``copilot``,
+    ``cortex``, ``cursor``, ``gemini``, or ``opencode``; ``skill`` is one of
+    ``_STREAMLIT_SKILL_NAMES``. Never raises: filesystem errors are swallowed
+    and produce an empty list.
 
     The result is cached per ``app_dir`` for the lifetime of the process.
     """
     return list(_detect_installed_skills_cached(app_dir))
 
 
-def _find_agent_config_root(app: str) -> str | None:
-    """Return the nearest ancestor of ``app`` (inclusive) containing a
-    ``.agents`` or ``.claude`` directory, excluding the user's home directory.
+def _find_install_root(app: str) -> str | None:
+    """Resolve the same project root the in-app installer writes to, so the
+    nudge's skill detection scans exactly where a one-click install lands.
 
-    This mirrors the upward walk in ``streamlit.web.skills._find_project_root``,
-    which is where the in-app installer writes project-mode skills. Detection
-    MUST scan that same root: when an agent-config dir sits between ``app`` and
-    the git root (e.g. a per-package ``.claude`` in a monorepo) — or when there
-    is no git root at all — a successful install lands there, but the
-    ``{home, app, repo}`` roots below would never see it, so the install-skills
-    nudge would re-appear forever despite a "successful" install. The
-    install->detect roundtrip test guards the two walks against drifting apart.
+    Mirrors ``streamlit.web.skills._find_project_root`` step for step:
+
+    1. nearest ancestor of ``app`` (inclusive) containing ``.agents`` or
+       ``.claude``, else
+    2. nearest ancestor containing ``.git``, else
+    3. ``None`` (the installer falls back to ``app`` itself, which detection
+       already scans as the ``app`` root, so there is nothing extra to add).
+
+    Both walks are **unbounded** up to the filesystem root, breaking at the
+    home directory — matching the installer exactly. This must not drift from
+    ``_find_project_root``: if the installer resolves a root this misses, a
+    successful install is never detected and the nudge re-appears forever (e.g.
+    a per-package ``.claude`` in a monorepo, or a project nested far below its
+    ``.git`` root). The install->detect roundtrip test guards against drift.
     """
     try:
         home = os.path.realpath(os.path.expanduser("~"))
-        current = os.path.abspath(app)
-        for _ in range(_MAX_REPO_ROOT_WALK_DEPTH):
-            if os.path.realpath(current) == home:
-                return None
-            if os.path.isdir(os.path.join(current, ".agents")) or os.path.isdir(
-                os.path.join(current, ".claude")
-            ):
-                return current
-            parent = os.path.dirname(current)
-            if parent == current:
-                return None
-            current = parent
-        return None
+        start = os.path.abspath(app)
+
+        def _walk(predicate: Callable[[str], bool]) -> str | None:
+            current = start
+            while True:
+                if os.path.realpath(current) == home:
+                    return None
+                if predicate(current):
+                    return current
+                parent = os.path.dirname(current)
+                if parent == current:
+                    return None
+                current = parent
+
+        # Pass 1: an existing agent-config dir takes precedence (matches the
+        # installer, which installs next to it).
+        agent_root = _walk(
+            lambda d: (
+                os.path.isdir(os.path.join(d, ".agents"))
+                or os.path.isdir(os.path.join(d, ".claude"))
+            )
+        )
+        if agent_root is not None:
+            return agent_root
+        # Pass 2: otherwise the git root.
+        return _walk(lambda d: os.path.exists(os.path.join(d, ".git")))
     except OSError:  # pragma: no cover - defensive
         return None
 
@@ -350,10 +371,11 @@ def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
         if repo is not None and os.path.normcase(repo) != os.path.normcase(app):
             roots["repo"] = repo
 
-        # Also scan the in-app installer's project root (nearest ``.agents`` /
-        # ``.claude`` ancestor) so a successful install is always detected, even
-        # when it lands in a dir that is neither ``app`` nor the git root.
-        project = _find_agent_config_root(app)
+        # Also scan the in-app installer's resolved project root so a
+        # successful install is always detected, even when it lands in a dir
+        # that is neither ``app`` nor the git root (e.g. a monorepo per-package
+        # ``.agents``/``.claude``, or a project nested far below its git root).
+        project = _find_install_root(app)
         if project is not None:
             project_nc = os.path.normcase(project)
             if project_nc != os.path.normcase(app) and (

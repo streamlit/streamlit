@@ -106,7 +106,11 @@ export { useWindowDimensionsContext } from "./components/shared/WindowDimensions
 export { ComponentRegistry } from "./components/widgets/CustomComponent/ComponentRegistry"
 export { Quiver } from "./dataframes/Quiver"
 export { FileUploadClient } from "./FileUploadClient"
-export { BackendOperationClient } from "./BackendOperationClient"
+export {
+  BackendOperationClient,
+  CONNECTION_CLOSED_MESSAGE,
+  REQUEST_TIMED_OUT_MESSAGE,
+} from "./BackendOperationClient"
 export type { BackendOperationClientProps } from "./BackendOperationClient"
 export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
 export { useCrossOriginAttribute } from "./hooks/useCrossOriginAttribute"

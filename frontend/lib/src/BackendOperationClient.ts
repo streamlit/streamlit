@@ -43,6 +43,16 @@ const DEFERRED_FILE_REQUEST_TIMEOUT_MS = 180_000
  */
 const INSTALL_SKILLS_REQUEST_TIMEOUT_MS = 180_000
 
+/**
+ * Rejection message used when pending requests are cleaned up on
+ * disconnect/session reset. Exported so callers can match on it (e.g. App's
+ * skills-install retry copy) without duplicating the literal.
+ */
+export const CONNECTION_CLOSED_MESSAGE = "Connection closed"
+
+/** Rejection message used when a request exceeds its timeout. */
+export const REQUEST_TIMED_OUT_MESSAGE = "Request timed out"
+
 /** Information about a pending request. */
 interface PendingRequest<T> {
   resolver: PromiseWithResolvers<T>
@@ -212,7 +222,7 @@ export class BackendOperationClient {
   public cleanup(): void {
     for (const [requestId, pending] of this.pendingRequests) {
       clearTimeout(pending.timeoutId)
-      pending.resolver.reject(new Error("Connection closed"))
+      pending.resolver.reject(new Error(CONNECTION_CLOSED_MESSAGE))
       LOG.debug(`Cleaned up pending request ${requestId}`)
     }
     this.pendingRequests.clear()
@@ -228,7 +238,7 @@ export class BackendOperationClient {
     if (pending) {
       LOG.warn(`Request ${requestId} (${pending.requestType}) timed out`)
       this.pendingRequests.delete(requestId)
-      pending.resolver.reject(new Error("Request timed out"))
+      pending.resolver.reject(new Error(REQUEST_TIMED_OUT_MESSAGE))
     }
   }
 

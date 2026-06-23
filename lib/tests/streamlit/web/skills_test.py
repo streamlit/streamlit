@@ -1800,3 +1800,73 @@ class TestInstallDetectRoundtrip:
             # pre-install values (empty / True) and the nudge would re-appear.
             assert metrics_util.detect_installed_skills(str(app_dir)) != []
             assert skills.should_show_skills_nudge(str(app_dir)) is False
+
+
+class TestFindInstallRootMatchesInstaller:
+    """``metrics_util._find_install_root`` must resolve the SAME root the
+    installer (``skills._find_project_root``) writes to, across layouts and at
+    any nesting depth. This is the drift guard for the duplicated upward walks:
+    if they disagree on the depth bound or home exclusion, detection can fail to
+    scan where the install landed and the nudge re-appears forever.
+    """
+
+    def test_resolves_same_root_as_installer(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Across no-git / monorepo / git-only / no-root / deeply-nested layouts,
+        detection's resolver agrees with the installer's. The deep case (root
+        >20 levels above the app) is the regression guard for the depth-cap drift
+        — the old capped walk returned None there and missed the install.
+        """
+        from streamlit.runtime import metrics_util
+
+        base = tmp_path.resolve()
+        (base / "home").mkdir()
+        monkeypatch.setenv("HOME", str(base / "home"))
+
+        def assert_agrees(app: Path) -> None:
+            installer = skills._find_project_root(app)
+            detect = metrics_util._find_install_root(str(app))
+            # Detection returns None exactly when the installer falls back to the
+            # app dir itself (no .agents/.claude/.git ancestor); detection's
+            # separate "app" root covers that, so None is correct there.
+            if detect is None:
+                assert os.path.normcase(str(installer)) == os.path.normcase(str(app))
+            else:
+                assert os.path.normcase(detect) == os.path.normcase(str(installer))
+
+        # 1. .agents ancestor, no git, app in a subdir.
+        a = base / "a"
+        (a / ".agents").mkdir(parents=True)
+        (a / "sub").mkdir()
+        assert_agrees(a / "sub")
+
+        # 2. .claude between the app and the git root (monorepo per-package).
+        b = base / "b"
+        (b / ".git").mkdir(parents=True)
+        (b / "mid" / ".claude").mkdir(parents=True)
+        (b / "mid" / "sub").mkdir()
+        assert_agrees(b / "mid" / "sub")
+
+        # 3. git root only.
+        c = base / "c"
+        (c / ".git").mkdir(parents=True)
+        (c / "x").mkdir()
+        assert_agrees(c / "x")
+
+        # 4. No .agents/.claude/.git anywhere: installer falls back to the app
+        #    dir, detection returns None.
+        d = base / "d" / "x"
+        d.mkdir(parents=True)
+        assert_agrees(d)
+
+        # 5. Git root >20 directory levels above the app — guards the depth-cap
+        #    drift the old fixed-bound walk would have missed.
+        deep = base / "deep"
+        (deep / ".git").mkdir(parents=True)
+        nested = deep
+        for i in range(25):
+            nested /= f"l{i}"
+        nested.mkdir(parents=True)
+        assert metrics_util._find_install_root(str(nested)) is not None
+        assert_agrees(nested)

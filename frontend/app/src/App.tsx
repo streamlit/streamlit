@@ -64,6 +64,7 @@ import {
   BackendOperationClient,
   CircularBuffer,
   ComponentRegistry,
+  CONNECTION_CLOSED_MESSAGE,
   createAutoTheme,
   createCustomThemes,
   createFormsData,
@@ -107,6 +108,7 @@ import {
   notUndefined,
   preserveEmbedQueryParams,
   PresetThemeName,
+  REQUEST_TIMED_OUT_MESSAGE,
   ScriptRunState,
   SessionInfo,
   sortThemeInputKeys,
@@ -1599,8 +1601,8 @@ export class App extends PureComponent<Props, State> {
         // is safe. (Matches BackendOperationClient's rejection messages.)
         const message = error instanceof Error ? error.message : ""
         if (
-          message === "Connection closed" ||
-          message === "Request timed out"
+          message === CONNECTION_CLOSED_MESSAGE ||
+          message === REQUEST_TIMED_OUT_MESSAGE
         ) {
           throw new Error(
             "Lost connection during install — it may have finished. " +
