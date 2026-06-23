@@ -707,12 +707,9 @@ class SelectboxMixin:
             current_value = widget_state.value
             value_needs_reset = False
         else:
-            # Validate the current value against the new options. Membership is
-            # decided by format_func; if format_func raises on the stored value
-            # (e.g. it depends on object identity/class and the value is a
-            # deepcopy from an earlier run), the stored wire label captured during
-            # register_widget is used as a fallback identity instead. This handles
-            # dynamic option changes without reverting the selection.
+            # Reset the selection only if the stored value no longer matches any
+            # option; see resolve_value_against_options for the format_func and
+            # wire-label fallback logic.
             current_value, value_needs_reset = resolve_value_against_options(
                 widget_state.value,
                 opt,

@@ -208,14 +208,12 @@ class RegisterWidgetResult(Generic[T_co]):
 
         Implies an update to the frontend is needed.
     incoming_serialized_value : str or None
-        The widget's serialized (wire) value as it was stored coming into this
-        run, captured before this run's serializer was applied. For string-valued
-        widgets this is the value the frontend currently holds, in serialized
-        form. It is ``None`` for non-string widgets and when the widget has no
-        stored value yet. Because it is the value's own wire form (not re-derived
-        from the deserialized ``value``), widgets can use it to reconcile a
-        stored value against freshly computed state without depending on the
-        deserialized value being current.
+        The widget's stored serialized (wire) value as it entered this run,
+        captured before this run's serializer was applied. ``None`` for
+        non-string widgets or when no value is stored yet. Because it's the raw
+        wire form (not re-derived from the deserialized ``value``), callers can
+        reconcile a stored value against freshly computed state even when the
+        deserialized value is stale.
     """
 
     value: T_co

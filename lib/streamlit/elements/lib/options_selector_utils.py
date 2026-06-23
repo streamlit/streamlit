@@ -403,7 +403,8 @@ def resolve_value_against_options(
     format_func: Callable[[Any], str] = str,
     incoming_serialized_value: str | None = None,
 ) -> tuple[T | None, bool]:
-    """Validate the current value against options, resetting if it's invalid.
+    """Like :func:`validate_and_sync_value_with_options`, but falls back to the
+    stored wire label when ``format_func`` raises on the current value.
 
     Membership is decided primarily by ``format_func``: the value is valid if
     its formatted label is among the options. This preserves correct behavior
@@ -434,7 +435,8 @@ def resolve_value_against_options(
     key
         The widget key for session state updates.
     format_func
-        Function to format options for comparison.
+        Used to compute the value's label for membership. May raise on a stale
+        value, which triggers the wire-label fallback.
     incoming_serialized_value
         The widget's stored wire label, used as a fallback identity when
         ``format_func`` raises on ``current_value``. ``None`` if unavailable.
