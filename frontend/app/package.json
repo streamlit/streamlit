@@ -30,6 +30,7 @@
     "@emotion/react": "^11.13.5",
     "@emotion/serialize": "^1.1.3",
     "@emotion/styled": "^11.14.1",
+    "@floating-ui/react": "^0.27.19",
     "@streamlit/connection": "workspace:^",
     "@streamlit/lib": "workspace:^",
     "@streamlit/protobuf": "workspace:^",

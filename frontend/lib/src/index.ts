@@ -63,7 +63,10 @@ export { toastQueue } from "./components/elements/Toast/toastQueue"
 export type { StreamlitToastContent } from "./components/elements/Toast/toastQueue"
 export { StreamlitToastItem } from "./components/elements/Toast/StreamlitToastItem"
 export { StyledToastRegion } from "./components/elements/Toast/styled-components"
-export { getPopoverContainerStyle } from "./components/shared/Base/styled-components"
+export {
+  getOverlayZIndex,
+  getPopoverContainerStyle,
+} from "./components/shared/Base/styled-components"
 export {
   default as BaseButton,
   BaseButtonKind,
@@ -103,6 +106,7 @@ export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
 export { useCrossOriginAttribute } from "./hooks/useCrossOriginAttribute"
 export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
+export { useFloatingOverlay } from "./hooks/useFloatingOverlay"
 export {
   ensureHotkeysFilterConfigured,
   isKeyboardEventFromEditableTarget,
