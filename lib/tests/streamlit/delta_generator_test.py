@@ -1341,7 +1341,9 @@ class ParallelWorkerExternalContainerWriteTest(DeltaGeneratorTestCase):
         cross-container case compositionally. If the root prefix were ever dropped
         from make_delta_path, this assertion fails.
         """
-        main = LockedCursor(root_container=RootContainer.MAIN, parent_path=(1,), index=2)
+        main = LockedCursor(
+            root_container=RootContainer.MAIN, parent_path=(1,), index=2
+        )
         sidebar = LockedCursor(
             root_container=RootContainer.SIDEBAR, parent_path=(1,), index=2
         )
