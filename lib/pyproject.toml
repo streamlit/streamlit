@@ -61,7 +61,12 @@ dependencies = [
   "cachetools>=5.5,<8",
   "click>=7.0,<9",
   "gitpython>=3.0.7,<4,!=3.1.19",
-  "numpy>=1.23,<3",
+  # numpy 2.5+ ships type stubs that use PEP 695 `type` aliases, which require
+  # type checkers to target Python 3.12+. We still support Python 3.10/3.11 (and
+  # mypy targets 3.10), so cap numpy below 2.5 to keep the version we type-check
+  # and test against in sync with what users install. Raise this once the older
+  # Python targets are dropped and the mypy target can move to 3.12+.
+  "numpy>=1.23,<2.5",
   # The "packaging" package isn't version-capped because they use calendar-based
   # versioning, i.e. "major" version increase != breaking changes
   "packaging>=20",
