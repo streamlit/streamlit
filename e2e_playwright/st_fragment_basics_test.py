@@ -299,8 +299,10 @@ def test_form_inside_fragment_submits_correctly(app: Page):
     name_input = app.get_by_role("textbox", name="Name")
     name_input.scroll_into_view_if_needed()
     name_input.fill("Alice")
-    name_input.press("Enter")
 
+    # Filling the field must not apply the value yet — the form batches input
+    # until the submit button is clicked. (We avoid pressing Enter here: in a
+    # single-input form Enter submits, which races on webkit and is flaky.)
     expect(form_status).to_have_count(1)
 
     click_form_button(app, "Submit form")
