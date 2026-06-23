@@ -49,7 +49,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.camera_input` | Display a widget that returns pictures from the user's webcam. It returns an `UploadedFile` with the captured image when the user takes a picture, and `None` before then. |
 | `st.caption` | Display text in small font. Use it for secondary text, notes, or metadata beneath primary content. |
 | `st.chat_input` | Display a chat input widget. It is designed for conversational apps and returns the submitted message or uploaded files depending on configuration. |
-| `st.chat_message` | Insert a chat message container. Use it with `with` blocks to render messages from users, assistants, or named speakers. |
+| `st.chat_message` | Insert a chat message container. Use it to render messages from users, assistants, or named speakers. |
 | `st.checkbox` | Display a checkbox widget. It returns a boolean value. |
 | `st.code` | Display a code block with optional syntax highlighting. Use it for source code, commands, logs, and other preformatted text. |
 | `st.color_picker` | Display a color picker widget. It returns the selected color as a hex string. |
