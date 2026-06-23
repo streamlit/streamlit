@@ -16,7 +16,7 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from "react"
 
-import { FloatingPortal } from "@floating-ui/react"
+import { FloatingFocusManager, FloatingPortal } from "@floating-ui/react"
 import { ChromePicker, ColorResult } from "react-color"
 import SaturationComponent from "react-color/es/components/common/Saturation"
 
@@ -105,6 +105,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
   const {
     refs: { setFloating, setReference },
     floatingStyles,
+    context: floatingContext,
   } = useFloatingOverlay({
     open: isOpen,
     placement: "bottom-start",
@@ -255,22 +256,23 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
       </StyledColorPreview>
       {isOpen && (
         <FloatingPortal>
-          <StyledColorPickerPopover
-            ref={setFloatingRef}
-            style={floatingStyles}
-            data-testid="stColorPickerPopover"
-            role="dialog"
-            aria-label={`${label} color picker`}
-          >
-            <StyledChromePicker>
-              <ChromePicker
-                color={value}
-                onChange={onColorChange}
-                disableAlpha={true}
-                styles={customChromePickerStyles}
-              />
-            </StyledChromePicker>
-          </StyledColorPickerPopover>
+          <FloatingFocusManager context={floatingContext} modal={false}>
+            <StyledColorPickerPopover
+              ref={setFloatingRef}
+              style={floatingStyles}
+              role="dialog"
+              aria-label={`${label} color picker`}
+            >
+              <StyledChromePicker data-testid="stColorPickerPopover">
+                <ChromePicker
+                  color={value}
+                  onChange={onColorChange}
+                  disableAlpha={true}
+                  styles={customChromePickerStyles}
+                />
+              </StyledChromePicker>
+            </StyledColorPickerPopover>
+          </FloatingFocusManager>
         </FloatingPortal>
       )}
     </StyledColorPicker>
