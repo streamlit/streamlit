@@ -312,20 +312,59 @@ class AppTest:
             executed via ``.run()``.
         """
         script_path = Path(script_path)
-        # Walk the stack once: the caller of from_file is stack[1]. Always
-        # resolve relative paths against that caller's directory rather than
-        # against the process's cwd, since the latter depends on how the
-        # test runner happened to launch the interpreter and produced
-        # resolution errors against pages/ in #8154.
+        # Resolve relative paths against the directory of the first frame on
+        # the call stack that lives outside the streamlit package, so users
+        # who wrap `AppTest.from_file(...)` in their own helpers, fixtures,
+        # or `pytest.mark.parametrize` setups still get the correct base
+        # directory. NB: walk_stack(None) lists the current frame first; if
+        # every caller happens to live in streamlit (rare — only happens
+        # when from_file is invoked from inside the package itself), fall
+        # back to the direct caller (stack[1]) so we always return a
+        # sensible path. We bound the package root by walking up from
+        # `__file__`, stopping just past the ``streamlit`` package
+        # directory (which lives at ``site-packages/streamlit/...`` for a
+        # `pip install streamlit`, and at ``lib/streamlit/...`` in the
+        # source tree). Test directories (``tests/`` or ``test/``) sitting
+        # alongside the package in the source layout are treated as
+        # outside the package, so a frame inside ``lib/tests/...`` is
+        # considered the caller-of-record.
         stack = traceback.StackSummary.extract(traceback.walk_stack(None))
-        caller_dir = Path(stack[1].filename).parent
+        package_root = Path(__file__).resolve().parent
+        current = package_root
+        while current.parent != current:
+            if current.name == "streamlit":
+                package_root = current.parent
+                break
+            current = current.parent
+
+        def _is_inside_package(frame_path: Path) -> bool:
+            try:
+                rel = frame_path.relative_to(package_root)
+            except ValueError:
+                return False
+            # Any path component matching tests/test excludes the frame,
+            # even if it lives under the same parent directory as streamlit.
+            return not any(p in {"tests", "test"} for p in rel.parts[:-1])
+
+        caller_dir: Path | None = None
+        for frame in stack[1:]:
+            frame_path = Path(frame.filename).resolve()
+            if _is_inside_package(frame_path):
+                # Frame lives inside the streamlit package; skip it.
+                continue
+            caller_dir = frame_path.parent
+            break
+        if caller_dir is None:
+            caller_dir = Path(stack[1].filename).parent
         relative_candidate = (caller_dir / script_path).resolve()
+        # NB: When script_path is absolute, pathlib's `/` operator discards
+        # the left-hand side, so relative_candidate collapses to
+        # script_path.resolve() and the same FileExists check covers both
+        # branches. If neither resolution points at a real file, fall back
+        # to the caller-relative path so callers get a clear "file not
+        # found" error from AppTest instead of a silent cwd surprise.
         if relative_candidate.is_file():
             path = relative_candidate
-        elif script_path.is_absolute() and script_path.is_file():
-            # Absolute paths are honoured as-is so existing test setups
-            # that pass absolute file paths keep working.
-            path = script_path
         else:
             path = relative_candidate
         return AppTest(path, default_timeout=default_timeout)
