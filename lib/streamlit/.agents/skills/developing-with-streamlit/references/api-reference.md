@@ -64,7 +64,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.divider` | Display a horizontal rule. Use it to separate sections without adding a heavy layout container. |
 | `st.download_button` | Display a download button widget. Use it for generated files, reports, transformed data, or other app outputs. |
 | `st.echo` | Use in a `with` block to draw some code on the app, then execute it. Useful for tutorials, examples, and educational apps. |
-| `st.empty` | Insert a single-element container. Use it when you need to replace, update, or clear one element later. |
+| `st.empty` | Insert a single-element container. Use it as a placeholder when you need to replace, update, or clear one element later. |
 | `st.error` | Display error message. Use it for failures or blocking conditions that require user attention. |
 | `st.exception` | Display an exception. Use it to surface caught exceptions and traceback information during debugging or diagnostics. |
 | `st.expander` | Insert a multi-element container that can be expanded/collapsed. Use it for optional details that should not dominate the main page. |
