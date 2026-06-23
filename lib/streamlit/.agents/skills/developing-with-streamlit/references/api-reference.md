@@ -42,7 +42,6 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.badge` | Display a colored badge with an icon and label. Useful for compact status, category, or metadata indicators. |
 | `st.balloons` | Draw a celebratory balloon animation. Use sparingly for success moments or lightweight feedback. |
 | `st.bar_chart` | Display a bar chart from data. It is a native chart command for straightforward categorical or binned comparisons. |
-| `st.bokeh_chart` | No-op compatibility command for the removed Bokeh integration. Use the `streamlit-bokeh` component instead: https://github.com/streamlit/streamlit-bokeh. |
 | `st.button` | Display a button widget. It returns `True` on the rerun triggered by a click and supports callbacks through `on_click`. |
 | `st.cache` | Deprecated caching decorator, kept only as an alias for the newer caches. Do not use in new code; prefer `st.cache_data` for serializable data and `st.cache_resource` for shared resources. |
 | `st.cache_data` | Decorator for caching functions that return data. Use it for serializable data-loading or computation results. |
@@ -92,6 +91,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.map` | Display a map with a scatterplot overlay. Use it for latitude/longitude data when a simple geographic visualization is enough. |
 | `st.markdown` | Display Markdown-formatted text. It supports Streamlit-specific extensions such as colored text, badges, icons, and limited HTML when enabled. |
 | `st.menu_button` | Display a dropdown menu button widget. Use it when a compact button should expose a small set of actions or options. |
+| `st.mermaid_chart` | Display a Mermaid diagram from a text-based definition. Use it for flowcharts, sequence diagrams, class diagrams, state diagrams, and similar diagrams. |
 | `st.metric` | Display a metric with an optional delta indicator and optional inline sparkline (`chart_data`). Use it for KPIs, headline numbers, and dashboard summaries. |
 | `st.multiselect` | Display a widget that lets users select multiple options. It returns a list of selected values. |
 | `st.navigation` | Configure pages for a multipage app. It returns the currently selected page object, which the app should run. |
