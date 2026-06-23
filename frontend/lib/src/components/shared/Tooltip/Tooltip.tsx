@@ -226,6 +226,12 @@ function Tooltip({
     closeDelay: 300,
   })
 
+  // Stable ref so effects always call close() on the latest state without
+  // re-subscribing listeners on every render (useTooltipTriggerState returns
+  // a new object reference each render).
+  const stateRef = useRef(state)
+  stateRef.current = state
+
   // Floating UI provides scroll-tracking via autoUpdate. RAC's <Tooltip> is
   // kept for its portal, role="tooltip", and aria-hidden management. Its
   // imperative positioning is overridden via CSS !important (see
@@ -246,10 +252,10 @@ function Tooltip({
       // eslint-disable-next-line streamlit-custom/no-force-reflow-access
       const rect = triggerRef.current.getBoundingClientRect()
       if (rect.width > 0 || rect.height > 0) {
-        state.close(true)
+        stateRef.current.close(true)
       }
     }
-  }, [referenceHidden, state])
+  }, [referenceHidden])
 
   // Callback ref that TriggerArea calls to register the trigger DOM node with
   // both the local triggerRef (for referenceHidden check) and Floating UI.
@@ -274,15 +280,12 @@ function Tooltip({
   // that calls stopPropagation(), preventing other handlers (e.g. textarea
   // onKeyDown inside glide-data-grid) from ever seeing the Escape event.
   // By managing state ourselves, we avoid that behavior entirely.
-  const escapeStateRef = useRef(state)
-  escapeStateRef.current = state
-
   useEffect(() => {
     if (!state.isOpen) return
 
     const onEscape = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
-        escapeStateRef.current.close(true)
+        stateRef.current.close(true)
       }
     }
 

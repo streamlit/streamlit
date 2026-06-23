@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { act, renderHook, RenderResult, screen } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  renderHook,
+  RenderResult,
+  screen,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { useFocusVisible } from "react-aria"
 
@@ -73,6 +79,11 @@ describe("Tooltip element", () => {
   })
 
   afterEach(() => {
+    // Unmount within act() so Floating UI's autoUpdate disconnect (which
+    // calls flushSync internally) runs inside the act boundary.
+    act(() => {
+      cleanup()
+    })
     vi.useRealTimers()
     vi.restoreAllMocks()
   })

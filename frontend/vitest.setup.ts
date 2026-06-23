@@ -137,11 +137,6 @@ console.error = (...args) => {
       // Suppress act() warnings from BaseUI Popover's async Popper.js updates
       return
     }
-    const isFromFloatingUI = stack.includes("floating-ui")
-    if (isFromFloatingUI) {
-      // Suppress act() warnings from Floating UI's autoUpdate flushSync
-      return
-    }
     // Fail tests for act() warnings in our own code
     throw new Error(
       `act() warning detected - wrap state updates in act():\n${message}`
