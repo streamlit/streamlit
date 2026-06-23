@@ -40,11 +40,9 @@ def _render_page_1_only_widgets() -> None:
     # a page-scoped value here must be dropped on the page switch even though no
     # other page re-registers the widget.
     if st.session_state.get("show"):
-        st.text_input("Page 1 page-scoped", key="p1_page_text", persist_state="page")
-        st.text_input(
-            "Page 1 session-scoped", key="p1_session_text", persist_state="session"
-        )
-        st.text_input("Page 1 not persisted", key="p1_plain_text")
+        st.text_input("Solo page", key="p1_page_text", persist_state="page")
+        st.text_input("Solo session", key="p1_session_text", persist_state="session")
+        st.text_input("Solo plain", key="p1_plain_text")
 
     _render_value("p1_page_text", "p1_page_text")
     _render_value("p1_session_text", "p1_session_text")
