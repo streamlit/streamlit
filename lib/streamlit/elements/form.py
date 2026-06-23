@@ -220,12 +220,8 @@ class FormMixin:
         form_id = key
 
         ctx = get_script_run_ctx()
-        if ctx is not None:
-            new_form_id = form_id not in ctx.form_ids_this_run
-            if new_form_id:
-                ctx.form_ids_this_run.add(form_id)
-            else:
-                raise StreamlitAPIException(_build_duplicate_form_message(key))
+        if ctx is not None and not ctx.form_ids_this_run.check_and_add(form_id):
+            raise StreamlitAPIException(_build_duplicate_form_message(key))
 
         block_proto = Block_pb2.Block()
         block_proto.form.form_id = form_id
@@ -409,7 +405,10 @@ class FormMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             For a list of supported keys and modifiers, see the documentation
             for |st.button|_.

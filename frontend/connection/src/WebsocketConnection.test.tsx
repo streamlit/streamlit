@@ -1075,8 +1075,13 @@ describe("WebsocketConnection", () => {
 
     const msg = BackMsg.create(TEST_BACK_MSG)
     const buffer = BackMsg.encode(msg).finish()
+    const encodedMessage = new Uint8Array(
+      buffer.buffer,
+      buffer.byteOffset,
+      buffer.byteLength
+    )
 
-    expect(sendSpy).toHaveBeenCalledWith(buffer)
+    expect(sendSpy).toHaveBeenCalledWith(encodedMessage)
   })
 
   describe("getBaseUriParts", () => {
@@ -1461,11 +1466,11 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
     globalThis.fetch = vi
       .fn()
       // First two calls are for background ping (health + host-config)
-      .mockReturnValueOnce(backgroundPingPromise as Promise<Response>)
-      .mockReturnValueOnce(backgroundPingPromise as Promise<Response>)
+      .mockReturnValueOnce(backgroundPingPromise)
+      .mockReturnValueOnce(backgroundPingPromise)
       // Next two calls are for foreground ping after transition
-      .mockReturnValueOnce(foregroundPingPromise as Promise<Response>)
-      .mockReturnValueOnce(foregroundPingPromise as Promise<Response>)
+      .mockReturnValueOnce(foregroundPingPromise)
+      .mockReturnValueOnce(foregroundPingPromise)
 
     const args = createMockArgs({ enableBypass: true })
     const ws = new WebsocketConnection(args)

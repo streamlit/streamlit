@@ -290,6 +290,48 @@ def test_badge_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
     assert_snapshot(badge_container, name="st_badge-examples")
 
 
+def test_shimmer_directive(app: Page):
+    """Test that shimmer directive renders text with the shimmer animation class."""
+    shimmer_container = get_element_by_key(app, "shimmer_elements")
+    expect(shimmer_container).to_be_visible()
+
+    shimmer_element = shimmer_container.locator(".stMarkdownShimmer")
+    expect(shimmer_element).to_have_count(1)
+    expect(shimmer_element).to_contain_text("Please wait...")
+
+    # Normal text should NOT have shimmer class
+    normal_text = shimmer_container.get_by_text("Normal text before")
+    expect(normal_text).not_to_have_class(re.compile(r"stMarkdownShimmer"))
+
+
+def test_shimmer_directive_reduced_motion(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test shimmer directive appearance with prefers-reduced-motion enabled.
+
+    Uses emulate_media to enable reduced motion, which disables the animation
+    and shows the static fallback style. This allows for reliable snapshot testing
+    in both light and dark themes.
+    """
+    # Enable reduced motion to disable animation for stable snapshots
+    themed_app.emulate_media(reduced_motion="reduce")
+
+    shimmer_container = get_element_by_key(themed_app, "shimmer_elements")
+    expect(shimmer_container).to_be_visible()
+    shimmer_container.scroll_into_view_if_needed()
+
+    # Verify shimmer element is present and animation is disabled
+    shimmer_element = shimmer_container.locator(".stMarkdownShimmer")
+    expect(shimmer_element).to_be_visible()
+
+    # In reduced motion mode, the shimmer should have no animation
+    # and should display with the theme's fadedText60 color
+    expect(shimmer_element).to_have_css("animation-duration", "0s")
+
+    # Take snapshot with reduced motion to verify visual appearance
+    assert_snapshot(shimmer_container, name="st_markdown-shimmer_reduced_motion")
+
+
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that large images in markdown are displayed correctly with max width 100%."""
     markdown_element = get_markdown(
@@ -427,6 +469,33 @@ def test_unsafe_allow_html(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that unsafe allow html works correctly."""
     markdown_element = get_markdown(app, "info This HTML tag is not escaped!")
     assert_snapshot(markdown_element, name="st_markdown-unsafe_allow_html")
+
+
+def test_unsafe_allow_html_with_help(app: Page, assert_snapshot: ImageCompareFunction):
+    """Regression test for gh-15211: help icon must render next to single-line HTML.
+
+    CommonMark's HTML-block rule consumes single-line block-level HTML as a raw
+    HTML block, swallowing any trailing ``:help[]`` directive. The fix renders
+    the tooltip icon directly instead of relying on the directive.
+    """
+    container = get_element_by_key(app, "markdown_html_help")
+    container.scroll_into_view_if_needed()
+    expect(container).to_be_visible()
+
+    expect(container).not_to_contain_text(":help[]")
+    expect_help_tooltip(app, container, "HTML help tooltip!")
+
+    assert_snapshot(container, name="st_markdown-unsafe_allow_html_with_help")
+
+
+def test_unsafe_allow_html_multiline_with_help(app: Page):
+    """Regression test for gh-15211: help icon also renders for multi-line HTML."""
+    container = get_element_by_key(app, "markdown_multiline_html_help")
+    container.scroll_into_view_if_needed()
+    expect(container).to_be_visible()
+
+    expect(container).not_to_contain_text(":help[]")
+    expect_help_tooltip(app, container, "HTML help tooltip!")
 
 
 def test_long_word_in_container(app: Page, assert_snapshot: ImageCompareFunction):

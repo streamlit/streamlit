@@ -90,23 +90,3 @@ with st.container(
     border=True, horizontal=True, key="test_fixed_width_in_horizontal_container"
 ):
     st.line_chart(df, width=300)
-
-
-# Test that add_rows maintains original styling params:
-# color, width, height
-line_data = pd.DataFrame({"Line 1": [], "Line 2": []})
-
-empty_line = st.line_chart(
-    line_data,
-    y=["Line 1", "Line 2"],
-    color=["#800080", "#0000FF"],  # Purple and Blue
-    width=600,
-    height=300,
-)
-
-if st.button("Add data to Line Chart"):
-    new_data = pd.DataFrame(
-        {"Line 1": np.random.randn(10).cumsum(), "Line 2": np.random.randn(10).cumsum()}
-    )
-
-    empty_line.add_rows(new_data)

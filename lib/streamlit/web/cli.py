@@ -416,6 +416,47 @@ def test_prog_name() -> None:
         )
 
 
+@main.command("skills")
+@click.option(
+    "-g",
+    "--global",
+    "global_mode",
+    is_flag=True,
+    help="Install globally (in user directory).",
+)
+@click.option("-y", "--yes", is_flag=True, help="Skip confirmation prompts.")
+def main_skills(global_mode: bool, yes: bool) -> None:
+    r"""Install Streamlit AI-agent skills.
+
+    Installs bundled Streamlit skills to help AI agents build better Streamlit apps.
+
+    \b
+    Project mode (default):
+        Creates symlinks from .agents/skills/ and .claude/skills/ to the
+        bundled skills in your Streamlit installation. Skills stay in sync
+        when Streamlit is upgraded.
+
+    \b
+    Global mode (--global):
+        Installs a meta skill globally (in user directory) that is available
+        to all projects.
+
+    \b
+    Examples:
+        $ streamlit skills              # Interactive project install
+        $ streamlit skills --global     # Interactive global install
+        $ streamlit skills --yes        # Non-interactive project install
+        $ streamlit skills -g -y        # Non-interactive global install
+    """
+    from streamlit.web.skills import install_skills
+
+    try:
+        install_skills(global_mode=global_mode, yes=yes)
+    except click.Abort:
+        click.echo("Aborted.")
+        raise click.exceptions.Exit(1) from None
+
+
 @main.command("init")
 @click.argument("directory", required=False)
 def main_init(directory: str | None = None) -> None:

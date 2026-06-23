@@ -24,7 +24,7 @@ import types
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import streamlit
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.proto.Help_pb2 import Help as HelpProto
 from streamlit.proto.Help_pb2 import Member as MemberProto
 from streamlit.runtime.caching.cache_utils import CachedFunc
@@ -129,8 +129,7 @@ class HelpMixin:
         """
         help_proto = HelpProto()
 
-        validate_width(width, allow_content=False)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
         _marshall(help_proto, obj)
 
         return self.dg._enqueue("help_info", help_proto, layout_config=layout_config)

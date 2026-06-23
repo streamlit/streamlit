@@ -770,6 +770,7 @@ class ConfigTest(unittest.TestCase):
                 "logger.messageFormat",
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
+                "runner.parallelMaxWorkers",
                 "runner.postScriptGC",
                 "runner.fastReruns",
                 "runner.enumCoercion",
@@ -803,7 +804,6 @@ class ConfigTest(unittest.TestCase):
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "server.trustedUserHeaders",
-                "server.useStarlette",
                 "ui.hideTopBar",
             ]
         )

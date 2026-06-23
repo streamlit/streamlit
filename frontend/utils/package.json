@@ -1,16 +1,16 @@
 {
   "name": "@streamlit/utils",
-  "version": "1.55.0",
+  "version": "1.58.0",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "main": "./dist/streamlit-utils.cjs.js",
   "module": "./dist/streamlit-utils.es.js",
   "browser": "./dist/streamlit-utils.umd.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/src/index.d.ts",
       "import": "./dist/streamlit-utils.es.js",
       "require": "./dist/streamlit-utils.cjs.js",
       "default": "./dist/streamlit-utils.umd.js"
@@ -24,17 +24,16 @@
     "lint": "yarn run -T eslint --cache --max-warnings 0 src",
     "lint:fix": "yarn run -T eslint --cache --max-warnings 0 --fix src",
     "typecheck": "yarn run typecheck:all",
-    "format": "yarn run -T prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
-    "formatCheck": "yarn run -T prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "format": "yarn run -T oxfmt --config ../.oxfmtrc.json './src/**/*.{js,ts,jsx,tsx}'",
+    "formatCheck": "yarn run -T oxfmt --check --config ../.oxfmtrc.json './src/**/*.{js,ts,jsx,tsx}'",
     "typesync": "typesync",
     "typesync:ci": "typesync --dry=fail"
   },
   "devDependencies": {
     "typesync": "^0.14.3",
-    "vite": "^8.0.0",
-    "vite-plugin-dts": "^4.5.4",
-    "vite-tsconfig-paths": "^6.1.0",
-    "vitest": "^4.1.0"
+    "vite": "^8.0.14",
+    "vite-plugin-dts": "^5.0.1",
+    "vitest": "^4.1.8"
   },
   "browserslist": [
     ">0.2%",

@@ -161,9 +161,7 @@ export function createIframeMessageHandler(
           )
         } else {
           frameHeightCallback(
-            tryGetValue(data as FrameHeightMessage, "height") as
-              | number
-              | undefined
+            tryGetValue(data, "height") as number | undefined
           )
         }
         break

@@ -69,7 +69,7 @@ expected_page_order = [
     "page 10",
     "page 11",
     "page 12",
-    "page 13",
+    "Págé_Wíth_Spêcîãl_Chäracters",
     "page 14",
 ]
 
@@ -898,3 +898,31 @@ def test_logo_source_errors(app: Page, app_base_url: str):
             "Client Error: Header Logo source error" in message for message in messages
         ),
     )
+
+
+def test_browser_back_forward_with_unicode_url_path(app: Page):
+    """Test browser Back/Forward navigation works with Unicode URL paths.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15267.
+    Browsers encode Unicode in URLs (e.g., "Págé" becomes "P%C3%A1g%C3%A9").
+    The frontend must decode the pathname before matching against page routes.
+    """
+    unicode_page_title = "Págé_Wíth_Spêcîãl_Chäracters"
+
+    # Navigate to the Unicode page via sidebar
+    app.get_by_test_id("stSidebarNav").get_by_role(
+        "link", name=unicode_page_title
+    ).click()
+    wait_for_app_loaded(app)
+    expect(app.get_by_role("heading", name=unicode_page_title)).to_be_visible()
+
+    # Browser Back should return to main page
+    app.go_back()
+    wait_for_app_loaded(app)
+    expect(main_heading(app)).to_contain_text("Main Page")
+
+    # Browser Forward should restore the Unicode page (not fall back to main)
+    app.go_forward()
+    wait_for_app_loaded(app)
+    expect(app.get_by_role("heading", name=unicode_page_title)).to_be_visible()
+    expect(main_heading(app)).not_to_contain_text(unicode_page_title)

@@ -38,9 +38,7 @@ from e2e_playwright.shared.app_utils import (
 
 
 def get_pill_button(locator: Locator, text: str) -> Locator:
-    return locator.get_by_test_id(re.compile(r"stBaseButton-pills(Active)?")).filter(
-        has_text=text
-    )
+    return locator.locator("button[data-variant='pills']").filter(has_text=text)
 
 
 def test_pills_regression_no_wrap_at_app_start(
@@ -536,3 +534,64 @@ def test_pills_query_param_multi_empty_overrides_nonempty_default(
 
     expect_text(page, "bound_pills_multi_default: []")
     expect(page).to_have_url(re.compile(r"bound_pills_multi_default="))
+
+
+def test_required_pills_behavior(app: Page):
+    """Test required parameter behavior: deselection prevention, selection changes, and not-required baseline.
+
+    Tests three scenarios in one aggregated test to reduce browser loads:
+    1. required=True with default: prevents deselection but allows selection changes
+    2. required=True without default: allows initial selection, then prevents deselection
+    3. required=False (baseline): allows deselection
+    """
+    # --- Scenario 1: required=True with default ---
+    required_pills = get_element_by_key(app, "pills_required_with_default")
+
+    # Initial state: "Option A" is selected (from default)
+    expect_text(app, "required_with_default: Option A")
+
+    # Click on the selected option to try to deselect it - should be prevented
+    get_pill_button(required_pills, "Option A").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_with_default: Option A")
+
+    # Click on a different option - changing selection should work
+    get_pill_button(required_pills, "Option B").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_with_default: Option B")
+
+    # Try to deselect "Option B" by clicking it again - should be prevented
+    get_pill_button(required_pills, "Option B").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_with_default: Option B")
+
+    # --- Scenario 2: required=True without default ---
+    required_pills_no_default = get_element_by_key(
+        app, "pills_required_without_default"
+    )
+
+    # Initial state: no selection (None)
+    expect_text(app, "required_without_default: None")
+
+    # Click to select an option
+    get_pill_button(required_pills_no_default, "Option X").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_without_default: Option X")
+
+    # Try to deselect by clicking again - should be prevented
+    get_pill_button(required_pills_no_default, "Option X").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_without_default: Option X")
+
+    # --- Scenario 3: required=False allows deselection ---
+    not_required_pills = get_element_by_key(app, "pills_not_required")
+
+    # Initial state: "Choice 1" is selected (from default)
+    expect_text(app, "not_required: Choice 1")
+
+    # Click on the selected option to deselect it
+    get_pill_button(not_required_pills, "Choice 1").click()
+    wait_for_app_run(app)
+
+    # Value should be None - deselection is allowed
+    expect_text(app, "not_required: None")

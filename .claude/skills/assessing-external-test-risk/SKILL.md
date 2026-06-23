@@ -36,7 +36,7 @@ Use an **any-hit** policy:
 Evaluate all categories. A single hit is enough to recommend external coverage.
 
 1. **Routing and URL behavior**
-   - Hit when changes introduce or modify Tornado or Starlette routes, `server.baseUrlPath`, catch-alls, request methods, URL resolution, redirects, or status codes.
+   - Hit when changes introduce or modify Starlette routes, `server.baseUrlPath`, catch-alls, request methods, URL resolution, redirects, or status codes.
 
 2. **Auth, cookies, CSRF, and identity binding**
    - Hit when changes touch login/logout or OAuth flows, `_streamlit_user`, `_streamlit_xsrf`, CSRF/XSRF handling, `server.trustedUserHeaders`, or session-to-identity binding.
@@ -57,7 +57,7 @@ Evaluate all categories. A single hit is enough to recommend external coverage.
    - Hit when changes alter CORS allowlists, `crossOrigin` usage, external-origin fetches or external networks behavior, or backend URL discovery via `window.__streamlit.*`.
 
 8. **Cross-origin theming and resource discovery**
-   - Hit when changes introduce or modify theme/resource loading across origins (fonts, images, theme globals), CSS isolation with host pages, or manifest/asset discovery when HTML is not served by Tornado or Starlette.
+   - Hit when changes introduce or modify theme/resource loading across origins (fonts, images, theme globals), CSS isolation with host pages, or manifest/asset discovery when HTML is not served by Starlette.
 
 9. **SiS and Snowflake runtime dependencies**
    - Hit when changes rely on or modify SiS/Snowflake runtime behavior, including `running_in_sis()`, `get_active_session()`, Snowflake connection/session semantics, or SiS-specific environment flags.
@@ -99,7 +99,7 @@ Use this exact structure:
 
 Diff includes:
 
-- `lib/streamlit/web/server/routes.py` route changes
+- `lib/streamlit/web/server/starlette/starlette_routes.py` route changes
 - Cookie/XSRF handling updates in request auth middleware
 - Frontend embed code changing iframe `allow` attributes
 

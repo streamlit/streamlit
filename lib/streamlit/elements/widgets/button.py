@@ -33,7 +33,7 @@ from typing import (
 
 from streamlit import runtime
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
-from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
+from streamlit.elements.lib.layout_utils import Width, create_layout_config
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.shortcut_utils import normalize_shortcut
 from streamlit.elements.lib.utils import (
@@ -108,7 +108,7 @@ def _normalize_icon_position(
             f'The argument passed was "{icon_position}".'
         )
 
-    return cast("IconPosition", icon_position)
+    return cast("IconPosition", icon_position)  # type: ignore[redundant-cast]
 
 
 def _icon_position_to_proto(
@@ -283,7 +283,10 @@ class ButtonMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             The following special keys are supported: Backspace, Delete, Down,
             End, Enter, Esc, Home, Left, PageDown, PageUp, Right, Space, Tab,
@@ -610,7 +613,10 @@ class ButtonMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             For a list of supported keys and modifiers, see the documentation
             for |st.button|_.
@@ -893,34 +899,45 @@ class ButtonMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         url : str
-            The url to be opened on user click
+            The URL to open on user click.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string to use for giving this element a stable
+            identity. If this is ``None`` (default), the element's identity
+            will be determined based on the values of the other parameters.
+
+            If ``on_click`` enables widget behavior and ``key`` is provided,
+            Streamlit will register the key in Session State to store the button state.
+            The button state is read-only. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_click : callable, "rerun", or "ignore"
             How the button should respond to user interaction. This controls
-            whether or not the button triggers a rerun and if a callback
-            function is called. This can be one of the following values:
+            whether or not the button behaves like an input widget. This can
+            be one of the following values:
 
-            - ``"ignore"`` (default): The link opens in a new tab and the app
-              doesn't rerun. No callback function is called.
-            - ``"rerun"``: The link opens in a new tab and the app reruns.
-              No callback function is called.
-            - A ``callable``: The link opens in a new tab and the app reruns.
-              The callable is called before the rest of the app.
+            - ``"ignore"`` (default): Streamlit opens the link in a new tab
+              and doesn't rerun the app. The button won't behave like an
+              input widget.
+            - ``"rerun"``: Streamlit opens the link in a new tab and reruns
+              the app. In this case, ``st.link_button`` returns a Boolean value
+              like ``st.button``.
+            - A ``callable``: Streamlit opens the link in a new tab, reruns
+              the app, and executes the callable at the beginning of the rerun.
+              In this case, ``st.link_button`` returns a Boolean value.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback when
-            ``on_click`` is a callable. Ignored when ``on_click`` is
-            ``"rerun"`` or ``"ignore"``.
+            ``on_click`` is a callable. If ``on_click`` isn't a callable,
+            this is ignored.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback when
-            ``on_click`` is a callable. Ignored when ``on_click`` is
-            ``"rerun"`` or ``"ignore"``.
+            ``on_click`` is a callable. If ``on_click`` isn't a callable,
+            this is ignored.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
@@ -1009,7 +1026,10 @@ class ButtonMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             For a list of supported keys and modifiers, see the documentation
             for |st.button|_.
@@ -1019,11 +1039,11 @@ class ButtonMixin:
 
         Returns
         -------
-        bool or DeltaGenerator
-            If ``on_click`` is ``"rerun"`` or a callable, this returns ``True``
-            when the button was clicked on the last run of the app, and
-            ``False`` otherwise. If ``on_click`` is ``"ignore"``, this returns a
-            ``DeltaGenerator``.
+        element or bool
+            If ``on_click`` is ``"ignore"`` (default), this command returns an internal
+            placeholder for the button element. Otherwise, this command returns a Boolean
+            value in the same manner as ``st.button``: ``True`` if the button was clicked
+            on the last rerun and ``False`` if it wasn't.
 
         Examples
         --------
@@ -1094,9 +1114,30 @@ class ButtonMixin:
         Parameters
         ----------
         page : str, Path, or StreamlitPage
-            The file path (relative to the main script) or a ``StreamlitPage``
-            indicating the page to switch to. Alternatively, this can be the
-            URL to an external page (must start with "http://" or "https://").
+            The page to switch to on user click. This can be one of the
+            following values:
+
+            - Path to a Python file: The path can be a string or
+              ``pathlib.Path`` object. It can be absolute or relative to the
+              entrypoint file. The Python file must be the source of a page in
+              ``st.navigation``.
+
+              If you are using the ``pages/`` directory instead of
+              ``st.navigation``, the Python file must be your entrypoint file
+              or a file in the ``pages/`` directory.
+
+            - ``StreamlitPage``: The source of the ``StreamlitPage`` and its
+              ``url_path`` must match a page defined in ``st.navigation``.
+              Use ``st.Page`` to create a ``StreamlitPage`` object.
+
+            - URL: The URL must contain an HTTP or HTTPS scheme, like
+              ``"https://docs.streamlit.io"``. When a user clicks a
+              URL-defined page link, the URL opens in a new tab and the app
+              doesn't rerun. If the page link is defined by a URL, then the
+              ``label`` parameter is required.
+
+            To link to a page defined by a ``callable``, you must use a
+            ``StreamlitPage`` object.
 
         label : str
             The label for the page link. Labels are required for external pages.
@@ -1363,8 +1404,7 @@ class ButtonMixin:
             value_type="trigger_value",
         )
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
         self.dg._enqueue(
             "download_button", download_button_proto, layout_config=layout_config
         )
@@ -1461,8 +1501,7 @@ class ButtonMixin:
                 value_type="trigger_value",
             )
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
         link_button_dg = self.dg._enqueue(
             "link_button", link_button_proto, layout_config=layout_config
         )
@@ -1487,14 +1526,13 @@ class ButtonMixin:
         if query_params:
             page_link_proto.query_string = process_query_params(query_params)
 
-        validate_width(width, allow_content=True)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         # Set icon_position early so it's set even in early return paths
         page_link_proto.icon_position = _icon_position_to_proto(icon_position)
 
         ctx = get_script_run_ctx()
         if not ctx:
-            layout_config = LayoutConfig(width=width)
             return self.dg._enqueue(
                 "page_link", page_link_proto, layout_config=layout_config
             )
@@ -1521,7 +1559,6 @@ class ButtonMixin:
             if page.is_external:
                 page_link_proto.page = page.external_url or ""
                 page_link_proto.external = True
-                layout_config = LayoutConfig(width=width)
                 return self.dg._enqueue(
                     "page_link", page_link_proto, layout_config=layout_config
                 )
@@ -1539,7 +1576,6 @@ class ButtonMixin:
                     raise StreamlitMissingPageLabelError()
                 page_link_proto.page = page
                 page_link_proto.external = True
-                layout_config = LayoutConfig(width=width)
                 return self.dg._enqueue(
                     "page_link", page_link_proto, layout_config=layout_config
                 )
@@ -1573,7 +1609,6 @@ class ButtonMixin:
                     uses_pages_directory=bool(PagesManager.uses_pages_directory),
                 )
 
-        layout_config = LayoutConfig(width=width)
         return self.dg._enqueue(
             "page_link", page_link_proto, layout_config=layout_config
         )
@@ -1678,8 +1713,7 @@ class ButtonMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, button_state.value)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
         self.dg._enqueue("button", button_proto, layout_config=layout_config)
 
         return button_state.value

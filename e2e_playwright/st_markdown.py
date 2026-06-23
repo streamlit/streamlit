@@ -526,6 +526,20 @@ st.container(key="markdown_bracket_in_tooltip").markdown(
     help="Line 1 ] Line 2 ] Line 3",
 )
 
+# Regression test for gh-15211: help icon must render next to single-line HTML
+# instead of leaking the literal `:help[]` directive text into the output.
+st.container(key="markdown_html_help").markdown(
+    "<p>an example</p>",
+    unsafe_allow_html=True,
+    help="HTML help tooltip!",
+)
+
+st.container(key="markdown_multiline_html_help").markdown(
+    "<div><p>line one</p><p>line two</p></div>",
+    unsafe_allow_html=True,
+    help="HTML help tooltip!",
+)
+
 # Complex markdown in tooltip - comprehensive test
 st.header("Complex Tooltip Case")
 
@@ -537,3 +551,9 @@ Links: [Streamlit](https://streamlit.io) Colors: :red[red] :blue[blue]
 
 Emoji: 🎉 Array: array[index] Dict: dict[key]""",
 )
+
+# Shimmer directive test
+with st.container(key="shimmer_elements"):
+    st.markdown(
+        "Normal text before :red[:shimmer[:material/hourglass_empty: :blue[Please] **wait**...]] and after"
+    )

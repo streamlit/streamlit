@@ -18,12 +18,16 @@ import styled from "@emotion/styled"
 
 interface StyledIframeProps {
   disableScrolling: boolean
+  /** Override width (e.g., "200px"). Defaults to "100%". */
+  width?: string
+  /** Override height (e.g., "150px"). Defaults to "100%". */
+  height?: string
 }
 
 export const StyledIframe = styled.iframe<StyledIframeProps>(
-  ({ theme, disableScrolling }) => ({
-    width: "100%",
-    height: "100%",
+  ({ theme, disableScrolling, width, height }) => ({
+    width: width ?? "100%",
+    height: height ?? "100%",
     colorScheme: "normal",
     border: "none",
     padding: theme.spacing.none,

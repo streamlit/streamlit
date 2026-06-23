@@ -44,6 +44,7 @@ import {
  * embedded app or in Notebooks. We're applying this fix here to prevent that:
  * https://github.com/uiwjs/react-color/issues/81#issuecomment-2208219820
  */
+/* istanbul ignore next -- browser-only: traverses window.parent chain for cross-origin iframes, untestable in jsdom */
 SaturationComponent.prototype.getContainerRenderWindow = function () {
   const container = this.container
   let renderWindow: Window & typeof globalThis = window

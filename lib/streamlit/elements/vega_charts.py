@@ -24,7 +24,6 @@ from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
-    Final,
     Literal,
     TypeAlias,
     TypedDict,
@@ -40,9 +39,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.lib import dicttools
 from streamlit.elements.lib.built_in_chart_utils import (
-    AddRowsMetadata,
     ChartStackType,
     ChartType,
     generate_chart,
@@ -65,7 +62,7 @@ from streamlit.proto.VegaLiteChart_pb2 import (
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import AttributeDictionary, calc_md5
+from streamlit.util import AttributeDictionary, calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -75,36 +72,6 @@ if TYPE_CHECKING:
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.color_util import Color
-
-# See https://vega.github.io/vega-lite/docs/encoding.html
-_CHANNELS: Final = {
-    "x",
-    "y",
-    "x2",
-    "y2",
-    "xError",
-    "xError2",
-    "yError",
-    "yError2",
-    "longitude",
-    "latitude",
-    "color",
-    "opacity",
-    "fillOpacity",
-    "strokeOpacity",
-    "strokeWidth",
-    "size",
-    "shape",
-    "text",
-    "tooltip",
-    "href",
-    "key",
-    "order",
-    "detail",
-    "facet",
-    "row",
-    "column",
-}
 
 VegaLiteSpec: TypeAlias = dict[str, Any]
 AltairChart: TypeAlias = Union[
@@ -320,17 +287,9 @@ def _has_nested_composition(spec: VegaLiteSpec) -> bool:
 def _prepare_vega_lite_spec(
     spec: VegaLiteSpec,
     use_container_width: bool,
-    **kwargs: Any,
 ) -> VegaLiteSpec:
-    if kwargs:
-        # Support passing in kwargs.
-        # > marshall(proto, {foo: 'bar'}, baz='boz')
-        # Merge spec with unflattened kwargs, where kwargs take precedence.
-        # This only works for string keys, but kwarg keys are strings anyways.
-        spec = dict(spec, **dicttools.unflatten(kwargs, _CHANNELS))
-    else:
-        # Clone the spec dict, since we may be mutating it.
-        spec = dict(spec)
+    # Clone the spec dict, since we may be mutating it.
+    spec = dict(spec)
 
     if len(spec) == 0:
         raise StreamlitAPIException("Vega-Lite charts require a non-empty spec dict.")
@@ -886,7 +845,7 @@ class VegaChartsMixin:
            height: 440px
 
         """
-        chart, add_rows_metadata = generate_chart(
+        chart = generate_chart(
             chart_type=ChartType.LINE,
             data=data,
             x_from_user=x,
@@ -897,7 +856,6 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
-            use_container_width=(width == "stretch"),
         )
 
         return cast(
@@ -906,7 +864,6 @@ class VegaChartsMixin:
                 chart,
                 use_container_width=use_container_width,
                 theme="streamlit",
-                add_rows_metadata=add_rows_metadata,
                 width=width,
                 height=height,
             ),
@@ -1178,7 +1135,7 @@ class VegaChartsMixin:
         if stack is False or stack is None:
             stack = "layered"
 
-        chart, add_rows_metadata = generate_chart(
+        chart = generate_chart(
             chart_type=ChartType.AREA,
             data=data,
             x_from_user=x,
@@ -1190,7 +1147,6 @@ class VegaChartsMixin:
             width=width,
             height=height,
             stack=stack,
-            use_container_width=(width == "stretch"),
         )
         return cast(
             "DeltaGenerator",
@@ -1198,7 +1154,6 @@ class VegaChartsMixin:
                 chart,
                 use_container_width=use_container_width,
                 theme="streamlit",
-                add_rows_metadata=add_rows_metadata,
                 width=width,
                 height=height,
             ),
@@ -1510,7 +1465,7 @@ class VegaChartsMixin:
             ChartType.HORIZONTAL_BAR if horizontal else ChartType.VERTICAL_BAR
         )
 
-        chart, add_rows_metadata = generate_chart(
+        chart = generate_chart(
             chart_type=bar_chart_type,
             data=data,
             x_from_user=x,
@@ -1521,9 +1476,7 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
-            use_container_width=use_container_width,
             stack=stack,
-            horizontal=horizontal,
             sort_from_user=sort,
         )
         return cast(
@@ -1532,7 +1485,6 @@ class VegaChartsMixin:
                 chart,
                 use_container_width=use_container_width,
                 theme="streamlit",
-                add_rows_metadata=add_rows_metadata,
                 width=width,
                 height=height,
             ),
@@ -1765,7 +1717,7 @@ class VegaChartsMixin:
            height: 440px
 
         """
-        chart, add_rows_metadata = generate_chart(
+        chart = generate_chart(
             chart_type=ChartType.SCATTER,
             data=data,
             x_from_user=x,
@@ -1776,7 +1728,6 @@ class VegaChartsMixin:
             size_from_user=size,
             width=width,
             height=height,
-            use_container_width=(width == "stretch"),
         )
         return cast(
             "DeltaGenerator",
@@ -1784,7 +1735,6 @@ class VegaChartsMixin:
                 chart,
                 use_container_width=use_container_width,
                 theme="streamlit",
-                add_rows_metadata=add_rows_metadata,
                 width=width,
                 height=height,
             ),
@@ -1977,9 +1927,8 @@ class VegaChartsMixin:
         -------
         element or dict
             If ``on_select`` is ``"ignore"`` (default), this command returns an
-            internal placeholder for the chart element that can be used with
-            the ``.add_rows()`` method. Otherwise, this command returns a
-            dictionary-like object that supports both key and attribute
+            internal placeholder for the chart element. Otherwise, this command
+            returns a dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
 
@@ -2030,7 +1979,6 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["ignore"] = "ignore",
         selection_mode: str | Iterable[str] | None = None,
-        **kwargs: Any,
     ) -> DeltaGenerator: ...
 
     # When on_select=rerun, return VegaLiteState.
@@ -2047,7 +1995,6 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: str | Iterable[str] | None = None,
-        **kwargs: Any,
     ) -> VegaLiteState: ...
 
     @gather_metrics("vega_lite_chart")
@@ -2063,7 +2010,6 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
-        **kwargs: Any,
     ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Lite library.
 
@@ -2209,22 +2155,12 @@ class VegaChartsMixin:
 
             Selection parameters are identified by their ``name`` property.
 
-        **kwargs : any
-            The Vega-Lite spec for the chart as keywords. This is an alternative
-            to ``spec``.
-
-            .. deprecated::
-               ``**kwargs`` are deprecated and will be removed in a future
-               release. To specify Vega-Lite configuration options, use the
-               ``spec`` argument instead.
-
         Returns
         -------
         element or dict
             If ``on_select`` is ``"ignore"`` (default), this command returns an
-            internal placeholder for the chart element that can be used with
-            the ``.add_rows()`` method. Otherwise, this command returns a
-            dictionary-like object that supports both key and attribute
+            internal placeholder for the chart element. Otherwise, this command
+            returns a dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
 
@@ -2258,14 +2194,6 @@ class VegaChartsMixin:
         translated to the syntax shown above.
 
         """
-        if kwargs:
-            show_deprecation_warning(
-                "Variable keyword arguments for `st.vega_lite_chart` have been "
-                "deprecated and will be removed in a future release. Use the "
-                "`spec` argument instead to specify Vega-Lite configuration "
-                "options."
-            )
-
         return self._vega_lite_chart(
             data=data,
             spec=spec,
@@ -2276,7 +2204,6 @@ class VegaChartsMixin:
             selection_mode=selection_mode,
             width=width,
             height=height,
-            **kwargs,
         )
 
     def _altair_chart(
@@ -2287,7 +2214,6 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
-        add_rows_metadata: AddRowsMetadata | None = None,
         width: Width | None = None,
         height: Height = "content",
     ) -> DeltaGenerator | VegaLiteState:
@@ -2313,7 +2239,6 @@ class VegaChartsMixin:
             key=key,
             on_select=on_select,
             selection_mode=selection_mode,
-            add_rows_metadata=add_rows_metadata,
             width=width,
             height=height,
         )
@@ -2327,10 +2252,8 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
-        add_rows_metadata: AddRowsMetadata | None = None,
         width: Width | None = None,
         height: Height = "content",
-        **kwargs: Any,
     ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on a vega-lite spec.
 
@@ -2432,7 +2355,7 @@ class VegaChartsMixin:
             else width == "stretch"
         )
 
-        spec = _prepare_vega_lite_spec(spec, use_container_width_for_spec, **kwargs)
+        spec = _prepare_vega_lite_spec(spec, use_container_width_for_spec)
         _marshall_chart_data(vega_lite_proto, spec, data)
 
         # Prevent the spec from changing across reruns:
@@ -2488,7 +2411,6 @@ class VegaChartsMixin:
             self.dg._enqueue(
                 "vega_lite_chart",
                 vega_lite_proto,
-                add_rows_metadata=add_rows_metadata,
                 layout_config=layout_config,
             )
             return widget_state.value
@@ -2499,7 +2421,6 @@ class VegaChartsMixin:
         return self.dg._enqueue(
             "vega_lite_chart",
             vega_lite_proto,
-            add_rows_metadata=add_rows_metadata,
             layout_config=layout_config,
         )
 
@@ -2518,8 +2439,8 @@ def _to_arrow_dataset(data: Any, datasets: dict[str, Any]) -> dict[str, str]:
     # Already serialize the data to be able to create a stable
     # dataset name:
     data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
-    # Use the md5 hash of the data as the name:
-    name = calc_md5(str(data_bytes))
+    # Use the content hash of the data as the name:
+    name = calc_hash(str(data_bytes))
 
     datasets[name] = data_bytes
     return {"name": name}

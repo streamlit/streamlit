@@ -15,12 +15,43 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Final, NamedTuple, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Final, NamedTuple, Protocol, runtime_checkable
+
+from streamlit.logger import get_logger
+
+_LOGGER: Final = get_logger(__name__)
 
 CACHE_MEMORY_FAMILY: Final = "cache_memory_bytes"
-SESSION_EVENTS_FAMILY: Final = "session_events_total"
-SESSION_DURATION_FAMILY: Final = "session_duration_seconds_total"
+SESSION_EVENTS_FAMILY: Final = "session_events"
+SESSION_DURATION_FAMILY: Final = "session_duration_seconds"
 ACTIVE_SESSIONS_FAMILY: Final = "active_sessions"
+
+
+def safe_sizeof(obj: Any) -> int:
+    """Return the memory size of an object in bytes, or 0 if sizing fails.
+
+    Some objects (e.g., SQLAlchemy connections) contain internal references that
+    cannot be sized by pympler.asizeof (e.g., objects that don't support weak
+    references). This function catches those exceptions and returns 0 instead
+    of propagating the error.
+    """
+    # Import inside function for lazy loading (reduces startup time).
+    # Python's import system caches modules, so repeated calls have minimal overhead.
+    from streamlit.vendor.pympler.asizeof import asizeof
+
+    try:
+        return asizeof(obj)
+    except (TypeError, ReferenceError):
+        # TypeError: objects that don't support weak references (e.g., SQLAlchemy's
+        # _EmptyListener). ReferenceError: weak references that have been garbage
+        # collected during traversal.
+        _LOGGER.debug(
+            "Failed to calculate size for object of type %s",
+            type(obj).__name__,
+            exc_info=True,
+        )
+        return 0
+
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -150,7 +181,7 @@ class CounterStat(NamedTuple):
     Properties
     ----------
     family_name : str
-        The name of the metric family (e.g. 'session_events_total').
+        The name of the metric family (e.g. 'session_events').
     value : int
         The current count value.
     labels : dict[str, str] | None
@@ -172,10 +203,11 @@ class CounterStat(NamedTuple):
         return "counter"
 
     def to_metric_str(self) -> str:
+        metric_name = f"{self.family_name}_total"
         if self.labels:
             labels_str = ",".join(f'{k}="{v}"' for k, v in sorted(self.labels.items()))
-            return f"{self.family_name}{{{labels_str}}} {self.value}"
-        return f"{self.family_name} {self.value}"
+            return f"{metric_name}{{{labels_str}}} {self.value}"
+        return f"{metric_name} {self.value}"
 
     def marshall_metric_proto(self, metric: MetricProto) -> None:
         """Fill an OpenMetrics `Metric` protobuf object."""

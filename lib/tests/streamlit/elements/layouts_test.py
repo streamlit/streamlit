@@ -27,6 +27,7 @@ from streamlit.errors import (
     StreamlitInvalidFormCallbackError,
     StreamlitInvalidHorizontalAlignmentError,
     StreamlitInvalidVerticalAlignmentError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapSize
@@ -493,6 +494,23 @@ class ExpanderTest(DeltaGeneratorTestCase):
         assert not expander_block.add_block.expandable.expanded
         assert expander.open is False
 
+    @parameterized.expand(
+        [
+            ("default", BlockProto.Expandable.Type.DEFAULT),
+            ("compact", BlockProto.Expandable.Type.COMPACT),
+        ]
+    )
+    def test_type_parameter(self, type_param: str, expected_proto_type: int):
+        """Test that the type parameter sets the correct proto type."""
+        st.expander("label", type=type_param)
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.expandable.type == expected_proto_type
+
+    def test_invalid_type(self):
+        """Test that invalid type values raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.expander("label", type="invalid")
+
     def test_on_change_callback_without_key_works(self):
         """Test that a callback works without an explicit key."""
         expander = st.expander("label", on_change=lambda: None)
@@ -832,6 +850,37 @@ class ContainerTest(DeltaGeneratorTestCase):
         """Test that st.container raises on invalid vertical_alignment."""
         with pytest.raises(StreamlitInvalidVerticalAlignmentError):
             st.container(horizontal=True, vertical_alignment=vertical_alignment)
+
+    @parameterized.expand(
+        [
+            ("true_with_height", True, 300, True),
+            ("false_with_height", False, 300, False),
+        ],
+    )
+    def test_autoscroll_sets_proto_field(
+        self,
+        _name: str,
+        autoscroll: bool,
+        height: int,
+        expected_value: bool,
+    ) -> None:
+        """Test that explicit autoscroll values set the proto field."""
+        st.container(height=height, autoscroll=autoscroll)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.HasField("autoscroll")
+        assert container_block.add_block.autoscroll is expected_value
+
+    def test_autoscroll_none_does_not_set_field(self) -> None:
+        """Test that autoscroll=None (default) does not set the proto field."""
+        st.container(height=300)
+        container_block = self.get_delta_from_queue()
+        assert not container_block.add_block.HasField("autoscroll")
+
+    def test_autoscroll_without_height(self) -> None:
+        """Test that autoscroll can be set without a fixed height."""
+        st.container(autoscroll=True)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.autoscroll is True
 
 
 class PopoverContainerTest(DeltaGeneratorTestCase):
@@ -1311,6 +1360,23 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise an error"""
         with pytest.raises(StreamlitAPIException):
             st.status("label", width=invalid_width)
+
+    @parameterized.expand(
+        [
+            ("default", BlockProto.Expandable.Type.DEFAULT),
+            ("compact", BlockProto.Expandable.Type.COMPACT),
+        ]
+    )
+    def test_type_parameter(self, type_param: str, expected_proto_type: int):
+        """Test that the type parameter sets the correct proto type."""
+        st.status("label", type=type_param)
+        status_block = self.get_delta_from_queue()
+        assert status_block.add_block.expandable.type == expected_proto_type
+
+    def test_invalid_type(self):
+        """Test that invalid type values raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.status("label", type="invalid")
 
 
 class TabsTest(DeltaGeneratorTestCase):

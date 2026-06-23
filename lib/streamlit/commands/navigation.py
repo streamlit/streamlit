@@ -150,23 +150,31 @@ def navigation(
 
     expanded : bool or int
         Controls whether the navigation menu is expanded and how many items
-        are visible when collapsed.
+        are visible when it's collapsed.
 
-        If this is ``False`` (default), the navigation menu will be collapsed
-        when there are more than 12 pages, showing only the first 10 pages
-        with a "View X more" button. If this is ``True``, the navigation menu
-        will always be fully expanded; no collapse button will be displayed.
+        This parameter is only used when ``position="sidebar"`` and the sidebar
+        has other elements below the navigation menu. If the sidebar only
+        contains the navigation menu, it will always be fully expanded. The
+        following values are valid:
 
-        If this is a positive integer, it specifies the maximum number of
-        pages to display when collapsed. For example, ``expanded=5`` shows
-        only the first 5 pages with a "View X more" button when there are
-        more than 7 pages.
+        - ``False`` (default): The navigation menu shows a maximum
+          of ten pages when there are more than twelve pages. The menu is fully
+          expanded when there are twelve or fewer pages. A collapsed menu has a
+          "View X more" button at the bottom. An expanded menu that can be
+          collapsed has a "View less" button at the bottom.
 
-        If ``st.navigation`` changes from ``expanded=True`` to
-        ``expanded=False`` on a rerun, the menu will stay expanded and a
-        collapse button will be displayed.
+        - ``True``: The navigation menu will always be fully expanded, and no
+          "View less" button will be displayed.
 
-        The parameter is only used when ``position="sidebar"``.
+        - Positive integer: A positive integer specifies the maximum number of
+          pages to display when the menu is collapsed. When there are at least
+          three more pages than this integer, the menu will be collapsed.
+          Otherwise, the menu will be fully expanded. ``expanded=10`` is
+          equivalent to the default, ``expanded=False``.
+
+        If the value of ``expanded`` changes between reruns, an expanded menu
+        will stay expanded. If the change in value makes the menu newly
+        collapsible, Streamlit will only add a "View less" button at the bottom.
 
     Returns
     -------
@@ -451,10 +459,10 @@ def _navigation(
             p.is_hidden = page._visibility == "hidden"
             _set_external_url(p, page)
 
-    # Inform our page manager about the set of pages we have
-    ctx.pages_manager.set_pages(pagehash_to_pageinfo)
-    found_page = ctx.pages_manager.get_page_script(
-        fallback_page_hash=default_page._script_hash
+    # Inform our page manager about the set of pages we have and resolve the page
+    found_page = ctx.pages_manager.set_pages_and_resolve(
+        pagehash_to_pageinfo,
+        fallback_page_hash=default_page._script_hash,
     )
 
     page_to_return = None

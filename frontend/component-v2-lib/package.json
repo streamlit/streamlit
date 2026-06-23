@@ -5,10 +5,10 @@
   "type": "module",
   "main": "./dist/streamlit-component-v2-lib.mjs",
   "module": "./dist/streamlit-component-v2-lib.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/src/index.d.ts",
       "import": "./dist/streamlit-component-v2-lib.mjs",
       "default": "./dist/streamlit-component-v2-lib.mjs"
     }
@@ -30,18 +30,17 @@
     "testWatch": "vitest",
     "lint": "yarn run -T eslint --cache --max-warnings 0 src",
     "typecheck": "yarn run typecheck:all",
-    "format": "yarn run -T prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
-    "formatCheck": "yarn run -T prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "format": "yarn run -T oxfmt --config ../.oxfmtrc.json './src/**/*.{js,ts,jsx,tsx}'",
+    "formatCheck": "yarn run -T oxfmt --check --config ../.oxfmtrc.json './src/**/*.{js,ts,jsx,tsx}'",
     "typesync": "typesync",
     "typesync:ci": "typesync --dry=fail"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "typesync": "^0.14.3",
-    "vite": "^8.0.0",
-    "vite-plugin-dts": "^4.5.4",
-    "vite-tsconfig-paths": "^6.1.0",
-    "vitest": "^4.1.0"
+    "vite": "^8.0.14",
+    "vite-plugin-dts": "^5.0.1",
+    "vitest": "^4.1.8"
   },
   "repository": {
     "type": "git",
@@ -56,5 +55,5 @@
     "url": "https://github.com/streamlit/streamlit/issues"
   },
   "homepage": "https://github.com/streamlit/streamlit#readme",
-  "packageManager": "yarn@4.5.3"
+  "packageManager": "yarn@4.13.0"
 }

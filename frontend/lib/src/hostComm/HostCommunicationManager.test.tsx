@@ -93,6 +93,7 @@ describe("HostCommunicationManager messaging", () => {
       deployedAppMetadataChanged: vi.fn(),
       restartWebsocketConnection: vi.fn(),
       terminateWebsocketConnection: vi.fn(),
+      printApp: vi.fn(),
     })
 
     originalHash = window.location.hash
@@ -134,6 +135,101 @@ describe("HostCommunicationManager messaging", () => {
       "guestReadyAt",
       expect.any(Number)
     )
+  })
+
+  describe("self-dispatch GUEST_READY", () => {
+    let postMessageSpy: MockInstance
+    const originalParent = window.parent
+
+    beforeEach(() => {
+      postMessageSpy = vi.spyOn(window, "postMessage")
+    })
+
+    afterEach(() => {
+      postMessageSpy.mockRestore()
+      Object.defineProperty(window, "parent", {
+        value: originalParent,
+        configurable: true,
+      })
+    })
+
+    it("dispatches on own window when embedded in an iframe", () => {
+      const fakeParent = { postMessage: vi.fn() } as unknown as Window
+      Object.defineProperty(window, "parent", {
+        value: fakeParent,
+        configurable: true,
+      })
+
+      hostCommunicationMgr.closeHostCommunication()
+      postMessageSpy.mockClear()
+
+      hostCommunicationMgr.setAllowedOrigins({
+        allowedOrigins: ["https://devel.streamlit.test"],
+        useExternalAuthToken: false,
+      })
+
+      expect(postMessageSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stCommVersion: HOST_COMM_VERSION,
+          type: "GUEST_READY",
+          streamlitExecutionStartedAt: expect.any(Number),
+          guestReadyAt: expect.any(Number),
+        }),
+        window.location.origin
+      )
+    })
+
+    it("does not dispatch when not embedded (top-level window)", () => {
+      hostCommunicationMgr.closeHostCommunication()
+      postMessageSpy.mockClear()
+
+      hostCommunicationMgr.setAllowedOrigins({
+        allowedOrigins: ["https://devel.streamlit.test"],
+        useExternalAuthToken: false,
+      })
+
+      const selfDispatchCalls = postMessageSpy.mock.calls.filter(
+        ([, targetOrigin]) => targetOrigin === window.location.origin
+      )
+      expect(selfDispatchCalls).toHaveLength(0)
+    })
+
+    it("does not dispatch when already open", () => {
+      const fakeParent = { postMessage: vi.fn() } as unknown as Window
+      Object.defineProperty(window, "parent", {
+        value: fakeParent,
+        configurable: true,
+      })
+      postMessageSpy.mockClear()
+
+      hostCommunicationMgr.setAllowedOrigins({
+        allowedOrigins: ["https://devel.streamlit.test"],
+        useExternalAuthToken: false,
+      })
+
+      expect(postMessageSpy).not.toHaveBeenCalled()
+    })
+
+    it("re-dispatches after close and reopen", () => {
+      const fakeParent = { postMessage: vi.fn() } as unknown as Window
+      Object.defineProperty(window, "parent", {
+        value: fakeParent,
+        configurable: true,
+      })
+
+      hostCommunicationMgr.closeHostCommunication()
+      postMessageSpy.mockClear()
+
+      hostCommunicationMgr.setAllowedOrigins({
+        allowedOrigins: ["https://devel.streamlit.test"],
+        useExternalAuthToken: false,
+      })
+
+      expect(postMessageSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "GUEST_READY" }),
+        window.location.origin
+      )
+    })
   })
 
   it("only sends GUEST_READY once when setAllowedOrigins is called multiple times", () => {
@@ -224,6 +320,22 @@ describe("HostCommunicationManager messaging", () => {
 
     // @ts-expect-error - props are private
     expect(hostCommunicationMgr.props.clearCache).toHaveBeenCalled()
+  })
+
+  it("can process a received PRINT_APP message", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "PRINT_APP",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    // @ts-expect-error - props are private
+    expect(hostCommunicationMgr.props.printApp).toHaveBeenCalled()
   })
 
   it("can process a received REQUEST_PAGE_CHANGE message", () => {
@@ -654,6 +766,7 @@ describe("Test different origins", () => {
       deployedAppMetadataChanged: vi.fn(),
       restartWebsocketConnection: vi.fn(),
       terminateWebsocketConnection: vi.fn(),
+      printApp: vi.fn(),
     })
     ;({ dispatchEvent } = mockEventListeners())
   })
@@ -752,6 +865,7 @@ describe("HostCommunicationManager external auth token handling", () => {
       deployedAppMetadataChanged: vi.fn(),
       restartWebsocketConnection: vi.fn(),
       terminateWebsocketConnection: vi.fn(),
+      printApp: vi.fn(),
     })
   })
 

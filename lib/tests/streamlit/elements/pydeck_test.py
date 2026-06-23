@@ -27,7 +27,9 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements import deck_gl_json_chart
 from streamlit.elements.deck_gl_json_chart import (
+    PydeckMixin,
     PydeckSelectionSerde,
+    _get_pydeck_width,
     parse_selection_mode,
 )
 from streamlit.errors import StreamlitAPIException
@@ -708,6 +710,66 @@ class ParseSelectionModeTest(DeltaGeneratorTestCase):
         assert "Selection mode must be a single value" in str(e.value)
 
 
+def test_get_pydeck_width_returns_none_for_none_input() -> None:
+    """`None` pydeck object returns `None`."""
+    assert _get_pydeck_width(None) is None
+
+
+def test_get_pydeck_width_returns_none_when_width_not_set() -> None:
+    """Object without a `width` attribute returns `None`."""
+
+    class _NoWidth:
+        pass
+
+    assert _get_pydeck_width(_NoWidth()) is None
+
+
+def test_get_pydeck_width_returns_none_when_width_is_none() -> None:
+    """`width=None` returns `None`."""
+
+    class _HasWidth:
+        width = None
+
+    assert _get_pydeck_width(_HasWidth()) is None
+
+
+def test_get_pydeck_width_returns_none_when_width_is_invalid_type() -> None:
+    """Non-numeric width values are ignored."""
+
+    class _StringWidth:
+        width = "not_a_number"
+
+    assert _get_pydeck_width(_StringWidth()) is None
+
+
+def test_get_pydeck_width_returns_int_when_width_is_int() -> None:
+    """Integer widths are returned as-is."""
+
+    class _IntWidth:
+        width = 600
+
+    assert _get_pydeck_width(_IntWidth()) == 600
+
+
+def test_get_pydeck_width_returns_int_when_width_is_float() -> None:
+    """Float widths are truncated to int."""
+
+    class _FloatWidth:
+        width = 600.7
+
+    assert _get_pydeck_width(_FloatWidth()) == 600
+
+
+def test_pydeck_mixin_dg_returns_self() -> None:
+    """``PydeckMixin.dg`` returns the mixin instance."""
+
+    class _OnlyPydeck(PydeckMixin):
+        pass
+
+    pydeck_mixin = _OnlyPydeck()
+    assert pydeck_mixin.dg is pydeck_mixin
+
+
 class PydeckCallbackTest(DeltaGeneratorTestCase):
     """Test pydeck_chart with callback functions."""
 
@@ -763,3 +825,100 @@ class PydeckCallbackTest(DeltaGeneratorTestCase):
                 on_select="invalid",
             )
         assert "only 'ignore', 'rerun', or a callable is supported" in str(e.value)
+
+
+class TestPreparePydeckForJson:
+    """Tests for _prepare_pydeck_for_json helper function."""
+
+    def test_none_input_is_noop(self) -> None:
+        """Test that None input is handled gracefully."""
+        # Should not raise
+        deck_gl_json_chart._prepare_pydeck_for_json(None)
+
+    def test_converts_dataframe_to_dict(self) -> None:
+        """Test that DataFrame layer data is converted to list of dicts."""
+        df = pd.DataFrame({"lat": [1, 2], "lon": [10, 20]})
+        deck = pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df)])
+
+        deck_gl_json_chart._prepare_pydeck_for_json(deck)
+
+        # Data should now be a list of dicts
+        assert deck.layers[0].data == [
+            {"lat": 1, "lon": 10},
+            {"lat": 2, "lon": 20},
+        ]
+
+    def test_handles_weakref_to_dataframe(self) -> None:
+        """Test that weakref-wrapped DataFrames are handled correctly."""
+        import weakref
+
+        df = pd.DataFrame({"lat": [1], "lon": [10]})
+        layer = pdk.Layer("ScatterplotLayer", data=df)
+        # Simulate pydeck's weakref wrapping
+        layer.data = weakref.ref(df)
+
+        deck = pdk.Deck(layers=[layer])
+        deck_gl_json_chart._prepare_pydeck_for_json(deck)
+
+        # Data should be converted (weakref dereferenced and converted)
+        assert deck.layers[0].data == [{"lat": 1, "lon": 10}]
+
+    def test_handles_dead_weakref(self) -> None:
+        """Test that dead weakrefs are skipped without error."""
+        import weakref
+
+        layer = pdk.Layer("ScatterplotLayer", data=None)
+        # Create a weakref to a DataFrame that will be garbage collected
+        df = pd.DataFrame({"lat": [1], "lon": [10]})
+        layer.data = weakref.ref(df)
+        del df  # DataFrame is now garbage collected
+
+        deck = pdk.Deck(layers=[layer])
+        # Should not raise when weakref returns None
+        deck_gl_json_chart._prepare_pydeck_for_json(deck)
+
+    def test_non_dataframe_data_unchanged(self) -> None:
+        """Test that non-DataFrame data is left unchanged."""
+        list_data = [{"lat": 1, "lon": 10}]
+        deck = pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=list_data)])
+
+        deck_gl_json_chart._prepare_pydeck_for_json(deck)
+
+        # Data should be unchanged
+        assert deck.layers[0].data == list_data
+
+    def test_multiple_layers(self) -> None:
+        """Test that all layers with DataFrame data are converted."""
+        df1 = pd.DataFrame({"lat": [1], "lon": [10]})
+        df2 = pd.DataFrame({"lat": [2], "lon": [20]})
+        list_data = [{"lat": 3, "lon": 30}]
+
+        deck = pdk.Deck(
+            layers=[
+                pdk.Layer("ScatterplotLayer", data=df1),
+                pdk.Layer("ScatterplotLayer", data=df2),
+                pdk.Layer("ScatterplotLayer", data=list_data),
+            ]
+        )
+
+        deck_gl_json_chart._prepare_pydeck_for_json(deck)
+
+        assert deck.layers[0].data == [{"lat": 1, "lon": 10}]
+        assert deck.layers[1].data == [{"lat": 2, "lon": 20}]
+        assert deck.layers[2].data == list_data  # Unchanged
+
+    def test_deck_without_layers_attribute(self) -> None:
+        """Test that Deck without layers attribute is handled gracefully."""
+        deck = MagicMock(spec=[])  # Mock without 'layers' attribute
+
+        # Should not raise
+        deck_gl_json_chart._prepare_pydeck_for_json(deck)
+
+    def test_layer_without_data_attribute(self) -> None:
+        """Test that layers without data attribute are skipped."""
+        layer = MagicMock(spec=[])  # Mock without 'data' attribute
+        deck = MagicMock()
+        deck.layers = [layer]
+
+        # Should not raise
+        deck_gl_json_chart._prepare_pydeck_for_json(deck)

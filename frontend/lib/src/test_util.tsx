@@ -25,9 +25,9 @@ import {
 import { Config, PageConfig } from "@streamlit/protobuf"
 
 import {
-  DownloadContext,
-  DownloadContextProps,
-} from "./components/core/DownloadContext"
+  BackendOperationContext,
+  BackendOperationContextProps,
+} from "./components/core/BackendOperationContext"
 import {
   FormsContext,
   FormsContextProps,
@@ -113,6 +113,10 @@ const defaultScriptRunContextValue = {
   fragmentIdsThisRun: [],
 }
 
+const defaultBackendOperationContextValue = {
+  backendOperationClient: undefined,
+}
+
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
   return (
     <ThemeProvider theme={mockTheme.emotion}>
@@ -132,7 +136,11 @@ export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
                     <ScriptRunContext.Provider
                       value={defaultScriptRunContextValue}
                     >
-                      {children}
+                      <BackendOperationContext.Provider
+                        value={defaultBackendOperationContextValue}
+                      >
+                        {children}
+                      </BackendOperationContext.Provider>
                     </ScriptRunContext.Provider>
                   </NavigationContext.Provider>
                 </ViewStateContext.Provider>
@@ -165,10 +173,14 @@ export function mockWindowLocation(hostname: string): void {
   // @ts-expect-error
   delete window.location
 
+  const hasScheme = /^https?:\/\//.test(hostname)
+  const origin = hasScheme ? new URL(hostname).origin : `https://${hostname}`
+
   // @ts-expect-error
   window.location = {
     assign: vi.fn(),
-    hostname: hostname,
+    hostname: hasScheme ? new URL(hostname).hostname : hostname,
+    origin,
   }
 }
 
@@ -193,7 +205,7 @@ export interface RenderWithContextsOptions {
   navigationContext?: Partial<NavigationContextProps>
   formsContext?: Partial<FormsContextProps>
   scriptRunContext?: Partial<ScriptRunContextProps>
-  downloadContext?: Partial<DownloadContextProps>
+  backendOperationContext?: Partial<BackendOperationContextProps>
 }
 
 /**
@@ -305,9 +317,9 @@ export const renderWithContexts = (
     ...options.formsContext,
   }
 
-  let currentDownloadContextProps: DownloadContextProps = {
-    requestDeferredFile: undefined,
-    ...options.downloadContext,
+  let currentBackendOperationContextProps: BackendOperationContextProps = {
+    backendOperationClient: undefined,
+    ...options.backendOperationContext,
   }
 
   const Wrapper: FC<PropsWithChildren> = ({ children }) => {
@@ -317,7 +329,7 @@ export const renderWithContexts = (
     // Build the actual sidebar config with the ref if needed
     // Note: We intentionally don't use useMemo here because rerenderWithContexts
     // needs to update the context value on each rerender when currentSidebarConfigContextProps changes.
-    // eslint-disable-next-line react/jsx-no-constructed-context-values
+    // eslint-disable-next-line @eslint-react/no-unstable-context-value
     const sidebarConfigValue: SidebarConfigContextProps = {
       ...currentSidebarConfigContextProps,
       ...(shouldCreateAppRoot && { appRootRef }),
@@ -347,15 +359,15 @@ export const renderWithContexts = (
                       <ScriptRunContext.Provider
                         value={currentScriptRunContextProps}
                       >
-                        <DownloadContext.Provider
-                          value={currentDownloadContextProps}
+                        <BackendOperationContext.Provider
+                          value={currentBackendOperationContextProps}
                         >
                           <FormsContext.Provider
                             value={currentFormsContextProps}
                           >
                             {content}
                           </FormsContext.Provider>
-                        </DownloadContext.Provider>
+                        </BackendOperationContext.Provider>
                       </ScriptRunContext.Provider>
                     </ViewStateContext.Provider>
                   </NavigationContext.Provider>
@@ -421,10 +433,10 @@ export const renderWithContexts = (
           ...newOptions.formsContext,
         }
       }
-      if (newOptions?.downloadContext) {
-        currentDownloadContextProps = {
-          ...currentDownloadContextProps,
-          ...newOptions.downloadContext,
+      if (newOptions?.backendOperationContext) {
+        currentBackendOperationContextProps = {
+          ...currentBackendOperationContextProps,
+          ...newOptions.backendOperationContext,
         }
       }
       if (newOptions?.scriptRunContext) {

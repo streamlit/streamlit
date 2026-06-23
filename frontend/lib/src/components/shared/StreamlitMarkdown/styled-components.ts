@@ -14,18 +14,31 @@
  * limitations under the License.
  */
 
-import { Theme } from "@emotion/react"
+import { keyframes, Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
+
+// Shimmer animation: sweeps a mask gradient from right to left across the text.
+// Uses mask-position animation to fade text opacity in/out.
+const shimmerAnimation = keyframes`
+  0% {
+    mask-position: 600% center;
+    -webkit-mask-position: 600% center;
+  }
+  100% {
+    mask-position: -600% center;
+    -webkit-mask-position: -600% center;
+  }
+`
 
 interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInDialog: boolean
   isLabel?: boolean
+  isInHorizontalLayout?: boolean
   inheritFont?: boolean
   boldLabel?: boolean
-  largerLabel?: boolean
   isToast?: boolean
   truncate?: boolean
 }
@@ -89,7 +102,8 @@ function convertFontSizes(
 function getMarkdownHeadingDefinitions(
   theme: Theme,
   isInDialog: boolean,
-  isCaption: boolean
+  isCaption: boolean,
+  isInHorizontalLayout: boolean
 ): Record<string, unknown> {
   return {
     "h1, h2, h3, h4, h5, h6": {
@@ -106,7 +120,9 @@ function getMarkdownHeadingDefinitions(
       ),
 
       fontWeight: theme.fontWeights.h1FontWeight,
-      padding: `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
     },
     "h1 b, h1 strong": {
       // Per Pull Request #9395, setting text to bold in headers
@@ -123,7 +139,9 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: theme.fontWeights.h2FontWeight,
-      padding: `${theme.spacing.lg} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.lg} 0 ${theme.spacing.lg} 0`,
     },
     h3: {
       fontSize: convertFontSizes(
@@ -133,7 +151,9 @@ function getMarkdownHeadingDefinitions(
       ),
 
       fontWeight: theme.fontWeights.h3FontWeight,
-      padding: `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
     },
     h4: {
       fontSize: convertFontSizes(
@@ -142,7 +162,9 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: theme.fontWeights.h4FontWeight,
-      padding: `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
     },
     h5: {
       fontSize: convertFontSizes(
@@ -151,7 +173,9 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: theme.fontWeights.h5FontWeight,
-      padding: `${theme.spacing.xs} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.xs} 0 ${theme.spacing.lg} 0`,
     },
     h6: {
       fontSize: convertFontSizes(
@@ -161,7 +185,9 @@ function getMarkdownHeadingDefinitions(
       ),
 
       fontWeight: theme.fontWeights.h6FontWeight,
-      padding: `${theme.spacing.twoXS} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.twoXS} 0 ${theme.spacing.lg} 0`,
     },
   }
 }
@@ -173,16 +199,19 @@ export const StyledStreamlitMarkdown =
       isCaption,
       isInDialog,
       isLabel,
+      isInHorizontalLayout = false,
       inheritFont,
       boldLabel,
-      largerLabel,
       isToast,
       truncate,
     }) => {
-      // Widget Labels have smaller font size with exception of Button/Checkbox/Radio Button labels
-      // Toasts also have smaller font size as well as pills and segmented controls.
-      const useSmallerFontSize =
-        (isLabel && !largerLabel) || isToast || isCaption
+      // All widget labels (isLabel=true) use the smaller font size (fontSizes.sm = 14px).
+      // Normal markdown text (isLabel=false) stays at fontSizes.md (16px).
+      // Toasts and captions also use the smaller font size.
+      // Some label contexts (e.g. alert titles, dialog titles, slider labels, metric values)
+      // opt out of this sizing via inheritFont=true, which makes the font-size, font-family,
+      // and font-weight inherit from their parent container instead.
+      const useSmallerFontSize = isLabel || isToast || isCaption
 
       return {
         fontFamily: inheritFont ? "inherit" : theme.genericFonts.bodyFont,
@@ -192,8 +221,9 @@ export const StyledStreamlitMarkdown =
             ? theme.fontSizes.sm
             : theme.fontSizes.md,
         fontWeight: inheritFont ? "inherit" : undefined,
-        marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
-        opacity: isCaption ? 0.6 : undefined,
+        marginBottom:
+          isLabel || isInHorizontalLayout ? "" : `-${theme.spacing.lg}`,
+        opacity: isCaption ? theme.opacities.secondary : undefined,
         color: "inherit",
         // Always respect the width of the parent container:
         maxWidth: "100%",
@@ -201,7 +231,12 @@ export const StyledStreamlitMarkdown =
         // Break long words to prevent them from overflowing the container:
         overflowWrap: "break-word",
         ...sharedMarkdownStyle(theme),
-        ...getMarkdownHeadingDefinitions(theme, isInDialog, isCaption),
+        ...getMarkdownHeadingDefinitions(
+          theme,
+          isInDialog,
+          isCaption,
+          isInHorizontalLayout
+        ),
 
         // Truncate text with ellipsis when it overflows the container.
         // This is useful for single-line text that should not wrap.
@@ -272,7 +307,7 @@ export const StyledStreamlitMarkdown =
           margin: "1em 0 1em 0",
           padding: `0 0 0 0.75em`,
           borderLeft: `0.15em solid ${theme.colors.borderColor}`,
-          opacity: 0.6,
+          opacity: theme.opacities.secondary,
         },
 
         "b, strong": {
@@ -345,6 +380,43 @@ export const StyledStreamlitMarkdown =
           maxWidth: "100%",
           display: "inline-block",
           verticalAlign: "middle",
+        },
+
+        // Shimmer animation for loading/thinking text. Uses mask-image with an
+        // animated gradient to fade text opacity in and out. The shimmer uses
+        // fadedText60 as its base color. When nesting with color directives:
+        // - :shimmer[:red[text]] - inner color wins (displays red)
+        // - :red[:shimmer[text]] - shimmer color wins (displays fadedText60)
+        "span.stMarkdownShimmer": {
+          // Use theme's secondary text color for shimmer text
+          color: theme.colors.fadedText60,
+          // Mask gradient: fades from 40% opacity to 100% at the shimmer peak and back
+          maskImage: `linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.4) 0%,
+            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 1) 50%,
+            rgba(0, 0, 0, 0.4) 60%,
+            rgba(0, 0, 0, 0.4) 100%
+          )`,
+          WebkitMaskImage: `linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.4) 0%,
+            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 1) 50%,
+            rgba(0, 0, 0, 0.4) 60%,
+            rgba(0, 0, 0, 0.4) 100%
+          )`,
+          maskSize: "200% 100%",
+          WebkitMaskSize: "200% 100%",
+          animation: `${shimmerAnimation} 8s linear infinite`,
+
+          // Respect user's motion preferences for accessibility
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+            maskImage: "none",
+            WebkitMaskImage: "none",
+          },
         },
 
         "p, ol, ul, dl, li": {

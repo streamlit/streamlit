@@ -417,7 +417,7 @@ def get_radio_option(locator: Locator | Page, label: str | re.Pattern[str]) -> L
     Locator
         The element.
     """
-    element = locator.locator('[data-baseweb="radio"]').filter(has_text=label)
+    element = locator.get_by_test_id("stRadioOption").filter(has_text=label)
     expect(element).to_be_visible()
     return element
 
@@ -860,9 +860,11 @@ def click_checkbox(
         The label of the button to click.
     """
     checkbox_element = get_checkbox(page, label)
-    # Click the checkbox label to be more reliable:
-    checkbox_element.locator('label[data-baseweb="checkbox"]').first.click()
+    checkbox_element.locator("label").first.click()
     wait_for_app_run(page)
+    # Blur the active element after the app run so that focus rings from this
+    # interaction don't bleed into subsequent snapshot assertions.
+    page.evaluate("document.activeElement?.blur()")
 
 
 def click_toggle(
@@ -1457,9 +1459,9 @@ def get_segment_button(locator: Locator, text: str) -> Locator:
     Locator
         The segment button.
     """
-    return locator.get_by_test_id(
-        re.compile(r"stBaseButton-segmented_control(Active)?")
-    ).filter(has_text=text)
+    return locator.locator("button[data-variant='segmented_control']").filter(
+        has_text=text
+    )
 
 
 def goto_app(page: Page, url: str) -> None:
@@ -1496,3 +1498,45 @@ def get_metric(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator
     element = locator.get_by_test_id("stMetric").filter(has_text=label)
     expect(element).to_be_visible()
     return element
+
+
+def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
+    """Wait for all images within a locator to be fully loaded and decoded.
+
+    This is useful for stabilizing snapshot tests that include images,
+    especially in browsers like webkit that may have timing variations
+    in image loading/decoding.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator containing the images to wait for.
+
+    timeout : int
+        Maximum time to wait in milliseconds. Defaults to 5000ms.
+    """
+    locator.evaluate(
+        """(element) => {
+            const images = element.querySelectorAll('img');
+            return Promise.all(
+                Array.from(images).map(async img => {
+                    // Wait for image to load if not complete yet
+                    if (!img.complete) {
+                        await new Promise((resolve, reject) => {
+                            img.addEventListener('load', resolve, { once: true });
+                            img.addEventListener('error', reject, { once: true });
+                        });
+                    }
+                    // Check for already-failed images (complete but no content)
+                    if (img.naturalWidth === 0) {
+                        throw new Error('Image failed to load: ' + img.src);
+                    }
+                    // Wait for the image to be decoded (ready for rendering)
+                    // This is important for webkit which may have timing variations
+                    // between load and decode completion
+                    await img.decode();
+                })
+            );
+        }""",
+        timeout=timeout,
+    )

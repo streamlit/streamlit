@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import weakref
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -37,10 +38,8 @@ from streamlit.deprecation_util import (
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     HeightWithoutContent,
-    LayoutConfig,
     WidthWithoutContent,
-    validate_height,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -97,7 +96,9 @@ def parse_selection_mode(
             f"Valid options are: {_SELECTION_MODES}"
         )
 
-    if selection_mode_set.issuperset({"single-object", "multi-object"}):
+    if selection_mode_set.issuperset(  # pragma: no cover - defensive, only string inputs reach here
+        {"single-object", "multi-object"}
+    ):
         raise StreamlitAPIException(
             "Only one of `single-object` or `multi-object` can be selected as selection mode."
         )
@@ -510,12 +511,18 @@ class PydeckMixin:
                 width = "stretch"
             # Otherwise keep the provided width.
 
-        validate_width(width, allow_content=False)
-        validate_height(height, allow_content=False)
+        layout_config = create_layout_config(width=width, height=height)
 
         pydeck_proto = PydeckProto()
 
         ctx = get_script_run_ctx()
+
+        # Workaround for pandas 3.x compatibility issue in pydeck's serialization.
+        # See: https://github.com/visgl/deck.gl/issues/9986
+        from streamlit.dataframe_util import is_pandas_version_less_than
+
+        if not is_pandas_version_less_than("3.0.0"):
+            _prepare_pydeck_for_json(pydeck_obj)
 
         spec = json.dumps(EMPTY_MAP) if pydeck_obj is None else pydeck_obj.to_json()
 
@@ -586,14 +593,12 @@ class PydeckMixin:
                 value_type="string_value",
             )
 
-            layout_config = LayoutConfig(width=width, height=height)
             self.dg._enqueue(
                 "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
             )
 
             return widget_state.value
 
-        layout_config = LayoutConfig(width=width, height=height)
         return self.dg._enqueue(
             "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
         )
@@ -632,3 +637,44 @@ def _get_pydeck_tooltip(pydeck_obj: Deck | None) -> dict[str, str] | None:
         return cast("dict[str, str]", tooltip)
 
     return None
+
+
+def _prepare_pydeck_for_json(pydeck_obj: Deck | None) -> None:
+    """Prepare a pydeck Deck object for JSON serialization.
+
+    This function converts pandas DataFrames in pydeck layers to lists of dicts
+    to work around a pandas 3.x compatibility issue in pydeck's serialization.
+    In pandas 3.x, DataFrames no longer have a __dict__ attribute that vars()
+    can access, which breaks pydeck's default_serialize function.
+
+    This function modifies the pydeck object in place. If the same Deck object
+    is passed to multiple st.pydeck_chart calls within a single script run,
+    subsequent calls will see the converted list[dict] data instead of DataFrames.
+    In Streamlit's rerun-based execution model, this is typically not an issue
+    since Deck objects are usually recreated on each run.
+
+    For the upstream pydeck issue, see: https://github.com/visgl/deck.gl/issues/9986
+    """
+    if pydeck_obj is None:
+        return
+
+    import pandas as pd
+
+    layers = getattr(pydeck_obj, "layers", None)
+    if layers is None:
+        return
+
+    for layer in layers:
+        data = getattr(layer, "data", None)
+        if data is None:
+            continue
+
+        # Handle weakref to DataFrame (pydeck wraps DataFrames in weakrefs)
+        if isinstance(data, weakref.ref):
+            data = data()
+            if data is None:
+                continue
+
+        # Convert pandas DataFrame to list of dicts for JSON serialization
+        if isinstance(data, pd.DataFrame):
+            layer.data = data.to_dict(orient="records")

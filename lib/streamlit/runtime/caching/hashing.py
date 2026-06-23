@@ -21,11 +21,11 @@ import collections.abc
 import dataclasses
 import datetime
 import functools
-import hashlib
 import inspect
 import io
 import os
 import pickle  # noqa: S403
+import re
 import sys
 import tempfile
 import threading
@@ -33,7 +33,6 @@ import uuid
 import weakref
 from collections.abc import Callable
 from enum import Enum
-from re import Pattern
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Final, TypeAlias, cast
 
@@ -256,10 +255,9 @@ def _key(obj: Any | None) -> Any:
         return None
 
     def is_simple(obj: Any) -> bool:
-        return (
-            isinstance(obj, (bytes, bytearray, str, float, int, bool, uuid.UUID))
-            or obj is None
-        )
+        # Note: bytearray is excluded because it's unhashable and cannot be
+        # used as a dictionary key for memoization
+        return isinstance(obj, (bytes, str, float, int, bool, uuid.UUID)) or obj is None
 
     if is_simple(obj):
         return obj
@@ -352,7 +350,7 @@ class _CacheFuncHasher:
         runs.
         """
 
-        h = hashlib.new("md5", usedforsecurity=False)
+        h = util.create_fast_hasher()
 
         if type_util.is_type(obj, "unittest.mock.Mock") or type_util.is_type(
             obj, "unittest.mock.MagicMock"
@@ -361,8 +359,11 @@ class _CacheFuncHasher:
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
 
-        if isinstance(obj, (bytes, bytearray)):
+        if isinstance(obj, bytes):
             return obj
+
+        if isinstance(obj, bytearray):
+            return bytes(obj)
 
         if type_util.get_fqn_type(obj) in self._hash_funcs:
             # Escape hatch for unsupported objects
@@ -403,19 +404,22 @@ class _CacheFuncHasher:
         if obj is None:
             return b"0"
 
-        if obj is True:
+        if obj is True:  # pragma: no cover - unreachable; bool subclasses int
             return b"1"
 
-        if obj is False:
+        if obj is False:  # pragma: no cover - unreachable; bool subclasses int
             return b"0"
 
         if not isinstance(obj, type) and dataclasses.is_dataclass(obj):
-            return self.to_bytes(dataclasses.asdict(obj))
+            # mypy 2.x narrows to DataclassInstance | type[DataclassInstance]
+            # which doesn't satisfy asdict's expected DataclassInstance type.
+            return self.to_bytes(dataclasses.asdict(cast("Any", obj)))
 
         if isinstance(obj, Enum):
             return str(obj).encode()
 
-        if type_util.is_type(obj, "pandas.core.series.Series"):
+        # pandas 3.x changed __module__ from pandas.core.* to pandas.*
+        if type_util.is_type(obj, re.compile(r"^pandas(\.core\.series)?\.Series$")):
             from pandas.util import hash_pandas_object
 
             series_obj = cast("pd.Series[Any]", obj)
@@ -438,7 +442,7 @@ class _CacheFuncHasher:
                 # it contains unhashable objects.
                 return b"%s" % pickle.dumps(series_obj, pickle.HIGHEST_PROTOCOL)
 
-        elif type_util.is_type(obj, "pandas.core.frame.DataFrame"):
+        elif type_util.is_type(obj, re.compile(r"^pandas(\.core\.frame)?\.DataFrame$")):
             from pandas.util import hash_pandas_object
 
             df_obj: pd.DataFrame = cast("pd.DataFrame", obj)
@@ -537,9 +541,18 @@ class _CacheFuncHasher:
 
             pil_obj: Image = cast("Image", obj)
 
-            # we don't just hash the results of obj.tobytes() because we want to use
-            # the sampling logic for numpy data
-            np_array = np.frombuffer(pil_obj.tobytes(), dtype="uint8")
+            # We don't just hash the results of obj.tobytes() because we want to use
+            # the sampling logic for numpy data.
+            pixel_bytes = pil_obj.tobytes()
+
+            # P-mode (palette-indexed) images need the palette included in the hash,
+            # since tobytes() only returns palette indices, not the color table.
+            if pil_obj.mode == "P":
+                palette_data = pil_obj.getpalette()
+                if palette_data is not None:
+                    pixel_bytes = bytes(palette_data) + pixel_bytes
+
+            np_array = np.frombuffer(pixel_bytes, dtype="uint8")
             return self.to_bytes(np_array)
 
         elif inspect.isbuiltin(obj):
@@ -576,7 +589,7 @@ class _CacheFuncHasher:
             self.update(h, obj.tell())
             return h.digest()
 
-        elif isinstance(obj, Pattern):
+        elif isinstance(obj, re.Pattern):
             return self.to_bytes([obj.pattern, obj.flags])
 
         elif isinstance(obj, (io.StringIO, io.BytesIO)):

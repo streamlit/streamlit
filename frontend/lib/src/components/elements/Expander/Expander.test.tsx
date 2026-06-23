@@ -25,6 +25,12 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Expander, { ExpanderProps } from "./Expander"
 
+const createWidgetMgr = (): WidgetStateManager =>
+  new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+
 const getProps = (
   elementProps: Partial<BlockProto.Expandable> = {},
   props: Partial<ExpanderProps> = {}
@@ -32,17 +38,13 @@ const getProps = (
   element: BlockProto.Expandable.create({
     label: "hi",
     expanded: true,
+    type: BlockProto.Expandable.Type.DEFAULT,
     ...elementProps,
   }),
   isStale: false,
+  widgetMgr: createWidgetMgr(),
   ...props,
 })
-
-const createWidgetMgr = (): WidgetStateManager =>
-  new WidgetStateManager({
-    sendRerunBackMsg: vi.fn(),
-    formsDataChanged: vi.fn(),
-  })
 
 describe("Expander container", () => {
   it("renders without crashing", () => {
@@ -283,21 +285,101 @@ describe("widget mode (widgetMgr + element.id)", () => {
     expect(setBoolValueSpy).not.toHaveBeenCalled()
   })
 
-  it("adds CSS class from blockId key", () => {
-    const props = getProps({}, { blockId: "$$ID-abc123-my_expander" })
+  it("syncs widget manager state on programmatic expand change", () => {
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
 
-    render(
+    const widgetId = "expander-123"
+    const fragmentId = "frag-1"
+
+    // Start collapsed
+    const props = getProps(
+      { expanded: false, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    const { rerender } = render(
       <Expander {...props}>
         <div>test</div>
       </Expander>
     )
 
-    const expander = screen.getByTestId("stExpander")
-    expect(expander).toHaveClass("st-key-my_expander")
+    expect(screen.getByText("test")).not.toBeVisible()
+
+    // Backend programmatically expands (e.g. st.session_state.key = True)
+    const expandedProps = getProps(
+      { expanded: true, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    rerender(
+      <Expander {...expandedProps}>
+        <div>test</div>
+      </Expander>
+    )
+
+    // The widget manager should be updated with fromUi: false so that
+    // subsequent reruns send the correct value back to the backend
+    expect(setBoolValueSpy).toHaveBeenCalledWith(
+      { id: widgetId },
+      true,
+      { fromUi: false },
+      fragmentId
+    )
   })
 
-  it("does not add CSS class when blockId is absent", () => {
-    const props = getProps()
+  it("syncs widget manager state on programmatic collapse to prevent stale reopens", () => {
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+
+    const widgetId = "expander-123"
+    const fragmentId = "frag-1"
+
+    // Start expanded
+    const props = getProps(
+      { expanded: true, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    const { rerender } = render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(screen.getByText("test")).toBeVisible()
+
+    // Backend programmatically collapses (e.g. st.session_state.key = False)
+    const collapsedProps = getProps(
+      { expanded: false, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    rerender(
+      <Expander {...collapsedProps}>
+        <div>test</div>
+      </Expander>
+    )
+
+    // The widget manager must be updated with false so that the next rerun
+    // (triggered by e.g. another widget) does not send stale "true" back
+    expect(setBoolValueSpy).toHaveBeenCalledWith(
+      { id: widgetId },
+      false,
+      { fromUi: false },
+      fragmentId
+    )
+  })
+})
+
+describe("passive state persistence", () => {
+  it("restores expanded state from elementStates on mount", () => {
+    const blockId = "$$ID-abc123-my_expander"
+    const widgetMgr = createWidgetMgr()
+
+    widgetMgr.setElementState(blockId, "expanded", true)
+
+    const props = getProps({ expanded: false }, { widgetMgr, blockId })
 
     render(
       <Expander {...props}>
@@ -305,7 +387,168 @@ describe("widget mode (widgetMgr + element.id)", () => {
       </Expander>
     )
 
-    const expander = screen.getByTestId("stExpander")
-    expect(expander.className).not.toContain("st-key-")
+    // Stored state (true) overrides proto default (false)
+    expect(screen.getByText("test")).toBeVisible()
+  })
+
+  it("uses proto default when no stored state exists", () => {
+    const blockId = "$$ID-abc123-my_expander"
+    const widgetMgr = createWidgetMgr()
+
+    const props = getProps({ expanded: false }, { widgetMgr, blockId })
+
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(screen.getByText("test")).not.toBeVisible()
+  })
+
+  it("persists expanded state on toggle", async () => {
+    const user = userEvent.setup()
+    const blockId = "$$ID-abc123-my_expander"
+    const widgetMgr = createWidgetMgr()
+
+    const props = getProps({ expanded: false }, { widgetMgr, blockId })
+
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    await user.click(screen.getByText("hi"))
+
+    expect(widgetMgr.getElementState(blockId, "expanded")).toBe(true)
+  })
+
+  it("does NOT persist state when no blockId is set", async () => {
+    const user = userEvent.setup()
+    const widgetMgr = createWidgetMgr()
+
+    const props = getProps({ expanded: false }, { widgetMgr })
+
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    await user.click(screen.getByText("hi"))
+
+    // No blockId → toggled state (true) should NOT have been stored
+    expect(widgetMgr.getElementState("", "expanded")).not.toBe(true)
+  })
+
+  it("does NOT persist state for widget-mode expanders", async () => {
+    const user = userEvent.setup()
+    const blockId = "$$ID-abc123-my_expander"
+    const widgetMgr = createWidgetMgr()
+
+    const props = getProps(
+      { expanded: false, id: "widget-123" },
+      { widgetMgr, blockId }
+    )
+
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    await user.click(screen.getByText("hi"))
+
+    // Widget mode: persistence should not write expanded state
+    // (the hook id is "" so nothing meaningful is stored)
+    expect(widgetMgr.getElementState(blockId, "expanded")).toBeUndefined()
+  })
+
+  it("uses server state even when elementStates has a stale value (widget mode)", () => {
+    const blockId = "$$ID-abc123-my_expander"
+    const widgetMgr = createWidgetMgr()
+
+    // Pre-populate elementStates with stale "expanded = true"
+    widgetMgr.setElementState(blockId, "expanded", true)
+
+    // Widget mode (element.id set → on_change="rerun"): server says collapsed
+    const props = getProps(
+      { expanded: false, id: "widget-123" },
+      { widgetMgr, blockId }
+    )
+
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    // Server value should win — content should NOT be visible (collapsed)
+    expect(screen.getByText("test")).not.toBeVisible()
+  })
+})
+
+describe("compact mode (type=COMPACT)", () => {
+  it("renders compact expander expanded with content visible", () => {
+    const props = getProps({
+      expanded: true,
+      type: BlockProto.Expandable.Type.COMPACT,
+    })
+    render(
+      <Expander {...props}>
+        <div>test content</div>
+      </Expander>
+    )
+    expect(screen.getByText("test content")).toBeVisible()
+  })
+
+  it("renders compact expander collapsed with content hidden", () => {
+    const props = getProps({
+      expanded: false,
+      type: BlockProto.Expandable.Type.COMPACT,
+    })
+    render(
+      <Expander {...props}>
+        <div>test content</div>
+      </Expander>
+    )
+    expect(screen.getByText("test content")).not.toBeVisible()
+  })
+
+  it("expands and collapses compact expander when clicking", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      expanded: false,
+      type: BlockProto.Expandable.Type.COMPACT,
+    })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    // Click to expand
+    await user.click(screen.getByText("hi"))
+    expect(screen.getByText("test")).toBeVisible()
+
+    // Click to collapse - verify via inert attribute (more reliable than visibility in jsdom)
+    await user.click(screen.getByText("hi"))
+    const panel = screen.getByTestId("stExpanderDetails")
+    expect(panel).toHaveAttribute("inert")
+  })
+
+  it("renders compact expander with icon", () => {
+    const props = getProps({
+      icon: ":material/psychology:",
+      type: BlockProto.Expandable.Type.COMPACT,
+    })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    expect(screen.getByTestId("stExpanderIcon")).toBeVisible()
+    expect(screen.getByText("psychology")).toBeVisible()
   })
 })

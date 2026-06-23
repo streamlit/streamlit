@@ -81,27 +81,27 @@ describe("NumberInput widget", () => {
     expect(numberInput).toHaveClass("stNumberInput")
   })
 
-  it("adds a focused class when running onFocus", async () => {
+  it("input receives focus when clicked (onFocus fires)", async () => {
     const user = userEvent.setup()
     const props = getIntProps()
     render(<NumberInput {...props} />)
 
-    await user.click(screen.getByTestId("stNumberInputField"))
-    expect(screen.getByTestId("stNumberInputContainer")).toHaveClass("focused")
+    const input = screen.getByTestId("stNumberInputField")
+    await user.click(input)
+    expect(input).toHaveFocus()
   })
 
-  it("removes the focused class when running onBlur", async () => {
+  it("input loses focus after tabbing away (onBlur fires)", async () => {
     const user = userEvent.setup()
     const props = getIntProps()
     render(<NumberInput {...props} />)
 
-    await user.click(screen.getByTestId("stNumberInputField"))
-    expect(screen.getByTestId("stNumberInputContainer")).toHaveClass("focused")
+    const input = screen.getByTestId("stNumberInputField")
+    await user.click(input)
+    expect(input).toHaveFocus()
 
     await user.tab()
-    expect(screen.getByTestId("stNumberInputContainer")).not.toHaveClass(
-      "focused"
-    )
+    expect(input).not.toHaveFocus()
   })
 
   it("commits typed value when input loses focus (blur)", async () => {
@@ -208,15 +208,6 @@ describe("NumberInput widget", () => {
     render(<NumberInput {...props} />)
 
     expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
-  })
-
-  it("sets input mode to empty string", () => {
-    const props = getIntProps()
-    render(<NumberInput {...props} />)
-
-    const numberInput = screen.getByTestId("stNumberInputField")
-
-    expect(numberInput).toHaveAttribute("inputmode", "")
   })
 
   it("sets input type to number", () => {
@@ -1448,6 +1439,180 @@ describe("NumberInput widget", () => {
       await user.click(stepDownButton) // 0.51
 
       expect(input).toHaveValue(0.51)
+    })
+  })
+
+  describe("disabled state", () => {
+    it("disables the input field when disabled prop is true", () => {
+      const props = { ...getIntProps(), disabled: true }
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInputField")).toBeDisabled()
+    })
+
+    it("disables step up button when disabled prop is true", () => {
+      const props = { ...getIntProps(), disabled: true }
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInputStepUp")).toBeDisabled()
+    })
+
+    it("disables step down button when disabled prop is true", () => {
+      const props = { ...getIntProps(), disabled: true }
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInputStepDown")).toBeDisabled()
+    })
+
+    it("does not render clear button when disabled even with no default", () => {
+      // clearable = isNullOrUndefined(default) && !disabled, so disabled prevents
+      // the clear button from rendering.
+      const props = { ...getProps({ default: null }), disabled: true }
+      render(<NumberInput {...props} />)
+
+      expect(
+        screen.queryByTestId("stNumberInputClearButton")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  describe("accessibility", () => {
+    it("applies aria-label from element.label to the input", () => {
+      const props = getIntProps()
+      render(<NumberInput {...props} />)
+
+      // React Aria's TextField propagates aria-label to the inner input element.
+      expect(screen.getByTestId("stNumberInputField")).toHaveAttribute(
+        "aria-label",
+        props.element.label
+      )
+    })
+
+    it("applies aria-label='Increment' to step up button", () => {
+      const props = getIntProps()
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInputStepUp")).toHaveAttribute(
+        "aria-label",
+        "Increment"
+      )
+    })
+
+    it("applies aria-label='Decrement' to step down button", () => {
+      const props = getIntProps()
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInputStepDown")).toHaveAttribute(
+        "aria-label",
+        "Decrement"
+      )
+    })
+  })
+
+  describe("clear button (clearable widget)", () => {
+    // clearable = true when element.default is null (no default set)
+    const getClearableProps = (
+      elementProps: Partial<NumberInputProto> = {}
+    ): Props =>
+      getProps({
+        dataType: NumberInputProto.DataType.INT,
+        default: null,
+        min: 0,
+        max: 100,
+        ...elementProps,
+      })
+
+    it("does not render clear button when default is set (not clearable)", () => {
+      const props = getIntProps({ default: 10 })
+      render(<NumberInput {...props} />)
+
+      expect(
+        screen.queryByTestId("stNumberInputClearButton")
+      ).not.toBeInTheDocument()
+    })
+
+    it("does not render clear button when clearable but input is empty", () => {
+      // With default=null and no value typed yet, formattedValue is null → no button.
+      const props = getClearableProps()
+      render(<NumberInput {...props} />)
+
+      expect(
+        screen.queryByTestId("stNumberInputClearButton")
+      ).not.toBeInTheDocument()
+    })
+
+    it("renders clear button when clearable and a value is present", async () => {
+      const user = userEvent.setup()
+      const props = getClearableProps()
+      render(<NumberInput {...props} />)
+
+      await user.type(screen.getByTestId("stNumberInputField"), "42")
+
+      expect(
+        screen.getByTestId("stNumberInputClearButton")
+      ).toBeInTheDocument()
+    })
+
+    it("clicking clear button commits null and hides the button", async () => {
+      const user = userEvent.setup()
+      const props = getClearableProps()
+      vi.spyOn(props.widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "42")
+      await user.keyboard("{enter}") // commit so the clear button shows on a non-dirty input
+
+      const clearButton = screen.getByTestId("stNumberInputClearButton")
+      await user.click(clearButton)
+
+      expect(input).toHaveDisplayValue("")
+      expect(
+        screen.queryByTestId("stNumberInputClearButton")
+      ).not.toBeInTheDocument()
+      expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+        props.element,
+        null,
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("pressing Escape when clearable clears the value", async () => {
+      const user = userEvent.setup()
+      const props = getClearableProps()
+      vi.spyOn(props.widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "42")
+      await user.keyboard("{enter}") // commit the value first
+
+      // Now press Escape to clear
+      await user.click(input)
+      await user.keyboard("{Escape}")
+
+      expect(input).toHaveDisplayValue("")
+      expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+        props.element,
+        null,
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("Escape does not clear when widget has a default (not clearable)", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ default: 10 })
+      vi.spyOn(props.widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.click(input)
+      await user.keyboard("{Escape}")
+
+      // Should remain at default value
+      expect(input).toHaveValue(10)
     })
   })
 })

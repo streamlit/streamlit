@@ -25,11 +25,16 @@ import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
+from streamlit.runtime.fragment import _check_not_parallel_worker
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
 from streamlit.runtime.scriptrunner import (
     RerunData,
     ScriptRunContext,
     get_script_run_ctx,
+)
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
 )
 
 if TYPE_CHECKING:
@@ -37,7 +42,7 @@ if TYPE_CHECKING:
 
 
 @gather_metrics("stop")
-def stop() -> NoReturn:  # type: ignore[misc]
+def stop() -> NoReturn:  # type: ignore[misc] # ty: ignore[invalid-return-type]
     """Stops execution immediately.
 
     Streamlit will not run any statements after `st.stop()`.
@@ -95,7 +100,9 @@ def _new_fragment_id_queue(
             "functions during fragment reruns."
         )
 
-    new_queue = list(dropwhile(lambda x: x != ctx.current_fragment_id, curr_queue))
+    new_queue = list(
+        dropwhile(lambda x: x != ThreadState.get().fragment_id, curr_queue)
+    )
     if not new_queue:  # pragma: no cover - defensive
         raise RuntimeError(
             "Could not find current_fragment_id in fragment_id_queue. This should never happen."
@@ -193,17 +200,31 @@ def switch_page(  # type: ignore[misc]
     """Programmatically switch the current page in a multipage app.
 
     When ``st.switch_page`` is called, the current page execution stops and
-    the specified page runs as if the user clicked on it in the sidebar
-    navigation. The specified page must be recognized by Streamlit's multipage
-    architecture (your main Python file or a Python file in a ``pages/``
-    folder). Arbitrary Python scripts cannot be passed to ``st.switch_page``.
+    the specified page runs as if the user clicked on it in the navigation
+    menu. The specified page must be recognized by Streamlit's multipage
+    architecture. Arbitrary Python scripts and URLs can't be passed to
+    ``st.switch_page``.
 
     Parameters
     ----------
-    page : str, Path, or st.Page
-        The file path (relative to the main script) or an st.Page indicating
-        the page to switch to. External URL pages are not supported, including
-        hidden external pages.
+    page : str, Path, or StreamlitPage
+        The page to switch to. This can be one of the following values:
+
+        - Path to a Python file: The path can be a string or ``pathlib.Path``
+          object. It can be absolute or relative to the entrypoint file. The
+          Python file must be the source of a page in ``st.navigation``.
+
+          If you are using the ``pages/`` directory instead of
+          ``st.navigation``, the Python file must be your entrypoint file or
+          a file in the ``pages/`` directory.
+
+        - ``StreamlitPage``: The source of the ``StreamlitPage`` and its
+          ``url_path`` must match a page defined in ``st.navigation``. The
+          ``StreamlitPage`` must be internal and can't be defined by a URL.
+          Use ``st.Page`` to create a ``StreamlitPage`` object.
+
+        To switch to a page defined by a ``callable``, you must use a
+        ``StreamlitPage`` object.
 
     query_params : dict, list of tuples, or None
         Query parameters to apply when navigating to the target page.
@@ -266,6 +287,7 @@ def switch_page(  # type: ignore[misc]
         height: 350px
 
     """
+    _check_not_parallel_worker("st.switch_page")
 
     ctx = get_script_run_ctx()
 
@@ -306,11 +328,12 @@ def switch_page(  # type: ignore[misc]
     # Reset query params (with exception of embed) and optionally apply overrides.
     with ctx.session_state.query_params() as qp:
         _set_query_params_for_switch(qp, query_params)
-        # Additional safeguard to ensure the query params
-        #  are sent out to the frontend before the new rerun might clear
-        # outstanding messages. This uses the same time that is used as waiting
-        # in our event loop.
-        time.sleep(0.01)
+
+    # Safeguard: sleep longer than the flush interval to ensure at least one
+    # complete flush cycle delivers the query params before the rerun clears
+    # outstanding messages. Sleep is placed after the with block to release
+    # the session state lock first.
+    time.sleep(2 * MESSAGE_FLUSH_INTERVAL_SECS)
 
     ctx.script_requests.request_rerun(
         RerunData(

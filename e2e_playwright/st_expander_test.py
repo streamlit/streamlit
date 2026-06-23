@@ -12,16 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 from typing import Final
 
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_button,
+    click_toggle,
+    get_element_by_key,
+    get_expander,
+)
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
-NUMBER_OF_EXPANDERS: Final = 21
+NUMBER_OF_EXPANDERS: Final = 27
 
 
 def test_expander_displays_correctly(
@@ -46,7 +53,10 @@ def test_expander_displays_correctly(
     assert_snapshot(expander_elements.nth(9), name="st_expander-nested")
     assert_snapshot(expander_elements.nth(11), name="st_expander-fixed_width")
     assert_snapshot(expander_elements.nth(12), name="st_expander-stretch_width")
-    assert_snapshot(expander_elements.nth(14), name="st_expander-with_code_block")
+    assert_snapshot(expander_elements.nth(14), name="st_expander-compact_collapsed")
+    assert_snapshot(expander_elements.nth(15), name="st_expander-compact_expanded")
+    assert_snapshot(expander_elements.nth(16), name="st_expander-compact_with_icon")
+    assert_snapshot(expander_elements.nth(17), name="st_expander-with_code_block")
 
 
 def test_expander_collapses_and_expands(app: Page):
@@ -331,6 +341,42 @@ def test_expander_ignore_mode_does_not_trigger_rerun(app: Page):
     expect(rerun_text).to_have_text(initial_count or "")
 
 
+def test_compact_expander_collapses_and_expands(app: Page):
+    """Test that a compact expander collapses and expands."""
+    # Compact expanded starts open
+    compact_expanded = get_expander(app, "Compact expanded")
+    expect(
+        compact_expanded.get_by_text("Compact content with no border")
+    ).to_be_visible()
+
+    # Click to collapse
+    compact_expanded.locator(EXPANDER_HEADER_IDENTIFIER).click()
+    expect(
+        compact_expanded.get_by_text("Compact content with no border")
+    ).not_to_be_visible()
+
+    # Click to expand again
+    compact_expanded.locator(EXPANDER_HEADER_IDENTIFIER).click()
+    expect(
+        compact_expanded.get_by_text("Compact content with no border")
+    ).to_be_visible()
+
+
+def test_compact_expander_hover_states(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that compact expander hover states render correctly via snapshots."""
+    # Test hover on compact collapsed expander
+    compact_expander = get_expander(themed_app, "Compact collapsed")
+    compact_expander.locator("summary").hover()
+    assert_snapshot(compact_expander, name="st_expander-compact_collapsed_hover")
+
+    # Test hover on compact expanded expander
+    compact_expanded = get_expander(themed_app, "Compact expanded")
+    compact_expanded.locator("summary").hover()
+    assert_snapshot(compact_expanded, name="st_expander-compact_expanded_hover")
+
+
 def test_expander_callback_fires_on_toggle(app: Page):
     """Test that a callback fires when the expander is toggled."""
     # Initially callback count is 0
@@ -368,3 +414,69 @@ def test_expander_callback_with_args_kwargs(app: Page):
 
     # Callback should have received args and kwargs
     expect(app.get_by_text("Callback args result: hello-toggled-world")).to_be_visible()
+
+
+def test_keyed_expander_css_key_class(app: Page):
+    """Keyed expander should have the st-key-* CSS class on the outermost element."""
+    keyed_expander = get_element_by_key(app, "persist_expander")
+    expect(keyed_expander).to_have_class(re.compile(r"st-key-persist_expander"))
+
+
+def test_keyed_expander_persist_expanded_across_remount(app: Page):
+    """Toggling a conditional element above a keyed expander shifts the delta path,
+    but the expanded state should be preserved via elementStates.
+    """
+    keyed_expander = get_element_by_key(app, "persist_expander")
+
+    # Initially collapsed — expand it
+    keyed_expander.locator("summary").click()
+    expect(keyed_expander.get_by_text("Persist expander content")).to_be_visible()
+
+    # Toggle the conditional element above — causes a rerun and delta path shift
+    click_toggle(app, "Show extra text above expander")
+    expect(app.get_by_text("Extra text inserted above expander")).to_be_visible()
+
+    # The keyed expander should still be expanded
+    keyed_expander = get_element_by_key(app, "persist_expander")
+    expect(keyed_expander.get_by_text("Persist expander content")).to_be_visible()
+
+    # Toggle back — another rerun and delta path shift
+    click_toggle(app, "Show extra text above expander")
+    expect(app.get_by_text("Extra text inserted above expander")).not_to_be_visible()
+
+    # Still expanded
+    keyed_expander = get_element_by_key(app, "persist_expander")
+    expect(keyed_expander.get_by_text("Persist expander content")).to_be_visible()
+
+
+def test_programmatic_close_does_not_reopen_other_expander(app: Page):
+    """Test that programmatically closing one expander does not cause it to
+    reopen when another stateful expander is interacted with.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/14943
+    """
+    exp_a = get_element_by_key(app, "multi_exp_a")
+    exp_b = get_element_by_key(app, "multi_exp_b")
+
+    # Open expander A
+    exp_a.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Verify expander A is open
+    expect(exp_a.get_by_text("Expander A content")).to_be_visible()
+
+    # Programmatically close it via the button inside
+    click_button(app, "Close A")
+
+    # Expander A should be closed
+    expect(exp_a.get_by_text("Expander A content")).not_to_be_visible()
+
+    # Open expander B
+    exp_b.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Expander B should be open
+    expect(exp_b.get_by_text("Expander B content")).to_be_visible()
+
+    # Expander A must NOT have reopened (the bug from #14943)
+    expect(exp_a.get_by_text("Expander A content")).not_to_be_visible()

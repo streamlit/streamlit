@@ -54,11 +54,11 @@ at. Ut et dui molestie, iaculis magna sed.
 """
     )
 
-with st.chat_message("dog", avatar="https://static.streamlit.io/examples/dog.jpg"):
+with st.chat_message("dog", avatar="/app/static/dog.jpg"):
     st.write("Woof woof! I'm a dog and I like charts:")
     st.line_chart(df, width="stretch")
 
-cat = st.chat_message("cat", avatar="https://static.streamlit.io/examples/cat.jpg")
+cat = st.chat_message("cat", avatar="/app/static/cat.jpg")
 cat.write("I'm a cat and I like this dataset:")
 cat.dataframe(df, width="stretch")
 cat.text_input("What's your name?")
@@ -80,10 +80,13 @@ st.chat_message("assistant", avatar=image2).write(
     "Another message with the same blue avatar."
 )
 
-# Test avatar using local image
-CAT_IMAGE_PATH = STATIC_DIR / "test-cat.jpg"
-st.chat_message("user", avatar=str(CAT_IMAGE_PATH)).write("Cat avatar using str path")
-st.chat_message("user", avatar=CAT_IMAGE_PATH).write("Cat avatar using Path")
+# Test avatar using local image file path (use solid color PNG to avoid
+# JPEG compression rendering differences across browsers, especially webkit)
+AVATAR_IMAGE_PATH = STATIC_DIR / "test-avatar-solid.png"
+st.chat_message("user", avatar=str(AVATAR_IMAGE_PATH)).write(
+    "Custom avatar using str path"
+)
+st.chat_message("user", avatar=AVATAR_IMAGE_PATH).write("Custom avatar using Path")
 
 with st.chat_message("user", avatar=":material/airline_seat_recline_extra:"):
     st.write("Hello from USER, non-emoji icon.")

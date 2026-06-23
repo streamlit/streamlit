@@ -44,9 +44,7 @@ def test_persists_widget_state_across_reruns(app: Page):
     click_button(app, "Step 2: Press me")
 
     expect(app.locator("h2").first).to_have_text("Pressed!")
-    expect(get_checkbox(app, "Step 1: Check me").locator("input")).to_have_attribute(
-        "aria-checked", "true"
-    )
+    expect(get_checkbox(app, "Step 1: Check me").locator("input")).to_be_checked()
 
 
 def test_renders_container_with_border(
@@ -200,3 +198,24 @@ def test_containers_in_columns(app: Page, assert_snapshot: ImageCompareFunction)
     columns_container = app.get_by_test_id("stHorizontalBlock").last
     columns_container.scroll_into_view_if_needed()
     assert_snapshot(columns_container, name="st_container-columns")
+
+
+def test_autoscroll_parameter(app: Page):
+    """Test that the autoscroll parameter correctly controls scroll-to-bottom behavior."""
+    # Test autoscroll=True enables scroll-to-bottom without chat messages
+    container_with_autoscroll = get_element_by_key(
+        app, "container_with_autoscroll_true"
+    )
+    expect(container_with_autoscroll).to_have_css("overflow", "auto")
+    expect(container_with_autoscroll).to_have_attribute(
+        "data-test-scroll-behavior", "scroll-to-bottom"
+    )
+
+    # Test autoscroll=False disables scroll-to-bottom even with chat messages
+    container_without_autoscroll = get_element_by_key(
+        app, "container_with_autoscroll_false_and_chat"
+    )
+    expect(container_without_autoscroll).to_have_css("overflow", "auto")
+    expect(container_without_autoscroll).to_have_attribute(
+        "data-test-scroll-behavior", "normal"
+    )

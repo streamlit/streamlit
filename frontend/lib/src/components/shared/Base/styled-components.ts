@@ -80,8 +80,7 @@ export const getPopoverContainerStyle = (
  * @see TimeInput
  * @see TextInput
  * @see TextArea
- * Note: NumberInput exhibits same styling but doesn't directly use this function -
- * border color is handled in StyledInputContainer instead of the baseweb overrides.
+ * @see NumberInput
  */
 export const getBorderColor = (
   colors: EmotionThemeColors,

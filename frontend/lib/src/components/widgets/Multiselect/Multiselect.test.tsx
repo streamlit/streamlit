@@ -20,6 +20,7 @@ import { userEvent } from "@testing-library/user-event"
 import {
   LabelVisibility as LabelVisibilityProto,
   MultiSelect as MultiSelectProto,
+  streamlit,
 } from "@streamlit/protobuf"
 
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
@@ -534,6 +535,44 @@ describe("Multiselect widget", () => {
     expect(dataOptions[2]).toHaveTextContent("aA")
   })
 
+  it("uses filterMode=contains for match filtering and bulk selection labels", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "grape", "banana"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS,
+    })
+    render(<Multiselect {...props} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    await user.type(selectboxInput, "AP")
+
+    const options = screen.queryAllByRole("option")
+    expect(options).toHaveLength(3)
+    expect(options[0]).toHaveTextContent("Select 2 matches")
+    expect(options[1]).toHaveTextContent("apple")
+    expect(options[2]).toHaveTextContent("grape")
+  })
+
+  it("keeps all options visible and the input readonly when filterMode is none", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["yes", "no", "maybe"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
+    })
+    render(<Multiselect {...props} />)
+    const input = screen.getByRole("combobox")
+
+    expect(input).toHaveAttribute("readonly")
+
+    await user.click(input)
+    expect(screen.queryAllByRole("option")).toHaveLength(4)
+
+    await user.type(input, "no")
+    expect(screen.queryAllByRole("option")).toHaveLength(4)
+  })
+
   describe("scroll position preservation", () => {
     it("preserves scroll position when removing an item", async () => {
       const user = userEvent.setup()
@@ -893,6 +932,49 @@ describe("Multiselect widget", () => {
       // Should show "Select all" again
       expect(screen.getByText("Select all")).toBeInTheDocument()
       expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
+    })
+
+    it("does not show Select all when there are >= 1000 options", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 1000 }, (_, i) => `option_${i}`)
+      const props = getProps({ default: [], options })
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+      // Options should still be visible
+      expect(screen.getByText("option_0")).toBeVisible()
+    })
+
+    it("does not show Select X matches when there are >= 1000 options", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 1000 }, (_, i) => `option_${i}`)
+      const props = getProps({ default: [], options })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.click(multiSelect)
+      // Search for options matching "option_1" (this will match option_1, option_10-19, option_100-199, etc.)
+      await user.type(multiSelect, "option_1")
+
+      // "Select X matches" should NOT be shown for >= 1000 total options
+      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
+      // But matching options should still be visible (use queryAllBy since multiple match)
+      expect(screen.queryAllByText(/option_1/).length).toBeGreaterThan(0)
+    })
+
+    it("shows Select all when there are less than 1000 options", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 999 }, (_, i) => `option_${i}`)
+      const props = getProps({ default: [], options })
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      expect(screen.getByText("Select all")).toBeVisible()
     })
   })
 })

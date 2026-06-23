@@ -44,7 +44,7 @@ from streamlit.runtime.state.session_state import (
     STREAMLIT_INTERNAL_KEY_PREFIX,
     _is_internal_key,
 )
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -311,7 +311,7 @@ class BidiComponentMixinTest(DeltaGeneratorTestCase):
         # Compute expected aggregator trigger id
         base_id = next(
             wid
-            for wid in ctx.widget_ids_this_run
+            for wid in ctx.widget_ids_this_run.snapshot()
             if wid.startswith("$$ID") and EVENT_DELIM not in wid
         )
         aggregator_id = _make_trigger_id(base_id, "events")
@@ -1274,7 +1274,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             proto=proto,
         )
 
-        assert identity["mixed_json"] == calc_md5("{}")
+        assert identity["mixed_json"] == calc_hash("{}")
         assert identity["mixed_arrow_blobs"] == "a,b"
 
     def test_identity_kwargs_json_canonicalizes_order(self):
@@ -1292,7 +1292,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
         )
 
         expected = json.dumps({"a": 1, "b": 2}, sort_keys=True)
-        assert identity["json"] == calc_md5(expected)
+        assert identity["json"] == calc_hash(expected)
 
     def test_identity_kwargs_mixed_json_canonicalizes_order(self):
         """MixedData identity must canonicalize JSON portion independently of storage order."""
@@ -1309,7 +1309,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
         )
 
         expected = json.dumps({"a": 1, "b": 2}, sort_keys=True)
-        assert identity["mixed_json"] == calc_md5(expected)
+        assert identity["mixed_json"] == calc_hash(expected)
 
     def test_identity_kwargs_bytes_use_digest(self):
         """Raw byte payloads should contribute content digests, not the full payload."""
@@ -1325,7 +1325,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             proto=proto,
         )
 
-        assert identity["bytes"] == calc_md5(b"bytes payload")
+        assert identity["bytes"] == calc_hash(b"bytes payload")
 
     def test_identity_kwargs_arrow_data_use_digest(self):
         """Arrow payloads should contribute digests to avoid hashing large blobs repeatedly."""
@@ -1341,7 +1341,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             proto=proto,
         )
 
-        assert identity["arrow_data"] == calc_md5(b"\x00\x01")
+        assert identity["arrow_data"] == calc_hash(b"\x00\x01")
 
     def test_unkeyed_id_stable_when_json_key_order_changes(self):
         """Without a user key, changing the insertion order of keys in a JSON dict should NOT change the backend id."""
@@ -1419,7 +1419,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
 
             # Verify the result is correct (sorted keys)
             expected_canonical = json.dumps(data, sort_keys=True)
-            assert identity["json"] == calc_md5(expected_canonical)
+            assert identity["json"] == calc_hash(expected_canonical)
 
             # Verify the slow path was skipped
             mock_digest.assert_not_called()
@@ -1440,10 +1440,45 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             )
 
             # Verify result is still correct
-            assert identity["json"] == calc_md5(expected_canonical)
+            assert identity["json"] == calc_hash(expected_canonical)
 
             # Verify the slow path WAS called
             mock_digest.assert_called_once()
+
+
+def test_canonicalize_json_returns_payload_when_empty() -> None:
+    """An empty payload is returned without parsing."""
+    mixin = BidiComponentMixin()
+    assert mixin._canonicalize_json_for_identity("") == ""
+
+
+def test_canonicalize_json_returns_payload_when_invalid_json() -> None:
+    """Invalid JSON payloads are returned as-is."""
+    mixin = BidiComponentMixin()
+    payload = "not-a-valid-json{"
+    assert mixin._canonicalize_json_for_identity(payload) == payload
+
+
+def test_canonicalize_json_returns_payload_when_unserializable() -> None:
+    """Payloads that parse but can't be re-serialized fall back to the original."""
+    mixin = BidiComponentMixin()
+    payload = '{"a": 1}'
+
+    with patch(
+        "streamlit.components.v2.bidi_component.main.json.dumps",
+        side_effect=TypeError("not serializable"),
+    ):
+        assert mixin._canonicalize_json_for_identity(payload) == payload
+
+
+def test_bidi_component_mixin_dg_returns_self() -> None:
+    """`BidiComponentMixin.dg` returns the mixin instance."""
+
+    class _OnlyBidi(BidiComponentMixin):
+        pass
+
+    bidi_mixin = _OnlyBidi()
+    assert bidi_mixin.dg is bidi_mixin
 
 
 class BidiComponentStateCallbackTest(DeltaGeneratorTestCase):
