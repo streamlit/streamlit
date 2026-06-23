@@ -1102,7 +1102,9 @@ class TestInstallProjectSkillsConflicts:
             result = runner.invoke(cli.main, ["skills", "--yes"])
 
         assert result.exit_code != 0
-        assert "No skills were installed due to conflicts" in result.output
+        # The error names the specific conflicting path, not a vague "conflicts".
+        assert ".agents/skills/developing-with-streamlit" in result.output
+        assert "already exist" in result.output
 
 
 class TestInstallProjectSkillsCancellation:
@@ -1460,7 +1462,9 @@ class TestGlobalInstallationConflicts:
             result = runner.invoke(cli.main, ["skills", "--global", "--yes"])
 
         assert result.exit_code != 0
-        assert "No skills were installed due to conflicts" in result.output
+        # The error names the specific conflicting path, not a vague "conflicts".
+        assert ".agents/skills/developing-with-streamlit" in result.output
+        assert "already exist" in result.output
 
 
 class TestInteractiveModeSelection:
@@ -1694,6 +1698,43 @@ class TestSummarizeInstall:
         assert skills.summarize_install(result) == (
             "Skills are already up to date. 2 skills skipped due to conflicts."
         )
+
+
+class TestConflictError:
+    """_conflict_error names the specific conflicting paths (the message the
+    in-app nudge shows verbatim), collapsed so it never leaks an absolute path.
+    """
+
+    def test_names_paths_collapsed_to_harness_tail(self) -> None:
+        """Absolute target paths collapse to the concise <harness>/skills/<skill>
+        tail, and multiple conflicts read as a plural list."""
+        err = skills._conflict_error(
+            [
+                (
+                    "/abs/tmp/proj/.agents/skills/developing-with-streamlit "
+                    "(existing file or directory)"
+                ),
+                (
+                    "/abs/tmp/proj/.claude/skills/developing-with-streamlit "
+                    "(existing file or directory)"
+                ),
+            ]
+        )
+        message = err.format_message()
+        assert "/abs/tmp/proj" not in message
+        assert ".agents/skills/developing-with-streamlit" in message
+        assert ".claude/skills/developing-with-streamlit" in message
+        assert "already exist." in message
+        assert "Remove them and try again." in message
+
+    def test_single_conflict_reads_singular(self) -> None:
+        """A lone conflict uses singular phrasing ("exists" / "it")."""
+        err = skills._conflict_error(
+            [".agents/skills/developing-with-streamlit (existing symlink)"]
+        )
+        message = err.format_message()
+        assert ".agents/skills/developing-with-streamlit already exists." in message
+        assert "Remove it and try again." in message
 
 
 class TestInstallSkillsReturnsResult:

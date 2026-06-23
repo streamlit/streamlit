@@ -37,7 +37,6 @@ import {
   StyledSkillsNudgeBody,
   StyledSkillsNudgeCard,
   StyledSkillsNudgeClose,
-  StyledSkillsNudgeError,
   StyledSkillsNudgeHeading,
   StyledSkillsNudgeLink,
 } from "./styled-components"
@@ -154,10 +153,20 @@ function SkillsNudgeToast({
       <StyledToastWrapper>
         <DynamicIcon
           iconValue={
-            isSuccess ? ":material/check_circle:" : ":material/auto_awesome:"
+            isSuccess
+              ? ":material/check_circle:"
+              : isError
+                ? ":material/error:"
+                : ":material/auto_awesome:"
           }
           size="lg"
-          color={isSuccess ? theme.colors.greenColor : theme.colors.primary}
+          color={
+            isSuccess
+              ? theme.colors.greenColor
+              : isError
+                ? theme.colors.redTextColor
+                : theme.colors.primary
+          }
         />
         <StyledMessageWrapper>
           {isSuccess ? (
@@ -170,18 +179,22 @@ function SkillsNudgeToast({
               )}
             </>
           ) : (
+            // Idle, installing, and error share one layout (heading + body +
+            // actions). Error is a distinct *follow-up* state — not the offer
+            // with an error wedged in: the pitch is replaced by the failure
+            // reason and the primary action becomes "Retry", mirroring how
+            // success replaces the whole card.
             <>
               <StyledSkillsNudgeHeading>
-                Help agents write better Streamlit
+                {isError
+                  ? "Couldn't install skills"
+                  : "Help agents write better Streamlit"}
               </StyledSkillsNudgeHeading>
               <StyledSkillsNudgeBody>
-                Install the official Streamlit skills so AI coding assistants
-                can build and debug your app.
+                {isError
+                  ? errorMessage
+                  : "Install the official Streamlit skills so AI coding assistants can build and debug your app."}
               </StyledSkillsNudgeBody>
-
-              {isError && (
-                <StyledSkillsNudgeError>{errorMessage}</StyledSkillsNudgeError>
-              )}
 
               <StyledSkillsNudgeActions>
                 <BaseButton
@@ -190,7 +203,11 @@ function SkillsNudgeToast({
                   onClick={handleInstall}
                   disabled={isInstalling}
                 >
-                  {isInstalling ? "Installing…" : "Install"}
+                  {isInstalling
+                    ? "Installing…"
+                    : isError
+                      ? "Retry"
+                      : "Install"}
                 </BaseButton>
                 <StyledSkillsNudgeLink
                   type="button"

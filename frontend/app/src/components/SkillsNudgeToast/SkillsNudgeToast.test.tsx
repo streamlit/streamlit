@@ -122,7 +122,7 @@ describe("SkillsNudgeToast", () => {
     expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
   })
 
-  it("shows an error and keeps the actions when the install fails", async () => {
+  it("shows a distinct failure state with a Retry action when the install fails", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const onInstall = vi.fn().mockRejectedValue(new Error("network down"))
     const onClose = vi.fn()
@@ -131,15 +131,48 @@ describe("SkillsNudgeToast", () => {
     await user.click(screen.getByRole("button", { name: "Install" }))
     await flush()
 
+    // Failure is its own follow-up state, not the offer with an error wedged
+    // in: the pitch is replaced by the failure heading + reason, and the
+    // primary action becomes Retry.
+    expect(screen.getByText("Couldn't install skills")).toBeVisible()
     expect(screen.getByText("network down")).toBeVisible()
-    // Actions remain so the user can retry; the card is not closed.
-    expect(screen.getByRole("button", { name: "Install" })).toBeVisible()
+    expect(
+      screen.queryByText("Help agents write better Streamlit")
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Retry" })).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Don't show again" })
+    ).toBeVisible()
     expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
     // An error must never auto-dismiss, even long after the failure.
     act(() => {
       vi.advanceTimersByTime(3000)
     })
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it("retries the install from the failure state and can then succeed", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const onInstall = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("network down"))
+      .mockResolvedValueOnce("Installed to .agents/skills")
+    renderNudge({ onInstall })
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flush()
+    expect(screen.getByRole("button", { name: "Retry" })).toBeVisible()
+
+    // Retry re-runs the install; a subsequent success replaces the failure.
+    await user.click(screen.getByRole("button", { name: "Retry" }))
+    await flush()
+
+    expect(onInstall).toHaveBeenCalledTimes(2)
+    expect(screen.getByText("Skills installed")).toBeVisible()
+    expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
+    expect(
+      screen.queryByText("Couldn't install skills")
+    ).not.toBeInTheDocument()
   })
 
   it("snoozes and closes when the user clicks the dismiss (✕) control", async () => {

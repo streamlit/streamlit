@@ -574,6 +574,31 @@ def _confirm_global_installation(target_dirs: list[Path]) -> bool:
     return click.confirm("Proceed with installation?", default=True)
 
 
+def _conflict_error(skipped: list[str]) -> click.ClickException:
+    """Build a specific "couldn't install" error that names the conflicting
+    paths, rather than a vague "remove conflicting files".
+
+    ``skipped`` entries are formatted ``"<path> (<reason>)"``. We surface the
+    paths so the user knows exactly what to remove, collapsed to the concise
+    ``<harness>/skills/<skill>`` tail (like the install summary) so the message
+    never leaks an absolute path when the server's cwd isn't the project root.
+    This message is what the in-app nudge shows verbatim on failure, so it must
+    stand on its own (the CLI's detailed ``_print_result`` output never reaches
+    the browser).
+    """
+    paths = []
+    for entry in skipped:
+        raw = entry.split(" (", 1)[0]
+        parts = Path(raw).parts
+        paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
+    joined = ", ".join(paths)
+    plural = len(paths) != 1
+    return click.ClickException(
+        f"{joined} already exist{'' if plural else 's'}. "
+        f"Remove {'them' if plural else 'it'} and try again."
+    )
+
+
 def _install_project_skills(
     *,
     yes: bool = False,
@@ -696,10 +721,7 @@ def _install_project_skills(
         for line in gitignore_snippet.splitlines():
             click.secho(f"  {line}", fg="bright_black")
     elif result.skipped:
-        raise click.ClickException(
-            "No skills were installed due to conflicts. "
-            "Remove conflicting files and try again."
-        )
+        raise _conflict_error(result.skipped)
 
     return result
 
@@ -753,10 +775,7 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
                     fg="bright_black",
                 )
         elif result.skipped:
-            raise click.ClickException(
-                "No skills were installed due to conflicts. "
-                "Remove conflicting files and try again."
-            )
+            raise _conflict_error(result.skipped)
 
         return result
     finally:

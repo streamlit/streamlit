@@ -7085,8 +7085,8 @@ describe("Skills install nudge", () => {
     await flushInstall()
 
     expect(screen.getByText("install blew up")).toBeVisible()
-    // The actions remain so the user can retry; no success confirmation shows.
-    expect(screen.getByRole("button", { name: "Install" })).toBeVisible()
+    // Failure is a distinct retry state; no success confirmation shows.
+    expect(screen.getByRole("button", { name: "Retry" })).toBeVisible()
     expect(screen.queryByText("Skills installed")).not.toBeInTheDocument()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallFailed",

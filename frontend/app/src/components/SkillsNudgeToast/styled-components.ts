@@ -93,10 +93,6 @@ export const StyledSkillsNudgeBody = styled.div(({ theme }) => ({
   color: theme.colors.fadedText60,
 }))
 
-export const StyledSkillsNudgeError = styled.div(({ theme }) => ({
-  color: theme.colors.redTextColor,
-}))
-
 export const StyledSkillsNudgeActions = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
