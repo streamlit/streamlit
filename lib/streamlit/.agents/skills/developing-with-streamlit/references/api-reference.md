@@ -106,13 +106,13 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.pydeck_chart` | Draw a chart using the PyDeck library. Use it for deck.gl-powered maps and geospatial visualizations. |
 | `st.pyplot` | Display a matplotlib.pyplot figure. Use it for existing Matplotlib visualizations or libraries that produce Matplotlib figures. |
 | `st.radio` | Display a radio button widget. Use it when users should choose exactly one option from a small visible set. |
-| `st.rerun` | Rerun the script immediately. Use it to force a rerun after state changes or navigation-like actions. |
+| `st.rerun` | Rerun the app or current fragment immediately. Use it to force a rerun after state changes or navigation-like actions. |
 | `st.scatter_chart` | Display a scatterplot chart. Use it for relationships between numeric variables, optionally with size and color encodings. |
 | `st.segmented_control` | Display a segmented control widget. Use it for compact mutually exclusive choices, especially mode or view switching. |
 | `st.select_slider` | Display a slider widget to select items from a list. Use it when options are ordered but not necessarily numeric. |
 | `st.selectbox` | Display a select widget. Use it for selecting one item from a medium or large set. |
 | `st.set_option` | Set a configuration option. Use sparingly because not all options are safe or meaningful to change after startup. |
-| `st.set_page_config` | Configure the default settings of the page. Can be called multiple times in a run; calls are additive and override only the parameters you specify. |
+| `st.set_page_config` | Configure the default settings of the page. Prefer calling it near the top of the script; repeated calls are additive and override only the parameters you specify. |
 | `st.slider` | Display a slider widget. Use it for numeric ranges, dates, times, or other ordered values. |
 | `st.snow` | Draw celebratory snowfall. Use sparingly for lightweight success or celebration effects. |
 | `st.space` | Add vertical or horizontal space. Use it for small layout adjustments instead of empty Markdown strings. |
@@ -122,9 +122,9 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.subheader` | Display text in subheader formatting. Use it for subsections under headers. |
 | `st.success` | Display a success message. Use it for completed actions or positive status. |
 | `st.switch_page` | Programmatically switch the current page in a multipage app. Use it for navigation triggered by app logic. |
-| `st.table` | Display a static table. Use it when users do not need sorting, selection, resizing, or other interactive dataframe behavior. |
+| `st.table` | Display data in a static table. Use it for small, styled tables such as key-value summaries, confusion matrices, or leaderboards, including cells with supported Markdown, when users do not need interactive exploration. |
 | `st.tabs` | Insert containers separated into tabs. Use tabs to switch between related views while rendering all tab content in the same run. |
-| `st.text` | Write text without Markdown or HTML parsing. Use it for literal output. |
+| `st.text` | Write text without Markdown or HTML parsing. Use it for unformatted output. |
 | `st.text_area` | Display a multi-line text input widget. Use it for comments, prompts, notes, and longer free-form input. |
 | `st.text_input` | Display a single-line text input widget. Use it for short free-form input such as names, filters, IDs, or search text. |
 | `st.time_input` | Display a time input widget. Use it when users need to choose a time of day. |
