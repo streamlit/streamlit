@@ -844,7 +844,9 @@ class TimeWidgetsMixin:
             on the same page, but is cleared when the user switches pages. If
             this is ``"session"``, the value is preserved for the entire
             session, including across page switches. This requires ``key`` to
-            be set.
+            be set. If ``bind="query-params"`` is also set, the binding takes
+            precedence: the value is stored in the URL, so it persists across
+            page switches regardless of the ``persist_state`` scope.
 
         Returns
         -------
@@ -1225,7 +1227,9 @@ class TimeWidgetsMixin:
             on the same page, but is cleared when the user switches pages. If
             this is ``"session"``, the value is preserved for the entire
             session, including across page switches. This requires ``key`` to
-            be set.
+            be set. If ``bind="query-params"`` is also set, the binding takes
+            precedence: the value is stored in the URL, so it persists across
+            page switches regardless of the ``persist_state`` scope.
 
         Returns
         -------
@@ -1700,7 +1704,9 @@ class TimeWidgetsMixin:
             on the same page, but is cleared when the user switches pages. If
             this is ``"session"``, the value is preserved for the entire
             session, including across page switches. This requires ``key`` to
-            be set.
+            be set. If ``bind="query-params"`` is also set, the binding takes
+            precedence: the value is stored in the URL, so it persists across
+            page switches regardless of the ``persist_state`` scope.
 
         Returns
         -------

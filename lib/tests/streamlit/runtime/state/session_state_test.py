@@ -2404,6 +2404,46 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
 
         assert self.session_state._old_state["my_widget"] == "custom_value"
 
+    def test_bind_takes_precedence_over_persist_state_page_on_page_switch(
+        self,
+    ) -> None:
+        """bind="query-params" wins over persist_state="page" on a page switch.
+
+        The two options are contradictory on page switch (binding stores the
+        value in the URL, which is global; "page" scope wants it dropped). By
+        design binding wins, so the URL value is restored on the new page
+        instead of being dropped.
+        """
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(
+            widget_id, "page", bind="query-params"
+        )
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(set())
+
+        # Binding keeps the value in the URL across the page switch, so it is
+        # present in the initial query params seen on the destination page.
+        self.session_state.query_params.set_initial_query_params(
+            "my_widget=custom_value"
+        )
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_2_hash"),
+        ):
+            result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+
 
 class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
     """Tests for URL sync in register_widget for bound widgets."""

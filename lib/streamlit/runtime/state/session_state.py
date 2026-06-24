@@ -1146,6 +1146,10 @@ class SessionState:
             self.query_params.unbind_and_clear_param(widget_id)
 
         # Track persist_state registrations (server-side only, no URL involved).
+        # When a widget also sets bind="query-params", the URL value seeded
+        # above into _new_session_state intentionally takes precedence: a
+        # "page"-scoped drop below cannot remove a URL-backed value, so a bound
+        # widget keeps its value across page switches regardless of scope.
         dropped_page_scoped_value = False
         if metadata.persist_state is not None and user_key is not None:
             self._persisted_widget_ids[widget_id] = metadata.persist_state
