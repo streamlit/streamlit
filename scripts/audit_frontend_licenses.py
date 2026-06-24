@@ -107,6 +107,12 @@ PACKAGE_EXCEPTIONS: set[PackageInfo] = {
         "splaytree-ts@npm:1.0.2",
         "BDS-3-Clause",
     ),
+    (
+        # MIT license: https://github.com/fabiospampinato/khroma/blob/master/license
+        # (npm metadata incorrectly shows "Proprietary")
+        "khroma@npm:2.1.0",
+        "UNKNOWN",
+    ),
 }
 
 

@@ -287,6 +287,17 @@ export const BlockNodeRenderer = (
     notNullOrUndefined(node.deltaBlock.dialog) ||
     notNullOrUndefined(node.deltaBlock.popover)
 
+  // Transparent blocks group elements in the backend tree without adding DOM.
+  // Children render directly in the parent's flex context.
+  if (node.deltaBlock.transparent) {
+    return (
+      <ChildRenderer
+        {...childProps}
+        disableFullscreenMode={disableFullscreenMode}
+      />
+    )
+  }
+
   let containerElement: ReactElement | undefined
   // Whether the CSS key class (st-key-*) is applied on StyledLayoutWrapper.
   // Gating this per container so we can analyze each one to confirm that

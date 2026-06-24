@@ -225,6 +225,7 @@ link_button = _main.link_button
 map = _main.map
 markdown = _main.markdown
 menu_button = _main.menu_button
+mermaid_chart = _main.mermaid_chart
 metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input

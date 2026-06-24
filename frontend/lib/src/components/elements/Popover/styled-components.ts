@@ -15,12 +15,11 @@
  */
 
 import styled from "@emotion/styled"
-import { Popover as RAPopover } from "react-aria-components"
 
 import { getOverlayZIndex } from "~lib/components/shared/Base/styled-components"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
-export const StyledPopoverBody = styled(RAPopover)<{
+export const StyledPopoverBody = styled.div<{
   $stretchWidth?: boolean
   $calculatedWidth?: number
 }>(({ theme, $stretchWidth, $calculatedWidth = 0 }) => {

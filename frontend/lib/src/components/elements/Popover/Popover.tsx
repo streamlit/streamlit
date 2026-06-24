@@ -23,6 +23,8 @@ import {
   useState,
 } from "react"
 
+import { FloatingPortal } from "@floating-ui/react"
+
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
@@ -40,6 +42,7 @@ import {
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -49,10 +52,6 @@ import {
   StyledPopoverExpansionIcon,
   StyledPopoverLabelContainer,
 } from "./styled-components"
-
-// Passed to RAC Popover to disable its internal close-on-interact-outside
-// paths. All dismissal is handled by our own capture-phase useEffect instead.
-const NEVER_CLOSE = (): boolean => false
 
 export interface PopoverProps {
   element: BlockProto.Popover
@@ -179,19 +178,22 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // outside BaseButtonTooltip is always rendered once and correctly positioned.
   const triggerRef = useRef<HTMLDivElement>(null)
 
-  const popoverBodyRef = useRef<HTMLElement>(null)
+  const popoverBodyRef = useRef<HTMLDivElement>(null)
+
+  // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
+  // fully replaced with FloatingPortal here because Popover has no collection
+  // system dependency — it renders arbitrary children, not ComboBox items.
+  const { refs, floatingStyles } = useFloatingOverlay({
+    open,
+    placement: "bottom-start",
+    offsetPx: convertRemToPx(theme.spacing.twoXS),
+  })
 
   // Custom dismissal via document-level DOM listeners.
   //
-  // isNonModal disables React Aria's ariaHideOutside, which would otherwise
-  // mark every element outside the popover as `inert`. In webkit (Safari),
-  // `inert` fully prevents pointer events, making it impossible to click
-  // anything on the page while the popover is open. But isNonModal also
-  // disables React Aria's built-in dismiss handlers, so we implement
-  // outside-click and Escape dismissal ourselves.
-  //
-  // We also pass shouldCloseOnInteractOutside={NEVER_CLOSE} to disable any
-  // remaining RAC close-on-blur/interact-outside paths that could conflict.
+  // The popover is portalled to document.body and uses isNonModal-style
+  // rendering (no ariaHideOutside), so we implement outside-click and Escape
+  // dismissal ourselves.
   //
   // We use `click` (not `pointerdown`) so that a focused input inside the
   // popover fires its blur/change handlers before we close, ensuring its
@@ -242,9 +244,30 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
   }, [open, handleClose])
 
+  // Merge the floating ref with our local popoverBodyRef for dismissal logic.
+  const setFloatingRef = useCallback(
+    (node: HTMLDivElement | null): void => {
+      refs.setFloating(node)
+      ;(
+        popoverBodyRef as React.MutableRefObject<HTMLDivElement | null>
+      ).current = node
+    },
+    [refs]
+  )
+
+  // Merge the reference ref with our local triggerRef for dismissal logic.
+  const setReferenceRef = useCallback(
+    (node: HTMLDivElement | null): void => {
+      refs.setReference(node)
+      ;(triggerRef as React.MutableRefObject<HTMLDivElement | null>).current =
+        node
+    },
+    [refs]
+  )
+
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
-      <div ref={triggerRef}>
+      <div ref={setReferenceRef}>
         <BaseButtonTooltip help={element.help} containerWidth={true}>
           <BaseButton
             data-testid="stPopoverButton"
@@ -274,21 +297,21 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           </BaseButton>
         </BaseButtonTooltip>
       </div>
-      <StyledPopoverBody
-        ref={popoverBodyRef}
-        data-testid="stPopoverBody"
-        isOpen={open}
-        triggerRef={triggerRef}
-        placement="bottom left"
-        offset={convertRemToPx(theme.spacing.twoXS)}
-        containerPadding={convertRemToPx(theme.spacing.lg)}
-        isNonModal
-        shouldCloseOnInteractOutside={NEVER_CLOSE}
-        $stretchWidth={stretchWidth}
-        $calculatedWidth={calculatedWidth}
-      >
-        {children}
-      </StyledPopoverBody>
+      {open && (
+        <FloatingPortal>
+          <StyledPopoverBody
+            ref={setFloatingRef}
+            data-testid="stPopoverBody"
+            role="dialog"
+            aria-label={element.label}
+            style={floatingStyles}
+            $stretchWidth={stretchWidth}
+            $calculatedWidth={calculatedWidth}
+          >
+            {children}
+          </StyledPopoverBody>
+        </FloatingPortal>
+      )}
     </Box>
   )
 }
