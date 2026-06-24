@@ -39,7 +39,10 @@ from streamlit.errors import StreamlitAPIException, UnserializableSessionStateEr
 from streamlit.logger import get_logger
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
+    get_script_run_ctx,
+)
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
@@ -115,14 +118,14 @@ def _sanitize_url_array(
     return result if result != parsed else None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Serialized:
     """A widget value that's serialized to a protobuf. Immutable."""
 
     value: WidgetStateProto
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Value:
     """A widget value that's not serialized. Immutable."""
 
@@ -132,7 +135,7 @@ class Value:
 WState: TypeAlias = Value | Serialized
 
 
-@dataclass
+@dataclass(slots=True)
 class WStates(MutableMapping[str, Any]):
     """A mapping of widget IDs to values. Widget values can be stored in
     serialized or deserialized form, but when values are retrieved from the
@@ -334,9 +337,8 @@ class WStates(MutableMapping[str, Any]):
 
         ctx = get_script_run_ctx()
         if ctx and metadata.fragment_id is not None:
-            ctx.in_fragment_callback = True
-            callback(*args, **kwargs)
-            ctx.in_fragment_callback = False
+            with ThreadState.scoped(in_fragment_callback=True):
+                callback(*args, **kwargs)
         else:
             callback(*args, **kwargs)
 
@@ -348,7 +350,7 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class KeyIdMapper:
     """A mapping of user-provided keys to element IDs.
     It also maps element IDs to user-provided keys so that this reverse mapping
@@ -398,7 +400,7 @@ class KeyIdMapper:
         del self._id_key_mapping[widget_id]
 
 
-@dataclass
+@dataclass(slots=True)
 class SessionState:
     """SessionState allows users to store values that persist between app
     reruns.
@@ -599,8 +601,8 @@ class SessionState:
 
         if ctx is not None:
             widget_id = self._key_id_mapper.get_id_from_key(user_key, None)
-            widget_ids = ctx.widget_ids_this_run
-            form_ids = ctx.form_ids_this_run
+            widget_ids = ctx.shared.widget_ids_this_run
+            form_ids = ctx.shared.form_ids_this_run
 
             if widget_id in widget_ids or user_key in form_ids:
                 raise StreamlitAPIException(
@@ -717,15 +719,13 @@ class SessionState:
 
         ctx = get_script_run_ctx()
         if ctx and cb_metadata.fragment_id is not None:
-            ctx.in_fragment_callback = True
-            try:
-                callback_fn(*cb_args, **cb_kwargs)
-            except RerunException:
-                get_dg_singleton_instance().main_dg.warning(
-                    "Calling st.rerun() within a callback is a no-op."
-                )
-            finally:
-                ctx.in_fragment_callback = False
+            with ThreadState.scoped(in_fragment_callback=True):
+                try:
+                    callback_fn(*cb_args, **cb_kwargs)
+                except RerunException:
+                    get_dg_singleton_instance().main_dg.warning(
+                        "Calling st.rerun() within a callback is a no-op."
+                    )
         else:
             try:
                 callback_fn(*cb_args, **cb_kwargs)
@@ -1124,7 +1124,7 @@ class SessionState:
         """
         # Register the widget binding
         ctx = get_script_run_ctx()
-        script_hash = ctx.active_script_hash if ctx is not None else ""
+        script_hash = ThreadState.get().active_script_hash if ctx is not None else ""
         self.query_params.bind_widget(
             param_key=user_key,
             widget_id=widget_id,
@@ -1281,10 +1281,16 @@ class SessionState:
     def get_stats(
         self, _family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
-        # Lazy-load vendored package to prevent import of numpy
-        from streamlit.vendor.pympler.asizeof import asizeof
+        if config.get_option("server.enableExpensiveMemoryStats"):
+            from streamlit.runtime.stats import safe_sizeof
 
-        stat = CacheStat("st_session_state", "", asizeof(self))
+            byte_length = safe_sizeof(self)
+        else:
+            # Use a cheap item-count proxy instead of traversing the session
+            # state values, which can be very expensive.
+            byte_length = len(self)
+
+        stat = CacheStat("st_session_state", "", byte_length)
         # In general, get_stats methods need to be able to return only requested stat
         # families, but this method only returns a single family, and we're guaranteed
         # that it was one of those requested if we make it here.

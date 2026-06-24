@@ -391,3 +391,101 @@ def test_asset_roots_only_committed_after_success(file_watcher, tmp_path: Path):
     assert file_watcher._watched_directories == {}
     # Roots should not be committed on failure
     assert file_watcher._asset_watch_roots == {}
+
+
+def test_internal_start_noops_when_already_active(file_watcher, tmp_path: Path) -> None:
+    """The internal `_start_file_watching` returns early when already active."""
+    file_watcher._watching_active = True
+    with patch(
+        "streamlit.watcher.path_watcher.get_default_path_watcher_class"
+    ) as path_watcher_class_mock:
+        file_watcher._start_file_watching({"comp": tmp_path})
+
+    # Path watcher class should never be consulted when already active.
+    path_watcher_class_mock.assert_not_called()
+
+
+def test_handle_component_change_skips_when_not_active(file_watcher) -> None:
+    """`_handle_component_change` is a no-op when watching is not active."""
+    callback = Mock()
+    file_watcher._component_update_callback = callback
+
+    file_watcher._handle_component_change(["some.component"])
+
+    callback.assert_not_called()
+
+
+def test_rollback_logs_close_failures(file_watcher, tmp_path: Path) -> None:
+    """Watchers whose close raises during rollback are logged but do not propagate."""
+    successful_watcher = Mock()
+    failing_watcher = Mock()
+    failing_watcher.close.side_effect = Exception("close-failed")
+
+    call_index = {"value": 0}
+
+    def ctor(*args, **kwargs):
+        idx = call_index["value"]
+        call_index["value"] += 1
+        if idx == 0:
+            return successful_watcher
+        if idx == 1:
+            return failing_watcher
+        raise RuntimeError("third call triggers rollback")
+
+    with (
+        patch(
+            "streamlit.watcher.path_watcher.get_default_path_watcher_class",
+            return_value=ctor,
+        ),
+        patch("streamlit.components.v2.component_file_watcher._LOGGER") as logger_mock,
+    ):
+        dir_a = tmp_path / "a"
+        dir_b = tmp_path / "b"
+        dir_c = tmp_path / "c"
+        for d in (dir_a, dir_b, dir_c):
+            d.mkdir()
+        file_watcher.start_file_watching({"c1": dir_a, "c2": dir_b, "c3": dir_c})
+
+    # Both already-created watchers should have close attempted during rollback.
+    successful_watcher.close.assert_called_once()
+    failing_watcher.close.assert_called_once()
+    # The failing close should have been logged via _LOGGER.exception.
+    logger_mock.exception.assert_any_call(
+        "Failed to close path watcher during rollback"
+    )
+    # State must not be committed after a rollback.
+    assert not file_watcher.is_watching_active
+
+
+def test_is_in_ignored_directory_returns_false_on_exception(file_watcher) -> None:
+    """If resolving the changed path raises, the helper returns False."""
+    with patch("pathlib.Path") as path_mock:
+        path_mock.return_value.resolve.side_effect = OSError("resolve failed")
+        result = file_watcher._is_in_ignored_directory("/whatever")
+    assert result is False
+
+
+def test_directory_callback_dispatches_to_component_update(
+    file_watcher, tmp_path: Path
+) -> None:
+    """The watcher callback delegates to `_handle_component_change` for non-ignored paths."""
+    callback_mock = Mock()
+    file_watcher._component_update_callback = callback_mock
+
+    mock_watcher_instance = Mock()
+    watcher_class_mock = Mock(return_value=mock_watcher_instance)
+    with patch(
+        "streamlit.watcher.path_watcher.get_default_path_watcher_class",
+        return_value=watcher_class_mock,
+    ):
+        root = tmp_path / "comp"
+        root.mkdir()
+        file_watcher.start_file_watching({"my.component": root})
+
+    # Retrieve the directory-level callback registered with the watcher.
+    cb = watcher_class_mock.call_args.args[1]
+
+    # A change to a non-ignored path should trigger the update callback.
+    safe_path = str((root / "main.js").resolve())
+    cb(safe_path)
+    callback_mock.assert_called_once_with(["my.component"])

@@ -25,12 +25,16 @@ import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
+from streamlit.runtime.fragment import _check_not_parallel_worker
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
 from streamlit.runtime.scriptrunner import (
     RerunData,
     ScriptRunContext,
     get_script_run_ctx,
+)
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
 )
 
 if TYPE_CHECKING:
@@ -96,7 +100,9 @@ def _new_fragment_id_queue(
             "functions during fragment reruns."
         )
 
-    new_queue = list(dropwhile(lambda x: x != ctx.current_fragment_id, curr_queue))
+    new_queue = list(
+        dropwhile(lambda x: x != ThreadState.get().fragment_id, curr_queue)
+    )
     if not new_queue:  # pragma: no cover - defensive
         raise RuntimeError(
             "Could not find current_fragment_id in fragment_id_queue. This should never happen."
@@ -281,6 +287,7 @@ def switch_page(  # type: ignore[misc]
         height: 350px
 
     """
+    _check_not_parallel_worker("st.switch_page")
 
     ctx = get_script_run_ctx()
 

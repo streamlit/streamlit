@@ -134,3 +134,30 @@ st.container(key="column-menu-test").dataframe(
     column_order=["Column A", "Column B", "Column E", "Column C", "Column D"],
     width="content",
 )
+
+st.header("Categorical column statistics")
+
+# Deterministic text/boolean data so the statistics submenu snapshots are stable.
+st.container(key="categorical-statistics-test").dataframe(
+    pd.DataFrame(
+        {
+            "text_col": [
+                "Apple",
+                "Banana",
+                "Apple",
+                "Cherry",
+                "Apple",
+                "Banana",
+                "Date",
+                "Apple",
+            ],
+            "bool_col": [True, False, True, True, False, True, False, True],
+        }
+    ),
+    column_config={
+        "_index": st.column_config.Column(width="small"),
+        "text_col": st.column_config.TextColumn("Text", width="small"),
+        "bool_col": st.column_config.CheckboxColumn("Boolean", width="small"),
+    },
+    width="content",
+)

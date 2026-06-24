@@ -14,6 +14,8 @@
 
 """slider unit test."""
 
+from __future__ import annotations
+
 from datetime import date, datetime, time, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
@@ -23,6 +25,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.js_number import JSNumber
+from streamlit.elements.widgets.slider import SliderSerde
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidBindValueError,
@@ -31,6 +34,7 @@ from streamlit.errors import (
     StreamlitValueBelowMinError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -631,3 +635,102 @@ class SliderBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         assert c.query_param_key == "my_key"
         assert list(c.default) == [25, 75]
+
+
+def _make_int_serde(
+    value: list[float],
+    *,
+    single_value: bool = True,
+    min_value: float = 0,
+    max_value: float = 100,
+) -> SliderSerde:
+    """Construct a ``SliderSerde`` for INT data with the provided defaults."""
+    return SliderSerde(
+        value=value,
+        data_type=SliderProto.INT,
+        single_value=single_value,
+        orig_tz=None,
+        min_value=min_value,
+        max_value=max_value,
+    )
+
+
+def test_slider_serde_deserialize_returns_default_when_ui_value_none() -> None:
+    """A None ui_value falls back to the default."""
+    assert _make_int_serde(value=[42]).deserialize(None) == 42
+
+
+@pytest.mark.parametrize(
+    ("default", "single_value", "ui_value", "expected"),
+    [
+        ([7], True, [1, 2], 7),
+        ([3, 8], False, [5], (3, 8)),
+    ],
+    ids=["single_value_too_many", "range_too_few"],
+)
+def test_slider_serde_deserialize_falls_back_on_wrong_length(
+    default: list[float],
+    single_value: bool,
+    ui_value: list[float],
+    expected: int | tuple[int, int],
+) -> None:
+    """ui_value lists with the wrong length revert to the default."""
+    serde = _make_int_serde(value=default, single_value=single_value)
+    assert serde.deserialize(ui_value) == expected
+
+
+@pytest.mark.parametrize(
+    "ui_value",
+    [[5], [200]],
+    ids=["below_min", "above_max"],
+)
+def test_slider_serde_deserialize_resets_out_of_range(
+    ui_value: list[float],
+) -> None:
+    """Out-of-range ui_values revert to the default."""
+    serde = _make_int_serde(value=[20], min_value=10, max_value=100)
+    assert serde.deserialize(ui_value) == 20
+
+
+def test_slider_serde_deserialize_passes_through_in_range_value() -> None:
+    """In-range ui_values are returned and converted to the slider's data type."""
+    serde = _make_int_serde(value=[20])
+    assert serde.deserialize([42.0]) == 42
+
+
+class SliderEdgeCasesTest(DeltaGeneratorTestCase):
+    """Tests for slider parameter validation edge cases."""
+
+    def test_mixed_types_in_value_raises(self):
+        """A list with mixed numeric types raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="must be of the same type"):
+            st.slider("the label", value=[1, 2.5])
+
+    def test_mismatched_arg_types_raises(self):
+        """Mismatched min/max/step types raise StreamlitAPIException."""
+        with pytest.raises(
+            StreamlitAPIException, match="arguments must be of matching types"
+        ):
+            # min/max are float but step is int, so the args-type-mismatch error fires.
+            st.slider("label", min_value=0.0, max_value=10.0, value=5.0, step=1)
+
+    def test_value_type_mismatch_with_args(self):
+        """Value type that doesn't match arg types raises StreamlitAPIException."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match="value and arguments must be of the same type",
+        ):
+            # min/max/step are float but value is int, so data_type is INT and
+            # the value-vs-args matching-type check fails.
+            st.slider("label", min_value=0.0, max_value=10.0, value=5, step=0.5)
+
+    def test_reversed_range_swaps_start_end(self):
+        """A reversed range (start > end) gets swapped automatically."""
+        assert st.slider("label", value=(80, 20), min_value=0, max_value=100) == (
+            20,
+            80,
+        )
+
+    def test_empty_value_list_uses_outer_bounds(self):
+        """An empty value list uses min_value and max_value as bounds."""
+        assert st.slider("label", value=[], min_value=0, max_value=100) == (0, 100)

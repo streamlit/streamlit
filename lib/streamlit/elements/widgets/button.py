@@ -283,7 +283,10 @@ class ButtonMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             The following special keys are supported: Backspace, Delete, Down,
             End, Enter, Esc, Home, Left, PageDown, PageUp, Right, Space, Tab,
@@ -610,7 +613,10 @@ class ButtonMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             For a list of supported keys and modifiers, see the documentation
             for |st.button|_.
@@ -1020,7 +1026,10 @@ class ButtonMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             For a list of supported keys and modifiers, see the documentation
             for |st.button|_.
@@ -1394,6 +1403,9 @@ class ButtonMixin:
             ctx=ctx,
             value_type="trigger_value",
         )
+
+        if ctx:
+            save_for_app_testing(ctx, element_id, button_state.value)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
         self.dg._enqueue(

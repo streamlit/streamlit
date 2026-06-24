@@ -231,12 +231,18 @@ class BidiComponentDefinition:
         # Fallback: preserve relative subpath if the provided path is relative;
         # otherwise default to the basename for absolute paths. Normalize
         # leading "./" to avoid awkward prefixes in URLs.
+        # Note: `__post_init__` only accepts absolute paths, so the relative
+        # branch below is a defensive fallback for callers that bypass that
+        # validation.
         path_str = str(value)
         if os.path.isabs(path_str):
             return os.path.basename(path_str)
-        norm = path_str.replace("\\", "/").removeprefix("./")
-        # If there's a subpath remaining, preserve it; otherwise use basename
-        return norm if "/" in norm else os.path.basename(norm)
+        norm = path_str.replace("\\", "/").removeprefix(
+            "./"
+        )  # pragma: no cover - defensive
+        return (
+            norm if "/" in norm else os.path.basename(norm)
+        )  # pragma: no cover - defensive
 
     @property
     def css_content(self) -> str | None:

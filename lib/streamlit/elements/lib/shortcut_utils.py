@@ -22,6 +22,9 @@ from typing import (
 from streamlit.errors import (
     StreamlitAPIException,
 )
+from streamlit.logger import get_logger
+
+_LOGGER: Final = get_logger(__name__)
 
 _MODIFIER_ALIASES: Final[dict[str, str]] = {
     "ctrl": "ctrl",
@@ -63,6 +66,37 @@ _KEY_ALIASES: Final[dict[str, str]] = {
 }
 
 _RESERVED_KEYS: Final[set[str]] = {"c", "r"}
+
+_BROWSER_RESERVED_SHORTCUTS: Final[frozenset[str]] = frozenset(
+    {
+        "ctrl+t",
+        "cmd+t",
+        "ctrl+w",
+        "cmd+w",
+        "ctrl+n",
+        "cmd+n",
+        "ctrl+shift+t",
+        "cmd+shift+t",
+        "ctrl+shift+n",
+        "cmd+shift+n",
+        "ctrl+shift+w",
+        "cmd+shift+w",
+        "ctrl+tab",
+        "ctrl+shift+tab",
+        "cmd+tab",
+        "cmd+shift+tab",
+        "ctrl+pageup",
+        "ctrl+pagedown",
+        "cmd+pageup",
+        "cmd+pagedown",
+        "ctrl+l",
+        "cmd+l",
+        "alt+f4",
+        "f11",
+    }
+)
+
+_warned_browser_reserved_shortcuts: set[str] = set()
 
 
 def _normalize_key_token(lower_token: str) -> str:
@@ -149,4 +183,16 @@ def normalize_shortcut(shortcut: str) -> str:
     if key is not None:
         normalized_tokens.append(key)
 
-    return "+".join(normalized_tokens)
+    normalized = "+".join(normalized_tokens)
+    if (
+        normalized in _BROWSER_RESERVED_SHORTCUTS
+        and normalized not in _warned_browser_reserved_shortcuts
+    ):
+        _warned_browser_reserved_shortcuts.add(normalized)
+        _LOGGER.warning(
+            "The shortcut %s is typically reserved by the browser or operating "
+            "system and may never reach Streamlit. Consider choosing a "
+            "different combination.",
+            shortcut,
+        )
+    return normalized

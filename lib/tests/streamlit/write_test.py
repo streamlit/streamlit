@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import dataclasses
+import re
 import time
 import unittest
 from collections import namedtuple
@@ -32,7 +33,7 @@ from PIL import Image
 
 import streamlit as st
 from streamlit import type_util
-from streamlit.elements.write import StreamingOutput
+from streamlit.elements.write import StreamingOutput, WriteMixin
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -514,6 +515,43 @@ class StreamlitStreamTest(unittest.TestCase):
         stream_return = st.write_stream(openai_stream)
         assert stream_return == "Hello World"
 
+    def test_with_openai_response_events(self):
+        """Test st.write_stream with OpenAI Responses API stream events."""
+
+        def openai_response_stream():
+            yield _openai_response_event("ResponseCreatedEvent", "response.created")
+            yield _openai_response_event(
+                "ResponseTextDeltaEvent",
+                "response.output_text.delta",
+                delta="Hello ",
+            )
+            yield _openai_response_event(
+                "ResponseWebSearchCallInProgressEvent",
+                "response.web_search_call.in_progress",
+            )
+            yield _openai_response_event(
+                "ResponseTextDeltaEvent",
+                "response.output_text.delta",
+                delta="World",
+            )
+            yield _openai_response_event("ResponseCompletedEvent", "response.completed")
+
+        stream_return = st.write_stream(openai_response_stream)
+        assert stream_return == "Hello World"
+
+    def test_with_openai_response_refusal_delta_event(self):
+        """Test st.write_stream with OpenAI Responses API refusal deltas."""
+
+        def openai_response_stream():
+            yield _openai_response_event(
+                "ResponseRefusalDeltaEvent",
+                "response.refusal.delta",
+                delta="I can't help with that.",
+            )
+
+        stream_return = st.write_stream(openai_response_stream)
+        assert stream_return == "I can't help with that."
+
     def test_with_generator_text(self):
         """Test st.write_stream with generator text content."""
 
@@ -808,13 +846,36 @@ def _broken_langchain_ai_message_chunk() -> Any:
     return cls()
 
 
+def _openai_response_event(name: str, event_type: str, **attrs: Any) -> Any:
+    """Instance whose type FQN matches OpenAI Responses API stream events."""
+    cls = type(name, (), {})
+    # Mirror the SDK's snake_case module naming (e.g. ResponseTextDeltaEvent ->
+    # openai.types.responses.response_text_delta_event).
+    snake_case_name = re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+    cls.__module__ = f"openai.types.responses.{snake_case_name}"
+    event = cls()
+    event.type = event_type
+    for attr, value in attrs.items():
+        setattr(event, attr, value)
+    return event
+
+
+def _broken_openai_response_event() -> Any:
+    """Instance whose type FQN matches OpenAI Response stream event checks."""
+    return _openai_response_event(
+        "ResponseTextDeltaEvent",
+        "response.output_text.delta",
+    )
+
+
 @pytest.mark.parametrize(
     ("make_chunk", "match_substr"),
     [
         (_broken_openai_chat_completion_chunk, "Failed to parse the OpenAI"),
+        (_broken_openai_response_event, "Failed to parse the OpenAI Response"),
         (_broken_langchain_ai_message_chunk, "Failed to parse the LangChain"),
     ],
-    ids=["openai", "langchain"],
+    ids=["openai-chat-completion", "openai-response", "langchain"],
 )
 def test_write_stream_chunk_attribute_error_raises(
     make_chunk: Callable[[], Any], match_substr: str
@@ -828,16 +889,20 @@ def test_write_stream_chunk_attribute_error_raises(
         st.write_stream(stream)
 
 
-def test_write_bokeh_figure_routes_to_bokeh_chart() -> None:
-    """Route bokeh figures to ``DeltaGenerator.bokeh_chart``."""
+def test_write_pydeck_routes_to_pydeck_chart() -> None:
+    """Route pydeck Deck objects to ``DeltaGenerator.pydeck_chart``."""
+    import pydeck as pdk
 
-    class FakeBokehFigure:
-        pass
+    with patch("streamlit.delta_generator.DeltaGenerator.pydeck_chart") as p:
+        st.write(pdk.Deck())
+        p.assert_called_once()
 
-    with patch("streamlit.type_util.is_type") as is_type:
-        is_type.side_effect = make_is_type_mock("bokeh.plotting.figure.Figure")
-        with patch("streamlit.delta_generator.DeltaGenerator.bokeh_chart") as p:
-            st.write(FakeBokehFigure())
+
+def test_write_graphviz_chart_routes_to_graphviz_chart() -> None:
+    """Route graphviz objects to ``DeltaGenerator.graphviz_chart``."""
+    with patch("streamlit.type_util.is_graphviz_chart", return_value=True):
+        with patch("streamlit.delta_generator.DeltaGenerator.graphviz_chart") as p:
+            st.write(object())
             p.assert_called_once()
 
 
@@ -845,6 +910,16 @@ def test_write_mixin_dg_property_returns_self() -> None:
     """``WriteMixin.dg`` returns the host ``DeltaGenerator`` instance."""
     dg = st.container()
     assert dg.dg is dg
+
+
+def test_write_mixin_dg_returns_self_for_standalone_mixin() -> None:
+    """A standalone ``WriteMixin`` instance returns itself from the ``dg`` property."""
+
+    class _OnlyWrite(WriteMixin):
+        pass
+
+    write_mixin = _OnlyWrite()
+    assert write_mixin.dg is write_mixin
 
 
 @pytest.mark.require_integration

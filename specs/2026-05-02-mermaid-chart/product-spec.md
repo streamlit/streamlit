@@ -7,10 +7,9 @@ created: 2026-05-02
 
 ## Summary
 
-Add native support for rendering [Mermaid](https://mermaid.js.org/) diagrams in Streamlit apps
-through markdown code blocks and a dedicated `st.mermaid_chart` command. This enables users to
-create flowcharts, sequence diagrams, class diagrams, and other visualizations using Mermaid's
-text-based syntax.
+Add native support for rendering [Mermaid](https://mermaid.js.org/) diagrams in Streamlit apps.
+This enables users to create flowcharts, sequence diagrams, class diagrams, and other
+visualizations using Mermaid's text-based syntax.
 
 ## Problem
 
@@ -84,7 +83,7 @@ For discoverability and explicit usage, provide `st.mermaid_chart`:
 st.mermaid_chart(
     body: str,                               # Mermaid diagram definition
     *,
-    width: "auto" | "stretch" | "content" | int = "auto",  # Layout width
+    width: "stretch" | "content" | int = "stretch",  # Layout width
 ) -> DeltaGenerator
 ```
 
@@ -93,7 +92,7 @@ st.mermaid_chart(
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `body` | `str` | The Mermaid diagram definition using Mermaid syntax |
-| `width` | `"auto"`, `"stretch"`, `"content"`, or `int` | The width of the element (default: `"auto"`). See `st.markdown` for details. |
+| `width` | `"stretch"`, `"content"`, or `int` | The width of the element (default: `"stretch"`). See `st.markdown` for details. |
 
 **Implementation Note:** `st.mermaid_chart` internally calls `st.markdown` with the diagram
 wrapped in a code fence. The fence uses four backticks (````) to safely handle diagrams that
@@ -120,7 +119,7 @@ portion and operates on the diagram content independently.
 
 #### Supported Diagram Types
 
-All Mermaid diagram types are supported:
+Nearly all Mermaid diagram types are supported, including:
 
 | Type | Example Syntax |
 |------|----------------|
@@ -137,6 +136,20 @@ All Mermaid diagram types are supported:
 | Timeline | `timeline; 2020: Event 1; 2021: Event 2` |
 | Quadrant Chart | `quadrantChart; Campaign A: [0.3, 0.6]` |
 | Sankey Diagram | `sankey-beta; Source,Target,Value` |
+| Block / Packet / Kanban | `block-beta`, `packet-beta`, `kanban` |
+| XY Chart / Radar / Treemap | `xychart-beta`, `radar-beta`, `treemap-beta` |
+| Architecture | `architecture-beta` |
+
+**Known limitations:**
+
+- **C4 diagrams** (`C4Context`, etc.) do not render correctly. C4 relies on HTML
+  labels (`foreignObject`), which are disabled by our strict security configuration
+  (see [Security](#security)). They render with missing/garbled labels and are not
+  supported.
+- **ZenUML** (`zenuml`) is not supported. It requires the separate
+  `@mermaid-js/mermaid-zenuml` plugin, which is not bundled.
+- **Newer "beta" diagram types** (e.g. `radar-beta`, `xychart-beta`) depend on the
+  bundled Mermaid version and may have weaker theming than the core types.
 
 #### Theming
 
@@ -170,7 +183,10 @@ Invalid Mermaid syntax displays:
 
 - A styled error message with the Mermaid parser error
 - Error styled with Streamlit's error colors (red background)
-- The original source is not exposed in the error
+- The error message comes directly from Mermaid and may include the diagram source
+  (Mermaid embeds it in messages such as "No diagram type detected ... for text:
+  <source>"). This is the user's own source, so it is not a security concern, and
+  surfacing it helps users debug invalid diagrams.
 
 #### Streaming Behavior
 
@@ -276,9 +292,12 @@ Diagrams are rendered with security in mind:
 - **SVG Sandboxing**: Rendered SVGs are loaded via blob URLs in `<img>` tags, providing
   browser-enforced sandboxing (no script execution possible)
 
-Note: `securityLevel: "strict"` already disables HTML labels and strips `foreignObject`
-elements, so no additional `htmlLabels: false` configuration is needed. This allows
-Mermaid to render richer label styling where supported while maintaining security.
+Note: `securityLevel: "strict"` strips `foreignObject` elements, and the implementation
+additionally sets `htmlLabels: false` so labels are rendered as native SVG `<text>`
+elements. This keeps labels within the diagram's computed `viewBox` (HTML labels can
+overflow it and get clipped when the SVG is rasterized into an `<img>`). The trade-off is
+that diagram types that rely on HTML labels — most notably C4 — do not render correctly
+(see [Known limitations](#supported-diagram-types)).
 
 **CSP Requirements**: The blob URL approach requires `blob:` in the `img-src` CSP directive.
 Deployments with restrictive Content-Security-Policy headers must include:

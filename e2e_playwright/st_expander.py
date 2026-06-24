@@ -92,6 +92,17 @@ with st.expander("Stretch width", width="stretch"):
 
 st.expander("Empty", expanded=True)
 
+# Compact expanders
+st.expander("Compact collapsed", type="compact").write("Compact mode content")
+
+with st.expander("Compact expanded", expanded=True, type="compact"):
+    st.write("Compact content with no border")
+    st.code("print('hello')")
+
+st.expander("Compact with icon", type="compact", icon=":material/psychology:").write(
+    "AI reasoning content"
+)
+
 
 # To test for: https://github.com/streamlit/streamlit/issues/12149
 code_block = """

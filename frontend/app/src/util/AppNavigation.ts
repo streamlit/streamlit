@@ -106,9 +106,6 @@ export class AppNavigation {
       this.hideSidebarNav = newSession.config?.hideSidebarNav ?? null
     }
 
-    // We do not know the page name, so use an empty string version
-    document.title = getTitle("")
-
     return [
       {
         // Set current page script hash to handle SPA case
@@ -198,11 +195,20 @@ export class AppNavigation {
   }
 
   findPageByUrlPath(pathname: string): IAppPage | null {
+    // Browsers URL-encode Unicode during Back/Forward navigation (popstate),
+    // so decode before matching against unencoded page URL paths.
+    let decodedPathname: string
+    try {
+      decodedPathname = decodeURIComponent(pathname)
+    } catch {
+      decodedPathname = pathname
+    }
+
     return (
       this.appPages.find(appPage =>
         // The page name is embedded at the end of the URL path, and if not, we are in the main page.
         // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
-        pathname.endsWith("/" + appPage.urlPathname)
+        decodedPathname.endsWith("/" + appPage.urlPathname)
       ) ?? this.mainPage
     )
   }
