@@ -125,7 +125,7 @@ it("builds HTTP URI correctly", () => {
       hostname: "the_host",
       port: "9988",
       pathname: "foo/bar",
-    },
+    } as URL,
     "baz"
   )
   expect(uri).toBe("http://the_host:9988/foo/bar/baz")
@@ -139,7 +139,7 @@ it("builds HTTPS URI correctly", () => {
       hostname: "the_host",
       port: "9988",
       pathname: "foo/bar",
-    },
+    } as URL,
     "baz"
   )
   expect(uri).toBe("https://the_host:9988/foo/bar/baz")
@@ -153,7 +153,7 @@ it("builds HTTP URI with no base path", () => {
       hostname: "the_host",
       port: "9988",
       pathname: "",
-    },
+    } as URL,
     "baz"
   )
   expect(uri).toBe("http://the_host:9988/baz")
