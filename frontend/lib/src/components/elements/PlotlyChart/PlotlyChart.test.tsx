@@ -342,10 +342,7 @@ describe("PlotlyChart Component", () => {
     }
 
     act(() => {
-      lastCallProps.onUpdate?.(
-        newFigure as Parameters<NonNullable<PlotParams["onUpdate"]>>[0],
-        document.createElement("div")
-      )
+      lastCallProps.onUpdate?.(newFigure, document.createElement("div"))
     })
 
     expect(widgetMgr.setElementState).toHaveBeenCalledWith(
@@ -381,7 +378,7 @@ describe("PlotlyChart Component", () => {
     act(() => {
       if (typeof fullscreenButton === "object") {
         fullscreenButton.click(
-          document.createElement("div") as unknown as Plotly.PlotlyHTMLElement,
+          document.createElement("div"),
           new MouseEvent("click")
         )
       }
