@@ -29,6 +29,7 @@ import {
 
 interface UseFloatingOverlayOptions {
   open: boolean
+  onOpenChange?: (open: boolean) => void
   placement?: Placement
   offsetPx?: number
   flipOptions?: FlipOptions | false
@@ -50,6 +51,7 @@ export function useFloatingOverlay(
 ): ReturnType<typeof useFloating> {
   const {
     open,
+    onOpenChange,
     placement = "bottom-start",
     offsetPx = 0,
     flipOptions,
@@ -81,6 +83,7 @@ export function useFloatingOverlay(
 
   return useFloating({
     open,
+    onOpenChange,
     placement,
     strategy: "fixed",
     whileElementsMounted: autoUpdate,

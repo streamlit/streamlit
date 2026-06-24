@@ -16,13 +16,17 @@
 
 import { memo, ReactElement, useMemo } from "react"
 
-import { PLACEMENT, Popover, TRIGGER_TYPE } from "baseui/popover"
+import {
+  FloatingPortal,
+  safePolygon,
+  useHover,
+  useInteractions,
+} from "@floating-ui/react"
 
-import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 
 import StatisticsChart from "./StatisticsChart"
 import {
@@ -44,6 +48,8 @@ import {
   StyledStatisticsNote,
   StyledStatisticsRow,
   StyledStatisticsValue,
+  StyledSubMenuAnchor,
+  StyledSubMenuPanel,
 } from "./styled-components"
 
 export interface StatisticsMenuProps {
@@ -53,10 +59,8 @@ export interface StatisticsMenuProps {
   data: Quiver
   /** Whether the menu is open. */
   isOpen: boolean
-  /** Callback when mouse enters the menu. */
-  onMouseEnter: () => void
-  /** Callback when mouse leaves the menu. */
-  onMouseLeave: () => void
+  /** Callback when the open state changes (fired by hover interactions). */
+  onOpenChange: (open: boolean) => void
   /** The menu item trigger element. */
   children: ReactElement
 }
@@ -262,13 +266,9 @@ function StatisticsMenu({
   column,
   data,
   isOpen,
-  onMouseEnter,
-  onMouseLeave,
+  onOpenChange,
   children,
 }: StatisticsMenuProps): ReactElement {
-  const theme = useEmotionTheme()
-  const { colors, fontSizes, fontWeights } = theme
-
   // Compute statistics only when menu is open.
   // Note: This useMemo caches within a single open session only, not across
   // open/close cycles (the component unmounts when the parent ColumnMenu closes).
@@ -280,6 +280,20 @@ function StatisticsMenu({
     return computeStatistics(column.kind, data, column.indexNumber, timezone)
   }, [isOpen, column.kind, column.indexNumber, column.arrowType, data])
 
+  const { refs, floatingStyles, context } = useFloatingOverlay({
+    open: isOpen,
+    placement: "right",
+    offsetPx: 2,
+    onOpenChange,
+  })
+
+  // safePolygon keeps the sub-menu open while the pointer moves through the
+  // geometric triangle between trigger and panel. No fixed timeout — always correct.
+  const hover = useHover(context, {
+    handleClose: safePolygon({ buffer: 2 }),
+  })
+  const { getReferenceProps, getFloatingProps } = useInteractions([hover])
+
   // Defensive fallback: parent ColumnMenu already guards this, but keep for safety.
   // This ensures the component renders nothing if called directly without the guard.
   if (!supportsStatistics(column.kind)) {
@@ -287,49 +301,27 @@ function StatisticsMenu({
   }
 
   return (
-    <Popover
-      triggerType={TRIGGER_TYPE.hover}
-      // Note: autoFocus and focusLock are intentionally omitted for this read-only
-      // submenu, allowing keyboard users to navigate the parent column menu while
-      // the statistics panel is open.
-      isOpen={isOpen}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      ignoreBoundary={true}
-      content={<StatisticsContent statistics={statistics} />}
-      placement={PLACEMENT.right}
-      showArrow={false}
-      popoverMargin={2}
-      overrides={{
-        Body: {
-          props: {
-            "data-testid": "stDataFrameStatisticsMenu",
-          },
-          style: () => ({
-            ...getPopoverContainerStyle(theme),
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
-            backgroundColor: "transparent",
-          }),
-        },
-        Inner: {
-          style: () => ({
-            backgroundColor: colors.bgColor,
-            color: colors.bodyText,
-            fontSize: fontSizes.sm,
-            fontWeight: fontWeights.normal,
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
-          }),
-        },
-      }}
-    >
-      {children}
-    </Popover>
+    <>
+      <StyledSubMenuAnchor
+        role="presentation"
+        ref={refs.setReference}
+        {...getReferenceProps()}
+      >
+        {children}
+      </StyledSubMenuAnchor>
+      {isOpen && (
+        <FloatingPortal>
+          <StyledSubMenuPanel
+            ref={refs.setFloating}
+            style={floatingStyles}
+            data-testid="stDataFrameStatisticsMenu"
+            {...getFloatingProps()}
+          >
+            <StatisticsContent statistics={statistics} />
+          </StyledSubMenuPanel>
+        </FloatingPortal>
+      )}
+    </>
   )
 }
 
