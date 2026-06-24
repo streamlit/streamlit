@@ -1404,6 +1404,9 @@ class ButtonMixin:
             value_type="trigger_value",
         )
 
+        if ctx:
+            save_for_app_testing(ctx, element_id, button_state.value)
+
         layout_config = create_layout_config(width=width, allow_content_width=True)
         self.dg._enqueue(
             "download_button", download_button_proto, layout_config=layout_config
@@ -1720,7 +1723,7 @@ class ButtonMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 

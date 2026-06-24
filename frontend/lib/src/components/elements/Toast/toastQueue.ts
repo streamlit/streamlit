@@ -14,18 +14,13 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { UNSTABLE_ToastQueue as ToastQueue } from "react-aria-components/Toast"
 
-import { render } from "@streamlit/lib/testing"
+export interface StreamlitToastContent {
+  body: string
+  icon?: string
+}
 
-import EventContainer from "./EventContainer"
-
-describe("EventContainer Component", () => {
-  it("renders Toast Container", () => {
-    render(<EventContainer />)
-
-    const toastContainer = screen.getByTestId("stToastContainer")
-    expect(toastContainer).toBeInTheDocument()
-    expect(toastContainer).toHaveClass("stToastContainer")
-  })
+export const toastQueue = new ToastQueue<StreamlitToastContent>({
+  maxVisibleToasts: Infinity,
 })

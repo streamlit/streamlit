@@ -124,6 +124,7 @@ _EDITING_COMPATIBILITY_MAPPING: Final[dict[ColumnType, list[ColumnDataKind]]] = 
         ColumnDataKind.STRING,
         ColumnDataKind.EMPTY,
     ],
+    "markdown": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
 }
 
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, screen } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -309,6 +309,68 @@ describe("Multiselect widget", () => {
     dataOptions.forEach((option, idx) => {
       expect(option).toHaveTextContent(props.element.options[idx])
     })
+  })
+
+  it("does not clear the selection on Escape when a default exists", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    const multiSelect = screen.getByRole("combobox")
+    // The default selection ("a") is rendered.
+    expect(screen.getAllByTitle("Delete").length).toBeGreaterThan(0)
+
+    // With the dropdown closed, Escape must not clear the value because the
+    // widget has a default (not clearable), matching st.selectbox.
+    act(() => {
+      multiSelect.focus()
+    })
+    // baseweb's Select reads event.keyCode, which userEvent no longer sets, so
+    // dispatch the key event directly.
+    // eslint-disable-next-line testing-library/prefer-user-event
+    fireEvent.keyDown(multiSelect, { key: "Escape", keyCode: 27, which: 27 })
+
+    expect(screen.getAllByTitle("Delete").length).toBeGreaterThan(0)
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+      props.element,
+      [],
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("clears the selection on Escape when there is no default", () => {
+    const props = getProps({ default: [] })
+    // Seed a user selection so there is a value to clear (dropdown closed).
+    props.widgetMgr.setStringArrayValue(
+      props.element,
+      ["b"],
+      { fromUi: true },
+      undefined
+    )
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    const multiSelect = screen.getByRole("combobox")
+    expect(screen.getAllByTitle("Delete").length).toBeGreaterThan(0)
+
+    // With the dropdown closed, Escape clears the value because the widget is
+    // clearable (no default), matching st.selectbox.
+    act(() => {
+      multiSelect.focus()
+    })
+    // baseweb's Select reads event.keyCode, which userEvent no longer sets, so
+    // dispatch the key event directly.
+    // eslint-disable-next-line testing-library/prefer-user-event
+    fireEvent.keyDown(multiSelect, { key: "Escape", keyCode: 27, which: 27 })
+
+    expect(screen.queryAllByTitle("Delete")).toHaveLength(0)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [],
+      { fromUi: true },
+      undefined
+    )
   })
 
   it("resets its value when form is cleared", async () => {

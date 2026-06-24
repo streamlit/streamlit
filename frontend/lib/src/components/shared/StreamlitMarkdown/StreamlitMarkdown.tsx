@@ -95,6 +95,10 @@ const StreamlitSyntaxHighlighter = lazy(
   () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
 )
 
+const MermaidChart = lazy(() =>
+  import("./MermaidChart").then(module => ({ default: module.MermaidChart }))
+)
+
 /**
  * Heuristic to determine if the markdown source contains emoji shortcodes that require remark-emoji.
  * Checks for patterns like :emoji_name: but excludes Streamlit's custom :material/ and
@@ -487,11 +491,20 @@ interface RenderedMarkdownProps {
   unterminatedParsing?: boolean
 }
 
+/**
+ * Context to indicate if markdown is being streamed (unterminatedParsing mode).
+ * When true, mermaid code blocks render as syntax-highlighted code instead of diagrams.
+ * This prevents flickering and error states from partial/incomplete diagram source.
+ */
+const StreamingContext = createContext<boolean>(false)
+StreamingContext.displayName = "StreamingContext"
+
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
   ReactMarkdownProps & { inline?: boolean }
 
 /**
  * Renders code tag with highlighting based on requested language.
+ * Mermaid code blocks are rendered as diagrams (unless streaming is in progress).
  */
 export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   inline,
@@ -500,12 +513,34 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   ...props
 }) => {
   const match = /language-(\w+)/.exec(className || "")
+  const isStreaming = useContext(StreamingContext)
 
   const codeText = String(children ?? "")
     .replace(/^\n/, "")
     .replace(/\n$/, "")
 
   const language = match?.[1] || ""
+
+  // Handle mermaid code blocks: render as a diagram unless streaming
+  // (see StreamingContext for rationale).
+  if (!inline && language.toLowerCase() === "mermaid" && !isStreaming) {
+    return (
+      <ErrorBoundary>
+        <Suspense
+          fallback={
+            <Skeleton
+              element={SkeletonProto.create({
+                style: SkeletonProto.SkeletonStyle.ELEMENT,
+              })}
+            />
+          }
+        >
+          <MermaidChart source={codeText} />
+        </Suspense>
+      </ErrorBoundary>
+    )
+  }
+
   return !inline ? (
     <ErrorBoundary>
       <Suspense
@@ -1259,21 +1294,23 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   }
 
   return (
-    <HelpTextContext.Provider value={helpText}>
-      <ErrorBoundary>
-        <ReactMarkdown
-          remarkPlugins={remarkPlugins}
-          rehypePlugins={rehypePlugins}
-          components={renderers}
-          urlTransform={transformLinkUri}
-          disallowedElements={disallowed}
-          // unwrap and render children from invalid markdown
-          unwrapDisallowed={true}
-        >
-          {processedSource}
-        </ReactMarkdown>
-      </ErrorBoundary>
-    </HelpTextContext.Provider>
+    <StreamingContext.Provider value={Boolean(unterminatedParsing)}>
+      <HelpTextContext.Provider value={helpText}>
+        <ErrorBoundary>
+          <ReactMarkdown
+            remarkPlugins={remarkPlugins}
+            rehypePlugins={rehypePlugins}
+            components={renderers}
+            urlTransform={transformLinkUri}
+            disallowedElements={disallowed}
+            // unwrap and render children from invalid markdown
+            unwrapDisallowed={true}
+          >
+            {processedSource}
+          </ReactMarkdown>
+        </ErrorBoundary>
+      </HelpTextContext.Provider>
+    </StreamingContext.Provider>
   )
 })
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import {
@@ -28,6 +28,7 @@ import {
   mockSessionInfo,
   mockTheme,
   NavigationContextProps,
+  toastQueue,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
@@ -140,6 +141,28 @@ describe("AppView element", () => {
     const appViewContainer = screen.getByTestId("stAppViewContainer")
     expect(appViewContainer).toBeInTheDocument()
     expect(appViewContainer).toHaveClass("stAppViewContainer")
+  })
+
+  it("renders the toast container when toasts are present", () => {
+    render(<AppView {...getProps()} />)
+
+    // ToastRegion only renders when there are visible toasts
+    expect(screen.queryByTestId("stToastContainer")).not.toBeInTheDocument()
+
+    // Add a toast and verify the container appears
+    act(() => {
+      toastQueue.add({ body: "test toast" }, { timeout: undefined })
+    })
+    const toastContainer = screen.getByTestId("stToastContainer")
+    expect(toastContainer).toBeInTheDocument()
+    expect(toastContainer).toHaveClass("stToastContainer")
+
+    // Clean up
+    act(() => {
+      toastQueue.visibleToasts.forEach((t: { key: string }) =>
+        toastQueue.close(t.key)
+      )
+    })
   })
 
   it("does not render a sidebar when there are no elements and only one page", () => {
@@ -1059,9 +1082,8 @@ describe("AppView element", () => {
       const header = screen.getByTestId("stHeader")
       expect(header).toBeInTheDocument()
       expect(header).not.toHaveStyle({ backgroundColor: "transparent" })
-      // Navigation should be present in the header
-      const allPage2Elements = screen.getAllByText("page2")
-      expect(allPage2Elements.length).toBeGreaterThan(0)
+      // Navigation should be present in the header — top nav section trigger is rendered
+      expect(screen.getByTestId("stTopNavSection")).toBeInTheDocument()
     })
 
     it("header shows logo and sidebar button in embed mode", () => {
@@ -1138,9 +1160,8 @@ describe("AppView element", () => {
       // Header should be visible
       expect(screen.getByTestId("stHeader")).toBeInTheDocument()
 
-      // Navigation should still be shown in embed mode
-      const allPage2Elements = screen.getAllByText("page2")
-      expect(allPage2Elements.length).toBeGreaterThan(0)
+      // Navigation should still be shown in embed mode — top nav section trigger is rendered
+      expect(screen.getByTestId("stTopNavSection")).toBeInTheDocument()
     })
 
     it("header does NOT show toolbar actions in embed mode without show_toolbar", () => {

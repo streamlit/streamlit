@@ -375,6 +375,7 @@ def test_mega_tester_app_interactions_validate_behavior(app: Page) -> None:
     form_text = get_text_input(app, "Form text")
     form_text.locator("input").first.fill("hello")
     app.get_by_role("button", name="Submit form").first.click()
+    wait_for_app_run(app)
     expect(app.get_by_text("Form submitted", exact=True)).to_be_visible()
 
     click_button(app, "Write stream")
