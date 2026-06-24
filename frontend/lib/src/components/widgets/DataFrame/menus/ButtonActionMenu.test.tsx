@@ -16,7 +16,7 @@
 
 import type { ReactElement } from "react"
 
-import { screen, waitFor } from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { BaseProvider, LightTheme } from "baseui"
 
@@ -170,4 +170,113 @@ describe("ButtonActionMenu", () => {
       expect(onCloseMenu).toHaveBeenCalled()
     }
   )
+
+  describe("dismissal listeners", () => {
+    it("closes the menu when a click happens outside the menu", async () => {
+      const onCloseMenu = vi.fn()
+      await renderAndWaitForPopover(
+        <ButtonActionMenu {...defaultProps} onCloseMenu={onCloseMenu} />
+      )
+
+      const outsideElement = document.createElement("div")
+      document.body.appendChild(outsideElement)
+      try {
+        await userEvent.click(outsideElement)
+        expect(onCloseMenu).toHaveBeenCalled()
+      } finally {
+        outsideElement.remove()
+      }
+    })
+
+    it("does not close the menu when clicking the menu target", async () => {
+      const onCloseMenu = vi.fn()
+      await renderAndWaitForPopover(
+        <ButtonActionMenu {...defaultProps} onCloseMenu={onCloseMenu} />
+      )
+
+      const target = screen.getByTestId("stDataFrameButtonActionMenuTarget")
+      await userEvent.click(target)
+
+      // Mousedown on the anchor target is delegated to the dataframe's button
+      // handler and must not trigger menu close logic here.
+      expect(onCloseMenu).not.toHaveBeenCalled()
+    })
+
+    it("does not close the menu when clicking inside the menu container", async () => {
+      const onCloseMenu = vi.fn()
+      await renderAndWaitForPopover(
+        <ButtonActionMenu {...defaultProps} onCloseMenu={onCloseMenu} />
+      )
+
+      // Click on the menu list container itself (not on a menuitem, which has
+      // its own onClick that calls onCloseMenu via handleSelectAction).
+      const menu = screen.getByRole("menu")
+      await userEvent.click(menu)
+
+      expect(onCloseMenu).not.toHaveBeenCalled()
+    })
+
+    it("closes the menu on document scroll outside the menu", async () => {
+      const onCloseMenu = vi.fn()
+      await renderAndWaitForPopover(
+        <ButtonActionMenu {...defaultProps} onCloseMenu={onCloseMenu} />
+      )
+
+      // Scroll outside the menu (e.g., the dataframe scroll container) should
+      // close the menu since it would misalign with the cell.
+      fireEvent.scroll(document)
+
+      expect(onCloseMenu).toHaveBeenCalled()
+    })
+
+    it("does not close the menu on scroll within the menu", async () => {
+      const onCloseMenu = vi.fn()
+      await renderAndWaitForPopover(
+        <ButtonActionMenu {...defaultProps} onCloseMenu={onCloseMenu} />
+      )
+
+      const menu = screen.getByRole("menu")
+      fireEvent.scroll(menu)
+
+      // Internal menu scrolling should NOT dismiss the menu.
+      expect(onCloseMenu).not.toHaveBeenCalled()
+    })
+
+    it("closes the menu on a window wheel event", async () => {
+      const onCloseMenu = vi.fn()
+      await renderAndWaitForPopover(
+        <ButtonActionMenu {...defaultProps} onCloseMenu={onCloseMenu} />
+      )
+
+      // Wheel on window doesn't always trigger a scroll event for elements
+      // with overflow: hidden, so the component listens for it explicitly.
+      const outside = document.createElement("div")
+      document.body.appendChild(outside)
+      try {
+        const wheelEvent = new Event("wheel", { bubbles: true })
+        outside.dispatchEvent(wheelEvent)
+        expect(onCloseMenu).toHaveBeenCalled()
+      } finally {
+        outside.remove()
+      }
+    })
+
+    it("removes the dismissal listeners after unmount", async () => {
+      const onCloseMenu = vi.fn()
+      const { unmount } = await renderAndWaitForPopover(
+        <ButtonActionMenu {...defaultProps} onCloseMenu={onCloseMenu} />
+      )
+
+      unmount()
+
+      const outsideElement = document.createElement("div")
+      document.body.appendChild(outsideElement)
+      try {
+        await userEvent.click(outsideElement)
+        expect(onCloseMenu).not.toHaveBeenCalled()
+      } finally {
+        outsideElement.remove()
+      }
+    })
+  })
 })

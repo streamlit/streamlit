@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-import { Theme as GlideTheme, GridCellKind } from "@glideapps/glide-data-grid"
+import {
+  drawTextCell,
+  Theme as GlideTheme,
+  GridCellKind,
+} from "@glideapps/glide-data-grid"
 import { renderHook } from "@testing-library/react"
 import { Field, Int64, Utf8 } from "apache-arrow"
 
 import {
   BaseColumn,
+  getEmptyCell,
   getErrorCell,
   NumberColumn,
   TextColumn,
@@ -27,6 +32,15 @@ import {
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import useCustomRenderer from "./useCustomRenderer"
+
+vi.mock("@glideapps/glide-data-grid", async importOriginal => {
+  const actual =
+    await importOriginal<typeof import("@glideapps/glide-data-grid")>()
+  return {
+    ...actual,
+    drawTextCell: vi.fn(),
+  }
+})
 
 const MOCK_COLUMNS: BaseColumn[] = [
   NumberColumn({
@@ -100,10 +114,11 @@ const createMockCanvasContext = (): CanvasRenderingContext2D => {
   } as unknown as CanvasRenderingContext2D
 }
 
-// Note: drawMissingPlaceholder is not unit-testable because it requires
-// a complete canvas context with measureText. Coverage is via E2E tests.
-
 describe("useCustomRenderer hook", () => {
+  beforeEach(() => {
+    vi.mocked(drawTextCell).mockClear()
+  })
+
   it("returns correct initial state", () => {
     const { result } = renderHook(() => {
       return useCustomRenderer(MOCK_COLUMNS)
@@ -188,6 +203,150 @@ describe("useCustomRenderer hook", () => {
       expect(() => {
         renderHook(() => useCustomRenderer(MOCK_COLUMNS, customPlaceholder))
       }).not.toThrow()
+    })
+
+    it("draws missing placeholder for missing-value cells with default placeholder", () => {
+      const { result } = renderHook(() => useCustomRenderer(MOCK_COLUMNS))
+
+      const drawMock = vi.fn()
+      const ctx = createMockCanvasContext()
+
+      const args = {
+        cell: getEmptyCell(true),
+        theme: MOCK_THEME as GlideTheme,
+        ctx,
+        rect: { x: 0, y: 0, width: 100, height: 35 },
+        // Use the second column (TextColumn) so that we don't also draw the
+        // attention indicator (TextColumn is not isRequired in the mock).
+        col: 1,
+        row: 0,
+      }
+
+      result.current.drawCell?.(args as never, drawMock)
+
+      // Default placeholder should be used when no override is supplied.
+      expect(drawTextCell).toHaveBeenCalledTimes(1)
+      expect(drawTextCell).toHaveBeenCalledWith(
+        expect.anything(),
+        "None",
+        undefined
+      )
+      // Missing branch returns early without invoking the default draw().
+      expect(drawMock).not.toHaveBeenCalled()
+    })
+
+    it("uses the custom placeholder when one is provided", () => {
+      const { result } = renderHook(() =>
+        useCustomRenderer(MOCK_COLUMNS, "N/A")
+      )
+
+      const drawMock = vi.fn()
+      const ctx = createMockCanvasContext()
+
+      const args = {
+        cell: getEmptyCell(true),
+        theme: MOCK_THEME as GlideTheme,
+        ctx,
+        rect: { x: 0, y: 0, width: 100, height: 35 },
+        col: 1,
+        row: 0,
+      }
+
+      result.current.drawCell?.(args as never, drawMock)
+
+      expect(drawTextCell).toHaveBeenCalledWith(
+        expect.anything(),
+        "N/A",
+        undefined
+      )
+    })
+
+    it("draws attention indicator on top of placeholder for required editable columns", () => {
+      const { result } = renderHook(() => useCustomRenderer(MOCK_COLUMNS))
+
+      const drawMock = vi.fn()
+      const ctx = createMockCanvasContext()
+
+      const args = {
+        cell: getEmptyCell(true),
+        theme: MOCK_THEME as GlideTheme,
+        ctx,
+        rect: { x: 0, y: 0, width: 100, height: 35 },
+        // Column 0 is the NumberColumn with isRequired=true and isEditable=true,
+        // so the attention indicator should be drawn after the placeholder.
+        col: 0,
+        row: 0,
+      }
+
+      result.current.drawCell?.(args as never, drawMock)
+
+      expect(drawTextCell).toHaveBeenCalledTimes(1)
+      expect(ctx.beginPath).toHaveBeenCalled()
+      expect(ctx.fill).toHaveBeenCalled()
+      expect(drawMock).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ["checkbox"],
+      ["line_chart"],
+      ["bar_chart"],
+      ["progress"],
+    ] as const)(
+      "delegates to draw() (no placeholder) for missing %s cells",
+      kind => {
+        const columnsWithKind: BaseColumn[] = [
+          {
+            ...MOCK_COLUMNS[1],
+            kind,
+            isRequired: false,
+            isEditable: false,
+          },
+        ]
+        const { result } = renderHook(() => useCustomRenderer(columnsWithKind))
+
+        const drawMock = vi.fn()
+        const ctx = createMockCanvasContext()
+
+        const args = {
+          cell: getEmptyCell(true),
+          theme: MOCK_THEME as GlideTheme,
+          ctx,
+          rect: { x: 0, y: 0, width: 100, height: 35 },
+          col: 0,
+          row: 0,
+        }
+
+        result.current.drawCell?.(args as never, drawMock)
+
+        // For these column types, default rendering applies and the placeholder
+        // path is skipped entirely.
+        expect(drawMock).toHaveBeenCalledTimes(1)
+        expect(drawTextCell).not.toHaveBeenCalled()
+        // Without isRequired+isEditable, no attention indicator either.
+        expect(ctx.fill).not.toHaveBeenCalled()
+      }
+    )
+
+    it("falls back to default draw() when missing cell's column index is out of range", () => {
+      const { result } = renderHook(() => useCustomRenderer(MOCK_COLUMNS))
+
+      const drawMock = vi.fn()
+      const ctx = createMockCanvasContext()
+
+      const args = {
+        cell: getEmptyCell(true),
+        theme: MOCK_THEME as GlideTheme,
+        ctx,
+        rect: { x: 0, y: 0, width: 100, height: 35 },
+        // Out-of-range column index should bypass the missing-cell branch.
+        col: 99,
+        row: 0,
+      }
+
+      result.current.drawCell?.(args as never, drawMock)
+
+      expect(drawMock).toHaveBeenCalledTimes(1)
+      expect(drawTextCell).not.toHaveBeenCalled()
     })
   })
 })

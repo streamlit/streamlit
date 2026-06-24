@@ -297,6 +297,57 @@ describe("DataFrame ColumnMenu", () => {
     })
   })
 
+  describe("scroll prevention", () => {
+    it("prevents default on wheel events while open", async () => {
+      await renderAndWaitForPopover(<ColumnMenu {...defaultProps} />)
+
+      const wheelEvent = new Event("wheel", {
+        bubbles: true,
+        cancelable: true,
+      })
+      const preventDefaultSpy = vi.spyOn(wheelEvent, "preventDefault")
+
+      document.dispatchEvent(wheelEvent)
+
+      // The menu installs a non-passive wheel listener that should call
+      // preventDefault to keep the menu visually pinned to its column header.
+      expect(preventDefaultSpy).toHaveBeenCalled()
+    })
+
+    it("prevents default on touchmove events while open", async () => {
+      await renderAndWaitForPopover(<ColumnMenu {...defaultProps} />)
+
+      const touchEvent = new Event("touchmove", {
+        bubbles: true,
+        cancelable: true,
+      })
+      const preventDefaultSpy = vi.spyOn(touchEvent, "preventDefault")
+
+      document.dispatchEvent(touchEvent)
+
+      expect(preventDefaultSpy).toHaveBeenCalled()
+    })
+
+    it("removes wheel listener after unmount", async () => {
+      const { unmount } = await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} />
+      )
+
+      unmount()
+
+      const wheelEvent = new Event("wheel", {
+        bubbles: true,
+        cancelable: true,
+      })
+      const preventDefaultSpy = vi.spyOn(wheelEvent, "preventDefault")
+
+      document.dispatchEvent(wheelEvent)
+
+      // After cleanup runs, the listener should be detached.
+      expect(preventDefaultSpy).not.toHaveBeenCalled()
+    })
+  })
+
   describe("statistics menu functionality", () => {
     const mockQuiver = new Quiver({ data: TEN_BY_TEN })
 

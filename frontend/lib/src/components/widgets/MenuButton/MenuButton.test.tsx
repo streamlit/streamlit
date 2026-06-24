@@ -361,4 +361,87 @@ describe("MenuButton widget", () => {
       expect(screen.getByRole("menu")).toHaveAttribute("aria-label", "Menu")
     })
   })
+
+  describe("dismissal behavior", () => {
+    it("closes the menu when clicking outside the trigger and popover", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      render(<MenuButton {...props} />)
+
+      await user.click(screen.getByTestId("stMenuButtonButton"))
+      await screen.findByTestId("stMenuButtonBody")
+
+      const outside = document.createElement("div")
+      document.body.appendChild(outside)
+      try {
+        await user.click(outside)
+      } finally {
+        outside.remove()
+      }
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stMenuButtonBody")
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it("closes the menu and refocuses the trigger on Escape", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      render(<MenuButton {...props} />)
+
+      const trigger = screen.getByTestId("stMenuButtonButton")
+      await user.click(trigger)
+      await screen.findByTestId("stMenuButtonBody")
+
+      await user.keyboard("{Escape}")
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stMenuButtonBody")
+        ).not.toBeInTheDocument()
+      })
+      // Escape should restore focus to the trigger to satisfy the ARIA
+      // dismissal pattern.
+      expect(trigger).toHaveFocus()
+    })
+
+    it("closes the menu when Tab is pressed without preventing default focus movement", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      render(<MenuButton {...props} />)
+
+      const trigger = screen.getByTestId("stMenuButtonButton")
+      await user.click(trigger)
+      await screen.findByTestId("stMenuButtonBody")
+
+      await user.keyboard("{Tab}")
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stMenuButtonBody")
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it("does not toggle widget state when an option is selected via keyboard while disabled", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      const { rerender } = render(<MenuButton {...props} />)
+
+      // Open the menu in the enabled state so that menu items are reachable.
+      await user.click(screen.getByTestId("stMenuButtonButton"))
+      await screen.findByTestId("stMenuButtonBody")
+
+      // While the menu is still open, switch to disabled and trigger a selection.
+      // The handler must early-return without invoking widgetMgr.
+      rerender(<MenuButton {...props} disabled={true} />)
+
+      const menuItems = screen.getAllByRole("menuitem")
+      await user.click(menuItems[0])
+
+      expect(props.widgetMgr.setStringTriggerValue).not.toHaveBeenCalled()
+    })
+  })
 })

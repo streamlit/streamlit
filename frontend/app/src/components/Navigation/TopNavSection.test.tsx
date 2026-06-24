@@ -134,4 +134,98 @@ describe("TopNavSection", () => {
       expect(internalLink).not.toHaveAttribute("rel")
     })
   })
+
+  describe("dismissal behavior", () => {
+    it("renders nothing when there are no sections", () => {
+      const { container } = renderWithContexts(
+        <TopNavSection {...getDefaultProps({ sections: [] })} />
+      )
+
+      expect(container).toBeEmptyDOMElement()
+      expect(screen.queryByTestId("stTopNavSection")).not.toBeInTheDocument()
+    })
+
+    it("renders nothing when the first section has no pages", () => {
+      const { container } = renderWithContexts(
+        <TopNavSection {...getDefaultProps({ sections: [[]] })} />
+      )
+
+      expect(container).toBeEmptyDOMElement()
+    })
+
+    it("closes the popover when Escape is pressed", async () => {
+      const user = userEvent.setup()
+
+      renderWithContexts(
+        <TopNavSection {...getDefaultProps({ sections: MIXED_SECTIONS })} />
+      )
+
+      await openPopover(user)
+      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
+
+      await user.keyboard("{Escape}")
+
+      expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
+      // The trigger should remain rendered after dismissal.
+      expect(screen.getByTestId("stTopNavSection")).toBeVisible()
+    })
+
+    it("closes the popover when clicking outside the trigger and content", async () => {
+      const user = userEvent.setup()
+
+      renderWithContexts(
+        <TopNavSection {...getDefaultProps({ sections: MIXED_SECTIONS })} />
+      )
+
+      await openPopover(user)
+      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
+
+      // Click outside the trigger and the popover content.
+      const outside = document.createElement("div")
+      document.body.appendChild(outside)
+      try {
+        await user.click(outside)
+      } finally {
+        outside.remove()
+      }
+
+      expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
+    })
+
+    it("ignores pointer events whose target is not a Node", async () => {
+      const user = userEvent.setup()
+
+      renderWithContexts(
+        <TopNavSection {...getDefaultProps({ sections: MIXED_SECTIONS })} />
+      )
+
+      await openPopover(user)
+      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
+
+      // Some synthesized events (e.g. from devices/extensions) can omit a Node
+      // target. The component should defensively bail out without throwing.
+      const event = new Event("pointerdown")
+      Object.defineProperty(event, "target", { value: null })
+      document.dispatchEvent(event)
+
+      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
+    })
+
+    it("keeps the popover open when clicking inside it", async () => {
+      const user = userEvent.setup()
+
+      renderWithContexts(
+        <TopNavSection {...getDefaultProps({ sections: MIXED_SECTIONS })} />
+      )
+
+      const popover = await openPopover(user)
+
+      // Click on the popover content itself (not on a link) must NOT dismiss
+      // the menu — only outside-clicks should. This protects against
+      // accidental dismissal on selection.
+      await user.click(popover)
+
+      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
+    })
+  })
 })
