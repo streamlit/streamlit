@@ -456,6 +456,12 @@ function ChatInput({
   // typing the next message ("focus is preserved" in the spec). We only do this
   // for the run-driven disable transition, not when the widget is explicitly
   // disabled via the `disabled` prop.
+  //
+  // `disabled` is in the dependency array, so this effect also runs when only
+  // `disabled` changes (without `isDisabledDuringRun` changing). The
+  // `wasDisabledDuringRunRef` guard is essential here: it ensures we only
+  // refocus on the run-driven disable -> enable transition and never on
+  // unrelated `disabled` prop changes.
   const wasDisabledDuringRunRef = useRef(false)
   useEffect(() => {
     if (wasDisabledDuringRunRef.current && !isDisabledDuringRun && !disabled) {
@@ -920,7 +926,14 @@ function ChatInput({
     }
   }, [fileDragged, innerWidth, innerHeight])
 
-  /** Renders the submit or stop button based on submit_mode state. */
+  /**
+   * Renders the submit or stop button based on submit_mode state.
+   *
+   * The stop button only reflects the explicit `disabled` prop and
+   * intentionally ignores `isDisabledDuringRun`: it must stay clickable while
+   * the script runs so the user can actually stop it. The submit button, in
+   * contrast, is disabled during the run via `isDisabledDuringRun`.
+   */
   const renderActionButton = (): React.ReactElement =>
     showStopButton ? (
       <StyledSendIconButton

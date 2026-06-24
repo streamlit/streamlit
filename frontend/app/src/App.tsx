@@ -1596,7 +1596,10 @@ export class App extends PureComponent<Props, State> {
   handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
     // Bump a monotonic counter and snapshot the fragment IDs of the run that
     // just finished, so widgets (e.g. ChatInput) can react to the completion of
-    // the specific full-script or fragment run they triggered.
+    // the specific full-script or fragment run they triggered. This runs before
+    // the status-conditional handling below on purpose: the counter must bump
+    // for every finish status (including FINISHED_WITH_COMPILE_ERROR) so widgets
+    // re-enable even when a run ends with a compilation error.
     this.setState(prevState => ({
       scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
       scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
