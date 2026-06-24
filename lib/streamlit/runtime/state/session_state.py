@@ -444,7 +444,7 @@ class SessionState:
 
     # Widget IDs that registered with persist_state, mapped to their scope.
     # Like _query_param_bound_widget_ids, this is a durable snapshot that
-    # survives MPA page-transition sequencing.
+    # survives the rerun sequencing of a multi-page app page transition.
     _persisted_widget_ids: dict[str, Literal["page", "session"]] = field(
         default_factory=dict
     )
