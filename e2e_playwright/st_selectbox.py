@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+from dataclasses import dataclass
+
 import pandas as pd
 
 import streamlit as st
@@ -228,6 +231,28 @@ v23 = st.selectbox(
     filter_mode=None,
 )
 st.write("value 23:", v23)
+
+
+# Regression test for https://github.com/streamlit/streamlit/issues/15618:
+# custom-class options with a format_func that depends on object identity
+# (here a dict lookup) must not revert the selection on rerun.
+@dataclass(frozen=True)
+class _Choice:
+    id: int
+    name: str
+
+
+_choice_a = _Choice(1, "one")
+_choice_b = _Choice(2, "two")
+_choice_labels = {_choice_a: "I", _choice_b: "II"}
+
+v24 = st.selectbox(
+    "selectbox 24 (custom objects with identity-dependent format_func)",
+    [_choice_a, _choice_b],
+    format_func=lambda choice: f"{_choice_labels[choice]} ({choice.name})",
+    key="selectbox_24",
+)
+st.write("value 24:", v24.name)
 
 # --- Bound widgets (query-params) ---
 

@@ -220,7 +220,7 @@ class FormMixin:
         form_id = key
 
         ctx = get_script_run_ctx()
-        if ctx is not None and not ctx.form_ids_this_run.check_and_add(form_id):
+        if ctx is not None and not ctx.shared.form_ids_this_run.check_and_add(form_id):
             raise StreamlitAPIException(_build_duplicate_form_message(key))
 
         block_proto = Block_pb2.Block()
@@ -405,7 +405,10 @@ class FormMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             For a list of supported keys and modifiers, see the documentation
             for |st.button|_.
@@ -488,5 +491,5 @@ class FormMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

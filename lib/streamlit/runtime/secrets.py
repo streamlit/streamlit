@@ -34,8 +34,10 @@ from streamlit.logger import get_logger
 _LOGGER: Final = get_logger(__name__)
 
 # Type alias for programmatic secrets values.
-# Supported types: str, int, float, bool, and nested dicts.
-SecretsValue = str | int | float | bool | dict[str, "SecretsValue"]
+# Supported types: str, int, float, bool, lists, and nested dicts.
+SecretsValue = (
+    str | int | float | bool | list["SecretsValue"] | dict[str, "SecretsValue"]
+)
 
 # Allowed scalar types for secrets values
 _ALLOWED_SCALAR_TYPES: Final[frozenset[type]] = frozenset({str, int, float, bool})
@@ -49,7 +51,9 @@ def _validate_secrets_value(value: Any, path: str = "") -> None:
     value
         The value to validate.
     path
-        The dotted path to this value (for error messages).
+        The path to this value (for error messages). Dict keys use dotted
+        notation (e.g. ``outer.inner``) and list elements use bracket indexing
+        (e.g. ``outer.inner[2]``).
 
     Raises
     ------
@@ -66,6 +70,10 @@ def _validate_secrets_value(value: Any, path: str = "") -> None:
                 )
             nested_path = f"{path}.{key}" if path else key
             _validate_secrets_value(nested_value, nested_path)
+    elif isinstance(value, list):
+        for index, nested_value in enumerate(value):
+            nested_path = f"{path}[{index}]" if path else f"[{index}]"
+            _validate_secrets_value(nested_value, nested_path)
     # Use type() instead of isinstance() because bool is a subclass of int,
     # and we need to distinguish them for os.environ promotion (bool excluded).
     elif type(value) not in _ALLOWED_SCALAR_TYPES:
@@ -73,7 +81,7 @@ def _validate_secrets_value(value: Any, path: str = "") -> None:
         path_info = f" at '{path}'" if path else ""
         raise TypeError(
             f"Unsupported type '{type_name}'{path_info} in secrets. "
-            f"Allowed types are: str, int, float, bool, and nested dicts."
+            f"Allowed types are: str, int, float, bool, lists, and nested dicts."
         )
 
 
@@ -440,7 +448,9 @@ class Secrets(Mapping[str, Any]):
         ----------
         programmatic_secrets
             A dictionary of secrets to merge. Supported value types are:
-            ``str``, ``int``, ``float``, ``bool``, and nested ``dict``.
+            ``str``, ``int``, ``float``, ``bool``, ``list``, and nested ``dict``.
+            Lists and dicts are validated recursively, so their elements must
+            themselves be supported secrets types.
 
         Raises
         ------

@@ -341,7 +341,7 @@ class StarletteSessionClient(SessionClient):
 
     @property
     def client_context(self) -> ClientContext:
-        """Return the client's connection context."""
+        """The client's connection context."""
         return self._client_context
 
     async def aclose(self) -> None:
