@@ -48,37 +48,35 @@ def _navigate(app: Page, page_name: str) -> None:
     wait_for_app_run(app)
 
 
-def test_persist_state_retains_value_when_not_rendered(app: Page) -> None:
-    """page/session-scoped values survive unmounting; plain values reset."""
+def test_persist_state_survives_unmount_remount_on_same_page(app: Page) -> None:
+    """Single-page lifecycle for persist_state: persisted values survive an
+    unmount, are restored on the re-rendered widget, are not clobbered by a
+    follow-up rerun, and are never written to the URL. A non-persisted widget
+    resets, mirroring the default redisplay behavior covered in
+    widget_state_test.py.
+    """
     click_checkbox(app, "Show widgets")
     _fill_text_input(app, "Page-scoped", "page_value")
     _fill_text_input(app, "Session-scoped", "session_value")
     _fill_text_input(app, "Not persisted", "plain_value")
 
-    # Hide the widgets so they stop being rendered on the current page.
+    # persist_state is server-side only and must not add URL query params.
+    query_string = app.url.split("?", 1)[1] if "?" in app.url else ""
+    assert query_string == ""
+
+    # Hide the widgets so they stop being rendered, then rerun to settle the
+    # post-cleanup state for the value readouts.
     click_checkbox(app, "Show widgets")
-    # A follow-up rerun settles the post-cleanup state for the value readouts.
     click_button(app, "Rerun")
 
+    # Persisted values survive the unmount; the non-persisted one is dropped.
     _expect_value(app, "page_text", "page_value")
     _expect_value(app, "session_text", "session_value")
-    # The non-persisted widget loses its value once it stops being rendered.
     _expect_value(app, "plain_text", "UNSET")
 
-
-def test_persist_state_restores_widget_value_on_remount(app: Page) -> None:
-    """A persisted widget shows its value again after a hide/show cycle, and a
-    follow-up rerun does not reset it back to the default.
-    """
+    # Show the widgets again: the remounted widgets must render the preserved
+    # values, not their default.
     click_checkbox(app, "Show widgets")
-    _fill_text_input(app, "Page-scoped", "page_value")
-    _fill_text_input(app, "Session-scoped", "session_value")
-
-    # Hide then show the widgets to force an unmount/remount.
-    click_checkbox(app, "Show widgets")
-    click_checkbox(app, "Show widgets")
-
-    # The remounted widgets must render the preserved values, not their default.
     _expect_input_value(app, "Page-scoped", "page_value")
     _expect_input_value(app, "Session-scoped", "session_value")
 
@@ -159,13 +157,3 @@ def test_page_scoped_value_dropped_when_other_page_skips_widget(app: Page) -> No
     expect(get_element_by_key(app, "p1_plain_text_value")).not_to_contain_text(
         "plain_value"
     )
-
-
-def test_persist_state_does_not_touch_query_params(app: Page) -> None:
-    """persist_state is server-side only and must not add URL query params."""
-    click_checkbox(app, "Show widgets")
-    _fill_text_input(app, "Page-scoped", "page_value")
-    _fill_text_input(app, "Session-scoped", "session_value")
-
-    query_string = app.url.split("?", 1)[1] if "?" in app.url else ""
-    assert query_string == ""
