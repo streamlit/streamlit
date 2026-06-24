@@ -222,8 +222,8 @@ describe("Dynamic popover (widget mode)", () => {
       </Popover>
     )
 
-    const trigger = screen.getByRole("button").closest("[aria-expanded]")
-    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    const button = screen.getByRole("button")
+    expect(button).toHaveAttribute("aria-expanded", "false")
 
     const updatedProps = getProps({ open: true }, { widgetMgr })
 
@@ -233,7 +233,7 @@ describe("Dynamic popover (widget mode)", () => {
       </Popover>
     )
 
-    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    expect(button).toHaveAttribute("aria-expanded", "false")
     expect(setBoolValueSpy).not.toHaveBeenCalled()
   })
 
@@ -254,8 +254,8 @@ describe("Dynamic popover (widget mode)", () => {
       </Popover>
     )
 
-    const trigger = screen.getByRole("button").closest("[aria-expanded]")
-    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    const button = screen.getByRole("button")
+    expect(button).toHaveAttribute("aria-expanded", "false")
 
     const updatedProps = getProps(
       { open: true, id: widgetId },
@@ -268,7 +268,7 @@ describe("Dynamic popover (widget mode)", () => {
       </Popover>
     )
 
-    expect(trigger).toHaveAttribute("aria-expanded", "true")
+    expect(button).toHaveAttribute("aria-expanded", "true")
     // The widget manager state should also be updated (with fromUi: false
     // to avoid triggering a rerun) so that subsequent reruns send the
     // correct value back to the backend.
@@ -299,8 +299,8 @@ describe("Dynamic popover (widget mode)", () => {
       </Popover>
     )
 
-    const trigger = screen.getByRole("button").closest("[aria-expanded]")
-    expect(trigger).toHaveAttribute("aria-expanded", "true")
+    const button = screen.getByTestId("stPopoverButton")
+    expect(button).toHaveAttribute("aria-expanded", "true")
 
     // Backend programmatically closes the popover (e.g. st.session_state.key = False)
     const closedProps = getProps(
@@ -314,7 +314,7 @@ describe("Dynamic popover (widget mode)", () => {
       </Popover>
     )
 
-    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    expect(button).toHaveAttribute("aria-expanded", "false")
     // The widget manager must be updated with false so that the next rerun
     // (triggered by e.g. another popover) does not send stale "true" back.
     expect(setBoolValueSpy).toHaveBeenCalledWith(
@@ -342,8 +342,10 @@ describe("passive state persistence", () => {
     )
 
     // Stored state (true) overrides proto default (false)
-    const trigger = screen.getByRole("button").closest("[aria-expanded]")
-    expect(trigger).toHaveAttribute("aria-expanded", "true")
+    expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    )
   })
 
   it("uses proto default when no stored state exists", () => {
@@ -358,8 +360,10 @@ describe("passive state persistence", () => {
       </Popover>
     )
 
-    const trigger = screen.getByRole("button").closest("[aria-expanded]")
-    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    expect(screen.getByRole("button")).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    )
   })
 
   it("persists open state on toggle", async () => {
@@ -437,8 +441,10 @@ describe("passive state persistence", () => {
     )
 
     // Server value should win — popover should be closed
-    const trigger = screen.getByRole("button").closest("[aria-expanded]")
-    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    expect(screen.getByRole("button")).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    )
   })
 })
 

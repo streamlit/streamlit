@@ -976,6 +976,35 @@ st.dataframe(
     hide_index=True,
 )
 
+st.header("Markdown column:")
+
+st.dataframe(
+    pd.DataFrame(
+        {
+            "col_0": [
+                "**Bold** and *italic*",
+                "# Header\nSome text",
+                "[Link](https://streamlit.io)",
+                None,
+            ],
+            "col_1": ["Simple text", "Another text", "", None],
+        }
+    ),
+    column_config={
+        "col_0": st.column_config.MarkdownColumn(
+            "Markdown column",
+            width="medium",
+            help="This is a markdown column",
+            required=True,  # Should be ignored
+            disabled=False,  # Should be ignored
+            default="**default**",  # Should be ignored
+        ),
+        "col_1": st.column_config.MarkdownColumn(),
+    },
+    width="content",
+    hide_index=True,
+)
+
 st.header("Missing placeholder:")
 st.dataframe(
     pd.DataFrame(

@@ -56,6 +56,24 @@ export const validateFileType = (
 }
 
 /**
+ * Extracts files from clipboard data on a paste event.
+ *
+ * Prefers `clipboardData.files`, falling back to file-kind `items` (e.g. when
+ * pasting an image where the file is only exposed via the items API).
+ */
+export const getPastedFiles = (clipboardData: DataTransfer): File[] => {
+  const files = Array.from(clipboardData.files)
+  if (files.length > 0) {
+    return files
+  }
+
+  return Array.from(clipboardData.items)
+    .filter(item => item.kind === "file")
+    .map(item => item.getAsFile())
+    .filter((file): file is File => file !== null)
+}
+
+/**
  * Gets a human-readable description for the upload type.
  */
 export const getUploadDescription = (acceptFile: AcceptFileValue): string => {

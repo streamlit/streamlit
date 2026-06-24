@@ -31,6 +31,7 @@ from streamlit.elements.lib.column_types import (
     LineChartColumn,
     LinkColumn,
     ListColumn,
+    MarkdownColumn,
     MultiselectColumn,
     NumberColumn,
     ProgressColumn,
@@ -610,6 +611,34 @@ class ColumnTypesTest(unittest.TestCase):
             }
         }, "Colors should cycle through the provided iterable."
 
+    def test_markdown_column(self):
+        """Test MarkdownColumn creation."""
+
+        assert remove_none_values(MarkdownColumn()) == {
+            "type_config": {"type": "markdown"}
+        }, "Should only have the type defined and nothing else."
+
+        assert remove_none_values(
+            MarkdownColumn(
+                "Col1",
+                width="large",
+                help="Help text",
+                disabled=False,
+                required=True,
+                pinned=True,
+                default="# Default",
+            )
+        ) == {
+            "label": "Col1",
+            "width": "large",
+            "help": "Help text",
+            "disabled": False,
+            "required": True,
+            "pinned": True,
+            "default": "# Default",
+            "type_config": {"type": "markdown"},
+        }, "Should have all the properties defined."
+
 
 @pytest.mark.parametrize(
     "color",
@@ -683,6 +712,7 @@ def test_column_alignment(alignment: str) -> None:
     assert AudioColumn(alignment=alignment)["alignment"] == alignment
     assert VideoColumn(alignment=alignment)["alignment"] == alignment
     assert JsonColumn(alignment=alignment)["alignment"] == alignment
+    assert MarkdownColumn(alignment=alignment)["alignment"] == alignment
 
 
 def test_column_alignment_none_by_default() -> None:

@@ -53,7 +53,6 @@ _OBJECT_NAME_MAPPING: Final = {
     "pandas.Index": "PandasIndex",
     "pandas.Series": "PandasSeries",
     "plotly.graph_objs._figure.Figure": "PlotlyFigure",
-    "bokeh.plotting.figure.Figure": "BokehFigure",
     "matplotlib.figure.Figure": "MatplotlibFigure",
     "pandas.io.formats.style.Styler": "PandasStyler",
     "streamlit.connections.snowpark_connection.SnowparkConnection": "SnowparkConnection",

@@ -1,7 +1,7 @@
 
 # Using Markdown in Streamlit
 
-Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labels, help tooltips, metrics, `st.table()` cells, and more. Beyond standard GitHub-flavored Markdown, Streamlit adds colored text, badges, icons, and LaTeX.
+Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labels, help tooltips, metrics, `st.table()` cells, and more. Beyond standard GitHub-flavored Markdown, Streamlit adds colored text, badges, icons, shimmer text, and LaTeX.
 
 ## Quick reference
 
@@ -12,6 +12,7 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 | Strikethrough | `~text~` | `~Strikethrough~` | ✓ |
 | Inline code | `` `code` `` | `` `variable` `` | ✓ |
 | Code block | ` ```lang...``` ` | ` ```python...``` ` | ✗ |
+| Mermaid diagram | ` ```mermaid...``` ` | ` ```mermaid graph TD; A-->B``` ` | ✗ |
 | Link | `[text](url)` | `[Streamlit](https://streamlit.io)` | ✓ |
 | Image | `![alt](path)` | `![Logo](logo.png)` | ✓ |
 | Heading | `# ` to `###### ` | `## Section` | ✗ |
@@ -27,6 +28,7 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 | Colored text | `:color[text]` | `:red[Error]` | ✓ |
 | Colored background | `:color-background[text]` | `:blue-background[Info]` | ✓ |
 | Badge | `:color-badge[text]` | `:green-badge[Success]` | ✓ |
+| Shimmer animation | `:shimmer[text]` | `:shimmer[Loading...]` | ✓ |
 | Small text | `:small[text]` | `:small[footnote]` | ✓ |
 | LaTeX (inline) | `$formula$` | `$ax^2 + bx + c$` | ✓ |
 | LaTeX (block) | `$$formula$$` | `$$\int_0^1 x^2 dx$$` | ✗ |
@@ -43,6 +45,8 @@ Markdown is supported in most places where text is rendered. Streamlit has three
 
 **No Markdown** — Text displays literally:
 - `st.text()`, `st.json()`, `st.dataframe()` / `st.data_editor()` cells, `st.selectbox` / `st.multiselect` options, input placeholders, `st.Page` titles, chart/map labels
+
+**Exception:** `st.dataframe()` / `st.data_editor()` cells configured with `st.column_config.MarkdownColumn` show plain text in the cell, but render Markdown in an overlay when the cell is clicked (raw HTML disabled, links sanitized).
 
 ## GitHub-flavored Markdown
 
@@ -68,6 +72,32 @@ code_block = "with syntax highlighting"
 ```
 """)
 ~~~
+
+## Mermaid diagrams
+
+Fenced code blocks tagged `mermaid` render as [Mermaid](https://mermaid.js.org/) diagrams (flowcharts, sequence diagrams, class diagrams, state diagrams, Gantt charts, pie charts, mind maps, and more). This works anywhere full Markdown is rendered, such as `st.markdown()` and `st.write()`.
+
+~~~python
+st.markdown("""
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[OK]
+    B -->|No| D[Cancel]
+```
+""")
+~~~
+
+For a dedicated command that takes the diagram definition directly (no code fence needed), use `st.mermaid_chart()`:
+
+```python
+st.mermaid_chart("""
+    graph LR
+        A[Start] --> B{Decision}
+        B -->|Yes| C[OK]
+        B -->|No| D[Cancel]
+""", width="stretch")  # "stretch" (default), "content", or a pixel value
+```
 
 ## Colored text, backgrounds, and badges
 
