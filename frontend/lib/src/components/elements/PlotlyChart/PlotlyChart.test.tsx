@@ -337,7 +337,7 @@ describe("PlotlyChart Component", () => {
     const lastCallProps = getLastPlotProps()
     const newFigure = {
       data: [],
-      layout: { title: "New Title" },
+      layout: { title: { text: "New Title" } },
       frames: null,
     }
 
@@ -378,7 +378,9 @@ describe("PlotlyChart Component", () => {
     act(() => {
       if (typeof fullscreenButton === "object") {
         fullscreenButton.click(
-          document.createElement("div"),
+          document.createElement("div") as unknown as Parameters<
+            typeof fullscreenButton.click
+          >[0],
           new MouseEvent("click")
         )
       }
