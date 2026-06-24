@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import unittest
 from typing import Any
+from unittest.mock import patch
 
 from parameterized import parameterized
 
@@ -166,3 +167,16 @@ class UrlUtilTest(unittest.TestCase):
     def test_is_relative_static_url(self, url: str, expected_value: bool):
         """Test is_relative_static_url function for detecting /app/static/ URLs."""
         assert url_util.is_relative_static_url(url) == expected_value
+
+    def test_is_url_returns_false_when_urlparse_raises_value_error(self):
+        """ValueError from urlparse is caught and treated as an invalid URL."""
+        with patch.object(url_util, "urlparse", side_effect=ValueError("bad url")):
+            assert url_util.is_url("http://example.com") is False
+
+    def test_is_url_returns_false_for_allowed_but_unknown_scheme(self):
+        """Defensive fallback: allowed_schemas may include schemes outside the
+        known handling set; such URLs are rejected rather than silently allowed."""
+        # "ftp" is outside UrlSchema's known set ({http, https, mailto, data}),
+        # so even when explicitly listed in allowed_schemas it falls through to
+        # the trailing `return False`.
+        assert url_util.is_url("ftp://example.com", ("ftp",)) is False  # type: ignore[arg-type]

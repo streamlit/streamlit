@@ -280,3 +280,18 @@ class FileWatcherTest(unittest.TestCase):
             glob_pattern="*.py",
             allow_nonexistent=True,
         )
+
+    def test_no_op_path_watcher_accepts_full_watcher_signature(self) -> None:
+        """NoOpPathWatcher mirrors the constructor signature of real watchers.
+
+        Acts as a structural regression check: if a new keyword-only argument
+        is added to other watcher classes, NoOpPathWatcher must keep parity so
+        ``watch_file``/``watch_dir`` can pass through the same kwargs without
+        choking when no watcher is installed.
+        """
+        NoOpPathWatcher(
+            "/some/path",
+            Mock(),
+            glob_pattern="*.py",
+            allow_nonexistent=True,
+        )
