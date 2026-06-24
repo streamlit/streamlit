@@ -37,17 +37,17 @@
  * - https://vite.dev/guide/migration.html
  * - https://vite.dev/config/dep-optimization-options
  */
-import type {
-  CSSProperties,
-  ForwardRefExoticComponent,
-  RefAttributes,
-} from "react"
+import type { ForwardRefExoticComponent, RefAttributes } from "react"
 
 import type * as Plotly from "plotly.js"
 import * as ReactPlotlyModule from "react-plotly.js"
 
 import { resolveDefaultExport } from "./resolveDefaultExport"
 
+type UpstreamPlotParams = import("react-plotly.js").PlotParams
+
+// react-plotly.js v4 intentionally types Plotly-owned values as unknown.
+// Streamlit uses the installed plotly.js types for the fields it reads/writes.
 export interface Figure {
   data: Plotly.Data[]
   layout: Partial<Plotly.Layout>
@@ -61,59 +61,31 @@ type FigureCallback = (
 
 type EventCallback<TEvent = unknown> = (event: Readonly<TEvent>) => void
 
-type BooleanEventCallback<TEvent = unknown> = (
-  event: Readonly<TEvent>
-) => boolean
-
-export interface PlotParams {
+export type PlotParams = Omit<
+  UpstreamPlotParams,
+  | "data"
+  | "layout"
+  | "frames"
+  | "config"
+  | "onInitialized"
+  | "onUpdate"
+  | "onPurge"
+  | "onSelected"
+  | "onClick"
+  | "onDeselect"
+  | "onDoubleClick"
+> & {
   data: Plotly.Data[]
   layout: Partial<Plotly.Layout>
   frames?: Plotly.Frame[]
   config?: Partial<Plotly.Config>
-  revision?: number
   onInitialized?: FigureCallback
   onUpdate?: FigureCallback
   onPurge?: FigureCallback
-  onError?: (err: Readonly<Error>) => void
-  divId?: string
-  className?: string
-  style?: CSSProperties
-  debug?: boolean
-  useResizeHandler?: boolean
-
-  onAfterExport?: () => void
-  onAfterPlot?: () => void
-  onAnimated?: () => void
-  onAnimatingFrame?: EventCallback<Plotly.FrameAnimationEvent>
-  onAnimationInterrupted?: () => void
-  onAutoSize?: () => void
-  onBeforeExport?: () => void
-  onBeforeHover?: BooleanEventCallback<Plotly.PlotMouseEvent>
-  onButtonClicked?: EventCallback
+  onSelected?: EventCallback<Plotly.PlotSelectionEvent>
   onClick?: EventCallback<Plotly.PlotMouseEvent>
-  onClickAnnotation?: EventCallback<Plotly.ClickAnnotationEvent>
-  onClickAnywhere?: EventCallback
   onDeselect?: () => void
   onDoubleClick?: () => void
-  onFramework?: () => void
-  onHover?: EventCallback<Plotly.PlotHoverEvent>
-  onHoverAnywhere?: EventCallback
-  onLegendClick?: BooleanEventCallback<Plotly.LegendClickEvent>
-  onLegendDoubleClick?: BooleanEventCallback<Plotly.LegendClickEvent>
-  onRelayout?: EventCallback<Plotly.PlotRelayoutEvent>
-  onRelayouting?: EventCallback
-  onRestyle?: EventCallback<Plotly.PlotRestyleEvent>
-  onRedraw?: () => void
-  onSelected?: EventCallback<Plotly.PlotSelectionEvent>
-  onSelecting?: EventCallback<Plotly.PlotSelectionEvent>
-  onSliderChange?: EventCallback<Plotly.SliderChangeEvent>
-  onSliderEnd?: EventCallback<Plotly.SliderEndEvent>
-  onSliderStart?: EventCallback<Plotly.SliderStartEvent>
-  onSunburstClick?: EventCallback
-  onTransitioning?: () => void
-  onTransitionInterrupted?: () => void
-  onUnhover?: EventCallback<Plotly.PlotMouseEvent>
-  onWebGlContextLost?: () => void
 }
 
 type ReactPlotlyComponent = ForwardRefExoticComponent<
