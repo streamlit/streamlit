@@ -100,7 +100,7 @@
     "react-feather": "^2.0.10",
     "react-map-gl": "^5.3.21",
     "react-markdown": "^10.1.0",
-    "react-plotly.js": "^3.0.0",
+    "react-plotly.js": "^4.0.0",
     "react-responsive-carousel": "^3.2.23",
     "react-select": "^5.10.2",
     "react-syntax-highlighter": "^16.1.1",
