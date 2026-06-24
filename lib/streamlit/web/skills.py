@@ -842,7 +842,7 @@ def _install_location(path: str) -> str:
     parts = parent.parts
     if parts and parts[0] == "~":
         # Home-relative global install: keep the ``~`` so the message reads
-        # e.g. "~/.agents/skills" rather than "~/.agents/skills" collapsed to
+        # e.g. "~/.agents/skills" rather than being collapsed to
         # ".agents/skills" (which looks project-local).
         return parent.as_posix()
     if len(parts) > 2:

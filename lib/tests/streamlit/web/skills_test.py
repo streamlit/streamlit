@@ -1770,7 +1770,7 @@ class TestInstallDetectRoundtrip:
 
     This is the regression guard for the install/detection project-root
     divergence: ``skills._find_project_root`` (install target) and
-    ``metrics_util._find_agent_config_root`` (detection root) must not drift
+    ``metrics_util._find_install_root`` (detection root) must not drift
     apart. The pre-existing tests only covered the standard ``.git``-at-the-root
     layout, which masked the bug.
     """

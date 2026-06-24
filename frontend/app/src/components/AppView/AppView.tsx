@@ -495,7 +495,9 @@ function AppView(props: AppViewProps): ReactElement {
         // Push the toast region below the pinned nudge so app toasts stack
         // beneath it. The region is otherwise positioned by its own styles
         // (top = header height); the inline override wins only while a nudge is
-        // shown.
+        // shown. It must be an inline style rather than a styled-component prop
+        // because the offset is a runtime ResizeObserver measurement
+        // (skillsNudgeHeight), not a static value.
         style={
           skillsNudgeHeight > 0
             ? {

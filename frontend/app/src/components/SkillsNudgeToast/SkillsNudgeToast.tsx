@@ -193,7 +193,7 @@ function SkillsNudgeToast({
               <StyledSkillsNudgeBody>
                 {isError
                   ? errorMessage
-                  : "Install the official Streamlit skills so AI coding assistants can build and debug your app."}
+                  : "Install the official Streamlit skills so AI coding agents can build and debug your apps."}
               </StyledSkillsNudgeBody>
 
               <StyledSkillsNudgeActions>

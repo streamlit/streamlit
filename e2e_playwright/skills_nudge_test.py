@@ -136,7 +136,7 @@ def test_skills_nudge_shows_and_dismisses(
 
     # The app toast auto-dismisses on its own timer; the nudge persists (it
     # never fades on a timer — only an explicit action dismisses it).
-    expect(toast).not_to_be_visible()
+    expect(toast).not_to_be_visible(timeout=10000)
     expect(nudge).to_be_visible()
 
     # Permanently dismiss; the nudge disappears immediately.

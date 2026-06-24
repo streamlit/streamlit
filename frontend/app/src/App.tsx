@@ -25,6 +25,14 @@ import Hotkeys from "react-hot-keys"
 import AppView from "@streamlit/app/src/components/AppView/AppView"
 import DeployButton from "@streamlit/app/src/components/DeployButton/DeployButton"
 import MainMenu from "@streamlit/app/src/components/MainMenu/MainMenu"
+import {
+  isSkillsNudgeDismissed,
+  isSkillsNudgeDroppedConnection,
+  isSkillsNudgeSnoozed,
+  setSkillsNudgeDismissed,
+  setSkillsNudgeSnoozed,
+  SKILLS_NUDGE_DROPPED_MESSAGE,
+} from "@streamlit/app/src/components/SkillsNudgeToast/skillsNudge"
 import SkillsNudgeToast from "@streamlit/app/src/components/SkillsNudgeToast/SkillsNudgeToast"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget/StatusWidget"
 import StreamlitContextProvider from "@streamlit/app/src/components/StreamlitContextProvider"
@@ -64,7 +72,6 @@ import {
   BackendOperationClient,
   CircularBuffer,
   ComponentRegistry,
-  CONNECTION_CLOSED_MESSAGE,
   createAutoTheme,
   createCustomThemes,
   createFormsData,
@@ -108,7 +115,6 @@ import {
   notUndefined,
   preserveEmbedQueryParams,
   PresetThemeName,
-  REQUEST_TIMED_OUT_MESSAGE,
   ScriptRunState,
   SessionInfo,
   sortThemeInputKeys,
@@ -173,24 +179,6 @@ export interface Props {
   streamlitExecutionStartedAt: number
   isMobileViewport: boolean
 }
-
-/**
- * localStorage key recording that the user permanently dismissed the
- * skills-install nudge in this browser ("Don't show again"). The nudge is
- * suppressed if this flag OR the server-side marker file is set; both are
- * written when the user picks "Don't show again".
- */
-const SKILLS_NUDGE_DISMISSED_KEY = "stSkillsNudgeDismissed"
-
-/**
- * localStorage key recording the timestamp (ms) when the user snoozed the
- * nudge via the close (✕) button. While within the snooze window the nudge
- * stays hidden; it reappears on the next server start after the window lapses.
- */
-const SKILLS_NUDGE_SNOOZED_AT_KEY = "stSkillsNudgeSnoozedAt"
-
-/** How long the close (✕) button snoozes the nudge for: 24 hours. */
-const SKILLS_NUDGE_SNOOZE_MS = 24 * 60 * 60 * 1000
 
 interface State {
   connectionState: ConnectionState
@@ -1511,8 +1499,8 @@ export class App extends PureComponent<Props, State> {
       isLocalhost() &&
       !isEmbed() &&
       localStorageAvailable() &&
-      !this.isSkillsNudgeDismissed() &&
-      !this.isSkillsNudgeSnoozed() &&
+      !isSkillsNudgeDismissed() &&
+      !isSkillsNudgeSnoozed() &&
       // `handleInitialization` re-runs on reconnect; show + log the impression
       // only once per page load so a reconnect can't enqueue a duplicate nudge
       // or inflate the funnel's numerator.
@@ -1533,49 +1521,6 @@ export class App extends PureComponent<Props, State> {
     this.metricsMgr.enqueue("menuClick", { label })
   }
 
-  /**
-   * Whether the skills nudge has been permanently dismissed in this browser
-   * ("Don't show again"). We suppress the nudge if EITHER this localStorage
-   * flag OR the server-side marker is set (the server-side marker gates
-   * ``recommendSkillsInstall`` on the backend).
-   */
-  private readonly isSkillsNudgeDismissed = (): boolean => {
-    return (
-      localStorageAvailable() &&
-      window.localStorage.getItem(SKILLS_NUDGE_DISMISSED_KEY) === "true"
-    )
-  }
-
-  /**
-   * Whether the nudge was snoozed (closed via ✕) within the last 24h. Once the
-   * window lapses it shows again on the next server start.
-   */
-  private readonly isSkillsNudgeSnoozed = (): boolean => {
-    if (!localStorageAvailable()) {
-      return false
-    }
-    const snoozedAt = Number(
-      window.localStorage.getItem(SKILLS_NUDGE_SNOOZED_AT_KEY)
-    )
-    const elapsed = Date.now() - snoozedAt
-    return (
-      Number.isFinite(snoozedAt) &&
-      snoozedAt > 0 &&
-      // Guard against a future timestamp (e.g. clock skew / a clock set back):
-      // a negative elapsed would otherwise read as "still snoozed" and suppress
-      // the nudge until real time catches up to snoozedAt + window.
-      elapsed >= 0 &&
-      elapsed < SKILLS_NUDGE_SNOOZE_MS
-    )
-  }
-
-  /** Persist the permanent browser-side "don't show the nudge again" flag. */
-  private readonly setSkillsNudgeDismissed = (): void => {
-    if (localStorageAvailable()) {
-      window.localStorage.setItem(SKILLS_NUDGE_DISMISSED_KEY, "true")
-    }
-  }
-
   /** Install the bundled skills via a backend operation (no script rerun). */
   private readonly handleSkillsNudgeInstall = (): Promise<
     string | undefined
@@ -1593,22 +1538,16 @@ export class App extends PureComponent<Props, State> {
         return result.detail ?? undefined
       })
       .catch((error: unknown) => {
-        this.trackSkillsNudge("skillsNudgeInstallFailed")
         // A dropped or timed-out connection during a long install (e.g. the
         // GitHub global fallback) rejects the request even though the server
-        // install may have completed. Surface a clearer, non-alarming message
-        // than the raw transport error; re-install is idempotent, so retrying
-        // is safe. (Matches BackendOperationClient's rejection messages.)
-        const message = error instanceof Error ? error.message : ""
-        if (
-          message === CONNECTION_CLOSED_MESSAGE ||
-          message === REQUEST_TIMED_OUT_MESSAGE
-        ) {
-          throw new Error(
-            "Lost connection during install — it may have finished. " +
-              "Reconnect or try again."
-          )
+        // install may have completed. Count it separately — not as a failure,
+        // which would over-count the funnel — and surface a reassuring,
+        // retry-friendly message; re-install is idempotent.
+        if (isSkillsNudgeDroppedConnection(error)) {
+          this.trackSkillsNudge("skillsNudgeInstallDropped")
+          throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
         }
+        this.trackSkillsNudge("skillsNudgeInstallFailed")
         // Re-throw so the toast renders its error state.
         throw error
       })
@@ -1616,12 +1555,7 @@ export class App extends PureComponent<Props, State> {
 
   /** Close (✕): snooze the nudge for ~24h. The card removes itself via onClose. */
   private readonly handleSkillsNudgeSnooze = (): void => {
-    if (localStorageAvailable()) {
-      window.localStorage.setItem(
-        SKILLS_NUDGE_SNOOZED_AT_KEY,
-        String(Date.now())
-      )
-    }
+    setSkillsNudgeSnoozed()
     this.trackSkillsNudge("skillsNudgeSnoozed")
   }
 
@@ -1631,7 +1565,7 @@ export class App extends PureComponent<Props, State> {
    * either signal. The card removes itself via onClose.
    */
   private readonly handleSkillsNudgeDontShowAgain = (): void => {
-    this.setSkillsNudgeDismissed()
+    setSkillsNudgeDismissed()
     // Best-effort durable suppression: the localStorage flag already suppresses
     // the nudge in this browser, so a failed marker write only means a fresh
     // browser could see it again — log it rather than failing the dismissal.

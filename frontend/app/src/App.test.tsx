@@ -43,6 +43,7 @@ import {
 import {
   BackendOperationClient,
   CachedTheme,
+  CONNECTION_CLOSED_MESSAGE,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
@@ -7094,6 +7095,32 @@ describe("Skills install nudge", () => {
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallSucceeded",
     })
+  })
+
+  it("counts a dropped-connection install separately from a failure", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(new Error(CONNECTION_CLOSED_MESSAGE))
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    // A dropped connection may mean the install actually completed, so it is
+    // tracked as a distinct outcome — not a failure (which would over-count the
+    // funnel) — and surfaced with a reassuring, retry-friendly message.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallDropped",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+    })
+    expect(screen.getByText(/Lost connection during install/)).toBeVisible()
+    expect(screen.getByRole("button", { name: "Retry" })).toBeVisible()
   })
 
   it("snoozes and tracks the dismiss (✕) control", async () => {
