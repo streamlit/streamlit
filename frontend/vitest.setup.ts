@@ -16,9 +16,9 @@
 
 import "@testing-library/jest-dom/vitest"
 import { act, configure } from "@testing-library/react"
-// FRAGILE: This imports from a private react-aria module path. It may break on
-// minor/patch upgrades. If React Aria exposes setInteractionModality publicly in
-// a future version, migrate to the public API.
+// FRAGILE: setInteractionModality has no public export today, so we import from a
+// private react-aria path. This may break on minor/patch upgrades — migrate to the
+// public API if React Aria ever exposes it.
 import { setInteractionModality } from "react-aria/private/interactions/useFocusVisible"
 import { beforeEach, vi } from "vitest"
 import "vitest-canvas-mock"
@@ -27,12 +27,12 @@ import "vitest-canvas-mock"
 // due to the slower machine speeds in our CI environment.
 configure({ asyncUtilTimeout: 5_000 })
 
-// React Aria's useTooltipTrigger checks getInteractionModality() === "pointer"
-// in onHoverStart. In JSDOM there's no ambient mouse movement, so modality is
-// never "pointer" by default. Set it directly before each test without rendering
-// a React root (renderHook interferes with React.lazy/Suspense resolution).
-// Wrapped in act() because setInteractionModality triggers change handlers that
-// may update React state in test files with mounted useFocusVisible hooks.
+// React Aria's useTooltipTrigger only opens a hover tooltip when
+// getInteractionModality() === "pointer". JSDOM has no real mouse movement, so the
+// modality is never "pointer" on its own — set it before each test. We call
+// setInteractionModality directly (renderHook interferes with React.lazy/Suspense)
+// and wrap it in act() since it can trigger state updates in mounted
+// useFocusVisible hooks.
 //
 // This is safe to apply globally: it only affects React Aria's internal modality
 // variable (which gates hover-triggered tooltip opening), NOT the browser's
