@@ -31,13 +31,26 @@ class StSkeletonAPITest(DeltaGeneratorTestCase):
         assert isinstance(placeholder, SkeletonPlaceholder)
 
     def test_skeleton_default_dimensions(self) -> None:
-        """Test default dimensions: 100px height and stretch width."""
+        """Test default dimensions: no explicit height and stretch width.
+
+        With no height, the proto height is left unset and no height is added
+        to the layout config so the frontend can resolve the default element
+        height.
+        """
         placeholder = st.skeleton()
 
-        assert placeholder._skeleton_proto.height == 100
+        assert not placeholder._skeleton_proto.HasField("height")
         assert placeholder._layout_config is not None
-        assert placeholder._layout_config.height == 100
+        assert placeholder._layout_config.height is None
         assert placeholder._layout_config.width == "stretch"
+
+    def test_skeleton_explicit_none_height(self) -> None:
+        """Test that passing height=None behaves like the default."""
+        placeholder = st.skeleton(height=None)
+
+        assert not placeholder._skeleton_proto.HasField("height")
+        assert placeholder._layout_config is not None
+        assert placeholder._layout_config.height is None
 
     def test_skeleton_pixel_height(self) -> None:
         """Test that st.skeleton accepts custom pixel height."""
@@ -88,6 +101,16 @@ class StSkeletonAPITest(DeltaGeneratorTestCase):
         """Test that invalid width string raises an error."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.skeleton(width="invalid")  # type: ignore[arg-type]
+
+    def test_skeleton_content_width_not_supported(self) -> None:
+        """Test that "content" width is rejected (skeleton has no content width)."""
+        with pytest.raises(StreamlitInvalidWidthError):
+            st.skeleton(width="content")  # type: ignore[arg-type]
+
+    def test_skeleton_content_height_not_supported(self) -> None:
+        """Test that "content" height is rejected."""
+        with pytest.raises(StreamlitInvalidHeightError):
+            st.skeleton(height="content")  # type: ignore[arg-type]
 
 
 class SkeletonContextManagerTest(DeltaGeneratorTestCase):

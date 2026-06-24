@@ -90,7 +90,11 @@ export const ElementContainer = memo(function ElementContainer({
       config={config}
     >
       <ErrorBoundary>
-        <Suspense fallback={<SquareSkeleton data-testid="stSkeleton" />}>
+        <Suspense
+          fallback={
+            <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
+          }
+        >
           {children}
         </Suspense>
       </ErrorBoundary>

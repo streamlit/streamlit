@@ -17,6 +17,7 @@ How you structure your app affects usability more than you think.
 | `@st.dialog` | You need a focused modal flow, such as confirmation, short editing, or settings that should temporarily interrupt the main page. |
 | `st.form` | You need to batch multiple widget inputs and rerun only when the user submits. |
 | `st.empty` | You need a placeholder that can be filled, replaced, or cleared later, including inserting elements out of order. |
+| `st.skeleton` | You need an animated loading placeholder that reserves space while content loads. Use it standalone like `st.empty` (replace it with content later) or as a context manager like `st.spinner` (auto-clears when the block exits). |
 | `st.chat_message` | You need a message container with chat-specific styling and avatars. See `chat-ui.md` for chat interface patterns. |
 | `st.bottom` | You need content pinned to the bottom of the main app area, commonly persistent chat input or bottom action controls. |
 | `st.space` | You need explicit vertical or horizontal spacing inside the current layout direction. |
@@ -126,6 +127,28 @@ dataframe_slot.dataframe(df.iloc[start:end], width="stretch")
 ```
 
 This is useful when a control should appear below an element but the control's value is needed before that element renders, such as pagination below a dataframe. It also works for progress updates, temporary status messages, wizard-like flows, and cases where later code needs to render above content that has already been written. For persistent multi-element sections that do not need replacement, use `st.container()` instead.
+
+## Skeleton loading placeholders with st.skeleton
+
+Use `st.skeleton()` to show an animated placeholder that reserves layout space while content loads. It works in two modes.
+
+Standalone (like `st.empty`): the skeleton appears immediately and is replaced when you call a method on the returned placeholder.
+
+```python
+placeholder = st.skeleton(height=200)
+data = load_data()  # Expensive work
+placeholder.dataframe(data)  # Replaces the skeleton with content
+```
+
+Context manager (like `st.spinner`): the skeleton appears while the `with` block runs (after a short delay) and clears automatically when the block exits. Any `st.*` calls inside the block render in the parent container and remain visible after the skeleton clears.
+
+```python
+with st.skeleton(height=200):
+    data = expensive_operation()
+st.success("Data loaded!")
+```
+
+By default (`height=None`), the skeleton uses the standard element height. Pass an integer for a fixed pixel height, or `"stretch"` to fill a parent container with a bounded height.
 
 ## Dialogs for focused interactions
 

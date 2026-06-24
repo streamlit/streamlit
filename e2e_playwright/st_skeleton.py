@@ -22,6 +22,11 @@ st.header("Skeleton Tests")
 st.subheader("Static Skeleton (for snapshot)")
 st.skeleton(height=100)
 
+# Default skeleton (height=None) uses the standard element height.
+st.subheader("Default Skeleton")
+with st.container(key="default_skeleton"):
+    st.skeleton()
+
 # Skeleton with different width configurations
 st.subheader("Width Configurations")
 st.skeleton(height=50, width=200)

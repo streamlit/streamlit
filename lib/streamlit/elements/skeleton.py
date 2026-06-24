@@ -51,32 +51,38 @@ class SkeletonMixin:
     @gather_metrics("skeleton")
     def skeleton(
         self,
-        height: HeightWithoutContent = 100,
+        height: HeightWithoutContent | None = None,
         *,
         width: WidthWithoutContent = "stretch",
     ) -> SkeletonPlaceholder:
         r"""Display a skeleton loading placeholder.
 
-        A skeleton is a visual placeholder that indicates content is loading.
-        It can be used in two ways:
+        A skeleton is an animated placeholder that indicates content is
+        loading. Use it to reserve layout space and provide visual feedback
+        while content loads. It can be used in two ways:
 
-        **Standalone mode**: Returns a placeholder that can be replaced with
-        content later, similar to ``st.empty()``.
+        **Standalone mode** (like ``st.empty()``): Returns a placeholder that
+        is shown immediately and can be replaced with content later by calling
+        an ``st.*`` method on it (for example, ``placeholder.dataframe(...)``).
 
-        **Context manager mode**: The skeleton automatically clears when the
-        block exits, whether normally or due to an exception. Like
-        ``st.spinner``, any ``st.*`` calls made inside the ``with`` block
+        **Context manager mode** (like ``st.spinner()``): The skeleton is shown
+        while the ``with`` block runs (after a short delay) and automatically
+        clears when the block exits, whether normally or due to an exception.
+        Like ``st.spinner``, any ``st.*`` calls made inside the ``with`` block
         are written to the parent container and remain visible after the
         skeleton clears.
 
         Parameters
         ----------
-        height : int or "stretch"
+        height : int, "stretch", or None
             The height of the skeleton. This can be one of the following:
 
-            - An integer specifying the height in pixels (default: 100).
+            - ``None`` (default): The skeleton uses the standard element
+              height (the same height as most input widgets).
+            - An integer specifying the height in pixels.
             - ``"stretch"``: The height of the skeleton matches the height of
-              the parent container.
+              the parent container. This requires a parent container with a
+              bounded height.
 
         width : int or "stretch"
             The width of the skeleton. This can be one of the following:
@@ -122,19 +128,26 @@ class SkeletonMixin:
            height: 200px
 
         """
-        layout_config = create_layout_config(
-            width=width,
-            height=height,
-            allow_stretch_height=True,
-        )
+        # When height is None, omit it from the layout config so no
+        # HeightConfig is sent. The frontend then resolves the height to the
+        # standard element height (theme.sizes.minElementHeight). Passing None
+        # to create_layout_config() would fail height validation.
+        if height is None:
+            layout_config = create_layout_config(width=width)
+        else:
+            layout_config = create_layout_config(
+                width=width,
+                height=height,
+                allow_stretch_height=True,
+            )
 
         skeleton_proto = SkeletonProto()
-        # Set pixel height on the proto if an integer is provided.
+        # Set the pixel height on the proto when an integer is provided.
         # Exclude bool since isinstance(True, int) is True in Python.
-        # Note: For the public API, this proto field is not used visually.
-        # The frontend reads height from layout_config instead. This assignment
-        # is kept for parity with the legacy internal _skeleton() method and
-        # potential future use cases (e.g., server-side height validation).
+        # For the public API the visual height is derived from the layout config;
+        # this proto field is redundant there but the frontend still reads it as
+        # a fallback "has an explicit height" signal (see ElementNodeRenderer),
+        # and the internal _skeleton() path relies on it for sizing.
         if isinstance(height, int) and not isinstance(height, bool):
             skeleton_proto.height = height
 
@@ -146,5 +159,5 @@ class SkeletonMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

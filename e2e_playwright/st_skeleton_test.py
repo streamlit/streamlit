@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import get_button
+from e2e_playwright.shared.app_utils import get_button, get_element_by_key
 
 
 def test_skeleton_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
@@ -26,20 +26,31 @@ def test_skeleton_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(skeleton, name="st_skeleton-default")
 
 
+def test_skeleton_default_height(app: Page):
+    """Test that a skeleton without an explicit height uses the standard
+    element height (theme.sizes.minElementHeight == 2.5rem == 40px).
+    """
+    skeleton = get_element_by_key(app, "default_skeleton").get_by_test_id(
+        "stSkeletonElement"
+    )
+    expect(skeleton).to_be_visible()
+    expect(skeleton).to_have_css("height", "40px")
+
+
 def test_skeleton_width_configurations(app: Page):
     """Test skeleton with different width configurations."""
     # Get all skeletons under "Width Configurations" section
     skeletons = app.get_by_test_id("stSkeletonElement")
-    # Should have at least 3 skeletons: 1 static + 2 width configs
-    expect(skeletons).to_have_count(4)  # 1 static + 2 width + 1 in form
+    # 1 static + 1 default + 2 width + 1 in form
+    expect(skeletons).to_have_count(5)
 
     # The fixed width skeleton (200px) should be visible and have correct width
-    fixed_width_skeleton = skeletons.nth(1)
+    fixed_width_skeleton = skeletons.nth(2)
     expect(fixed_width_skeleton).to_be_visible()
     expect(fixed_width_skeleton).to_have_css("width", "200px")
 
     # The stretch width skeleton should be visible
-    expect(skeletons.nth(2)).to_be_visible()
+    expect(skeletons.nth(3)).to_be_visible()
 
 
 def test_skeleton_context_manager_instant(app: Page):

@@ -574,6 +574,18 @@ const RawElementNodeRenderer = (
       // widthConfig and heightConfig from the public API.
       const isAppSkeleton =
         skeletonProto.style === SkeletonProto.SkeletonStyle.APP
+      // The container only has a definite height when the element carries an
+      // explicit height (a stretch/pixel/rem height config, or the legacy
+      // pixel height on the proto used by the internal _skeleton()). When it
+      // does, the skeleton should fill it; otherwise it falls back to the
+      // default element height.
+      const { heightConfig } = node.element
+      const fillContainerHeight = Boolean(
+        heightConfig?.useStretch ||
+        heightConfig?.pixelHeight ||
+        heightConfig?.remHeight ||
+        skeletonProto.height
+      )
       return (
         <ElementContainer
           node={node}
@@ -587,7 +599,7 @@ const RawElementNodeRenderer = (
           {isAppSkeleton ? (
             <AppSkeleton />
           ) : (
-            <Skeleton element={skeletonProto} />
+            <Skeleton fillContainerHeight={fillContainerHeight} />
           )}
         </ElementContainer>
       )

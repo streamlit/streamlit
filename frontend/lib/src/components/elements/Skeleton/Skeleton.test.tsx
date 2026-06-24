@@ -16,20 +16,35 @@
 
 import { screen } from "@testing-library/react"
 
-import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
-
 import { render } from "~lib/test_util"
 
 import { Skeleton } from "./Skeleton"
 
 describe("Skeleton element", () => {
-  it("renders with correct styling and fills container", () => {
-    render(<Skeleton element={SkeletonProto.create()} />)
+  it("uses the default element height when no container height is set", () => {
+    render(<Skeleton />)
 
     const skeletonElement = screen.getByTestId("stSkeletonElement")
     expect(skeletonElement).toBeVisible()
     expect(skeletonElement).toHaveClass("stSkeleton")
-    // Use toHaveStyle for Emotion CSS-in-JS styles, not toHaveAttribute
+    // Falls back to the standard element height (theme.sizes.minElementHeight)
+    // rather than collapsing inside an auto-height container.
+    expect(skeletonElement).toHaveStyle({ height: "2.5rem", width: "100%" })
+  })
+
+  it("fills the container height when an explicit height is provided", () => {
+    render(<Skeleton fillContainerHeight={true} />)
+
+    const skeletonElement = screen.getByTestId("stSkeletonElement")
     expect(skeletonElement).toHaveStyle({ height: "100%", width: "100%" })
+  })
+
+  it("is hidden from assistive technologies (decorative placeholder)", () => {
+    render(<Skeleton />)
+
+    const skeletonElement = screen.getByTestId("stSkeletonElement")
+    expect(skeletonElement).toHaveAttribute("aria-hidden", "true")
+    // It must not be announced as a live status region.
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
   })
 })

@@ -524,15 +524,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   if (!inline && language.toLowerCase() === "mermaid" && !isStreaming) {
     return (
       <ErrorBoundary>
-        <Suspense
-          fallback={
-            <Skeleton
-              element={SkeletonProto.create({
-                style: SkeletonProto.SkeletonStyle.ELEMENT,
-              })}
-            />
-          }
-        >
+        <Suspense fallback={<SquareSkeleton data-testid="stSkeleton" />}>
           <MermaidChart source={codeText} />
         </Suspense>
       </ErrorBoundary>

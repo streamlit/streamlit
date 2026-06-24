@@ -31,6 +31,8 @@ if TYPE_CHECKING:
 
     # Test return type
     assert_type(dg.skeleton(), SkeletonPlaceholder)
+    assert_type(dg.skeleton(height=None), SkeletonPlaceholder)
+    assert_type(dg.skeleton(100), SkeletonPlaceholder)
     assert_type(dg.skeleton(height=100), SkeletonPlaceholder)
     assert_type(dg.skeleton(height="stretch"), SkeletonPlaceholder)
     assert_type(dg.skeleton(width=200), SkeletonPlaceholder)

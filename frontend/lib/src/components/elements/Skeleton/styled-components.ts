@@ -33,6 +33,11 @@ const ANIMATION_STYLES = {
   animationTimingFunction: "ease-in",
   animationDirection: "normal",
   animationIterationCount: "infinite",
+  // Respect the user's reduced-motion preference by disabling the pulse
+  // animation. The skeleton remains visible as a static placeholder.
+  "@media (prefers-reduced-motion: reduce)": {
+    animation: "none",
+  },
 }
 
 export const StyledSkeleton = styled.div(({ theme }) => ({
