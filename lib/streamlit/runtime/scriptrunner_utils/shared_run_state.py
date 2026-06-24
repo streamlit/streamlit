@@ -59,13 +59,13 @@ class SharedRunState:
 
     @property
     def tracked_commands(self) -> tuple[Command, ...]:
-        """Return an immutable snapshot of tracked commands."""
+        """An immutable snapshot of tracked commands."""
         with self._telemetry_lock:
             return tuple(self._tracked_commands)
 
     @property
     def tracked_commands_count(self) -> int:
-        """Return the number of commands stored in the tracked list (capped)."""
+        """The number of commands stored in the tracked list (capped)."""
         with self._telemetry_lock:
             return len(self._tracked_commands)
 

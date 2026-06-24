@@ -357,7 +357,7 @@ class DeltaGenerator(
 
     @property
     def _active_dg(self) -> DeltaGenerator:
-        """Return the DeltaGenerator that's currently 'active'.
+        """The DeltaGenerator that's currently 'active'.
         If we are the main DeltaGenerator, and are inside a `with` block that
         creates a container, our active_dg is that container. Otherwise,
         our active_dg is self.
@@ -375,7 +375,7 @@ class DeltaGenerator(
 
     @property
     def _main_dg(self) -> DeltaGenerator:
-        """Return this DeltaGenerator's root - that is, the top-level ancestor
+        """The root DeltaGenerator - that is, the top-level ancestor
         DeltaGenerator that we belong to (this generally means the st._main
         DeltaGenerator).
         """
@@ -444,7 +444,7 @@ class DeltaGenerator(
 
     @property
     def _cursor(self) -> Cursor | None:
-        """Return our Cursor. This will be None if we're not running in a
+        """Our Cursor. This will be None if we're not running in a
         ScriptThread - e.g., if we're running a "bare" script outside of
         Streamlit.
         """
