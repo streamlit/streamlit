@@ -52,7 +52,12 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.runtime.state import SessionState, get_session_state
-from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX, WidgetMetadata
+from streamlit.runtime.state.common import (
+    GENERATED_ELEMENT_ID_PREFIX,
+    BindOption,
+    PersistStateOption,
+    WidgetMetadata,
+)
 from streamlit.runtime.state.session_state import (
     KeyIdMapper,
     Serialized,
@@ -104,9 +109,9 @@ def _create_test_widget_metadata(
 
 def _create_persist_state_metadata(
     widget_id: str,
-    persist_state: str,
+    persist_state: PersistStateOption,
     value_type: str = "string_value",
-    bind: str | None = None,
+    bind: BindOption = None,
 ) -> WidgetMetadata:
     """Helper to create widget metadata for persist_state tests."""
     return WidgetMetadata(
