@@ -16,27 +16,18 @@
 
 import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { vi } from "vitest"
 
 /**
- * Opens the main menu by clicking the menu button.
- * Adapts automatically to fake or real timers: when fake timers are active,
- * uses advanceTimers + runOnlyPendingTimers; otherwise waits for the
- * popover asynchronously via waitFor.
+ * Opens the main menu by clicking the menu button and waits for the popover
+ * to appear. The menu mounts synchronously via conditional render, so waitFor
+ * typically resolves on the first check.
  */
 export async function openMenu(): Promise<void> {
-  if (vi.isFakeTimers()) {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    await user.click(screen.getByRole("button", { name: "Main menu" }))
-    vi.runOnlyPendingTimers()
+  const user = userEvent.setup()
+  await user.click(screen.getByRole("button", { name: "Main menu" }))
+  await waitFor(() => {
     expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
-  } else {
-    const user = userEvent.setup()
-    await user.click(screen.getByRole("button", { name: "Main menu" }))
-    await waitFor(() => {
-      expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
-    })
-  }
+  })
 }
 
 /**
