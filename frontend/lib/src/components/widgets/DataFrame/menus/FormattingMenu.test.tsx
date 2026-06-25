@@ -152,8 +152,6 @@ describe("DataFrame FormattingMenu", () => {
 
     const anchor = screen.getByRole("presentation")
     await userEvent.hover(anchor)
-    // floating-ui calls onOpenChange(open, event, reason) — assert on first arg only
-    expect(onOpenChange).toHaveBeenCalled()
-    expect(onOpenChange.mock.calls[0][0]).toBe(true)
+    expect(onOpenChange).toHaveBeenCalledWith(true)
   })
 })

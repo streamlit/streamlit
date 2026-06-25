@@ -186,6 +186,13 @@ function FormattingMenu({
 }: FormattingMenuProps): ReactElement {
   const formats = COLUMN_KIND_FORMAT_MAPPING[columnKind] || []
 
+  // Note: FloatingPortal panels may render at (0,0) for one frame before
+  // floating-ui measures and positions them. A visibility:hidden guard until
+  // placement is stable would fix this, but no other overlay in the codebase
+  // (MenuButton, Popover, TopNav, ColorPicker) uses that pattern. If a flash
+  // is observed on slow machines, add `visibility: isPositioned ? 'visible' :
+  // 'hidden'` using useFloating's `isPositioned` return value.
+
   // Refs to the anchor and panel DOM nodes — needed for the mouseover check.
   const anchorRef = useRef<HTMLDivElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
@@ -224,6 +231,7 @@ function FormattingMenu({
   // when crossing portal boundaries. mouseover bubbles to document unconditionally,
   // so it fires regardless of portal structure or browser engine.
   useEffect(() => {
+    if (formats.length === 0) return
     const handleMouseOver = (e: MouseEvent): void => {
       const target = e.target as Element
       if (anchorRef.current?.contains(target)) {
@@ -237,7 +245,7 @@ function FormattingMenu({
     }
     document.addEventListener("mouseover", handleMouseOver)
     return () => document.removeEventListener("mouseover", handleMouseOver)
-  }, [clearClose, onOpenChange, scheduleClose])
+  }, [formats.length, clearClose, onOpenChange, scheduleClose])
 
   if (formats.length === 0) {
     // If there are no formats available for the column kind,
@@ -256,6 +264,8 @@ function FormattingMenu({
             ref={setPanelRef}
             style={floatingStyles}
             data-testid="stDataFrameColumnFormattingMenu"
+            tabIndex={-1}
+            autoFocus
           >
             <StyledMenuList role="menu">
               {formats.map(format => (

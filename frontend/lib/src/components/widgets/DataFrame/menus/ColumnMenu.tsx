@@ -223,13 +223,11 @@ function ColumnMenu({
         <StyledColumnMenuPanel
           ref={setFloatingCallback}
           data-testid="stDataFrameColumnMenu"
-          aria-label="Dataframe column menu"
-          role="menu"
           style={floatingStyles}
           tabIndex={-1}
           autoFocus
         >
-          <StyledMenuList>
+          <StyledMenuList role="menu" aria-label="Dataframe column menu">
             <StyledColumnHeaderRow>
               <StyledTypeIconContainer title={column.kind}>
                 <DynamicIcon

@@ -349,6 +349,9 @@ function StatisticsMenu({
       </StyledSubMenuAnchor>
       {isOpen && (
         <FloatingPortal>
+          {/* No tabIndex/autoFocus — intentionally omitted for this read-only panel,
+              matching the original BaseWeb implementation. Allows keyboard users to
+              navigate the parent column menu while viewing statistics. */}
           <StyledSubMenuPanel
             ref={setPanelRef}
             style={floatingStyles}

@@ -20,6 +20,7 @@ import {
   type FlipOptions,
   type Middleware,
   offset,
+  type OpenChangeReason,
   type Placement,
   shift,
   type ShiftOptions,
@@ -29,7 +30,11 @@ import {
 
 interface UseFloatingOverlayOptions {
   open: boolean
-  onOpenChange?: (open: boolean) => void
+  onOpenChange?: (
+    open: boolean,
+    event?: Event,
+    reason?: OpenChangeReason
+  ) => void
   placement?: Placement
   offsetPx?: number
   flipOptions?: FlipOptions | false
