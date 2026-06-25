@@ -1160,10 +1160,11 @@ class SessionState:
         # Re-add preserved query-param-bound values under user keys.
         self._old_state.update(bound_preserved)
 
-        # When a widget remounts under a new id this run (e.g. after a page
-        # switch) but its user key was just preserved from a stale widget, seed
-        # the active widget's value directly. Otherwise the freshly defaulted
-        # new widget-id entry would shadow the preserved user-key value.
+        # A keyed widget can remount under a new element id this run (e.g. after
+        # a page switch) while its user key stays the same. The value was just
+        # preserved under the user key, so copy it onto the new element id —
+        # otherwise the default written for that id at registration shadows it,
+        # since a value stored by element id outranks one stored by user key.
         for user_key, value in bound_preserved.items():
             active_id = self._key_id_mapper.get_id_from_key(user_key, None)
             if active_id is not None and active_id in active_widget_ids:
