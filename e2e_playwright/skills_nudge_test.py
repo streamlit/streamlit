@@ -91,7 +91,7 @@ def test_skills_nudge_shows_and_dismisses(
     """
     nudge = app.get_by_test_id("stSkillsNudge")
     expect(nudge).to_be_visible()
-    expect(nudge).to_contain_text("Help agents write better Streamlit")
+    expect(nudge).to_contain_text("Help agents write better apps")
     expect(nudge.get_by_role("button", name="Install")).to_be_visible()
     expect(nudge.get_by_role("button", name="Don't show again")).to_be_visible()
     # The close (✕) control exposes an accessible "Close" name (it snoozes the
