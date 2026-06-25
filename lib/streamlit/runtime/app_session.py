@@ -886,6 +886,13 @@ class AppSession:
         never break session creation (defaults to not recommending on failure).
         """
         try:
+            # Never nudge in the bundled ``streamlit hello`` demo: its script
+            # lives inside the Streamlit package, so a one-click install would
+            # write skills into the install tree (e.g. site-packages), and a
+            # call-to-action card is inappropriate on the demo app anyway.
+            if self._script_data.is_hello:
+                return False
+
             from streamlit.web import skills
 
             app_dir = os.path.dirname(self._script_data.main_script_path)

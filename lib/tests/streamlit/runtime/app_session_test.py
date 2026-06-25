@@ -72,6 +72,7 @@ def del_path(monkeypatch):
 def _create_test_session(
     event_loop: asyncio.AbstractEventLoop | None = None,
     session_id_override: str | None = None,
+    is_hello: bool = False,
 ) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
     if event_loop is None:
@@ -88,7 +89,7 @@ def _create_test_session(
         ),
     ):
         return AppSession(
-            script_data=ScriptData("/fake/script_path.py", is_hello=False),
+            script_data=ScriptData("/fake/script_path.py", is_hello=is_hello),
             uploaded_file_manager=MagicMock(spec=UploadedFileManager),
             script_cache=MagicMock(),
             message_enqueued_callback=None,
@@ -2478,3 +2479,20 @@ def test_create_new_session_message_recomputes_skills_recommendation() -> None:
     # The second NewSession reflects the updated detection (e.g. post-install),
     # not a stale memoized True.
     assert second.new_session.initialize.recommend_skills_install is False
+
+
+def test_create_new_session_message_skips_skills_install_for_hello_app() -> None:
+    """The skills nudge is never recommended for the bundled ``streamlit hello``
+    demo: its script lives inside the Streamlit package, so a one-click install
+    would write into the install tree. The recommendation short-circuits on
+    ``is_hello`` before the detection is consulted."""
+    session = _create_test_session(is_hello=True)
+
+    with patch(
+        "streamlit.web.skills.should_show_skills_nudge", return_value=True
+    ) as mock_should_show:
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    # Short-circuited on is_hello before the (would-recommend) detection ran.
+    mock_should_show.assert_not_called()
