@@ -81,7 +81,6 @@ export const StyledRightControls = styled.div(({ theme }) => ({
   alignItems: "center",
   alignSelf: "center",
   flexShrink: 0,
-  minHeight: theme.sizes.minElementHeight,
   paddingRight: theme.spacing.sm,
   paddingLeft: theme.spacing.none,
 }))

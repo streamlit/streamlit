@@ -16,8 +16,6 @@
 
 import { FC, memo } from "react"
 
-import { Close } from "@emotion-icons/material-outlined"
-
 import {
   StyledTagButton,
   StyledTagRemoveIcon,
@@ -53,7 +51,19 @@ const Tag: FC<TagProps> = ({ label, onRemove, disabled }) => (
   >
     <StyledTagText title={label}>{label}</StyledTagText>
     <StyledTagRemoveIcon aria-hidden="true">
-      <Close size="0.75em" />
+      <svg
+        height="0.5em"
+        viewBox="0 0 10 10"
+        width="0.5em"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M9 1L5 5M1 9L5 5M5 5L1 1M5 5L9 9"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="2"
+        />
+      </svg>
     </StyledTagRemoveIcon>
   </StyledTagButton>
 )

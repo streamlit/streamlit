@@ -151,7 +151,9 @@ def test_multiselect_in_fragment(app: Page):
     multiselect = app.get_by_test_id("stMultiSelect").locator("input")
     multiselect.evaluate("el => el.scrollIntoView({ block: 'center' })")
     multiselect.click()
-    app.locator("li").first.click()
+    multiselect.press("ArrowDown")
+    expect(app.get_by_test_id("stMultiSelectPopover")).to_be_visible()
+    app.get_by_role("option").first.click()
     app.keyboard.press("Escape")
     wait_for_app_run(app)
 
