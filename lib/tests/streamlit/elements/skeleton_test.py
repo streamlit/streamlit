@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import time
 from unittest.mock import patch
 
 import pytest
@@ -149,8 +150,6 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
 
     def test_context_manager_uses_transient_elements(self) -> None:
         """Test that context manager mode uses transient elements (0.5s delay pattern)."""
-        import time
-
         # Patch the delay to a smaller value for faster tests.
         # Use 0.1s with 0.3s sleep (200ms buffer) to avoid CI flakiness.
         # A 10ms buffer (0.01s delay, 0.02s sleep) is too tight under load.
@@ -201,6 +200,23 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
         delta = self.get_delta_from_queue()
         assert delta.HasField("new_transient")
         assert len(delta.new_transient.elements) == 0
+
+    def test_context_manager_reuse_shows_skeleton_again(self) -> None:
+        """Test that reusing the same placeholder as a context manager shows the
+        delayed skeleton again (the display flag is reset on re-entry)."""
+        placeholder = st.skeleton()
+
+        with patch("streamlit.elements.lib.skeleton_placeholder._DELAY_SECS", 0.1):
+            # First use of the context manager.
+            with placeholder:
+                time.sleep(0.3)
+
+            # Second use of the same placeholder must show the skeleton again.
+            with placeholder:
+                time.sleep(0.3)
+                create_delta = self.get_delta_from_queue()
+                assert create_delta.HasField("new_transient")
+                assert create_delta.new_transient.elements[0].HasField("skeleton")
 
 
 class SkeletonPlaceholderTest(DeltaGeneratorTestCase):

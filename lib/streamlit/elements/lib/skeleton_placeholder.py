@@ -109,6 +109,10 @@ class SkeletonPlaceholder:
         """
         with self._display_lock:
             self._in_context_manager = True
+            # Reset the display flag so re-entering the context manager on the
+            # same placeholder shows the delayed skeleton again (a prior
+            # __exit__ sets it to False).
+            self._should_display = True
 
         # Clear the immediately-shown skeleton and switch to transient mode.
         # Use empty() to clear without flashing any content.

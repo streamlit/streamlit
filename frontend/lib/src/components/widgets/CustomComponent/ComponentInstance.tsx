@@ -413,6 +413,7 @@ function ComponentInstance(props: Props): ReactElement {
       <SquareSkeleton
         data-testid="stSkeleton"
         height={frameHeight ? `${frameHeight}px` : undefined}
+        aria-hidden="true"
       />
     )
 

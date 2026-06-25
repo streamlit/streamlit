@@ -16,6 +16,8 @@
 
 import { FC, memo } from "react"
 
+import { notNullOrUndefined } from "~lib/util/utils"
+
 import { SquareSkeleton } from "./styled-components"
 
 interface SkeletonProps {
@@ -27,6 +29,13 @@ interface SkeletonProps {
    * auto-height container.
    */
   fillContainerHeight?: boolean
+  /**
+   * Explicit pixel height applied directly to the skeleton. This is only used
+   * by the deprecated internal `_skeleton()` path, which carries its height on
+   * the proto without a layout config (so the container is not sized). The
+   * public `st.skeleton()` API instead uses `fillContainerHeight`.
+   */
+  pixelHeight?: number
 }
 
 /**
@@ -48,14 +57,24 @@ interface SkeletonProps {
  * the app-loaded gate, which waits on the internal loading skeletons (Suspense
  * fallbacks) that use the "stSkeleton" test ID.
  */
-const RawSkeleton: FC<SkeletonProps> = ({ fillContainerHeight = false }) => (
-  <SquareSkeleton
-    className="stSkeleton"
-    data-testid="stSkeletonElement"
-    height={fillContainerHeight ? "100%" : undefined}
-    width="100%"
-    aria-hidden="true"
-  />
-)
+const RawSkeleton: FC<SkeletonProps> = ({
+  fillContainerHeight = false,
+  pixelHeight,
+}) => {
+  const height = fillContainerHeight
+    ? "100%"
+    : notNullOrUndefined(pixelHeight)
+      ? `${pixelHeight}px`
+      : undefined
+  return (
+    <SquareSkeleton
+      className="stSkeleton"
+      data-testid="stSkeletonElement"
+      height={height}
+      width="100%"
+      aria-hidden="true"
+    />
+  )
+}
 
 export const Skeleton = memo(RawSkeleton)
