@@ -883,7 +883,7 @@ def _nudge_dismissed_marker_path() -> Path:
     """Return the path to the marker file that suppresses the skills nudge."""
     from streamlit import file_util
 
-    return Path(file_util.get_streamlit_file_path("skills_nudge_dismissed"))
+    return Path(file_util.get_streamlit_file_path(".skills_nudge_dismissed"))
 
 
 def write_nudge_dismissed_marker() -> None:

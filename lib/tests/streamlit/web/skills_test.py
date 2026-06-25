@@ -1581,7 +1581,7 @@ def _evaluate_nudge(
     marker_exists: bool = False,
 ) -> bool:
     """Run ``should_show_skills_nudge`` with the given conditions patched in."""
-    marker = tmp_path / "skills_nudge_dismissed"
+    marker = tmp_path / ".skills_nudge_dismissed"
     if marker_exists:
         marker.touch()
 
@@ -1648,7 +1648,7 @@ def test_should_show_skills_nudge_returns_false_on_error() -> None:
 
 def test_write_nudge_dismissed_marker_creates_file(tmp_path: Path) -> None:
     """Writing the marker creates the file (and any missing parent dirs)."""
-    marker = tmp_path / ".streamlit" / "skills_nudge_dismissed"
+    marker = tmp_path / ".streamlit" / ".skills_nudge_dismissed"
     with patch.object(skills, "_nudge_dismissed_marker_path", return_value=marker):
         skills.write_nudge_dismissed_marker()
         # A second call must not raise even though the marker already exists.
@@ -1660,7 +1660,7 @@ def test_write_nudge_dismissed_marker_creates_file(tmp_path: Path) -> None:
 def test_nudge_dismissed_marker_path_under_streamlit_dir() -> None:
     """The marker lives under the user's ``.streamlit`` config directory."""
     path = skills._nudge_dismissed_marker_path()
-    assert path.name == "skills_nudge_dismissed"
+    assert path.name == ".skills_nudge_dismissed"
     assert path.parent.name == ".streamlit"
 
 
