@@ -114,12 +114,15 @@ class SkeletonMixin:
         --------
         **Standalone mode** - replace skeleton with content:
 
-        >>> import streamlit as st
-        >>> import time
-        >>>
-        >>> placeholder = st.skeleton(height=200)
-        >>> time.sleep(2)
-        >>> placeholder.dataframe({"col1": [1, 2, 3], "col2": [4, 5, 6]})
+        .. code-block:: python
+           :filename: streamlit_app.py
+
+           import streamlit as st
+           import time
+
+           placeholder = st.skeleton(height=200)
+           time.sleep(2)
+           placeholder.dataframe({"col1": [1, 2, 3], "col2": [4, 5, 6]})
 
         .. output::
            https://doc-skeleton-standalone.streamlit.app/
@@ -127,14 +130,18 @@ class SkeletonMixin:
 
         **Context manager mode** - skeleton auto-clears when block exits:
 
-        >>> import streamlit as st
-        >>> import time
-        >>>
-        >>> with st.skeleton(height=100):
-        ...     # Expensive computation runs here
-        ...     time.sleep(2)
-        >>> # Skeleton clears, show results below
-        >>> st.success("Data loaded!")
+        .. code-block:: python
+           :filename: streamlit_app.py
+
+           import streamlit as st
+           import time
+
+           with st.skeleton(height=100):
+               # Expensive computation runs here
+               time.sleep(2)
+
+           # Skeleton clears, show results below
+           st.success("Data loaded!")
 
         .. output::
            https://doc-skeleton-context.streamlit.app/

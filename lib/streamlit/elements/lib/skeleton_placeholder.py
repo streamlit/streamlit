@@ -68,7 +68,6 @@ class SkeletonPlaceholder:
 
         # State tracking
         self._in_context_manager = False
-        self._used_standalone = False  # True once methods are called (e.g., .write())
         self._timer: threading.Timer | None = None
         self._display_lock = threading.Lock()
         self._should_display = True
@@ -91,8 +90,6 @@ class SkeletonPlaceholder:
             raise AttributeError(
                 f"'{type(self).__name__}' object has no attribute '{name}'"
             )
-        # Mark as used in standalone mode (prevents later context manager use)
-        self._used_standalone = True
         # Delegate to the internal DeltaGenerator
         return getattr(self._dg, name)
 
@@ -106,23 +103,10 @@ class SkeletonPlaceholder:
         """Enter context manager mode with 0.5s delay before showing skeleton.
 
         In context manager mode, we clear the immediately-shown skeleton and switch
-        to transient elements with a delay (like st.spinner).
-
-        Raises
-        ------
-        RuntimeError
-            If the placeholder was already used in standalone mode (via method calls
-            like `placeholder.write()`) before entering context manager mode.
+        to transient elements with a delay (like st.spinner). If the placeholder was
+        already used in standalone mode, the context manager simply takes over the
+        placeholder's slot (any standalone content there is cleared).
         """
-        # Disallow mixing standalone and context-manager modes.
-        # If methods were already called, the user is in standalone mode.
-        if self._used_standalone:
-            raise RuntimeError(
-                "Cannot use st.skeleton() as a context manager after calling methods "
-                "on it (like .write(), .dataframe(), etc.). Use either standalone mode "
-                "OR context manager mode, not both."
-            )
-
         with self._display_lock:
             self._in_context_manager = True
 

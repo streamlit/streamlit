@@ -187,14 +187,20 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
             with st.skeleton():
                 raise ValueError("Test exception")
 
-    def test_context_manager_after_standalone_raises(self) -> None:
-        """Test that using context manager after standalone mode raises an error."""
+    def test_context_manager_after_standalone_is_allowed(self) -> None:
+        """Test that entering the context manager after standalone use does not
+        raise; the context manager simply takes over the placeholder's slot."""
         placeholder = st.skeleton()
-        placeholder.markdown("Hello")  # Use in standalone mode
+        placeholder.markdown("Hello")  # Use in standalone mode first
 
-        with pytest.raises(RuntimeError, match=r"Cannot use st\.skeleton"):
-            with placeholder:  # Try to use as context manager
-                pass
+        # Mixing modes is permissive (no error); the context manager takes over.
+        with placeholder:
+            pass
+
+        # On exit, the transient skeleton is cleared (context-manager mode ran).
+        delta = self.get_delta_from_queue()
+        assert delta.HasField("new_transient")
+        assert len(delta.new_transient.elements) == 0
 
 
 class SkeletonPlaceholderTest(DeltaGeneratorTestCase):
