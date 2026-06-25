@@ -527,20 +527,34 @@ class PersistedWidgetTracker:
         user_key: str,
         scope: Literal["page", "session"],
         current_page: str,
-        is_bound: bool,
-    ) -> bool:
-        """Record a persist_state registration.
-
-        Returns True if the caller should drop the widget's stored value: a
-        "page"-scoped value resolving on a different page than it belongs to, or
-        one flagged for reset after a page switch. Bound widgets keep their value
-        (bind takes precedence) but still clear stale page-tracking.
+    ) -> None:
+        """Record a persist_state registration: the widget's scope and, for
+        "page" scope, the page it is mounting on. This is the durable snapshot
+        that later runs read; "session" scope needs no page, so any stale
+        page-tracking for the widget is cleared.
         """
         self._scopes[widget_id] = scope
-        if scope != "page":
+        if scope == "page":
+            self._widget_pages[widget_id] = current_page
+        else:
             self._widget_pages.pop(widget_id, None)
             self._value_pages.pop(user_key, None)
             self._pending_resets.discard(widget_id)
+
+    def take_pending_drop(
+        self, widget_id: str, user_key: str, current_page: str, is_bound: bool
+    ) -> bool:
+        """Resolve whether a just-registered widget's stored value must be
+        dropped, consuming the one-shot flags behind the decision. Call after
+        register().
+
+        Returns True when a "page"-scoped value must not survive: it belongs to a
+        different page than the one the widget is mounting on, or it was flagged
+        for reset after a page switch. Bound widgets are exempt (bind takes
+        precedence over "page" scope) but still clear the flags so they don't
+        linger. "session" scope never drops.
+        """
+        if self._scopes.get(widget_id) != "page":
             return False
 
         should_drop = False
@@ -556,7 +570,6 @@ class PersistedWidgetTracker:
             self._pending_resets.discard(widget_id)
             if not is_bound:
                 should_drop = True
-        self._widget_pages[widget_id] = current_page
         return should_drop
 
     def untrack(self, widget_id: str, user_key: str) -> None:
@@ -1267,20 +1280,22 @@ class SessionState:
             self._query_param_bound_widget_ids.discard(widget_id)
             self.query_params.unbind_and_clear_param(widget_id)
 
-        # Track persist_state registrations (server-side only, no URL). When bind
-        # is also set it takes precedence: the tracker still records the page but
-        # the value drop is skipped for bound widgets so it survives page switches.
+        # Keep persist_state tracking in sync (server-side only, no URL) and drop
+        # the stored value if the tracker says it's no longer valid for this page.
         dropped_page_scoped_value = False
         if metadata.persist_state is not None and user_key is not None:
             ctx = get_script_run_ctx()
             current_page_hash = ctx.page_script_hash if ctx is not None else ""
-            if self._persist_tracker.register(
+            self._persist_tracker.register(
+                widget_id, user_key, metadata.persist_state, current_page_hash
+            )
+            should_drop = self._persist_tracker.take_pending_drop(
                 widget_id,
                 user_key,
-                metadata.persist_state,
                 current_page_hash,
                 is_bound=metadata.bind == "query-params",
-            ):
+            )
+            if should_drop:
                 dropped_page_scoped_value = self._drop_widget_value(widget_id, user_key)
         elif metadata.persist_state is None and user_key is not None:
             # Widget stopped persisting — drop any stale tracking.
