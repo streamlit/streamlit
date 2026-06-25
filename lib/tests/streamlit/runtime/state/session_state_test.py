@@ -2186,7 +2186,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
         metadata = _create_persist_state_metadata(widget_id, "page")
 
         self.session_state.register_widget(metadata, user_key="my_widget")
-        assert self.session_state._persisted_widget_pages[widget_id] == "page_1_hash"
+        assert self.session_state._persist_tracker.page_of(widget_id) == "page_1_hash"
         self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
         self.session_state._compact_state()
         self.session_state._remove_stale_widgets(set())
@@ -2208,7 +2208,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
         self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
         self.session_state._compact_state()
         # Simulate navigation to a different page by recording a different hash.
-        self.session_state._persisted_widget_pages[widget_id] = "page_2_hash"
+        self.session_state._persist_tracker._widget_pages[widget_id] = "page_2_hash"
         self.session_state._remove_stale_widgets(set())
 
         assert widget_id not in self.session_state._old_state
@@ -2240,13 +2240,13 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
         page_metadata = _create_persist_state_metadata(widget_id, "page")
 
         self.session_state.register_widget(page_metadata, user_key="my_widget")
-        assert self.session_state._persisted_widget_ids[widget_id] == "page"
-        assert widget_id in self.session_state._persisted_widget_pages
+        assert self.session_state._persist_tracker.scope_of(widget_id) == "page"
+        assert self.session_state._persist_tracker.page_of(widget_id) is not None
 
         none_metadata = _create_persist_state_metadata(widget_id, None)
         self.session_state.register_widget(none_metadata, user_key="my_widget")
-        assert widget_id not in self.session_state._persisted_widget_ids
-        assert widget_id not in self.session_state._persisted_widget_pages
+        assert self.session_state._persist_tracker.scope_of(widget_id) is None
+        assert self.session_state._persist_tracker.page_of(widget_id) is None
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -2257,15 +2257,19 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
         kept_widget_id = "$$ID-hash-kept"
         stale_widget_id = "$$ID-hash-stale"
         self.session_state._set_key_widget_mapping(kept_widget_id, "kept")
-        self.session_state._persisted_widget_ids.update(
+        self.session_state._persist_tracker._scopes.update(
             {kept_widget_id: "session", stale_widget_id: "session"}
         )
-        self.session_state._persisted_widget_pages[stale_widget_id] = "page_1_hash"
+        self.session_state._persist_tracker._widget_pages[stale_widget_id] = (
+            "page_1_hash"
+        )
 
         self.session_state._remove_stale_widgets(set())
 
-        assert self.session_state._persisted_widget_ids == {kept_widget_id: "session"}
-        assert stale_widget_id not in self.session_state._persisted_widget_pages
+        assert self.session_state._persist_tracker._scopes == {
+            kept_widget_id: "session"
+        }
+        assert self.session_state._persist_tracker.page_of(stale_widget_id) is None
 
     def test_persist_state_page_drops_carried_value_on_remount_other_page(
         self,
@@ -2286,7 +2290,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
             self.session_state._compact_state()
             self.session_state._remove_stale_widgets(set())
 
-        assert self.session_state._persisted_page_value_pages["my_widget"] == (
+        assert self.session_state._persist_tracker.value_page_of("my_widget") == (
             "page_1_hash"
         )
 
@@ -2325,7 +2329,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
         ):
             self.session_state._remove_stale_widgets(frozenset())
 
-        assert widget_id in self.session_state._page_scoped_widget_ids_to_reset
+        assert self.session_state._persist_tracker.has_pending_reset(widget_id)
         assert "my_widget" not in self.session_state._old_state
 
         # Return to the origin page; the frontend resends the cached value for
@@ -2341,7 +2345,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
 
         assert result.value == "default"
         assert result.value_changed is True
-        assert widget_id not in self.session_state._page_scoped_widget_ids_to_reset
+        assert not self.session_state._persist_tracker.has_pending_reset(widget_id)
 
     def test_persist_state_page_dropped_after_hide_then_page_switch(self) -> None:
         """A "page" value preserved by hiding the widget on its origin page is
@@ -2379,7 +2383,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
 
         # The value is dropped on the page switch — not just at re-registration.
         assert "my_widget" not in self.session_state._old_state
-        assert widget_id in self.session_state._page_scoped_widget_ids_to_reset
+        assert self.session_state._persist_tracker.has_pending_reset(widget_id)
 
         # Returning to the origin page still resolves to the default, even if the
         # frontend resends the stale value for the reused widget id.
@@ -2412,7 +2416,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
             self.session_state._compact_state()
             self.session_state._remove_stale_widgets(frozenset())
 
-        assert widget_id not in self.session_state._page_scoped_widget_ids_to_reset
+        assert not self.session_state._persist_tracker.has_pending_reset(widget_id)
         assert self.session_state._old_state["my_widget"] == "custom_value"
 
     def test_persist_state_page_keeps_carried_value_on_remount_same_page(
@@ -2508,7 +2512,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
             self.session_state._remove_stale_widgets(frozenset())
 
         assert self.session_state._old_state["my_widget"] == "custom_value"
-        assert widget_id not in self.session_state._page_scoped_widget_ids_to_reset
+        assert not self.session_state._persist_tracker.has_pending_reset(widget_id)
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -2611,7 +2615,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
         # Binding wins: the value is preserved and the widget is not flagged for
         # a reset (unlike a non-bound "page" widget, which would be dropped).
         assert self.session_state._old_state["my_widget"] == "custom_value"
-        assert widget_id not in self.session_state._page_scoped_widget_ids_to_reset
+        assert not self.session_state._persist_tracker.has_pending_reset(widget_id)
 
         # Return to the origin page with no URL value to seed: the widget still
         # resolves to the preserved bound value rather than the default.

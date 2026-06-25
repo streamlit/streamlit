@@ -773,8 +773,8 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
             persist_state=None,
         )
         session_state = self.script_run_ctx.session_state._state
-        assert session_state._persisted_widget_ids == {}
-        assert session_state._persisted_widget_pages == {}
+        assert session_state._persist_tracker._scopes == {}
+        assert session_state._persist_tracker._widget_pages == {}
 
 
 @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
