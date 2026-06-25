@@ -524,7 +524,11 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   if (!inline && language.toLowerCase() === "mermaid" && !isStreaming) {
     return (
       <ErrorBoundary>
-        <Suspense fallback={<SquareSkeleton data-testid="stSkeleton" />}>
+        <Suspense
+          fallback={
+            <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
+          }
+        >
           <MermaidChart source={codeText} />
         </Suspense>
       </ErrorBoundary>
@@ -533,7 +537,11 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 
   return !inline ? (
     <ErrorBoundary>
-      <Suspense fallback={<SquareSkeleton data-testid="stSkeleton" />}>
+      <Suspense
+        fallback={
+          <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
+        }
+      >
         <StreamlitSyntaxHighlighter
           language={language}
           showLineNumbers={false}
@@ -1266,7 +1274,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   if (isLoadingPlugins) {
     return (
       <ErrorBoundary>
-        <SquareSkeleton data-testid="stSkeleton" />
+        <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
       </ErrorBoundary>
     )
   }
