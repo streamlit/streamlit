@@ -106,6 +106,32 @@ describe("DefaultStreamlitEndpoints", () => {
     })
   })
 
+  describe("buildBidiComponentURL()", () => {
+    it("builds the URL using the bidi-components endpoint", () => {
+      const endpoint = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: false,
+        sendClientError: vi.fn(),
+      })
+      expect(
+        endpoint.buildBidiComponentURL("my_component", "index.html")
+      ).toBe(
+        "http://streamlit.mock:80/mock/base/path/_stcore/bidi-components/my_component/index.html"
+      )
+    })
+
+    it("throws if no serverURI is available", () => {
+      const endpoint = new DefaultStreamlitEndpoints({
+        getServerUri: () => undefined,
+        csrfEnabled: false,
+        sendClientError: vi.fn(),
+      })
+      expect(() =>
+        endpoint.buildBidiComponentURL("my_component", "index.html")
+      ).toThrow("not connected to a server!")
+    })
+  })
+
   describe("buildMediaURL", () => {
     const endpoints = new DefaultStreamlitEndpoints({
       getServerUri: () => MOCK_SERVER_URI,
@@ -196,7 +222,7 @@ describe("DefaultStreamlitEndpoints", () => {
       sendClientError: vi.fn(),
     })
 
-    it("builds URL correctly for files being uploaded to the tornado server", () => {
+    it("builds URL correctly for files being uploaded to the server", () => {
       const url = endpoints.buildFileUploadURL("/_stcore/upload_file/file_1")
       expect(url).toBe(
         "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
@@ -547,7 +573,7 @@ describe("DefaultStreamlitEndpoints", () => {
       // Create a mock for axios.request that will be used by the dynamic import
       mockRequest = vi
         .fn<typeof axios.request>()
-        .mockResolvedValue({ data: {} } as never)
+        .mockResolvedValue({ data: {} })
       vi.spyOn(axios, "request").mockImplementation(mockRequest)
     })
 

@@ -176,7 +176,7 @@ export const useTextInputAutoExpand = ({
     scrollHeight,
     defaultHeight
   )
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
+
   const calculatedMaxHeight = calculateMaxHeight(maxHeightValue)
 
   return {

@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
@@ -36,7 +36,7 @@ jobs:
       - if: ${{ env.AWS_ACCESS_KEY_ID != '' }}
         name: Create or update comment (Building)
         id: initial-comment
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
         with:
@@ -105,7 +105,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -150,7 +150,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -223,7 +223,7 @@ jobs:
           echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
       - if: steps.exports.outputs.enable-setup == 'true' && success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request'
         name: Set S3 URL as Github Status
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           S3_URL: ${{ steps.exports.outputs.s3-url }}
         with:
@@ -258,7 +258,7 @@ jobs:
     steps:
       - name: Compare wheel sizes
         id: compare-sizes
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const threshold = parseFloat(process.env.SIZE_CHANGE_THRESHOLD);
@@ -349,7 +349,7 @@ jobs:
 
       - name: Add PR comment for significant size change
         if: success() && fromJSON(steps.compare-sizes.outputs.result).is_significant
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const result = JSON.parse(process.env.COMPARE_RESULT);
@@ -435,7 +435,7 @@ jobs:
 
       - name: Get latest develop run ID
         id: get-latest-run
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const { data: runs } = await github.rest.actions.listWorkflowRuns({
@@ -465,7 +465,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compare bundle sizes and comment
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -630,7 +630,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -687,7 +687,7 @@ jobs:
 
     steps:
       - name: Checkout Core Previews Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: streamlit/core-previews
           # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo.
@@ -732,12 +732,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
       - name: Update comment (Ready)
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             // Find the existing comment

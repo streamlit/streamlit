@@ -15,13 +15,20 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
+from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 import pytest
 
+from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.element_tree import _format_value_for_widget
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_alert():
@@ -48,6 +55,49 @@ def test_alert():
     repr(at.warning[0])
 
 
+def test_app_test_discovers_installed_v2_components_with_file_backed_assets(
+    tmp_path: Path,
+):
+    """Installed CCv2 components with file-backed assets resolve under AppTest."""
+    package_root = tmp_path / "apptest_pkg"
+    asset_dir = package_root / "assets"
+    asset_dir.mkdir(parents=True)
+    (asset_dir / "style.css").write_text("#demo { color: purple; }")
+    (asset_dir / "script.js").write_text("console.log('loaded');")
+
+    manifest = ComponentManifest(
+        name="apptest_pkg",
+        version="0.0.1",
+        components=[ComponentConfig(name="demo", asset_dir="assets")],
+    )
+
+    def script():
+        import streamlit as st
+        from streamlit.components.v2 import component
+
+        component(
+            "apptest_pkg.demo",
+            html='<div id="demo">hi</div>',
+            css="style.css",
+            js="script.js",
+        )
+        st.success("Done")
+
+    with patch(
+        "streamlit.components.v2.manifest_scanner.scan_component_manifests",
+        return_value=[(manifest, package_root)],
+    ) as scan_mock:
+        at = AppTest.from_function(script)
+        at.run()
+        # Rerun to ensure the discovered component manager is cached on the
+        # AppTest instance and components are not rescanned on every rerun.
+        at.run()
+
+    assert at.success[0].value == "Done"
+    assert not at.exception
+    assert scan_mock.call_count == 1
+
+
 def test_button():
     def script():
         import streamlit as st
@@ -68,6 +118,35 @@ def test_button():
     assert sr3.button[1].value is False
 
     repr(sr.button[0])
+
+
+def test_download_button():
+    def script():
+        import streamlit as st
+
+        clicked = st.download_button(
+            "Download",
+            data="contents",
+            file_name="example.txt",
+            mime="text/plain",
+            key="download",
+        )
+        st.write(clicked)
+
+    at = AppTest.from_function(script).run()
+    assert at.download_button[0].label == "Download"
+    assert at.download_button(key="download").value is False
+    assert at.markdown[0].value == "`False`"
+
+    at.download_button[0].click().run()
+    assert at.download_button[0].value is True
+    assert at.markdown[0].value == "`True`"
+
+    at.run()
+    assert at.download_button[0].value is False
+    assert at.markdown[0].value == "`False`"
+
+    repr(at.download_button[0])
 
 
 def test_chat():
@@ -152,6 +231,35 @@ def test_columns():
     assert at.columns[1].radio[0].value == "a"
 
     repr(at.columns[0])
+
+
+def test_image():
+    def script():
+        import streamlit as st
+
+        st.image("https://example.com/image.png", caption="A caption")
+        st.image(
+            [
+                "https://example.com/first.png",
+                "https://example.com/second.png",
+            ],
+            caption=["First", "Second"],
+        )
+        st.image("https://example.com/no_caption.png")
+
+    at = AppTest.from_function(script).run()
+    assert at.image.len == 3
+    assert at.image[0].value == ["https://example.com/image.png"]
+    assert at.image[0].captions == ["A caption"]
+    assert at.image[1].value == [
+        "https://example.com/first.png",
+        "https://example.com/second.png",
+    ]
+    assert at.image[1].captions == ["First", "Second"]
+    assert at.image[2].value == ["https://example.com/no_caption.png"]
+    assert at.image[2].captions == [""]
+
+    repr(at.image[0])
 
 
 def test_dataframe():
@@ -709,6 +817,110 @@ def test_format_func():
     assert at.select_slider("s").value == (2, 5)
 
     assert not at.exception
+
+
+def test_format_func_accepts_formatted_labels():
+    """Selection widgets accept already-formatted labels via format_func (#9476)."""
+    expected_inventories = [
+        {"id_inventory": 1, "description": "Inventory 1"},
+        {"id_inventory": 2, "description": "Inventory 2"},
+        {"id_inventory": 3, "description": "Inventory 3"},
+    ]
+
+    def script():
+        import streamlit as st
+
+        inventories = [
+            {"id_inventory": 1, "description": "Inventory 1"},
+            {"id_inventory": 2, "description": "Inventory 2"},
+            {"id_inventory": 3, "description": "Inventory 3"},
+        ]
+
+        selected_items = st.multiselect(
+            "Multi inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="multi_inventory",
+        )
+        st.button(
+            "Run multi",
+            disabled=not selected_items,
+            key="multi_button",
+            on_click=lambda: st.session_state.update(multi_clicked=True),
+        )
+
+        selected_item = st.selectbox(
+            "Single inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="single_inventory",
+        )
+        st.button(
+            "Run single",
+            disabled=selected_item["description"] == "Inventory 1",
+            key="single_button",
+        )
+
+        st.radio(
+            "Radio inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="radio_inventory",
+        )
+
+        st.segmented_control(
+            "Segmented inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="segmented_inventory",
+        )
+
+    at = AppTest.from_function(script).run()
+
+    at.multiselect("multi_inventory").set_value(["Inventory 1"])
+    at = at.button("multi_button").click().run()
+
+    assert at.session_state.multi_clicked
+    assert at.multiselect("multi_inventory").value == [expected_inventories[0]]
+    assert at.multiselect("multi_inventory").indices == [0]
+    assert not at.button("multi_button").disabled
+
+    at = at.selectbox("single_inventory").set_value("Inventory 2").run()
+
+    assert at.selectbox("single_inventory").value == expected_inventories[1]
+    assert at.selectbox("single_inventory").index == 1
+    assert not at.button("single_button").disabled
+
+    at = at.radio("radio_inventory").set_value("Inventory 3").run()
+
+    assert at.radio("radio_inventory").value == expected_inventories[2]
+    assert at.radio("radio_inventory").index == 2
+
+    at = at.segmented_control("segmented_inventory").set_value("Inventory 1").run()
+
+    assert at.segmented_control("segmented_inventory").value == expected_inventories[0]
+    assert not at.exception
+
+
+def test_format_value_for_widget_error_semantics():
+    """_format_value_for_widget falls back only for string labels, else re-raises."""
+
+    def format_func(value: dict[str, str]) -> str:
+        return value["description"]
+
+    # Raw option formats normally.
+    assert format_func({"description": "Inventory 1"}) == "Inventory 1"
+    assert (
+        _format_value_for_widget(format_func, {"description": "Inventory 1"})
+        == "Inventory 1"
+    )
+
+    # Formatted string label is accepted.
+    assert _format_value_for_widget(format_func, "Inventory 1") == "Inventory 1"
+
+    # Non-string value with a raising format_func is a real bug and must propagate.
+    with pytest.raises(TypeError):
+        _format_value_for_widget(format_func, 123)
 
 
 def test_select_slider():
@@ -1304,3 +1516,156 @@ def test_file_uploader_multiple_persists_across_runs():
     assert len(at.file_uploader[0].value) == 2
     assert at.markdown[0].value == "File: file1.txt"
     assert at.markdown[1].value == "File: file2.txt"
+
+
+def test_segmented_control_with_none_default():
+    """Test st.segmented_control with default=None works correctly. (Issue #11338)"""
+
+    def script():
+        import streamlit as st
+
+        # Single-select with no default (None)
+        result = st.segmented_control(
+            "Choose option",
+            options=["A", "B", "C"],
+            default=None,
+            key="single_select",
+        )
+        st.write(f"Selected: {result}")
+
+    at = AppTest.from_function(script).run()
+
+    # Verify the widget renders without error
+    assert len(at.segmented_control) == 1
+    assert at.segmented_control[0].value is None
+    assert at.segmented_control[0].indices == []
+    assert at.markdown[0].value == "Selected: None"
+
+    # Verify selecting a value works
+    at.segmented_control[0].select("B").run()
+    assert at.segmented_control[0].value == "B"
+    assert at.segmented_control[0].indices == [1]
+    assert at.markdown[0].value == "Selected: B"
+
+
+def test_pills_widget():
+    """Test st.pills can be accessed via the pills property. (Issue #11361)"""
+
+    def script():
+        import streamlit as st
+
+        selected = st.pills("Pick one", options=["X", "Y", "Z"], key="my_pills")
+        st.write(f"Picked: {selected}")
+
+    at = AppTest.from_function(script).run()
+
+    # Verify pills property returns only pills widgets (filtered by style)
+    assert len(at.pills) == 1
+    assert len(at.button_group) == 1
+
+    # Verify key lookup works
+    assert at.pills("my_pills").value is None
+
+    # Verify selection works
+    at.pills[0].select("Y").run()
+    assert at.pills[0].value == "Y"
+    assert at.markdown[0].value == "Picked: Y"
+
+
+def test_segmented_control_property():
+    """Test st.segmented_control can be accessed via the segmented_control property."""
+
+    def script():
+        import streamlit as st
+
+        result = st.segmented_control(
+            "Options", options=["opt1", "opt2"], key="my_segmented"
+        )
+        st.write(f"Result: {result}")
+
+    at = AppTest.from_function(script).run()
+
+    # Verify segmented_control property returns only segmented_control widgets
+    assert len(at.segmented_control) == 1
+    assert len(at.button_group) == 1
+
+    # Verify key lookup works
+    assert at.segmented_control("my_segmented").value is None
+
+
+def test_pills_and_segmented_control_filtering():
+    """Test pills/segmented_control properties filter by style when both are on page."""
+
+    def script():
+        import streamlit as st
+
+        # Render both widget types on the same page
+        pills_val = st.pills("Pills label", options=["A", "B"], key="the_pills")
+        seg_val = st.segmented_control("Seg label", options=["X", "Y"], key="the_seg")
+        st.write(f"Pills: {pills_val}, Seg: {seg_val}")
+
+    at = AppTest.from_function(script).run()
+
+    # button_group should contain both widgets
+    assert len(at.button_group) == 2
+
+    # pills should only contain the pills widget
+    assert len(at.pills) == 1
+    assert at.pills("the_pills") is not None
+    # segmented_control key should NOT be found in pills
+    assert len([p for p in at.pills if p.key == "the_seg"]) == 0
+
+    # segmented_control should only contain the segmented_control widget
+    assert len(at.segmented_control) == 1
+    assert at.segmented_control("the_seg") is not None
+    # pills key should NOT be found in segmented_control
+    assert len([s for s in at.segmented_control if s.key == "the_pills"]) == 0
+
+    # Verify interaction with each widget type works correctly
+    at.pills[0].select("B").run()
+    assert at.pills[0].value == "B"
+    assert at.segmented_control[0].value is None
+
+    at.segmented_control[0].select("Y").run()
+    assert at.segmented_control[0].value == "Y"
+    assert at.pills[0].value == "B"  # Pills value should be unchanged
+
+
+def test_dataframe_key():
+    """Test st.dataframe key is accessible for interactive dataframes. (Issue #12199)"""
+
+    def script():
+        import pandas as pd
+
+        import streamlit as st
+
+        df1 = pd.DataFrame({"col1": [1, 2], "col2": [3, 4]})
+        df2 = pd.DataFrame({"colA": ["a", "b"], "colB": ["c", "d"]})
+
+        # Interactive dataframes with on_select have the key stored in proto.id
+        st.dataframe(df1, key="first_df", on_select="rerun")
+        st.dataframe(df2, key="second_df", on_select="rerun")
+
+    at = AppTest.from_function(script).run()
+
+    # Verify key is accessible for interactive dataframes
+    assert at.dataframe[0].key == "first_df"
+    assert at.dataframe[1].key == "second_df"
+
+
+def test_dataframe_non_interactive_has_no_key():
+    """Test non-interactive st.dataframe has None key (expected behavior)."""
+
+    def script():
+        import pandas as pd
+
+        import streamlit as st
+
+        df = pd.DataFrame({"col1": [1, 2]})
+        # Non-interactive dataframe - key param is accepted but not stored in proto
+        st.dataframe(df, key="my_df")
+
+    at = AppTest.from_function(script).run()
+
+    # Non-interactive dataframes don't store the key in proto.id
+    assert at.dataframe[0].key is None

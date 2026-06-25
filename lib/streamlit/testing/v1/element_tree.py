@@ -67,12 +67,16 @@ if TYPE_CHECKING:
     from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
     from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
     from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
+    from streamlit.proto.DownloadButton_pb2 import (
+        DownloadButton as DownloadButtonProto,
+    )
     from streamlit.proto.Element_pb2 import Element as ElementProto
     from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
     from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
     from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.Heading_pb2 import Heading as HeadingProto
+    from streamlit.proto.Image_pb2 import ImageList as ImageListProto
     from streamlit.proto.Json_pb2 import Json as JsonProto
     from streamlit.proto.MenuButton_pb2 import MenuButton as MenuButtonProto
     from streamlit.proto.Metric_pb2 import Metric as MetricProto
@@ -91,6 +95,23 @@ if TYPE_CHECKING:
     from streamlit.testing.v1.app_test import AppTest
 
 T = TypeVar("T")
+
+
+def _format_value_for_widget(format_func: Callable[[Any], str], value: Any) -> str:
+    """Format a widget value into its option label.
+
+    AppTest supports setting widget values with either the raw option or the
+    formatted label. The latter matches what the production frontend sends to
+    the backend, but may raise when passed directly to ``format_func`` if the
+    function expects a raw option. To support formatted labels without hiding
+    real ``format_func`` bugs, only string values fall back to themselves.
+    """
+    try:
+        return format_func(value)
+    except builtins.Exception:
+        if isinstance(value, str):
+            return value
+        raise
 
 
 @dataclass
@@ -349,6 +370,48 @@ class Button(Widget):
 
 
 @dataclass(repr=False)
+class DownloadButton(Widget):
+    """A representation of ``st.download_button``."""
+
+    _value: bool
+
+    proto: DownloadButtonProto = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+
+    def __init__(self, proto: DownloadButtonProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = False
+        self.type = "download_button"
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        ws.trigger_value = self._value
+        return ws
+
+    @property
+    def value(self) -> bool:
+        """The value of the download button. (bool)"""  # noqa: D400
+        if self._value:
+            return self._value
+        state = self.root.session_state
+        assert state
+        return cast("bool", state[TESTING_KEY][self.id])
+
+    def set_value(self, v: bool) -> DownloadButton:
+        """Set the value of the download button."""
+        self._value = v
+        return self
+
+    def click(self) -> DownloadButton:
+        """Set the value of the download button to True."""
+        return self.set_value(True)
+
+
+@dataclass(repr=False)
 class ChatInput(Widget):
     """A representation of ``st.chat_input``."""
 
@@ -502,10 +565,11 @@ class Dataframe(Element):
     proto: DataframeProto = field(repr=False)
 
     def __init__(self, proto: DataframeProto, root: ElementTree) -> None:
-        self.key = None
         self.proto = proto
         self.root = root
         self.type = "dataframe"
+        # Extract user key from the element id if present
+        self.key = user_key_from_element_id(proto.id) if proto.id else None
 
     @property
     def value(self) -> PandasDataframe:
@@ -620,6 +684,30 @@ class Subheader(HeadingBase):
 class Title(HeadingBase):
     def __init__(self, proto: HeadingProto, root: ElementTree) -> None:
         super().__init__(proto, root, "title")
+
+
+@dataclass(repr=False)
+class Image(Element):
+    """A representation of ``st.image``."""
+
+    proto: ImageListProto = field(repr=False)
+    key: None
+
+    def __init__(self, proto: ImageListProto, root: ElementTree) -> None:
+        self.proto = proto
+        self.key = None
+        self.root = root
+        self.type = "image"
+
+    @property
+    def value(self) -> list[str]:
+        """The image URLs for this element."""
+        return [img.url for img in self.proto.imgs]
+
+    @property
+    def captions(self) -> list[str]:
+        """The image captions for this element."""
+        return [img.caption for img in self.proto.imgs]
 
 
 @dataclass(repr=False)
@@ -775,9 +863,11 @@ class ButtonGroup(Widget, Generic[T]):
             # Single-select: value is a single item or None
             if value is None:
                 return []
-            return [format_func(value)]
+            return [_format_value_for_widget(format_func, value)]
         # Multi-select: value is a list
-        return [format_func(v) for v in cast("list[T]", value)]
+        return [
+            _format_value_for_widget(format_func, v) for v in cast("list[T]", value)
+        ]
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
@@ -932,7 +1022,7 @@ class FileUploader(Widget):
         """Allowed file types for upload. (list of str)"""  # noqa: D400
         return list(self.proto.type)
 
-    def set_value(  # type: ignore[override,unused-ignore]
+    def set_value(  # ty: ignore[invalid-method-override]
         self,
         files: (tuple[str, bytes, str] | Sequence[tuple[str, bytes, str]] | None),
     ) -> Self:
@@ -1202,12 +1292,13 @@ class Multiselect(Widget, Generic[T]):
     @property
     def indices(self) -> Sequence[int]:
         """The indices of the currently selected values from the options. (list)"""  # noqa: D400
-        return [self.options.index(self.format_func(v)) for v in self.value]
+        return [self.options.index(v) for v in self.values]
 
     @property
     def values(self) -> Sequence[str]:
         """The currently selected values from the options. (list)"""  # noqa: D400
-        return [self.format_func(v) for v in self.value]
+        format_func = self.format_func
+        return [_format_value_for_widget(format_func, v) for v in self.value]
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
@@ -1289,7 +1380,7 @@ class NumberInput(Widget):
 
     @property
     def value(self) -> Number | None:
-        """Get the current value of the ``st.number_input`` widget."""
+        """The current value of the ``st.number_input`` widget."""
         if not isinstance(self._value, InitialValue):
             return self._value
         state = self.root.session_state
@@ -1339,7 +1430,8 @@ class Radio(Widget, Generic[T]):
         """The index of the current selection. (int)"""  # noqa: D400
         if self.value is None:
             return None
-        return self.options.index(self.format_func(self.value))
+        formatted_value = _format_value_for_widget(self.format_func, self.value)
+        return self.options.index(formatted_value)
 
     @property
     def value(self) -> T | None:
@@ -1400,7 +1492,8 @@ class Selectbox(Widget, Generic[T]):
 
         if len(self.options) == 0:
             return 0
-        return self.options.index(self.format_func(self.value))
+        formatted_value = _format_value_for_widget(self.format_func, self.value)
+        return self.options.index(formatted_value)
 
     @property
     def value(self) -> T | None:
@@ -1948,6 +2041,28 @@ class Block:
         return WidgetList(self.get("button_group"))  # type: ignore
 
     @property
+    def pills(self) -> WidgetList[ButtonGroup[Any]]:
+        """st.pills widgets (subset of button_group with PILLS style)."""
+        return WidgetList(
+            [
+                button_group
+                for button_group in self.button_group
+                if button_group.proto.style == ButtonGroupProto.Style.PILLS
+            ]
+        )
+
+    @property
+    def segmented_control(self) -> WidgetList[ButtonGroup[Any]]:
+        """st.segmented_control widgets (subset of button_group with SEGMENTED_CONTROL style)."""
+        return WidgetList(
+            [
+                button_group
+                for button_group in self.button_group
+                if button_group.proto.style == ButtonGroupProto.Style.SEGMENTED_CONTROL
+            ]
+        )
+
+    @property
     def caption(self) -> ElementList[Caption]:
         return ElementList(self.get("caption"))  # type: ignore
 
@@ -1992,6 +2107,10 @@ class Block:
         return ElementList(self.get("divider"))  # type: ignore
 
     @property
+    def download_button(self) -> WidgetList[DownloadButton]:
+        return WidgetList(self.get("download_button"))  # type: ignore
+
+    @property
     def error(self) -> ElementList[Error]:
         return ElementList(self.get("error"))  # type: ignore
 
@@ -2014,6 +2133,10 @@ class Block:
     @property
     def header(self) -> ElementList[Header]:
         return ElementList(self.get("header"))  # type: ignore
+
+    @property
+    def image(self) -> ElementList[Image]:
+        return ElementList(self.get("image"))  # type: ignore
 
     @property
     def info(self) -> ElementList[Info]:
@@ -2467,6 +2590,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = DateInput(elt.date_input, root=root)
             elif ty == "date_time_input":
                 new_node = DateTimeInput(elt.date_time_input, root=root)
+            elif ty == "download_button":
+                new_node = DownloadButton(elt.download_button, root=root)
             elif ty == "exception":
                 new_node = Exception(elt.exception, root=root)
             elif ty == "feedback":
@@ -2482,6 +2607,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     new_node = Subheader(elt.heading, root=root)
                 else:
                     raise ValueError(f"Unknown heading type with tag {elt.heading.tag}")
+            elif ty == "imgs":
+                new_node = Image(elt.imgs, root=root)
             elif ty == "json":
                 new_node = Json(elt.json, root=root)
             elif ty == "markdown":
@@ -2544,8 +2671,11 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Tab(block.tab, root=root)
             else:
                 new_node = Block(proto=block, root=root)
+        elif delta.WhichOneof("type") == "new_transient":
+            # new_transient (e.g. spinner) - skip these in the element tree
+            continue
         else:
-            # add_rows
+            # Unknown delta type - skip to avoid silently swallowing future types
             continue
 
         current_node: Block = root

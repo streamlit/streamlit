@@ -27,31 +27,37 @@ from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import get_extension_for_mimetype
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
-from streamlit.web.server.app_static_file_handler import MAX_APP_STATIC_FILE_SIZE
 from streamlit.web.server.component_file_utils import (
     build_safe_abspath,
     guess_content_type,
 )
-from streamlit.web.server.routes import (
+from streamlit.web.server.server_util import (
     allow_all_cross_origin_requests,
+    get_url,
     is_allowed_origin,
+    is_xsrf_enabled,
 )
-from streamlit.web.server.server_util import get_url, is_xsrf_enabled
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_app_utils import validate_xsrf_token
-from streamlit.web.server.starlette.starlette_server_config import XSRF_COOKIE_NAME
-from streamlit.web.server.stats_request_handler import StatsRequestHandler
+from streamlit.web.server.starlette.starlette_server_config import (
+    MAX_APP_STATIC_FILE_SIZE,
+    XSRF_COOKIE_NAME,
+)
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
     from starlette.requests import Request
     from starlette.responses import Response
     from starlette.routing import BaseRoute
 
     from streamlit.components.types.base_component_registry import BaseComponentRegistry
     from streamlit.components.v2.component_manager import BidiComponentManager
+    from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
     from streamlit.runtime import Runtime
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+    from streamlit.runtime.stats import Stat
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -66,16 +72,18 @@ BASE_ROUTE_CORE: Final = "_stcore"
 BASE_ROUTE_MEDIA: Final = "media"
 BASE_ROUTE_UPLOAD_FILE: Final = f"{BASE_ROUTE_CORE}/upload_file"
 BASE_ROUTE_COMPONENT: Final = "component"
+# Route prefix for serving static Streamlit frontend assets (JS, CSS, etc.)
+BASE_ROUTE_STATIC: Final = "static"
 
 # Health check routes
-_ROUTE_HEALTH: Final = f"{BASE_ROUTE_CORE}/health"
-_ROUTE_SCRIPT_HEALTH: Final = f"{BASE_ROUTE_CORE}/script-health-check"
+ROUTE_HEALTH: Final = f"{BASE_ROUTE_CORE}/health"
+ROUTE_SCRIPT_HEALTH: Final = f"{BASE_ROUTE_CORE}/script-health-check"
 
 # Metrics routes
-_ROUTE_METRICS: Final = f"{BASE_ROUTE_CORE}/metrics"
+ROUTE_METRICS: Final = f"{BASE_ROUTE_CORE}/metrics"
 
 # Host configuration
-_ROUTE_HOST_CONFIG: Final = f"{BASE_ROUTE_CORE}/host-config"
+ROUTE_HOST_CONFIG: Final = f"{BASE_ROUTE_CORE}/host-config"
 
 # Media and file routes
 _ROUTE_MEDIA: Final = f"{BASE_ROUTE_MEDIA}/{{file_id:path}}"
@@ -85,8 +93,71 @@ _ROUTE_UPLOAD_FILE: Final = f"{BASE_ROUTE_UPLOAD_FILE}/{{session_id}}/{{file_id}
 _ROUTE_COMPONENTS_V1: Final = f"{BASE_ROUTE_COMPONENT}/{{path:path}}"
 _ROUTE_COMPONENTS_V2: Final = f"{BASE_ROUTE_CORE}/bidi-components/{{path:path}}"
 
+# Mapping of the (lowercase) server.xsrfCookieSameSite config values to their
+# canonical Set-Cookie "SameSite" attribute values.
+_SAME_SITE_HEADER_VALUES: Final = {
+    "lax": "Lax",
+    "strict": "Strict",
+    "none": "None",
+}
+
 # App static files
 _ROUTE_APP_STATIC: Final = "app/static/{path:path}"
+
+
+def _stats_to_text(stats_by_family: Mapping[str, Sequence[Stat]]) -> str:
+    """Convert stats to OpenMetrics text format."""
+    result: list[str] = []
+
+    for stats in stats_by_family.values():
+        if not stats:
+            continue
+
+        # All of the stats in a family will have the same family_name, type,
+        # unit, and help text, so we can just use the first one to construct
+        # our OpenMetrics comments.
+        first_stat = stats[0]
+        result.append(f"# TYPE {first_stat.family_name} {first_stat.type}")
+        if first_stat.unit:
+            result.append(f"# UNIT {first_stat.family_name} {first_stat.unit}")
+        result.append(f"# HELP {first_stat.family_name} {first_stat.help}")
+        result.extend(stat.to_metric_str() for stat in stats)
+
+    result.append("# EOF\n")
+    return "\n".join(result)
+
+
+def _stats_to_proto(
+    stats_by_family: Mapping[str, Sequence[Stat]],
+) -> MetricSetProto:
+    """Convert stats to protobuf MetricSet format."""
+    # Lazy load the import of this proto message for better performance:
+    from streamlit.proto.openmetrics_data_model_pb2 import (
+        MetricSet as MetricSetProto,
+    )
+    from streamlit.runtime.stats import metric_type_string_to_proto
+
+    metric_set = MetricSetProto()
+
+    for stats in stats_by_family.values():
+        if not stats:
+            continue
+
+        # All of the stats in a family will have the same family_name, type,
+        # unit, and help text, so we can just use the first one to fill in
+        # these metric_family fields.
+        first_stat = stats[0]
+        metric_family = metric_set.metric_families.add()
+        metric_family.name = first_stat.family_name
+        metric_family.type = metric_type_string_to_proto(first_stat.type)
+        metric_family.unit = first_stat.unit
+        metric_family.help = first_stat.help
+
+        for stat in stats:
+            metric_proto = metric_family.metrics.add()
+            stat.marshall_metric_proto(metric_proto)
+
+    return metric_set
 
 
 def _with_base(path: str, base_url: str | None = None) -> str:
@@ -140,12 +211,13 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
     """Ensure that the XSRF cookie is set on the response.
 
     This function manages XSRF (Cross-Site Request Forgery) token generation
-    and cookie setting to maintain compatibility with Tornado's implementation.
-    If an existing valid XSRF cookie is present, its token bytes and timestamp
-    are preserved. Otherwise, a new token is generated.
+    and cookie setting. If an existing valid XSRF cookie is present, its token
+    bytes and timestamp are preserved. Otherwise, a new token is generated.
 
     The cookie is only set if XSRF protection is enabled in the configuration.
-    The Secure flag is added when SSL is configured.
+    The SameSite attribute is controlled by server.xsrfCookieSameSite. The
+    Secure flag is added when SSL is configured, and is always added when
+    SameSite is "none" (browsers require Secure for SameSite=None).
 
     Note: The XSRF cookie intentionally does NOT have the HttpOnly flag. This
     is required for the double-submit cookie pattern: JavaScript reads the
@@ -176,11 +248,25 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
         token_bytes, timestamp
     )
 
+    # Only normalize actual strings; any unexpected value (e.g. None) falls
+    # back to the safe "Lax" default rather than being coerced into "none".
+    xsrf_cookie_same_site = config.get_option("server.xsrfCookieSameSite")
+    same_site = _SAME_SITE_HEADER_VALUES.get(
+        xsrf_cookie_same_site.lower()
+        if isinstance(xsrf_cookie_same_site, str)
+        else "lax",
+        "Lax",
+    )
+    # Browsers reject SameSite=None cookies without the Secure flag, so force
+    # Secure in that case.
+    secure = bool(config.get_option("server.sslCertFile")) or same_site == "None"
+
     _set_unquoted_cookie(
         response,
         XSRF_COOKIE_NAME,
         cookie_value,
-        secure=bool(config.get_option("server.sslCertFile")),
+        same_site=same_site,
+        secure=secure,
     )
 
 
@@ -189,25 +275,26 @@ def _set_unquoted_cookie(
     cookie_name: str,
     cookie_value: str,
     *,
+    same_site: str = "Lax",
     secure: bool,
 ) -> None:
     """Set a cookie without URL-encoding or quoting the value.
 
     Starlette's standard set_cookie() method URL-encodes special characters
-    (like `|`) in cookie values. This function bypasses that encoding to
-    maintain compatibility with Tornado's cookie format, which is required
-    for XSRF tokens that use the format "2|mask|token|timestamp".
+    (like `|`) in cookie values. This function bypasses that encoding to preserve
+    the raw cookie format required for XSRF tokens (format: "2|mask|token|timestamp").
 
     If a cookie with the same name already exists, it is replaced.
 
     Cookie flags set:
     - Path=/: Available to all paths
-    - SameSite=Lax: Protects against CSRF while allowing top-level navigations
-    - Secure (conditional): Added when SSL is configured
+    - SameSite: Controlled by the `same_site` argument. "Lax" (the default)
+      protects against CSRF while allowing top-level navigations; "None" enables
+      cross-origin (iframe) usage and requires Secure.
+    - Secure (conditional): Added when SSL is configured or `secure` is True.
 
     HttpOnly is intentionally NOT set for XSRF cookies because JavaScript must
     read the cookie value to include it in request headers (double-submit pattern).
-    This matches Tornado's behavior.
 
     Parameters
     ----------
@@ -217,6 +304,9 @@ def _set_unquoted_cookie(
         The name of the cookie.
     cookie_value
         The raw cookie value (will not be URL-encoded or quoted).
+    same_site
+        The SameSite attribute value to use (e.g. "Lax", "Strict", or "None").
+        Defaults to "Lax".
     secure
         Whether to add the Secure flag (should be True when using HTTPS).
     """
@@ -225,7 +315,7 @@ def _set_unquoted_cookie(
         [
             f"{cookie_name}={cookie_value}",
             "Path=/",
-            "SameSite=Lax",
+            f"SameSite={same_site}",
             *(["Secure"] if secure else []),
         ]
     )
@@ -269,6 +359,22 @@ def create_health_routes(runtime: Runtime, base_url: str | None) -> list[BaseRou
     async def _health_endpoint(request: Request) -> PlainTextResponse:
         ok, message = await runtime.is_ready_for_browser_connection
         status = 200 if ok else 503
+
+        # Provide a more helpful message when the runtime is not ready
+        if not ok:
+            from streamlit.runtime import RuntimeState
+
+            if runtime.state == RuntimeState.INITIAL:
+                # Runtime was never started - common issue when mounting without lifespan
+                message = (
+                    "Runtime not started. If mounting st.App on another ASGI framework, "
+                    "ensure the runtime starts before serving requests."
+                )
+            elif runtime.state == RuntimeState.STOPPING:
+                message = "Runtime is shutting down"
+            elif runtime.state == RuntimeState.STOPPED:
+                message = "Runtime has stopped"
+
         response = PlainTextResponse(message, status_code=status)
         response.headers["Cache-Control"] = "no-cache"
         await _set_cors_headers(request, response)
@@ -283,12 +389,12 @@ def create_health_routes(runtime: Runtime, base_url: str | None) -> list[BaseRou
 
     return [
         Route(
-            _with_base(_ROUTE_HEALTH, base_url),
+            _with_base(ROUTE_HEALTH, base_url),
             _health_endpoint,
             methods=["GET", "HEAD"],
         ),
         Route(
-            _with_base(_ROUTE_HEALTH, base_url),
+            _with_base(ROUTE_HEALTH, base_url),
             _health_options,
             methods=["OPTIONS"],
         ),
@@ -319,12 +425,12 @@ def create_script_health_routes(
 
     return [
         Route(
-            _with_base(_ROUTE_SCRIPT_HEALTH, base_url),
+            _with_base(ROUTE_SCRIPT_HEALTH, base_url),
             _script_health_endpoint,
             methods=["GET", "HEAD"],
         ),
         Route(
-            _with_base(_ROUTE_SCRIPT_HEALTH, base_url),
+            _with_base(ROUTE_SCRIPT_HEALTH, base_url),
             _script_health_options,
             methods=["OPTIONS"],
         ),
@@ -341,10 +447,10 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRo
         stats = runtime.stats_mgr.get_stats(family_names=requested_families or None)
         accept = request.headers.get("Accept", "")
         if "application/x-protobuf" in accept:
-            payload = StatsRequestHandler._stats_to_proto(stats).SerializeToString()
+            payload = _stats_to_proto(stats).SerializeToString()
             response = Response(payload, media_type="application/x-protobuf")
         else:
-            text = StatsRequestHandler._stats_to_text(stats)
+            text = _stats_to_text(stats)
             response = PlainTextResponse(
                 text, media_type="application/openmetrics-text"
             )
@@ -360,12 +466,12 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRo
 
     return [
         Route(
-            _with_base(_ROUTE_METRICS, base_url),
+            _with_base(ROUTE_METRICS, base_url),
             _metrics_endpoint,
             methods=["GET"],
         ),
         Route(
-            _with_base(_ROUTE_METRICS, base_url),
+            _with_base(ROUTE_METRICS, base_url),
             _metrics_options,
             methods=["OPTIONS"],
         ),
@@ -402,7 +508,7 @@ def create_host_config_routes(base_url: str | None) -> list[BaseRoute]:
 
     return [
         Route(
-            _with_base(_ROUTE_HOST_CONFIG, base_url),
+            _with_base(ROUTE_HOST_CONFIG, base_url),
             _host_config_endpoint,
             methods=["GET"],
         ),
@@ -547,7 +653,6 @@ def create_upload_routes(
         """Validate XSRF token for non-safe HTTP methods.
 
         Raises HTTPException with 403 if XSRF is enabled and validation fails.
-        This mirrors Tornado's automatic XSRF protection for non-GET requests.
         """
         if not is_xsrf_enabled():
             return
@@ -587,7 +692,15 @@ def create_upload_routes(
         file_id = request.path_params["file_id"]
 
         if not runtime.is_active_session(session_id):
-            raise HTTPException(status_code=400, detail="Invalid session_id")
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Invalid session_id. This is likely caused by a multi-replica "
+                    "deployment without sticky sessions / session affinity. See "
+                    "https://docs.streamlit.io/develop/concepts/architecture/"
+                    "architecture#websockets-and-session-management"
+                ),
+            )
 
         max_size_bytes = (  # maxUploadSize is in megabytes
             config.get_option("server.maxUploadSize") * 1024 * 1024
@@ -768,7 +881,7 @@ def create_bidi_component_routes(
 
         abspath = build_safe_abspath(component_root, filename)
         if abspath is None:
-            # Return 400 for unsafe paths (matches Tornado behavior for opacity)
+            # Return 400 for unsafe paths
             return await _text_response("Bad Request", 400)
 
         if await AsyncPath(abspath).is_dir():

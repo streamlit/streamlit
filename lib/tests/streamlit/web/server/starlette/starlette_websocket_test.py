@@ -433,8 +433,7 @@ class TestWebsocketHandlerUserInfoPrecedence:
         """Test that trusted headers override auth cookie values.
 
         When both an auth cookie and trusted headers provide the same user info
-        key (e.g., 'email'), the header value should take precedence. This matches
-        Tornado's behavior where headers override auth cookie values.
+        key (e.g., 'email'), the header value should take precedence.
         """
         from starlette.websockets import WebSocketDisconnect
 

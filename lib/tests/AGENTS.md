@@ -1,16 +1,17 @@
 # Python Unit Test Guide
 
 We use the unit tests to cover internal behavior that can work without the web / backend counterpart.
-We aim for high unit test coverage (90% or higher) of our Python code in `lib/streamlit`.
+We aim for 95%+ unit test coverage of our Python code in `lib/streamlit`.
 
 ## Key Principles
 
-- Prefer pytest or pytest plugins over unittest.
+- Prefer pytest-style standalone test functions over `unittest.TestCase` classes. Only use `unittest.TestCase` when you genuinely need its features (e.g., `setUp`/`tearDown` lifecycle, specific assertion helpers). New test files should default to plain `def test_*` functions.
 - For every new test function, please add a brief docstring comment (numpydoc style).
 - New tests should be fully annotated with types.
 - Imports should be at the top-level of the test file. Only use imports inside test functions when there is a specific reason (e.g., integration requirements, circular import issues, testing import behavior, or within `AppTest` functions).
+- Integration dependencies: Packages listed under `[dependency-groups] integration` in root `pyproject.toml` (e.g., `pydantic`, `sympy`, `polars`, `sqlalchemy`) are only installed for integration tests. Tests using these packages must: (1) import them **inside the test function**, not at module top-level, and (2) add `@pytest.mark.require_integration` marker. This ensures tests skip gracefully when run outside the integration environment.
 - Skip tests (via `pytest.mark.skipif`) requiring CI secrets if the environment variables are not set.
-- Parameterized Tests: Use `@pytest.mark.parametrize` for standalone pytest functions whenever it is possible to combine overlapping tests with varying inputs. For legacy class-based `unittest.TestCase` tests, use `@parameterized.expand` instead. New tests should prefer standalone pytest functions with `@pytest.mark.parametrize`.
+- Parameterized Tests: Use `@pytest.mark.parametrize` to consolidate tests that only differ in inputs/expected outputs — this keeps the test suite concise and easier to maintain. For legacy class-based `unittest.TestCase` tests, use `@parameterized.expand` instead. New tests should prefer standalone pytest functions with `@pytest.mark.parametrize`.
 - Anti-regression assertions: Where practical, go beyond testing the happy path by also covering a plausible failure mode or edge case. Good examples:
   - Test that invalid input raises the expected exception.
   - Test a boundary condition (empty list, zero, `None`, max length).

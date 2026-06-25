@@ -21,7 +21,6 @@ import terminal from "vite-plugin-terminal"
 import { version } from "./package.json"
 
 import react from "@vitejs/plugin-react-swc"
-import viteTsconfigPaths from "vite-tsconfig-paths"
 import path from "path"
 
 const BASE = "./"
@@ -105,7 +104,6 @@ export default defineConfig(({ command }) => ({
       jsxImportSource: "@emotion/react",
       plugins: [["@swc/plugin-emotion", {}]],
     }),
-    viteTsconfigPaths(),
     // Log browser console output to terminal for debugging by coding agents
     // Enable with: DEBUG_TO_CONSOLE=1 make frontend-dev
     ...(command === "serve" && DEBUG_TO_CONSOLE
@@ -134,6 +132,7 @@ export default defineConfig(({ command }) => ({
       : []),
   ],
   resolve: {
+    tsconfigPaths: true,
     alias: [
       {
         find: /^react-uid$/,
@@ -146,9 +145,12 @@ export default defineConfig(({ command }) => ({
         find: "react-syntax-highlighter",
         replacement: "react-syntax-highlighter/dist/cjs/index.js",
       },
-      // Redirect old lodash to lodash-es to avoid duplication
+      // Redirect old lodash to lodash-es to avoid duplication.
+      // Use a regex that matches "lodash" only at the start of the import path,
+      // so it doesn't interfere with mermaid's bundled lodash (which uses internal
+      // paths like "lodash-es/hasIn" that should not be aliased).
       {
-        find: "lodash",
+        find: /^lodash$/,
         replacement: "lodash-es",
       },
       ...profilerAliases,
@@ -195,6 +197,7 @@ export default defineConfig(({ command }) => ({
     assetsDir: "static",
     sourcemap: DEV_BUILD || ANALYZE_BUNDLE,
     manifest: true,
+    reportCompressedSize: false,
     rolldownOptions: {
       output: {
         // Customize the chunk file naming pattern to match static/js/[name].[hash].js

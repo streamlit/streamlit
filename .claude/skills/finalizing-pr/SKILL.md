@@ -105,34 +105,58 @@ EOF
 
 **If PR exists**, check if description needs updating based on current changes.
 
-### 10. Trigger AI review
+### 10. Upload intermediate files
 
-Apply the `ai-review` label to trigger the AI code review:
+If relevant intermediate files exist (specs, plans, implementation notes in `work-tmp/` or untracked in `specs/`), run the `/sharing-pr-agent-artifacts` skill to push them to the wiki and comment on the PR with links.
+
+### 11. AI review and fix loop
+
+Iterate through AI review and fixes until the review passes (max 5 iterations):
+
+```
+for iteration 1 to 5:
+    1. Trigger AI review by applying the "ai-review" label
+    2. Run the `fixing-pr` subagent in foreground to wait for CI, fix failures, and address review comments
+    3. Check AI review verdict in the latest github-actions bot comment
+    4. If verdict is "approved" → exit loop
+    5. Otherwise → continue to next iteration
+```
+
+**Triggering AI review:**
 
 ```bash
 gh pr edit --add-label "ai-review"
 ```
 
-### 11. Upload intermediate files
+**Checking AI review verdict:**
 
-If relevant intermediate files exist (specs, plans, implementation notes in `work-tmp/` or untracked in `specs/`), run the `/sharing-pr-agent-artifacts` skill to push them to the wiki and comment on the PR with links.
+The AI review posts results as a PR review from the `github-actions` bot. These contain a hidden marker:
 
-### 12. Fix CI issues and address PR review comments
+```html
+<!-- streamlit-ai-review run_id="..." timestamp="..." -->
+```
 
-Run the `fixing-pr` subagent to automatically wait for CI, fix any failures, address PR review comments, validate changes, and push. Wait for completion before proceeding.
+To find the latest AI review and extract the verdict:
 
-### 13. Post agent metrics
+```bash
+PR_NUM=$(gh pr view --json number -q '.number')
+
+# Get the verdict from the latest AI review
+gh api --paginate "repos/streamlit/streamlit/pulls/${PR_NUM}/reviews" \
+  | jq -s '[.[][] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review")))] | sort_by(.submitted_at) | last | .body' \
+  | grep -A2 "## Verdict"
+```
+
+The verdict section contains a bold keyword indicating the result:
+- **`**APPROVED**`** → exit loop, PR is ready
+- **`**CHANGES_REQUESTED**`** → continue iterating, address the feedback
+
+**Important:** After each `fixing-pr` run, re-check if changes were made. If changes were pushed, the AI review will be stale and needs re-triggering. Continue iterating until the review verdict is "approved" or max iterations reached.
+
+### 12. Post agent metrics
 
 Post the agent metrics to the PR body:
 
 ```bash
 uv run python scripts/log_agent_metrics.py --post
-```
-
-### 14. Trigger final AI review
-
-Apply the `ai-review` label to trigger the final AI code review:
-
-```bash
-gh pr edit --add-label "ai-review"
 ```

@@ -26,6 +26,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_popover,
     open_popover,
+    reset_hovering,
 )
 
 
@@ -34,7 +35,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(22)
+    expect(popover_elements).to_have_count(27)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -200,7 +201,7 @@ def test_show_tooltip_on_hover(app: Page):
         .get_by_test_id("stPopoverButton")
         .first
     )
-    # Click the button to open it:
+    reset_hovering(app)
     popover_button.hover()
 
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
@@ -389,3 +390,59 @@ def test_keyed_popover_css_key_class(app: Page):
     """Keyed popover should have the st-key-* CSS class on the outermost element."""
     keyed_popover = get_element_by_key(app, "persist_popover")
     expect(keyed_popover).to_have_class(re.compile(r"st-key-persist_popover"))
+
+
+def test_popover_menu_style_icons_hide_chevron(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that menu-style icon labels hide the chevron (expand/collapse icon)."""
+    container = get_element_by_key(app, "menu_style_icons_container")
+
+    # Verify all three popovers are visible
+    popovers = container.get_by_test_id("stPopover")
+    expect(popovers).to_have_count(3)
+
+    # Check that chevron icons are NOT present in these buttons
+    # The chevron uses expand_more/expand_less material icons
+    menu_icon_popover = get_element_by_key(app, "menu_icon_popover")
+    more_vert_popover = get_element_by_key(app, "more_vert_icon_popover")
+    more_horiz_popover = get_element_by_key(app, "more_horiz_icon_popover")
+
+    # None of these buttons should have expand_more or expand_less icons
+    expect(menu_icon_popover.get_by_text("expand_more")).not_to_be_visible()
+    expect(more_vert_popover.get_by_text("expand_more")).not_to_be_visible()
+    expect(more_horiz_popover.get_by_text("expand_more")).not_to_be_visible()
+
+    # Verify that regular popovers DO have the chevron (for contrast)
+    regular_popover = get_popover(app, "popover 3 (with widgets)")
+    expect(regular_popover.get_by_text("expand_more")).to_be_visible()
+
+    # Snapshot the container with all three menu-style icon popovers
+    assert_snapshot(container, name="st_popover-menu_style_icons")
+
+
+def test_programmatic_close_does_not_reopen_other_popover(app: Page):
+    """Test that programmatically closing one popover does not cause it to
+    reopen when another stateful popover is interacted with.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/14943
+    """
+    # Open popover A
+    open_popover(app, "Multi pop A")
+    expect(app.get_by_text("Close A")).to_be_visible()
+
+    # Programmatically close it via the button inside
+    click_button(app, "Close A")
+
+    # Popover A should be closed — the body should no longer be visible
+    expect(app.get_by_text("Close A")).not_to_be_visible()
+
+    # Open popover B
+    open_popover(app, "Multi pop B")
+
+    # Popover B should be open
+    expect(app.get_by_text("Close B")).to_be_visible()
+
+    # Popover A must NOT have reopened (the bug from #14943).
+    # If it did, "Close A" would be visible in a second popover body.
+    expect(app.get_by_text("Close A")).not_to_be_visible()

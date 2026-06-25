@@ -38,8 +38,10 @@ import {
   FlexContext,
   FlexContextProvider,
 } from "~lib/components/core/Layout/FlexContext"
-import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
-import type { UseLayoutStylesArgs } from "~lib/components/core/Layout/useLayoutStyles"
+import {
+  extractLayoutSubElement,
+  useLayoutStyles,
+} from "~lib/components/core/Layout/useLayoutStyles"
 import {
   Direction,
   getDirectionOfBlock,
@@ -83,12 +85,65 @@ import {
 
 const MIN_RESIZABLE_COLUMN_WIDTH_PX = 64
 const KEYBOARD_RESIZE_STEP_PX = 10
+let fallbackResizableColumnKeyCounter = 0
+const fallbackResizableColumnKeys = new WeakMap<BlockNode, string>()
+
+const getResizableColumnKey = (columnNode: BlockNode): string => {
+  const { id } = columnNode.deltaBlock
+  if (id) {
+    return id
+  }
+
+  let key = fallbackResizableColumnKeys.get(columnNode)
+  if (!key) {
+    key = `resizable-column-${fallbackResizableColumnKeyCounter}`
+    fallbackResizableColumnKeyCounter += 1
+    fallbackResizableColumnKeys.set(columnNode, key)
+  }
+  return key
+}
 
 const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
-  return <>{RenderNodeVisitor.collectReactElements(props)}</>
+  const {
+    node,
+    widgetsDisabled,
+    disableFullscreenMode,
+    endpoints,
+    widgetMgr,
+    uploadClient,
+    componentRegistry,
+  } = props
+
+  // Memoize traversal to avoid recomputing during resize events.
+  // All props are included in deps to satisfy exhaustive-deps lint rule.
+  // The singleton props (endpoints, widgetMgr, etc.) never change references,
+  // so including them doesn't cause unnecessary recomputation.
+  const elements = useMemo(
+    () =>
+      RenderNodeVisitor.collectReactElements({
+        node,
+        widgetsDisabled,
+        disableFullscreenMode,
+        endpoints,
+        widgetMgr,
+        uploadClient,
+        componentRegistry,
+      }),
+    [
+      node,
+      widgetsDisabled,
+      disableFullscreenMode,
+      endpoints,
+      widgetMgr,
+      uploadClient,
+      componentRegistry,
+    ]
+  )
+
+  return <>{elements}</>
 }
 
 /**
@@ -106,46 +161,6 @@ const hasResizableColumns = (node: BlockNode): boolean =>
       child => child instanceof BlockNode && child.deltaBlock.column?.resizable
     )
   )
-
-/**
- * Extract only layout-relevant fields from a block submessage to satisfy
- * `useLayoutStyles`'s `subElement` shape while being robust to unrelated block
- * types like TabContainer.
- */
-const getLayoutSubElement = (
-  block: BlockProto
-): UseLayoutStylesArgs["subElement"] => {
-  const typeKey = block.type as keyof typeof block | undefined
-  const raw = typeKey
-    ? (block as unknown as Record<string, unknown>)[typeKey]
-    : undefined
-  if (!raw || typeof raw !== "object") return undefined
-
-  const candidate = raw as Record<string, unknown>
-  const subElement = {
-    useContainerWidth: candidate.useContainerWidth as
-      | boolean
-      | null
-      | undefined,
-    height: candidate.height as number | undefined,
-    width: candidate.width as number | undefined,
-    widthConfig: candidate.widthConfig as
-      | streamlit.IWidthConfig
-      | null
-      | undefined,
-  }
-
-  if (
-    subElement.useContainerWidth === undefined &&
-    subElement.height === undefined &&
-    subElement.width === undefined &&
-    subElement.widthConfig === undefined
-  ) {
-    return undefined
-  }
-
-  return subElement
-}
 
 interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
@@ -221,7 +236,6 @@ const ResizableColumnsBlock = (
 
     if (isNarrowLayout) {
       if (columnWidths !== null) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- DOM measurement sync: reset widths when layout changes
         setColumnWidths(null)
       }
       return
@@ -371,7 +385,7 @@ const ResizableColumnsBlock = (
 
         return (
           <StyledColumn
-            key={columnNode.deltaBlock.id || index}
+            key={getResizableColumnKey(columnNode)}
             ref={(columnElementRef): void => {
               columnElementsRef.current[index] = columnElementRef
             }}
@@ -431,7 +445,7 @@ export const FlexBoxContainer = (
 
   const layout_styles = useLayoutStyles({
     element: props.node.deltaBlock,
-    subElement: getLayoutSubElement(props.node.deltaBlock),
+    subElement: extractLayoutSubElement(props.node.deltaBlock),
   })
 
   const styles = {
@@ -538,7 +552,7 @@ export const BlockNodeRenderer = (
 
   const styles = useLayoutStyles({
     element: node.deltaBlock,
-    subElement: getLayoutSubElement(node.deltaBlock),
+    subElement: extractLayoutSubElement(node.deltaBlock),
     minStretchBehavior,
   })
 
@@ -564,6 +578,17 @@ export const BlockNodeRenderer = (
     props.disableFullscreenMode ||
     notNullOrUndefined(node.deltaBlock.dialog) ||
     notNullOrUndefined(node.deltaBlock.popover)
+
+  // Transparent blocks group elements in the backend tree without adding DOM.
+  // Children render directly in the parent's flex context.
+  if (node.deltaBlock.transparent) {
+    return (
+      <ChildRenderer
+        {...childProps}
+        disableFullscreenMode={disableFullscreenMode}
+      />
+    )
+  }
 
   let containerElement: ReactElement | undefined
   // Whether the CSS key class (st-key-*) is applied on StyledLayoutWrapper.

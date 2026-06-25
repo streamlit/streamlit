@@ -29,8 +29,12 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.SelectWidgetFilterMode_pb2 import (
+    SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
+)
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -59,6 +63,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
         # Default placeholders are now handled on the frontend side
         # Backend only passes through custom user-provided placeholders
         assert not c.accept_new_options
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -148,6 +153,35 @@ class SelectboxTest(DeltaGeneratorTestCase):
         assert c.accept_new_options
         # Placeholder logic is now handled on the frontend side
         # Backend only passes through custom user-provided placeholders
+
+    def test_filter_mode(self):
+        """Test that it can set a non-default filter mode."""
+        st.selectbox("the label", ("m", "f"), filter_mode="contains")
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS
+
+    def test_filter_mode_none(self):
+        """Test that None filter mode is serialized using the frontend marker."""
+        st.selectbox("the label", ("m", "f"), filter_mode=None)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_NONE
+
+    def test_invalid_filter_mode(self):
+        """Test that unsupported filter modes raise an exception."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `filter_mode` value"):
+            st.selectbox("the label", ("m", "f"), filter_mode="invalid")
+
+    def test_filter_mode_none_with_accept_new_options_raises_exception(self):
+        """Test that filter_mode=None is incompatible with accept_new_options=True."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"cannot be None when `accept_new_options=True`",
+        ):
+            st.selectbox(
+                "the label", ("m", "f"), filter_mode=None, accept_new_options=True
+            )
 
     def test_invalid_value(self):
         """Test that value must be an int."""
@@ -297,6 +331,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 placeholder="placeholder 1",
                 format_func=lambda x: x.capitalize(),
                 options=["a", "b", "cd"],
+                filter_mode="fuzzy",
                 # Whitelisted kwargs:
                 accept_new_options=True,
             )
@@ -318,6 +353,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 placeholder="placeholder 2",
                 format_func=lambda x: x.upper(),
                 options=["apple", "banana", "cherry"],
+                filter_mode="prefix",
                 # Whitelisted kwargs:
                 accept_new_options=True,
             )
@@ -342,7 +378,8 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 "label": "Label",
                 "key": "selectbox_key_whitelist",
                 "options": ["a", "b"],
-                "accept_new_options": True,
+                "accept_new_options": False,
+                "filter_mode": "fuzzy",
                 "format_func": lambda x: x.lower(),
             }
 
@@ -585,6 +622,79 @@ def test_selectbox_enum_coercion():
         pytest.raises(AssertionError),
     ):
         test_enum()
+
+
+def test_selectbox_keeps_selection_with_identity_dependent_format_func():
+    """Selection persists when format_func does an identity-dependent lookup.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15618.
+    The option class is defined at module scope (redefined every rerun), so the
+    stored value is an instance of a previous run's class. A format_func that
+    looks the option up in a dict keyed on the current options would raise for
+    that stale instance; the label-based resolver avoids calling format_func on
+    the stored value and keeps the selection.
+    """
+
+    def script():
+        from dataclasses import dataclass
+
+        import streamlit as st
+
+        @dataclass(frozen=True)
+        class MyDataClass:
+            id: int
+            name: str
+
+        a = MyDataClass(1, "one")
+        b = MyDataClass(2, "two")
+        lookup = {a: "I", b: "II"}
+
+        def format_func(option: MyDataClass) -> str:
+            _ = lookup[option]
+            return option.name
+
+        selected = st.selectbox("selectbox", [a, b], format_func=format_func, key="sb")
+        st.text(f"Selected: {selected.name}")
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "Selected: one"
+
+    at = at.selectbox[0].set_value("two").run()
+    assert at.text[0].value == "Selected: two"
+
+
+def test_selectbox_keeps_enum_selection_with_identity_dependent_format_func():
+    """Enum options keep their selection with an identity-dependent format_func.
+
+    Regression test for the gap where ``maybe_coerce_enum`` dropped the stored
+    wire label. With ``runner.enumCoercion="off"`` the stored value is a stale
+    enum member, so an identity-dependent ``format_func`` raises; the wire label
+    must still be available to keep the selection instead of resetting.
+    """
+
+    def script():
+        from enum import Enum
+
+        import streamlit as st
+
+        class Color(Enum):
+            RED = 1
+            GREEN = 2
+
+        labels = {Color.RED: "I", Color.GREEN: "II"}
+
+        def format_func(color: Color) -> str:
+            return labels[color]
+
+        selected = st.selectbox("color", list(Color), format_func=format_func, key="c")
+        st.text(f"Selected: {selected.name}")
+
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        at = AppTest.from_function(script).run()
+        assert at.text[0].value == "Selected: RED"
+
+        at = at.selectbox[0].set_value("II").run()
+        assert at.text[0].value == "Selected: GREEN"
 
 
 def test_None_session_state_value_retained():

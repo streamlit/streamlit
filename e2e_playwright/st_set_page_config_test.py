@@ -129,6 +129,47 @@ def test_with_expanded_sidebar(app: Page):
     expect_no_exception(app)
 
 
+def test_with_locked_sidebar(app: Page):
+    """Test that initial_sidebar_state="locked" keeps the sidebar permanently
+    expanded with collapse controls hidden.
+    """
+    click_button(app, "Locked Sidebar")
+    expect(app).to_have_title("Locked Sidebar")
+
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
+
+    # Collapse button must not be in the DOM (locked sidebar cannot be closed)
+    expect(app.get_by_test_id("stSidebarCollapseButton")).not_to_be_attached()
+
+    # Expand button in the header must also not be in the DOM (sidebar is always open)
+    expect(app.get_by_test_id("stExpandSidebarButton")).not_to_be_attached()
+
+    expect_no_exception(app)
+
+
+def test_with_locked_sidebar_on_narrow_viewport(app: Page):
+    """Test that a locked sidebar degrades gracefully on a mobile viewport.
+
+    On mobile (< 768px), the sidebar renders as an overlay that covers the
+    main content. Keeping it locked open would trap users, so the lock is
+    lifted: the sidebar collapses and the collapse button is shown so users
+    can toggle it.
+    """
+    app.set_viewport_size({"width": 400, "height": 800})
+    click_button(app, "Locked Sidebar")
+    expect(app).to_have_title("Locked Sidebar")
+
+    sidebar = app.get_by_test_id("stSidebar")
+    # On mobile the lock degrades — sidebar starts collapsed
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
+
+    # Expand button in the header should be visible (sidebar can be opened)
+    expect(app.get_by_test_id("stExpandSidebarButton")).to_be_visible()
+
+    expect_no_exception(app)
+
+
 def test_page_icon_with_emoji_shortcode(app: Page):
     """Test that calling set_page_config with page_icon=":shark:" sets
     the page icon to a shark emoji.

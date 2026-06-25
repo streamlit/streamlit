@@ -2,8 +2,17 @@
   "name": "streamlit-component-lib",
   "version": "2.0.0",
   "description": "Support code for Streamlit Components",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
     "dist"
   ],
@@ -49,16 +58,15 @@
     "@types/react-dom": "^18.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "typesync": "^0.14.3",
-    "vite": "^8.0.1",
-    "vite-plugin-dts": "^4.5.4",
-    "vite-tsconfig-paths": "^6.1.0",
-    "vitest": "^4.1.0"
+    "vite": "^8.0.16",
+    "vite-plugin-dts": "^5.0.1",
+    "vitest": "^4.1.9"
   },
   "resolutions": {
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0"
   },
-  "packageManager": "yarn@4.5.3"
+  "packageManager": "yarn@4.13.0"
 }

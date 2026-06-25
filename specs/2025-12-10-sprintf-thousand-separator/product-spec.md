@@ -23,9 +23,9 @@ comma separators.
 **User requests:**
 
 - [#1301](https://github.com/streamlit/streamlit/issues/1301) — Improve our format
-  parameter as python format (130+ upvotes)
+  parameter as python format
 - [#7702](https://github.com/streamlit/streamlit/issues/7702) — Change the character of
-  the thousand and decimal separator in `st.data_editor` and `st.dataframe` (54+ upvotes)
+  the thousand and decimal separator in `st.data_editor` and `st.dataframe`
 
 ## Proposal
 
@@ -135,7 +135,7 @@ and extends the format parser to recognize `,` and `_` as thousand separator fla
 Separators are inserted every 3 digits in the integer portion of the number.
 
 Thousand separator support has been a long-standing feature request for sprintf-js itself
-([sprintf.js#124](https://github.com/alexei/sprintf.js/issues/124), 30+ upvotes since 2017),
+([sprintf.js#124](https://github.com/alexei/sprintf.js/issues/124)),
 but the library hasn't been maintained for over 2 years. By vendoring the library, we can
 add this feature independently while also allowing us to maintain it ourselves. The implementation is only a single file with a couple hundred lines of code.
 

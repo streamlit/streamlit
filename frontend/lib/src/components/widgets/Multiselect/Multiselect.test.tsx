@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-import { act, screen } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
   LabelVisibility as LabelVisibilityProto,
   MultiSelect as MultiSelectProto,
+  streamlit,
 } from "@streamlit/protobuf"
 
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
@@ -310,6 +311,68 @@ describe("Multiselect widget", () => {
     })
   })
 
+  it("does not clear the selection on Escape when a default exists", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    const multiSelect = screen.getByRole("combobox")
+    // The default selection ("a") is rendered.
+    expect(screen.getAllByTitle("Delete").length).toBeGreaterThan(0)
+
+    // With the dropdown closed, Escape must not clear the value because the
+    // widget has a default (not clearable), matching st.selectbox.
+    act(() => {
+      multiSelect.focus()
+    })
+    // baseweb's Select reads event.keyCode, which userEvent no longer sets, so
+    // dispatch the key event directly.
+    // eslint-disable-next-line testing-library/prefer-user-event
+    fireEvent.keyDown(multiSelect, { key: "Escape", keyCode: 27, which: 27 })
+
+    expect(screen.getAllByTitle("Delete").length).toBeGreaterThan(0)
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+      props.element,
+      [],
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("clears the selection on Escape when there is no default", () => {
+    const props = getProps({ default: [] })
+    // Seed a user selection so there is a value to clear (dropdown closed).
+    props.widgetMgr.setStringArrayValue(
+      props.element,
+      ["b"],
+      { fromUi: true },
+      undefined
+    )
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    const multiSelect = screen.getByRole("combobox")
+    expect(screen.getAllByTitle("Delete").length).toBeGreaterThan(0)
+
+    // With the dropdown closed, Escape clears the value because the widget is
+    // clearable (no default), matching st.selectbox.
+    act(() => {
+      multiSelect.focus()
+    })
+    // baseweb's Select reads event.keyCode, which userEvent no longer sets, so
+    // dispatch the key event directly.
+    // eslint-disable-next-line testing-library/prefer-user-event
+    fireEvent.keyDown(multiSelect, { key: "Escape", keyCode: 27, which: 27 })
+
+    expect(screen.queryAllByTitle("Delete")).toHaveLength(0)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [],
+      { fromUi: true },
+      undefined
+    )
+  })
+
   it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const user = userEvent.setup()
@@ -532,6 +595,44 @@ describe("Multiselect widget", () => {
     expect(dataOptions[0]).toHaveTextContent("aa")
     expect(dataOptions[1]).toHaveTextContent("Aa")
     expect(dataOptions[2]).toHaveTextContent("aA")
+  })
+
+  it("uses filterMode=contains for match filtering and bulk selection labels", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "grape", "banana"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS,
+    })
+    render(<Multiselect {...props} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    await user.type(selectboxInput, "AP")
+
+    const options = screen.queryAllByRole("option")
+    expect(options).toHaveLength(3)
+    expect(options[0]).toHaveTextContent("Select 2 matches")
+    expect(options[1]).toHaveTextContent("apple")
+    expect(options[2]).toHaveTextContent("grape")
+  })
+
+  it("keeps all options visible and the input readonly when filterMode is none", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["yes", "no", "maybe"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
+    })
+    render(<Multiselect {...props} />)
+    const input = screen.getByRole("combobox")
+
+    expect(input).toHaveAttribute("readonly")
+
+    await user.click(input)
+    expect(screen.queryAllByRole("option")).toHaveLength(4)
+
+    await user.type(input, "no")
+    expect(screen.queryAllByRole("option")).toHaveLength(4)
   })
 
   describe("scroll position preservation", () => {
@@ -893,6 +994,49 @@ describe("Multiselect widget", () => {
       // Should show "Select all" again
       expect(screen.getByText("Select all")).toBeInTheDocument()
       expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
+    })
+
+    it("does not show Select all when there are >= 1000 options", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 1000 }, (_, i) => `option_${i}`)
+      const props = getProps({ default: [], options })
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+      // Options should still be visible
+      expect(screen.getByText("option_0")).toBeVisible()
+    })
+
+    it("does not show Select X matches when there are >= 1000 options", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 1000 }, (_, i) => `option_${i}`)
+      const props = getProps({ default: [], options })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.click(multiSelect)
+      // Search for options matching "option_1" (this will match option_1, option_10-19, option_100-199, etc.)
+      await user.type(multiSelect, "option_1")
+
+      // "Select X matches" should NOT be shown for >= 1000 total options
+      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
+      // But matching options should still be visible (use queryAllBy since multiple match)
+      expect(screen.queryAllByText(/option_1/).length).toBeGreaterThan(0)
+    })
+
+    it("shows Select all when there are less than 1000 options", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 999 }, (_, i) => `option_${i}`)
+      const props = getProps({ default: [], options })
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      expect(screen.getByText("Select all")).toBeVisible()
     })
   })
 })

@@ -16,6 +16,11 @@
 
 import styled from "@emotion/styled"
 
+import {
+  getOverlayZIndex,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
+
 interface StyledColorPickerProps {
   disabled: boolean
 }
@@ -35,6 +40,11 @@ export const StyledColorPicker = styled.div<StyledColorPickerProps>(
   })
 )
 
+export const StyledColorPickerPopover = styled.div(({ theme }) => ({
+  ...getPopoverContainerStyle(theme),
+  zIndex: getOverlayZIndex(theme),
+}))
+
 // We need this to override the default font-family: 'Menlo' rule,
 // Which causes the font to change to a serif one in Windows
 export const StyledChromePicker = styled.div(({ theme }) => ({
@@ -49,7 +59,7 @@ export const StyledChromePicker = styled.div(({ theme }) => ({
     color: `${theme.colors.bodyText} !important`,
   },
   input: {
-    fontSize: `${theme.fontSizes.md} !important`,
+    fontSize: `${theme.fontSizes.sm} !important`,
     height: `${theme.sizes.minElementHeight} !important`,
     backgroundColor: `${theme.colors.secondaryBg} !important`,
     color: `${theme.colors.bodyText} !important`,
@@ -70,20 +80,27 @@ interface StyledColorPreviewProps {
   disabled: boolean
 }
 
-export const StyledColorPreview = styled.div<StyledColorPreviewProps>(
+export const StyledColorPreview = styled.button<StyledColorPreviewProps>(
   ({ disabled, theme }) => ({
+    // Button reset
+    appearance: "none",
+    background: "none",
+    border: "none",
+    padding: 0,
+    margin: 0,
+    font: "inherit",
+    // Layout
+    display: "flex",
     height: theme.sizes.minElementHeight,
     borderRadius: theme.radii.default,
-    borderColor: theme.colors.borderColor,
-    cursor: disabled ? "not-allowed" : "pointer",
-    pointerEvents: disabled ? "none" : "auto",
     boxShadow: "none",
     lineHeight: theme.lineHeights.base,
     gap: theme.spacing.md,
-    "&:focus": {
+    cursor: disabled ? "not-allowed" : "pointer",
+    "&:focus-visible": {
       outline: "none",
+      boxShadow: theme.shadows.focusRing,
     },
-    display: "flex",
   })
 )
 

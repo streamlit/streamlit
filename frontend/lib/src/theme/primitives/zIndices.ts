@@ -28,6 +28,9 @@ const popup = fullscreenWrapper + 10
 // Used for rendering the cell overlay editor of the
 // dataframe component:
 const tablePortal = fullscreenWrapper + 60
+// Used for Vega chart tooltips in the dataframe statistics submenu.
+// Must be above tablePortal so tooltips appear over the column menu portal.
+const tablePortalTooltip = tablePortal + 10
 const cacheSpinner = sidebar + 1
 // Toasts should overlap chatInput container
 // should also show above dialog
@@ -48,6 +51,7 @@ export const zIndices = {
   popup,
   fullscreenWrapper,
   tablePortal,
+  tablePortalTooltip,
   bottom,
   cacheSpinner,
   toast,

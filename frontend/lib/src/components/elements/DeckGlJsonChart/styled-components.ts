@@ -32,6 +32,19 @@ export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
   })
 )
 
+/**
+ * Wrapper around the DeckGL component that clips the map content with border-radius.
+ * Kept separate from StyledDeckGlChart to avoid clipping the toolbar.
+ * Uses absolute positioning to fill the parent, which works even when the parent
+ * only has minHeight defined (e.g., height="stretch" outside a container).
+ */
+export const StyledMapContainer = styled.div(({ theme }) => ({
+  position: "absolute",
+  inset: 0,
+  borderRadius: theme.radii.default,
+  overflow: "hidden",
+}))
+
 export const StyledNavigationControlContainer = styled.div(({ theme }) => ({
   position: "absolute",
   right: "2.625rem",

@@ -155,12 +155,22 @@ many_options = (
     "twenty-eight",
     "twenty-nine",
     "thirty",
+    "thirty-one",
+    "thirty-two",
+    "thirty-three",
+    "thirty-four",
+    "thirty-five",
+    "thirty-six",
+    "thirty-seven",
+    "thirty-eight",
+    "thirty-nine",
+    "forty",
 )
 
 st.multiselect(
     "multiselect 17 - show maxHeight",
     options=many_options,
-    default=many_options[0:28],
+    default=many_options,
 )
 
 st.multiselect(
@@ -250,6 +260,27 @@ i20 = st.multiselect(
 )
 st.text(f"value 20: {[opt.value for opt in i20]}")
 
+i21 = st.multiselect(
+    "multiselect 21 (filter_mode='prefix')",
+    ["A123", "A1234", "BA123", "CA123"],
+    filter_mode="prefix",
+)
+st.text(f"value 21: {i21}")
+
+i22 = st.multiselect(
+    "multiselect 22 (filter_mode='contains')",
+    ["apple", "grape", "banana"],
+    filter_mode="contains",
+)
+st.text(f"value 22: {i22}")
+
+i23 = st.multiselect(
+    "multiselect 23 (filter_mode=None)",
+    ["Yes", "No", "Maybe"],
+    filter_mode=None,
+)
+st.text(f"value 23: {i23}")
+
 # --- Bound multiselect widgets ---
 
 bound_multi = st.multiselect(
@@ -295,3 +326,16 @@ bound_multi_new = st.multiselect(
     bind="query-params",
 )
 st.text(f"bound_multi_new: {bound_multi_new}")
+
+# --- ESC key handling (issue #15637) ---
+
+esc_colors = ["Green", "Yellow", "Red", "Blue"]
+
+with st.popover("Popover with multiselect"):
+    esc_multi_popover = st.multiselect(
+        "multiselect esc popover",
+        esc_colors,
+        default=esc_colors,
+        key="multiselect_esc_popover",
+    )
+    st.text(f"value esc popover: {esc_multi_popover}")

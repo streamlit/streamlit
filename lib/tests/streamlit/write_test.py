@@ -17,11 +17,12 @@
 from __future__ import annotations
 
 import dataclasses
+import re
 import time
 import unittest
 from collections import namedtuple
 from io import StringIO
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, Mock, PropertyMock, call, mock_open, patch
 
 import numpy as np
@@ -32,7 +33,7 @@ from PIL import Image
 
 import streamlit as st
 from streamlit import type_util
-from streamlit.elements.write import StreamingOutput
+from streamlit.elements.write import StreamingOutput, WriteMixin
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -43,6 +44,9 @@ from tests.streamlit.data_test_cases import (
     CaseMetadata,
 )
 from tests.streamlit.runtime.secrets_test import MOCK_TOML
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -511,6 +515,43 @@ class StreamlitStreamTest(unittest.TestCase):
         stream_return = st.write_stream(openai_stream)
         assert stream_return == "Hello World"
 
+    def test_with_openai_response_events(self):
+        """Test st.write_stream with OpenAI Responses API stream events."""
+
+        def openai_response_stream():
+            yield _openai_response_event("ResponseCreatedEvent", "response.created")
+            yield _openai_response_event(
+                "ResponseTextDeltaEvent",
+                "response.output_text.delta",
+                delta="Hello ",
+            )
+            yield _openai_response_event(
+                "ResponseWebSearchCallInProgressEvent",
+                "response.web_search_call.in_progress",
+            )
+            yield _openai_response_event(
+                "ResponseTextDeltaEvent",
+                "response.output_text.delta",
+                delta="World",
+            )
+            yield _openai_response_event("ResponseCompletedEvent", "response.completed")
+
+        stream_return = st.write_stream(openai_response_stream)
+        assert stream_return == "Hello World"
+
+    def test_with_openai_response_refusal_delta_event(self):
+        """Test st.write_stream with OpenAI Responses API refusal deltas."""
+
+        def openai_response_stream():
+            yield _openai_response_event(
+                "ResponseRefusalDeltaEvent",
+                "response.refusal.delta",
+                delta="I can't help with that.",
+            )
+
+        stream_return = st.write_stream(openai_response_stream)
+        assert stream_return == "I can't help with that."
+
     def test_with_generator_text(self):
         """Test st.write_stream with generator text content."""
 
@@ -789,3 +830,156 @@ class TestWriteStringIO(DeltaGeneratorTestCase):
 
         delta = self.get_delta_from_queue()
         assert delta.new_element.markdown.body == content
+
+
+def _broken_openai_chat_completion_chunk() -> Any:
+    """Instance whose type FQN matches ``is_openai_chunk`` but lacks expected attrs."""
+    cls = type("ChatCompletionChunk", (), {})
+    cls.__module__ = "openai.types.chat.chat_completion_chunk"
+    return cls()
+
+
+def _broken_langchain_ai_message_chunk() -> Any:
+    """Instance whose type FQN matches LangChain AIMessageChunk checks."""
+    cls = type("AIMessageChunk", (), {})
+    cls.__module__ = "langchain_core.messages.ai"
+    return cls()
+
+
+def _openai_response_event(name: str, event_type: str, **attrs: Any) -> Any:
+    """Instance whose type FQN matches OpenAI Responses API stream events."""
+    cls = type(name, (), {})
+    # Mirror the SDK's snake_case module naming (e.g. ResponseTextDeltaEvent ->
+    # openai.types.responses.response_text_delta_event).
+    snake_case_name = re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+    cls.__module__ = f"openai.types.responses.{snake_case_name}"
+    event = cls()
+    event.type = event_type
+    for attr, value in attrs.items():
+        setattr(event, attr, value)
+    return event
+
+
+def _broken_openai_response_event() -> Any:
+    """Instance whose type FQN matches OpenAI Response stream event checks."""
+    return _openai_response_event(
+        "ResponseTextDeltaEvent",
+        "response.output_text.delta",
+    )
+
+
+@pytest.mark.parametrize(
+    ("make_chunk", "match_substr"),
+    [
+        (_broken_openai_chat_completion_chunk, "Failed to parse the OpenAI"),
+        (_broken_openai_response_event, "Failed to parse the OpenAI Response"),
+        (_broken_langchain_ai_message_chunk, "Failed to parse the LangChain"),
+    ],
+    ids=["openai-chat-completion", "openai-response", "langchain"],
+)
+def test_write_stream_chunk_attribute_error_raises(
+    make_chunk: Callable[[], Any], match_substr: str
+) -> None:
+    """``write_stream`` wraps AttributeError when chunk types lack expected shape."""
+
+    def stream() -> Any:
+        yield make_chunk()
+
+    with pytest.raises(StreamlitAPIException, match=match_substr):
+        st.write_stream(stream)
+
+
+def test_write_pydeck_routes_to_pydeck_chart() -> None:
+    """Route pydeck Deck objects to ``DeltaGenerator.pydeck_chart``."""
+    import pydeck as pdk
+
+    with patch("streamlit.delta_generator.DeltaGenerator.pydeck_chart") as p:
+        st.write(pdk.Deck())
+        p.assert_called_once()
+
+
+def test_write_graphviz_chart_routes_to_graphviz_chart() -> None:
+    """Route graphviz objects to ``DeltaGenerator.graphviz_chart``."""
+    with patch("streamlit.type_util.is_graphviz_chart", return_value=True):
+        with patch("streamlit.delta_generator.DeltaGenerator.graphviz_chart") as p:
+            st.write(object())
+            p.assert_called_once()
+
+
+def test_write_mixin_dg_property_returns_self() -> None:
+    """``WriteMixin.dg`` returns the host ``DeltaGenerator`` instance."""
+    dg = st.container()
+    assert dg.dg is dg
+
+
+def test_write_mixin_dg_returns_self_for_standalone_mixin() -> None:
+    """A standalone ``WriteMixin`` instance returns itself from the ``dg`` property."""
+
+    class _OnlyWrite(WriteMixin):
+        pass
+
+    write_mixin = _OnlyWrite()
+    assert write_mixin.dg is write_mixin
+
+
+@pytest.mark.require_integration
+def test_write_real_sympy_expression_routes_to_latex() -> None:
+    """With sympy installed, real expressions use ``st.latex`` via ``st.write``."""
+    import sympy
+
+    x = sympy.Symbol("x")
+    with patch("streamlit.delta_generator.DeltaGenerator.latex") as p:
+        st.write(x + 1)
+        p.assert_called_once()
+
+
+class TestWritePydanticModels(DeltaGeneratorTestCase):
+    """Test st.write with Pydantic models."""
+
+    @pytest.mark.require_integration
+    def test_write_list_of_pydantic_models_to_json(self) -> None:
+        """Verify st.write correctly serializes a list of Pydantic models to JSON."""
+        import json
+
+        from pydantic import BaseModel
+
+        class User(BaseModel):
+            name: str
+            age: int
+            active: bool
+
+        users = [
+            User(name="Alice", age=30, active=True),
+            User(name="Bob", age=25, active=False),
+        ]
+
+        st.write(users)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+
+        assert isinstance(body, list)
+        assert len(body) == 2
+        assert body[0] == {"name": "Alice", "age": 30, "active": True}
+        assert body[1] == {"name": "Bob", "age": 25, "active": False}
+
+    @pytest.mark.require_integration
+    def test_write_single_pydantic_model_to_json(self) -> None:
+        """Verify st.write correctly serializes a single Pydantic model to JSON."""
+        import json
+
+        from pydantic import BaseModel
+
+        class Config(BaseModel):
+            host: str
+            port: int
+            debug: bool
+
+        config = Config(host="localhost", port=8080, debug=True)
+
+        st.write(config)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+
+        assert body == {"host": "localhost", "port": 8080, "debug": True}

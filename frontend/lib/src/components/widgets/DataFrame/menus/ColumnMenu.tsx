@@ -21,11 +21,14 @@ import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { Quiver } from "~lib/dataframes/Quiver"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme/utils"
 
 import FormattingMenu from "./FormattingMenu"
+import StatisticsMenu from "./StatisticsMenu"
+import { supportsStatistics } from "./statisticsUtils"
 import {
   StyledColumnHeaderRow,
   StyledColumnNameText,
@@ -44,6 +47,15 @@ export interface ColumnMenuProps {
   left: number
   // The selected column:
   column: BaseColumn
+  // The Arrow data for statistics computation.
+  // Optional because DataFrame always provides it, but data-editor scenarios
+  // may not have Quiver data bound initially. Statistics menu is only shown
+  // when data is available.
+  data?: Quiver
+  // Whether the table is in an editable mode (st.data_editor).
+  // Statistics menu is hidden for editable tables since the displayed stats
+  // would reflect the original data, not the user's edits.
+  isEditable?: boolean
   // Callback used to instruct the parent to close the menu
   onCloseMenu: () => void
   // Callback to sort column
@@ -76,11 +88,14 @@ function ColumnMenu({
   onSortColumn,
   onHideColumn,
   column,
+  data,
+  isEditable,
   onChangeFormat,
   onAutosize,
 }: ColumnMenuProps): ReactElement {
   const theme = useEmotionTheme()
   const [formatMenuOpen, setFormatMenuOpen] = useState(false)
+  const [statsMenuOpen, setStatsMenuOpen] = useState(false)
   const { colors, fontSizes, fontWeights } = theme
 
   const { isCopied, copyToClipboard } = useCopyToClipboard()
@@ -101,10 +116,6 @@ function ColumnMenu({
       document.removeEventListener("touchmove", preventScroll)
     }
   }, [])
-
-  const closeMenu = useCallback((): void => {
-    onCloseMenu()
-  }, [onCloseMenu])
 
   const handleCopyNameToClipboard = useCallback((): void => {
     copyToClipboard(column.title)
@@ -145,7 +156,7 @@ function ColumnMenu({
               <StyledMenuListItem
                 onClick={() => {
                   onSortColumn("asc")
-                  closeMenu()
+                  onCloseMenu()
                 }}
                 role="menuitem"
               >
@@ -155,7 +166,7 @@ function ColumnMenu({
               <StyledMenuListItem
                 onClick={() => {
                   onSortColumn("desc")
-                  closeMenu()
+                  onCloseMenu()
                 }}
                 role="menuitem"
               >
@@ -168,6 +179,40 @@ function ColumnMenu({
               <StyledMenuDivider />
             </>
           )}
+          {data && !isEditable && supportsStatistics(column.kind) && (
+            <StatisticsMenu
+              column={column}
+              data={data}
+              isOpen={statsMenuOpen}
+              onMouseEnter={() => setStatsMenuOpen(true)}
+              onMouseLeave={() => setStatsMenuOpen(false)}
+            >
+              <StyledMenuListItem
+                onMouseEnter={() => setStatsMenuOpen(true)}
+                onMouseLeave={() => setStatsMenuOpen(false)}
+                onFocus={() => setStatsMenuOpen(true)}
+                onBlur={() => setStatsMenuOpen(false)}
+                isActive={statsMenuOpen}
+                hasSubmenu={true}
+                role="menuitem"
+                // The statistics popover is a read-only informational panel
+                // (no focus management/focus lock), so "true" is more accurate
+                // than "dialog", which implies a focusable dialog widget.
+                aria-haspopup="true"
+                aria-expanded={statsMenuOpen}
+                tabIndex={0}
+              >
+                <div>
+                  <DynamicIcon size="base" iconValue=":material/bar_chart:" />
+                  Statistics
+                </div>
+                <DynamicIcon
+                  size="base"
+                  iconValue=":material/chevron_right:"
+                />
+              </StyledMenuListItem>
+            </StatisticsMenu>
+          )}
           {onChangeFormat && (
             <FormattingMenu
               columnKind={column.kind}
@@ -175,13 +220,19 @@ function ColumnMenu({
               onMouseEnter={() => setFormatMenuOpen(true)}
               onMouseLeave={() => setFormatMenuOpen(false)}
               onChangeFormat={onChangeFormat}
-              onCloseMenu={closeMenu}
+              onCloseMenu={onCloseMenu}
             >
               <StyledMenuListItem
                 onMouseEnter={() => setFormatMenuOpen(true)}
                 onMouseLeave={() => setFormatMenuOpen(false)}
+                onFocus={() => setFormatMenuOpen(true)}
+                onBlur={() => setFormatMenuOpen(false)}
                 isActive={formatMenuOpen}
                 hasSubmenu={true}
+                role="menuitem"
+                aria-haspopup="menu"
+                aria-expanded={formatMenuOpen}
+                tabIndex={0}
               >
                 <div>
                   <DynamicIcon
@@ -202,8 +253,9 @@ function ColumnMenu({
             <StyledMenuListItem
               onClick={() => {
                 onAutosize()
-                closeMenu()
+                onCloseMenu()
               }}
+              role="menuitem"
             >
               <DynamicIcon size="base" iconValue=":material/arrows_outward:" />
               Autosize
@@ -213,8 +265,9 @@ function ColumnMenu({
             <StyledMenuListItem
               onClick={() => {
                 onUnpinColumn()
-                closeMenu()
+                onCloseMenu()
               }}
+              role="menuitem"
             >
               <DynamicIcon size="base" iconValue=":material/keep_off:" />
               Unpin column
@@ -224,8 +277,9 @@ function ColumnMenu({
             <StyledMenuListItem
               onClick={() => {
                 onPinColumn()
-                closeMenu()
+                onCloseMenu()
               }}
+              role="menuitem"
             >
               <DynamicIcon size="base" iconValue=":material/keep:" />
               Pin column
@@ -235,8 +289,9 @@ function ColumnMenu({
             <StyledMenuListItem
               onClick={() => {
                 onHideColumn()
-                closeMenu()
+                onCloseMenu()
               }}
+              role="menuitem"
             >
               <DynamicIcon size="base" iconValue=":material/visibility_off:" />
               Hide column
@@ -248,8 +303,10 @@ function ColumnMenu({
       accessibilityType={ACCESSIBILITY_TYPE.menu}
       showArrow={false}
       popoverMargin={convertRemToPx("0.375rem")}
-      onClickOutside={!formatMenuOpen ? closeMenu : undefined}
-      onEsc={closeMenu}
+      onClickOutside={
+        !formatMenuOpen && !statsMenuOpen ? onCloseMenu : undefined
+      }
+      onEsc={onCloseMenu}
       overrides={{
         Body: {
           props: {

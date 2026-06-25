@@ -25,6 +25,7 @@ from e2e_playwright.shared.app_utils import (
     get_caption,
     get_element_by_key,
     get_markdown,
+    reset_hovering,
     tab_until_focused,
     wait_for_all_images_to_be_loaded,
 )
@@ -290,6 +291,48 @@ def test_badge_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
     assert_snapshot(badge_container, name="st_badge-examples")
 
 
+def test_shimmer_directive(app: Page):
+    """Test that shimmer directive renders text with the shimmer animation class."""
+    shimmer_container = get_element_by_key(app, "shimmer_elements")
+    expect(shimmer_container).to_be_visible()
+
+    shimmer_element = shimmer_container.locator(".stMarkdownShimmer")
+    expect(shimmer_element).to_have_count(1)
+    expect(shimmer_element).to_contain_text("Please wait...")
+
+    # Normal text should NOT have shimmer class
+    normal_text = shimmer_container.get_by_text("Normal text before")
+    expect(normal_text).not_to_have_class(re.compile(r"stMarkdownShimmer"))
+
+
+def test_shimmer_directive_reduced_motion(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test shimmer directive appearance with prefers-reduced-motion enabled.
+
+    Uses emulate_media to enable reduced motion, which disables the animation
+    and shows the static fallback style. This allows for reliable snapshot testing
+    in both light and dark themes.
+    """
+    # Enable reduced motion to disable animation for stable snapshots
+    themed_app.emulate_media(reduced_motion="reduce")
+
+    shimmer_container = get_element_by_key(themed_app, "shimmer_elements")
+    expect(shimmer_container).to_be_visible()
+    shimmer_container.scroll_into_view_if_needed()
+
+    # Verify shimmer element is present and animation is disabled
+    shimmer_element = shimmer_container.locator(".stMarkdownShimmer")
+    expect(shimmer_element).to_be_visible()
+
+    # In reduced motion mode, the shimmer should have no animation
+    # and should display with the theme's fadedText60 color
+    expect(shimmer_element).to_have_css("animation-duration", "0s")
+
+    # Take snapshot with reduced motion to verify visual appearance
+    assert_snapshot(shimmer_container, name="st_markdown-shimmer_reduced_motion")
+
+
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that large images in markdown are displayed correctly with max width 100%."""
     markdown_element = get_markdown(
@@ -429,6 +472,33 @@ def test_unsafe_allow_html(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(markdown_element, name="st_markdown-unsafe_allow_html")
 
 
+def test_unsafe_allow_html_with_help(app: Page, assert_snapshot: ImageCompareFunction):
+    """Regression test for gh-15211: help icon must render next to single-line HTML.
+
+    CommonMark's HTML-block rule consumes single-line block-level HTML as a raw
+    HTML block, swallowing any trailing ``:help[]`` directive. The fix renders
+    the tooltip icon directly instead of relying on the directive.
+    """
+    container = get_element_by_key(app, "markdown_html_help")
+    container.scroll_into_view_if_needed()
+    expect(container).to_be_visible()
+
+    expect(container).not_to_contain_text(":help[]")
+    expect_help_tooltip(app, container, "HTML help tooltip!")
+
+    assert_snapshot(container, name="st_markdown-unsafe_allow_html_with_help")
+
+
+def test_unsafe_allow_html_multiline_with_help(app: Page):
+    """Regression test for gh-15211: help icon also renders for multi-line HTML."""
+    container = get_element_by_key(app, "markdown_multiline_html_help")
+    container.scroll_into_view_if_needed()
+    expect(container).to_be_visible()
+
+    expect(container).not_to_contain_text(":help[]")
+    expect_help_tooltip(app, container, "HTML help tooltip!")
+
+
 def test_long_word_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that a long word in a container is displayed correctly (doesn't overflow the container)."""
     container = get_element_by_key(app, "long_word")
@@ -552,8 +622,12 @@ def test_tooltip_with_newlines_gh_13339(
     expect(element).not_to_contain_text("Line 2")
     expect(element).not_to_contain_text("Line 3")
 
-    # Hover to show tooltip
+    # Hover to show tooltip.
+    # reset_hovering primes the interaction modality to 'pointer' first — React Aria
+    # requires a document-level pointermove before pointerenter to register hover
+    # intent; Playwright teleports the cursor when the mouse starts "off-page".
     hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    reset_hovering(app)
     hover_target.hover()
 
     # Verify tooltip is visible and contains the multiline content
@@ -594,7 +668,9 @@ def test_tooltip_with_complex_markdown_gh_13339(
     expect(element).not_to_contain_text("array[index]")
     expect(element).not_to_contain_text("Streamlit")
 
+    # reset_hovering primes interaction modality to 'pointer' before hover.
     hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    reset_hovering(app)
     hover_target.hover()
 
     tooltip_content = app.get_by_test_id("stTooltipContent")
@@ -617,3 +693,46 @@ def test_tooltip_with_complex_markdown_gh_13339(
     assert_snapshot(
         tooltip_content, name="st_markdown-complex_tooltip_with_markdown_formatting"
     )
+
+
+# Mermaid chart tests
+
+
+def test_mermaid_charts_render(app: Page):
+    """Test that mermaid charts are rendered correctly within markdown."""
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+    expect(mermaid_charts).to_have_count(3)
+    # Negative assertion: only 1 error element should exist (from the invalid syntax block)
+    error = mermaid_container.get_by_test_id("stMermaidError")
+    expect(error).to_have_count(1)
+
+
+def test_mermaid_charts_contain_rendered_image(app: Page):
+    """Test that rendered mermaid charts contain rendered image content.
+
+    MermaidChart renders diagrams as <img> tags with blob URLs for security
+    sandboxing, rather than inline SVG elements.
+    """
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+
+    # Check that the first 2 valid diagrams contain img elements with blob URLs
+    for i in range(2):
+        img = mermaid_charts.nth(i).locator("img")
+        expect(img).to_be_visible()
+        # Verify the img has a blob URL src (security sandboxing)
+        expect(img).to_have_attribute("src", re.compile(r"^blob:"))
+
+
+def test_mermaid_invalid_syntax_shows_error(app: Page):
+    """Test that invalid mermaid syntax shows an error message."""
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    error = mermaid_container.get_by_test_id("stMermaidError")
+    expect(error).to_be_visible()
+    expect(error).to_contain_text("Mermaid diagram error")
+    # Negative assertion: error chart should not contain an img element
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+    # The error chart is the 3rd one (index 2)
+    error_chart = mermaid_charts.nth(2)
+    expect(error_chart.locator("img")).to_have_count(0)

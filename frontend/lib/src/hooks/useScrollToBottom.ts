@@ -30,7 +30,7 @@ function setImmediateInterval(fn: () => void, ms: number): NodeJS.Timeout {
   return setInterval(fn, ms)
 }
 
-function isAtBottom({
+export function isAtBottom({
   scrollHeight,
   offsetHeight,
   scrollTop,
@@ -249,10 +249,8 @@ export function useScrollToBottom<T extends HTMLElement>(
     return undefined
   }, [scrollableRef, active])
 
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   useScrollSpy(scrollableRef.current, handleScroll, active)
   useScrollAnimation(
-    // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
     scrollableRef.current,
     handleScrollToBottomFinished,
     isAnimating,

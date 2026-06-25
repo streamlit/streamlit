@@ -76,9 +76,9 @@ def build_safe_abspath(component_root: str, relative_url_path: str) -> str | Non
 def guess_content_type(abspath: str) -> str:
     """Guess the HTTP ``Content-Type`` for a file path.
 
-    This logic mirrors Tornado's ``StaticFileHandler`` by respecting encoding
-    metadata from ``mimetypes.guess_type`` and falling back to
-    ``application/octet-stream`` when no specific type can be determined.
+    This logic respects encoding metadata from ``mimetypes.guess_type`` and
+    falls back to ``application/octet-stream`` when no specific type can be
+    determined.
 
     Parameters
     ----------

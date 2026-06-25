@@ -337,3 +337,43 @@ class AlertIconExtractionTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.alert.icon == ":material/warning:"
         assert el.alert.body == "Line 1\nLine 2"
+
+
+class AlertTitleTest(DeltaGeneratorTestCase):
+    """Test title parameter for alert elements."""
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_with_title(self, alert_func):
+        """Test that alerts accept and pass through title parameter."""
+        alert_func("Body text", title="Alert Title")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.title == "Alert Title"
+        assert el.alert.body == "Body text"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_without_title(self, alert_func):
+        """Test that alerts without title have empty title field."""
+        alert_func("Body text only")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.title == ""
+        assert el.alert.body == "Body text only"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_with_title_and_icon(self, alert_func):
+        """Test that alerts accept both title and icon parameters."""
+        alert_func("Body text", title="Alert Title", icon="🔔")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.title == "Alert Title"
+        assert el.alert.body == "Body text"
+        assert el.alert.icon == "🔔"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_title_cleaned(self, alert_func):
+        """Test that title text is cleaned (whitespace trimmed)."""
+        alert_func("Body text", title="  Title with whitespace  ")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.title == "Title with whitespace"

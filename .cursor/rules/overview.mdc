@@ -12,7 +12,7 @@ alwaysApply: true
 
 ## Tech Stack
 
-- **Backend (Server):** Python, Tornado server, pytest
+- **Backend (Server):** Python, Starlette/Uvicorn server, pytest
 - **Frontend (Web UI):** TypeScript, React, Emotion (CSS-in-JS), Vite, Vitest
 - **Communication:** Protocol Buffers (protobuf) over WebSocket.
 
@@ -34,6 +34,7 @@ alwaysApply: true
 - `proto/streamlit/proto/`: Protobuf definitions for client-server communication.
 - `e2e_playwright/`: E2E tests using playwright (via pytest).
 - `scripts/`: Utility scripts for development and CI/CD.
+- `specs/`: Product and tech specs for Streamlit features.
 - `.github/workflows/`: GitHub Actions workflows used for CI/CD.
 - `wiki/`: Documentation relevant for development of Streamlit.
 

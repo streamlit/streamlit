@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-import { Fragment, useState } from "react"
+import { Fragment, useCallback, useEffect, useRef, useState } from "react"
 
 import {
   KeyboardArrowDown,
   KeyboardArrowUp,
 } from "@emotion-icons/material-outlined"
-import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
+import { FloatingPortal } from "@floating-ui/react"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   convertRemToPx,
-  getPopoverContainerStyle,
   Icon,
   StreamlitMarkdown,
   useEmotionTheme,
+  useFloatingOverlay,
 } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
@@ -40,6 +40,7 @@ import {
   StyledNavSectionText,
   StyledPopoverContent,
   StyledSectionName,
+  StyledTopNavPopoverBody,
   StyledTopNavSidebarNavLinkContainer,
 } from "./styled-components"
 import { getExternalPageUrl, isExternalPage } from "./utils"
@@ -69,6 +70,64 @@ const TopNavSection = ({
   const theme = useEmotionTheme()
   const showSections = sections.length > 1
 
+  // useRef<T | null>(null) gives MutableRefObject so .current is directly assignable.
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const popoverRef = useRef<HTMLDivElement | null>(null)
+
+  const { refs, floatingStyles } = useFloatingOverlay({
+    open,
+    placement: "bottom-start",
+    offsetPx: convertRemToPx(theme.spacing.twoXS),
+  })
+
+  const setReferenceRef = useCallback(
+    (node: HTMLButtonElement | null): void => {
+      triggerRef.current = node
+      refs.setReference(node)
+    },
+    [refs]
+  )
+
+  const setFloatingRef = useCallback(
+    (node: HTMLDivElement | null): void => {
+      popoverRef.current = node
+      refs.setFloating(node)
+    },
+    [refs]
+  )
+
+  // Custom dismissal: outside-click and Escape via capture-phase listeners.
+  useEffect(() => {
+    if (!open) return
+
+    const handlePointerDown = (e: PointerEvent): void => {
+      const target = e.target
+      if (!(target instanceof Node)) return
+      if (
+        !triggerRef.current?.contains(target) &&
+        !popoverRef.current?.contains(target)
+      ) {
+        setOpen(false)
+      }
+    }
+
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        e.stopPropagation()
+        e.preventDefault()
+        setOpen(false)
+        triggerRef.current?.focus()
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown, true)
+    document.addEventListener("keydown", handleKeyDown, true)
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true)
+      document.removeEventListener("keydown", handleKeyDown, true)
+    }
+  }, [open])
+
   if (
     isNullOrUndefined(sections) ||
     sections.length === 0 ||
@@ -77,126 +136,105 @@ const TopNavSection = ({
     return null
   }
 
-  return (
-    <UIPopover
-      triggerType={TRIGGER_TYPE.click}
-      placement={PLACEMENT.bottomLeft}
-      content={() => (
-        <StyledPopoverContent data-testid="stTopNavPopover">
-          {sections.map((section, _sectionIndex) => {
-            const sectionName = section[0].sectionHeader
+  const popoverContent = sections.map((section, _sectionIndex) => {
+    const sectionName = section[0].sectionHeader
 
-            return section.map((item, index) => {
-              const isExternal = isExternalPage(item)
-              const handleClick = (e: React.MouseEvent): void => {
-                // External links are handled by the browser (target="_blank")
-                if (isExternal) {
-                  setOpen(false)
-                  return
-                }
-                e.preventDefault()
-                if (item.pageScriptHash) {
-                  handlePageChange(item.pageScriptHash)
-                }
-                setOpen(false)
-              }
+    return section.map((item, index) => {
+      const isExternal = isExternalPage(item)
+      const handleClick = (e: React.MouseEvent): void => {
+        // External links are handled by the browser (target="_blank")
+        if (isExternal) {
+          setOpen(false)
+          return
+        }
+        e.preventDefault()
+        if (item.pageScriptHash) {
+          handlePageChange(item.pageScriptHash)
+        }
+        setOpen(false)
+      }
 
-              // Convert potentially null pageName to string safely
-              const pageName = String(item.pageName || "")
+      // Convert potentially null pageName to string safely
+      const pageName = String(item.pageName || "")
 
-              return (
-                <Fragment key={`${item.pageScriptHash}-${pageName}`}>
-                  {index === 0 && showSections && (
-                    <StyledSectionName>
-                      <StreamlitMarkdown
-                        source={sectionName || ""}
-                        allowHTML={false}
-                        isLabel
-                        disableLinks
-                        truncate
-                        inheritFont
-                      />
-                    </StyledSectionName>
-                  )}
-                  <StyledTopNavSidebarNavLinkContainer>
-                    <SidebarNavLink
-                      icon={item.icon || null}
-                      isTopNav={true}
-                      isInDropdown={true}
-                      isActive={currentPageScriptHash === item.pageScriptHash}
-                      onClick={handleClick}
-                      pageUrl={endpoints.buildAppPageURL(
-                        pageLinkBaseUrl,
-                        item
-                      )}
-                      widgetsDisabled={widgetsDisabled}
-                      isExternal={isExternal}
-                      externalUrl={getExternalPageUrl(item)}
-                    >
-                      {pageName}
-                    </SidebarNavLink>
-                  </StyledTopNavSidebarNavLinkContainer>
-                </Fragment>
-              )
-            })
-          })}
-        </StyledPopoverContent>
-      )}
-      isOpen={open}
-      onClickOutside={() => setOpen(false)}
-      onClick={() => (open ? setOpen(false) : undefined)}
-      onEsc={() => setOpen(false)}
-      // Consistently render the content for smoother opening/closing
-      renderAll={true}
-      popoverMargin={convertRemToPx(theme.spacing.twoXS)}
-      overrides={{
-        Body: {
-          style: () => ({
-            ...getPopoverContainerStyle(theme),
-
-            marginRight: theme.spacing.lg,
-            marginBottom: theme.spacing.lg,
-
-            maxHeight: "70vh",
-            minWidth: "8rem",
-            overflow: "auto",
-            maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
-
-            [`@media (max-width: ${theme.breakpoints.sm})`]: {
-              maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
-            },
-          }),
-        },
-      }}
-    >
-      <div>
-        <StyledNavSection
-          tabIndex={0}
-          onClick={() => setOpen(!open)}
-          isOpen={open}
-          data-testid="stTopNavSection"
-        >
-          <StyledNavSectionText>
-            <StreamlitMarkdown
-              source={title}
-              allowHTML={false}
-              isLabel
-              disableLinks
-              truncate
-              inheritFont
-            />
-          </StyledNavSectionText>
-          {!hideChevron && (
-            <StyledIconContainer>
-              <Icon
-                content={open ? KeyboardArrowUp : KeyboardArrowDown}
-                size="lg"
+      return (
+        <Fragment key={`${item.pageScriptHash}-${pageName}`}>
+          {index === 0 && showSections && (
+            <StyledSectionName>
+              <StreamlitMarkdown
+                source={sectionName || ""}
+                allowHTML={false}
+                isLabel
+                disableLinks
+                truncate
+                inheritFont
               />
-            </StyledIconContainer>
+            </StyledSectionName>
           )}
-        </StyledNavSection>
-      </div>
-    </UIPopover>
+          <StyledTopNavSidebarNavLinkContainer>
+            <SidebarNavLink
+              icon={item.icon || null}
+              isTopNav={true}
+              isInDropdown={true}
+              isActive={currentPageScriptHash === item.pageScriptHash}
+              onClick={handleClick}
+              pageUrl={endpoints.buildAppPageURL(pageLinkBaseUrl, item)}
+              widgetsDisabled={widgetsDisabled}
+              isExternal={isExternal}
+              externalUrl={getExternalPageUrl(item)}
+            >
+              {pageName}
+            </SidebarNavLink>
+          </StyledTopNavSidebarNavLinkContainer>
+        </Fragment>
+      )
+    })
+  })
+
+  return (
+    <>
+      <StyledNavSection
+        ref={setReferenceRef}
+        type="button"
+        onClick={() => setOpen(prev => !prev)}
+        isOpen={open}
+        aria-expanded={open}
+        aria-haspopup="true"
+        data-testid="stTopNavSection"
+      >
+        <StyledNavSectionText>
+          <StreamlitMarkdown
+            source={title}
+            allowHTML={false}
+            isLabel
+            disableLinks
+            truncate
+            inheritFont
+          />
+        </StyledNavSectionText>
+        {!hideChevron && (
+          <StyledIconContainer>
+            <Icon
+              content={open ? KeyboardArrowUp : KeyboardArrowDown}
+              size="lg"
+            />
+          </StyledIconContainer>
+        )}
+      </StyledNavSection>
+      {open && (
+        <FloatingPortal>
+          <StyledTopNavPopoverBody
+            ref={setFloatingRef}
+            style={floatingStyles}
+            data-testid="stTopNavPopoverBody"
+          >
+            <StyledPopoverContent data-testid="stTopNavPopover">
+              {popoverContent}
+            </StyledPopoverContent>
+          </StyledTopNavPopoverBody>
+        </FloatingPortal>
+      )}
+    </>
   )
 }
 

@@ -22,9 +22,8 @@ from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar, cast, overload
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     WidthWithoutContent,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -724,15 +723,17 @@ class NumberInputMixin:
                 number_input_proto.value = current_value
             number_input_proto.set_value = True
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         self.dg._enqueue(
-            "number_input", number_input_proto, layout_config=layout_config
+            "number_input",
+            number_input_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
         )
         return current_value
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

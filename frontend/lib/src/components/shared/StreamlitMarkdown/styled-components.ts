@@ -14,10 +14,23 @@
  * limitations under the License.
  */
 
-import { Theme } from "@emotion/react"
+import { keyframes, Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
+
+// Shimmer animation: sweeps a mask gradient from right to left across the text.
+// Uses mask-position animation to fade text opacity in/out.
+const shimmerAnimation = keyframes`
+  0% {
+    mask-position: 600% center;
+    -webkit-mask-position: 600% center;
+  }
+  100% {
+    mask-position: -600% center;
+    -webkit-mask-position: -600% center;
+  }
+`
 
 interface StyledStreamlitMarkdownProps {
   isCaption: boolean
@@ -26,7 +39,6 @@ interface StyledStreamlitMarkdownProps {
   isInHorizontalLayout?: boolean
   inheritFont?: boolean
   boldLabel?: boolean
-  largerLabel?: boolean
   isToast?: boolean
   truncate?: boolean
 }
@@ -190,14 +202,16 @@ export const StyledStreamlitMarkdown =
       isInHorizontalLayout = false,
       inheritFont,
       boldLabel,
-      largerLabel,
       isToast,
       truncate,
     }) => {
-      // Widget Labels have smaller font size with exception of Button/Checkbox/Radio Button labels
-      // Toasts also have smaller font size as well as pills and segmented controls.
-      const useSmallerFontSize =
-        (isLabel && !largerLabel) || isToast || isCaption
+      // All widget labels (isLabel=true) use the smaller font size (fontSizes.sm = 14px).
+      // Normal markdown text (isLabel=false) stays at fontSizes.md (16px).
+      // Toasts and captions also use the smaller font size.
+      // Some label contexts (e.g. alert titles, dialog titles, slider labels, metric values)
+      // opt out of this sizing via inheritFont=true, which makes the font-size, font-family,
+      // and font-weight inherit from their parent container instead.
+      const useSmallerFontSize = isLabel || isToast || isCaption
 
       return {
         fontFamily: inheritFont ? "inherit" : theme.genericFonts.bodyFont,
@@ -209,7 +223,7 @@ export const StyledStreamlitMarkdown =
         fontWeight: inheritFont ? "inherit" : undefined,
         marginBottom:
           isLabel || isInHorizontalLayout ? "" : `-${theme.spacing.lg}`,
-        opacity: isCaption ? 0.6 : undefined,
+        opacity: isCaption ? theme.opacities.secondary : undefined,
         color: "inherit",
         // Always respect the width of the parent container:
         maxWidth: "100%",
@@ -293,7 +307,7 @@ export const StyledStreamlitMarkdown =
           margin: "1em 0 1em 0",
           padding: `0 0 0 0.75em`,
           borderLeft: `0.15em solid ${theme.colors.borderColor}`,
-          opacity: 0.6,
+          opacity: theme.opacities.secondary,
         },
 
         "b, strong": {
@@ -366,6 +380,43 @@ export const StyledStreamlitMarkdown =
           maxWidth: "100%",
           display: "inline-block",
           verticalAlign: "middle",
+        },
+
+        // Shimmer animation for loading/thinking text. Uses mask-image with an
+        // animated gradient to fade text opacity in and out. The shimmer uses
+        // fadedText60 as its base color. When nesting with color directives:
+        // - :shimmer[:red[text]] - inner color wins (displays red)
+        // - :red[:shimmer[text]] - shimmer color wins (displays fadedText60)
+        "span.stMarkdownShimmer": {
+          // Use theme's secondary text color for shimmer text
+          color: theme.colors.fadedText60,
+          // Mask gradient: fades from 40% opacity to 100% at the shimmer peak and back
+          maskImage: `linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.4) 0%,
+            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 1) 50%,
+            rgba(0, 0, 0, 0.4) 60%,
+            rgba(0, 0, 0, 0.4) 100%
+          )`,
+          WebkitMaskImage: `linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.4) 0%,
+            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 1) 50%,
+            rgba(0, 0, 0, 0.4) 60%,
+            rgba(0, 0, 0, 0.4) 100%
+          )`,
+          maskSize: "200% 100%",
+          WebkitMaskSize: "200% 100%",
+          animation: `${shimmerAnimation} 8s linear infinite`,
+
+          // Respect user's motion preferences for accessibility
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+            maskImage: "none",
+            WebkitMaskImage: "none",
+          },
         },
 
         "p, ol, ul, dl, li": {
@@ -486,3 +537,41 @@ export const StyledHelpIconWrapper = styled.span({
   verticalAlign: "middle",
   transform: "translateY(-0.1em)",
 })
+
+export const StyledMermaidContainer = styled.div<{
+  hasError: boolean
+  isFullScreen: boolean
+}>(({ theme, hasError, isFullScreen }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: hasError ? "flex-start" : "center",
+  justifyContent: isFullScreen ? "center" : "flex-start",
+  minHeight: "2rem",
+  padding: theme.spacing.md,
+  height: isFullScreen ? "100%" : "auto",
+  width: "100%",
+  "& img": {
+    // Render the diagram at its natural size, scaled down to fit the container
+    // width. We intentionally do not clamp the height inline: a fixed max-height
+    // combined with a preserved aspect ratio shrinks tall/narrow diagrams into an
+    // unreadable sliver. Tall diagrams stay readable and can use fullscreen.
+    width: isFullScreen ? "100%" : "auto",
+    maxWidth: "100%",
+    height: isFullScreen ? "100%" : "auto",
+    maxHeight: isFullScreen ? "100%" : "none",
+    objectFit: "contain",
+    borderRadius: theme.radii.default,
+  },
+}))
+
+export const StyledMermaidErrorMessage = styled.div(({ theme }) => ({
+  color: theme.colors.redTextColor,
+  backgroundColor: theme.colors.redBackgroundColor,
+  padding: theme.spacing.sm,
+  borderRadius: theme.radii.default,
+  fontSize: theme.fontSizes.sm,
+  fontFamily: theme.genericFonts.codeFont,
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+  width: "100%",
+}))

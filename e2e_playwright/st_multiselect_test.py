@@ -33,9 +33,10 @@ from e2e_playwright.shared.app_utils import (
     expect_text,
     get_element_by_key,
     get_multiselect,
+    open_popover,
 )
 
-MULTISELECT_COUNT = 26
+MULTISELECT_COUNT = 29
 
 
 def _get_multiselect_input(locator: Locator | Page, label: str) -> Locator:
@@ -140,6 +141,9 @@ def test_multiselect_initial_value(app: Page):
     expect_text(app, "value 14: []")
     expect_text(app, "value 15: ['apple', 'orange']")
     expect_text(app, "value 16: []")
+    expect_text(app, "value 21: []")
+    expect_text(app, "value 22: []")
+    expect_text(app, "value 23: []")
 
 
 def test_multiselect_clear_all(app: Page):
@@ -269,6 +273,32 @@ def test_multiselect_deselect_option(app: Page):
     select_for_multiselect(app, "multiselect 2", "Male", True)
     del_from_multiselect(app, "multiselect 2", "Female")
     expect_text(app, "value 2: ['male']")
+
+
+def test_multiselect_esc_in_popover_preserves_selection(app: Page):
+    """Pressing ESC should close a containing popover without clearing the
+    multiselect selection.
+
+    Regression test for issue #15637.
+    """
+    popover_container = open_popover(app, "Popover with multiselect")
+    multiselect = popover_container.get_by_test_id("stMultiSelect")
+    expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(4)
+
+    multiselect.locator("input").first.click()
+    # First ESC closes the open dropdown.
+    app.keyboard.press("Escape")
+    # Second ESC closes the popover; it must not clear the selection.
+    app.keyboard.press("Escape")
+    expect(app.get_by_test_id("stPopoverBody")).not_to_be_visible()
+
+    # Reopen the popover and verify the selection is preserved.
+    popover_container = open_popover(app, "Popover with multiselect")
+    multiselect = popover_container.get_by_test_id("stMultiSelect")
+    expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(4)
+    expect_text(
+        popover_container, "value esc popover: ['Green', 'Yellow', 'Red', 'Blue']"
+    )
 
 
 def test_multiselect_option_over_max_selections(app: Page):
@@ -564,6 +594,47 @@ def test_multiselect_custom_objects_without_eq(app: Page):
 
     # Verify both selections are visible
     expect(multiselect_elem.locator('[data-baseweb="tag"]')).to_have_count(2)
+
+
+def test_multiselect_prefix_filter_mode_matches_prefix_only(app: Page):
+    """Test that prefix mode only shows prefix matches and keeps bulk actions in sync."""
+    input_elem = _get_multiselect_input(app, "multiselect 21 (filter_mode='prefix')")
+    input_elem.type("A123")
+
+    options = app.get_by_role("option")
+    expect(options).to_have_count(3)
+    expect(options.nth(0)).to_have_text("Select 2 matches")
+    expect(options.nth(1)).to_have_text("A123")
+    expect(options.nth(2)).to_have_text("A1234")
+    expect(app.get_by_role("option", name="BA123", exact=True)).to_have_count(0)
+
+
+def test_multiselect_contains_filter_mode_matches_substrings(app: Page):
+    """Test that contains mode matches case-insensitive substrings without reordering."""
+    input_elem = _get_multiselect_input(app, "multiselect 22 (filter_mode='contains')")
+    input_elem.type("AP")
+
+    options = app.get_by_role("option")
+    expect(options).to_have_count(3)
+    expect(options.nth(0)).to_have_text("Select 2 matches")
+    expect(options.nth(1)).to_have_text("apple")
+    expect(options.nth(2)).to_have_text("grape")
+    expect(app.get_by_role("option", name="banana", exact=True)).to_have_count(0)
+
+
+def test_multiselect_filter_mode_none_disables_typing_but_keeps_selection(app: Page):
+    """Test that filter_mode=None keeps the input readonly while leaving selection enabled."""
+    input_elem = _get_multiselect_input(app, "multiselect 23 (filter_mode=None)")
+    expect(input_elem).to_have_attribute("readonly", "")
+
+    input_elem.click()
+    options = app.get_by_role("option")
+    expect(options).to_have_count(4)
+    expect(options.nth(0)).to_have_text("Select all")
+
+    app.get_by_role("option", name="No", exact=True).click()
+    wait_for_app_run(app)
+    expect_text(app, "value 23: ['No']")
 
 
 # --- Query parameter binding tests ---

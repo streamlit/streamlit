@@ -19,7 +19,7 @@ import mimetypes
 import os
 import signal
 import sys
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
 from streamlit.logger import get_logger
@@ -82,38 +82,6 @@ def _maybe_install_uvloop(running_in_event_loop: bool) -> None:
         )
 
 
-def _fix_tornado_crash() -> None:
-    """Set default asyncio policy to be compatible with Tornado 6.
-
-    Tornado 6 (at least) is not compatible with the default
-    asyncio implementation on Windows. So here we
-    pick the older SelectorEventLoopPolicy when the OS is Windows
-    if the known-incompatible default policy is in use.
-
-    This has to happen as early as possible to make it a low priority and
-    overridable
-
-    See: https://github.com/tornadoweb/tornado/issues/2608
-
-    FIXME: if/when tornado supports the defaults in asyncio,
-    remove and bump tornado requirement for py38
-    """
-    if env_util.IS_WINDOWS:
-        try:
-            from asyncio import (  # type: ignore[attr-defined]
-                WindowsProactorEventLoopPolicy,
-                WindowsSelectorEventLoopPolicy,
-            )
-        except ImportError:
-            pass
-            # Not affected
-        else:
-            if type(asyncio.get_event_loop_policy()) is WindowsProactorEventLoopPolicy:
-                # WindowsProactorEventLoopPolicy is not compatible with
-                # Tornado 6 fallback to the pre-3.8 default of Selector
-                asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
-
-
 def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
     """sys.argv needs to exclude streamlit arguments and parameters
     and be set to what a user's script may expect.
@@ -126,6 +94,7 @@ def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
 def _on_server_start(server: Server) -> None:
     prepare_streamlit_environment(server.main_script_path)
     _print_url(server.is_running_hello)
+    _maybe_print_skills_recommendation()
     report_watchdog_availability()
 
     def maybe_open_browser() -> None:
@@ -297,6 +266,35 @@ def _print_url(is_running_hello: bool) -> None:
         cli_util.print_to_cli("")
 
 
+def _maybe_print_skills_recommendation() -> None:
+    """Recommend installing Streamlit agent skills when starting an app.
+
+    The message is only shown for interactive (non-headless) sessions where the
+    skills are not already installed. It points users to ``streamlit skills`` so
+    AI coding assistants can build and debug their apps more effectively.
+    """
+    if config.get_option("server.headless"):
+        # Don't advertise in headless mode (e.g. deployments, CI).
+        return
+
+    if config.get_option("logger.hideWelcomeMessage"):
+        return
+
+    from streamlit.web import skills
+
+    if skills.are_skills_installed():
+        # Skills are already installed - nothing to recommend.
+        return
+
+    skills_command = cli_util.style_for_cli("streamlit skills", fg="cyan", bold=True)
+    cli_util.print_to_cli("  Help agents write better Streamlit apps?", bold=True)
+    cli_util.print_to_cli(
+        f"  Install the official Streamlit skills by running {skills_command} "
+        "in your terminal."
+    )
+    cli_util.print_to_cli("")
+
+
 def load_config_options(flag_options: dict[str, Any]) -> None:
     """Load config options from config.toml files, then overlay the ones set by
     flag_options.
@@ -344,6 +342,23 @@ def _install_config_watchers(flag_options: dict[str, Any]) -> None:
         )
 
 
+def _prepare_asgi_app_run_context(
+    main_script_path: str,
+    args: list[str],
+    flag_options: dict[str, Any],
+    *,
+    server_mode: Literal["starlette-app", "starlette-app-direct"] = "starlette-app",
+) -> None:
+    """Apply process-level setup shared by st.App launch modes."""
+    _fix_sys_path(main_script_path)
+    _fix_sys_argv(main_script_path, args)
+    _install_config_watchers(flag_options)
+
+    config._server_mode = server_mode
+
+    report_watchdog_availability()
+
+
 def run_asgi_app(
     main_script_path: str,
     app_import_string: str,
@@ -372,16 +387,7 @@ def run_asgi_app(
     """
     from streamlit.web.server.starlette.starlette_server import UvicornRunner
 
-    # Process-level setup (CLI responsibility)
-    _fix_sys_path(main_script_path)
-    _fix_sys_argv(main_script_path, args)
-    _install_config_watchers(flag_options)
-
-    # Set server mode for metrics tracking (CLI-managed st.App)
-    config._server_mode = "starlette-app"
-
-    # Report watchdog availability for file watching
-    report_watchdog_availability()
+    _prepare_asgi_app_run_context(main_script_path, args, flag_options)
 
     # Run the ASGI app using UvicornRunner
     # UvicornRunner handles: port retry, SSL, WebSocket config, signal handling
@@ -403,18 +409,12 @@ def run(
 
     This starts a blocking asyncio eventloop.
     """
-
     _fix_sys_path(main_script_path)
-    _fix_tornado_crash()
     _fix_sys_argv(main_script_path, args)
     _install_config_watchers(flag_options)
 
     # Set server mode for metrics tracking
-    # The Server class may use Starlette (via server.useStarlette config) or Tornado
-    if config.get_option("server.useStarlette"):
-        config._server_mode = "starlette-managed"
-    else:
-        config._server_mode = "tornado"
+    config._server_mode = "starlette-managed"
 
     # Create the server. It won't start running yet.
     server = Server(main_script_path, is_hello)

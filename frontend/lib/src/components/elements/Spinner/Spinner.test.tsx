@@ -15,7 +15,6 @@
  */
 
 import { act, screen, waitFor } from "@testing-library/react"
-import { BaseProvider, LightTheme } from "baseui"
 
 import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
@@ -44,11 +43,7 @@ describe("Spinner component", () => {
   })
 
   it("renders without crashing", () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <Spinner {...getProps()} />
-      </BaseProvider>
-    )
+    render(<Spinner {...getProps()} />)
 
     const spinnerContainer = screen.getByTestId("stSpinner")
     expect(spinnerContainer).toBeInTheDocument()
@@ -56,22 +51,14 @@ describe("Spinner component", () => {
   })
 
   it("sets the text and width correctly", () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <Spinner {...getProps()} />
-      </BaseProvider>
-    )
+    render(<Spinner {...getProps()} />)
 
     const markdownText = screen.getByText("Loading...")
     expect(markdownText).toBeInTheDocument()
   })
 
   it("sets additional className/CSS for caching spinner", () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <Spinner {...getProps({}, { cache: true })} />
-      </BaseProvider>
-    )
+    render(<Spinner {...getProps({}, { cache: true })} />)
 
     const spinnerContainer = screen.getByTestId("stSpinner")
     expect(spinnerContainer).toBeInTheDocument()
@@ -82,11 +69,7 @@ describe("Spinner component", () => {
   })
 
   it("shows timer when showTime is true", () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <Spinner {...getProps({}, { showTime: true })} />
-      </BaseProvider>
-    )
+    render(<Spinner {...getProps({}, { showTime: true })} />)
 
     const spinnerContainer = screen.getByTestId("stSpinner")
     expect(spinnerContainer).toBeInTheDocument()
@@ -94,11 +77,7 @@ describe("Spinner component", () => {
   })
 
   it("updates timer based on system time", async () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <Spinner {...getProps({}, { showTime: true })} />
-      </BaseProvider>
-    )
+    render(<Spinner {...getProps({}, { showTime: true })} />)
 
     // Initially shows 0.0 seconds
     expect(screen.getByText("(0.0 seconds)")).toBeInTheDocument()
@@ -127,11 +106,7 @@ describe("Spinner component", () => {
   })
 
   it("formats time correctly for different durations", async () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <Spinner {...getProps({}, { showTime: true })} />
-      </BaseProvider>
-    )
+    render(<Spinner {...getProps({}, { showTime: true })} />)
 
     // Test seconds
     act(() => {
@@ -155,11 +130,7 @@ describe("Spinner component", () => {
   })
 
   it("does not show timer when showTime is false", () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <Spinner {...getProps({}, { showTime: false })} />
-      </BaseProvider>
-    )
+    render(<Spinner {...getProps({}, { showTime: false })} />)
 
     const spinnerContainer = screen.getByTestId("stSpinner")
     expect(spinnerContainer).toBeInTheDocument()

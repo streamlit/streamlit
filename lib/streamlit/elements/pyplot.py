@@ -24,7 +24,7 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements.lib.image_utils import marshall_images
-from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import LayoutConfig, Width
 
 
 class PyplotMixin:
@@ -49,7 +50,7 @@ class PyplotMixin:
 
         .. Important::
             You must install ``matplotlib>=3.0.0`` to use this command. You can
-            install all charting dependencies (except Bokeh) as an extra with
+            install all charting dependencies as an extra with
             Streamlit:
 
             .. code-block:: shell
@@ -167,8 +168,7 @@ If you have a specific use case that requires this functionality, please let us
 know via [issue on Github](https://github.com/streamlit/streamlit/issues).
 """)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         image_list_proto = ImageListProto()
         marshall(
@@ -183,7 +183,7 @@ know via [issue on Github](https://github.com/streamlit/streamlit/issues).
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 

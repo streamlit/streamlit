@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+from dataclasses import dataclass
+
 import pandas as pd
 
 import streamlit as st
@@ -204,6 +207,52 @@ v20 = st.selectbox(
     key="selectbox20",
 )
 st.write("value 20:", v20)
+
+v21 = st.selectbox(
+    "selectbox 21 (filter_mode='prefix')",
+    ["A123", "A1234", "BA123", "CA123"],
+    index=None,
+    filter_mode="prefix",
+)
+st.write("value 21:", v21)
+
+v22 = st.selectbox(
+    "selectbox 22 (filter_mode='contains')",
+    ["alice@example.com", "bob@company.com", "carol@example.com"],
+    index=None,
+    filter_mode="contains",
+)
+st.write("value 22:", v22)
+
+v23 = st.selectbox(
+    "selectbox 23 (filter_mode=None)",
+    ["Yes", "No", "Maybe"],
+    index=None,
+    filter_mode=None,
+)
+st.write("value 23:", v23)
+
+
+# Regression test for https://github.com/streamlit/streamlit/issues/15618:
+# custom-class options with a format_func that depends on object identity
+# (here a dict lookup) must not revert the selection on rerun.
+@dataclass(frozen=True)
+class _Choice:
+    id: int
+    name: str
+
+
+_choice_a = _Choice(1, "one")
+_choice_b = _Choice(2, "two")
+_choice_labels = {_choice_a: "I", _choice_b: "II"}
+
+v24 = st.selectbox(
+    "selectbox 24 (custom objects with identity-dependent format_func)",
+    [_choice_a, _choice_b],
+    format_func=lambda choice: f"{_choice_labels[choice]} ({choice.name})",
+    key="selectbox_24",
+)
+st.write("value 24:", v24.name)
 
 # --- Bound widgets (query-params) ---
 

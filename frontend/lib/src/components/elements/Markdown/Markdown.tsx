@@ -74,6 +74,21 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
         <InlineTooltipIcon content={help} isLatex={isLatex} />
       </StyledLabelHelpWrapper>
     )
+  } else if (help && allowHtml) {
+    // For raw HTML with help, render the inline tooltip icon directly:
+    // CommonMark's HTML-block rule swallows a trailing `:help[]` directive
+    // appended to block-level HTML (gh-15211).
+    content = (
+      <StyledLabelHelpWrapper>
+        <StreamlitMarkdown
+          isCaption={isCaption}
+          source={body}
+          allowHTML={allowHtml}
+          unterminatedParsing={unterminatedParsing}
+        />
+        <InlineTooltipIcon content={help} />
+      </StyledLabelHelpWrapper>
+    )
   } else {
     // For other markdown, render with inline help icon
     // Use :help[] as a marker where the help icon should appear.
