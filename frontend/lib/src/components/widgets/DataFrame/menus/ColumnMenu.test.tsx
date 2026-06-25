@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, waitFor, within } from "@testing-library/react"
+import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { Field, Int64, Utf8 } from "apache-arrow"
 
@@ -177,6 +177,52 @@ describe("DataFrame ColumnMenu", () => {
       render(<ColumnMenu {...defaultProps} onChangeFormat={undefined} />)
 
       expect(screen.queryByText("Format")).not.toBeInTheDocument()
+    })
+
+    it("does not close format sub-menu on blur while pointer is down", () => {
+      render(<ColumnMenu {...defaultProps} />)
+
+      const formatMenuItem = screen.getByRole("menuitem", {
+        name: /Format/,
+      })
+
+      // Focus the Format item to open the sub-menu
+      fireEvent.focus(formatMenuItem)
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      // Dispatch pointerdown on document to set the pointerDownRef flag.
+      // We use fireEvent here (not userEvent) because we're testing the
+      // document-level capture listener, not simulating a user click on a UI
+      // element. userEvent.pointer corrupts JSDOM's clipboard mock state.
+      // eslint-disable-next-line testing-library/prefer-user-event
+      fireEvent.pointerDown(document.body)
+
+      // Blur the Format item while pointer is still down
+      fireEvent.blur(formatMenuItem)
+
+      // Sub-menu should remain open because pointer is down
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      // eslint-disable-next-line testing-library/prefer-user-event
+      fireEvent.pointerUp(document.body)
+    })
+
+    it("closes format sub-menu on keyboard-driven blur", () => {
+      render(<ColumnMenu {...defaultProps} />)
+
+      const formatMenuItem = screen.getByRole("menuitem", {
+        name: /Format/,
+      })
+
+      // Focus to open
+      fireEvent.focus(formatMenuItem)
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      // Blur without pointer down (simulates Tab away)
+      fireEvent.blur(formatMenuItem)
+
+      // Sub-menu should close
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "false")
     })
   })
 

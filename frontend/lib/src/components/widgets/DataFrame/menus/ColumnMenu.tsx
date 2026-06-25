@@ -111,6 +111,26 @@ function ColumnMenu({
     offsetPx: convertRemToPx("0.375rem"),
   })
 
+  // Tracks whether a pointer button is currently pressed. Used by the onBlur
+  // handlers to distinguish pointer-driven blur (click in sub-menu portal —
+  // ignore, let document-level mouseover manage close) from keyboard-driven
+  // blur (Tab away — close immediately).
+  const pointerDownRef = useRef(false)
+  useEffect(() => {
+    const onDown = (): void => {
+      pointerDownRef.current = true
+    }
+    const onUp = (): void => {
+      pointerDownRef.current = false
+    }
+    document.addEventListener("pointerdown", onDown, true)
+    document.addEventListener("pointerup", onUp, true)
+    return () => {
+      document.removeEventListener("pointerdown", onDown, true)
+      document.removeEventListener("pointerup", onUp, true)
+    }
+  }, [])
+
   // Local ref for the panel — needed for click-outside detection.
   // Merged with floating-ui's ref via a callback ref.
   const panelRef = useRef<HTMLDivElement | null>(null)
@@ -142,11 +162,20 @@ function ColumnMenu({
   // Click-outside and Escape handlers.
   useEffect(() => {
     const handlePointerDown = (e: PointerEvent): void => {
-      // safePolygon keeps sub-menus open during pointer transit; by the time
-      // a pointerdown fires, formatMenuOpen/statsMenuOpen reflects true state.
-      // Avoid closing the parent while a sub-menu is open (the sub-menu panel
-      // lives in its own FloatingPortal, outside panelRef's subtree).
+      // Primary guard: avoid closing the parent while a sub-menu is open.
+      // The sub-menu panels live in their own FloatingPortals, outside panelRef.
       if (formatMenuOpen || statsMenuOpen) return
+      // Fallback guard: if a sub-menu panel is still in the DOM (e.g. React
+      // hasn't flushed a pending setFormatMenuOpen(false) yet), don't close the
+      // column menu when the pointer is inside that panel. This handles a webkit
+      // race where the close-timer state update races the pointerdown event.
+      const target = e.target as Element
+      if (
+        target.closest('[data-testid="stDataFrameColumnFormattingMenu"]') ||
+        target.closest('[data-testid="stDataFrameStatisticsMenu"]')
+      ) {
+        return
+      }
       if (!panelRef.current?.contains(e.target as Node)) onCloseMenu()
     }
 
@@ -265,7 +294,18 @@ function ColumnMenu({
               >
                 <StyledMenuListItem
                   onFocus={() => setStatsMenuOpen(true)}
-                  onBlur={() => setStatsMenuOpen(false)}
+                  onBlur={e => {
+                    if (pointerDownRef.current) return
+                    const related = e.relatedTarget
+                    if (
+                      related?.closest(
+                        '[data-testid="stDataFrameStatisticsMenu"]'
+                      )
+                    ) {
+                      return
+                    }
+                    setStatsMenuOpen(false)
+                  }}
                   isActive={statsMenuOpen}
                   hasSubmenu={true}
                   role="menuitem"
@@ -300,7 +340,18 @@ function ColumnMenu({
               >
                 <StyledMenuListItem
                   onFocus={() => setFormatMenuOpen(true)}
-                  onBlur={() => setFormatMenuOpen(false)}
+                  onBlur={e => {
+                    if (pointerDownRef.current) return
+                    const related = e.relatedTarget
+                    if (
+                      related?.closest(
+                        '[data-testid="stDataFrameColumnFormattingMenu"]'
+                      )
+                    ) {
+                      return
+                    }
+                    setFormatMenuOpen(false)
+                  }}
                   isActive={formatMenuOpen}
                   hasSubmenu={true}
                   role="menuitem"
