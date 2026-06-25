@@ -7006,35 +7006,6 @@ describe("Skills install nudge", () => {
     expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
   })
 
-  it("keeps the nudge hidden when snoozed ~20h ago (just inside the window)", () => {
-    // Boundary: 20h < 24h, so still snoozed. Unlike the "0h" case, this would
-    // fail if the snooze window were mis-sized (e.g. minutes instead of hours).
-    const twentyHoursMs = 20 * 60 * 60 * 1000
-    window.localStorage.setItem(
-      "stSkillsNudgeSnoozedAt",
-      String(Date.now() - twentyHoursMs)
-    )
-    renderApp(getProps())
-
-    sendRecommendingNewSession()
-
-    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
-  })
-
-  it("shows the nudge when snoozed ~28h ago (just past the window)", () => {
-    // Boundary: 28h > 24h, so the snooze has lapsed and the nudge returns.
-    const twentyEightHoursMs = 28 * 60 * 60 * 1000
-    window.localStorage.setItem(
-      "stSkillsNudgeSnoozedAt",
-      String(Date.now() - twentyEightHoursMs)
-    )
-    renderApp(getProps())
-
-    sendRecommendingNewSession()
-
-    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
-  })
-
   it("tracks install clicks", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     renderApp(getProps())

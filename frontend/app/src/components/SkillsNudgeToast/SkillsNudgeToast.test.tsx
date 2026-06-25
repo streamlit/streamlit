@@ -85,6 +85,30 @@ describe("SkillsNudgeToast", () => {
     expect(screen.queryByText("Skills installed")).not.toBeInTheDocument()
   })
 
+  it("disables the controls and shows progress while installing", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // Keep the install pending so the card holds its "installing" state while
+    // we assert the in-flight UI.
+    const deferred = Promise.withResolvers<string | undefined>()
+    const onInstall = vi.fn(() => deferred.promise)
+    renderNudge({ onInstall })
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+
+    // In flight: the primary button shows progress and is disabled, and neither
+    // secondary action can abandon the request mid-install (no double-submit,
+    // no stray dismissal of an in-flight install).
+    expect(screen.getByRole("button", { name: "Installing…" })).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "Don't show again" })
+    ).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Close" })).toBeDisabled()
+
+    // Settle the promise so it doesn't dangle into teardown.
+    deferred.resolve("done")
+    await flush()
+  })
+
   it("installs and shows the success confirmation, then asks to be closed", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const onInstall = vi.fn().mockResolvedValue(undefined)

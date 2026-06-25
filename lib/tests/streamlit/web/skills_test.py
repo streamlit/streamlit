@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import io
 import os
 import tarfile
@@ -168,7 +169,10 @@ class TestFindProjectRoot:
     ) -> None:
         """Uses cwd when .agents or .claude directory exists."""
         (tmp_path / marker_dir).mkdir()
-        with patch("pathlib.Path.cwd", return_value=tmp_path):
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
             result = skills._find_project_root()
         assert result == tmp_path
 
@@ -178,7 +182,10 @@ class TestFindProjectRoot:
         subdir = tmp_path / "sub" / "dir"
         subdir.mkdir(parents=True)
 
-        with patch("pathlib.Path.cwd", return_value=subdir):
+        with (
+            patch("pathlib.Path.cwd", return_value=subdir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
             result = skills._find_project_root()
         assert result == tmp_path
 
@@ -187,7 +194,10 @@ class TestFindProjectRoot:
         subdir = tmp_path / "sub" / "dir"
         subdir.mkdir(parents=True)
 
-        with patch("pathlib.Path.cwd", return_value=subdir):
+        with (
+            patch("pathlib.Path.cwd", return_value=subdir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
             result = skills._find_project_root()
         assert result == subdir
 
@@ -198,7 +208,10 @@ class TestFindProjectRoot:
         subdir.mkdir()
         (subdir / ".agents").mkdir()
 
-        with patch("pathlib.Path.cwd", return_value=subdir):
+        with (
+            patch("pathlib.Path.cwd", return_value=subdir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
             result = skills._find_project_root()
         assert result == subdir
 
@@ -607,6 +620,12 @@ class TestInstallSkillSymlink:
         assert success
         assert target.is_symlink()
         assert ".agents/skills/developing-with-streamlit" in result.installed
+        # The replacement must RESOLVE to the real source, not recreate a
+        # still-dangling link that reuses the old (broken) target string.
+        assert (
+            target.resolve()
+            == (mock_source_skills_dir / "developing-with-streamlit").resolve()
+        )
 
 
 class TestInstallSkillCopy:
@@ -1231,6 +1250,44 @@ class TestDownloadGlobalSkill:
         assert result.name == "test-skill"
         assert (result / "SKILL.md").is_file()
 
+    def test_blocks_path_traversal_members(self, tmp_path: Path) -> None:
+        """A malicious archive member is never written outside the extraction dir.
+
+        Guards the ``tarfile`` ``data`` filter (Python 3.12+) and the manual
+        absolute-/``..``-path filter (3.10/3.11) in ``_download_global_skill``.
+        An absolute-path member targeting an arbitrary location must not be
+        extracted: on 3.12+ the data filter rejects the archive (ClickException);
+        on 3.10/3.11 the member is silently dropped (and the requested skill is
+        then "not found"). Either way the target file must not exist afterward.
+        """
+        evil_target = tmp_path / "pwned.txt"
+        tar_buffer = io.BytesIO()
+        with tarfile.open(fileobj=tar_buffer, mode="w:gz") as tar:
+            root_info = tarfile.TarInfo(name="repo-v1/")
+            root_info.type = tarfile.DIRTYPE
+            root_info.mode = 0o755
+            tar.addfile(root_info)
+            # Malicious absolute-path member attempting an arbitrary file write.
+            evil = tarfile.TarInfo(name=str(evil_target))
+            content = b"pwned"
+            evil.size = len(content)
+            tar.addfile(evil, io.BytesIO(content))
+        tar_buffer.seek(0)
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = tar_buffer.getvalue()
+        mock_response.__enter__ = MagicMock(return_value=mock_response)
+        mock_response.__exit__ = MagicMock(return_value=False)
+
+        with patch.object(skills.request, "urlopen", return_value=mock_response):
+            # 3.12+ rejects the unsafe member outright; older versions drop it.
+            with contextlib.suppress(click.ClickException):
+                skills._download_global_skill(
+                    "https://example.com/test.tar.gz", "skill"
+                )
+
+        assert not evil_target.exists()
+
 
 class TestSkillCopyMatches:
     """Tests for _skill_copy_matches."""
@@ -1378,6 +1435,11 @@ class TestInstallSkillSymlinkEdgeCases:
         assert success
         assert len(result.installed) == 1
         assert target.is_symlink()
+        # The replacement resolves to the real source, not the unrelated dir.
+        assert (
+            target.resolve()
+            == (mock_source_skills_dir / "developing-with-streamlit").resolve()
+        )
 
     def test_returns_false_when_symlink_creation_fails(
         self, tmp_path: Path, mock_source_skills_dir: Path

@@ -842,7 +842,9 @@ def test_detect_installed_skills_emits_expected_token(
     monkeypatch.setenv("HOME", str(home))
     tokens = metrics_util.detect_installed_skills(str(app))
 
-    assert f"{location}:{harness}:{skill}" in tokens
+    # Exactly one marker is planted, so assert the full list (``==`` not ``in``)
+    # to also catch a spurious extra token bleeding in from another root.
+    assert tokens == [f"{location}:{harness}:{skill}"]
 
 
 def test_detect_installed_skills_empty_when_absent(
