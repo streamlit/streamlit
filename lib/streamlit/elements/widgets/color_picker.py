@@ -343,5 +343,5 @@ like '#00FFAA' or '#000'.
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

@@ -1380,7 +1380,7 @@ class NumberInput(Widget):
 
     @property
     def value(self) -> Number | None:
-        """Get the current value of the ``st.number_input`` widget."""
+        """The current value of the ``st.number_input`` widget."""
         if not isinstance(self._value, InitialValue):
             return self._value
         state = self.root.session_state

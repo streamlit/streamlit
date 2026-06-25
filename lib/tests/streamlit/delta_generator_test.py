@@ -305,13 +305,29 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         delta = self.get_delta_from_queue()
         assert delta.fragment_id == "my_fragment_id"
 
-    def test_enqueue_explodes_if_fragment_writes_to_sidebar(self):
+    def test_fragment_sidebar_write_is_redirected_to_wrapper(self):
         ctx = get_script_run_ctx()
-        ThreadState.update(fragment_id="my_fragment_id")
-        ctx.fragment_ids_this_run = ["my_fragment_id"]
+        ThreadState.update(fragment_id="my_fragment_id", delta_path=(0, 1, 2))
+        self.addCleanup(lambda: ThreadState.update(fragment_id=None, delta_path=None))
 
-        exc = "is not supported"
-        with pytest.raises(StreamlitAPIException, match=exc):
+        get_dg_singleton_instance().sidebar_dg._enqueue("text", TextProto())
+
+        wrappers = ctx.fragment_storage.outside_wrappers_for("my_fragment_id")
+        assert len(wrappers) == 1
+
+    def test_parallel_worker_writing_directly_to_sidebar_raises(self):
+        ThreadState.update(
+            fragment_id="my_fragment_id",
+            delta_path=(0, 1, 2),
+            is_parallel_worker=True,
+        )
+        self.addCleanup(
+            lambda: ThreadState.update(
+                fragment_id=None, delta_path=None, is_parallel_worker=False
+            )
+        )
+
+        with pytest.raises(StreamlitAPIException, match="parallel"):
             get_dg_singleton_instance().sidebar_dg._enqueue("text", TextProto())
 
     def test_enqueue_can_write_to_container_in_sidebar(self):
@@ -1311,6 +1327,37 @@ class ParallelWorkerExternalContainerWriteTest(DeltaGeneratorTestCase):
             assert result is not None
         finally:
             ThreadState.update(is_parallel_worker=False, delta_path=())
+
+    def test_delta_path_encodes_root_container(self) -> None:
+        """delta_path encodes the root container as its first element.
+
+        This is the invariant that keeps the parallel-worker guard correct across
+        root containers: a MAIN fragment_path and a sidebar/bottom write share
+        their parent_path/index but differ in delta_path[0], so
+        _is_inside_fragment_path can never prefix-match across containers. Tested
+        directly here (rather than through _enqueue) because it's a property of
+        make_delta_path; combined with test_is_inside_fragment_path and
+        test_parallel_worker_write_outside_fragment_raises_exception it covers the
+        cross-container case compositionally. If the root prefix were ever dropped
+        from make_delta_path, this assertion fails.
+        """
+        main = LockedCursor(
+            root_container=RootContainer.MAIN, parent_path=(1,), index=2
+        )
+        sidebar = LockedCursor(
+            root_container=RootContainer.SIDEBAR, parent_path=(1,), index=2
+        )
+        bottom = LockedCursor(
+            root_container=RootContainer.BOTTOM, parent_path=(1,), index=2
+        )
+
+        assert main.delta_path == [RootContainer.MAIN, 1, 2]
+        assert sidebar.delta_path == [RootContainer.SIDEBAR, 1, 2]
+        assert bottom.delta_path == [RootContainer.BOTTOM, 1, 2]
+        # The only thing distinguishing identical paths in different containers is
+        # the leading root-container element.
+        assert sidebar.delta_path[0] != main.delta_path[0]
+        assert bottom.delta_path[0] != main.delta_path[0]
 
 
 # Outside container writes: detection, wrapper creation, and redirection.

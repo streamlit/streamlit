@@ -26,6 +26,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_popover,
     open_popover,
+    reset_hovering,
 )
 
 
@@ -200,7 +201,7 @@ def test_show_tooltip_on_hover(app: Page):
         .get_by_test_id("stPopoverButton")
         .first
     )
-    # Click the button to open it:
+    reset_hovering(app)
     popover_button.hover()
 
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")

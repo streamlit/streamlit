@@ -77,7 +77,9 @@ interface SquareSkeletonProps {
 
 export const SquareSkeleton = styled.div<SquareSkeletonProps>(
   ({ theme, height, width }) => ({
-    height: height ?? theme.fontSizes.fourXL,
+    // Default to the standard widget height (used as the placeholder height for
+    // most other elements) when no explicit height is provided.
+    height: height ?? theme.sizes.minElementHeight,
     width: width ?? "100%",
     background: theme.colors.darkenedBgMix15,
     borderRadius: theme.radii.default,

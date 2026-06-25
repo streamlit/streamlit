@@ -207,10 +207,18 @@ class RegisterWidgetResult(Generic[T_co]):
         returned from the frontend.
 
         Implies an update to the frontend is needed.
+    incoming_serialized_value : str or None
+        The widget's stored serialized (wire) value as it entered this run,
+        captured before this run's serializer was applied. ``None`` for
+        non-string widgets or when no value is stored yet. Because it's the raw
+        wire form (not re-derived from the deserialized ``value``), callers can
+        reconcile a stored value against freshly computed state even when the
+        deserialized value is stale.
     """
 
     value: T_co
     value_changed: bool
+    incoming_serialized_value: str | None = None
 
     @classmethod
     def failure(

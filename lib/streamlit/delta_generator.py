@@ -357,7 +357,7 @@ class DeltaGenerator(
 
     @property
     def _active_dg(self) -> DeltaGenerator:
-        """Return the DeltaGenerator that's currently 'active'.
+        """The DeltaGenerator that's currently 'active'.
         If we are the main DeltaGenerator, and are inside a `with` block that
         creates a container, our active_dg is that container. Otherwise,
         our active_dg is self.
@@ -375,7 +375,7 @@ class DeltaGenerator(
 
     @property
     def _main_dg(self) -> DeltaGenerator:
-        """Return this DeltaGenerator's root - that is, the top-level ancestor
+        """The root DeltaGenerator - that is, the top-level ancestor
         DeltaGenerator that we belong to (this generally means the st._main
         DeltaGenerator).
         """
@@ -444,7 +444,7 @@ class DeltaGenerator(
 
     @property
     def _cursor(self) -> Cursor | None:
-        """Return our Cursor. This will be None if we're not running in a
+        """Our Cursor. This will be None if we're not running in a
         ScriptThread - e.g., if we're running a "bare" script outside of
         Streamlit.
         """
@@ -507,13 +507,6 @@ class DeltaGenerator(
         dg = self._active_dg
 
         ctx = get_script_run_ctx()
-        if ctx and ThreadState.get().fragment_id and _writes_directly_to_sidebar(dg):
-            raise StreamlitAPIException(
-                "Calling `st.sidebar` in a function wrapped with `st.fragment` is not "
-                "supported. To write elements to the sidebar with a fragment, call your "
-                "fragment function inside a `with st.sidebar` context manager."
-            )
-
         if ctx:
             ts = ThreadState.get()
             if ts.is_parallel_worker:
@@ -626,8 +619,8 @@ class DeltaGenerator(
         ctx = get_script_run_ctx()
         ts = ThreadState.get() if ctx else None
         if (
-            ctx
-            and ts
+            ctx is not None
+            and ts is not None
             and ts.fragment_id
             and _needs_outside_wrapper(dg, ts, ctx.fragment_storage)
         ):
@@ -736,12 +729,6 @@ class DeltaGenerator(
             return clear_msg
 
         return create_transient_element, clear_transient_element
-
-
-def _writes_directly_to_sidebar(dg: DeltaGenerator) -> bool:
-    in_sidebar = any(a._root_container == RootContainer.SIDEBAR for a in dg._ancestors)
-    has_container = bool(list(dg._ancestor_block_types))
-    return in_sidebar and not has_container
 
 
 def _is_inside_fragment_path(

@@ -1239,6 +1239,12 @@ class TestButtonClickSerde:
         with pytest.raises((StreamlitAPIException, json.JSONDecodeError)):
             serde.deserialize(ui_value)
 
+    def test_deserialize_negative_row_raises(self) -> None:
+        """Negative row indices fail the bounds check with a helpful message."""
+        serde = ButtonClickSerde()
+        with pytest.raises(StreamlitAPIException, match="Row must be >= 0"):
+            serde.deserialize('{"row": -1, "label": "x"}')
+
     def test_roundtrip_preserves_state(self) -> None:
         """Test that serialization roundtrip preserves the click state."""
         serde = ButtonClickSerde()

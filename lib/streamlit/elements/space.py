@@ -117,5 +117,5 @@ class SpaceMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

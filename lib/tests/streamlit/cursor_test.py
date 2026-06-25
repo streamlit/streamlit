@@ -186,6 +186,23 @@ class TestRunningCursor:
         assert cursor.transient_index == 0
         assert len(cursor.transient_elements) == 0
 
+    def test_reset_returns_to_initial_position(self):
+        """reset() returns index to 0 and clears transient state."""
+        cursor = RunningCursor(RootContainer.MAIN, (1, 2))
+        cursor.lock_element()
+        cursor.lock_element()
+        cursor.get_transient_cursor()
+        cursor.transient_elements[0] = "element"
+        assert cursor.index == 2
+        assert len(cursor.transient_elements) == 1
+
+        cursor.reset()
+        assert cursor.index == 0
+        assert cursor.transient_index == 0
+        assert len(cursor.transient_elements) == 0
+        # The immutable container position is intentionally preserved.
+        assert cursor.parent_path == (1, 2)
+
     def test_open_block(self):
         """Test open_block creates a child cursor and advances."""
         cursor = RunningCursor(RootContainer.MAIN, parent_path=(1,))
