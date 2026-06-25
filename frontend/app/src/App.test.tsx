@@ -6887,6 +6887,34 @@ describe("Skills install nudge", () => {
     })
   })
 
+  it("tracks a suppressed (non-loopback) nudge without showing it", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    // Server says the nudge was eligible but suppressed because the browser
+    // isn't on a direct-loopback connection (Docker/VM/tunnel).
+    sendForwardMessage("newSession", {
+      ...NEW_SESSION_JSON,
+      initialize: {
+        ...NEW_SESSION_JSON.initialize,
+        recommendSkillsInstall: false,
+        skillsNudgeSuppressedLocality: "private",
+      },
+    })
+
+    // The nudge is not shown...
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    // ...but the connection class is recorded so we can measure the excluded
+    // (containerized/remote) slice of the agent-harness audience.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeSuppressedNonLocal:private",
+    })
+    // And no (false) impression is logged.
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+    })
+  })
+
   it("tracks the impression only once across a reconnect", () => {
     renderApp(getProps())
     const metricsManager = getStoredValue<MetricsManager>(MetricsManager)

@@ -86,9 +86,17 @@ message Initialize {
 
   // True when the server wants the frontend to show the "install skills"
   // nudge. Only set in local development when an agent harness is detected,
-  // the bundled Streamlit skills are not yet installed, and the user has not
-  // dismissed the nudge permanently. Frontend treats an unset value as false.
+  // the bundled Streamlit skills are not yet installed, the user has not
+  // dismissed the nudge permanently, and the browser is connected directly
+  // over a loopback address. Frontend treats an unset value as false.
   bool recommend_skills_install = 8;
+
+  // Connection-locality class of an otherwise-eligible nudge that was
+  // suppressed because the browser is NOT on a direct-loopback connection:
+  // "private" (RFC1918/Docker/VM/LAN), "other" (public/relayed), or empty when
+  // not applicable. Purely for adoption telemetry — it lets us measure how much
+  // of the agent-harness audience the conservative loopback gate excludes.
+  string skills_nudge_suppressed_locality = 9;
 
   reserved 5;
 }

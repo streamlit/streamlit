@@ -31,11 +31,25 @@ from streamlit.runtime.backend_operation_handler import (
     DeferredFileHandler,
     DismissSkillsNudgeHandler,
     InstallSkillsHandler,
+    connection_locality,
 )
 from streamlit.web import skills
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
+
+
+@pytest.fixture(autouse=True)
+def _default_loopback_connection() -> Iterator[None]:
+    """Default the skills-nudge connection-locality gate to ``"loopback"`` so the
+    install/dismiss handler tests exercise their action paths. Tests that probe
+    the non-loopback refusal override this with their own patch."""
+    with patch(
+        "streamlit.runtime.backend_operation_handler.connection_locality",
+        return_value="loopback",
+    ):
+        yield
 
 
 def _create_deferred_file_request(
@@ -251,6 +265,30 @@ def test_install_skills_handler_refuses_without_agent_harness() -> None:
     assert not response.HasField("install_skills")
 
 
+def test_install_skills_handler_refuses_non_loopback_connection() -> None:
+    """The install is refused when the browser is not on a direct-loopback
+    connection (Docker/VM/tunnel), even with an agent present and not headless,
+    so a shared/deployed-ish app can never trigger a filesystem write."""
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch(
+            "streamlit.runtime.backend_operation_handler.connection_locality",
+            return_value="private",
+        ),
+        patch("streamlit.web.skills.install_skills") as mock_install,
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    mock_install.assert_not_called()
+    assert response.error_msg == "Skills install is not available in this environment."
+    assert not response.HasField("install_skills")
+
+
 def test_install_skills_handler_allows_idempotent_retry_when_already_installed() -> (
     None
 ):
@@ -370,6 +408,26 @@ def test_dismiss_skills_nudge_handler_writes_marker() -> None:
     assert response.HasField("dismiss_skills_nudge")
 
 
+def test_dismiss_skills_nudge_handler_refuses_non_loopback_connection() -> None:
+    """The dismiss marker is never written from a non-loopback connection
+    (mirrors the install gate)."""
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch(
+            "streamlit.runtime.backend_operation_handler.connection_locality",
+            return_value="other",
+        ),
+        patch("streamlit.web.skills.write_nudge_dismissed_marker") as mock_write,
+    ):
+        response = asyncio.run(
+            DismissSkillsNudgeHandler().handle(_dismiss_nudge_request(), "session-id")
+        )
+
+    mock_write.assert_not_called()
+    assert response.error_msg == "Skills nudge is not available in this environment."
+    assert not response.HasField("dismiss_skills_nudge")
+
+
 def test_dismiss_skills_nudge_handler_refuses_in_headless_mode() -> None:
     """The marker is never written in headless mode (mirrors the install gate)."""
     with (
@@ -399,3 +457,55 @@ def test_dismiss_skills_nudge_handler_reports_failure() -> None:
         )
 
     assert response.error_msg == "Failed to save your preference."
+
+
+@pytest.mark.parametrize(
+    ("remote_ip", "expected"),
+    [
+        ("127.0.0.1", "loopback"),
+        ("::1", "loopback"),
+        ("10.0.0.5", "private"),
+        ("172.17.0.1", "private"),  # Docker bridge gateway
+        ("192.168.1.10", "private"),
+        ("169.254.1.1", "private"),  # link-local
+        ("8.8.8.8", "other"),
+        ("2606:4700:4700::1111", "other"),
+        ("not-an-ip", "unknown"),
+        (None, "unknown"),
+    ],
+)
+def test_connection_locality_classifies_peer_ip(
+    remote_ip: str | None, expected: str
+) -> None:
+    """``connection_locality`` maps the raw websocket peer IP to a coarse class.
+
+    Uses the raw ``remote_ip`` (loopback is "127.0.0.1"/"::1", NOT normalized to
+    None like ``st.context.ip_address``), so a genuine loopback dev connection
+    is distinguished from Docker/VM/LAN (private) and public (other) peers.
+    """
+    client = MagicMock()
+    client.client_context.remote_ip = remote_ip
+    instance = MagicMock()
+    instance.get_client.return_value = client
+    with (
+        patch("streamlit.runtime.exists", return_value=True),
+        patch("streamlit.runtime.get_instance", return_value=instance),
+    ):
+        assert connection_locality("session-id") == expected
+
+
+def test_connection_locality_unknown_when_runtime_absent() -> None:
+    """No running runtime (e.g. ``python app.py`` raw mode) → unknown, no raise."""
+    with patch("streamlit.runtime.exists", return_value=False):
+        assert connection_locality("session-id") == "unknown"
+
+
+def test_connection_locality_unknown_when_no_client() -> None:
+    """An unknown/closed session (no client) → unknown rather than raising."""
+    instance = MagicMock()
+    instance.get_client.return_value = None
+    with (
+        patch("streamlit.runtime.exists", return_value=True),
+        patch("streamlit.runtime.get_instance", return_value=instance),
+    ):
+        assert connection_locality("missing") == "unknown"
