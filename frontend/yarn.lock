@@ -3754,7 +3754,7 @@ __metadata:
     typescript: "npm:^6.0.3"
     typesync: "npm:^0.14.3"
     vite: "npm:^8.0.16"
-    vite-plugin-dts: "npm:^5.0.1"
+    vite-plugin-dts: "npm:^5.0.2"
     vitest: "npm:^4.1.9"
   languageName: unknown
   linkType: soft
@@ -3772,7 +3772,7 @@ __metadata:
     loglevel: "npm:^1.9.2"
     typesync: "npm:^0.14.3"
     vite: "npm:^8.0.16"
-    vite-plugin-dts: "npm:^5.0.1"
+    vite-plugin-dts: "npm:^5.0.2"
     vite-plugin-svgr: "npm:^5.2.0"
     vitest: "npm:^4.1.9"
     vitest-websocket-mock: "npm:^0.5.0"
@@ -3902,7 +3902,7 @@ __metadata:
     vega-interpreter: "npm:^2.2.1"
     vega-lite: "npm:6.4.3"
     vite: "npm:^8.0.16"
-    vite-plugin-dts: "npm:^5.0.1"
+    vite-plugin-dts: "npm:^5.0.2"
     vite-plugin-svgr: "npm:^5.2.0"
     vitest: "npm:^4.1.9"
     vitest-canvas-mock: "npm:^1.1.4"
@@ -3939,7 +3939,7 @@ __metadata:
   dependencies:
     typesync: "npm:^0.14.3"
     vite: "npm:^8.0.16"
-    vite-plugin-dts: "npm:^5.0.1"
+    vite-plugin-dts: "npm:^5.0.2"
     vitest: "npm:^4.1.9"
   languageName: unknown
   linkType: soft
@@ -17047,7 +17047,7 @@ __metadata:
     typescript: "npm:^6.0.3"
     typesync: "npm:^0.14.3"
     vite: "npm:^8.0.16"
-    vite-plugin-dts: "npm:^5.0.1"
+    vite-plugin-dts: "npm:^5.0.2"
     vitest: "npm:^4.1.9"
   peerDependencies:
     react: ^18.2.0
@@ -18169,9 +18169,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"unplugin-dts@npm:1.0.1":
-  version: 1.0.1
-  resolution: "unplugin-dts@npm:1.0.1"
+"unplugin-dts@npm:1.0.2":
+  version: 1.0.2
+  resolution: "unplugin-dts@npm:1.0.2"
   dependencies:
     "@rollup/pluginutils": "npm:^5.1.4"
     "@volar/typescript": "npm:^2.4.26"
@@ -18208,7 +18208,7 @@ __metadata:
       optional: true
     webpack:
       optional: true
-  checksum: 10c0/48870162a2442eff8e9769d3f2f97e7d4459769d69254c13d448e1afb45c48d10f36af7d868761d0629cd4a8aff2f8a94b585dbc89c91394a64cff17a72f2ca0
+  checksum: 10c0/c220bcf1de09da2c8570dfb0694967a9dd4f0240b71de6656a864051ed6af5a1f413180676abdf13cf4047c34fff930deeb1ee2519f205d66c4aac626927d281
   languageName: node
   linkType: hard
 
@@ -18955,11 +18955,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite-plugin-dts@npm:^5.0.1":
-  version: 5.0.1
-  resolution: "vite-plugin-dts@npm:5.0.1"
+"vite-plugin-dts@npm:^5.0.2":
+  version: 5.0.2
+  resolution: "vite-plugin-dts@npm:5.0.2"
   dependencies:
-    unplugin-dts: "npm:1.0.1"
+    unplugin-dts: "npm:1.0.2"
   peerDependencies:
     "@microsoft/api-extractor": ">=7"
     rollup: ">=3"
@@ -18971,7 +18971,7 @@ __metadata:
       optional: true
     vite:
       optional: true
-  checksum: 10c0/c8dc517e696d27b822c7e3aee5e707d92604bc5a75c71a2eb0c3db50b5cc5d22da8193578519dd7c9456a84e33b2471138007d54ed43c302d176b3131161f220
+  checksum: 10c0/dabccc6602dcd8c3e262adf26b38594ab5d86d5d9da7b1eb967e991ab81b311e1fc424cd5910a0a4d7ad763022261b6605217b2a6035c94a3fb5d49538237c9f
   languageName: node
   linkType: hard
 
