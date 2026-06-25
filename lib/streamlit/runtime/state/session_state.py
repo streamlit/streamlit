@@ -988,9 +988,16 @@ class SessionState:
         # its next registration discards the value the frontend may still resend
         # for the reused widget id, even if that registration happens back on the
         # originating page.
+        #
+        # Widgets that also bind to query params are exempt: binding takes
+        # precedence over "page" scope, so the value must survive the page switch
+        # (the binding preservation path above keeps it under the user key, ready
+        # to be restored from the URL). Dropping it here would make the
+        # combination lose the value even though plain bind keeps it.
         for wid, scope in self._persisted_widget_ids.items():
             if (
                 scope == "page"
+                and wid not in self._query_param_bound_widget_ids
                 and self._persisted_widget_pages.get(wid) != ctx.page_script_hash
                 and _is_stale_widget(
                     self._new_widget_state.widget_metadata.get(wid),
@@ -1156,23 +1163,28 @@ class SessionState:
             self.query_params.unbind_and_clear_param(widget_id)
 
         # Track persist_state registrations (server-side only, no URL involved).
-        # When a widget also sets bind="query-params", the URL value seeded
-        # above into _new_session_state intentionally takes precedence: a
-        # "page"-scoped drop below cannot remove a URL-backed value, so a bound
-        # widget keeps its value across page switches regardless of scope.
+        # When a widget also sets bind="query-params", binding takes precedence:
+        # the "page"-scope drops below are skipped for bound widgets so the value
+        # survives page switches (restored from the URL) regardless of scope.
         dropped_page_scoped_value = False
         if metadata.persist_state is not None and user_key is not None:
             self._persisted_widget_ids[widget_id] = metadata.persist_state
             if metadata.persist_state == "page":
                 ctx = get_script_run_ctx()
                 current_page_hash = ctx.page_script_hash if ctx is not None else ""
+                # Binding takes precedence over "page" scope: a bound widget keeps
+                # its value across page switches (restored from the URL), so the
+                # page-scope drops below must not clobber it. Stale page-tracking
+                # is still cleared so it does not accumulate.
+                is_bound = metadata.bind == "query-params"
                 # A "page"-scoped value preserved while the widget was unmounted
                 # carries the page it belongs to. If the widget now mounts on a
                 # different page, the value must not leak across pages, so drop
                 # it before it is resolved.
                 origin_page_hash = self._persisted_page_value_pages.pop(user_key, None)
                 if (
-                    origin_page_hash is not None
+                    not is_bound
+                    and origin_page_hash is not None
                     and origin_page_hash != current_page_hash
                 ):
                     dropped_page_scoped_value = self._drop_widget_value(
@@ -1183,10 +1195,11 @@ class SessionState:
                 # widget falls back to its default, even back on its origin page.
                 if widget_id in self._page_scoped_widget_ids_to_reset:
                     self._page_scoped_widget_ids_to_reset.discard(widget_id)
-                    dropped_page_scoped_value = (
-                        self._drop_widget_value(widget_id, user_key)
-                        or dropped_page_scoped_value
-                    )
+                    if not is_bound:
+                        dropped_page_scoped_value = (
+                            self._drop_widget_value(widget_id, user_key)
+                            or dropped_page_scoped_value
+                        )
                 self._persisted_widget_pages[widget_id] = current_page_hash
             else:
                 self._persisted_widget_pages.pop(widget_id, None)

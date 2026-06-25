@@ -2496,6 +2496,59 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
 
         assert result.value == "custom_value"
 
+    def test_bind_value_survives_page_switch_without_url_seed(self) -> None:
+        """bind="query-params" + persist_state="page" keeps its value across a
+        page switch even when navigation dropped the URL param.
+
+        ``st.navigation`` links go to the bare page URL, so a bound widget's
+        query param is removed on a page switch and there is nothing to re-seed
+        on return. The value is held under the user key by the binding
+        preservation path, and binding takes precedence over "page" scope, so
+        the page-scope drop/reset must not clobber it. (Plain ``bind`` keeps the
+        value here; the combination must behave the same.)
+        """
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(
+            widget_id, "page", bind="query-params"
+        )
+
+        # Page 1 (origin): render, set value, then hide on the same page.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+
+        # Page 2: navigate to a page that does not render the widget. No query
+        # params are seeded, mirroring navigation dropping the URL param.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_2_hash"),
+        ):
+            self.session_state._remove_stale_widgets(frozenset())
+
+        # Binding wins: the value is preserved and the widget is not flagged for
+        # a reset (unlike a non-bound "page" widget, which would be dropped).
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+        assert widget_id not in self.session_state._page_scoped_widget_ids_to_reset
+
+        # Return to the origin page with no URL value to seed: the widget still
+        # resolves to the preserved bound value rather than the default.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+
 
 class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
     """Tests for URL sync in register_widget for bound widgets."""
