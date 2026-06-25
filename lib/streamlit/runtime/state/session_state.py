@@ -1388,11 +1388,16 @@ class SessionState:
             if widget_value != default_value:
                 restored_persisted_value = True
 
-        # Tells the caller the widget's value differs from the frontend's. Also
-        # true when a preserved bound/persisted value was restored (the frontend
-        # must adopt the backend value instead of the default on first render),
-        # or when a "page"-scoped value was dropped on a page switch (the
-        # frontend must fall back to the default for the reused widget id).
+        # widget_value_changed indicates to the caller that the widget's current
+        # value is different from what is in the frontend. True when:
+        # - the value changed this run;
+        # - a bound value was restored to the URL — the frontend renders the
+        #   widget for the first time on this page and must use the backend's
+        #   resolved value instead of the widget's default;
+        # - a persisted value was restored from session state on (re)mount, for
+        #   the same reason;
+        # - a "page"-scoped value was dropped on a page switch, so the frontend
+        #   must fall back to the default for the reused widget id.
         widget_value_changed = (
             (user_key is not None and self.is_new_state_value(user_key))
             or restored_bound_value
