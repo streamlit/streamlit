@@ -22,42 +22,61 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "react"
 
-import { ChevronDown } from "baseui/icon"
+import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
+import { Cancel } from "@emotion-icons/material-rounded"
 import {
-  type OnChangeParams,
-  type Option,
-  type SharedStylePropsArg,
-  StyledValueContainer,
-  TYPE,
-  Select as UISelect,
-} from "baseui/select"
-import { without } from "lodash-es"
+  ComboBox,
+  ComboBoxStateContext,
+  I18nProvider,
+  type Key,
+} from "react-aria-components"
 
-import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
+import {
+  MultiSelect as MultiSelectProto,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import {
-  getBorderColor,
-  getPopoverContainerStyle,
-} from "~lib/components/shared/Base/styled-components"
-import VirtualDropdown, {
-  SELECT_ALL_ID,
-  SELECT_MATCHES_ID,
-} from "~lib/components/shared/Dropdown/VirtualDropdown"
+import InlineTagGroup from "~lib/components/shared/Tag/InlineTagGroup"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
-import { StyledUISelect } from "~lib/components/widgets/Multiselect/styled-components"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import {
+  MULTISELECT_CREATABLE_ID,
+  MULTISELECT_SELECT_ALL_ID,
+  MULTISELECT_SELECT_MATCHES_ID,
+  useMultiselectFiltering,
+} from "~lib/hooks/useMultiselectFiltering"
 import { convertRemToPx } from "~lib/theme/utils"
-import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import { getSelectFilterMode } from "~lib/util/fuzzyFilterSelectOptions"
+import { isMobile } from "~lib/util/isMobile"
+import {
+  getSelectPlaceholder,
+  labelVisibilityProtoValueToEnum,
+} from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
+
+import {
+  StyledClearButton,
+  StyledEmptyState,
+  StyledGroup,
+  StyledInput,
+  StyledItemHighlight,
+  StyledListBox,
+  StyledListBoxItem,
+  StyledOpenButton,
+  StyledPopover,
+  StyledRightControls,
+} from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -66,34 +85,19 @@ export interface Props {
   fragmentId?: string
 }
 
-/**
- * Threshold at or above which "Select all" / "Select X matches" is disabled.
- * Selecting all items at once with very large option lists (>= 1000) causes
- * severe performance issues (browser freezes, large serialization payloads).
- * See: https://github.com/streamlit/streamlit/issues/15299
- */
-const SELECT_ALL_THRESHOLD = 1000
-
 type MultiselectValue = string[]
 
 const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: MultiSelectProto
-): MultiselectValue | undefined => {
-  return widgetMgr.getStringArrayValue(element)
-}
+): MultiselectValue | undefined => widgetMgr.getStringArrayValue(element)
 
 const getDefaultStateFromProto = (
   element: MultiSelectProto
-): MultiselectValue => {
-  return element.default.map(i => element.options[i]) ?? null
-}
+): MultiselectValue => element.default.map(i => element.options[i]) ?? []
 
-const getCurrStateFromProto = (
-  element: MultiSelectProto
-): MultiselectValue => {
-  return element.rawValues ?? null
-}
+const getCurrStateFromProto = (element: MultiSelectProto): MultiselectValue =>
+  element.rawValues ?? []
 
 const updateWidgetMgrState = (
   element: MultiSelectProto,
@@ -109,14 +113,49 @@ const updateWidgetMgrState = (
   )
 }
 
+/**
+ * Null-render component mounted inside <ComboBox> to expose RAC's internal
+ * open/close methods via refs. Identical pattern to Selectbox's DropdownController.
+ */
+const DropdownController = memo<{
+  openRef: React.MutableRefObject<(() => void) | null>
+  closeRef: React.MutableRefObject<(() => void) | null>
+}>(({ openRef, closeRef }) => {
+  const state = useContext(ComboBoxStateContext)
+  // useLayoutEffect runs synchronously before paint, ensuring openRef.current
+  // is set before any browser event (click/pointer) can fire after a commit.
+  // useEffect would leave a window between paint and effect where the ref is
+  // null — Playwright's fast click dispatch can land in that window.
+  useLayoutEffect(() => {
+    if (state) {
+      openRef.current = () => state.open(null, "manual")
+      closeRef.current = () => state.close()
+    }
+    return () => {
+      openRef.current = null
+      closeRef.current = null
+    }
+  }, [state, openRef, closeRef])
+  return null
+})
+DropdownController.displayName = "DropdownController"
+
 const Multiselect: FC<Props> = props => {
   const { element, widgetMgr, fragmentId } = props
 
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
-  const valueContainerRef = useRef<HTMLDivElement>(null)
-  const scrollTopRef = useRef(0)
 
+  // Floating UI for scroll-tracked popover positioning (same pattern as Selectbox).
+  const { refs, floatingStyles } = useFloatingOverlay({
+    open: true,
+    placement: "bottom-start",
+    offsetPx: convertRemToPx(theme.spacing.twoXS),
+    flipOptions: isInSidebar ? false : undefined,
+    matchTriggerWidth: true,
+  })
+
+  // ── Query-param binding ──────────────────────────────────────────────────
   const queryParamBinding = element.queryParamKey
     ? {
         paramKey: element.queryParamKey,
@@ -126,8 +165,7 @@ const Multiselect: FC<Props> = props => {
       }
     : undefined
 
-  // Ref to store filtered matches for "Select X matches" option
-  const selectMatchesRef = useRef<string[]>([])
+  // ── Widget state ─────────────────────────────────────────────────────────
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -143,209 +181,339 @@ const Multiselect: FC<Props> = props => {
     queryParamBinding,
   })
 
-  const overMaxSelections =
-    element.maxSelections > 0 && value.length >= element.maxSelections
+  // ── Local UI state ───────────────────────────────────────────────────────
+  // Display text in the ComboBox input. We clear it after each selection.
+  const [inputValue, setInputValue] = useState("")
 
-  const getNoResultsMsg = useMemo(() => {
-    if (element.maxSelections === 0) {
-      return "No results"
-    } else if (value.length === element.maxSelections) {
-      const option = element.maxSelections !== 1 ? "options" : "option"
-      return `You can only select up to ${element.maxSelections} ${option}. Remove an option first.`
+  // True while the user is actively typing.
+  const [filterActive, setFilterActive] = useState(false)
+
+  // Always-current mirrors for use inside stale RAC closures.
+  const valueRef = useRef(value)
+  valueRef.current = value
+
+  const inputValueRef = useRef(inputValue)
+  inputValueRef.current = inputValue
+
+  const filterActiveRef = useRef(filterActive)
+  filterActiveRef.current = filterActive
+
+  // Tracks whether the dropdown is currently open.
+  const isOpenRef = useRef(false)
+
+  // Set in handleSelectionChange so that handleInputChange can ignore the
+  // automatic onInputChange("apple") that RAC fires right after selection.
+  const justSelectedRef = useRef(false)
+
+  // Ref that holds the filtered match values when "Select X matches" is shown.
+  // Updated synchronously from useMultiselectFiltering result.
+  const selectMatchesValuesRef = useRef<string[]>([])
+
+  // Refs to imperatively open / close the RAC dropdown.
+  const openDropdownRef = useRef<(() => void) | null>(null)
+  const closeDropdownRef = useRef<(() => void) | null>(null)
+
+  // Scroll preservation for the tag container.
+  const tagContainerRef = useRef<HTMLDivElement>(null)
+  const scrollTopRef = useRef(0)
+
+  // ── Sync value when backend pushes an update ─────────────────────────────
+  // (form clear, session state, etc.) — `value` is already updated by
+  // useBasicWidgetState; here we just reset the local filter input.
+  useExecuteWhenChanged(() => {
+    setInputValue("")
+    setFilterActive(false)
+  }, [value])
+
+  // ── Derived state ────────────────────────────────────────────────────────
+  const { options } = element
+  const acceptNewOptions = element.acceptNewOptions ?? false
+  const maxSelections = element.maxSelections ?? 0
+  const overMaxSelections = maxSelections > 0 && value.length >= maxSelections
+
+  const isFilterNone =
+    getSelectFilterMode(element.filterMode) ===
+    streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
+
+  // On mobile with a short option list and no creatable mode, hide the
+  // on-screen keyboard by making the input readOnly.
+  const inputReadOnly =
+    isFilterNone || (isMobile() && !acceptNewOptions && options.length <= 10)
+
+  const { placeholder: resolvedPlaceholder, shouldDisable } =
+    getSelectPlaceholder(element.placeholder, options, acceptNewOptions, true)
+  const disabled = props.disabled || shouldDisable
+
+  const showPlaceholder = value.length === 0 && inputValue === ""
+
+  // Dynamic "no results" message adapts to maxSelections state.
+  const noResultsMsg = useMemo(() => {
+    if (maxSelections > 0 && value.length === maxSelections) {
+      const word = maxSelections !== 1 ? "options" : "option"
+      return `You can only select up to ${maxSelections} ${word}. Remove an option first.`
     }
     return "No results"
-  }, [element.maxSelections, value.length])
+  }, [maxSelections, value.length])
 
-  const generateNewState = useCallback(
-    (data: OnChangeParams): MultiselectValue => {
-      switch (data.type) {
-        case "remove": {
-          return without(value, data.option?.value)
-        }
-        case "clear": {
-          return []
-        }
-        case "select": {
-          // Handle "Select all" option (no search) - compute from element.options
-          if (data.option?.value === SELECT_ALL_ID) {
-            const unselectedValues = element.options.filter(
-              opt => !value.includes(opt)
-            )
+  // Max height of the tag container (cuts at ~4.5 rows to hint scroll).
+  const tagContainerMaxHeight = useMemo(() => {
+    const rowHeight = `calc(${theme.sizes.elementHighlightHeight} + ${theme.sizes.tagMarginInsideBorder})`
+    return `calc(4.5 * ${rowHeight} + ${theme.sizes.tagMarginInsideBorder})`
+  }, [theme.sizes.elementHighlightHeight, theme.sizes.tagMarginInsideBorder])
 
-            // Respect maxSelections limit
-            if (element.maxSelections > 0) {
-              const remainingSlots = element.maxSelections - value.length
-              return [...value, ...unselectedValues.slice(0, remainingSlots)]
-            }
+  // ── Filtering ─────────────────────────────────────────────────────────────
+  const { displayOptions, selectMatchesValues } = useMultiselectFiltering({
+    options,
+    inputValue,
+    selectedValues: value,
+    filterActive,
+    filterMode: element.filterMode,
+    acceptNewOptions,
+  })
 
-            return [...value, ...unselectedValues]
-          }
+  // Sync match values to ref for use inside the selection callback.
+  selectMatchesValuesRef.current = selectMatchesValues
 
-          // Handle "Select X matches" option (with search) - values stored in ref
-          if (data.option?.value === SELECT_MATCHES_ID) {
-            const filteredValues = selectMatchesRef.current
+  // When at the maxSelections limit, return an empty list so that the ListBox
+  // renders its empty state (the noResultsMsg). This matches the Baseweb
+  // filterOptions behaviour that returned [] when overMaxSelections.
+  const displayOptionsWithDisabled = useMemo(() => {
+    if (overMaxSelections) return []
+    return displayOptions
+  }, [displayOptions, overMaxSelections])
 
-            // Respect maxSelections limit
-            if (element.maxSelections > 0) {
-              const remainingSlots = element.maxSelections - value.length
-              return [...value, ...filteredValues.slice(0, remainingSlots)]
-            }
+  // ── Scroll preservation ───────────────────────────────────────────────────
+  // Runs on every render to restore scrollTop before the browser paints,
+  // counteracting BaseWeb / RAC state updates that reset the scroll.
+  useLayoutEffect(() => {
+    if (tagContainerRef.current) {
+      tagContainerRef.current.scrollTop = scrollTopRef.current
+    }
+  })
 
-            return [...value, ...filteredValues]
-          }
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- safe: read during scroll event, layout already done
+    scrollTopRef.current = e.currentTarget.scrollTop
+  }, [])
 
-          return value.concat([data.option?.value])
-        }
-        default: {
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          throw new Error(`State transition is unknown: ${data.type}`)
-        }
-      }
-    },
-    [value, element.maxSelections, element.options]
-  )
+  // ── Selection handling ────────────────────────────────────────────────────
+  const handleSelectionChange = useCallback(
+    (key: Key | null): void => {
+      // Discard deferred RAC callbacks that fire after the dropdown has closed.
+      if (!isOpenRef.current) return
+      if (key === null) return
 
-  /**
-   * This is the onChange handler for the baseweb Select component.
-   * It is called whenever the user selects an option or removes an option.
-   * When the user starts to modify an option by typing in the input field and
-   * pressing backspace, a single `type="remove"` event is fired with the value set
-   * to the option that is being removed. The same type of event is fired when the
-   * user removes an option by clicking the X icon.
-   *
-   * If we wanted to prevent an immediate rerun when starting to delete characters,
-   * we would need to introduce two new states, e.g. `localValue` and `aboutToDelete`,
-   * and commit that state to the backend upon an onBlur event.
-   * To keep it simple, we just accept the rerun happening for now.
-   */
-  const onChange = useCallback(
-    (params: OnChangeParams) => {
-      if (
-        element.maxSelections &&
-        params.type === "select" &&
-        value.length >= element.maxSelections
-      ) {
+      const keyStr = String(key)
+
+      // Mark that we just made a selection so handleInputChange can ignore
+      // RAC's automatic onInputChange(label) callback.
+      justSelectedRef.current = true
+      setInputValue("")
+      setFilterActive(false)
+
+      const currentValue = valueRef.current
+
+      if (keyStr === MULTISELECT_SELECT_ALL_ID) {
+        const unselected = options.filter(o => !currentValue.includes(o))
+        const toAdd =
+          maxSelections > 0
+            ? unselected.slice(0, maxSelections - currentValue.length)
+            : unselected
+        setValueWithSource({
+          value: [...currentValue, ...toAdd],
+          fromUi: true,
+        })
+        void Promise.resolve().then(() => openDropdownRef.current?.())
         return
       }
+
+      if (keyStr === MULTISELECT_SELECT_MATCHES_ID) {
+        const matches = selectMatchesValuesRef.current.filter(
+          m => !currentValue.includes(m)
+        )
+        const toAdd =
+          maxSelections > 0
+            ? matches.slice(0, maxSelections - currentValue.length)
+            : matches
+        setValueWithSource({
+          value: [...currentValue, ...toAdd],
+          fromUi: true,
+        })
+        void Promise.resolve().then(() => openDropdownRef.current?.())
+        return
+      }
+
+      if (keyStr === MULTISELECT_CREATABLE_ID) {
+        const newOption = inputValueRef.current.trim()
+        if (!newOption) return
+        if (maxSelections > 0 && currentValue.length >= maxSelections) return
+        if (currentValue.includes(newOption)) return
+        setValueWithSource({
+          value: [...currentValue, newOption],
+          fromUi: true,
+        })
+        void Promise.resolve().then(() => openDropdownRef.current?.())
+        return
+      }
+
+      // Regular option selection — enforce maxSelections.
+      if (maxSelections > 0 && currentValue.length >= maxSelections) return
+
+      // Find the option by ID to get its string value.
+      const opt = displayOptions.find(o => o.id === keyStr)
+      if (!opt || opt.isSelectAll) return
+
       setValueWithSource({
-        value: generateNewState(params),
+        value: [...currentValue, opt.value],
+        fromUi: true,
+      })
+
+      // Keep dropdown open for multi-selection.
+      void Promise.resolve().then(() => openDropdownRef.current?.())
+    },
+    [displayOptions, maxSelections, options, setValueWithSource]
+  )
+
+  // ── Input change handling ─────────────────────────────────────────────────
+  const handleInputChange = useCallback((text: string): void => {
+    // Ignore RAC's automatic onInputChange(label) fired right after selection.
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false
+      return
+    }
+    setInputValue(text)
+    if (text !== "") {
+      setFilterActive(true)
+      openDropdownRef.current?.()
+    } else {
+      setFilterActive(false)
+    }
+  }, [])
+
+  const handleOpenChange = useCallback((open: boolean): void => {
+    isOpenRef.current = open
+  }, [])
+
+  // ── Tag removal ───────────────────────────────────────────────────────────
+  const removeTag = useCallback(
+    (item: string): void => {
+      setValueWithSource({
+        value: valueRef.current.filter(v => v !== item),
         fromUi: true,
       })
     },
-    [element.maxSelections, generateNewState, setValueWithSource, value.length]
+    [setValueWithSource]
   )
 
-  const { options } = element
+  // ── Clear all ─────────────────────────────────────────────────────────────
+  const handleClearAll = useCallback((): void => {
+    setValueWithSource({ value: [], fromUi: true })
+    closeDropdownRef.current?.()
+  }, [setValueWithSource])
 
-  const {
-    placeholder,
-    disabled: shouldDisable,
-    selectOptions,
-    inputReadOnly,
-    valuesToUiMulti,
-    createFilterOptions,
-  } = useSelectCommon({
-    options,
-    isMulti: true,
-    acceptNewOptions: element.acceptNewOptions ?? false,
-    filterMode: element.filterMode,
-    placeholderInput: element.placeholder,
-  })
+  // ── Pointer / keyboard interaction ────────────────────────────────────────
+  const handleInputPointerDown = useCallback((): void => {
+    if (disabled) return
+    openDropdownRef.current?.()
+  }, [disabled])
 
-  const filterOptions = useCallback(
-    (options: readonly Option[], filterValue: string): readonly Option[] => {
-      if (overMaxSelections) {
-        return []
-      }
+  // Also open on click so that the dropdown reliably opens regardless of whether
+  // the browser dispatches pointerdown before or after focus events.
+  const handleInputClick = useCallback((): void => {
+    if (disabled) return
+    openDropdownRef.current?.()
+  }, [disabled])
 
-      // Get filtered options (excluding already selected ones) for the dropdown
-      const filteredOptions = createFilterOptions(value)(options, filterValue)
+  // True when the widget has a proto default (mirrors st.selectbox clearable logic).
+  const hasDefault = element.default.length > 0
 
-      // Add "Select all" or "Select X matches" option when multiple selectable options
-      // Disable for large option lists to prevent browser freezes
+  /**
+   * Capture-phase keydown — fires before RAC's handler:
+   * - Opens the dropdown on ArrowUp / ArrowDown when closed.
+   * - For FILTER_MODE_NONE (which also sets readOnly), additional safety:
+   *   block character keys in case the browser ignores readOnly in some edge cases.
+   * - Clears all selections on Escape when the dropdown is closed and the widget
+   *   has no default (i.e. is clearable), matching st.selectbox ESC semantics.
+   */
+  const handleInputKeyDownCapture = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>): void => {
+      if (disabled) return
       if (
-        filteredOptions.length > 1 &&
-        element.options.length < SELECT_ALL_THRESHOLD
+        isFilterNone &&
+        (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
       ) {
-        if (filterValue.trim()) {
-          // With search: store filtered values in dedicated ref
-          // Using separate ref from "Select all" avoids race conditions
-          selectMatchesRef.current = filteredOptions.map(
-            (opt: Option) => opt.value as string
-          )
-          const selectMatchesOption: Option = {
-            label: `Select ${filteredOptions.length} matches`,
-            value: SELECT_MATCHES_ID,
-            id: SELECT_MATCHES_ID,
-          }
-          return [selectMatchesOption, ...filteredOptions]
-        }
-
-        // No search: just use marker, handler computes unselected from element.options
-        const selectAllOption: Option = {
-          label: "Select all",
-          value: SELECT_ALL_ID,
-          id: SELECT_ALL_ID,
-        }
-        return [selectAllOption, ...filteredOptions]
+        e.preventDefault()
+        return
       }
-
-      return filteredOptions
+      if (
+        (e.key === "ArrowDown" || e.key === "ArrowUp") &&
+        !isOpenRef.current
+      ) {
+        openDropdownRef.current?.()
+      }
+      if (
+        e.key === "Escape" &&
+        !isOpenRef.current &&
+        !hasDefault &&
+        valueRef.current.length > 0
+      ) {
+        setValueWithSource({ value: [], fromUi: true })
+      }
     },
-    [createFilterOptions, element.options.length, overMaxSelections, value]
+    [disabled, hasDefault, isFilterNone, setValueWithSource]
   )
 
-  const disabled = props.disabled || shouldDisable
-  const valueFromState = useMemo(
-    () => valuesToUiMulti(value),
-    [valuesToUiMulti, value]
-  )
+  // ── Keyboard Enter to add creatable item ──────────────────────────────────
+  //
+  // We handle this directly here (not via handleSelectionChange) because RAC's
+  // ComboBox fires onOpenChange(false) during its own Enter keydown handler,
+  // which runs in the bubble phase BEFORE this callback. By the time we reach
+  // this handler, isOpenRef.current is already false — we must bypass that guard.
+  const handleInputKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>): void => {
+      if (e.key !== "Enter") return
+      const creatableOpt = displayOptions.find(
+        o => o.id === MULTISELECT_CREATABLE_ID
+      )
+      if (!creatableOpt) return
 
-  // Calculate the max height of the selectbox based on the baseFontSize
-  // to better support advanced theming
-  const maxHeight = useMemo(() => {
-    // Set max height to cut through fifth row of options so the scroll state is apparent
-    const rowHeight = `calc(${theme.sizes.elementHighlightHeight} + ${theme.sizes.tagMarginInsideBorder})`
-    const maxHeight = `calc(4.5 * ${rowHeight} + ${theme.sizes.tagMarginInsideBorder} + 2 * ${theme.sizes.borderWidth})`
-    return maxHeight
-  }, [
-    theme.sizes.elementHighlightHeight,
-    theme.sizes.tagMarginInsideBorder,
-    theme.sizes.borderWidth,
-  ])
+      const newOption = inputValueRef.current.trim()
+      if (!newOption) return
+      if (maxSelections > 0 && valueRef.current.length >= maxSelections) return
+      if (valueRef.current.includes(newOption)) return
 
-  // Runs every render to capture BaseWeb's internal DOM updates that can reset scroll position.
-  // Performance is acceptable since this is a leaf component with no children to re-render.
-  useLayoutEffect(() => {
-    if (valueContainerRef.current) {
-      valueContainerRef.current.scrollTop = scrollTopRef.current
-    }
-  })
-
-  const handleValueContainerScroll = useCallback(
-    (e: React.UIEvent<HTMLDivElement>) => {
-      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: layout already computed during scroll event
-      scrollTopRef.current = e.currentTarget.scrollTop
+      setValueWithSource({
+        value: [...valueRef.current, newOption],
+        fromUi: true,
+      })
+      setInputValue("")
+      setFilterActive(false)
+      // Reopen the dropdown after adding so the user can continue selecting.
+      void Promise.resolve().then(() => openDropdownRef.current?.())
     },
-    []
+    [displayOptions, maxSelections, setValueWithSource]
   )
 
-  // Memoized to prevent BaseWeb from remounting on every render
-  const ValueContainer = useMemo(
-    () =>
-      // eslint-disable-next-line @eslint-react/no-nested-component-definitions -- Required for baseweb component override with refs
-      function ValueContainer(
-        props: SharedStylePropsArg & { children: React.ReactNode }
-      ): React.ReactElement {
-        return (
-          <StyledValueContainer
-            {...props}
-            ref={valueContainerRef}
-            onScroll={handleValueContainerScroll}
-          />
-        )
-      },
-    [handleValueContainerScroll]
+  // ── Render ────────────────────────────────────────────────────────────────
+  const labelVisibility = labelVisibilityProtoValueToEnum(
+    element.labelVisibility?.value
+  )
+
+  const filterInput = (
+    <StyledInput
+      placeholder={showPlaceholder ? resolvedPlaceholder : undefined}
+      readOnly={inputReadOnly ? true : undefined}
+      onPointerDown={handleInputPointerDown}
+      onClick={handleInputClick}
+      onKeyDownCapture={handleInputKeyDownCapture}
+      onKeyDown={handleInputKeyDown}
+      onPaste={isFilterNone ? e => e.preventDefault() : undefined}
+      onCompositionStart={isFilterNone ? e => e.preventDefault() : undefined}
+      $placeholderColor={disabled ? theme.colors.fadedText40 : undefined}
+    />
   )
 
   return (
@@ -353,257 +521,126 @@ const Multiselect: FC<Props> = props => {
       <WidgetLabel
         label={element.label}
         disabled={disabled}
-        labelVisibility={labelVisibilityProtoValueToEnum(
-          element.labelVisibility?.value
-        )}
+        labelVisibility={labelVisibility}
       >
         {element.help && (
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <StyledUISelect>
-        <UISelect
-          creatable={element.acceptNewOptions ?? false}
-          options={selectOptions}
-          labelKey="label"
-          valueKey="value"
-          aria-label={element.label}
-          placeholder={placeholder}
-          type={TYPE.select}
-          multi
-          onChange={onChange}
-          value={valueFromState}
-          disabled={disabled}
-          size={"compact"}
-          noResultsMsg={getNoResultsMsg}
-          filterOptions={filterOptions}
-          closeOnSelect={false}
-          escapeClearsValue={element.default.length > 0 ? false : !disabled}
-          ignoreCase={false}
-          overrides={{
-            DropdownContainer: {
-              style: () => ({
-                ...getPopoverContainerStyle(theme),
-
-                // Height constraint - VirtualDropdown handles scrolling internally
-                maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
-                overflow: "hidden",
-              }),
-            },
-            Popover: {
-              props: {
-                ignoreBoundary: isInSidebar,
-                popoverMargin: convertRemToPx(theme.spacing.twoXS),
-                overrides: {
-                  Body: {
-                    style: () => ({
-                      // Scrolling is handled by the VirtualDropdown component
-                      overflow: "hidden",
-                    }),
-                  },
-                },
-              },
-            },
-            SelectArrow: {
-              component: ChevronDown,
-              props: {
-                style: {
-                  cursor: "pointer",
-                },
-                overrides: {
-                  Svg: {
-                    style: () => ({
-                      width: theme.iconSizes.lg,
-                      height: theme.iconSizes.lg,
-                    }),
-                  },
-                },
-              },
-            },
-
-            IconsContainer: {
-              style: () => ({
-                paddingRight: theme.spacing.sm,
-              }),
-            },
-            ControlContainer: {
-              style: ({ $isFocused }: { $isFocused: boolean }) => {
-                const borderColor = getBorderColor(theme.colors, $isFocused)
-                return {
-                  maxHeight: maxHeight,
-                  minHeight: theme.sizes.minElementHeight,
-                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                  borderLeftWidth: theme.sizes.borderWidth,
-                  borderRightWidth: theme.sizes.borderWidth,
-                  borderTopWidth: theme.sizes.borderWidth,
-                  borderBottomWidth: theme.sizes.borderWidth,
-
-                  borderTopColor: borderColor,
-                  borderRightColor: borderColor,
-                  borderBottomColor: borderColor,
-                  borderLeftColor: borderColor,
-                }
-              },
-            },
-            Placeholder: {
-              style: () => ({
-                flex: "inherit",
-                color: disabled
-                  ? theme.colors.fadedText40
-                  : theme.colors.fadedText60,
-                // Position absolute so Input can overlay it
-                position: "absolute",
-                // Vertically center in the container
-                top: "50%",
-                transform: "translateY(-50%)",
-                // Left padding aligns with tag text
-                paddingLeft: theme.spacing.sm,
-                // Allow clicks to pass through to input
-                pointerEvents: "none",
-              }),
-            },
-            ValueContainer: {
-              component: ValueContainer,
-              style: () => ({
-                overflowY: "auto",
-                // Uniform top and left padding - placeholder/input/tags are sized
-                paddingLeft: theme.sizes.tagMarginInsideBorder,
-                paddingTop: theme.sizes.tagMarginInsideBorder,
-                // Right and bottom gaps are deferred to items
-                paddingBottom: theme.spacing.none,
-                paddingRight: theme.spacing.none,
-              }),
-            },
-            ClearIcon: {
-              props: {
-                overrides: {
-                  Svg: {
-                    style: {
-                      color: theme.colors.grayTextColor,
-                      // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
-                      padding: theme.spacing.threeXS,
-                      height: theme.sizes.clearIconSize,
-                      width: theme.sizes.clearIconSize,
-                      cursor: "pointer",
-                      ":hover": {
-                        fill: theme.colors.bodyText,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            SearchIcon: {
-              style: {
-                color: theme.colors.grayTextColor,
-              },
-            },
-            Tag: {
-              props: {
-                overrides: {
-                  Root: {
-                    style: {
-                      fontWeight: theme.fontWeights.normal,
-                      borderTopLeftRadius: theme.radii.md2,
-                      borderTopRightRadius: theme.radii.md2,
-                      borderBottomRightRadius: theme.radii.md2,
-                      borderBottomLeftRadius: theme.radii.md2,
-                      fontSize: theme.fontSizes.sm,
-                      paddingLeft: theme.spacing.sm,
-                      // Top and left margins are deferred to ValueContainer padding
-                      marginTop: theme.spacing.none,
-                      marginLeft: theme.spacing.none,
-                      // Right and bottom margins to handle tag spacing and row gap
-                      marginRight: theme.spacing.twoXS,
-                      marginBottom: theme.sizes.tagMarginInsideBorder,
-                      height: theme.sizes.elementHighlightHeight,
-                      maxWidth: `calc(100% - ${theme.spacing.lg})`,
-                      // Using !important because the alternative would be
-                      // uglier: we'd have to put it under a selector like
-                      // "&[role="button"]:not(:disabled)" in order to win in
-                      // the order of the precedence.
-                      cursor: "default !important",
-                      // Allow clicks to pass through to the container/input
-                      pointerEvents: "none",
-                    },
-                  },
-                  Text: {
-                    style: {
-                      // Re-enable pointer events for the text so the title
-                      // tooltip is shown on hover (pointerEvents: none on Root
-                      // disables it by default)
-                      pointerEvents: "auto",
-                    },
-                  },
-                  Action: {
-                    style: {
-                      paddingLeft: theme.spacing.none,
-                      // Re-enable pointer events for the close button
-                      pointerEvents: "auto",
-                    },
-                  },
-                  ActionIcon: {
-                    props: {
-                      overrides: {
-                        Svg: {
-                          style: {
-                            // The action icon should be around 0.625% of the parent font size.
-                            width: "0.625em",
-                            height: "0.625em",
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            MultiValue: {
-              props: {
-                overrides: {
-                  Root: {
-                    style: {
-                      fontSize: theme.fontSizes.sm,
-                    },
-                  },
-                },
-              },
-            },
-            InputContainer: {
-              style: ({ $isFocused }: { $isFocused: boolean }) => ({
-                // Height matches tags
-                height: theme.sizes.elementHighlightHeight,
-                // Alignment and left margin to match tags (ValueContainer padding)
-                alignSelf: "flex-start",
-                marginLeft: theme.spacing.none,
-                marginTop: theme.spacing.none,
-                // Bottom margin required to size the container correctly if the
-                // input is orphaned on a new line (in focus)
-                marginBottom: theme.sizes.tagMarginInsideBorder,
-                // Stack input when not focused to prevent premature line wrap
-                position: $isFocused ? "relative" : "absolute",
-                width: "fit-content",
-                flexGrow: 0,
-                // Center input vertically
-                display: "flex",
-              }),
-            },
-            Input: {
-              props: {
-                readOnly: inputReadOnly,
-              },
-              style: () => ({
-                color: theme.colors.bodyText,
-                caretColor: theme.colors.bodyText,
-                // Left padding aligns cursor with tag/placeholder text (only when focused)
-                paddingLeft: theme.spacing.sm,
-                fieldSizing: "content",
-              }),
-            },
-            Dropdown: { component: VirtualDropdown },
-          }}
-        />
-      </StyledUISelect>
+      <I18nProvider locale="en-US">
+        <ComboBox
+          // We manage multi-selection manually; selectedKey is always null
+          // so RAC never "commits" a single value to the input.
+          selectedKey={null}
+          inputValue={inputValue}
+          onSelectionChange={handleSelectionChange}
+          onInputChange={handleInputChange}
+          onOpenChange={handleOpenChange}
+          isDisabled={disabled}
+          allowsCustomValue={acceptNewOptions}
+          allowsEmptyCollection
+          menuTrigger="manual"
+          // Disable RAC's built-in client-side filtering. We do our own
+          // filtering in useMultiselectFiltering so pseudo-items like
+          // "Select all" / "Select X matches" are never inadvertently
+          // stripped out by RAC's filter pass.
+          defaultFilter={() => true}
+          aria-label={element.label ?? "Multiselect"}
+        >
+          <DropdownController
+            openRef={openDropdownRef}
+            closeRef={closeDropdownRef}
+          />
+          <StyledGroup ref={refs.setReference}>
+            <InlineTagGroup
+              items={value}
+              onRemove={removeTag}
+              disabled={disabled}
+              containerRef={tagContainerRef}
+              onScroll={handleScroll}
+              inputElement={filterInput}
+              maxHeight={tagContainerMaxHeight}
+            />
+            <StyledRightControls>
+              {value.length > 0 && !disabled && (
+                <StyledClearButton
+                  aria-label="Clear all"
+                  slot={null}
+                  onPress={handleClearAll}
+                >
+                  <Cancel size={theme.iconSizes.md} aria-hidden="true" />
+                </StyledClearButton>
+              )}
+              <StyledOpenButton
+                title="open"
+                aria-label="Open"
+                type="button"
+                $disabled={disabled}
+                disabled={disabled}
+                onClick={() => {
+                  if (!disabled) openDropdownRef.current?.()
+                }}
+              >
+                <KeyboardArrowDown
+                  size={theme.iconSizes.lg}
+                  aria-hidden="true"
+                />
+              </StyledOpenButton>
+            </StyledRightControls>
+          </StyledGroup>
+          <StyledPopover
+            ref={refs.setFloating}
+            data-testid="stMultiSelectPopover"
+            placement="bottom left"
+            isNonModal
+            $isInSidebar={isInSidebar}
+            offset={0}
+            style={floatingStyles}
+          >
+            {/*
+             * Passing `items` to StyledListBox disables RAC's built-in
+             * client-side filtering (which would strip out pseudo-items like
+             * "Select all" / "Select X matches" because their textValue doesn't
+             * match the typed pattern). We manage all filtering ourselves in
+             * useMultiselectFiltering.
+             */}
+            <StyledListBox
+              items={displayOptionsWithDisabled}
+              aria-label={element.label ?? "Multiselect options"}
+              renderEmptyState={() => (
+                <StyledEmptyState>{noResultsMsg}</StyledEmptyState>
+              )}
+            >
+              {(rawOpt: unknown) => {
+                // `styled(ListBox)` loses the generic parameter; cast back to
+                // the actual element type so we can access typed properties.
+                type Opt = (typeof displayOptionsWithDisabled)[number]
+                const opt = rawOpt as Opt
+                return (
+                  <StyledListBoxItem
+                    key={opt.id}
+                    id={opt.id}
+                    textValue={opt.label}
+                    isDisabled={
+                      (opt as Opt & { isDisabled?: boolean }).isDisabled ??
+                      false
+                    }
+                    $isCreatable={opt.isCreatable}
+                    $isSelectAll={
+                      opt.isSelectAll ||
+                      opt.id === MULTISELECT_SELECT_MATCHES_ID
+                    }
+                  >
+                    <StyledItemHighlight data-item-hl="">
+                      {opt.label}
+                    </StyledItemHighlight>
+                  </StyledListBoxItem>
+                )
+              }}
+            </StyledListBox>
+          </StyledPopover>
+        </ComboBox>
+      </I18nProvider>
     </div>
   )
 }

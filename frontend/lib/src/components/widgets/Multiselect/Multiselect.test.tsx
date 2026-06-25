@@ -91,8 +91,8 @@ describe("Multiselect widget", () => {
     render(<Multiselect {...props} />)
 
     const selections = screen.getAllByRole("button")
-    // one of the buttons is the dropdown button
-    expect(selections.length).toBe(3)
+    // tag buttons (b, c) + clear-all button + open button = 4 total
+    expect(selections.length).toBe(4)
     expect(selections[0]).toHaveTextContent("b")
     expect(selections[1]).toHaveTextContent("c")
   })
@@ -155,8 +155,9 @@ describe("Multiselect widget", () => {
       const props = getProps({ default: [] })
       render(<Multiselect {...props} />)
 
-      const placeholder = screen.getByText("Please select")
-      expect(placeholder).toBeInTheDocument()
+      // Placeholder text lives in the input's placeholder attribute
+      const input = screen.getByRole("combobox")
+      expect(input).toHaveAttribute("placeholder", "Please select")
     })
 
     it("renders with custom placeholder", () => {
@@ -167,7 +168,8 @@ describe("Multiselect widget", () => {
       })
       render(<Multiselect {...props} />)
 
-      expect(screen.getByText("Custom placeholder text")).toBeInTheDocument()
+      const input = screen.getByRole("combobox")
+      expect(input).toHaveAttribute("placeholder", "Custom placeholder text")
     })
 
     it("integrates with placeholder utility for default behavior", () => {
@@ -180,7 +182,8 @@ describe("Multiselect widget", () => {
       render(<Multiselect {...props} />)
 
       // Verifies that the integration with getSelectPlaceholder utility works
-      expect(screen.getByText("Choose options")).toBeInTheDocument()
+      const input = screen.getByRole("combobox")
+      expect(input).toHaveAttribute("placeholder", "Choose options")
     })
 
     it("handles single space placeholder as a valid placeholder", () => {
@@ -191,15 +194,12 @@ describe("Multiselect widget", () => {
       })
       render(<Multiselect {...props} />)
 
-      // Should not show any default placeholder text since single space is provided
-      expect(screen.queryByText("Choose options")).not.toBeInTheDocument()
-      expect(
-        screen.queryByText("Choose or add options")
-      ).not.toBeInTheDocument()
-      expect(screen.queryByText("Add options")).not.toBeInTheDocument()
-      expect(
-        screen.queryByText("No options to select")
-      ).not.toBeInTheDocument()
+      const input = screen.getByRole("combobox")
+      // Single space is a valid placeholder — no default text should be used
+      expect(input).not.toHaveAttribute("placeholder", "Choose options")
+      expect(input).not.toHaveAttribute("placeholder", "Choose or add options")
+      expect(input).not.toHaveAttribute("placeholder", "Add options")
+      expect(input).not.toHaveAttribute("placeholder", "No options to select")
     })
   })
 
@@ -258,6 +258,10 @@ describe("Multiselect widget", () => {
     const match = screen.getByRole("option")
     await user.click(match)
 
+    // Close the dropdown before querying buttons, because when the dropdown
+    // is open React Aria applies aria-hidden to elements outside the popover
+    // which would prevent getAllByRole from finding the tag buttons.
+    await user.keyboard("{Escape}")
     const selections = screen.getAllByRole("button")
     expect(selections[0]).toHaveTextContent("a")
     expect(selections[1]).toHaveTextContent("b")
@@ -325,8 +329,6 @@ describe("Multiselect widget", () => {
     act(() => {
       multiSelect.focus()
     })
-    // baseweb's Select reads event.keyCode, which userEvent no longer sets, so
-    // dispatch the key event directly.
     // eslint-disable-next-line testing-library/prefer-user-event
     fireEvent.keyDown(multiSelect, { key: "Escape", keyCode: 27, which: 27 })
 
@@ -359,8 +361,6 @@ describe("Multiselect widget", () => {
     act(() => {
       multiSelect.focus()
     })
-    // baseweb's Select reads event.keyCode, which userEvent no longer sets, so
-    // dispatch the key event directly.
     // eslint-disable-next-line testing-library/prefer-user-event
     fireEvent.keyDown(multiSelect, { key: "Escape", keyCode: 27, which: 27 })
 
@@ -645,15 +645,7 @@ describe("Multiselect widget", () => {
       })
       render(<Multiselect {...props} />)
 
-      const multiselect = screen.getByTestId("stMultiSelect")
-      const valueContainer = multiselect.querySelector(
-        '[data-baseweb="select"] > div > div:first-child'
-      )
-
-      expect(valueContainer).not.toBeNull()
-      if (valueContainer === null) {
-        return
-      }
+      const valueContainer = screen.getByTestId("stMultiSelectTagContainer")
 
       Object.defineProperty(valueContainer, "scrollTop", {
         writable: true,

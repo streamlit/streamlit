@@ -19,7 +19,7 @@ import {
   memo,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -55,15 +55,15 @@ import {
 } from "~lib/util/utils"
 
 import {
-  StyledClearButton,
-  StyledGroup,
-  StyledInput,
-  StyledItemHighlight,
-  StyledListBox,
-  StyledListBoxItem,
-  StyledOpenButton,
-  StyledPopover,
-} from "./Selectbox.styled"
+  StyledSelectboxClearButton as StyledClearButton,
+  StyledSelectboxGroup as StyledGroup,
+  StyledSelectboxInput as StyledInput,
+  StyledSelectboxItemHighlight as StyledItemHighlight,
+  StyledSelectboxListBox as StyledListBox,
+  StyledSelectboxListBoxItem as StyledListBoxItem,
+  StyledSelectboxOpenButton as StyledOpenButton,
+  StyledSelectboxPopover as StyledPopover,
+} from "./styled-components"
 
 export interface Props {
   value: string | null | undefined
@@ -100,7 +100,9 @@ const DropdownController = memo<{
   closeRef: React.MutableRefObject<(() => void) | null>
 }>(({ openRef, closeRef }) => {
   const state = useContext(ComboBoxStateContext)
-  useEffect(() => {
+  // useLayoutEffect runs synchronously before paint, ensuring the ref is set
+  // before any browser click event can fire after a commit.
+  useLayoutEffect(() => {
     if (state) {
       openRef.current = () => state.open(null, "manual")
       closeRef.current = () => state.close()
@@ -135,7 +137,7 @@ const Selectbox: FC<Props> = ({
   // ComboBox's collection system requires ListBoxItems to be inside RAC's own
   // Popover to discover them and assign role="option". Instead, Floating UI's
   // position is applied via the style prop and CSS !important overrides
-  // neutralize RAC's imperative style writes (see Selectbox.styled.ts).
+  // neutralize RAC's imperative style writes (see Dropdown/styled-components.ts).
   //
   // open is always true because whileElementsMounted already gates autoUpdate
   // on both refs being mounted — the actual ComboBox open state is irrelevant

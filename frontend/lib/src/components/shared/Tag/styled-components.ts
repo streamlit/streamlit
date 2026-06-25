@@ -1,0 +1,113 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import styled from "@emotion/styled"
+
+/**
+ * A rounded-pill tag chip using the theme's primary color as background.
+ * Matches the Baseweb Select tag appearance (tagPrimarySolidBackground).
+ *
+ * The entire element acts as the remove trigger (aria-label="Remove …") for
+ * accessibility — keyboard users can remove a tag with Enter/Space.
+ */
+export const StyledTagButton = styled.button<{ $disabled?: boolean }>(
+  ({ theme, $disabled }) => ({
+    display: "inline-flex",
+    alignItems: "center",
+    gap: theme.spacing.twoXS,
+    fontWeight: theme.fontWeights.normal,
+    fontSize: theme.fontSizes.sm,
+    lineHeight: theme.lineHeights.inputWidget,
+    height: theme.sizes.elementHighlightHeight,
+    maxWidth: `calc(100% - ${theme.spacing.lg})`,
+    paddingLeft: theme.spacing.sm,
+    paddingRight: theme.spacing.xs,
+    marginTop: theme.spacing.none,
+    marginLeft: theme.spacing.none,
+    marginRight: theme.spacing.twoXS,
+    marginBottom: theme.sizes.tagMarginInsideBorder,
+    borderRadius: theme.radii.md2,
+    border: "none",
+    backgroundColor: $disabled
+      ? theme.colors.fadedText10
+      : theme.colors.primary,
+    color: $disabled ? theme.colors.fadedText40 : theme.colors.white,
+    cursor: $disabled ? "default" : "pointer",
+    flexShrink: 0,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    pointerEvents: $disabled ? "none" : "auto",
+    "&:hover": {
+      filter: $disabled ? undefined : "brightness(0.88)",
+    },
+    "&:focus-visible": {
+      outline: `2px solid ${theme.colors.primary}`,
+      outlineOffset: "1px",
+    },
+  })
+)
+
+/**
+ * Text portion of the tag. Truncates with ellipsis and carries a `title`
+ * for the overflow tooltip (set by the consumer to the full label text).
+ */
+export const StyledTagText = styled.span(() => ({
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  minWidth: 0,
+  flexShrink: 1,
+}))
+
+/**
+ * Small × icon at the trailing edge of the tag.
+ * Matches Baseweb's ActionIcon size (0.625em relative to tag font-size).
+ */
+export const StyledTagRemoveIcon = styled.span(() => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+  // Icon inherits the tag's font-size; size="0.625em" on the SVG is then
+  // 0.625× that font-size — matching Baseweb's ActionIcon Svg override.
+  lineHeight: "normal",
+}))
+
+/**
+ * Scrollable flex-wrap container that holds tag pills and the inline input.
+ *
+ * Mirrors the Baseweb ValueContainer layout:
+ * - `paddingTop / paddingLeft` of `tagMarginInsideBorder` provide the gap
+ *   between the group border and the first tag, replacing flexbox centering.
+ * - `alignItems: "flex-start"` + `tagMarginInsideBorder` bottom-margin on
+ *   each tag/input produces symmetric spacing: equal space above (from
+ *   container padding) and below (from tag marginBottom) — the same trick
+ *   Baseweb's ValueContainer used to visually centre tags in single-row mode.
+ */
+export const StyledTagGroupContainer = styled.div<{ $maxHeight?: string }>(
+  ({ theme, $maxHeight }) => ({
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+    flex: 1,
+    minWidth: 0,
+    overflowY: "auto",
+    overflowX: "hidden",
+    paddingTop: theme.sizes.tagMarginInsideBorder,
+    paddingLeft: theme.sizes.tagMarginInsideBorder,
+    maxHeight: $maxHeight,
+  })
+)

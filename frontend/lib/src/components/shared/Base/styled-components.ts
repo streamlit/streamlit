@@ -36,7 +36,7 @@ export const Box = styled.div<{
  * class overrides a non-!important inline style, placing overlays above all
  * fixed UI. Apply this to every styled component wrapping RAC's Popover.
  *
- * @see StyledPopover — Selectbox.styled.ts
+ * @see StyledSelectboxPopover — Dropdown/styled-components.ts
  * @see StyledPopoverBody — Popover/styled-components.ts
  * @see StyledMenuPopover — MenuButton/styled-components.ts
  */

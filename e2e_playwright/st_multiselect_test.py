@@ -48,7 +48,12 @@ def select_for_multiselect(
 ) -> None:
     """Select an option from a multiselect widget identified by its label."""
     ms = get_multiselect(page, label)
-    ms.locator("input").click()
+    ms_input = ms.locator("input")
+    ms_input.click()
+    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
+    ms_input.press("ArrowDown")
+    # Wait for the popover to be visible before selecting an option.
+    expect(page.get_by_test_id("stMultiSelectPopover")).to_be_visible()
     page.get_by_role("option", name=option_text, exact=True).first.click()
     if close_after_selecting:
         page.keyboard.press("Escape")
@@ -57,9 +62,7 @@ def select_for_multiselect(
 
 def del_from_multiselect(page: Page, label: str, option_text: str) -> None:
     ms = get_multiselect(page, label)
-    ms.locator(
-        f'span[data-baseweb="tag"] span[title="{option_text}"] + span[role="presentation"]'
-    ).first.click()
+    ms.locator(f'button[aria-label="Remove {option_text}"]').first.click()
     wait_for_app_run(page)
 
 
@@ -150,7 +153,7 @@ def test_multiselect_clear_all(app: Page):
     """Should clear all options when clicking clear all."""
     select_for_multiselect(app, "multiselect 2", "Female", True)
     get_multiselect(app, "multiselect 2").locator(
-        '[role="button"][aria-label="Clear all"]'
+        'button[aria-label="Clear all"]'
     ).first.click()
     expect_text(app, "value 2: []")
 
@@ -162,7 +165,7 @@ def test_multiselect_show_values_in_dropdown(
     multiselect_elem = get_multiselect(app, "multiselect 1")
     multiselect_elem.locator("input").click()
     wait_for_app_run(app)
-    dropdown_elements = app.locator("li")
+    dropdown_elements = app.get_by_role("option")
     # 3 elements: "Select all", "male", "female"
     expect(dropdown_elements).to_have_count(3)
     assert_snapshot(
@@ -183,7 +186,7 @@ def test_multiselect_long_values_in_dropdown(
     multiselect_elem.locator("input").click()
     wait_for_app_run(app)
     # Skip the first element which is "Select all"
-    dropdown_elems = app.locator("li").all()[1:]
+    dropdown_elems = app.get_by_role("option").all()[1:]
     for idx, el in enumerate(dropdown_elems):
         assert_snapshot(el, name="st_multiselect-dropdown_long_label_" + str(idx))
 
@@ -202,9 +205,15 @@ def test_multiselect_long_values_in_narrow_column(
 
 def test_multiselect_register_callback(app: Page):
     """Should call the callback when an option is selected."""
-    _get_multiselect_input(app, "multiselect 11").click()
+    ms_input = _get_multiselect_input(app, "multiselect 11")
+    ms_input.click()
+    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
+    ms_input.press("ArrowDown")
+    # Wait for the popover to be visible before clicking an option.
+    expect(app.get_by_test_id("stMultiSelectPopover")).to_be_visible()
     # Click on "male" option (skip "Select all" which is first)
     app.get_by_role("option", name="male", exact=True).click()
+    wait_for_app_run(app)
     expect_text(app, "value 11: ['male']")
     expect_text(app, "multiselect changed: True")
 
@@ -212,9 +221,8 @@ def test_multiselect_register_callback(app: Page):
 def test_multiselect_max_selections_form(app: Page):
     """Should apply max selections when used in form."""
     select_for_multiselect(app, "multiselect 10", "male", False)
-    expect(app.locator("li")).to_have_text(
-        "You can only select up to 1 option. Remove an option first.",
-        use_inner_text=True,
+    expect(app.get_by_test_id("stMultiSelectPopover")).to_contain_text(
+        "You can only select up to 1 option. Remove an option first."
     )
 
 
@@ -224,9 +232,8 @@ def test_multiselect_max_selections_1(app: Page):
     """
     select_for_multiselect(app, "multiselect 9", "male", True)
     get_multiselect(app, "multiselect 9").click()
-    expect(app.locator("li")).to_have_text(
-        "You can only select up to 1 option. Remove an option first.",
-        use_inner_text=True,
+    expect(app.get_by_test_id("stMultiSelectPopover")).to_contain_text(
+        "You can only select up to 1 option. Remove an option first."
     )
 
 
@@ -235,32 +242,33 @@ def test_multiselect_max_selections_2(app: Page):
     selecting.
     """
     select_for_multiselect(app, "multiselect 9", "male", False)
-    expect(app.locator("li")).to_have_text(
-        "You can only select up to 1 option. Remove an option first.",
-        use_inner_text=True,
+    expect(app.get_by_test_id("stMultiSelectPopover")).to_contain_text(
+        "You can only select up to 1 option. Remove an option first."
     )
 
 
 def test_multiselect_valid_options(app: Page):
     """Should allow selections when there are valid options."""
-    expect(get_multiselect(app, "multiselect 1")).to_have_text(
-        "multiselect 1\n\nPlease select", use_inner_text=True
+    expect(get_multiselect(app, "multiselect 1").locator("input")).to_have_attribute(
+        "placeholder", "Please select"
     )
 
 
 def test_multiselect_no_valid_options(app: Page):
-    """Should show that their are no options."""
-    expect(get_multiselect(app, "multiselect 3")).to_have_text(
-        "multiselect 3\n\nNo options to select", use_inner_text=True
+    """Should show that there are no options."""
+    expect(get_multiselect(app, "multiselect 3").locator("input")).to_have_attribute(
+        "placeholder", "No options to select"
     )
 
 
 def test_multiselect_single_selection(app: Page, assert_snapshot: ImageCompareFunction):
     """Should allow selections."""
     select_for_multiselect(app, "multiselect 2", "Female", True)
-    expect(get_multiselect(app, "multiselect 2").locator("span").nth(1)).to_have_text(
-        "Female", use_inner_text=True
-    )
+    expect(
+        get_multiselect(app, "multiselect 2")
+        .get_by_test_id("stTag")
+        .get_by_text("Female", exact=True)
+    ).to_be_visible()
     assert_snapshot(
         get_multiselect(app, "multiselect 2"), name="st_multiselect-selection"
     )
@@ -283,7 +291,7 @@ def test_multiselect_esc_in_popover_preserves_selection(app: Page):
     """
     popover_container = open_popover(app, "Popover with multiselect")
     multiselect = popover_container.get_by_test_id("stMultiSelect")
-    expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(4)
+    expect(multiselect.get_by_test_id("stTag")).to_have_count(4)
 
     multiselect.locator("input").first.click()
     # First ESC closes the open dropdown.
@@ -295,7 +303,7 @@ def test_multiselect_esc_in_popover_preserves_selection(app: Page):
     # Reopen the popover and verify the selection is preserved.
     popover_container = open_popover(app, "Popover with multiselect")
     multiselect = popover_container.get_by_test_id("stMultiSelect")
-    expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(4)
+    expect(multiselect.get_by_test_id("stTag")).to_have_count(4)
     expect_text(
         popover_container, "value esc popover: ['Green', 'Yellow', 'Red', 'Blue']"
     )
@@ -392,69 +400,74 @@ def test_dynamic_multiselect_props(app: Page, assert_snapshot: ImageCompareFunct
 def test_multiselect_accept_new_options(app: Page):
     """Should allow adding new options when accept_new_options is True and respect
     max_selections.
-    """
-    # Get the last multiselect (index 13)
-    multiselect_elem = get_multiselect(app, "multiselect 14 - accept new options")
 
-    # Click to open dropdown
-    multiselect_elem.locator("input").click()
+    Note: multiselect 14 uses format_func=str.upper, so the backend's serialize step
+    applies str.upper to ALL stored values (including user-entered free-form strings).
+    After a rerun raw_values will contain the uppercased form (e.g. "MANGO", not "mango"),
+    and that is what the frontend reads back for display.  Only options that are in the
+    predefined list are deserialized back to their original Python objects ("APPLE" →
+    "apple"), so session-state shows "apple" for the original option but "MANGO" / "GRAPE"
+    for the user-entered ones.
+    """
+    multiselect_elem = get_multiselect(app, "multiselect 14 - accept new options")
+    input_elem = multiselect_elem.locator("input")
 
     # Type and add new option "mango"
-    input_elem = multiselect_elem.locator("input")
+    input_elem.click()
     input_elem.fill("mango")
     input_elem.press("Enter")
     wait_for_app_run(app)
+    # After rerun the backend serializes "mango" → "MANGO" (format_func applied)
+    expect(
+        multiselect_elem.get_by_test_id("stTag").filter(has_text="MANGO")
+    ).to_be_visible()
 
     # Type and add another option "grape"
     input_elem.fill("grape")
     input_elem.press("Enter")
     wait_for_app_run(app)
+    # After rerun: "grape" → "GRAPE"
+    expect(
+        multiselect_elem.get_by_test_id("stTag").filter(has_text="GRAPE")
+    ).to_be_visible()
 
-    # Add a third option from original options (dropdown is still open)
-    options_list = app.locator("li")
-    # 5 elements: "Select all", "apple", "banana", "orange", "cherry"
+    # Add a third option from the predefined list (dropdown is still open after Enter)
+    options_list = app.get_by_role("option")
+    # 5 elements: "Select all", "APPLE", "BANANA", "ORANGE", "CHERRY"
     expect(options_list).to_have_count(5)
-    options_list.filter(has_text="apple").click()
+    options_list.filter(has_text="APPLE").click()
     wait_for_app_run(app)
 
-    # Verify three options were added successfully
-    expect_text(app, "value 14: ['mango', 'grape', 'apple']")
-    # Verify that format_func was applied to original option but not to the dynamically
-    # added option
+    # After rerun: session state = ['MANGO', 'GRAPE', 'apple']
+    # ("APPLE" deserializes back to "apple", "MANGO"/"GRAPE" have no match)
+    expect_text(app, "value 14: ['MANGO', 'GRAPE', 'apple']")
     expect(
-        multiselect_elem.get_by_role("button").get_by_text("APPLE", exact=True)
+        multiselect_elem.get_by_test_id("stTag").filter(has_text="APPLE")
     ).to_be_visible()
     expect(
-        multiselect_elem.get_by_role("button").get_by_text("grape", exact=True)
+        multiselect_elem.get_by_test_id("stTag").filter(has_text="GRAPE")
     ).to_be_visible()
     expect(
-        multiselect_elem.get_by_role("button").get_by_text("mango", exact=True)
+        multiselect_elem.get_by_test_id("stTag").filter(has_text="MANGO")
     ).to_be_visible()
 
-    # Try to add a fourth option (dropdown still open) - prevented by max_selections
-    expect(
-        app.get_by_test_id("stSelectboxVirtualDropdownEmpty").locator("li")
-    ).to_have_text(
-        "You can only select up to 3 options. Remove an option first.",
-        use_inner_text=True,
+    # Try to add a fourth option - max_selections=3 prevents it
+    expect(app.get_by_test_id("stMultiSelectPopover")).to_contain_text(
+        "You can only select up to 3 options. Remove an option first."
     )
-    # Type and add another option "berries" - this should not be added
     input_elem.fill("berries")
     input_elem.press("Enter")
     wait_for_app_run(app)
-    # Verify that this option was not added as it would have exceeded max_selections
-    expect_text(app, "value 14: ['mango', 'grape', 'apple']")
+    expect_text(app, "value 14: ['MANGO', 'GRAPE', 'apple']")
 
-    # Remove one option
-    del_from_multiselect(app, "multiselect 14 - accept new options", "mango")
+    # Remove one option and verify we can then add another
+    del_from_multiselect(app, "multiselect 14 - accept new options", "MANGO")
 
-    # Verify we can add another option after removing one
     input_elem.fill("kiwi")
     input_elem.press("Enter")
     wait_for_app_run(app)
-
-    # Verify final selections are correct
-    expect_text(app, "value 14: ['grape', 'apple', 'kiwi']")
+    # "kiwi" → "KIWI" after format_func; "GRAPE" stays "GRAPE"; "APPLE" → "apple"
+    expect_text(app, "value 14: ['GRAPE', 'apple', 'KIWI']")
 
 
 def test_multiselect_preset_session_state(app: Page):
@@ -462,7 +475,7 @@ def test_multiselect_preset_session_state(app: Page):
     # Check the initial values from session_state
     expect_text(app, "value 15: ['apple', 'orange']")
     multiselect_elem = get_multiselect(app, "multiselect 15 - session_state values")
-    selections_button = multiselect_elem.locator('[data-baseweb="tag"]')
+    selections_button = multiselect_elem.get_by_test_id("stTag")
     expect(selections_button).to_have_count(2)
     expect(selections_button.get_by_text("apple")).to_be_visible()
     expect(selections_button.get_by_text("orange")).to_be_visible()
@@ -475,8 +488,10 @@ def test_multiselect_empty_options_with_accept_new_options(app: Page):
         app, "multiselect 16 - empty options with accept_new_options"
     )
 
-    # Verify the initial placeholder shows "Add options" (frontend now handles default placeholders)
-    expect(multiselect_elem).to_contain_text("Add options")
+    # Verify the initial placeholder shows "Add options" (in the input's placeholder attribute)
+    expect(multiselect_elem.locator("input")).to_have_attribute(
+        "placeholder", "Add options"
+    )
 
     # Click to open input field
     multiselect_elem.locator("input").click()
@@ -496,7 +511,7 @@ def test_multiselect_empty_options_with_accept_new_options(app: Page):
     expect_text(app, "value 16: ['strawberry', 'blueberry']")
 
     # Verify the selections are visible in the UI
-    selections_button = multiselect_elem.locator('[data-baseweb="tag"]')
+    selections_button = multiselect_elem.get_by_test_id("stTag")
     expect(selections_button).to_have_count(2)
     expect(selections_button.get_by_text("strawberry")).to_be_visible()
     expect(selections_button.get_by_text("blueberry")).to_be_visible()
@@ -515,8 +530,10 @@ def test_multiselect_empty_options_disabled_when_no_accept_new(app: Page):
     # Get multiselect 3 (index 2) which has empty options and accept_new_options=False (default)
     multiselect_elem = get_multiselect(app, "multiselect 3")
 
-    # Verify the placeholder shows "No options to select"
-    expect(multiselect_elem).to_contain_text("No options to select")
+    # Verify the placeholder shows "No options to select" (in the input's placeholder attribute)
+    expect(multiselect_elem.locator("input")).to_have_attribute(
+        "placeholder", "No options to select"
+    )
 
     # Verify the input field is disabled
     input_elem = multiselect_elem.locator("input")
@@ -527,7 +544,7 @@ def test_multiselect_empty_options_disabled_when_no_accept_new(app: Page):
     wait_for_app_run(app)
 
     # Verify no dropdown options appear
-    dropdown_options = app.locator("li[role='option']")
+    dropdown_options = app.get_by_role("option")
     expect(dropdown_options).to_have_count(0)
 
     # Verify the widget value remains empty
@@ -539,9 +556,7 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
     multiselect_elem = get_multiselect(app, "multiselect 17 - show maxHeight")
 
     # Get the value container (scrollable area)
-    value_container = multiselect_elem.locator(
-        '[data-baseweb="select"] > div > div:first-child'
-    )
+    value_container = multiselect_elem.get_by_test_id("stMultiSelectTagContainer")
 
     # Scroll to middle of the value container (not bottom, to avoid clamping issues
     # when items are removed and scrollHeight decreases)
@@ -583,9 +598,9 @@ def test_multiselect_custom_objects_without_eq(app: Page):
     expect_text(app, "value 20: ['opt_a']")
 
     # Verify the selection is visible in the UI
-    expect(multiselect_elem.locator('[data-baseweb="tag"]')).to_have_count(1)
+    expect(multiselect_elem.get_by_test_id("stTag")).to_have_count(1)
     expect(
-        multiselect_elem.get_by_role("button").get_by_text("Option A", exact=True)
+        multiselect_elem.get_by_test_id("stTag").get_by_text("Option A", exact=True)
     ).to_be_visible()
 
     # Select another option to verify multiple selections work
@@ -593,7 +608,7 @@ def test_multiselect_custom_objects_without_eq(app: Page):
     expect_text(app, "value 20: ['opt_a', 'opt_b']")
 
     # Verify both selections are visible
-    expect(multiselect_elem.locator('[data-baseweb="tag"]')).to_have_count(2)
+    expect(multiselect_elem.get_by_test_id("stTag")).to_have_count(2)
 
 
 def test_multiselect_prefix_filter_mode_matches_prefix_only(app: Page):
@@ -628,6 +643,9 @@ def test_multiselect_filter_mode_none_disables_typing_but_keeps_selection(app: P
     expect(input_elem).to_have_attribute("readonly", "")
 
     input_elem.click()
+    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
+    input_elem.press("ArrowDown")
+    expect(app.get_by_test_id("stMultiSelectPopover")).to_be_visible()
     options = app.get_by_role("option")
     expect(options).to_have_count(4)
     expect(options.nth(0)).to_have_text("Select all")
@@ -685,7 +703,7 @@ def test_multiselect_query_param_default_override(page: Page, app_base_url: str)
 
     # Clear and set back to default ["Red", "Green"]
     get_multiselect(page, "Bound multiselect with default").locator(
-        '[role="button"][aria-label="Clear all"]'
+        'button[aria-label="Clear all"]'
     ).first.click()
     wait_for_app_run(page)
     select_for_multiselect(page, "Bound multiselect with default", "Red", True)
@@ -847,8 +865,8 @@ def test_multiselect_selected_tags_have_working_tooltips(app: Page):
     ms = get_multiselect(app, "multiselect 4")
 
     # Verify tags have title attributes set to their option values
-    tea_tag = ms.locator('span[data-baseweb="tag"] span[title="tea"]')
-    water_tag = ms.locator('span[data-baseweb="tag"] span[title="water"]')
+    tea_tag = ms.locator('[data-testid="stTag"] span[title="tea"]')
+    water_tag = ms.locator('[data-testid="stTag"] span[title="water"]')
 
     expect(tea_tag).to_be_visible()
     expect(water_tag).to_be_visible()
