@@ -1591,11 +1591,11 @@ def _evaluate_nudge(
         patch("streamlit.config.get_option", side_effect=options.__getitem__),
         patch.object(skills, "_nudge_dismissed_marker_path", return_value=marker),
         patch(
-            "streamlit.runtime.metrics_util.detect_installed_agents",
+            "streamlit.web.skills.detect_installed_agents",
             return_value=list(agents),
         ),
         patch(
-            "streamlit.runtime.metrics_util.detect_installed_skills",
+            "streamlit.web.skills.detect_installed_skills",
             return_value=list(installed_skills),
         ),
     ):
@@ -1831,10 +1831,11 @@ class TestInstallDetectRoundtrip:
     neither the app dir nor the git root.
 
     This is the regression guard for the install/detection project-root
-    divergence: ``skills._find_project_root`` (install target) and
-    ``metrics_util._find_install_root`` (detection root) must not drift
-    apart. The pre-existing tests only covered the standard ``.git``-at-the-root
-    layout, which masked the bug.
+    divergence. Detection now resolves its project root via the very same
+    ``skills._find_project_root`` the installer uses, so the two cannot drift;
+    this end-to-end test confirms the install->detect roundtrip closes. The
+    pre-existing tests only covered the standard ``.git``-at-the-root layout,
+    which masked the original bug.
     """
 
     @pytest.mark.parametrize("with_git", [True, False])
@@ -1845,7 +1846,6 @@ class TestInstallDetectRoundtrip:
         (optional) git root; detection must still find it. ``with_git=True`` is
         the monorepo/per-package case; ``with_git=False`` is the no-git case.
         """
-        from streamlit.runtime import metrics_util
 
         _skip_if_symlinks_not_supported(tmp_path)
 
@@ -1876,8 +1876,8 @@ class TestInstallDetectRoundtrip:
         app_dir.mkdir()
 
         def clear_caches() -> None:
-            metrics_util._detect_installed_skills_cached.cache_clear()
-            metrics_util._detect_installed_agents_cached.cache_clear()
+            skills._detect_installed_skills_cached.cache_clear()
+            skills._detect_installed_agents_cached.cache_clear()
 
         with (
             patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
@@ -1891,7 +1891,7 @@ class TestInstallDetectRoundtrip:
             skills.install_skills(global_mode=False, yes=True, app_dir=str(app_dir))
 
             # Mimic the in-app handler invalidating the detection cache.
-            metrics_util.clear_installed_skills_cache()
+            skills.clear_installed_skills_cache()
             clear_caches()
 
             # The install landed in the package's agent-config dirs...
@@ -1901,75 +1901,5 @@ class TestInstallDetectRoundtrip:
             # ...and detection now sees it, so the nudge is suppressed. Without
             # the project-root unification, both of these would be the
             # pre-install values (empty / True) and the nudge would re-appear.
-            assert metrics_util.detect_installed_skills(str(app_dir)) != []
+            assert skills.detect_installed_skills(str(app_dir)) != []
             assert skills.should_show_skills_nudge(str(app_dir)) is False
-
-
-class TestFindInstallRootMatchesInstaller:
-    """``metrics_util._find_install_root`` must resolve the SAME root the
-    installer (``skills._find_project_root``) writes to, across layouts and at
-    any nesting depth. This is the drift guard for the duplicated upward walks:
-    if they disagree on the depth bound or home exclusion, detection can fail to
-    scan where the install landed and the nudge re-appears forever.
-    """
-
-    def test_resolves_same_root_as_installer(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Across no-git / monorepo / git-only / no-root / deeply-nested layouts,
-        detection's resolver agrees with the installer's. The deep case (root
-        >20 levels above the app) is the regression guard for the depth-cap drift
-        — the old capped walk returned None there and missed the install.
-        """
-        from streamlit.runtime import metrics_util
-
-        base = tmp_path.resolve()
-        (base / "home").mkdir()
-        monkeypatch.setenv("HOME", str(base / "home"))
-
-        def assert_agrees(app: Path) -> None:
-            installer = skills._find_project_root(app)
-            detect = metrics_util._find_install_root(str(app))
-            # Detection returns None exactly when the installer falls back to the
-            # app dir itself (no .agents/.claude/.git ancestor); detection's
-            # separate "app" root covers that, so None is correct there.
-            if detect is None:
-                assert os.path.normcase(str(installer)) == os.path.normcase(str(app))
-            else:
-                assert os.path.normcase(detect) == os.path.normcase(str(installer))
-
-        # 1. .agents ancestor, no git, app in a subdir.
-        a = base / "a"
-        (a / ".agents").mkdir(parents=True)
-        (a / "sub").mkdir()
-        assert_agrees(a / "sub")
-
-        # 2. .claude between the app and the git root (monorepo per-package).
-        b = base / "b"
-        (b / ".git").mkdir(parents=True)
-        (b / "mid" / ".claude").mkdir(parents=True)
-        (b / "mid" / "sub").mkdir()
-        assert_agrees(b / "mid" / "sub")
-
-        # 3. git root only.
-        c = base / "c"
-        (c / ".git").mkdir(parents=True)
-        (c / "x").mkdir()
-        assert_agrees(c / "x")
-
-        # 4. No .agents/.claude/.git anywhere: installer falls back to the app
-        #    dir, detection returns None.
-        d = base / "d" / "x"
-        d.mkdir(parents=True)
-        assert_agrees(d)
-
-        # 5. Git root >20 directory levels above the app — guards the depth-cap
-        #    drift the old fixed-bound walk would have missed.
-        deep = base / "deep"
-        (deep / ".git").mkdir(parents=True)
-        nested = deep
-        for i in range(25):
-            nested /= f"l{i}"
-        nested.mkdir(parents=True)
-        assert metrics_util._find_install_root(str(nested)) is not None
-        assert_agrees(nested)

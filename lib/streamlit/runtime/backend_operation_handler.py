@@ -160,7 +160,6 @@ class InstallSkillsHandler(BackendOperationHandler):
     ) -> BackendOperationResponse:
         """Install the bundled Streamlit skills in project mode."""
         from streamlit import config
-        from streamlit.runtime import metrics_util
         from streamlit.web import skills
 
         app_dir = self._get_app_dir()
@@ -177,10 +176,7 @@ class InstallSkillsHandler(BackendOperationHandler):
         # after a dropped connection whose first attempt already completed
         # server-side — surfacing a success as an unrecoverable error and
         # logging it as a failed install. Idempotent retry is the correct path.
-        if (
-            config.get_option("server.headless")
-            or not metrics_util.detect_installed_agents()
-        ):
+        if config.get_option("server.headless") or not skills.detect_installed_agents():
             return BackendOperationResponse(
                 request_id=request.request_id,
                 error_msg="Skills install is not available in this environment.",
@@ -205,7 +201,7 @@ class InstallSkillsHandler(BackendOperationHandler):
 
         # Invalidate the cached "skills installed" detection so a later session
         # in this same process does not re-show the nudge.
-        metrics_util.clear_installed_skills_cache()
+        skills.clear_installed_skills_cache()
 
         return BackendOperationResponse(
             request_id=request.request_id,

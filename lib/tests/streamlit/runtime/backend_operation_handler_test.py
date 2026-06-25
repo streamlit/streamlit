@@ -26,7 +26,6 @@ from streamlit.proto.ForwardMsg_pb2 import (
     BackendOperationResponse,
     DeferredFileResponsePayload,
 )
-from streamlit.runtime import metrics_util
 from streamlit.runtime.backend_operation_handler import (
     BackendOperationDispatcher,
     DeferredFileHandler,
@@ -183,11 +182,11 @@ def test_install_skills_handler_installs_in_project_mode() -> None:
     )
     with (
         patch("streamlit.config.get_option", return_value=False),
-        patch.object(metrics_util, "detect_installed_agents", return_value=["claude"]),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
         patch(
             "streamlit.web.skills.install_skills", return_value=install_result
         ) as mock_install,
-        patch.object(metrics_util, "clear_installed_skills_cache") as mock_clear,
+        patch.object(skills, "clear_installed_skills_cache") as mock_clear,
     ):
         response = asyncio.run(
             InstallSkillsHandler(lambda: "/app/dir").handle(
@@ -215,7 +214,7 @@ def test_install_skills_handler_reports_failure() -> None:
     """Install failures are returned via the response's error message."""
     with (
         patch("streamlit.config.get_option", return_value=False),
-        patch.object(metrics_util, "detect_installed_agents", return_value=["claude"]),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
         patch(
             "streamlit.web.skills.install_skills",
             side_effect=click.ClickException("No skills found"),
@@ -238,7 +237,7 @@ def test_install_skills_handler_refuses_without_agent_harness() -> None:
     """
     with (
         patch("streamlit.config.get_option", return_value=False),
-        patch.object(metrics_util, "detect_installed_agents", return_value=[]),
+        patch.object(skills, "detect_installed_agents", return_value=[]),
         patch("streamlit.web.skills.install_skills") as mock_install,
     ):
         response = asyncio.run(
@@ -266,17 +265,17 @@ def test_install_skills_handler_allows_idempotent_retry_when_already_installed()
     up_to_date = skills._InstallResult(up_to_date=[".agents/skills/foo"])
     with (
         patch("streamlit.config.get_option", return_value=False),
-        patch.object(metrics_util, "detect_installed_agents", return_value=["claude"]),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
         # Skills already present (the nudge's display predicate would be False)...
         patch.object(
-            metrics_util,
+            skills,
             "detect_installed_skills",
             return_value=["app:claude:developing-with-streamlit"],
         ),
         patch(
             "streamlit.web.skills.install_skills", return_value=up_to_date
         ) as mock_install,
-        patch.object(metrics_util, "clear_installed_skills_cache"),
+        patch.object(skills, "clear_installed_skills_cache"),
     ):
         response = asyncio.run(
             InstallSkillsHandler(lambda: "/app/dir").handle(
@@ -332,12 +331,12 @@ def test_install_skills_handler_runs_real_installer(tmp_path: Path) -> None:
 
     with (
         patch("streamlit.config.get_option", return_value=False),
-        patch.object(metrics_util, "detect_installed_agents", return_value=["claude"]),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
         patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
         patch("pathlib.Path.cwd", return_value=project_dir),
         # No ~/.claude, so only .agents/skills is targeted.
         patch("pathlib.Path.home", return_value=tmp_path / "home"),
-        patch.object(metrics_util, "clear_installed_skills_cache"),
+        patch.object(skills, "clear_installed_skills_cache"),
     ):
         response = asyncio.run(
             InstallSkillsHandler(lambda: str(project_dir)).handle(

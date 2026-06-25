@@ -23,6 +23,7 @@ import sys
 import tarfile
 import tempfile
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Final
 from urllib import request
@@ -31,6 +32,9 @@ from urllib.error import URLError
 import click
 
 import streamlit
+from streamlit.logger import get_logger
+
+_LOGGER: Final = get_logger(__name__)
 
 # GitHub URL for downloading global skills (versioned tag)
 _GLOBAL_SKILLS_URL: Final[str] = (
@@ -898,6 +902,159 @@ def write_nudge_dismissed_marker() -> None:
     marker.touch(exist_ok=True)
 
 
+_STREAMLIT_SKILL_NAMES: Final = (
+    "developing-with-streamlit",
+    "developing-with-streamlit-in-snowflake",
+)
+_SKILL_MARKER_FILENAME: Final = "SKILL.md"
+# (harness, project_skills_dir, home_skills_dir, agent_home_dir) - skill dirs
+# are checked for the SKILL.md marker; agent_home_dir is checked for existence
+# to detect the harness itself independent of Streamlit skills.
+_HARNESSES: Final = (
+    ("agents", ".agents/skills", ".agents/skills", ".agents"),
+    ("claude", ".claude/skills", ".claude/skills", ".claude"),
+    ("codex", ".codex/skills", ".codex/skills", ".codex"),
+    ("copilot", ".github/skills", ".copilot/skills", ".copilot"),
+    ("cortex", ".cortex/skills", ".snowflake/cortex/skills", ".snowflake/cortex"),
+    ("cursor", ".cursor/skills", ".cursor/skills", ".cursor"),
+    ("gemini", ".gemini/skills", ".gemini/skills", ".gemini"),
+    ("opencode", ".opencode/skills", ".config/opencode/skills", ".config/opencode"),
+)
+# Max directory levels to walk when searching for a ``.git`` ancestor. Bounded
+# to avoid scanning the entire filesystem on pathological layouts.
+_MAX_REPO_ROOT_WALK_DEPTH: Final = 20
+
+
+def _find_git_root(start: str) -> str | None:
+    """Return the nearest ancestor of ``start`` containing a ``.git`` entry, or ``None``.
+
+    Uses a bounded stdlib ancestor walk rather than ``git.Repo(...)`` from
+    GitPython. GitPython's cold import adds ~170ms on first call, which shows
+    up on every hosted-app startup via the ``create_page_profile_message``
+    code path — for a signal that almost always resolves to ``None`` in those
+    environments. The stdlib walk is ~1ms cold and returns the same path we
+    need.
+    """
+    current = os.path.abspath(start)
+    for _ in range(_MAX_REPO_ROOT_WALK_DEPTH):
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+    return None
+
+
+def detect_installed_skills(app_dir: str | None) -> list[str]:
+    """Detect Streamlit-shipped agent skills in well-known locations.
+
+    Returns a sorted, deduplicated list of ``"<location>:<harness>:<skill>"``
+    tokens. ``location`` is ``home``, ``app``, ``repo``, or ``project`` (the
+    in-app installer's resolved root, when distinct from ``app``/``repo``);
+    ``harness`` is one of ``agents``, ``claude``, ``codex``, ``copilot``,
+    ``cortex``, ``cursor``, ``gemini``, or ``opencode``; ``skill`` is one of
+    ``_STREAMLIT_SKILL_NAMES``. Never raises: filesystem errors are swallowed
+    and produce an empty list.
+
+    The result is cached per ``app_dir`` for the lifetime of the process.
+    """
+    return list(_detect_installed_skills_cached(app_dir))
+
+
+# maxsize=2 (not 1) so the two callers' keys can coexist: the page-profile
+# telemetry may pass ``None`` (no script-run context) while the skills nudge
+# passes ``dirname(main_script_path)``. A size-1 cache would let those evict
+# each other and re-walk the filesystem on every alternating call.
+@lru_cache(maxsize=2)
+def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
+    try:
+        home = os.path.expanduser("~")
+        app = os.path.abspath(app_dir) if app_dir else os.getcwd()
+        repo = _find_git_root(app)
+
+        roots: dict[str, str] = {"home": home, "app": app}
+        # Skip ``repo`` when it matches ``app`` to avoid double-counting the
+        # common case where the app script lives at the repo root. ``normcase``
+        # handles case-insensitive filesystems (Windows, default macOS).
+        if repo is not None and os.path.normcase(repo) != os.path.normcase(app):
+            roots["repo"] = repo
+
+        # Also scan the in-app installer's resolved project root — the very same
+        # ``_find_project_root`` the one-click install writes to — so a
+        # successful install is always detected, even when it lands in a dir
+        # that is neither ``app`` nor the git root (e.g. a monorepo per-package
+        # ``.agents``/``.claude``, or a project nested far below its git root).
+        # Sharing the resolver (instead of a mirror) keeps install and detection
+        # from ever drifting apart.
+        project = str(_find_project_root(Path(app)))
+        project_nc = os.path.normcase(project)
+        if project_nc != os.path.normcase(app) and (
+            repo is None or project_nc != os.path.normcase(repo)
+        ):
+            roots["project"] = project
+
+        tokens: set[str] = set()
+        for location, root in roots.items():
+            for harness, project_dir, home_skills_dir, agent_home_dir in _HARNESSES:
+                # At home level, skip harnesses that aren't installed at all
+                # (saves 2 isfile calls per absent harness — common on hosted
+                # apps where no skills or harnesses exist).
+                if location == "home" and not os.path.isdir(
+                    os.path.join(root, agent_home_dir)
+                ):
+                    continue
+                harness_dir = home_skills_dir if location == "home" else project_dir
+                for skill in _STREAMLIT_SKILL_NAMES:
+                    marker = os.path.join(
+                        root, harness_dir, skill, _SKILL_MARKER_FILENAME
+                    )
+                    if os.path.isfile(marker):
+                        tokens.add(f"{location}:{harness}:{skill}")
+        return tuple(sorted(tokens))
+    except Exception as ex:  # pragma: no cover - defensive
+        _LOGGER.debug("Failed to detect installed Streamlit skills", exc_info=ex)
+        return ()
+
+
+def detect_installed_agents() -> list[str]:
+    """Detect agent harnesses installed under the user's home directory.
+
+    Returns a sorted, deduplicated list of harness name tokens (``agents``,
+    ``claude``, ``codex``, ``copilot``, ``cortex``, ``cursor``, ``gemini``, ``opencode``)
+    for each harness whose home-level config directory exists. Independent
+    of whether Streamlit-specific skills are installed for that harness.
+
+    The result is cached for the lifetime of the process. Never raises:
+    filesystem errors are swallowed and produce an empty list.
+    """
+    return list(_detect_installed_agents_cached())
+
+
+@lru_cache(maxsize=1)
+def _detect_installed_agents_cached() -> tuple[str, ...]:
+    try:
+        home = os.path.expanduser("~")
+        tokens: set[str] = set()
+        for harness, _project_dir, _home_skills_dir, agent_home_dir in _HARNESSES:
+            if os.path.isdir(os.path.join(home, agent_home_dir)):
+                tokens.add(harness)
+        return tuple(sorted(tokens))
+    except Exception as ex:  # pragma: no cover - defensive
+        _LOGGER.debug("Failed to detect installed agents", exc_info=ex)
+        return ()
+
+
+def clear_installed_skills_cache() -> None:
+    """Invalidate the cached installed-skills detection.
+
+    Call after installing skills so a subsequent ``detect_installed_skills``
+    in the same process re-scans the filesystem instead of returning the
+    stale (pre-install) result.
+    """
+    _detect_installed_skills_cached.cache_clear()
+
+
 def should_show_skills_nudge(app_dir: str | None = None) -> bool:
     """Return whether the in-app "install skills" nudge should be shown.
 
@@ -919,7 +1076,6 @@ def should_show_skills_nudge(app_dir: str | None = None) -> bool:
     blocks app startup or surfaces a spurious nudge.
     """
     from streamlit import config
-    from streamlit.runtime import metrics_util
 
     try:
         if config.get_option("server.headless"):
@@ -929,12 +1085,12 @@ def should_show_skills_nudge(app_dir: str | None = None) -> bool:
             return False
         if _nudge_dismissed_marker_path().exists():
             return False
-        # Reuse the same detection that powers the page-profile telemetry so
-        # the nudge gates on exactly the funnel the adoption dashboard tracks:
-        # an agent must be present, and our skills must not be installed yet.
-        if not metrics_util.detect_installed_agents():
+        # Gate on the same detection the page-profile telemetry uses (both now
+        # defined here): an agent must be present, and our skills must not be
+        # installed yet.
+        if not detect_installed_agents():
             return False
         # An agent is present; recommend installing only if our skills aren't.
-        return not metrics_util.detect_installed_skills(app_dir)
+        return not detect_installed_skills(app_dir)
     except Exception:  # pragma: no cover - defensive
         return False
