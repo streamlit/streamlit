@@ -39,18 +39,21 @@ def test_skeleton_default_height(app: Page):
 
 def test_skeleton_width_configurations(app: Page):
     """Test skeleton with different width configurations."""
-    # Get all skeletons under "Width Configurations" section
-    skeletons = app.get_by_test_id("stSkeletonElement")
     # 1 static + 1 default + 2 width + 1 in form
-    expect(skeletons).to_have_count(5)
+    expect(app.get_by_test_id("stSkeletonElement")).to_have_count(5)
 
-    # The fixed width skeleton (200px) should be visible and have correct width
-    fixed_width_skeleton = skeletons.nth(2)
+    # The fixed width skeleton (200px) should be visible and have correct width.
+    fixed_width_skeleton = get_element_by_key(
+        app, "fixed_width_skeleton"
+    ).get_by_test_id("stSkeletonElement")
     expect(fixed_width_skeleton).to_be_visible()
     expect(fixed_width_skeleton).to_have_css("width", "200px")
 
-    # The stretch width skeleton should be visible
-    expect(skeletons.nth(3)).to_be_visible()
+    # The stretch width skeleton should be visible.
+    stretch_width_skeleton = get_element_by_key(
+        app, "stretch_width_skeleton"
+    ).get_by_test_id("stSkeletonElement")
+    expect(stretch_width_skeleton).to_be_visible()
 
 
 def test_skeleton_context_manager_instant(app: Page):
@@ -70,8 +73,11 @@ def test_skeleton_context_manager_instant(app: Page):
 
 def test_skeleton_context_manager_with_delay(app: Page):
     """Test context manager mode shows skeleton during delay then clears."""
-    # Get initial count of skeletons (static ones in the page)
-    initial_skeleton_count = app.get_by_test_id("stSkeletonElement").count()
+    # Auto-wait for the static skeletons to render before capturing the count,
+    # so the baseline is stable regardless of initial load timing.
+    skeletons = app.get_by_test_id("stSkeletonElement")
+    expect(skeletons).to_have_count(5)
+    initial_skeleton_count = skeletons.count()
 
     # Click the button to run the context manager
     get_button(app, "Run skeleton context manager (with delay)").click()

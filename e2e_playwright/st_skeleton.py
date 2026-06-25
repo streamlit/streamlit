@@ -29,8 +29,10 @@ with st.container(key="default_skeleton"):
 
 # Skeleton with different width configurations
 st.subheader("Width Configurations")
-st.skeleton(height=50, width=200)
-st.skeleton(height=50, width="stretch")
+with st.container(key="fixed_width_skeleton"):
+    st.skeleton(height=50, width=200)
+with st.container(key="stretch_width_skeleton"):
+    st.skeleton(height=50, width="stretch")
 
 # Context manager - instant (skeleton clears immediately)
 if st.button("Run skeleton context manager (instant)"):
