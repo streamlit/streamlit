@@ -1172,10 +1172,8 @@ class SessionState:
             if metadata.persist_state == "page":
                 ctx = get_script_run_ctx()
                 current_page_hash = ctx.page_script_hash if ctx is not None else ""
-                # Binding takes precedence over "page" scope: a bound widget keeps
-                # its value across page switches (restored from the URL), so the
-                # page-scope drops below must not clobber it. Stale page-tracking
-                # is still cleared so it does not accumulate.
+                # Binding takes precedence (see above): bound widgets skip the
+                # page-scope drops below but still clear stale page-tracking.
                 is_bound = metadata.bind == "query-params"
                 # A "page"-scoped value preserved while the widget was unmounted
                 # carries the page it belongs to. If the widget now mounts on a
