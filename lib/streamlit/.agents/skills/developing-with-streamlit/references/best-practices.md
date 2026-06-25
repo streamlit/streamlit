@@ -6,7 +6,7 @@ Use this reference when reviewing an app, starting a new app, or applying the qu
 
 ## Styling and copy
 
-Do not use custom CSS for app styling unless the user actively requests it. Prefer native Streamlit APIs and `.streamlit/config.toml` theming.
+Do not use custom CSS for app styling unless the user actively requests it. Prefer native Streamlit APIs and `.streamlit/config.toml` to customize the appearance.
 
 ```python
 # BAD: Styling the app with injected CSS
@@ -29,11 +29,11 @@ Prefer Material Symbols icons over emojis in UI labels, and use sentence casing.
 
 ```python
 # BAD: Title casing and emoji-heavy UI
-st.page_link("reports.py", label="Sales Reports", icon="📊")
+st.button("Sales Reports 📊")
 st.button("Refresh Data 🔄")
 
 # GOOD: Sentence casing and Material Symbols
-st.Page("app_pages/reports.py", title="Sales reports", icon=":material/bar_chart:")
+st.button("Sales reports", icon=":material/bar_chart:")
 st.button("Refresh data", icon=":material/refresh:")
 ```
 
@@ -290,7 +290,7 @@ Store credentials in `st.secrets`, keep `.streamlit/secrets.toml` out of git, an
 
 ```python
 # BAD: Hard-coded secret and SQL string interpolation
-api_key = "sk-live-secret"
+api_key = "my-hardcoded-api-key"
 df = conn.query(f"SELECT * FROM orders WHERE region = '{region}'")
 ```
 
