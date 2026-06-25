@@ -577,21 +577,15 @@ const RawElementNodeRenderer = (
       // The public st.skeleton() API drives sizing through the layout config:
       // when an explicit stretch/pixel/rem height is set, the container is
       // sized and the skeleton fills it (100%). Otherwise it falls back to the
-      // default element height instead of collapsing in an auto-height container.
+      // default element height instead of collapsing in an auto-height
+      // container. The deprecated internal _skeleton() carries no layout config,
+      // so it always renders at the default element height.
       const { heightConfig } = node.element
       const fillContainerHeight = Boolean(
         heightConfig?.useStretch ||
         heightConfig?.pixelHeight ||
         heightConfig?.remHeight
       )
-      // The deprecated internal _skeleton() path carries its pixel height on the
-      // proto without a layout config, so the container is not sized. In that
-      // case apply the pixel height directly to the skeleton to preserve the
-      // legacy sizing behavior.
-      const legacyPixelHeight =
-        !fillContainerHeight && skeletonProto.height
-          ? skeletonProto.height
-          : undefined
       return (
         <ElementContainer
           node={node}
@@ -605,10 +599,7 @@ const RawElementNodeRenderer = (
           {isAppSkeleton ? (
             <AppSkeleton />
           ) : (
-            <Skeleton
-              fillContainerHeight={fillContainerHeight}
-              pixelHeight={legacyPixelHeight}
-            />
+            <Skeleton fillContainerHeight={fillContainerHeight} />
           )}
         </ElementContainer>
       )

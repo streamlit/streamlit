@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 class SkeletonMixin:
     @gather_metrics("_skeleton")
-    def _skeleton(self, *, height: int | None = None) -> DeltaGenerator:
+    def _skeleton(self, *, height: int | None = None) -> DeltaGenerator:  # noqa: ARG002
         """Insert a single-element container displaying a skeleton placeholder.
 
         .. deprecated::
@@ -46,20 +46,20 @@ class SkeletonMixin:
         Parameters
         ----------
         height: int or None
-            Desired height of the skeleton expressed in pixels. If None, a
-            default height is used.
+            Deprecated and ignored. The skeleton always renders at the default
+            element height. Kept only for backwards compatibility with the old
+            signature.
         """
         # Kept only for backwards compatibility with external callers (e.g.
         # streamlit-extras). New code should use the public `skeleton()` method.
+        # `height` is intentionally ignored: the proto height field is deprecated
+        # and this path always renders at the default element height.
         show_deprecation_warning(
             "`_skeleton` is deprecated and will be removed in a future release. "
             "Please use `st.skeleton` instead.",
             show_once=True,
         )
-        skeleton_proto = SkeletonProto()
-        if height:
-            skeleton_proto.height = height
-        return self.dg._enqueue("skeleton", skeleton_proto)
+        return self.dg._enqueue("skeleton", SkeletonProto())
 
     @gather_metrics("skeleton")
     def skeleton(
@@ -161,15 +161,9 @@ class SkeletonMixin:
                 allow_stretch_height=True,
             )
 
+        # The visual height is derived entirely from the layout config; the
+        # proto height field is deprecated and no longer set.
         skeleton_proto = SkeletonProto()
-        # Set the pixel height on the proto when an integer is provided.
-        # Exclude bool since isinstance(True, int) is True in Python.
-        # For the public API the visual height is derived from the layout config;
-        # this proto field is redundant there but the frontend still reads it as
-        # a fallback "has an explicit height" signal (see ElementNodeRenderer),
-        # and the internal _skeleton() path relies on it for sizing.
-        if isinstance(height, int) and not isinstance(height, bool):
-            skeleton_proto.height = height
 
         return get_dg_singleton_instance().skeleton_placeholder_cls(
             parent=self.dg,

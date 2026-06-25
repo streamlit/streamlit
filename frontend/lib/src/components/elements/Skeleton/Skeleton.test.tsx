@@ -39,15 +39,6 @@ describe("Skeleton element", () => {
     expect(skeletonElement).toHaveStyle({ height: "100%", width: "100%" })
   })
 
-  it("applies an explicit pixel height (legacy _skeleton path)", () => {
-    render(<Skeleton pixelHeight={150} />)
-
-    const skeletonElement = screen.getByTestId("stSkeletonElement")
-    // The legacy internal path is sized directly rather than filling the
-    // (unsized) container, so it must not collapse to 100%.
-    expect(skeletonElement).toHaveStyle({ height: "150px", width: "100%" })
-  })
-
   it("is hidden from assistive technologies (decorative placeholder)", () => {
     render(<Skeleton />)
 

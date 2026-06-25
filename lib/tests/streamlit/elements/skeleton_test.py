@@ -69,9 +69,11 @@ class StSkeletonAPITest(DeltaGeneratorTestCase):
         assert "_skeleton" in message
         assert "st.skeleton" in message
 
-        # The skeleton element is still produced despite the deprecation.
+        # The skeleton still renders, but the height arg is ignored (the proto
+        # height field is deprecated), so it always uses the default height.
         el = self.get_delta_from_queue().new_element
-        assert el.skeleton.height == 120
+        assert el.HasField("skeleton")
+        assert not el.skeleton.HasField("height")
 
     def test_internal_skeleton_without_height(self) -> None:
         """Test that the internal _skeleton() leaves the proto height unset
@@ -85,10 +87,14 @@ class StSkeletonAPITest(DeltaGeneratorTestCase):
         assert el.skeleton == SkeletonProto()
 
     def test_skeleton_pixel_height(self) -> None:
-        """Test that st.skeleton accepts custom pixel height."""
+        """Test that st.skeleton accepts a custom pixel height.
+
+        The height is carried by the layout config; the deprecated proto height
+        field is no longer set.
+        """
         placeholder = st.skeleton(height=200)
 
-        assert placeholder._skeleton_proto.height == 200
+        assert not placeholder._skeleton_proto.HasField("height")
         assert placeholder._layout_config is not None
         assert placeholder._layout_config.height == 200
 
