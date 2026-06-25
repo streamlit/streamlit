@@ -1121,12 +1121,11 @@ class SessionState:
                     key, user_key, ctx.page_script_hash
                 )
 
-        # Drop "page"-scoped values being left behind on a page switch. The
-        # tracker flags each widget for a reset; here we also drop a value held
-        # under its user key (widget hidden on its origin page), which may never
-        # reach the registration-time reset and would otherwise stay readable via
-        # st.session_state after the switch. A programmatic set this run lives in
-        # _new_session_state and is left untouched.
+        # A "page"-scoped value must not outlive a page switch. The widget may
+        # never re-register on the new page (that page might not render it), so
+        # we can't rely on the registration-time reset — drop any value left
+        # under its user key now, or it stays readable via st.session_state.
+        # (A set made this run lives in _new_session_state and is left untouched.)
         for user_key in self._persist_tracker.mark_page_switch_drops(
             ctx.page_script_hash,
             wid_key_map,
