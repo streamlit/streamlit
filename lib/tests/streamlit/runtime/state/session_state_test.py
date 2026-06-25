@@ -2193,23 +2193,29 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
 
         assert self.session_state._old_state["my_widget"] == "custom_value"
 
-    @patch(
-        "streamlit.runtime.state.session_state.get_script_run_ctx",
-        return_value=MockScriptRunCtx(),
-    )
-    def test_persist_state_page_drops_value_on_page_switch(
-        self, mock_ctx: MagicMock
-    ) -> None:
+    def test_persist_state_page_drops_value_on_page_switch(self) -> None:
         """A persist_state="page" widget loses its value on a different page."""
         widget_id = "$$ID-hash-my_widget"
         metadata = _create_persist_state_metadata(widget_id, "page")
 
-        self.session_state.register_widget(metadata, user_key="my_widget")
-        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
-        self.session_state._compact_state()
-        # Simulate navigation to a different page by recording a different hash.
-        self.session_state._persist_tracker._widget_pages[widget_id] = "page_2_hash"
-        self.session_state._remove_stale_widgets(set())
+        # Page 1: register and set the value (recording page_1 as its home).
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+
+        # Page 2: cleanup now runs under a different page, so the value belonging
+        # to page 1 must be dropped.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_2_hash"),
+        ):
+            self.session_state._remove_stale_widgets(set())
 
         assert widget_id not in self.session_state._old_state
         assert "my_widget" not in self.session_state._old_state
@@ -2521,7 +2527,8 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
     def test_persist_state_and_bind_combined_preserves(
         self, mock_ctx: MagicMock
     ) -> None:
-        """A widget that is both bound and persisted is preserved (OR logic)."""
+        """A widget that is both bound and persisted is preserved, since either
+        feature alone would keep its value."""
         widget_id = "$$ID-hash-my_widget"
         metadata = _create_persist_state_metadata(
             widget_id, "session", bind="query-params"

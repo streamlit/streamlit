@@ -422,7 +422,7 @@ class PersistedWidgetTracker:
     _scopes: dict[str, Literal["page", "session"]] = field(default_factory=dict)
     # "page" widget id -> page hash where it last registered.
     _widget_pages: dict[str, str] = field(default_factory=dict)
-    # "page" user key -> page hash a value preserved while unmounted belongs to.
+    # "page" user key -> origin page hash of a value preserved while unmounted.
     _value_pages: dict[str, str] = field(default_factory=dict)
     # "page" widget ids whose value was dropped on a page switch; the next
     # registration must discard a frontend-resent value and reset to the default.
