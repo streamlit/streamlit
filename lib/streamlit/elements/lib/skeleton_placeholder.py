@@ -34,8 +34,8 @@ if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
 
+# Delay before showing the skeleton in context manager mode (same as st.spinner).
 _DELAY_SECS: Final = 0.5
-"""Delay before showing skeleton in context manager mode (same as spinner)."""
 
 
 class SkeletonPlaceholder:
