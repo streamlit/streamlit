@@ -77,7 +77,7 @@ describe("Dataframe Tooltip", () => {
     expect(clearTooltip).not.toHaveBeenCalled()
   })
 
-  it("calls clearTooltip when a pointer-down occurs", () => {
+  it("calls clearTooltip when a pointer-down occurs outside the tooltip", () => {
     const clearTooltip = vi.fn()
     render(<Tooltip {...defaultProps} clearTooltip={clearTooltip} />)
 
@@ -86,5 +86,17 @@ describe("Dataframe Tooltip", () => {
     document.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }))
 
     expect(clearTooltip).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not call clearTooltip when a pointer-down occurs inside the tooltip", () => {
+    const clearTooltip = vi.fn()
+    render(<Tooltip {...defaultProps} clearTooltip={clearTooltip} />)
+
+    const tooltipContent = screen.getByTestId("stDataFrameTooltipContent")
+    tooltipContent.dispatchEvent(
+      new MouseEvent("pointerdown", { bubbles: true })
+    )
+
+    expect(clearTooltip).not.toHaveBeenCalled()
   })
 })

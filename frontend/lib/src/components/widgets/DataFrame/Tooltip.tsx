@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect } from "react"
+import { memo, ReactElement, useEffect } from "react"
 
 import styled from "@emotion/styled"
 import { FloatingPortal } from "@floating-ui/react"
@@ -73,17 +73,17 @@ function Tooltip({
     offsetPx: 5,
   })
 
-  const handleDismiss = useCallback((): void => {
-    clearTooltip()
-  }, [clearTooltip])
-
-  // Dismiss on Escape or any pointer-down outside (capture phase so it fires
-  // before React's bubbling handlers, consistent with ColumnMenu pattern).
+  // Dismiss on Escape or a pointer-down outside the tooltip content (capture
+  // phase, consistent with ColumnMenu pattern). Clicks inside the tooltip
+  // (e.g. to copy text or follow a link) do not dismiss it.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") handleDismiss()
+      if (e.key === "Escape") clearTooltip()
     }
-    const handlePointerDown = (): void => handleDismiss()
+    const handlePointerDown = (e: Event): void => {
+      if (refs.floating.current?.contains(e.target as Node)) return
+      clearTooltip()
+    }
 
     document.addEventListener("keydown", handleKeyDown, true)
     document.addEventListener("pointerdown", handlePointerDown, true)
@@ -91,7 +91,7 @@ function Tooltip({
       document.removeEventListener("keydown", handleKeyDown, true)
       document.removeEventListener("pointerdown", handlePointerDown, true)
     }
-  }, [handleDismiss])
+  }, [clearTooltip, refs.floating])
 
   return (
     <>
