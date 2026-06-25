@@ -30,7 +30,14 @@ const DEV_WATCH = Boolean(process.env.DEV_WATCH)
 // https://vitejs.dev/config/
 export default defineConfig({
   base: "./",
-  plugins: !DEV_WATCH ? [dts({ insertTypesEntry: true })] : [],
+  plugins: !DEV_WATCH
+    ? [
+        dts({
+          insertTypesEntry: true,
+          tsconfigPath: path.resolve(__dirname, "tsconfig.build.json"),
+        }),
+      ]
+    : [],
   resolve: {
     tsconfigPaths: true,
   },

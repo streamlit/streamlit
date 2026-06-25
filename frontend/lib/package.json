@@ -62,6 +62,7 @@
     "@microlink/react-json-view": "^1.31.19",
     "@sindresorhus/slugify": "^3.0.0",
     "@streamlit/component-v2-lib": "workspace:^",
+    "@streamlit/connection": "workspace:^",
     "@streamlit/protobuf": "workspace:^",
     "@streamlit/utils": "workspace:^",
     "apache-arrow": "^21.1.0",

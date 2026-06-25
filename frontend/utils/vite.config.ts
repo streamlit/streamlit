@@ -30,7 +30,14 @@ const DEV_WATCH = Boolean(process.env.DEV_WATCH)
 // https://vitejs.dev/config/
 export default defineConfig({
   base: "./",
-  plugins: !DEV_WATCH ? [dts({ insertTypesEntry: true })] : [],
+  plugins: !DEV_WATCH
+    ? [
+        dts({
+          insertTypesEntry: true,
+          tsconfigPath: path.resolve(__dirname, "tsconfig.build.json"),
+        }),
+      ]
+    : [],
   resolve: {
     tsconfigPaths: true,
   },
@@ -44,6 +51,9 @@ export default defineConfig({
       fileName: format => `streamlit-utils.${format}.js`,
       // For development, only build es format since that is what Streamlit uses
       formats: DEV_WATCH ? ["es"] : ["es", "umd", "cjs"],
+    },
+    rolldownOptions: {
+      input: "src/index.ts",
     },
   },
   test: {

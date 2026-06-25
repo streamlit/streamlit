@@ -33,7 +33,14 @@ const EXTERNAL_DEPENDENCIES = [
 
 export default defineConfig({
   base: "./",
-  plugins: !DEV_WATCH ? [dts({ insertTypesEntry: true })] : [],
+  plugins: !DEV_WATCH
+    ? [
+        dts({
+          insertTypesEntry: true,
+          tsconfigPath: path.resolve(__dirname, "tsconfig.build.json"),
+        }),
+      ]
+    : [],
   resolve: {
     tsconfigPaths: true,
   },
@@ -48,6 +55,7 @@ export default defineConfig({
       fileName: () => "index.js",
     },
     rolldownOptions: {
+      input: "src/index.ts",
       external: EXTERNAL_DEPENDENCIES,
     },
   },
