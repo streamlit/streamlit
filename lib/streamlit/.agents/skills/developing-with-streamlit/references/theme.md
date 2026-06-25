@@ -376,27 +376,26 @@ borderColor = "#1E6D94"
 ...
 ```
 
-## IMPORTANT: No custom CSS unless explicitly requested
+## Global theming vs. styling a single widget
 
-**DO NOT use custom CSS or HTML for theming.** This includes:
-- `st.markdown(..., unsafe_allow_html=True)` with `<style>` or inline styles
-- `st.html()` with `<style>` blocks
-- Any HTML/CSS for colors, backgrounds, fonts, or visual styling
+These are two different jobs — pick by scope:
 
-**Only use CSS if the user explicitly asks for it** (e.g., "add custom CSS", "use st.html for styling"). For brand colors, theming, and visual identity—always use `config.toml`.
+**Global theme (app-wide colors, fonts, background) → `.streamlit/config.toml`.** Do NOT use custom CSS/HTML for app-wide theming (`st.markdown(..., unsafe_allow_html=True)`, inline styles). Native theming is cleaner, more maintainable, and won't break with Streamlit updates.
 
-Native theming is cleaner, more maintainable, and won't break with Streamlit updates.
-
-If the user explicitly asks for CSS, use `key=` to create targetable classes:
+**Styling ONE specific widget (e.g. "make the submit button red", "give this container a border") → scoped CSS via `key=` + `.st-key-{key}`.** `config.toml` cannot target an individual widget, so this is the correct tool — not a global `.stButton` selector (which hits every button) and not `st.markdown(unsafe_allow_html=True)`. Use `st.html()` with the `.st-key-{key}` class the widget's `key=` generates:
 
 ```python
-st.button("Submit", key="submit")
-# Generates: .st-key-submit
-
-st.html("""<style>.st-key-submit button { width: 100%; }</style>""")
+st.button("Submit", key="submit")          # generates the CSS class .st-key-submit
+st.html("""
+<style>
+.st-key-submit button { background-color: #ff4b4b; color: white; }
+</style>
+""")
 ```
 
-**Never use CSS for theming (colors, backgrounds, fonts) unless explicitly asked. Use config.toml instead.**
+Rules of thumb:
+- Per-widget look (one button/container) → `key=` + `.st-key-{key}` in `st.html()`. **Never** a global `.stButton`/`.stTextInput` selector, and prefer `st.html()` over `st.markdown(..., unsafe_allow_html=True)`.
+- App-wide colors/fonts/background → `config.toml`.
 
 ## Development workflow
 
