@@ -94,8 +94,8 @@ export const StyledRightControls = styled.div(({ theme }) => ({
 export const StyledInput = styled(Input, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<{ $placeholderColor?: string }>(({ theme, $placeholderColor }) => ({
-  flex: "1 1 4rem",
-  minWidth: "4rem",
+  flex: "1 1 0",
+  minWidth: 0,
   padding: theme.spacing.none,
   paddingLeft: theme.spacing.sm,
   // Match tag marginBottom so the input sits in the same visual row as tags
@@ -210,8 +210,7 @@ interface StyledListBoxItemProps {
  * Individual option row. Hover/focus highlight is delegated to the inner
  * `StyledItemHighlight` pill (via `[data-item-hl]`) for the rounded-pill look.
  *
- * `$isSelectAll` adds a separator line AFTER the row (matching Baseweb's
- * `ThemedStyledDropdownListItem` `::after` rule for select-all items).
+ * `$isSelectAll` adds a separator line AFTER the row.
  * `$isCreatable` adds a separator line BEFORE the row.
  */
 export const StyledListBoxItem = styled(ListBoxItem, {
@@ -277,9 +276,8 @@ export const StyledItemHighlight = styled.div(({ theme }) => ({
 
 /**
  * Empty-state row rendered by `renderEmptyState` when the options list is
- * empty. Mirrors Baseweb's default "No results" / custom message styling:
- * centred text at `fontSizes.sm` in a faded colour, matching the item row
- * height so the dropdown feels consistent in size.
+ * empty. Centred text at `fontSizes.sm` in a faded colour, matching the item
+ * row height so the dropdown feels consistent in size.
  */
 export const StyledEmptyState = styled.div(({ theme }) => ({
   display: "flex",

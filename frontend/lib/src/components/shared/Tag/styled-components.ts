@@ -18,7 +18,6 @@ import styled from "@emotion/styled"
 
 /**
  * A rounded-pill tag chip using the theme's primary color as background.
- * Matches the Baseweb Select tag appearance (tagPrimarySolidBackground).
  *
  * The entire element acts as the remove trigger (aria-label="Remove …") for
  * accessibility — keyboard users can remove a tag with Enter/Space.
@@ -27,14 +26,14 @@ export const StyledTagButton = styled.button<{ $disabled?: boolean }>(
   ({ theme, $disabled }) => ({
     display: "inline-flex",
     alignItems: "center",
-    gap: theme.spacing.twoXS,
+    gap: theme.spacing.sm,
     fontWeight: theme.fontWeights.normal,
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.inputWidget,
     height: theme.sizes.elementHighlightHeight,
     maxWidth: `calc(100% - ${theme.spacing.lg})`,
     paddingLeft: theme.spacing.sm,
-    paddingRight: theme.spacing.xs,
+    paddingRight: theme.spacing.sm,
     marginTop: theme.spacing.none,
     marginLeft: theme.spacing.none,
     marginRight: theme.spacing.twoXS,
@@ -74,28 +73,25 @@ export const StyledTagText = styled.span(() => ({
 
 /**
  * Small × icon at the trailing edge of the tag.
- * Matches Baseweb's ActionIcon size (0.625em relative to tag font-size).
+ * Size is set to 0.625em relative to the tag's font-size via the SVG's size prop.
  */
 export const StyledTagRemoveIcon = styled.span(() => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   flexShrink: 0,
-  // Icon inherits the tag's font-size; size="0.625em" on the SVG is then
-  // 0.625× that font-size — matching Baseweb's ActionIcon Svg override.
   lineHeight: "normal",
 }))
 
 /**
  * Scrollable flex-wrap container that holds tag pills and the inline input.
  *
- * Mirrors the Baseweb ValueContainer layout:
  * - `paddingTop / paddingLeft` of `tagMarginInsideBorder` provide the gap
  *   between the group border and the first tag, replacing flexbox centering.
  * - `alignItems: "flex-start"` + `tagMarginInsideBorder` bottom-margin on
  *   each tag/input produces symmetric spacing: equal space above (from
- *   container padding) and below (from tag marginBottom) — the same trick
- *   Baseweb's ValueContainer used to visually centre tags in single-row mode.
+ *   container padding) and below (from tag marginBottom) — visually centring
+ *   tags in single-row mode without relying on `alignSelf: "center"`.
  */
 export const StyledTagGroupContainer = styled.div<{ $maxHeight?: string }>(
   ({ theme, $maxHeight }) => ({

@@ -275,8 +275,7 @@ const Multiselect: FC<Props> = props => {
   selectMatchesValuesRef.current = selectMatchesValues
 
   // When at the maxSelections limit, return an empty list so that the ListBox
-  // renders its empty state (the noResultsMsg). This matches the Baseweb
-  // filterOptions behaviour that returned [] when overMaxSelections.
+  // renders its empty state (the noResultsMsg).
   const displayOptionsWithDisabled = useMemo(() => {
     if (overMaxSelections) return []
     return displayOptions
@@ -284,7 +283,7 @@ const Multiselect: FC<Props> = props => {
 
   // ── Scroll preservation ───────────────────────────────────────────────────
   // Runs on every render to restore scrollTop before the browser paints,
-  // counteracting BaseWeb / RAC state updates that reset the scroll.
+  // counteracting any state updates that reset the scroll position.
   useLayoutEffect(() => {
     if (tagContainerRef.current) {
       tagContainerRef.current.scrollTop = scrollTopRef.current
