@@ -237,15 +237,15 @@ function FormattingMenu({
       if (anchorRef.current?.contains(target)) {
         clearClose()
         onOpenChange(true)
-      } else if (panelRef.current?.contains(target)) {
+      } else if (isOpen && panelRef.current?.contains(target)) {
         clearClose()
-      } else {
+      } else if (isOpen) {
         scheduleClose()
       }
     }
     document.addEventListener("mouseover", handleMouseOver)
     return () => document.removeEventListener("mouseover", handleMouseOver)
-  }, [formats.length, clearClose, onOpenChange, scheduleClose])
+  }, [isOpen, formats.length, clearClose, onOpenChange, scheduleClose])
 
   if (formats.length === 0) {
     // If there are no formats available for the column kind,
