@@ -351,13 +351,16 @@ class SelectSliderMixin:
             How long to preserve the widget's value when it isn't rendered.
             If this is ``None`` (default), the value is lost when the widget
             stops being rendered or the user switches pages. If this is
-            ``"page"``, the value is preserved while the widget isn't rendered
-            on the same page, but is cleared when the user switches pages. If
-            this is ``"session"``, the value is preserved for the entire
-            session, including across page switches. This requires ``key`` to
-            be set. If ``bind="query-params"`` is also set, the binding takes
-            precedence: the value is stored in the URL, so it persists across
-            page switches regardless of the ``persist_state`` scope.
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
 
         Returns
         -------

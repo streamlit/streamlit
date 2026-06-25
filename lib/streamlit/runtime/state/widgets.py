@@ -104,12 +104,15 @@ def register_widget(
         value to a URL query parameter. Requires a user-provided key.
     persist_state : "page", "session", or None
         How long to preserve the widget's value when it isn't rendered. If
-        "page", the value is preserved while the widget isn't rendered on the
-        same page; if "session", it is preserved for the whole session,
-        including across page switches; if None, it is not preserved. Requires
-        a user-provided key. If bind="query-params" is also set, the binding
-        takes precedence: the value is stored in the URL and therefore persists
-        across page switches regardless of the persist_state scope.
+        "page", the value is preserved only while the user stays on the page
+        where the widget is defined (for example, while it is conditionally
+        hidden); it is discarded on a page switch and not restored on return.
+        If "session", it is preserved for the whole session, including across
+        page switches, so it returns when the user navigates back. If None, it
+        is not preserved. Requires a user-provided key. If bind="query-params"
+        is also set, the binding takes precedence: the value is stored in the
+        URL and therefore persists across page switches regardless of the
+        persist_state scope.
     formatted_options : list[str] or None
         **Temporary** - will be removed once all selection widgets use string-based
         wire formats. Currently used for index-based widgets (pills, segmented_control,
