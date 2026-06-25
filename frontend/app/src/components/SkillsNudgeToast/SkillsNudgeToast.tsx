@@ -188,7 +188,7 @@ function SkillsNudgeToast({
               <StyledSkillsNudgeHeading>
                 {isError
                   ? "Couldn't install skills"
-                  : "Help agents write better Streamlit"}
+                  : "Help agents write better apps"}
               </StyledSkillsNudgeHeading>
               <StyledSkillsNudgeBody>
                 {isError

@@ -161,7 +161,7 @@ describe("SkillsNudgeToast", () => {
     expect(screen.getByText("Couldn't install skills")).toBeVisible()
     expect(screen.getByText("network down")).toBeVisible()
     expect(
-      screen.queryByText("Help agents write better Streamlit")
+      screen.queryByText("Help agents write better apps")
     ).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Retry" })).toBeVisible()
     expect(
