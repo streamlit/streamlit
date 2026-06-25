@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import pickle  # noqa: S403
 from collections.abc import (
+    Callable,
     Iterator,
     KeysView,
     Mapping,
@@ -472,18 +473,34 @@ class PersistedWidgetTracker:
         else:
             self._value_pages.pop(user_key, None)
 
-    def page_scoped_ids_off_page(self, current_page: str) -> list[str]:
-        """Page-scoped widget ids whose owning page differs from the current one
-        — the candidates to drop on a page switch.
-        """
-        return [
-            wid
-            for wid, scope in self._scopes.items()
-            if scope == "page" and self._widget_pages.get(wid) != current_page
-        ]
+    def mark_page_switch_drops(
+        self,
+        current_page: str,
+        user_key_for: Mapping[str, str],
+        is_exempt: Callable[[str], bool],
+        is_stale: Callable[[str], bool],
+    ) -> list[str]:
+        """Flag "page"-scoped widgets being dropped on this page switch and
+        return the user keys whose preserved value the caller should drop.
 
-    def mark_pending_reset(self, widget_id: str) -> None:
-        self._pending_resets.add(widget_id)
+        A widget qualifies when its owning page differs from the current one and
+        it is stale this run. Flagging it makes its next registration discard a
+        value the frontend may resend for the reused id. ``is_exempt`` skips
+        widgets that must survive the switch (bound widgets, which take
+        precedence over "page" scope); ``is_stale`` reports whether a widget is
+        absent from the current run.
+        """
+        dropped_user_keys: list[str] = []
+        for wid, scope in self._scopes.items():
+            if scope != "page" or self._widget_pages.get(wid) == current_page:
+                continue
+            if is_exempt(wid) or not is_stale(wid):
+                continue
+            self._pending_resets.add(wid)
+            user_key = user_key_for.get(wid)
+            if user_key is not None:
+                dropped_user_keys.append(user_key)
+        return dropped_user_keys
 
     def prune(
         self, live_widget_ids: KeysView[str], live_value_keys: Mapping[str, Any]
@@ -1104,26 +1121,23 @@ class SessionState:
                     key, user_key, ctx.page_script_hash
                 )
 
-        # A "page"-scoped widget on a page other than its origin is dropped on
-        # this page switch. Flag it so its next registration discards any value
-        # the frontend resends for the reused id (even back on the origin page).
-        # Bound widgets are exempt: binding takes precedence over "page" scope, so
-        # their value must survive the switch (restored from the URL).
-        for wid in self._persist_tracker.page_scoped_ids_off_page(ctx.page_script_hash):
-            if wid not in self._query_param_bound_widget_ids and _is_stale_widget(
+        # Drop "page"-scoped values being left behind on a page switch. The
+        # tracker flags each widget for a reset; here we also drop a value held
+        # under its user key (widget hidden on its origin page), which may never
+        # reach the registration-time reset and would otherwise stay readable via
+        # st.session_state after the switch. A programmatic set this run lives in
+        # _new_session_state and is left untouched.
+        for user_key in self._persist_tracker.mark_page_switch_drops(
+            ctx.page_script_hash,
+            wid_key_map,
+            is_exempt=lambda wid: wid in self._query_param_bound_widget_ids,
+            is_stale=lambda wid: _is_stale_widget(
                 self._new_widget_state.widget_metadata.get(wid),
                 active_widget_ids,
                 ctx.fragment_ids_this_run,
-            ):
-                self._persist_tracker.mark_pending_reset(wid)
-                # A value held under the user key (widget hidden on its origin
-                # page) may never reach the registration-time reset, so drop it
-                # now — otherwise it stays readable via st.session_state after
-                # the switch. A programmatic set this run lives in
-                # _new_session_state and is left untouched.
-                reset_user_key = wid_key_map.get(wid)
-                if reset_user_key is not None:
-                    self._old_state.pop(reset_user_key, None)
+            ),
+        ):
+            self._old_state.pop(user_key, None)
 
         self._new_widget_state.remove_stale_widgets(
             active_widget_ids,
