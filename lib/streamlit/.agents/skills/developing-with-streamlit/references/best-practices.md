@@ -6,7 +6,7 @@ Use this reference when reviewing an app, starting a new app, or applying the qu
 
 ## Styling and copy
 
-Do not use custom CSS for app styling. Prefer native Streamlit APIs and `.streamlit/config.toml` theming.
+Do not use custom CSS for app styling unless the user actively requests it. Prefer native Streamlit APIs and `.streamlit/config.toml` theming.
 
 ```python
 # BAD: Styling the app with injected CSS

@@ -96,7 +96,7 @@ Run this with the Streamlit installation relevant to the app being edited. Use `
 
 Apply these defaults unless the user's app or request clearly needs a different approach. For examples, read `references/best-practices.md`.
 - Do not use `use_container_width`; use `width="stretch"` or `width="content"` instead.
-- Do not apply CSS to style the app. Use native Streamlit features and `.streamlit/config.toml` theming instead; see the [theming reference](references/theme.md).
+- Do not apply CSS to style the app unless the user actively requests it. Use native Streamlit features and `.streamlit/config.toml` theming instead; see the [theming reference](references/theme.md).
 - Prefer Material Symbols icons (`:material/icon_name:`) over emojis for navigation, buttons, and labels. Use emojis sparingly, only when they add a special touch.
 - Prefer sentence casing over title casing, including titles and widget labels.
 - Do not use empty widget labels; use `label_visibility="collapsed"` or `label_visibility="hidden"` when a visible label is not desired.
