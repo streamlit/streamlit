@@ -19,6 +19,10 @@ export const INVALID_TEXT_INPUT_MESSAGE = "Invalid input."
 /**
  * Compiles the user-provided validation pattern into a RegExp.
  *
+ * The `"us"` flags (unicode + dotAll) intentionally match the convention used
+ * by `st.column_config.TextColumn` so regex behavior is consistent across
+ * Streamlit's text inputs.
+ *
  * Returns the compiled RegExp on success, an error message string if the
  * pattern is invalid, or undefined if no pattern was provided.
  */

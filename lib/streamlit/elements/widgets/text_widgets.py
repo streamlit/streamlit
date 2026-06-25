@@ -424,9 +424,11 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
-            # Explicitly whitelist max_chars to make sure the ID changes when it changes
-            # since the widget value might become invalid based on a different max_chars
-            key_as_main_identity={"max_chars", "validate_regex"},
+            # Explicitly whitelist max_chars and validate so the ID changes when
+            # they change, since the widget value might become invalid based on a
+            # different max_chars or validation regex. Only the regex (not the
+            # message) is used for identity, since the message is purely cosmetic.
+            key_as_main_identity={"max_chars", "validate"},
             dg=self.dg,
             label=label,
             value=value,
@@ -436,8 +438,7 @@ class TextWidgetsMixin:
             autocomplete=autocomplete,
             placeholder=str(placeholder),
             icon=icon,
-            validate_regex=validate_regex,
-            validate_message=validate_message,
+            validate=validate_regex,
             width=width,
         )
 

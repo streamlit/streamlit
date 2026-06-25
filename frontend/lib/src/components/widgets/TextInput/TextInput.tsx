@@ -290,6 +290,10 @@ function TextInput({
 
       if (inForm) {
         if (allowEnterToSubmit) {
+          // No explicit commit is needed here: `useOnInputChange` already
+          // pushes the latest value to the form's widget state on every
+          // keystroke, and the registered form submit validator commits the
+          // final value when validation is configured.
           widgetMgr.submitForm(formId, fragmentId)
           return
         }
