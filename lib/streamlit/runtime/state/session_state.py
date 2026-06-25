@@ -1100,7 +1100,7 @@ class SessionState:
                 )
             )
 
-        bound_preserved: dict[str, Any] = {}
+        preserved_by_key: dict[str, Any] = {}
         for key in self._old_state:
             if (
                 is_element_id(key)
@@ -1114,9 +1114,9 @@ class SessionState:
             ):
                 user_key = wid_key_map[key]
                 try:
-                    bound_preserved[user_key] = self._getitem(key, user_key)
+                    preserved_by_key[user_key] = self._getitem(key, user_key)
                 except KeyError:
-                    bound_preserved[user_key] = self._old_state[key]
+                    preserved_by_key[user_key] = self._old_state[key]
                 self._persist_tracker.note_preserved_value(
                     key, user_key, ctx.page_script_hash
                 )
@@ -1157,15 +1157,15 @@ class SessionState:
             )
         }
 
-        # Re-add preserved query-param-bound values under user keys.
-        self._old_state.update(bound_preserved)
+        # Re-add the preserved values under their user keys.
+        self._old_state.update(preserved_by_key)
 
         # A keyed widget can remount under a new element id this run (e.g. after
         # a page switch) while its user key stays the same. The value was just
         # preserved under the user key, so copy it onto the new element id —
         # otherwise the default written for that id at registration shadows it,
         # since a value stored by element id outranks one stored by user key.
-        for user_key, value in bound_preserved.items():
+        for user_key, value in preserved_by_key.items():
             active_id = self._key_id_mapper.get_id_from_key(user_key, None)
             if active_id is not None and active_id in active_widget_ids:
                 self._new_widget_state.set_from_value(active_id, value)
