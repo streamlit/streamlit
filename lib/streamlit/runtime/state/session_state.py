@@ -442,9 +442,9 @@ class SessionState:
     # stale-widget cleanup time.
     _query_param_bound_widget_ids: set[str] = field(default_factory=set)
 
-    # Widget IDs that registered with persist_state, mapped to their scope.
-    # Like _query_param_bound_widget_ids, this is a durable snapshot that
-    # survives the rerun sequencing of a multi-page app page transition.
+    # Widget IDs registered with persist_state, mapped to their scope. Like
+    # _query_param_bound_widget_ids, a durable snapshot that survives the rerun
+    # sequencing of a page transition.
     _persisted_widget_ids: dict[str, Literal["page", "session"]] = field(
         default_factory=dict
     )
@@ -458,10 +458,9 @@ class SessionState:
     # registration on a different page drop the value instead of adopting it.
     _persisted_page_value_pages: dict[str, str] = field(default_factory=dict)
 
-    # Widget IDs of persist_state="page" widgets whose value was dropped because
-    # the session navigated to a page that does not own the value. The frontend
-    # may still hold and resend the dropped value for the reused widget id, so
-    # the next registration must discard that value and fall back to the default.
+    # persist_state="page" widget IDs whose value was dropped on a page switch.
+    # The frontend may resend the stale value for the reused id, so the next
+    # registration must discard it and fall back to the default.
     _page_scoped_widget_ids_to_reset: set[str] = field(default_factory=set)
 
     def __repr__(self) -> str:
@@ -983,17 +982,11 @@ class SessionState:
                 else:
                     self._persisted_page_value_pages.pop(user_key, None)
 
-        # A stale "page"-scoped widget whose owned page differs from the current
-        # page is being dropped because of a page switch. Record the widget id so
-        # its next registration discards the value the frontend may still resend
-        # for the reused widget id, even if that registration happens back on the
-        # originating page.
-        #
-        # Widgets that also bind to query params are exempt: binding takes
-        # precedence over "page" scope, so the value must survive the page switch
-        # (the binding preservation path above keeps it under the user key, ready
-        # to be restored from the URL). Dropping it here would make the
-        # combination lose the value even though plain bind keeps it.
+        # A "page"-scoped widget on a page other than its origin is dropped on
+        # this page switch. Record the id so its next registration discards any
+        # value the frontend resends for the reused id (even back on the origin
+        # page). Bound widgets are exempt: binding takes precedence over "page"
+        # scope, so their value must survive the switch (restored from the URL).
         for wid, scope in self._persisted_widget_ids.items():
             if (
                 scope == "page"
@@ -1006,13 +999,11 @@ class SessionState:
                 )
             ):
                 self._page_scoped_widget_ids_to_reset.add(wid)
-                # If the widget was hidden on its origin page, its value is held
-                # under the user key in _old_state. The widget may never
-                # re-register on this page, so the registration-time reset would
-                # never run — drop the value now so it is not readable via
-                # st.session_state after the page switch, honoring the "page"
-                # scope guarantee. A programmatic set this run lives in
-                # _new_session_state and is intentionally left untouched.
+                # A value held under the user key (widget hidden on its origin
+                # page) may never reach the registration-time reset, so drop it
+                # now — otherwise it stays readable via st.session_state after
+                # the switch. A programmatic set this run lives in
+                # _new_session_state and is left untouched.
                 reset_user_key = wid_key_map.get(wid)
                 if reset_user_key is not None:
                     self._old_state.pop(reset_user_key, None)
@@ -1162,10 +1153,9 @@ class SessionState:
             self._query_param_bound_widget_ids.discard(widget_id)
             self.query_params.unbind_and_clear_param(widget_id)
 
-        # Track persist_state registrations (server-side only, no URL involved).
-        # When a widget also sets bind="query-params", binding takes precedence:
-        # the "page"-scope drops below are skipped for bound widgets so the value
-        # survives page switches (restored from the URL) regardless of scope.
+        # Track persist_state registrations (server-side only, no URL). When bind
+        # is also set it takes precedence: the "page"-scope drops below are
+        # skipped for bound widgets so the value survives page switches.
         dropped_page_scoped_value = False
         if metadata.persist_state is not None and user_key is not None:
             self._persisted_widget_ids[widget_id] = metadata.persist_state
@@ -1175,10 +1165,9 @@ class SessionState:
                 # Binding takes precedence (see above): bound widgets skip the
                 # page-scope drops below but still clear stale page-tracking.
                 is_bound = metadata.bind == "query-params"
-                # A "page"-scoped value preserved while the widget was unmounted
-                # carries the page it belongs to. If the widget now mounts on a
-                # different page, the value must not leak across pages, so drop
-                # it before it is resolved.
+                # A preserved "page"-scoped value carries its origin page. If the
+                # widget now mounts on a different page, drop it before it
+                # resolves so it does not leak across pages.
                 origin_page_hash = self._persisted_page_value_pages.pop(user_key, None)
                 if (
                     not is_bound
@@ -1281,12 +1270,10 @@ class SessionState:
             else:
                 self.query_params.discard_param_no_forward_msg(user_key)
 
-        # A persist_state widget that resolves to a non-default value carried
-        # over from a previous run (preserved while unmounted, or a programmatic
-        # set that has since been compacted into old state) must tell the
-        # frontend to adopt the backend value when the widget (re)mounts.
-        # Otherwise the freshly mounted widget renders at its default and the
-        # next rerun overwrites the preserved value with that default.
+        # A persist_state widget resolving to a non-default value from a previous
+        # run (preserved while unmounted, or a compacted programmatic set) must
+        # tell the frontend to adopt the backend value on (re)mount. Otherwise it
+        # renders at its default and the next rerun overwrites the preserved value.
         restored_persisted_value = False
         if (
             metadata.persist_state is not None
@@ -1299,14 +1286,11 @@ class SessionState:
             if widget_value != default_value:
                 restored_persisted_value = True
 
-        # widget_value_changed indicates to the caller that the widget's
-        # current value is different from what is in the frontend.
-        # Also true when a preserved bound or persisted value was restored —
-        # the frontend is rendering the widget for the first time on this page
-        # and needs to be told to use the backend's resolved value instead of
-        # the widget's default. When a "page"-scoped value was dropped on a page
-        # switch, the frontend may still hold the old value for the reused widget
-        # id, so it must be told to fall back to the default as well.
+        # Tells the caller the widget's value differs from the frontend's. Also
+        # true when a preserved bound/persisted value was restored (the frontend
+        # must adopt the backend value instead of the default on first render),
+        # or when a "page"-scoped value was dropped on a page switch (the
+        # frontend must fall back to the default for the reused widget id).
         widget_value_changed = (
             (user_key is not None and self.is_new_state_value(user_key))
             or restored_bound_value
