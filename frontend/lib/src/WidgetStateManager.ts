@@ -50,6 +50,8 @@ export interface WidgetInfo {
   formId?: string
 }
 
+type FormSubmitValidator = () => boolean
+
 /**
  * Valid widget value types for query param bindings.
  * These correspond to the WidgetState proto value field names.
@@ -210,6 +212,8 @@ export class WidgetStateDict {
 class FormState {
   public readonly widgetStates = new WidgetStateDict()
 
+  public readonly submitValidators = new Map<string, FormSubmitValidator>()
+
   /** True if the form was created with the clear_on_submit flag. */
   public clearOnSubmit = false
 
@@ -339,6 +343,18 @@ export class WidgetStateManager {
     form.enterToSubmit = enterToSubmit
   }
 
+  public addFormSubmitValidator(
+    formId: string,
+    widgetId: string,
+    validator: FormSubmitValidator
+  ): void {
+    this.getOrCreateFormState(formId).submitValidators.set(widgetId, validator)
+  }
+
+  public removeFormSubmitValidator(formId: string, widgetId: string): void {
+    this.getOrCreateFormState(formId).submitValidators.delete(widgetId)
+  }
+
   /**
    * Commit pending changes for widgets that belong to the given form,
    * and send a rerunBackMsg to the server.
@@ -356,6 +372,15 @@ export class WidgetStateManager {
     }
 
     const form = this.getOrCreateFormState(formId)
+
+    // Run every registered validator (don't short-circuit) so that all invalid
+    // fields can surface their error state, then abort the submit if any failed.
+    const validationResults = Array.from(form.submitValidators.values()).map(
+      validator => validator()
+    )
+    if (validationResults.some(passed => !passed)) {
+      return
+    }
 
     const submitButtons = this.formsData.submitButtons.get(formId)
 

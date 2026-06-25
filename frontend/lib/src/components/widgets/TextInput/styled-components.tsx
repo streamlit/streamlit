@@ -23,21 +23,41 @@ export const StyledTextInput = styled.div`
   position: relative;
 `
 
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values */
+/** Visually hidden but accessible to screen readers (standard CSS pattern). */
+export const StyledVisuallyHidden = styled.span({
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+})
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
+
 interface StyledInputRootProps {
   $isFocused: boolean
   $hasIcon: boolean
+  $hasError: boolean
 }
 
 export const StyledInputRoot = styled.div<StyledInputRootProps>(
-  ({ theme, $isFocused, $hasIcon }) => ({
+  ({ theme, $isFocused, $hasIcon, $hasError }) => ({
     display: "flex",
     alignItems: "center",
     height: theme.sizes.minElementHeight,
     borderWidth: theme.sizes.borderWidth,
     borderStyle: "solid",
-    borderColor: getBorderColor(theme.colors, $isFocused),
+    borderColor: $hasError
+      ? theme.colors.redTextColor
+      : getBorderColor(theme.colors, $isFocused),
     borderRadius: theme.radii.default,
-    backgroundColor: theme.colors.secondaryBg,
+    backgroundColor: $hasError
+      ? theme.colors.redBackgroundColor
+      : theme.colors.secondaryBg,
     paddingLeft: $hasIcon ? theme.spacing.sm : 0,
     overflow: "hidden",
     transitionDuration: "200ms",
@@ -46,7 +66,9 @@ export const StyledInputRoot = styled.div<StyledInputRootProps>(
     // Show the focused border whenever any descendant (input or password toggle)
     // has keyboard focus — handles the case where Tab moves focus to the toggle.
     "&:focus-within": {
-      borderColor: getBorderColor(theme.colors, true),
+      borderColor: $hasError
+        ? theme.colors.redTextColor
+        : getBorderColor(theme.colors, true),
     },
   })
 )
@@ -92,6 +114,19 @@ export const StyledStartEnhancer = styled.div<StyledStartEnhancerProps>(
     flexShrink: 0,
   })
 )
+
+export const StyledEndEnhancers = styled.div({
+  display: "flex",
+  alignItems: "center",
+  flexShrink: 0,
+})
+
+export const StyledErrorEnhancer = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  color: theme.colors.redTextColor,
+  paddingLeft: theme.spacing.xs,
+}))
 
 export const StyledPasswordToggle = styled.button(({ theme }) => ({
   display: "flex",

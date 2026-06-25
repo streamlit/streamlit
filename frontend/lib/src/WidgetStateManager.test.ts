@@ -660,6 +660,86 @@ describe("Widget State Manager", () => {
         undefined
       )
     })
+
+    it("aborts submission when a form validator fails", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
+
+      const validator = vi.fn(() => false)
+      widgetMgr.addFormSubmitValidator(formId, "widget1", validator)
+
+      widgetMgr.submitForm(formId, undefined)
+
+      expect(validator).toHaveBeenCalledTimes(1)
+      expect(sendBackMsg).not.toHaveBeenCalled()
+      expect(formsData.formsWithPendingChanges).toEqual(new Set([formId]))
+    })
+
+    it("runs all validators even when an earlier one fails", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      const failingValidator = vi.fn(() => false)
+      const secondValidator = vi.fn(() => false)
+      widgetMgr.addFormSubmitValidator(formId, "widget1", failingValidator)
+      widgetMgr.addFormSubmitValidator(formId, "widget2", secondValidator)
+
+      widgetMgr.submitForm(formId, undefined)
+
+      // Both validators must run (no short-circuit) so every invalid field can
+      // surface its error state.
+      expect(failingValidator).toHaveBeenCalledTimes(1)
+      expect(secondValidator).toHaveBeenCalledTimes(1)
+      expect(sendBackMsg).not.toHaveBeenCalled()
+    })
+
+    it("submits the form when all validators pass", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
+
+      const validator = vi.fn(() => true)
+      widgetMgr.addFormSubmitValidator(formId, "widget1", validator)
+
+      widgetMgr.submitForm(formId, undefined)
+
+      expect(validator).toHaveBeenCalledTimes(1)
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        {
+          widgets: [
+            { id: "submitButton", triggerValue: true },
+            { id: "widget1", stringValue: "foo" },
+          ],
+        },
+        undefined,
+        undefined,
+        undefined
+      )
+    })
   })
 
   describe("allowFormEnterToSubmit", () => {

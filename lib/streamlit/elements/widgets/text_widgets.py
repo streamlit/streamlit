@@ -85,6 +85,28 @@ class TextAreaSerde:
         return v
 
 
+def _parse_text_input_validate(
+    validate: str | tuple[str, str] | None,
+) -> tuple[str | None, str | None]:
+    if validate is None:
+        return None, None
+
+    if isinstance(validate, str):
+        return validate, None
+
+    if (
+        isinstance(validate, tuple)
+        and len(validate) == 2
+        and all(isinstance(item, str) for item in validate)
+    ):
+        return validate
+
+    raise StreamlitAPIException(
+        "The `validate` parameter must be `None`, a regex string, or a "
+        "`(regex, message)` tuple of strings."
+    )
+
+
 class TextWidgetsMixin:
     @overload
     def text_input(
@@ -104,6 +126,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
+        validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> str:
@@ -127,6 +150,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
+        validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> str | None:
@@ -150,6 +174,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
+        validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> str | None:
@@ -198,6 +223,8 @@ class TextWidgetsMixin:
             .. note::
                Changing ``max_chars`` resets the widget even when a key
                is provided.
+               Changing the validation regex also resets the widget even
+               when a key is provided.
 
             A key lets you read or update the widget's value via
             ``st.session_state[key]``. For more details, see `Widget
@@ -268,6 +295,27 @@ class TextWidgetsMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        validate : str, tuple[str, str], or None
+            An optional client-side validation rule for the input. If this is
+            ``None`` (default), no validation is performed. If this is a
+            string, it is treated as a JavaScript-flavored regular expression
+            that the input must match before it can be submitted, and a generic
+            error message is shown when validation fails. If this is a
+            ``(regex, message)`` tuple, the regex is used for client-side
+            validation and the custom ``message`` is shown when validation
+            fails. Providing a custom message is recommended, since generic
+            validation messages are less helpful to users.
+
+            Validation runs only when the user tries to submit a value (on
+            blur, when pressing Enter, or on form submission). Invalid values
+            are not submitted, and empty inputs bypass validation.
+
+            .. note::
+               This validation runs in the user's browser and can be bypassed.
+               If the validation is security-relevant, you must also validate
+               the value on the server (in your app code) after it is
+               submitted.
+
         width : "stretch" or int
             The width of the text input widget. This can be one of the
             following:
@@ -331,6 +379,7 @@ class TextWidgetsMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             icon=icon,
+            validate=validate,
             width=width,
             bind=bind,
             ctx=ctx,
@@ -353,6 +402,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
+        validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
@@ -369,13 +419,14 @@ class TextWidgetsMixin:
 
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
+        validate_regex, validate_message = _parse_text_input_validate(validate)
 
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
             # Explicitly whitelist max_chars to make sure the ID changes when it changes
             # since the widget value might become invalid based on a different max_chars
-            key_as_main_identity={"max_chars"},
+            key_as_main_identity={"max_chars", "validate_regex"},
             dg=self.dg,
             label=label,
             value=value,
@@ -385,6 +436,8 @@ class TextWidgetsMixin:
             autocomplete=autocomplete,
             placeholder=str(placeholder),
             icon=icon,
+            validate_regex=validate_regex,
+            validate_message=validate_message,
             width=width,
         )
 
@@ -414,6 +467,12 @@ class TextWidgetsMixin:
 
         if icon is not None:
             text_input_proto.icon = validate_icon_or_emoji(icon)
+
+        if validate_regex is not None:
+            text_input_proto.validate_regex = validate_regex
+
+        if validate_message is not None:
+            text_input_proto.validate_message = validate_message
 
         if type == "default":
             text_input_proto.type = TextInputProto.DEFAULT

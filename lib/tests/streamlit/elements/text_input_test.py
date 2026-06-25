@@ -109,6 +109,49 @@ class TextInputTest(DeltaGeneratorTestCase):
         assert c.placeholder == "testing"
         assert c.type == TextInput.DEFAULT
 
+    def test_validate_none(self):
+        """Test that validate=None does not set validation proto fields."""
+        st.text_input("the label", validate=None)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert not c.HasField("validate_regex")
+        assert not c.HasField("validate_message")
+
+    def test_validate_regex_string(self):
+        """Test that a regex string is marshalled to validate_regex."""
+        st.text_input("the label", validate="^[a-z]+$")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.validate_regex == "^[a-z]+$"
+        assert c.HasField("validate_regex")
+        assert not c.HasField("validate_message")
+
+    def test_validate_regex_tuple(self):
+        """Test that a regex tuple is marshalled to validate fields."""
+        st.text_input("the label", validate=("^[a-z]+$", "Lowercase only"))
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.validate_regex == "^[a-z]+$"
+        assert c.validate_message == "Lowercase only"
+        assert c.HasField("validate_regex")
+        assert c.HasField("validate_message")
+
+    @parameterized.expand(
+        [
+            ("wrong_tuple_length", ("only-one",)),
+            ("non_string_regex", (1, "msg")),
+            ("non_string_message", ("rx", 1)),
+            ("list_shape", ["rx", "msg"]),
+            ("callable", lambda _value: True),
+        ]
+    )
+    def test_invalid_validate_shapes_raise(self, _name, validate):
+        """Test that invalid validate values raise StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.text_input("the label", validate=validate)
+
+        assert "validate" in str(exc.value)
+
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
 
@@ -307,6 +350,7 @@ class TextInputTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             ("max_chars", 100, 200),
+            ("validate", "^[a-z]+$", "^[0-9]+$"),
         ]
     )
     def test_whitelisted_stable_key_kwargs(
@@ -333,6 +377,29 @@ class TextInputTest(DeltaGeneratorTestCase):
             c2 = self.get_delta_from_queue().new_element.text_input
             id2 = c2.id
             assert id1 != id2
+
+    def test_validate_message_does_not_change_stable_id(self):
+        """Test that changing only the validate message keeps the same widget ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input(
+                label="Label 1",
+                key="text_input_key",
+                validate=("^[a-z]+$", "Lowercase only"),
+            )
+            c1 = self.get_delta_from_queue().new_element.text_input
+            id1 = c1.id
+
+            st.text_input(
+                label="Label 2",
+                key="text_input_key",
+                validate=("^[a-z]+$", "Letters only"),
+            )
+            c2 = self.get_delta_from_queue().new_element.text_input
+            id2 = c2.id
+            assert id1 == id2
 
     def test_bind_query_params_sets_query_param_key(self) -> None:
         """Test that bind='query-params' with a key sets query_param_key in proto."""
