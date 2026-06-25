@@ -93,9 +93,10 @@ message Initialize {
 
   // Connection-locality class of an otherwise-eligible nudge that was
   // suppressed because the browser is NOT on a direct-loopback connection:
-  // "private" (RFC1918/Docker/VM/LAN), "other" (public/relayed), or empty when
-  // not applicable. Purely for adoption telemetry — it lets us measure how much
-  // of the agent-harness audience the conservative loopback gate excludes.
+  // "private" (RFC1918/Docker/VM/LAN), "other" (public/relayed), "unknown"
+  // (peer IP unavailable/unparseable), or empty when not applicable. Purely for
+  // adoption telemetry — it lets us measure how much of the agent-harness
+  // audience the conservative loopback gate excludes.
   string skills_nudge_suppressed_locality = 9;
 
   reserved 5;

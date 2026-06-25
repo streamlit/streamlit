@@ -889,10 +889,11 @@ class AppSession:
           conservative eligibility rule: Docker/VM/reverse-proxy/SSH-tunnel
           setups are legitimate local dev but also where the app may be
           shared/deployed, so we don't surface an in-app CTA there.
-        - ``suppressed_locality`` is the connection class (``"private"`` /
-          ``"other"``) when the nudge WOULD be eligible but the loopback gate
-          blocked it, else ``""`` — recorded purely so adoption telemetry can
-          measure how much of the agent-harness audience the gate excludes.
+        - ``suppressed_locality`` is the connection class (``"private"``,
+          ``"other"``, or ``"unknown"`` when the peer IP can't be determined)
+          when the nudge WOULD be eligible but the loopback gate blocked it,
+          else ``""`` — recorded purely so adoption telemetry can measure how
+          much of the agent-harness audience the gate excludes.
 
         Recomputed on each NewSession rather than memoized: the heavy filesystem
         detection is cached in ``skills`` (and invalidated when skills are
