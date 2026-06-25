@@ -316,6 +316,59 @@ class TestFindProjectRoot:
         # home directory as a project even when it has agent directories.
         assert result == home
 
+    def test_falls_back_to_cwd_when_cwd_is_ancestor_of_app(
+        self, tmp_path: Path
+    ) -> None:
+        """No marker, but cwd is an ancestor of the app dir: install into cwd.
+
+        Mirrors ``cd repo && streamlit run sub/app.py`` with no project marker —
+        the developer expects skills in ``repo``, not the nested app-script dir.
+        """
+        repo = tmp_path / "repo"
+        app_dir = repo / "sub" / "app"
+        app_dir.mkdir(parents=True)
+        with (
+            patch("pathlib.Path.cwd", return_value=repo),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            result = skills._find_project_root(app_dir)
+        assert result == repo
+
+    def test_falls_back_to_start_when_cwd_unrelated_to_app(
+        self, tmp_path: Path
+    ) -> None:
+        """No marker and cwd is NOT an ancestor of the app dir: use the app dir.
+
+        Mirrors ``cd /tmp && streamlit run /proj/app.py`` — the unrelated cwd
+        must never become the install root.
+        """
+        unrelated = tmp_path / "elsewhere"
+        unrelated.mkdir()
+        app_dir = tmp_path / "proj" / "app"
+        app_dir.mkdir(parents=True)
+        with (
+            patch("pathlib.Path.cwd", return_value=unrelated),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            result = skills._find_project_root(app_dir)
+        assert result == app_dir
+
+    def test_does_not_fall_back_to_home_even_when_cwd_is_home_ancestor(
+        self, tmp_path: Path
+    ) -> None:
+        """No marker and cwd is home (an ancestor of the app dir): use the app
+        dir, never install project-local skills into the home directory.
+        """
+        home = tmp_path / "home"
+        app_dir = home / "proj" / "app"
+        app_dir.mkdir(parents=True)
+        with (
+            patch("pathlib.Path.cwd", return_value=home),
+            patch("pathlib.Path.home", return_value=home),
+        ):
+            result = skills._find_project_root(app_dir)
+        assert result == app_dir
+
 
 class TestGetProjectTargetDirs:
     """Tests for _get_project_target_dirs."""

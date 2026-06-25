@@ -98,7 +98,12 @@ def _find_project_root(start: Path | None = None) -> Path:
 
     1. If the start dir or a non-home ancestor has .agents or .claude, use it
     2. Otherwise, walk up to find nearest .git
-    3. Otherwise, use the start dir
+    3. Otherwise, fall back to the current working directory when it is an
+       ancestor of (or equal to) the start dir — the common
+       ``cd repo && streamlit run sub/app.py`` launch, where ``repo`` is the
+       directory the developer thinks of as the project — and to the start dir
+       otherwise (e.g. ``cd /tmp && streamlit run /proj/app.py``, where ``/tmp``
+       must not become the install root). Never fall back to the home directory.
 
     Parameters
     ----------
@@ -109,7 +114,7 @@ def _find_project_root(start: Path | None = None) -> Path:
         scans (``app_dir`` or its git root), rather than wherever the server
         happened to be launched from.
     """
-    cwd = start or Path.cwd()
+    start_dir = start or Path.cwd()
     # Resolve home to handle symlinks/bind mounts reaching home via another path
     resolved_home = Path.home().resolve()
 
@@ -120,27 +125,43 @@ def _find_project_root(start: Path | None = None) -> Path:
         except OSError:
             return False
 
-    # Check if cwd or a project ancestor already has agent directories.
+    # Check if start_dir or a project ancestor already has agent directories.
     # Exclude the user's home directory so ~/.claude is not mistaken for
-    # a project-local Claude configuration (including when cwd == home).
+    # a project-local Claude configuration (including when start_dir == home).
     # Use is_dir() to ensure we only match directories, not files that happen
     # to be named .agents or .claude.
-    for parent in [cwd, *cwd.parents]:
+    for parent in [start_dir, *start_dir.parents]:
         if _is_home(parent):
             break
         if (parent / ".agents").is_dir() or (parent / ".claude").is_dir():
             return parent
 
     # Walk up to find git root, also excluding home directory to avoid
-    # treating ~/.git as the project root (including when cwd == home).
-    for parent in [cwd, *cwd.parents]:
+    # treating ~/.git as the project root (including when start_dir == home).
+    for parent in [start_dir, *start_dir.parents]:
         if _is_home(parent):
             break
         git_path = parent / ".git"
         if git_path.exists():
             return parent
 
-    return cwd
+    # No marker found. Prefer the current working directory when it is an
+    # ancestor of (or equal to) the start dir, so ``cd repo && streamlit run
+    # sub/app.py`` installs into ``repo`` rather than the nested app-script dir.
+    # Fall back to the start dir when cwd is unrelated, so a launch from an
+    # arbitrary cwd never installs somewhere surprising. Never use home: a
+    # project-local install belongs in the project, not ``~``.
+    cwd = Path.cwd()
+    try:
+        cwd_resolved = cwd.resolve()
+        start_resolved = start_dir.resolve()
+    except OSError:  # pragma: no cover - defensive
+        return start_dir
+    if not _is_home(cwd) and (
+        cwd_resolved == start_resolved or cwd_resolved in start_resolved.parents
+    ):
+        return cwd
+    return start_dir
 
 
 def _get_project_target_dirs(project_root: Path) -> list[Path]:
