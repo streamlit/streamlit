@@ -136,6 +136,19 @@ class TextInputTest(DeltaGeneratorTestCase):
         assert c.HasField("validate_regex")
         assert c.HasField("validate_message")
 
+    def test_validate_empty_string(self):
+        """Test that validate="" marshals an empty regex (a no-op on the frontend).
+
+        An empty regex string carries no constraint: the frontend treats a
+        falsy ``validate_regex`` as "no validation configured", so an empty
+        string disables validation rather than matching everything.
+        """
+        st.text_input("the label", validate="")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.validate_regex == ""
+        assert not c.HasField("validate_message")
+
     @parameterized.expand(
         [
             ("wrong_tuple_length", ("only-one",)),
