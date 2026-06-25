@@ -14,15 +14,22 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useMemo } from "react"
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react"
 
-import { PLACEMENT, Popover, TRIGGER_TYPE } from "baseui/popover"
+import { FloatingPortal } from "@floating-ui/react"
 
-import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import useTimeout from "~lib/hooks/useTimeout"
 
 import StatisticsChart from "./StatisticsChart"
 import {
@@ -44,6 +51,8 @@ import {
   StyledStatisticsNote,
   StyledStatisticsRow,
   StyledStatisticsValue,
+  StyledSubMenuAnchor,
+  StyledSubMenuPanel,
 } from "./styled-components"
 
 export interface StatisticsMenuProps {
@@ -53,10 +62,8 @@ export interface StatisticsMenuProps {
   data: Quiver
   /** Whether the menu is open. */
   isOpen: boolean
-  /** Callback when mouse enters the menu. */
-  onMouseEnter: () => void
-  /** Callback when mouse leaves the menu. */
-  onMouseLeave: () => void
+  /** Callback when the open state changes (fired by hover interactions). */
+  onOpenChange: (open: boolean) => void
   /** The menu item trigger element. */
   children: ReactElement
 }
@@ -262,13 +269,9 @@ function StatisticsMenu({
   column,
   data,
   isOpen,
-  onMouseEnter,
-  onMouseLeave,
+  onOpenChange,
   children,
 }: StatisticsMenuProps): ReactElement {
-  const theme = useEmotionTheme()
-  const { colors, fontSizes, fontWeights } = theme
-
   // Compute statistics only when menu is open.
   // Note: This useMemo caches within a single open session only, not across
   // open/close cycles (the component unmounts when the parent ColumnMenu closes).
@@ -280,6 +283,59 @@ function StatisticsMenu({
     return computeStatistics(column.kind, data, column.indexNumber, timezone)
   }, [isOpen, column.kind, column.indexNumber, column.arrowType, data])
 
+  // Refs to the anchor and panel DOM nodes — needed for the mouseover check.
+  const anchorRef = useRef<HTMLDivElement | null>(null)
+  const panelRef = useRef<HTMLDivElement | null>(null)
+
+  const { refs, floatingStyles } = useFloatingOverlay({
+    open: isOpen,
+    placement: "right",
+    offsetPx: 2,
+  })
+
+  // Merge floating-ui's callback refs with our local refs.
+  const setAnchorRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      anchorRef.current = node
+      refs.setReference(node)
+    },
+    [refs]
+  )
+  const setPanelRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      panelRef.current = node
+      refs.setFloating(node)
+    },
+    [refs]
+  )
+
+  const { clear: clearClose, restart: scheduleClose } = useTimeout(
+    () => onOpenChange(false),
+    500,
+    { autoStart: false }
+  )
+
+  // Document-level mouseover listener for reliable cross-browser hover detection.
+  // Element-level onPointerEnter is unreliable in WebKit with Playwright because
+  // synthetic click events don't always fire pointerenter on FloatingPortal elements
+  // when crossing portal boundaries. mouseover bubbles to document unconditionally,
+  // so it fires regardless of portal structure or browser engine.
+  useEffect(() => {
+    const handleMouseOver = (e: MouseEvent): void => {
+      const target = e.target as Element
+      if (anchorRef.current?.contains(target)) {
+        clearClose()
+        onOpenChange(true)
+      } else if (isOpen && panelRef.current?.contains(target)) {
+        clearClose()
+      } else if (isOpen) {
+        scheduleClose()
+      }
+    }
+    document.addEventListener("mouseover", handleMouseOver)
+    return () => document.removeEventListener("mouseover", handleMouseOver)
+  }, [isOpen, clearClose, onOpenChange, scheduleClose])
+
   // Defensive fallback: parent ColumnMenu already guards this, but keep for safety.
   // This ensures the component renders nothing if called directly without the guard.
   if (!supportsStatistics(column.kind)) {
@@ -287,49 +343,25 @@ function StatisticsMenu({
   }
 
   return (
-    <Popover
-      triggerType={TRIGGER_TYPE.hover}
-      // Note: autoFocus and focusLock are intentionally omitted for this read-only
-      // submenu, allowing keyboard users to navigate the parent column menu while
-      // the statistics panel is open.
-      isOpen={isOpen}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      ignoreBoundary={true}
-      content={<StatisticsContent statistics={statistics} />}
-      placement={PLACEMENT.right}
-      showArrow={false}
-      popoverMargin={2}
-      overrides={{
-        Body: {
-          props: {
-            "data-testid": "stDataFrameStatisticsMenu",
-          },
-          style: () => ({
-            ...getPopoverContainerStyle(theme),
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
-            backgroundColor: "transparent",
-          }),
-        },
-        Inner: {
-          style: () => ({
-            backgroundColor: colors.bgColor,
-            color: colors.bodyText,
-            fontSize: fontSizes.sm,
-            fontWeight: fontWeights.normal,
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
-          }),
-        },
-      }}
-    >
-      {children}
-    </Popover>
+    <>
+      <StyledSubMenuAnchor role="presentation" ref={setAnchorRef}>
+        {children}
+      </StyledSubMenuAnchor>
+      {isOpen && (
+        <FloatingPortal>
+          {/* No tabIndex/autoFocus — intentionally omitted for this read-only panel.
+              Allows keyboard users to navigate the parent column menu while
+              viewing statistics. */}
+          <StyledSubMenuPanel
+            ref={setPanelRef}
+            style={floatingStyles}
+            data-testid="stDataFrameStatisticsMenu"
+          >
+            <StatisticsContent statistics={statistics} />
+          </StyledSubMenuPanel>
+        </FloatingPortal>
+      )}
+    </>
   )
 }
 

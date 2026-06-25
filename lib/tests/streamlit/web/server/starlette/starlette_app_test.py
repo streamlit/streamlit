@@ -112,6 +112,14 @@ class _DummyStatsManager:
                     help="Current number of active sessions.",
                 )
             ],
+            "user_session_events": [
+                CounterStat(
+                    family_name="user_session_events",
+                    value=7,
+                    labels={"type": "connect", "email": "alice@example.com"},
+                    help="Total count of session events by type and user.",
+                )
+            ],
         }
 
     def get_stats(
@@ -378,6 +386,67 @@ def test_metrics_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) ->
     assert "active_sessions" in response.text
     assert "# HELP active_sessions Current number of active sessions." in response.text
     assert "# UNIT active_sessions " not in response.text
+
+
+def test_metrics_endpoint_includes_user_session_events(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """The user_session_events family is rendered in text when provided by the runtime."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics")
+    assert response.status_code == 200
+    assert "# TYPE user_session_events counter" in response.text
+    assert (
+        "# HELP user_session_events Total count of session events by type and user."
+        in response.text
+    )
+    assert (
+        'user_session_events_total{email="alice@example.com",type="connect"} 7'
+        in response.text
+    )
+
+
+def test_metrics_endpoint_user_session_events_protobuf(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """The user_session_events family is included in the protobuf response."""
+    client, _ = starlette_client
+    response = client.get(
+        "/_stcore/metrics",
+        headers={"Accept": "application/x-protobuf"},
+    )
+    assert response.status_code == 200
+
+    metric_set = MetricSetProto()
+    metric_set.ParseFromString(response.content)
+    family_names = {metric_family.name for metric_family in metric_set.metric_families}
+    assert "user_session_events" in family_names
+
+
+def test_metrics_endpoint_filters_user_session_events(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Filtering by user_session_events returns only that family."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics?families=user_session_events")
+    assert response.status_code == 200
+    assert "user_session_events_total" in response.text
+    # The aggregate session_events family should be excluded. Guard against the
+    # substring overlap with user_session_events_total by checking the family
+    # header line instead.
+    assert "# TYPE session_events counter" not in response.text
+    assert "cache_memory_bytes" not in response.text
+
+
+def test_metrics_endpoint_session_events_excludes_user_family(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Filtering by session_events must not leak the user_session_events family."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics?families=session_events")
+    assert response.status_code == 200
+    assert "session_events_total" in response.text
+    assert "user_session_events" not in response.text
 
 
 def test_metrics_endpoint_filters_single_family(

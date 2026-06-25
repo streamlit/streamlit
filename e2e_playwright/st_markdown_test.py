@@ -25,6 +25,7 @@ from e2e_playwright.shared.app_utils import (
     get_caption,
     get_element_by_key,
     get_markdown,
+    reset_hovering,
     tab_until_focused,
     wait_for_all_images_to_be_loaded,
 )
@@ -621,8 +622,12 @@ def test_tooltip_with_newlines_gh_13339(
     expect(element).not_to_contain_text("Line 2")
     expect(element).not_to_contain_text("Line 3")
 
-    # Hover to show tooltip
+    # Hover to show tooltip.
+    # reset_hovering primes the interaction modality to 'pointer' first — React Aria
+    # requires a document-level pointermove before pointerenter to register hover
+    # intent; Playwright teleports the cursor when the mouse starts "off-page".
     hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    reset_hovering(app)
     hover_target.hover()
 
     # Verify tooltip is visible and contains the multiline content
@@ -663,7 +668,9 @@ def test_tooltip_with_complex_markdown_gh_13339(
     expect(element).not_to_contain_text("array[index]")
     expect(element).not_to_contain_text("Streamlit")
 
+    # reset_hovering primes interaction modality to 'pointer' before hover.
     hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    reset_hovering(app)
     hover_target.hover()
 
     tooltip_content = app.get_by_test_id("stTooltipContent")

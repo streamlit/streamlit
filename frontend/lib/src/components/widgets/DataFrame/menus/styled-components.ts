@@ -16,6 +16,46 @@
 
 import styled from "@emotion/styled"
 
+import {
+  getOverlayZIndex,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
+
+/**
+ * Wrapper div that gives floating-ui a measurable bounding rect for sub-menu
+ * positioning. Must not use display:contents (produces a zero-size rect).
+ * role="presentation" keeps the ARIA menu tree valid (role="menu" → role="menuitem"
+ * must not have non-presentation elements between them).
+ */
+export const StyledSubMenuAnchor = styled.div({})
+
+/**
+ * Portal panel wrapper for the ColumnMenu content.
+ * position/top/left/transform are set by floatingStyles at render time.
+ */
+export const StyledColumnMenuPanel = styled.div(({ theme }) => ({
+  ...getPopoverContainerStyle(theme),
+  zIndex: getOverlayZIndex(theme),
+  backgroundColor: theme.colors.bgColor,
+  color: theme.colors.bodyText,
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.normal,
+  overflow: "auto",
+}))
+
+/**
+ * Portal panel wrapper shared by FormattingMenu and StatisticsMenu.
+ * position/top/left/transform are set by floatingStyles at render time.
+ */
+export const StyledSubMenuPanel = styled.div(({ theme }) => ({
+  ...getPopoverContainerStyle(theme),
+  zIndex: getOverlayZIndex(theme),
+  backgroundColor: theme.colors.bgColor,
+  color: theme.colors.bodyText,
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.normal,
+}))
+
 /**
  * A styled menu list component used by the column menu.
  */

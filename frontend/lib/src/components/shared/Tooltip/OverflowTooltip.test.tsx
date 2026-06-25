@@ -14,63 +14,39 @@
  * limitations under the License.
  */
 
-import { render, screen } from "@testing-library/react"
+import { act, render, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import ThemeProvider from "~lib/components/core/ThemeProvider"
+import { WindowDimensionsProvider } from "~lib/components/shared/WindowDimensions/Provider"
 import { mockTheme } from "~lib/mocks/mockTheme"
 
 import OverflowTooltip from "./OverflowTooltip"
 import { Placement } from "./Tooltip"
 
-const { useRefMock, useEffectMock } = vi.hoisted(() => ({
-  useRefMock: vi.fn(),
-  useEffectMock: vi.fn((f: () => void) => f()),
-}))
-
-vi.mock("react", async () => {
-  const actual = await vi.importActual<typeof import("react")>("react")
-
-  return {
-    ...actual,
-    useRef: useRefMock,
-    useEffect: useEffectMock,
-  }
-})
-
-// Mock useWindowDimensionsContext to avoid WindowDimensionsProvider,
-// which uses hooks that conflict with the global useRef/useEffect mocks.
-vi.mock(
-  "~lib/components/shared/WindowDimensions/useWindowDimensionsContext",
-  () => ({
-    useWindowDimensionsContext: () => ({
-      fullWidth: 1000,
-      fullHeight: 700,
-      innerWidth: 1024,
-      innerHeight: 768,
-    }),
-  })
-)
-
 const wrapper = ({ children }: { children: React.ReactNode }): JSX.Element => (
-  <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
+  <ThemeProvider theme={mockTheme.emotion}>
+    <WindowDimensionsProvider>{children}</WindowDimensionsProvider>
+  </ThemeProvider>
 )
 
+// See Tooltip.test.tsx for the full explanation of the fake-timers strategy.
 describe("Tooltip component", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
   afterEach(() => {
-    vi.clearAllMocks()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   it("should render when it fits onscreen", async () => {
-    const user = userEvent.setup()
-    useRefMock.mockReturnValue({
-      current: {
-        // Pretend the body is greater than its onscreen area.
-        offsetWidth: 200,
-        scrollWidth: 100,
-      },
-    })
+    // offsetWidth >= scrollWidth → no overflow → tooltip stays disabled.
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(200)
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(100)
 
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(
       <OverflowTooltip
         content="the content"
@@ -84,22 +60,19 @@ describe("Tooltip component", () => {
 
     const tooltip = screen.getByTestId("stTooltipHoverTarget")
     await user.hover(tooltip)
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
 
     expect(screen.queryByText("the content")).not.toBeInTheDocument()
-
-    expect(useRefMock).toHaveBeenCalledWith(null)
   })
 
   it("should render when ellipsized", async () => {
-    const user = userEvent.setup()
-    useRefMock.mockReturnValue({
-      current: {
-        // Pretend the body is smaller than its onscreen area.
-        offsetWidth: 100,
-        scrollWidth: 200,
-      },
-    })
+    // scrollWidth > offsetWidth → overflow → tooltip enabled and shows content.
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(100)
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(200)
 
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(
       <OverflowTooltip
         content="the content"
@@ -113,10 +86,11 @@ describe("Tooltip component", () => {
 
     const tooltip = screen.getByTestId("stTooltipHoverTarget")
     await user.hover(tooltip)
+    // Advance the TooltipTrigger's default 200 ms open delay.
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
 
-    const tooltipContent = await screen.findByText("the content")
-    expect(tooltipContent).toBeInTheDocument()
-
-    expect(useRefMock).toHaveBeenCalledWith(null)
+    expect(screen.getByText("the content")).toBeInTheDocument()
   })
 })
