@@ -1006,9 +1006,9 @@ class SessionState:
                 # st.session_state after the page switch, honoring the "page"
                 # scope guarantee. A programmatic set this run lives in
                 # _new_session_state and is intentionally left untouched.
-                user_key = wid_key_map.get(wid)
-                if user_key is not None:
-                    self._old_state.pop(user_key, None)
+                reset_user_key = wid_key_map.get(wid)
+                if reset_user_key is not None:
+                    self._old_state.pop(reset_user_key, None)
 
         self._new_widget_state.remove_stale_widgets(
             active_widget_ids,
