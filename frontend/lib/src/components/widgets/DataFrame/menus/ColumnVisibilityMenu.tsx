@@ -18,7 +18,6 @@ import { memo, ReactElement, useCallback, useEffect, useRef } from "react"
 
 import { FloatingFocusManager, FloatingPortal } from "@floating-ui/react"
 
-import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
@@ -98,14 +97,15 @@ const CheckboxItem: React.FC<CheckboxItemProps> = ({
         data-checked={initialValue ? "true" : undefined}
         data-indeterminate={isIndeterminate ? "true" : undefined}
       >
-        {(initialValue || isIndeterminate) && (
-          <DynamicIcon
-            size="sm"
-            iconValue={
-              isIndeterminate ? ":material/remove:" : ":material/check:"
-            }
-          />
-        )}
+        {isIndeterminate ? (
+          <svg viewBox="0 0 10 2" aria-hidden="true">
+            <line x1="1" y1="1" x2="9" y2="1" />
+          </svg>
+        ) : initialValue ? (
+          <svg viewBox="0 0 10 8" aria-hidden="true">
+            <polyline points="1 4 4 7 9 1" />
+          </svg>
+        ) : null}
       </StyledCheckboxMark>
       <StyledCheckboxLabel>{label}</StyledCheckboxLabel>
     </StyledCheckboxRoot>

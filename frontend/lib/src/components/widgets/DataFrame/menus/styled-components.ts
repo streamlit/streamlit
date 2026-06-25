@@ -114,26 +114,39 @@ export const StyledCheckboxInput = styled.input({
 /**
  * Custom visual checkmark square.
  * Checked/indeterminate state is driven by data-checked and data-indeterminate attributes.
+ * Styling mirrors StyledCheckboxIndicator from the Checkbox widget.
  */
 export const StyledCheckboxMark = styled.span(({ theme }) => ({
   flexShrink: 0,
   width: theme.sizes.checkbox,
   height: theme.sizes.checkbox,
-  marginTop: theme.spacing.twoXS,
+  // Vertically center the indicator with the first text line.
+  // = (lineHeight × fontSize − indicatorSize) / 2 = (1.5 × 0.875rem − 1rem) / 2 ≈ 2.5px
+  marginTop: `calc((${theme.lineHeights.small} * ${theme.fontSizes.sm} - ${theme.sizes.checkbox}) / 2)`,
   borderWidth: theme.sizes.borderWidth,
   borderStyle: "solid",
   borderColor: theme.colors.borderColor,
   borderRadius: theme.radii.sm,
+  backgroundColor: theme.colors.lightenedBg05,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  color: theme.colors.bgColor,
+  transition: "background-color 100ms ease, border-color 100ms ease",
   '&[data-checked="true"], &[data-indeterminate="true"]': {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primary,
   },
   "input:focus-visible + &": {
     boxShadow: theme.shadows.focusRing,
+  },
+  "& svg": {
+    width: "65%",
+    height: "65%",
+    fill: "none",
+    stroke: "white",
+    strokeWidth: "2.5px",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
   },
 }))
 
