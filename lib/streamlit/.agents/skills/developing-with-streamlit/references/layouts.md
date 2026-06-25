@@ -108,9 +108,14 @@ with st.container(border=True):
     st.write("Grouped content here")
 ```
 
-## Placeholders with st.empty
+## Placeholders with st.empty or st.skeleton
 
-Use `st.empty()` when you need to reserve a slot and fill it later, replace one element with another, clear an element, or insert content out of order. The returned placeholder is a single-element container. If you need to replace a group of elements, put a child `st.container()` inside the placeholder.
+Use a placeholder when you need to reserve a slot and fill it later, replace one element with another, clear an element, or insert content out of order. Both return a single-element container; to replace a group of elements, put a child `st.container()` inside the placeholder.
+
+- `st.empty()` — a blank slot that shows nothing until you fill it.
+- `st.skeleton()` — an animated loading placeholder that reserves space and signals that content is loading.
+
+### st.empty
 
 ```python
 dataframe_slot = st.empty()
@@ -128,9 +133,9 @@ dataframe_slot.dataframe(df.iloc[start:end], width="stretch")
 
 This is useful when a control should appear below an element but the control's value is needed before that element renders, such as pagination below a dataframe. It also works for progress updates, temporary status messages, wizard-like flows, and cases where later code needs to render above content that has already been written. For persistent multi-element sections that do not need replacement, use `st.container()` instead.
 
-## Skeleton loading placeholders with st.skeleton
+### st.skeleton
 
-Use `st.skeleton()` to show an animated placeholder that reserves layout space while content loads. It works in two modes.
+`st.skeleton()` works like `st.empty()` but shows an animated loading placeholder. It can be used in two modes.
 
 Standalone (like `st.empty`): the skeleton appears immediately and is replaced when you call a method on the returned placeholder.
 

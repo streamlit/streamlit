@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.elements.lib.layout_utils import (
     HeightWithoutContent,
     WidthWithoutContent,
@@ -35,6 +36,11 @@ class SkeletonMixin:
     def _skeleton(self, *, height: int | None = None) -> DeltaGenerator:
         """Insert a single-element container displaying a skeleton placeholder.
 
+        .. deprecated::
+            The internal ``_skeleton()`` method is deprecated. Use the public
+            ``st.skeleton()`` instead. It is kept only for backwards
+            compatibility and may be removed in a future release.
+
         This is an internal method and should not be used directly.
 
         Parameters
@@ -43,6 +49,13 @@ class SkeletonMixin:
             Desired height of the skeleton expressed in pixels. If None, a
             default height is used.
         """
+        # Kept only for backwards compatibility with external callers (e.g.
+        # streamlit-extras). New code should use the public `skeleton()` method.
+        show_deprecation_warning(
+            "`_skeleton` is deprecated and will be removed in a future release. "
+            "Please use `st.skeleton` instead.",
+            show_once=True,
+        )
         skeleton_proto = SkeletonProto()
         if height:
             skeleton_proto.height = height

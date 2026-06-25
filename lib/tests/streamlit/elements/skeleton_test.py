@@ -14,11 +14,14 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 
 import streamlit as st
 from streamlit.elements.lib.skeleton_placeholder import SkeletonPlaceholder
 from streamlit.errors import StreamlitInvalidHeightError, StreamlitInvalidWidthError
+from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -51,6 +54,34 @@ class StSkeletonAPITest(DeltaGeneratorTestCase):
         assert not placeholder._skeleton_proto.HasField("height")
         assert placeholder._layout_config is not None
         assert placeholder._layout_config.height is None
+
+    def test_internal_skeleton_is_deprecated(self) -> None:
+        """Test that the internal _skeleton() emits a deprecation warning
+        pointing to the public st.skeleton(), while still rendering."""
+        with patch(
+            "streamlit.elements.skeleton.show_deprecation_warning"
+        ) as mock_warning:
+            st.empty()._skeleton(height=120)
+
+        mock_warning.assert_called_once()
+        message = mock_warning.call_args.args[0]
+        assert "_skeleton" in message
+        assert "st.skeleton" in message
+
+        # The skeleton element is still produced despite the deprecation.
+        el = self.get_delta_from_queue().new_element
+        assert el.skeleton.height == 120
+
+    def test_internal_skeleton_without_height(self) -> None:
+        """Test that the internal _skeleton() leaves the proto height unset
+        when no height is provided."""
+        # Mock the deprecation warning to keep the test isolated from the
+        # show_once global state and the enqueued warning element.
+        with patch("streamlit.elements.skeleton.show_deprecation_warning"):
+            st.empty()._skeleton()
+
+        el = self.get_delta_from_queue().new_element
+        assert el.skeleton == SkeletonProto()
 
     def test_skeleton_pixel_height(self) -> None:
         """Test that st.skeleton accepts custom pixel height."""
@@ -119,7 +150,6 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
     def test_context_manager_uses_transient_elements(self) -> None:
         """Test that context manager mode uses transient elements (0.5s delay pattern)."""
         import time
-        from unittest.mock import patch
 
         # Patch the delay to a smaller value for faster tests.
         # Use 0.1s with 0.3s sleep (200ms buffer) to avoid CI flakiness.
