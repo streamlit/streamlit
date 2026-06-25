@@ -78,12 +78,16 @@ class SkeletonMixin:
         is shown immediately and can be replaced with content later by calling
         an ``st.*`` method on it (for example, ``placeholder.dataframe(...)``).
 
-        **Context manager mode** (like ``st.spinner()``): The skeleton is shown
-        while the ``with`` block runs (after a short delay) and automatically
-        clears when the block exits, whether normally or due to an exception.
-        Like ``st.spinner``, any ``st.*`` calls made inside the ``with`` block
-        are written to the parent container and remain visible after the
-        skeleton clears.
+        **Context manager mode** (like ``st.spinner()``, recommended): The
+        skeleton is shown while the ``with`` block runs (after a short delay)
+        and automatically clears when the block exits, whether normally or due
+        to an exception. Like ``st.spinner``, any ``st.*`` calls made inside the
+        ``with`` block are written to the parent container and remain visible
+        after the skeleton clears.
+
+        .. note::
+            Context manager mode is recommended. Use standalone mode only when
+            you need to reserve a slot and fill it later (like ``st.empty()``).
 
         Parameters
         ----------
