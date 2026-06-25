@@ -1240,8 +1240,7 @@ describe("MainMenu", () => {
     )
 
     // Note: " " (literal space) is used instead of "{Space}" because JSDOM
-    // does not fire click on <button> elements for {Space} keyUp. The menu
-    // button test uses {Space} because BaseWeb's popover handles it directly.
+    // does not fire click on <button> elements for {Space} keyUp.
     it.each([["{Enter}"], [" "]])(
       "activates a theme radio item with keyboard (%s)",
       async key => {
