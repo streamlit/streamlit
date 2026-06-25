@@ -401,13 +401,11 @@ def test_multiselect_accept_new_options(app: Page):
     """Should allow adding new options when accept_new_options is True and respect
     max_selections.
 
-    Note: multiselect 14 uses format_func=str.upper, so the backend's serialize step
-    applies str.upper to ALL stored values (including user-entered free-form strings).
-    After a rerun raw_values will contain the uppercased form (e.g. "MANGO", not "mango"),
-    and that is what the frontend reads back for display.  Only options that are in the
-    predefined list are deserialized back to their original Python objects ("APPLE" →
-    "apple"), so session-state shows "apple" for the original option but "MANGO" / "GRAPE"
-    for the user-entered ones.
+    Note: multiselect 14 uses format_func=str.upper. The format_func is applied to
+    predefined options in the dropdown (displayed as "APPLE", "BANANA", etc.), but
+    user-entered free-form values are stored and displayed as-is (lowercase "mango",
+    "grape"). Session state shows the original Python objects for predefined options
+    (e.g. "apple") and raw strings for user-entered ones ("mango", "grape").
     """
     multiselect_elem = get_multiselect(app, "multiselect 14 - accept new options")
     input_elem = multiselect_elem.locator("input")
@@ -417,38 +415,38 @@ def test_multiselect_accept_new_options(app: Page):
     input_elem.fill("mango")
     input_elem.press("Enter")
     wait_for_app_run(app)
-    # After rerun the backend serializes "mango" → "MANGO" (format_func applied)
+    # User-entered values stay as typed (no format_func applied)
     expect(
-        multiselect_elem.get_by_test_id("stTag").filter(has_text="MANGO")
+        multiselect_elem.get_by_test_id("stTag").filter(has_text="mango")
     ).to_be_visible()
 
     # Type and add another option "grape"
     input_elem.fill("grape")
     input_elem.press("Enter")
     wait_for_app_run(app)
-    # After rerun: "grape" → "GRAPE"
     expect(
-        multiselect_elem.get_by_test_id("stTag").filter(has_text="GRAPE")
+        multiselect_elem.get_by_test_id("stTag").filter(has_text="grape")
     ).to_be_visible()
 
     # Add a third option from the predefined list (dropdown is still open after Enter)
     options_list = app.get_by_role("option")
-    # 5 elements: "Select all", "APPLE", "BANANA", "ORANGE", "CHERRY"
+    # 5 elements: "Select all", "APPLE", "BANANA", "ORANGE", "KIWI"
     expect(options_list).to_have_count(5)
     options_list.filter(has_text="APPLE").click()
     wait_for_app_run(app)
 
-    # After rerun: session state = ['MANGO', 'GRAPE', 'apple']
-    # ("APPLE" deserializes back to "apple", "MANGO"/"GRAPE" have no match)
-    expect_text(app, "value 14: ['MANGO', 'GRAPE', 'apple']")
+    # Session state: predefined "apple" deserialized back to original object,
+    # user-entered "mango"/"grape" stay as-is
+    expect_text(app, "value 14: ['mango', 'grape', 'apple']")
+    # format_func applied to predefined option in the tag display
     expect(
         multiselect_elem.get_by_test_id("stTag").filter(has_text="APPLE")
     ).to_be_visible()
     expect(
-        multiselect_elem.get_by_test_id("stTag").filter(has_text="GRAPE")
+        multiselect_elem.get_by_test_id("stTag").filter(has_text="grape")
     ).to_be_visible()
     expect(
-        multiselect_elem.get_by_test_id("stTag").filter(has_text="MANGO")
+        multiselect_elem.get_by_test_id("stTag").filter(has_text="mango")
     ).to_be_visible()
 
     # Try to add a fourth option - max_selections=3 prevents it
@@ -458,16 +456,15 @@ def test_multiselect_accept_new_options(app: Page):
     input_elem.fill("berries")
     input_elem.press("Enter")
     wait_for_app_run(app)
-    expect_text(app, "value 14: ['MANGO', 'GRAPE', 'apple']")
+    expect_text(app, "value 14: ['mango', 'grape', 'apple']")
 
     # Remove one option and verify we can then add another
-    del_from_multiselect(app, "multiselect 14 - accept new options", "MANGO")
+    del_from_multiselect(app, "multiselect 14 - accept new options", "mango")
 
     input_elem.fill("kiwi")
     input_elem.press("Enter")
     wait_for_app_run(app)
-    # "kiwi" → "KIWI" after format_func; "GRAPE" stays "GRAPE"; "APPLE" → "apple"
-    expect_text(app, "value 14: ['GRAPE', 'apple', 'KIWI']")
+    expect_text(app, "value 14: ['grape', 'apple', 'kiwi']")
 
 
 def test_multiselect_preset_session_state(app: Page):

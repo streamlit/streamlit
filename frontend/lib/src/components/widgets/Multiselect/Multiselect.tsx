@@ -447,6 +447,23 @@ const Multiselect: FC<Props> = props => {
         e.preventDefault()
         return
       }
+      // When max_selections is reached with acceptNewOptions, prevent RAC from
+      // processing Enter (which would commit a custom value and reopen the
+      // dropdown via onInputChange). Instead, just clear the input.
+      // stopImmediatePropagation prevents RAC's bubble-phase handler from firing.
+      if (
+        e.key === "Enter" &&
+        acceptNewOptions &&
+        maxSelections > 0 &&
+        valueRef.current.length >= maxSelections &&
+        inputValueRef.current.trim()
+      ) {
+        e.preventDefault()
+        e.nativeEvent.stopImmediatePropagation()
+        setInputValue("")
+        setFilterActive(false)
+        return
+      }
       if (
         (e.key === "ArrowDown" || e.key === "ArrowUp") &&
         !isOpenRef.current
@@ -462,7 +479,14 @@ const Multiselect: FC<Props> = props => {
         setValueWithSource({ value: [], fromUi: true })
       }
     },
-    [disabled, hasDefault, isFilterNone, setValueWithSource]
+    [
+      acceptNewOptions,
+      disabled,
+      hasDefault,
+      isFilterNone,
+      maxSelections,
+      setValueWithSource,
+    ]
   )
 
   // ── Keyboard Enter to add creatable item ──────────────────────────────────

@@ -71,15 +71,15 @@ export const StyledGroup = styled(Group)(({ theme }) => ({
 /**
  * The right-hand column holding the clear and open buttons.
  *
- * Uses `alignSelf: "flex-start"` and `minHeight` to pin the buttons to the
- * top-right corner when the tag area wraps to multiple rows, while remaining
- * vertically centred within the single-row (minElementHeight) case.
+ * Vertically centered within the group via `alignSelf: "center"` so that the
+ * buttons remain at the visual midpoint regardless of how many rows of tags
+ * are displayed, matching the BaseWeb layout.
  */
 export const StyledRightControls = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
-  alignSelf: "flex-start",
+  alignSelf: "center",
   flexShrink: 0,
   minHeight: theme.sizes.minElementHeight,
   paddingRight: theme.spacing.sm,

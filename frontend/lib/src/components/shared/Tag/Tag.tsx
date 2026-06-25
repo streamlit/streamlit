@@ -53,7 +53,7 @@ const Tag: FC<TagProps> = ({ label, onRemove, disabled }) => (
   >
     <StyledTagText title={label}>{label}</StyledTagText>
     <StyledTagRemoveIcon aria-hidden="true">
-      <Close size="0.625em" />
+      <Close size="0.75em" />
     </StyledTagRemoveIcon>
   </StyledTagButton>
 )

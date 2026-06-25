@@ -1010,8 +1010,8 @@ describe("Multiselect widget", () => {
 
       const multiSelect = screen.getByRole("combobox")
       await user.click(multiSelect)
-      // Search for options matching "option_1" (this will match option_1, option_10-19, option_100-199, etc.)
-      await user.type(multiSelect, "option_1")
+      // eslint-disable-next-line testing-library/prefer-user-event -- fireEvent avoids expensive per-keystroke re-filtering with 1000 options
+      fireEvent.change(multiSelect, { target: { value: "option_1" } })
 
       // "Select X matches" should NOT be shown for >= 1000 total options
       expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
