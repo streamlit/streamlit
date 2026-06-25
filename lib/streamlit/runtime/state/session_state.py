@@ -999,6 +999,16 @@ class SessionState:
                 )
             ):
                 self._page_scoped_widget_ids_to_reset.add(wid)
+                # If the widget was hidden on its origin page, its value is held
+                # under the user key in _old_state. The widget may never
+                # re-register on this page, so the registration-time reset would
+                # never run — drop the value now so it is not readable via
+                # st.session_state after the page switch, honoring the "page"
+                # scope guarantee. A programmatic set this run lives in
+                # _new_session_state and is intentionally left untouched.
+                user_key = wid_key_map.get(wid)
+                if user_key is not None:
+                    self._old_state.pop(user_key, None)
 
         self._new_widget_state.remove_stale_widgets(
             active_widget_ids,
