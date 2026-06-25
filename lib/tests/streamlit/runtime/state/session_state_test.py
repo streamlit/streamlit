@@ -112,6 +112,7 @@ def _create_persist_state_metadata(
     persist_state: PersistStateOption,
     value_type: str = "string_value",
     bind: BindOption = None,
+    fragment_id: str | None = None,
 ) -> WidgetMetadata:
     """Helper to create widget metadata for persist_state tests."""
     return WidgetMetadata(
@@ -121,6 +122,7 @@ def _create_persist_state_metadata(
         value_type=value_type,
         bind=bind,
         persist_state=persist_state,
+        fragment_id=fragment_id,
     )
 
 
@@ -2435,6 +2437,78 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
 
         assert result.value == "custom_value"
         assert result.value_changed is True
+
+    def test_persist_state_session_preserved_during_fragment_rerun(self) -> None:
+        """A persist_state="session" widget inside a fragment keeps its value
+        when it stops rendering during a fragment-scoped rerun.
+
+        Cleanup runs with fragment_ids_this_run set, so the widget is only a
+        stale candidate because it belongs to the running fragment. persist_state
+        must preserve it just as it would on a full rerun.
+        """
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(
+            widget_id, "session", fragment_id="frag_1"
+        )
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(fragment_ids_this_run=["frag_1"]),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            # Widget no longer rendered during this fragment-only rerun.
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+
+    def test_persist_state_none_dropped_during_fragment_rerun(self) -> None:
+        """A non-persisted widget inside the running fragment is still dropped on
+        a fragment-scoped rerun when it stops rendering (control for the
+        persisted case)."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, None, fragment_id="frag_1")
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(fragment_ids_this_run=["frag_1"]),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert "my_widget" not in self.session_state._old_state
+
+    def test_persist_state_page_kept_during_fragment_rerun_same_page(self) -> None:
+        """A persist_state="page" widget keeps its value across a fragment rerun:
+        a fragment rerun stays on the same page, so the page-scope drop must not
+        fire."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(
+            widget_id, "page", fragment_id="frag_1"
+        )
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(
+                fragment_ids_this_run=["frag_1"], page_script_hash="page_1_hash"
+            ),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+        assert widget_id not in self.session_state._page_scoped_widget_ids_to_reset
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
