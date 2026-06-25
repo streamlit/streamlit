@@ -105,8 +105,9 @@ const getProps = (extend?: Partial<Props>): Props => ({
 
 describe("MainMenu", () => {
   afterEach(() => {
-    // Unmount within act() so Floating UI's autoUpdate disconnect (which
-    // calls flushSync internally) runs inside the act boundary.
+    // Override RTL's automatic cleanup so the unmount runs inside act().
+    // Floating UI's autoUpdate disconnect calls flushSync internally,
+    // which triggers a React warning if it fires outside an act boundary.
     act(() => {
       cleanup()
     })
@@ -322,9 +323,14 @@ describe("MainMenu", () => {
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
   })
 
-  it("closes the menu when Tab is pressed", async () => {
+  it("closes the menu when Tab is pressed without returning focus to trigger", async () => {
     const props = getProps()
-    render(<MainMenu {...props} />)
+    render(
+      <>
+        <MainMenu {...props} />
+        <button data-testid="next-focusable">Next</button>
+      </>
+    )
     await openMenu()
 
     const user = userEvent.setup()
@@ -332,11 +338,18 @@ describe("MainMenu", () => {
     await user.keyboard("{Tab}")
 
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
+    // Per WAI-ARIA, Tab should let focus advance — not force it back to trigger
+    expect(screen.getByRole("button", { name: "Main menu" })).not.toHaveFocus()
   })
 
-  it("closes the menu when Shift+Tab is pressed", async () => {
+  it("closes the menu when Shift+Tab is pressed without returning focus to trigger", async () => {
     const props = getProps()
-    render(<MainMenu {...props} />)
+    render(
+      <>
+        <button data-testid="prev-focusable">Prev</button>
+        <MainMenu {...props} />
+      </>
+    )
     await openMenu()
 
     const user = userEvent.setup()
@@ -344,6 +357,8 @@ describe("MainMenu", () => {
     await user.keyboard("{Shift>}{Tab}{/Shift}")
 
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
+    // Per WAI-ARIA, Shift+Tab should let focus move back — not force it to trigger
+    expect(screen.getByRole("button", { name: "Main menu" })).not.toHaveFocus()
   })
 
   it("returns focus to menu button after Escape closes menu", async () => {
