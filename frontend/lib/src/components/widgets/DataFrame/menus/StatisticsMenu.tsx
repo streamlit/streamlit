@@ -326,15 +326,15 @@ function StatisticsMenu({
       if (anchorRef.current?.contains(target)) {
         clearClose()
         onOpenChange(true)
-      } else if (panelRef.current?.contains(target)) {
+      } else if (isOpen && panelRef.current?.contains(target)) {
         clearClose()
-      } else {
+      } else if (isOpen) {
         scheduleClose()
       }
     }
     document.addEventListener("mouseover", handleMouseOver)
     return () => document.removeEventListener("mouseover", handleMouseOver)
-  }, [clearClose, onOpenChange, scheduleClose])
+  }, [isOpen, clearClose, onOpenChange, scheduleClose])
 
   // Defensive fallback: parent ColumnMenu already guards this, but keep for safety.
   // This ensures the component renders nothing if called directly without the guard.
@@ -349,9 +349,9 @@ function StatisticsMenu({
       </StyledSubMenuAnchor>
       {isOpen && (
         <FloatingPortal>
-          {/* No tabIndex/autoFocus — intentionally omitted for this read-only panel,
-              matching the original BaseWeb implementation. Allows keyboard users to
-              navigate the parent column menu while viewing statistics. */}
+          {/* No tabIndex/autoFocus — intentionally omitted for this read-only panel.
+              Allows keyboard users to navigate the parent column menu while
+              viewing statistics. */}
           <StyledSubMenuPanel
             ref={setPanelRef}
             style={floatingStyles}

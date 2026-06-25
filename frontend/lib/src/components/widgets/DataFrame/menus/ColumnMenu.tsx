@@ -162,21 +162,15 @@ function ColumnMenu({
   // Click-outside and Escape handlers.
   useEffect(() => {
     const handlePointerDown = (e: PointerEvent): void => {
-      // Primary guard: avoid closing the parent while a sub-menu is open.
-      // The sub-menu panels live in their own FloatingPortals, outside panelRef.
-      if (formatMenuOpen || statsMenuOpen) return
-      // Fallback guard: if a sub-menu panel is still in the DOM (e.g. React
-      // hasn't flushed a pending setFormatMenuOpen(false) yet), don't close the
-      // column menu when the pointer is inside that panel. This handles a webkit
-      // race where the close-timer state update races the pointerdown event.
       const target = e.target as Element
+      // Don't close when clicking inside a sub-menu portal.
       if (
         target.closest('[data-testid="stDataFrameColumnFormattingMenu"]') ||
         target.closest('[data-testid="stDataFrameStatisticsMenu"]')
       ) {
         return
       }
-      if (!panelRef.current?.contains(e.target as Node)) onCloseMenu()
+      if (!panelRef.current?.contains(target)) onCloseMenu()
     }
 
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -192,7 +186,7 @@ function ColumnMenu({
       document.removeEventListener("pointerdown", handlePointerDown, true)
       document.removeEventListener("keydown", handleKeyDown, true)
     }
-  }, [formatMenuOpen, statsMenuOpen, onCloseMenu])
+  }, [onCloseMenu])
 
   const handleCopyNameToClipboard = useCallback((): void => {
     copyToClipboard(column.title)
@@ -203,8 +197,7 @@ function ColumnMenu({
       {/*
        * Invisible fixed-position div that serves as the floating-ui reference.
        * Its position (top/left from canvas coords) determines where the menu
-       * appears. We repurpose the existing BaseWeb anchor pattern as a real
-       * DOM ref for floating-ui, so autoUpdate works without VirtualElement.
+       * appears. A real DOM ref lets autoUpdate work without VirtualElement.
        */}
       <div
         ref={refs.setReference}

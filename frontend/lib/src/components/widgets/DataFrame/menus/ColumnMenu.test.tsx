@@ -226,6 +226,30 @@ describe("DataFrame ColumnMenu", () => {
     })
   })
 
+  describe("dismiss behavior", () => {
+    it("calls onCloseMenu when Escape is pressed", async () => {
+      render(<ColumnMenu {...defaultProps} />)
+
+      await userEvent.keyboard("{Escape}")
+      expect(defaultProps.onCloseMenu).toHaveBeenCalled()
+    })
+
+    it("calls onCloseMenu when clicking outside the menu", async () => {
+      render(<ColumnMenu {...defaultProps} />)
+
+      await userEvent.click(document.body)
+      expect(defaultProps.onCloseMenu).toHaveBeenCalled()
+    })
+
+    it("does not call onCloseMenu when clicking inside the menu", async () => {
+      render(<ColumnMenu {...defaultProps} />)
+
+      const menu = screen.getByTestId("stDataFrameColumnMenu")
+      await userEvent.click(menu)
+      expect(defaultProps.onCloseMenu).not.toHaveBeenCalled()
+    })
+  })
+
   describe("autosize functionality", () => {
     it("renders 'Autosize' when onAutosize is defined", () => {
       render(<ColumnMenu {...defaultProps} />)
