@@ -405,17 +405,15 @@ class KeyIdMapper:
 class PersistedWidgetTracker:
     """Tracks persist_state bookkeeping for keyed widgets.
 
-    Owns the rules for keeping a widget's value when it stops rendering, so the
-    logic lives in one place instead of being spread across SessionState.
-    "session" scope always preserves the value. "page" scope preserves it only
-    while the user stays on the widget's page and must be actively dropped on a
-    page switch — including telling a remounted widget to ignore a value the
-    frontend may resend for the reused id.
+    "session" scope always preserves a widget's value when it stops rendering.
+    "page" scope preserves it only while the user stays on the widget's page, and
+    drops it on a page switch — including telling a remounted widget to ignore a
+    value the frontend may resend for the reused id.
 
-    This tracker only records policy/metadata; SessionState performs the actual
-    value mutations. bind="query-params" is a separate feature that takes
-    precedence over "page" scope; the tracker is unaware of it and the caller
-    passes ``is_bound`` so bound widgets skip the drops.
+    The tracker only records policy; SessionState performs the actual value
+    mutations. bind="query-params" takes precedence over "page" scope: the
+    tracker is unaware of it, and the caller passes ``is_bound`` so bound widgets
+    skip the drops.
     """
 
     # Widget id -> scope it registered with. A durable snapshot that survives the
