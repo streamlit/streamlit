@@ -14,12 +14,12 @@ small "tip" band at the foot of the error offers a one-click install right at th
 moment of pain.
 
 This is the second of two adoption surfaces for Streamlit's agent skills. The first
-is the proactive startup **toast** ([#15473](https://github.com/streamlit/streamlit/pull/15473)),
+is the proactive startup **toast** ([PR 15473](https://github.com/streamlit/streamlit/pull/15473)),
 already approved. Both reuse the same install backend and the
 [`streamlit skills` CLI](../2026-05-11-streamlit-skills-cli/product-spec.md) under
 the hood. This spec covers only the in-error callout — a "somewhat significant
 user-facing change" that Lukas and Johannes asked to write up so it has a discussion
-space outside the code review ([PR #15693](https://github.com/streamlit/streamlit/pull/15693)).
+space outside the code review ([PR 15693](https://github.com/streamlit/streamlit/pull/15693)).
 
 ## Problem
 
