@@ -145,13 +145,15 @@ data = load_data()  # Expensive work
 placeholder.dataframe(data)  # Replaces the skeleton with content
 ```
 
-Context manager (like `st.spinner`): the skeleton appears while the `with` block runs (after a short delay) and clears automatically when the block exits. Any `st.*` calls inside the block render in the parent container and remain visible after the skeleton clears.
+Context manager (like `st.spinner`, **recommended**): the skeleton appears while the `with` block runs (after a short delay) and clears automatically when the block exits. Any `st.*` calls inside the block render in the parent container and remain visible after the skeleton clears.
 
 ```python
 with st.skeleton(height=200):
     data = expensive_operation()
 st.success("Data loaded!")
 ```
+
+Prefer context manager mode; use standalone mode only when you need to reserve a slot and fill it later (like `st.empty`).
 
 By default (`height=None`), the skeleton uses the standard element height. Pass an integer for a fixed pixel height, or `"stretch"` to fill a parent container with a bounded height.
 
