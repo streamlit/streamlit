@@ -97,6 +97,12 @@ class BackgroundRefreshCoordinator:
                     self._threading_available = False
                     self._in_flight.discard(refresh_key)
                     run_synchronously = True
+                    _LOGGER.warning(
+                        "Unable to start a background cache refresh thread; "
+                        "refreshing cached values synchronously instead. This can "
+                        "happen in environments that restrict thread creation.",
+                        exc_info=True,
+                    )
             else:
                 run_synchronously = True
 

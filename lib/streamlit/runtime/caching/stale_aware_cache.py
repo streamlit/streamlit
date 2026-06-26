@@ -99,6 +99,8 @@ class StaleAwareCache(Generic[K, V]):
             An optional function called with an entry's value when it is removed
             from the cache via LRU eviction, ``safe_del``, or ``clear``.
         """
+        # The underlying cache stores ``_StaleAwareEntry[V]`` values internally
+        # (wrapping each value with its expiry), not the bare ``V`` values.
         self._cache: _ReleasingLRUCache[K, V] = _ReleasingLRUCache(maxsize, on_release)
         self._ttl = ttl
         self._timer = timer
