@@ -139,6 +139,55 @@ def test_sync_fallback_when_threads_unavailable(
     assert ran_on == [main_thread, main_thread]
 
 
+def test_sync_fallback_deduplicates_in_flight_key(
+    coordinator: BackgroundRefreshCoordinator,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A duplicate schedule is a no-op while a synchronous fallback refresh for the
+    same key is still running, then runs again once the key is cleared.
+    """
+
+    class _FailingExecutor:
+        def submit(self, *args: object, **kwargs: object) -> None:
+            raise RuntimeError("can't start new thread")
+
+    monkeypatch.setattr(coordinator, "_get_executor", lambda: _FailingExecutor())
+
+    started = threading.Event()
+    release = threading.Event()
+    call_count = [0]
+
+    def slow_refresh() -> None:
+        call_count[0] += 1
+        started.set()
+        release.wait(timeout=2)
+
+    # Run the synchronous refresh on a worker thread so the main thread can attempt
+    # a duplicate schedule while the first one is still in flight.
+    worker = threading.Thread(target=lambda: coordinator.schedule("key", slow_refresh))
+    worker.start()
+    assert started.wait(timeout=2)
+
+    # The key is in flight; scheduling it again is deduplicated (no second run).
+    coordinator.schedule("key", slow_refresh)
+    assert call_count[0] == 1
+
+    # Let the first refresh finish; the key is cleared afterwards.
+    release.set()
+    worker.join(timeout=2)
+    assert "key" not in coordinator._in_flight
+
+    # With the key cleared, a later schedule for it runs again.
+    release.clear()
+    started.clear()
+    worker2 = threading.Thread(target=lambda: coordinator.schedule("key", slow_refresh))
+    worker2.start()
+    assert started.wait(timeout=2)
+    release.set()
+    worker2.join(timeout=2)
+    assert call_count[0] == 2
+
+
 def test_shutdown_resets_state(
     coordinator: BackgroundRefreshCoordinator,
 ) -> None:

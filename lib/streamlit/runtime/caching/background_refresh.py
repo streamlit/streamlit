@@ -93,9 +93,9 @@ class BackgroundRefreshCoordinator:
                     executor.submit(self._run, refresh_key, refresh_fn)
                 except RuntimeError:
                     # Thread creation failed (e.g. a restricted environment).
-                    # Fall back to synchronous execution from now on.
+                    # Fall back to synchronous execution from now on. Keep the key
+                    # in ``_in_flight``; the synchronous run below clears it.
                     self._threading_available = False
-                    self._in_flight.discard(refresh_key)
                     run_synchronously = True
                     _LOGGER.warning(
                         "Unable to start a background cache refresh thread; "
@@ -104,11 +104,19 @@ class BackgroundRefreshCoordinator:
                         exc_info=True,
                     )
             else:
+                # Reserve the key so concurrent stale hits are deduplicated even on
+                # the synchronous fallback path; the synchronous run below clears it.
+                self._in_flight.add(refresh_key)
                 run_synchronously = True
 
         if run_synchronously:
-            # Run outside the lock so we never hold it while executing user code.
-            refresh_fn()
+            # Run outside the lock so we never hold it while executing user code,
+            # and always clear the in-flight marker afterwards (mirrors ``_run``).
+            try:
+                refresh_fn()
+            finally:
+                with self._lock:
+                    self._in_flight.discard(refresh_key)
 
     def _run(self, refresh_key: Any, refresh_fn: Callable[[], None]) -> None:
         try:
