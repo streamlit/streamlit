@@ -129,6 +129,10 @@ async function writeCsv(
  * @param getCellContent - The cell content getter compatible with glide-data-grid.
  * @param columns - The columns of the table.
  * @param numRows - The number of rows of the current state.
+ * @param enforceDownloadInNewTab - Whether to force the download to open in a new browser tab.
+ * @param downloadFilename - Optional filename for the exported CSV. If the
+ *   value does not end with `.csv` (case-insensitive), the extension is added
+ *   automatically.
  *
  * @returns a callback to trigger the data download as CSV.
  */
@@ -136,11 +140,17 @@ function useDataExporter(
   getCellContent: DataEditorProps["getCellContent"],
   columns: BaseColumn[],
   numRows: number,
-  enforceDownloadInNewTab: boolean
+  enforceDownloadInNewTab: boolean,
+  downloadFilename?: string
 ): DataExporterReturn {
   const exportToCsv = useCallback(async () => {
     const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
     const suggestedName = `${timestamp}_export.csv`
+    const finalFilename = downloadFilename
+      ? downloadFilename.toLowerCase().endsWith(".csv")
+        ? downloadFilename
+        : `${downloadFilename}.csv`
+      : suggestedName
     try {
       // Lazy import to prevent weird breakage in some niche cases
       // (e.g. usage within the replay.io browser). The package works well
@@ -150,7 +160,7 @@ function useDataExporter(
       const nativeFileSystemAdapter =
         await import("native-file-system-adapter")
       const fileHandle = await nativeFileSystemAdapter.showSaveFilePicker({
-        suggestedName,
+        suggestedName: finalFilename,
         types: [{ accept: { "text/csv": [".csv"] } }],
         excludeAcceptAllOption: false,
       })
@@ -195,7 +205,7 @@ function useDataExporter(
         const link = createDownloadLinkElement({
           enforceDownloadInNewTab,
           url,
-          filename: suggestedName,
+          filename: finalFilename,
         })
 
         link.style.display = "none"
@@ -208,7 +218,13 @@ function useDataExporter(
         LOG.error("Failed to export data as CSV", e)
       }
     }
-  }, [columns, numRows, getCellContent, enforceDownloadInNewTab])
+  }, [
+    columns,
+    numRows,
+    getCellContent,
+    enforceDownloadInNewTab,
+    downloadFilename,
+  ])
 
   return {
     // eslint-disable-next-line @typescript-eslint/no-misused-promises

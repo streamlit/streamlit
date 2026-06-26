@@ -191,6 +191,60 @@ describe("useDataExporter hook", () => {
     })
   })
 
+  it("uses provided downloadFilename with .csv suffix when missing", async () => {
+    const { result } = renderHook(() => {
+      return useDataExporter(
+        getCellContentMock,
+        MOCK_COLUMNS,
+        NUM_ROWS,
+        false,
+        "monthly-report"
+      )
+    })
+
+    if (typeof result.current.exportToCsv !== "function") {
+      throw new Error("exportToCsv is expected to be a function")
+    }
+
+    result.current.exportToCsv()
+
+    await waitFor(() => {
+      expect(showSaveFilePicker).toBeCalledTimes(1)
+    })
+    expect(showSaveFilePicker).toBeCalledWith({
+      excludeAcceptAllOption: false,
+      suggestedName: "monthly-report.csv",
+      types: [{ accept: { "text/csv": [".csv"] } }],
+    })
+  })
+
+  it("uses provided downloadFilename unchanged when it already includes .csv", async () => {
+    const { result } = renderHook(() => {
+      return useDataExporter(
+        getCellContentMock,
+        MOCK_COLUMNS,
+        NUM_ROWS,
+        false,
+        "monthly-report.csv"
+      )
+    })
+
+    if (typeof result.current.exportToCsv !== "function") {
+      throw new Error("exportToCsv is expected to be a function")
+    }
+
+    result.current.exportToCsv()
+
+    await waitFor(() => {
+      expect(showSaveFilePicker).toBeCalledTimes(1)
+    })
+    expect(showSaveFilePicker).toBeCalledWith({
+      excludeAcceptAllOption: false,
+      suggestedName: "monthly-report.csv",
+      types: [{ accept: { "text/csv": [".csv"] } }],
+    })
+  })
+
   it("does nothing when user cancels file picker (AbortError)", async () => {
     // Mock the file picker to throw an AbortError
     vi.mocked(showSaveFilePicker).mockRejectedValueOnce(

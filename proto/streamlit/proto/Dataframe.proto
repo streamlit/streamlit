@@ -55,6 +55,10 @@ message Dataframe {
   // so a single widget ID per column is sufficient to handle clicks on any row.
   map<string, string> button_click_widgets = 13;
 
+  // Optional filename to use for CSV downloads from the DataFrame toolbar.
+  // If not set, the frontend will generate a timestamped default filename.
+  optional string download_filename = 14;
+
   // Available editing modes:
   enum EditingMode {
     READ_ONLY = 0; // Read-only table.

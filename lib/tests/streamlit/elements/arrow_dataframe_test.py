@@ -170,6 +170,14 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.placeholder == "-"
 
+    def test_download_filename_parameter(self):
+        """Test that a download filename is stored in the dataframe proto."""
+        st.dataframe(pd.DataFrame(), download_filename="report")
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.HasField("download_filename")
+        assert proto.download_filename == "report"
+
     def test_uuid(self):
         df = mock_data_frame()
         styler = df.style

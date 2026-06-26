@@ -491,6 +491,7 @@ class ArrowMixin:
         selection_default: DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        download_filename: str | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -510,6 +511,7 @@ class ArrowMixin:
         selection_default: DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        download_filename: str | None = None,
     ) -> DataframeState: ...
 
     @gather_metrics("dataframe")
@@ -529,6 +531,7 @@ class ArrowMixin:
         selection_default: DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        download_filename: str | None = None,
     ) -> DeltaGenerator | DataframeState:
         """Display a dataframe as an interactive table.
 
@@ -744,6 +747,14 @@ class ArrowMixin:
             leave a cell empty, use an empty string (``""``). Other common
             values are ``"null"``, ``"NaN"`` and ``"-"``.
 
+        download_filename : str or None
+            Optional filename to use when the user exports the dataframe as
+            CSV. If provided, Streamlit will suggest this filename in the
+            download dialog. If the filename does not end with
+            ``".csv"`` (case-insensitive), Streamlit will append the extension
+            automatically. If ``None`` (default), Streamlit generates a
+            timestamp-based default filename.
+
         Returns
         -------
         element or dict
@@ -937,6 +948,10 @@ class ArrowMixin:
 
         if placeholder is not None:
             proto.placeholder = placeholder
+
+        # Optional: set download filename for CSV export from the frontend toolbar
+        if download_filename is not None:
+            proto.download_filename = download_filename
 
         proto.editing_mode = DataframeProto.EditingMode.READ_ONLY
 

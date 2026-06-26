@@ -504,7 +504,10 @@ function DataFrame({
     getCellContent,
     columns,
     numRows,
-    enforceDownloadInNewTab
+    enforceDownloadInNewTab,
+    // Optional filename provided by the Python API (proto field: download_filename)
+    // Falls back to a timestamped suggestion when undefined.
+    element.downloadFilename
   )
 
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
