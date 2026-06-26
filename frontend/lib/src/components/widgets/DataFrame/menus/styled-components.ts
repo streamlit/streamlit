@@ -164,7 +164,6 @@ export const StyledColumnVisibilityMenuContent = styled.div(({ theme }) => ({
 /** Text label for a checkbox row. */
 export const StyledCheckboxLabel = styled.span(({ theme }) => ({
   lineHeight: theme.lineHeights.small,
-  paddingLeft: theme.spacing.sm,
   color: theme.colors.bodyText,
   fontSize: theme.fontSizes.sm,
   fontWeight: theme.fontWeights.normal,

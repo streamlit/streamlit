@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
@@ -119,6 +119,37 @@ describe("ButtonActionMenu", () => {
     expect(onCloseMenu).toHaveBeenCalled()
     // Escape should only dismiss the menu, not select an action:
     expect(onSelectAction).not.toHaveBeenCalled()
+  })
+
+  it("closes the menu when clicking outside the menu panel", async () => {
+    const onCloseMenu = vi.fn()
+    render(<ButtonActionMenu {...defaultProps} onCloseMenu={onCloseMenu} />)
+
+    await userEvent.click(document.body)
+
+    expect(onCloseMenu).toHaveBeenCalled()
+  })
+
+  it("does not close when clicking the menu target anchor", () => {
+    const onCloseMenu = vi.fn()
+    render(<ButtonActionMenu {...defaultProps} onCloseMenu={onCloseMenu} />)
+
+    const menuTarget = screen.getByTestId("stDataFrameButtonActionMenuTarget")
+    // The anchor has pointer-events:none, so userEvent.click refuses to interact with it.
+    // Use fireEvent to test the capture-phase exclusion logic directly.
+    // eslint-disable-next-line testing-library/prefer-user-event
+    fireEvent.pointerDown(menuTarget)
+
+    expect(onCloseMenu).not.toHaveBeenCalled()
+  })
+
+  it("closes the menu when scrolling outside the menu panel", () => {
+    const onCloseMenu = vi.fn()
+    render(<ButtonActionMenu {...defaultProps} onCloseMenu={onCloseMenu} />)
+
+    fireEvent.scroll(document.body)
+
+    expect(onCloseMenu).toHaveBeenCalled()
   })
 
   it.each(["{Enter}", " "])(

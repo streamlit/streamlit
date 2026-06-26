@@ -183,10 +183,7 @@ function ButtonActionMenu({
           ref={setFloatingCallback}
           style={floatingStyles}
           tabIndex={-1}
-          autoFocus
           data-testid="stDataFrameButtonActionMenu"
-          role="dialog"
-          aria-label="Button action menu"
         >
           <StyledMenuList role="menu">
             {actions.map((label, index) => {
