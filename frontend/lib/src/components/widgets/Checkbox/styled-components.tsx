@@ -115,7 +115,7 @@ export const StyledCheckboxIndicator =
             ? hasLightBackgroundColor(theme)
               ? theme.colors.bgColor
               : theme.colors.bodyText
-            : "white",
+            : theme.colors.white,
           strokeWidth: "2.5px",
           strokeLinecap: "round",
           strokeLinejoin: "round",
