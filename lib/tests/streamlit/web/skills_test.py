@@ -1503,3 +1503,274 @@ class TestIsStreamlitOwnedSymlinkErrorPaths:
 
         # Should return True based on name check
         assert skills._is_streamlit_owned_symlink(link, {"developing-with-streamlit"})
+
+
+class TestGenerateGitignoreSnippetEdgeCases:
+    """Edge cases for _generate_gitignore_snippet."""
+
+    def test_target_dir_outside_project_root_uses_absolute_path(
+        self, tmp_path: Path
+    ) -> None:
+        """Falls back to absolute path when target_dir is not relative to project_root."""
+        project_root = tmp_path / "project"
+        unrelated_dir = tmp_path / "elsewhere" / "skills"
+
+        result = skills._generate_gitignore_snippet(
+            ["my-skill"], [unrelated_dir], project_root
+        )
+
+        # Snippet should contain the absolute path of the unrelated dir
+        assert f"{unrelated_dir}/my-skill/" in result
+
+
+class TestGetDisplayPath:
+    """Tests for _get_display_path."""
+
+    def test_returns_relative_path_when_under_base(self, tmp_path: Path) -> None:
+        """Returns the path relative to base_path when nested."""
+        target = tmp_path / "sub" / "file"
+        result = skills._get_display_path(target, tmp_path)
+        # Use as_posix-equivalent comparison to avoid OS-specific separator issues
+        assert result.parts[-2:] == ("sub", "file")
+
+    def test_returns_tilde_prefixed_path_when_under_home(self, tmp_path: Path) -> None:
+        """Returns ~/<rel> when use_tilde=True and target is under base."""
+        target = tmp_path / "sub" / "file"
+        result = skills._get_display_path(target, tmp_path, use_tilde=True)
+        assert result.parts[0] == "~"
+        assert result.parts[-2:] == ("sub", "file")
+
+    def test_returns_absolute_path_when_outside_base(self, tmp_path: Path) -> None:
+        """Returns the original absolute target when not under base."""
+        base = tmp_path / "base"
+        target = tmp_path / "elsewhere" / "file"
+        result = skills._get_display_path(target, base)
+        assert result == target
+
+    def test_returns_absolute_path_when_outside_base_with_tilde(
+        self, tmp_path: Path
+    ) -> None:
+        """ValueError fallback returns the original path even when use_tilde=True."""
+        base = tmp_path / "base"
+        target = tmp_path / "elsewhere" / "file"
+        result = skills._get_display_path(target, base, use_tilde=True)
+        assert result == target
+
+
+class TestAreSkillsInstalledErrorHandling:
+    """Tests for OSError handling inside the directory-iteration loop."""
+
+    def test_continues_when_skill_path_check_errors(self, tmp_path: Path) -> None:
+        """Continues to next candidate dir when is_symlink/exists raise OSError."""
+        first_dir = tmp_path / "first" / ".agents" / "skills"
+        second_dir = tmp_path / "second" / ".agents" / "skills"
+        (second_dir / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+
+        # Raise OSError when checking the first (nonexistent) candidate so the
+        # loop must continue to the second (existing) one. Returning False for
+        # all other paths is safe because none of them are real symlinks.
+        first_skill = first_dir / skills._GLOBAL_SKILL_NAME
+
+        def patched_is_symlink(self: Path) -> bool:
+            if self == first_skill:
+                raise OSError("Simulated filesystem failure")
+            return False
+
+        with (
+            patch.object(skills, "_find_project_root", return_value=tmp_path),
+            patch.object(
+                skills,
+                "_get_project_target_dirs",
+                return_value=[first_dir, second_dir],
+            ),
+            patch.object(skills, "_get_global_target_dirs", return_value=[]),
+            patch("pathlib.Path.is_symlink", patched_is_symlink),
+        ):
+            assert skills.are_skills_installed() is True
+
+
+class TestConfirmProjectInstallationEdgeCases:
+    """Edge cases for _confirm_project_installation."""
+
+    def test_target_dir_outside_project_root_uses_absolute_path(
+        self, tmp_path: Path
+    ) -> None:
+        """Shows absolute path when target_dir is not relative to project_root."""
+        project_root = tmp_path / "project"
+        unrelated_dir = tmp_path / "elsewhere" / "skills"
+
+        with patch("click.confirm", return_value=True) as mock_confirm:
+            result = skills._confirm_project_installation(
+                project_root=project_root,
+                skills=["my-skill"],
+                target_dirs=[unrelated_dir],
+            )
+
+        assert result is True
+        mock_confirm.assert_called_once()
+
+
+class TestConfirmGlobalInstallationEdgeCases:
+    """Edge cases for _confirm_global_installation."""
+
+    def test_target_dir_outside_home_uses_absolute_path(self, tmp_path: Path) -> None:
+        """Shows absolute path when target_dir is not relative to home."""
+        home = tmp_path / "home"
+        home.mkdir()
+        unrelated_dir = tmp_path / "elsewhere" / "skills"
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch("click.confirm", return_value=True),
+        ):
+            result = skills._confirm_global_installation(target_dirs=[unrelated_dir])
+
+        assert result is True
+
+
+class TestInstallProjectSkillsNoFallback:
+    """Tests for _install_project_skills with fallback_to_global=False."""
+
+    @pytest.mark.parametrize(
+        ("symlinks_supported", "install_skill_symlink_return"),
+        [
+            (False, True),
+            (True, False),
+        ],
+        ids=["symlinks_unsupported_globally", "individual_symlink_failed"],
+    )
+    def test_raises_clickexception_without_fallback(
+        self,
+        tmp_path: Path,
+        mock_source_skills_dir: Path,
+        symlinks_supported: bool,
+        install_skill_symlink_return: bool,
+    ) -> None:
+        """Raises ClickException when symlinks are unavailable and fallback disabled."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch.object(
+                skills, "_symlinks_supported", return_value=symlinks_supported
+            ),
+            patch.object(
+                skills,
+                "_install_skill_symlink",
+                return_value=install_skill_symlink_return,
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            with pytest.raises(click.ClickException, match="Symlinks not supported"):
+                skills._install_project_skills(yes=True, fallback_to_global=False)
+
+
+class TestInstallProjectSkillsFallbackErrors:
+    """Tests for fallback-to-global error handling in _install_project_skills."""
+
+    @pytest.mark.parametrize(
+        ("global_install_side_effect", "match"),
+        [
+            (click.exceptions.Abort(), "Installation incomplete"),
+            (click.ClickException("download failure"), "download failure"),
+        ],
+        ids=["user_aborted_global_install", "global_install_click_exception"],
+    )
+    def test_fallback_to_global_surfaces_errors_as_clickexception(
+        self,
+        tmp_path: Path,
+        mock_source_skills_dir: Path,
+        global_install_side_effect: BaseException,
+        match: str,
+    ) -> None:
+        """Errors from the global fallback install surface as a ClickException."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch.object(skills, "_symlinks_supported", return_value=True),
+            patch.object(skills, "_install_skill_symlink", return_value=False),
+            patch.object(
+                skills,
+                "_install_global_skills",
+                side_effect=global_install_side_effect,
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            with pytest.raises(click.ClickException, match=match):
+                skills._install_project_skills(yes=True)
+
+
+class TestInstallSkillCopyTempCleanup:
+    """Tests for temp file cleanup paths in _install_skill_copy."""
+
+    def test_removes_leftover_temp_before_copying(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Removes leftover temp directory from a previous failed copy."""
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        # Existing target directory with different content forces use of the
+        # temp-swap path.
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "stale-file.txt").write_text("old", encoding="utf-8")
+
+        # Leftover temp directory from a previous failed run.
+        leftover_temp = target_dir / ".developing-with-streamlit.tmp"
+        leftover_temp.mkdir()
+        (leftover_temp / "leftover.txt").write_text("leftover", encoding="utf-8")
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert len(result.installed) == 1
+        # New target must replace the old one and contain only the source content.
+        assert (target / "SKILL.md").is_file()
+        assert not (target / "stale-file.txt").exists()
+        # Temp directory must be cleaned up after the swap.
+        assert not leftover_temp.exists()
+
+
+class TestInstallGlobalSkillsCleanup:
+    """Tests for temp directory cleanup at the end of _install_global_skills."""
+
+    def test_cleans_up_streamlit_skills_prefixed_temp_dir(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Removes temp directories that follow the streamlit-skills- naming convention."""
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        # Simulate the layout created by _download_global_skill:
+        # /tmp/streamlit-skills-XXXX/archive_root/<skill_name>/SKILL.md
+        temp_root = tmp_path / "streamlit-skills-test"
+        archive_root = temp_root / "archive-root"
+        skill_dir = archive_root / "developing-with-streamlit"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("# Test Skill\n", encoding="utf-8")
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(skills, "_download_global_skill", return_value=skill_dir),
+        ):
+            skills._install_global_skills(yes=True)
+
+        # The temp root was cleaned up because its name starts with
+        # "streamlit-skills-".
+        assert not temp_root.exists()

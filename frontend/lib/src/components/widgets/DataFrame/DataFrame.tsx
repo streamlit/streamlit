@@ -1206,6 +1206,8 @@ function DataFrame({
             top={showMenu.headerBounds.y + showMenu.headerBounds.height}
             left={showMenu.headerBounds.x + showMenu.headerBounds.width}
             column={originalColumns[showMenu.columnIdx]}
+            data={data}
+            isEditable={editingMode !== DataframeProto.EditingMode.READ_ONLY}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
               canSort

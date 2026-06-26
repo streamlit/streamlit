@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.conftest import rerun_app, wait_for_app_loaded, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 26
+NUM_SELECTBOXES = 27
 
 
 def get_selectbox_input(
@@ -159,6 +159,24 @@ def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFuncti
     selection_dropdown.get_by_role("option").nth(1).click()
     # Check that selection worked:
     expect_markdown(app, "value 4: e2e/scripts/st_warning.py")
+
+
+def test_keeps_selection_with_identity_dependent_format_func(app: Page):
+    """Test that custom-object selections persist with an identity-dependent format_func.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15618. The
+    option class is redefined every rerun, so a format_func that looks options up
+    in a dict used to raise on the stored value and revert the selection.
+    """
+    label = "selectbox 24 (custom objects with identity-dependent format_func)"
+    select_selectbox_option(app, label, "II (two)")
+
+    # The selection must reflect the second option, not revert to the first.
+    expect_markdown(app, "value 24: two")
+
+    # It must also survive a fresh rerun (where the bug originally triggered).
+    rerun_app(app)
+    expect_markdown(app, "value 24: two")
 
 
 def test_handles_option_selection_via_typing(app: Page):

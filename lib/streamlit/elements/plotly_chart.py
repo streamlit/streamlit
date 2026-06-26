@@ -440,7 +440,7 @@ class PlotlyMixin:
         .. Important::
             You must install ``plotly>=4.0.0`` to use this command. Your app's
             performance may be enhanced by installing ``orjson`` as well. You
-            can install all charting dependencies (except Bokeh) as an extra
+            can install all charting dependencies as an extra
             with Streamlit:
 
             .. code-block:: shell
@@ -757,5 +757,5 @@ class PlotlyMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
