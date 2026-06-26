@@ -802,6 +802,35 @@ describe("TextInput widget", () => {
     expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
   })
 
+  it("deregisters the form submit validator on unmount", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      { formId: "form", validateRegex: "^[a-z]+$" },
+      { widgetMgr }
+    )
+    const { unmount } = render(<TextInput {...props} />)
+
+    // Enter an invalid value so the registered validator blocks submission.
+    await user.type(screen.getByRole("textbox"), "123")
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+    // After unmount, the validator must be removed so it no longer blocks the
+    // form (otherwise a stale validator would permanently break submission).
+    unmount()
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+  })
+
   it("blocks enter-to-submit when the form value is invalid", async () => {
     const user = userEvent.setup()
     const sendRerunBackMsg = vi.fn()

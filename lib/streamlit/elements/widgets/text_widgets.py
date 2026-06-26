@@ -306,6 +306,11 @@ class TextWidgetsMixin:
             fails. Providing a custom message is recommended, since generic
             validation messages are less helpful to users.
 
+            For example, pass ``r"[^@\s]+@[^@\s]+\.[^@\s]+"`` to require an
+            email-like value, or
+            ``(r"\d{3}-\d{3}-\d{4}", "Use the format 555-123-4567.")`` to
+            require a phone number and show a custom error message.
+
             Validation runs only when the user tries to submit a value (on
             blur, when pressing Enter, or on form submission). Invalid values
             are not submitted, and empty inputs bypass validation.
