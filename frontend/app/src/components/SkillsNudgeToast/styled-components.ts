@@ -99,20 +99,3 @@ export const StyledSkillsNudgeActions = styled.div(({ theme }) => ({
   gap: theme.spacing.lg,
   marginTop: theme.spacing.twoXS,
 }))
-
-/**
- * Quiet text-link button used for the secondary "Don't show again" dismiss
- * action, matching the native toast "view more" affordance.
- */
-export const StyledSkillsNudgeLink = styled.button(({ theme }) => ({
-  ...nudgeButtonBase(theme),
-  fontSize: theme.fontSizes.sm,
-  lineHeight: theme.lineHeights.base,
-  fontFamily: "inherit",
-  color: theme.colors.fadedText60,
-  whiteSpace: "nowrap",
-  "&:disabled": {
-    color: theme.colors.fadedText40,
-    cursor: "not-allowed",
-  },
-}))

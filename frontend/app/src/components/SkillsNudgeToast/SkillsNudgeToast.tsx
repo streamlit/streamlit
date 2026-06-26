@@ -38,7 +38,6 @@ import {
   StyledSkillsNudgeCard,
   StyledSkillsNudgeClose,
   StyledSkillsNudgeHeading,
-  StyledSkillsNudgeLink,
 } from "./styled-components"
 
 /** How long the success confirmation stays visible before auto-dismissing. */
@@ -209,13 +208,14 @@ function SkillsNudgeToast({
                       ? "Retry"
                       : "Install"}
                 </BaseButton>
-                <StyledSkillsNudgeLink
-                  type="button"
+                <BaseButton
+                  kind={BaseButtonKind.TERTIARY}
+                  size={BaseButtonSize.SMALL}
                   onClick={handleDontShowAgain}
                   disabled={isInstalling}
                 >
                   Don't show again
-                </StyledSkillsNudgeLink>
+                </BaseButton>
               </StyledSkillsNudgeActions>
             </>
           )}
