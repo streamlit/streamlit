@@ -46,7 +46,10 @@ if st.button("Run skeleton context manager (instant)"):
 with st.container(key="delay_cm_container"):
     if st.button("Run skeleton context manager (with delay)"):
         with st.skeleton(height=150):
-            time.sleep(1)
+            # Sleep well beyond the 0.5s delay threshold so the transient
+            # skeleton stays visible long enough for slower browsers (e.g.
+            # webkit on CI) to reliably observe it, mirroring st_spinner.py.
+            time.sleep(2)
         st.success("Data loaded after delay!")
 
 # Context manager - with exception
