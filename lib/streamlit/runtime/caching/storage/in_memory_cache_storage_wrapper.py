@@ -124,8 +124,9 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         try:
             return self._read_from_mem_cache_with_status(key)
         except CacheStorageKeyNotFoundError:
-            # No in-memory entry: fall back to the persistence layer. Persistence
-            # is disabled when background refresh is enabled, but we keep this for
+            # No in-memory entry: fall back to the persistence layer. Combining
+            # persist with background refresh is rejected at decoration time, so
+            # this fall-through is effectively unreachable; we keep it for
             # completeness/symmetry with ``get``.
             entry_bytes = self._persist_storage.get(key)
             self._write_to_mem_cache(key, entry_bytes)
