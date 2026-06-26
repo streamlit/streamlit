@@ -45,33 +45,33 @@ class StInternalMarkdownTest(DeltaGeneratorTestCase):
         assert el.markdown.unterminated_parsing is False
 
 
-class StMarkdownAnchorsTest(DeltaGeneratorTestCase):
-    """Test the ``anchors`` parameter of st.markdown."""
+class StMarkdownHideAnchorsTest(DeltaGeneratorTestCase):
+    """Test the ``hide_anchors`` parameter of st.markdown."""
 
-    def test_anchors_defaults_to_true(self):
-        """``anchors`` defaults to True; the ``hide_anchors`` proto stays False."""
+    def test_hide_anchors_defaults_to_false(self):
+        """``hide_anchors`` defaults to False; the proto field stays False."""
         st.markdown("# Heading")
 
         el = self.get_delta_from_queue().new_element
         assert el.markdown.hide_anchors is False
 
-    def test_anchors_false_sets_hide_anchors(self):
-        """``anchors=False`` sets ``hide_anchors=True`` on the proto."""
-        st.markdown("# Heading", anchors=False)
+    def test_hide_anchors_true_sets_proto(self):
+        """``hide_anchors=True`` sets ``hide_anchors=True`` on the proto."""
+        st.markdown("# Heading", hide_anchors=True)
 
         el = self.get_delta_from_queue().new_element
         assert el.markdown.hide_anchors is True
 
-    def test_anchors_true_explicit_keeps_hide_anchors_false(self):
-        """Explicit ``anchors=True`` keeps ``hide_anchors=False``."""
-        st.markdown("# Heading", anchors=True)
+    def test_hide_anchors_false_explicit_keeps_proto_false(self):
+        """Explicit ``hide_anchors=False`` keeps the proto field False."""
+        st.markdown("# Heading", hide_anchors=False)
 
         el = self.get_delta_from_queue().new_element
         assert el.markdown.hide_anchors is False
 
-    def test_anchors_false_does_not_affect_body(self):
-        """``anchors=False`` doesn't alter body, allow_html, or help fields."""
-        st.markdown("# Heading", anchors=False, help="tip")
+    def test_hide_anchors_true_does_not_affect_body(self):
+        """``hide_anchors=True`` doesn't alter body, allow_html, or help fields."""
+        st.markdown("# Heading", hide_anchors=True, help="tip")
 
         el = self.get_delta_from_queue().new_element
         assert el.markdown.body == "# Heading"

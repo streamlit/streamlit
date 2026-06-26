@@ -45,7 +45,7 @@ class MarkdownMixin:
         width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
         unterminated_parsing: bool = False,
-        anchors: bool = True,
+        hide_anchors: bool = False,
     ) -> DeltaGenerator:
         """Internal markdown method with extended options."""
         markdown_proto = MarkdownProto()
@@ -54,7 +54,7 @@ class MarkdownMixin:
         markdown_proto.allow_html = unsafe_allow_html
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
         markdown_proto.unterminated_parsing = unterminated_parsing
-        markdown_proto.hide_anchors = not anchors
+        markdown_proto.hide_anchors = hide_anchors
         if help:
             markdown_proto.help = help
 
@@ -78,7 +78,7 @@ class MarkdownMixin:
         help: str | None = None,
         width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
-        anchors: bool = True,
+        hide_anchors: bool = False,
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
@@ -206,12 +206,12 @@ class MarkdownMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
-        anchors : bool
-            Whether to show clickable anchor link icons next to Markdown
-            headings (h1-h6). If this is ``True`` (default), each heading
-            gets a visible link icon on hover. If this is ``False``, the
-            link icon is hidden. Headings still receive an ``id`` attribute
-            in either case, so URL fragment deep links (e.g.,
+        hide_anchors : bool
+            Whether to hide the clickable anchor link icons next to Markdown
+            headings (h1-h6). If this is ``False`` (default), each heading
+            gets a visible link icon on hover. If this is ``True``, the
+            link icon is not rendered. Headings still receive an ``id``
+            attribute in either case, so URL fragment deep links (e.g.,
             ``https://example.com/#my-heading``) continue to work.
 
             This is useful when Markdown headings are used purely for
@@ -246,7 +246,7 @@ class MarkdownMixin:
             help=help,
             width=width,
             text_alignment=text_alignment,
-            anchors=anchors,
+            hide_anchors=hide_anchors,
         )
 
     @gather_metrics("caption")
