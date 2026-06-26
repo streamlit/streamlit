@@ -78,7 +78,6 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
         # `_SkeletonPlaceholderBase`); the call keeps type-checkers and static
         # analysis satisfied that the superclass is initialized.
         super().__init__()
-        self._parent = parent
         self._skeleton_proto = skeleton_proto
         self._layout_config = layout_config
 
@@ -94,7 +93,10 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
 
         # Immediately enqueue the skeleton in standalone mode.
         # If used as context manager, __enter__ will clear this and switch to transient.
-        self._dg = self._parent._enqueue(
+        # The parent DeltaGenerator is only needed here; we don't retain it as an
+        # attribute (avoids shadowing DeltaGenerator's own `_parent` under the
+        # TYPE_CHECKING base class).
+        self._dg = parent._enqueue(
             "skeleton",
             self._skeleton_proto,
             layout_config=self._layout_config,
@@ -139,7 +141,7 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
         element_proto.skeleton.CopyFrom(self._skeleton_proto)
 
         # Set up transient element with delay (like st.spinner)
-        # Use self._dg (not self._parent) to anchor the transient at the skeleton's slot.
+        # Use self._dg (not the parent) to anchor the transient at the skeleton's slot.
         # _enqueue already advanced the parent's cursor past the skeleton's position,
         # so calling _transient on self._dg ensures the delayed skeleton renders correctly.
         try:

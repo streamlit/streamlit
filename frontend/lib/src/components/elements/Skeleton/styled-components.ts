@@ -34,9 +34,11 @@ const ANIMATION_STYLES = {
   animationDirection: "normal",
   animationIterationCount: "infinite",
   // Respect the user's reduced-motion preference by disabling the pulse
-  // animation. The skeleton remains visible as a static placeholder.
+  // animation. The skeleton remains visible as a static placeholder. We only
+  // reset `animationName` (not the `animation` shorthand) to avoid clobbering
+  // the other animation longhands defined above.
   "@media (prefers-reduced-motion: reduce)": {
-    animation: "none",
+    animationName: "none",
   },
 }
 
