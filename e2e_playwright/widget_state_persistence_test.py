@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
@@ -61,8 +63,7 @@ def test_persist_state_survives_unmount_remount_on_same_page(app: Page) -> None:
     _fill_text_input(app, "Not persisted", "plain_value")
 
     # persist_state is server-side only and must not add URL query params.
-    query_string = app.url.split("?", 1)[1] if "?" in app.url else ""
-    assert query_string == ""
+    expect(app).not_to_have_url(re.compile(r"\?"))
 
     # Hide the widgets so they stop being rendered, then rerun to settle the
     # post-cleanup state for the value readouts.

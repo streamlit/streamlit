@@ -1248,6 +1248,7 @@ class SessionState:
             if the frontend needs to be updated with the current value.
         """
         widget_id = metadata.id
+        ctx = get_script_run_ctx()
 
         # Capture the stored wire value *before* swapping in this run's
         # serializer, so it reflects the value as it was actually stored (using
@@ -1284,7 +1285,6 @@ class SessionState:
         # the stored value if the tracker says it's no longer valid for this page.
         dropped_page_scoped_value = False
         if metadata.persist_state is not None and user_key is not None:
-            ctx = get_script_run_ctx()
             current_page_hash = ctx.page_script_hash if ctx is not None else ""
             self._persist_tracker.register(
                 widget_id, user_key, metadata.persist_state, current_page_hash
@@ -1376,6 +1376,8 @@ class SessionState:
         # run (preserved while unmounted, or a compacted programmatic set) must
         # tell the frontend to adopt the backend value on (re)mount. Otherwise it
         # renders at its default and the next rerun overwrites the preserved value.
+        # For a bind + persist_state widget this can overlap with
+        # restored_bound_value; that is harmless since both only feed the OR below.
         restored_persisted_value = False
         if (
             metadata.persist_state is not None

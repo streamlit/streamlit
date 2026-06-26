@@ -2071,7 +2071,7 @@ class RemoveStaleWidgetsPreservationTest(DeltaGeneratorTestCase):
         assert self.query_params.get_binding_for_widget(widget_id) is None
 
         # Cleanup should still preserve value under user key.
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
         assert widget_id not in self.session_state._old_state
         assert self.session_state._old_state["my_widget"] == "custom_value"
 
@@ -2093,7 +2093,7 @@ class RemoveStaleWidgetsPreservationTest(DeltaGeneratorTestCase):
         self.session_state.register_widget(metadata, user_key="my_widget")
         self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
         self.session_state._compact_state()
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert widget_id not in self.session_state._old_state
         assert "my_widget" not in self.session_state._old_state
@@ -2125,7 +2125,7 @@ class RemoveStaleWidgetsPreservationTest(DeltaGeneratorTestCase):
         # Stale cleanup (MPA page change) — _old_state has "default" but
         # _new_widget_state has "user_value". Preservation should capture
         # "user_value".
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert widget_id not in self.session_state._old_state
         assert self.session_state._old_state["my_widget"] == "user_value"
@@ -2143,7 +2143,7 @@ class RemoveStaleWidgetsPreservationTest(DeltaGeneratorTestCase):
             {kept_widget_id, stale_widget_id}
         )
 
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert self.session_state._query_param_bound_widget_ids == {kept_widget_id}
 
@@ -2169,7 +2169,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
         self.session_state.register_widget(metadata, user_key="my_widget")
         self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
         self.session_state._compact_state()
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert widget_id not in self.session_state._old_state
         assert self.session_state._old_state["my_widget"] == "custom_value"
@@ -2189,7 +2189,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
         assert self.session_state._persist_tracker.page_of(widget_id) == "page_1_hash"
         self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
         self.session_state._compact_state()
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert self.session_state._old_state["my_widget"] == "custom_value"
 
@@ -2215,7 +2215,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
             "streamlit.runtime.state.session_state.get_script_run_ctx",
             return_value=MockScriptRunCtx(page_script_hash="page_2_hash"),
         ):
-            self.session_state._remove_stale_widgets(set())
+            self.session_state._remove_stale_widgets(frozenset())
 
         assert widget_id not in self.session_state._old_state
         assert "my_widget" not in self.session_state._old_state
@@ -2232,7 +2232,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
         self.session_state.register_widget(metadata, user_key="my_widget")
         self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
         self.session_state._compact_state()
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert "my_widget" not in self.session_state._old_state
 
@@ -2270,7 +2270,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
             "page_1_hash"
         )
 
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert self.session_state._persist_tracker._scopes == {
             kept_widget_id: "session"
@@ -2294,7 +2294,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
                 widget_id, "custom_value"
             )
             self.session_state._compact_state()
-            self.session_state._remove_stale_widgets(set())
+            self.session_state._remove_stale_widgets(frozenset())
 
         assert self.session_state._persist_tracker.value_page_of("my_widget") == (
             "page_1_hash"
@@ -2442,7 +2442,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
                 widget_id, "custom_value"
             )
             self.session_state._compact_state()
-            self.session_state._remove_stale_widgets(set())
+            self.session_state._remove_stale_widgets(frozenset())
             result = self.session_state.register_widget(metadata, user_key="my_widget")
 
         assert result.value == "custom_value"
@@ -2537,7 +2537,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
         self.session_state.register_widget(metadata, user_key="my_widget")
         self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
         self.session_state._compact_state()
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert self.session_state._old_state["my_widget"] == "custom_value"
 
@@ -2565,7 +2565,7 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
                 widget_id, "custom_value"
             )
             self.session_state._compact_state()
-            self.session_state._remove_stale_widgets(set())
+            self.session_state._remove_stale_widgets(frozenset())
 
         # Binding keeps the value in the URL across the page switch, so it is
         # present in the initial query params seen on the destination page.
@@ -2848,7 +2848,7 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
         self.session_state.register_widget(metadata, user_key="my_widget")
         self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
         self.session_state._compact_state()
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         result = self.session_state.register_widget(metadata, user_key="my_widget")
 
@@ -2900,7 +2900,7 @@ class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
         self.query_params.set_with_no_forward_msg("my_widget", "custom_value")
 
         self.session_state._compact_state()
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert "my_widget" in self.session_state._old_state
         assert "my_widget" not in self.query_params._query_params
@@ -2930,7 +2930,7 @@ class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
         self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
 
         self.session_state._compact_state()
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert "my_widget" not in self.session_state._old_state
 

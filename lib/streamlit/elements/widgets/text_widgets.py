@@ -314,7 +314,10 @@ class TextWidgetsMixin:
             requires ``key`` to be set. If ``bind="query-params"`` is also set,
             the binding takes precedence: the value is stored in the URL, so it
             persists across page switches regardless of the ``persist_state``
-            scope.
+            scope. For example,
+            ``st.text_input("Name", key="name", persist_state="session")`` keeps
+            the entered text when the widget is hidden and shown again, or when
+            the user navigates to another page and back.
 
         Returns
         -------
