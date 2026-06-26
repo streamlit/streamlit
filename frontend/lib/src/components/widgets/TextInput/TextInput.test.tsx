@@ -721,6 +721,35 @@ describe("TextInput widget", () => {
     expect(tooltip).toHaveTextContent("Lowercase only")
   })
 
+  it("keeps the shown error message in sync when only validateMessage changes", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      validateRegex: "^[a-z]+$",
+      validateMessage: "Old message",
+    })
+    const { rerender } = render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "123")
+    await user.click(document.body)
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Old message")
+
+    // Changing only the message keeps the widget identity stable (only the
+    // regex is part of the widget ID), so the component is re-rendered rather
+    // than remounted. The still-invalid input must immediately reflect the new
+    // message without the user re-triggering validation.
+    const updatedElement = TextInputProto.create({
+      ...props.element,
+      validateMessage: "New message",
+    })
+    rerender(<TextInput {...props} element={updatedElement} />)
+
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent("New message")
+    expect(alert).not.toHaveTextContent("Old message")
+  })
+
   it("exposes the validation message to assistive tech via aria-describedby", async () => {
     const user = userEvent.setup()
     const props = getProps({

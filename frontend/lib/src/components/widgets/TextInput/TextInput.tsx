@@ -59,6 +59,7 @@ import {
   StyledEndEnhancers,
   StyledErrorEnhancer,
   StyledInputElement,
+  StyledInputInstructionsContainer,
   StyledInputRoot,
   StyledPasswordToggle,
   StyledStartEnhancer,
@@ -104,12 +105,17 @@ function TextInput({
   /** Controls visibility of the password plain-text toggle. */
   const [showPassword, setShowPassword] = useState(false)
 
-  const [userError, setUserError] = useState<string | null>(null)
+  // Tracks whether the user's current value failed validation. We store a
+  // boolean rather than the message string so the displayed message always
+  // reflects the latest `element.validateMessage`: the message can change on
+  // rerun while the widget identity stays stable (only the regex is part of
+  // the widget ID), and a stored string would otherwise go stale.
+  const [hasUserError, setHasUserError] = useState(false)
 
   const onFormCleared = useCallback(() => {
     setUiValue(element.default ?? null)
     setDirty(true)
-    setUserError(null)
+    setHasUserError(false)
   }, [element.default])
 
   const queryParamBinding = element.queryParamKey
@@ -165,8 +171,13 @@ function TextInput({
       ? compiledValidationResult
       : null
   const hasValidationConfig = Boolean(element.validateRegex)
-  // `userError` is only ever set while validation is configured, but derive the
-  // displayed error defensively so it's never shown without an active config.
+  // The user error is only ever set while validation is configured, but derive
+  // the displayed error defensively so it's never shown without an active
+  // config. The user-error message is derived from the current
+  // `element.validateMessage` so it stays in sync when only the message changes.
+  const userError = hasUserError
+    ? element.validateMessage || INVALID_TEXT_INPUT_MESSAGE
+    : null
   const displayedError = hasValidationConfig
     ? (configError ?? userError)
     : null
@@ -177,21 +188,18 @@ function TextInput({
   }, [uiValue, setValueWithSource])
 
   const clearUserValidationError = useCallback((): void => {
-    setUserError(null)
+    setHasUserError(false)
   }, [])
 
-  const getUserValidationError = useCallback(
-    (nextValue: string | null): string | null => {
-      if (
-        !validateRegex ||
-        passesTextInputValidation(nextValue, validateRegex)
-      ) {
-        return null
+  const isUserValueInvalid = useCallback(
+    (nextValue: string | null): boolean => {
+      if (!validateRegex) {
+        return false
       }
 
-      return element.validateMessage || INVALID_TEXT_INPUT_MESSAGE
+      return !passesTextInputValidation(nextValue, validateRegex)
     },
-    [element.validateMessage, validateRegex]
+    [validateRegex]
   )
 
   // Runs validation for the current value, updates the displayed user error,
@@ -201,10 +209,10 @@ function TextInput({
       return false
     }
 
-    const validationError = getUserValidationError(uiValue)
-    setUserError(validationError)
-    return validationError === null
-  }, [configError, getUserValidationError, uiValue])
+    const invalid = isUserValueInvalid(uiValue)
+    setHasUserError(invalid)
+    return !invalid
+  }, [configError, isUserValueInvalid, uiValue])
 
   const tryCommitOutsideForm = useCallback((): boolean => {
     if (!dirty) {
@@ -432,13 +440,18 @@ function TextInput({
         </StyledVisuallyHidden>
       )}
       {shouldShowInstructions && (
-        <InputInstructions
-          dirty={dirty}
-          value={uiValue ?? ""}
-          maxLength={maxChars}
-          inForm={inForm}
-          allowEnterToSubmit={allowEnterToSubmit}
-        />
+        <StyledInputInstructionsContainer
+          $hasErrorIcon={Boolean(displayedError)}
+          $hasPasswordToggle={isPassword}
+        >
+          <InputInstructions
+            dirty={dirty}
+            value={uiValue ?? ""}
+            maxLength={maxChars}
+            inForm={inForm}
+            allowEnterToSubmit={allowEnterToSubmit}
+          />
+        </StyledInputInstructionsContainer>
       )}
     </StyledTextInput>
   )
