@@ -28,50 +28,6 @@ from streamlit.url_util import is_url
 from streamlit.util import calc_hash
 
 
-def _validate_registered_page(page: StreamlitPage) -> None:
-    """Validate that a ``StreamlitPage`` matches what was registered with
-    ``st.navigation``.
-
-    Page hashes are derived solely from ``url_path``, so two ``StreamlitPage``
-    objects sharing a ``url_path`` collide even when their underlying source
-    differs. Without this check, ``st.switch_page`` and ``st.page_link`` would
-    silently route to the registered page rather than surfacing the mismatch.
-
-    If no page with the same hash is registered, validation is skipped so apps
-    that haven't called ``st.navigation`` are unaffected.
-    """
-    if page.is_external:
-        return
-
-    ctx = get_script_run_ctx()
-    if not ctx:
-        return
-
-    registered = ctx.pages_manager.get_pages().get(page._script_hash)
-    if registered is None:
-        return
-
-    registered_script_path = registered.get("script_path", "")
-    if isinstance(page._page, Path):
-        if str(page._page) != registered_script_path:
-            registered_source = registered_script_path or "a callable"
-            raise StreamlitAPIException(
-                f"The page references `{page._page}`, but a different page is "
-                f"registered with `st.navigation` for URL pathname "
-                f"`/{page.url_path}` (`{registered_source}`). Pass the page "
-                "object returned by `st.navigation` or re-create the page "
-                "with the matching source."
-            )
-    elif callable(page._page) and registered_script_path:
-        raise StreamlitAPIException(
-            f"The page is a callable, but a file-based page "
-            f"(`{registered_script_path}`) is registered with `st.navigation` "
-            f"for URL pathname `/{page.url_path}`. Pass the page object "
-            "returned by `st.navigation` or re-create the page with the "
-            "matching source."
-        )
-
-
 def _sanitize_url_path(title: str) -> str:
     """Sanitize a title string to be used as a URL path.
 
@@ -540,3 +496,47 @@ class StreamlitPage:
     @property
     def _script_hash(self) -> str:
         return calc_hash(self._url_path)
+
+
+def _validate_registered_page(page: StreamlitPage) -> None:
+    """Validate that a ``StreamlitPage`` matches what was registered with
+    ``st.navigation``.
+
+    Page hashes are derived solely from ``url_path``, so two ``StreamlitPage``
+    objects sharing a ``url_path`` collide even when their underlying source
+    differs. Without this check, ``st.switch_page`` and ``st.page_link`` would
+    silently route to the registered page rather than surfacing the mismatch.
+
+    If no page with the same hash is registered, validation is skipped so apps
+    that haven't called ``st.navigation`` are unaffected.
+    """
+    if page.is_external:
+        return
+
+    ctx = get_script_run_ctx()
+    if not ctx:
+        return
+
+    registered = ctx.pages_manager.get_pages().get(page._script_hash)
+    if registered is None:
+        return
+
+    registered_script_path = registered.get("script_path", "")
+    if isinstance(page._page, Path):
+        if str(page._page) != registered_script_path:
+            registered_source = registered_script_path or "a callable"
+            raise StreamlitAPIException(
+                f"The page references `{page._page}`, but a different page is "
+                f"registered with `st.navigation` for URL pathname "
+                f"`/{page.url_path}` (`{registered_source}`). Pass the page "
+                "object returned by `st.navigation` or re-create the page "
+                "with the matching source."
+            )
+    elif callable(page._page) and registered_script_path:
+        raise StreamlitAPIException(
+            f"The page is a callable, but a file-based page "
+            f"(`{registered_script_path}`) is registered with `st.navigation` "
+            f"for URL pathname `/{page.url_path}`. Pass the page object "
+            "returned by `st.navigation` or re-create the page with the "
+            "matching source."
+        )
