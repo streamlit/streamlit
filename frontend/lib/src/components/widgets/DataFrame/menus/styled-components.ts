@@ -155,8 +155,8 @@ export const StyledCheckboxMark = styled.span(({ theme }) => ({
  * Scrollbar is clipped by the outer panel's border-radius.
  */
 export const StyledColumnVisibilityMenuContent = styled.div(({ theme }) => ({
-  paddingTop: theme.spacing.sm,
-  paddingBottom: theme.spacing.sm,
+  paddingTop: theme.spacing.twoXS,
+  paddingBottom: theme.spacing.twoXS,
   maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
   overflow: "auto",
 }))
