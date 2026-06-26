@@ -88,14 +88,13 @@ already supports `scope="fragment"`. The proposal extends it so it can target a 
 from anywhere — a callback, the main script, or another fragment:
 
 ```python
-@st.fragment
+@st.fragment(addressable=True)            # opt the fragment into being key-addressable
 def charts():
-    df = load(st.session_state.region)   # read shared state, recompute
+    df = load(st.session_state.region)    # read shared state, recompute
     st.line_chart(df)
     st.dataframe(df)
 
-with st.container(key="charts"):          # addressable call site (see §"Addressing fragments")
-    charts()
+charts(key="charts")                       # addressable call site (see §"Addressing fragments")
 
 st.selectbox(
     "Region", REGIONS, key="region",
@@ -127,39 +126,31 @@ compatible** (the fragment wrapper currently forwards `**kwargs` straight to the
 silently reserving `key` at call time would break any fragment whose function already takes a `key`
 argument).
 
-**Option A — keyed container at the call site** ✅ PREFERRED
-
-```python
-with st.container(key="charts"):
-    charts()
-st.rerun(target="charts")   # resolves to the fragment under the element keyed "charts"
-```
-
-- Pros: zero breaking change; reuses the `key` that layout containers already accept; inherently
-  call-site-scoped (a container *is* a call site); pure composition.
-- Cons: the key reads as "on the container," not "on the fragment"; needs a documented rule for
-  resolving a container key → the enclosed fragment (and an error if it wraps zero/many fragments).
-
-**Option B — opt-in call-time `key` via a decorator flag**
+**Option A — opt-in call-time `key` via a decorator flag** ✅ PREFERRED
 
 ```python
 @st.fragment(addressable=True)   # opts the function into reserving a call-time `key`
 def charts(): ...
 charts(key="charts")
+st.rerun(target="charts")
 ```
 
-- Pros: the key reads as "on the fragment"; non-breaking because off by default.
-- Cons: a second calling convention; a boolean flag (prefer enums); more API surface.
+- Pros: the key reads as "on the fragment," exactly where it belongs; call-site-scoped, so the same
+  function can back many independently-addressable fragments; non-breaking because the flag is off by
+  default (existing fragments keep forwarding `**kwargs` untouched).
+- Cons: a second calling convention (a fragment is only key-addressable when declared `addressable`);
+  the flag is a boolean (prefer enums — revisit if a third mode emerges).
 
-**Option C — signature-aware call-time `key`** (rejected)
+**Option B — signature-aware call-time `key`** (rejected)
 
 Consume `key` as identity only if the user's function doesn't declare a `key` param, else forward it.
 Non-breaking and ergonomic, but the same argument means different things depending on the function
 signature — "clever but too clever" and a "same name, same behavior" violation. Documented here only
 to record why we rejected it.
 
-We recommend **Option A** for the first release (smallest surface, fully backwards compatible) and
-leave Option B as a fast-follow if usage shows the container indirection is awkward.
+We recommend **Option A** for the first release: it puts the `key` on the fragment (matching how `key`
+identifies widgets), stays fully backwards compatible via the opt-in flag, and avoids any indirection
+between the addressable name and the thing it addresses.
 
 ### 2. Fragment dependencies — and the cycle problem
 
@@ -199,7 +190,7 @@ genuine **event-based programming model** — events map to handlers that update
 regions — expressed entirely in normal Python and the existing widget API:
 
 ```python
-@st.fragment
+@st.fragment(addressable=True)
 def results():
     data = run_query(st.session_state.filters)   # only re-runs on relevant events
     st.dataframe(data)
@@ -208,8 +199,7 @@ def results():
 st.multiselect("Filters", OPTIONS, key="filters",
                on_change=lambda: st.rerun(target="results"))
 
-with st.container(key="results"):
-    results()
+results(key="results")
 ```
 
 A widget callback firing `st.rerun(target=...)` is the event; the targeted fragment re-evaluation is
@@ -241,7 +231,7 @@ model exists to provide.
 | Item                         | ✅ or comment          |
 |------------------------------|------------------------|
 | Works on SiS, Cloud, etc?    | Should — builds on existing fragment rerun + WebSocket delta path; needs cross-platform e2e (embedded/mobile) for multi-fragment passes. |
-| No breaking API changes      | ✅ with Option A (keyed container) — additive only; `st.rerun` gains an optional `target`. Option C would break compat and is rejected. |
+| No breaking API changes      | ✅ with Option A (opt-in `addressable` flag) — additive only; `st.rerun` gains an optional `target`, `st.fragment` gains an optional `addressable`. Option B (signature-aware `key`) would break compat and is rejected. |
 | No new dependencies          | ✅ |
 | Metrics collected            | TODO — track `st.rerun(target=...)` usage and cycle-detection triggers via `gather_metrics`. |
 | Any security/legal impact?   | None identified. |
@@ -249,8 +239,9 @@ model exists to provide.
 
 ## Open questions
 
-- **Addressing:** ship Option A only, or A + B together? Does `target` accept a single key, a list of
-  keys, or also a fragment handle object?
+- **Addressing:** is the opt-in `addressable` flag the right shape, or should fragments always accept
+  a call-time `key` once we find a compat-safe way to reserve it? Does `target` accept a single key, a
+  list of keys, or also a fragment handle object?
 - **Parameter name:** `st.rerun(target=...)` vs reusing/expanding `scope`. `target` reads clearly and
   leaves `scope` for the app/fragment distinction.
 - **Cycle handling:** detect-and-raise (preferred) vs a max-depth cap vs documentation only.
