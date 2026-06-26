@@ -112,21 +112,21 @@ export function useMultiselectFiltering({
     }))
 
     // Exclude already-selected values so they don't show in the dropdown.
-    const unselectedOptions = allOptions.filter(
-      o => !selectedValues.includes(o.value)
-    )
+    const selectedSet = new Set(selectedValues)
+    const unselectedOptions = allOptions.filter(o => !selectedSet.has(o.value))
 
     // Apply filtering only when the user has typed something.
+    const trimmedInput = inputValue.trim()
     const filteredOptions: ComboOption[] =
-      filterActive && inputValue.trim()
+      filterActive && trimmedInput
         ? (filterSelectOptions(
             unselectedOptions,
-            inputValue,
+            trimmedInput,
             filterMode
           ) as ComboOption[])
         : unselectedOptions
 
-    const hasSearch = filterActive && Boolean(inputValue.trim())
+    const hasSearch = filterActive && Boolean(trimmedInput)
     const belowThreshold = options.length < SELECT_ALL_THRESHOLD
     const showBulk = filteredOptions.length > 1 && belowThreshold
 
@@ -157,15 +157,14 @@ export function useMultiselectFiltering({
     // Creatable option: only when user has typed something, the typed value
     // is not an exact match for ANY existing option (not just unselected ones),
     // and the value has not already been selected (prevents duplicates).
-    if (acceptNewOptions && filterActive && inputValue.trim()) {
+    if (acceptNewOptions && filterActive && trimmedInput) {
       const exactMatch =
-        options.some(o => o === inputValue) ||
-        selectedValues.includes(inputValue.trim())
+        options.some(o => o === trimmedInput) || selectedSet.has(trimmedInput)
       if (!exactMatch) {
         displayOptions.push({
           id: MULTISELECT_CREATABLE_ID,
-          label: `Add: ${inputValue}`,
-          value: inputValue,
+          label: `Add: ${trimmedInput}`,
+          value: trimmedInput,
           isCreatable: true,
         })
       }
