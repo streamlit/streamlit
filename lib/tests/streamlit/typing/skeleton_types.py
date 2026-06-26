@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing_extensions import assert_type
 
+    from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.skeleton_placeholder import SkeletonPlaceholder
     from streamlit.elements.skeleton import SkeletonMixin
 
@@ -40,12 +41,11 @@ if TYPE_CHECKING:
     assert_type(dg.skeleton(height=100, width=200), SkeletonPlaceholder)
     assert_type(dg.skeleton(height="stretch", width="stretch"), SkeletonPlaceholder)
 
-    # Test delegated method types - __getattr__ returns Any, which allows
-    # calling DeltaGenerator methods on the placeholder. Since Any is returned,
-    # the return type of delegated methods is also Any.
+    # Delegated element methods are typed via the DeltaGenerator interface
+    # (exposed as a TYPE_CHECKING-only base class), so they return the proper
+    # DeltaGenerator types rather than Any.
     placeholder = dg.skeleton()
-    # Delegated methods should be callable (no type error).
-    # With __getattr__ -> Any, these calls type-check correctly.
-    placeholder.empty()
-    placeholder.markdown("hello")
+    assert_type(placeholder.empty(), DeltaGenerator)
+    assert_type(placeholder.markdown("hello"), DeltaGenerator)
+    # Other element methods remain callable on the placeholder.
     placeholder.dataframe({"col": [1, 2, 3]})

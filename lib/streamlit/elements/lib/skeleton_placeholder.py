@@ -34,11 +34,21 @@ if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
 
+    # Element methods (e.g. `.dataframe()`, `.markdown()`) are delegated to an
+    # internal DeltaGenerator at runtime via `__getattr__`. We can't subclass
+    # DeltaGenerator at runtime (this class is registered lazily via the DG
+    # singleton to avoid a circular import), so we expose its interface to
+    # type-checkers and IDEs by using it as the base class only under
+    # TYPE_CHECKING. At runtime the base is `object` and delegation is dynamic.
+    _SkeletonPlaceholderBase = DeltaGenerator
+else:
+    _SkeletonPlaceholderBase = object
+
 # Delay before showing the skeleton in context manager mode (same as st.spinner).
 _DELAY_SECS: Final = 0.5
 
 
-class SkeletonPlaceholder:
+class SkeletonPlaceholder(_SkeletonPlaceholderBase):
     """A placeholder that displays a skeleton loading animation.
 
     This class wraps a ``DeltaGenerator`` and can be used in two modes:
@@ -99,7 +109,7 @@ class SkeletonPlaceholder:
 
         return dir(DeltaGenerator)
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> Self:  # type: ignore[override]
         """Enter context manager mode with 0.5s delay before showing skeleton.
 
         In context manager mode, we clear the immediately-shown skeleton and switch
