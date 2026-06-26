@@ -44,10 +44,10 @@ vi.mock("@streamlit/app/src/util/ScreenCastRecorder", () => ({
   },
 }))
 
-// Simulate FocusLock without its real implementation (which uses internal
-// setTimeout-based focus restoration that fires outside act() in tests).
-// Uses useLayoutEffect cleanup to call returnFocus synchronously during commit,
-// matching real FocusLock's behavior but keeping state updates inside act().
+// Simulate FocusLock without its real implementation. The real library restores
+// focus via an internal setTimeout that fires outside act() in tests, causing
+// spurious React warnings. This mock invokes returnFocus synchronously during
+// useLayoutEffect cleanup (same commit-phase timing) to keep updates in act().
 vi.mock("react-focus-lock", async () => {
   const { useLayoutEffect, useRef, createElement, Fragment } =
     await import("react")
@@ -105,7 +105,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
 
 describe("MainMenu", () => {
   afterEach(() => {
-    // Override RTL's automatic cleanup so the unmount runs inside act().
+    // Guard: run cleanup inside act() before RTL's automatic afterEach fires.
     // Floating UI's autoUpdate disconnect calls flushSync internally,
     // which triggers a React warning if it fires outside an act boundary.
     act(() => {
@@ -138,6 +138,21 @@ describe("MainMenu", () => {
     menuButton.focus()
 
     await user.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
+    })
+  })
+
+  it("opens the menu with Space key", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+
+    const user = userEvent.setup()
+    const menuButton = screen.getByRole("button", { name: "Main menu" })
+    menuButton.focus()
+
+    await user.keyboard(" ")
 
     await waitFor(() => {
       expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
@@ -319,6 +334,24 @@ describe("MainMenu", () => {
 
     // Press Escape while focus is inside the menu
     await user.keyboard("{Escape}")
+
+    expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
+  })
+
+  it("closes the menu when clicking outside", async () => {
+    const props = getProps()
+    render(
+      <>
+        <MainMenu {...props} />
+        <button data-testid="outside-element">Outside</button>
+      </>
+    )
+    await openMenu()
+
+    const user = userEvent.setup({
+      pointerEventsCheck: PointerEventsCheckLevel.Never,
+    })
+    await user.click(screen.getByTestId("outside-element"))
 
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
   })

@@ -979,9 +979,9 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     setIsMenuOpen(prev => !prev)
   }, [])
 
-  // Passed to FocusLock's returnFocus prop. FocusLock calls this
-  // synchronously during its useLayoutEffect cleanup (commit phase),
-  // after the lock is released — so focus routing is safe here.
+  // Passed to FocusLock's returnFocus prop. FocusLock internally uses a
+  // setTimeout to restore focus after unmount; this callback intercepts that
+  // restoration to route focus correctly.
   //
   // - Escape / item click / outside-click ("other"): focus returns to trigger.
   // - Tab: focus advances to the next tabbable element after the trigger.
