@@ -45,6 +45,41 @@ class StInternalMarkdownTest(DeltaGeneratorTestCase):
         assert el.markdown.unterminated_parsing is False
 
 
+class StMarkdownAnchorsTest(DeltaGeneratorTestCase):
+    """Test the ``anchors`` parameter of st.markdown."""
+
+    def test_anchors_defaults_to_true(self):
+        """``anchors`` defaults to True; the ``hide_anchors`` proto stays False."""
+        st.markdown("# Heading")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.hide_anchors is False
+
+    def test_anchors_false_sets_hide_anchors(self):
+        """``anchors=False`` sets ``hide_anchors=True`` on the proto."""
+        st.markdown("# Heading", anchors=False)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.hide_anchors is True
+
+    def test_anchors_true_explicit_keeps_hide_anchors_false(self):
+        """Explicit ``anchors=True`` keeps ``hide_anchors=False``."""
+        st.markdown("# Heading", anchors=True)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.hide_anchors is False
+
+    def test_anchors_false_does_not_affect_body(self):
+        """``anchors=False`` doesn't alter body, allow_html, or help fields."""
+        st.markdown("# Heading", anchors=False, help="tip")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "# Heading"
+        assert el.markdown.help == "tip"
+        assert el.markdown.allow_html is False
+        assert el.markdown.hide_anchors is True
+
+
 class StMarkdownAPITest(DeltaGeneratorTestCase):
     """Test st.markdown API."""
 

@@ -497,6 +497,15 @@ text justification properly. The text stretches to fill the available width.""",
     help="This is a help tooltip!",
 )
 
+# Regression test for gh-13913: anchors=False hides the anchor link icon
+# while preserving heading IDs so URL fragments still deep-link.
+st.container(key="markdown_anchors_default").markdown(
+    "# Anchors Default Heading\n## Anchors Default Subheading"
+)
+st.container(key="markdown_anchors_hidden").markdown(
+    "# Anchors Hidden Heading\n## Anchors Hidden Subheading", anchors=False
+)
+
 # Test for gh-13339: Tooltip with newlines should render correctly
 st.header("Tooltip with Newlines (gh-13339)")
 

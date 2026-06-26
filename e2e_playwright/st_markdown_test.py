@@ -145,6 +145,25 @@ def test_header_attributes(app: Page):
     expect(h6).to_have_count(7)
 
 
+def test_markdown_anchors_false_hides_anchor_icons(app: Page):
+    """anchors=False hides the anchor link icon but keeps heading IDs for
+    URL fragment deep-linking (gh-13913).
+    """
+    default_block = get_element_by_key(app, "markdown_anchors_default")
+    hidden_block = get_element_by_key(app, "markdown_anchors_hidden")
+
+    # IDs are present in both cases so deep-linking still works.
+    expect(default_block.locator("h1#anchors-default-heading")).to_have_count(1)
+    expect(default_block.locator("h2#anchors-default-subheading")).to_have_count(1)
+    expect(hidden_block.locator("h1#anchors-hidden-heading")).to_have_count(1)
+    expect(hidden_block.locator("h2#anchors-hidden-subheading")).to_have_count(1)
+
+    # The anchor link is rendered (hover-revealed) by default, but absent when
+    # anchors=False.
+    expect(default_block.get_by_role("link", name="Link to heading")).to_have_count(2)
+    expect(hidden_block.get_by_role("link", name="Link to heading")).to_have_count(0)
+
+
 def test_match_snapshot_for_headers_in_sidebar(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
