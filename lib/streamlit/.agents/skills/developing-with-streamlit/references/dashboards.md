@@ -104,14 +104,12 @@ with st.container(border=True):
 When each card loads its own independent, slow data (separate queries or API calls), combine `@st.fragment(parallel=True)` with `st.skeleton`. The fragments load concurrently, and each card shows a skeleton until its own data is ready—so the dashboard fills in card-by-card instead of blocking on the slowest query.
 
 ```python
-# Set show_spinner=False so the cache's "Running..." spinner doesn't render on
-# top of (and replace) the skeleton. The skeleton is the loading indicator.
-@st.cache_data(show_spinner=False)
+@st.cache_data
 def load_revenue():
     ...  # Slow query / API call
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data
 def load_orders():
     ...  # Independent slow query / API call
 
