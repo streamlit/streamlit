@@ -412,6 +412,34 @@ jobs:
         env:
           COMPARE_RESULT: ${{ steps.compare-sizes.outputs.result }}
 
+      - name: Remove outdated size comment if change is not significant
+        if: success() && !fromJSON(steps.compare-sizes.outputs.result).is_significant
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const commentIdentifier = '<!-- STREAMLIT-WHEEL-SIZE-CHECK -->';
+
+            try {
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              });
+
+              const sizeComment = comments.find(comment => comment.body.includes(commentIdentifier));
+
+              if (sizeComment) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: sizeComment.id,
+                });
+                console.log('Deleted outdated wheel size comment');
+              }
+            } catch (error) {
+              console.error(`Error removing outdated comment: ${error.message}`);
+            }
+
   check-bundle-size:
     runs-on: ubuntu-latest
     needs: analyze-frontend-bundle
