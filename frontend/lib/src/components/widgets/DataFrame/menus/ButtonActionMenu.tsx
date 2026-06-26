@@ -76,8 +76,8 @@ function ButtonActionMenu({
     [refs]
   )
 
-  // Close menu on click outside (except clicks on the menu target or menu itself).
-  // Capture-phase pointerdown matches the ColumnMenu pattern from PR A.
+  // Close menu on click outside or Escape key.
+  // Both use the capture phase to match the ColumnMenu/ColumnVisibilityMenu pattern.
   useEffect(() => {
     function handlePointerDown(event: PointerEvent): void {
       if (
@@ -97,22 +97,19 @@ function ButtonActionMenu({
       }
     }
 
-    document.addEventListener("pointerdown", handlePointerDown, true)
-    return () =>
-      document.removeEventListener("pointerdown", handlePointerDown, true)
-  }, [onCloseMenu])
-
-  // Close menu when Escape is pressed (capture phase so it fires regardless of focus).
-  useEffect(() => {
-    function handleEscape(e: KeyboardEvent): void {
+    function handleKeyDown(e: KeyboardEvent): void {
       if (e.key === "Escape") {
         e.stopPropagation()
         onCloseMenu()
       }
     }
 
-    document.addEventListener("keydown", handleEscape, true)
-    return () => document.removeEventListener("keydown", handleEscape, true)
+    document.addEventListener("pointerdown", handlePointerDown, true)
+    document.addEventListener("keydown", handleKeyDown, true)
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true)
+      document.removeEventListener("keydown", handleKeyDown, true)
+    }
   }, [onCloseMenu])
 
   // Close menu on any scroll in the document (fixed positioning would misalign
