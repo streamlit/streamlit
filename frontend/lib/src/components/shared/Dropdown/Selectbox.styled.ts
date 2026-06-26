@@ -32,16 +32,13 @@ import {
 import type { EmotionTheme } from "~lib/theme/types"
 
 /**
- * Calculate the right inset for dropdown items, accounting for scrollbar gutter
- * and border width in dark mode.
+ * Calculate the right inset for dropdown items, accounting for scrollbar
+ * gutter and border width. Mirrors the helper in the shared Dropdown
+ * styled-components so item padding matches between Selectbox and Multiselect.
  */
 function getRightInset(theme: EmotionTheme): string {
   return `max(0px, calc(${theme.sizes.tagMarginInsideBorder} - var(--scrollbar-gutter-size, 0px)))`
 }
-
-// ---------------------------------------------------------------------------
-// React Aria Components – Selectbox
-// ---------------------------------------------------------------------------
 
 /**
  * Outer row container for the ComboBox trigger: input + buttons.
@@ -49,11 +46,14 @@ function getRightInset(theme: EmotionTheme): string {
  * focused) to switch border colour to `primary`, mirroring the focus ring
  * on other Streamlit input widgets.
  */
-export const StyledSelectboxGroup = styled(Group)(({ theme }) => ({
+export const StyledGroup = styled(Group)(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "stretch",
   width: "100%",
+  // Use a fixed height so that subpixel line-height rounding in
+  // WebKit/Chromium cannot push the element 1px over the minimum.
+  // overflow:hidden prevents any content from leaking.
   height: theme.sizes.minElementHeight,
   overflow: "hidden",
   borderLeftWidth: theme.sizes.borderWidth,
@@ -74,7 +74,7 @@ export const StyledSelectboxGroup = styled(Group)(({ theme }) => ({
  * The text input inside the ComboBox. Grows to fill available space and
  * shows `$placeholderColor` when disabled (faded vs. normal faded text).
  */
-export const StyledSelectboxInput = styled(Input, {
+export const StyledInput = styled(Input, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<{ $placeholderColor?: string }>(({ theme, $placeholderColor }) => ({
   flexGrow: 1,
@@ -100,7 +100,7 @@ export const StyledSelectboxInput = styled(Input, {
 }))
 
 /** Chevron button that opens/closes the dropdown list. */
-export const StyledSelectboxOpenButton = styled(Button)(({ theme }) => ({
+export const StyledOpenButton = styled(Button)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -121,7 +121,7 @@ export const StyledSelectboxOpenButton = styled(Button)(({ theme }) => ({
  * Clear-value button rendered between the input and the open button when
  * `clearable` is true and a value is selected.
  */
-export const StyledSelectboxClearButton = styled(Button)(({ theme }) => ({
+export const StyledClearButton = styled(Button)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -139,33 +139,44 @@ export const StyledSelectboxClearButton = styled(Button)(({ theme }) => ({
 
 /**
  * Popover that positions the options list below the trigger group.
+ * Uses the shared popover container style (border-radius, border, shadow)
+ * and constrains the max height to match other Streamlit dropdowns.
+ *
  * Positioning is handled by Floating UI (applied via the style prop) rather
- * than React Aria's useOverlayPosition.
+ * than React Aria's useOverlayPosition. The !important overrides neutralize
+ * RAC's imperative inline style writes so Floating UI's transform takes over.
  */
-export const StyledSelectboxPopover = styled(Popover)<{
-  $isInSidebar?: boolean
-}>(({ theme, $isInSidebar }) => ({
-  ...getPopoverContainerStyle(theme),
-  backgroundColor: $isInSidebar
-    ? theme.colors.secondaryBg
-    : theme.colors.bgColor,
-  zIndex: getOverlayZIndex(theme),
-  maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
-  overflow: "hidden",
-  ...({
-    position: "fixed !important",
-    top: "0 !important",
-    left: "0 !important",
-    right: "auto !important",
-    bottom: "auto !important",
-  } as Record<string, string>),
-}))
+export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
+  ({ theme, $isInSidebar }) => ({
+    ...getPopoverContainerStyle(theme),
+    backgroundColor: $isInSidebar
+      ? theme.colors.secondaryBg
+      : theme.colors.bgColor,
+    zIndex: getOverlayZIndex(theme),
+    maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+    overflow: "hidden",
+    // Override RAC's useOverlayPosition imperative style writes.
+    // Floating UI with strategy:"fixed" positions via transform: translate(x,y)
+    // while emitting top:0/left:0 as the origin. These !important overrides
+    // pin RAC's top/left to 0 so the transform controls placement. If a future
+    // Floating UI version switches to direct top/left positioning instead of
+    // transform, these overrides would need to be removed.
+
+    ...({
+      position: "fixed !important",
+      top: "0 !important",
+      left: "0 !important",
+      right: "auto !important",
+      bottom: "auto !important",
+    } as Record<string, string>),
+  })
+)
 
 /**
  * The scrollable list of options. Removes default list styles and outline,
  * letting the popover control overflow.
  */
-export const StyledSelectboxListBox = styled(ListBox)(({ theme }) => ({
+export const StyledListBox = styled(ListBox)(({ theme }) => ({
   outline: "none",
   maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
   overflowY: "auto",
@@ -178,16 +189,22 @@ export const StyledSelectboxListBox = styled(ListBox)(({ theme }) => ({
   margin: theme.spacing.none,
 }))
 
-interface StyledSelectboxListBoxItemProps {
+interface StyledListBoxItemProps {
   $isCreatable?: boolean
 }
 
 /**
- * Individual option row. The `$isCreatable` variant adds a top separator line.
+ * Individual option row. Provides correct item height and outer inset
+ * padding. The hover/focus highlight is applied to the inner
+ * `StyledItemHighlight` pill (via the `[data-item-hl]` attribute selector)
+ * to match the rounded-pill style of the Multiselect dropdown.
+ *
+ * The `$isCreatable` variant adds a top separator line to visually separate
+ * the "Add: …" option from the normal list.
  */
-export const StyledSelectboxListBoxItem = styled(ListBoxItem, {
+export const StyledListBoxItem = styled(ListBoxItem, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<StyledSelectboxListBoxItemProps>(({ theme, $isCreatable }) => ({
+})<StyledListBoxItemProps>(({ theme, $isCreatable }) => ({
   display: "flex",
   alignItems: "center",
   height: theme.sizes.dropdownItemHeight,
@@ -195,11 +212,11 @@ export const StyledSelectboxListBoxItem = styled(ListBoxItem, {
   paddingRight: getRightInset(theme),
   cursor: "pointer",
   background: "transparent",
-  fontSize: theme.fontSizes.sm,
   fontWeight: theme.fontWeights.normal,
   color: theme.colors.bodyText,
   outline: "none",
   position: "relative",
+  // Delegate the highlight to the inner pill wrapper.
   "&[data-hovered] [data-item-hl], &[data-focused] [data-item-hl]": {
     backgroundColor: theme.colors.darkenedBgMix15,
   },
@@ -222,11 +239,13 @@ export const StyledSelectboxListBoxItem = styled(ListBoxItem, {
 }))
 
 /**
- * Inner pill wrapper rendered inside each list item. A rounded pill
- * (`radii.md2`) at `elementHighlightHeight` that receives hover/focus
- * background.
+ * Inner pill wrapper rendered inside each `StyledListBoxItem`. Mirrors
+ * `StyledHighlightWrapper` from the shared Dropdown styled-components:
+ * a rounded pill (`radii.md2`) at `elementHighlightHeight` that receives
+ * the hover/focus background, creating the "pill inside a row" visual that
+ * matches the Multiselect dropdown.
  */
-export const StyledSelectboxItemHighlight = styled.div(({ theme }) => ({
+export const StyledItemHighlight = styled.div(({ theme }) => ({
   flexGrow: 1,
   display: "flex",
   alignItems: "center",

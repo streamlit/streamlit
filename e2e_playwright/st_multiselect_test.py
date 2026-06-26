@@ -231,7 +231,9 @@ def test_multiselect_max_selections_1(app: Page):
     selecting.
     """
     select_for_multiselect(app, "multiselect 9", "male", True)
-    get_multiselect(app, "multiselect 9").click()
+    ms_input = get_multiselect(app, "multiselect 9").locator("input")
+    ms_input.click()
+    ms_input.press("ArrowDown")
     expect(app.get_by_test_id("stMultiSelectPopover")).to_contain_text(
         "You can only select up to 1 option. Remove an option first."
     )

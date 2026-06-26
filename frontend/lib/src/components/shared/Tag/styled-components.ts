@@ -24,14 +24,18 @@ import styled from "@emotion/styled"
  */
 export const StyledTagButton = styled.button<{ $disabled?: boolean }>(
   ({ theme, $disabled }) => ({
+    boxSizing: "border-box",
     display: "inline-flex",
     alignItems: "center",
     gap: theme.spacing.sm,
+    fontFamily: "inherit",
     fontWeight: theme.fontWeights.normal,
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.inputWidget,
     height: theme.sizes.elementHighlightHeight,
     maxWidth: `calc(100% - ${theme.spacing.lg})`,
+    paddingTop: theme.spacing.threeXS,
+    paddingBottom: theme.spacing.threeXS,
     paddingLeft: theme.spacing.sm,
     paddingRight: theme.spacing.sm,
     marginTop: theme.spacing.none,
