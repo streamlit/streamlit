@@ -21,6 +21,8 @@ Demonstrates:
 - Time window filtering
 - Growth score calculation
 - Dialog popup for company details
+- ``@st.cache_data(ttl=...)`` loader plus an ``st.skeleton`` placeholder so the
+  leaderboard fills in smoothly while data loads
 
 This template uses synthetic data. Replace ``generate_company_data()`` with
 your actual data source (e.g., Snowflake queries, CRM APIs, etc.).
@@ -72,11 +74,11 @@ REGIONS = ["North America", "EMEA", "APAC", "LATAM"]
 SEGMENTS = ["Technology", "Finance", "Healthcare", "Retail", "Manufacturing"]
 
 
-@st.cache_data(ttl=3600)
 def generate_company_data(days: int = 90) -> pd.DataFrame:
     """Generate synthetic company usage data.
 
-    Replace this function with your actual data source.
+    Replace this function with your actual data source. Caching happens in
+    ``load_company_data`` so the data is fetched once and reused across reruns.
     """
     rng = np.random.default_rng(42)
 
@@ -121,9 +123,9 @@ def generate_company_data(days: int = 90) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl="1h", show_spinner=False)
 def load_company_data() -> pd.DataFrame:
-    """Load all company data."""
+    """Load all company data (cached). Replace with your data source."""
     return generate_company_data(days=90)
 
 
@@ -261,9 +263,6 @@ def render_company_dialog(
 # Page Layout
 # =============================================================================
 
-# Load data
-all_data = load_company_data()
-
 st.markdown("# :material/business: Company Analytics")
 st.caption("Track company adoption - usage, growth trends, and account details.")
 
@@ -312,23 +311,6 @@ elif "Top gainers" in (sort_mode or ""):
 else:
     sort_by = "total_credits"
 
-# Get filtered data
-leaderboard = aggregate_companies(
-    all_data,
-    days=days_filter,
-    account_types=account_types,
-    sort_by=sort_by,
-)
-
-if leaderboard.empty:
-    st.warning("No company data found for the selected filters.")
-    st.stop()
-
-
-# Convert columns to lists for MultiselectColumn display (shows nice colored chips)
-for col in ["account_type", "region", "segment"]:
-    leaderboard[col] = leaderboard[col].apply(_to_list)
-
 # Companies dataframe
 with st.container(border=True):
     # Guard against None: segmented_control returns None when deselected.
@@ -337,67 +319,86 @@ with st.container(border=True):
     )
     st.markdown(f"**Companies — {timeframe_text}**")
 
-    # Selection dataframe with cell-click support
-    selection = st.dataframe(
-        leaderboard,
-        column_config={
-            "company_name": st.column_config.TextColumn(
-                "Company (click to view details)",
-                width="medium",
-            ),
-            "account_type": st.column_config.MultiselectColumn(
-                "Type",
-                options=ACCOUNT_TYPES,
-                color="auto",
-                width="small",
-            ),
-            "total_credits": st.column_config.NumberColumn(
-                "Credits",
-                format="%.0f",
-            ),
-            "growth_score": st.column_config.NumberColumn(
-                "Growth",
-                format="%+.0f",
-                help="Credit change: second half vs first half of period",
-            ),
-            "usage_trend": st.column_config.LineChartColumn(
-                "Trend",
-                width="medium",
-            ),
-            "daily_avg": st.column_config.NumberColumn(
-                "Daily Avg",
-                format="%.1f",
-            ),
-            "active_days": st.column_config.NumberColumn(
-                "Active Days",
-                format="%d",
-            ),
-            "region": st.column_config.MultiselectColumn(
-                "Region",
-                options=REGIONS,
-                color="auto",
-            ),
-            "segment": st.column_config.MultiselectColumn(
-                "Segment",
-                options=SEGMENTS,
-                color="auto",
-            ),
-        },
-        column_order=[
-            "company_name",
-            "account_type",
-            "total_credits",
-            "growth_score",
-            "usage_trend",
-            "daily_avg",
-            "region",
-            "segment",
-        ],
-        hide_index=True,
-        on_select="rerun",
-        selection_mode="single-cell",
-        key="company_leaderboard",
-    )
+    # Load, aggregate, and render inside a skeleton so the card shows a
+    # placeholder while the (cached) data loads and the leaderboard is computed.
+    with st.skeleton(height=440):
+        all_data = load_company_data()
+        leaderboard = aggregate_companies(
+            all_data,
+            days=days_filter,
+            account_types=account_types,
+            sort_by=sort_by,
+        )
+
+        if leaderboard.empty:
+            st.warning("No company data found for the selected filters.")
+            st.stop()
+
+        # Convert columns to lists for MultiselectColumn display (colored chips)
+        for col in ["account_type", "region", "segment"]:
+            leaderboard[col] = leaderboard[col].apply(_to_list)
+
+        # Selection dataframe with cell-click support
+        selection = st.dataframe(
+            leaderboard,
+            column_config={
+                "company_name": st.column_config.TextColumn(
+                    "Company (click to view details)",
+                    width="medium",
+                ),
+                "account_type": st.column_config.MultiselectColumn(
+                    "Type",
+                    options=ACCOUNT_TYPES,
+                    color="auto",
+                    width="small",
+                ),
+                "total_credits": st.column_config.NumberColumn(
+                    "Credits",
+                    format="%.0f",
+                ),
+                "growth_score": st.column_config.NumberColumn(
+                    "Growth",
+                    format="%+.0f",
+                    help="Credit change: second half vs first half of period",
+                ),
+                "usage_trend": st.column_config.LineChartColumn(
+                    "Trend",
+                    width="medium",
+                ),
+                "daily_avg": st.column_config.NumberColumn(
+                    "Daily Avg",
+                    format="%.1f",
+                ),
+                "active_days": st.column_config.NumberColumn(
+                    "Active Days",
+                    format="%d",
+                ),
+                "region": st.column_config.MultiselectColumn(
+                    "Region",
+                    options=REGIONS,
+                    color="auto",
+                ),
+                "segment": st.column_config.MultiselectColumn(
+                    "Segment",
+                    options=SEGMENTS,
+                    color="auto",
+                ),
+            },
+            column_order=[
+                "company_name",
+                "account_type",
+                "total_credits",
+                "growth_score",
+                "usage_trend",
+                "daily_avg",
+                "region",
+                "segment",
+            ],
+            hide_index=True,
+            on_select="rerun",
+            selection_mode="single-cell",
+            key="company_leaderboard",
+        )
 
 # Company drill-down via dialog when Company column cell is clicked
 if selection.selection.cells:  # type: ignore[attr-defined]

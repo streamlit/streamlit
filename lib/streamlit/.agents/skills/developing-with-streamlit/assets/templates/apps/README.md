@@ -19,10 +19,10 @@ These templates demonstrate common dashboard patterns with synthetic data. Repla
 
 | Template | Description | Key Features |
 |----------|-------------|--------------|
-| **dashboard-metrics** | Core metrics dashboard with KPIs | Chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
-| **dashboard-feature-usage** | API endpoint usage analytics | Segmented control, starter kits, normalization toggle, rolling averages |
-| **dashboard-companies** | Company leaderboard with drill-down | Interactive dataframe, sparkline columns, growth scores |
-| **dashboard-compute** | Resource consumption monitoring | `@st.fragment`, `st.popover` filters, TIME_RANGES, line/bar toggle |
+| **dashboard-metrics** | Core metrics dashboard with KPIs | `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
+| **dashboard-feature-usage** | API endpoint usage analytics | Segmented control, starter kits, normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
+| **dashboard-companies** | Company leaderboard with drill-down | Interactive dataframe, sparkline columns, growth scores, `st.skeleton` while loading |
+| **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` with `st.skeleton`, `st.popover` filters, TIME_RANGES, line/bar toggle |
 
 ## Quick Start
 
@@ -130,20 +130,34 @@ def render_page_header(title: str):
             st.rerun()
 ```
 
-### Independent Widget Updates with @st.fragment
+### Independent and parallel card updates with @st.fragment
+
+Wrap each card in `@st.fragment` so widget interactions rerun only that card,
+not the whole page. Add `parallel=True` so cards that each load their own data
+run concurrently on a full app rerun, and wrap the body in `st.skeleton` so the
+card shows a placeholder until its data is ready:
 
 ```python
-@st.fragment
-def metric_card():
+@st.fragment(parallel=True)
+def metric_card(metric_name: str):
     with st.container(border=True):
-        # This widget updates independently without full page rerun
-        ...
+        st.markdown(f"**{metric_name}**")  # Stays stable while the body loads
+        with st.skeleton(height=300):
+            data = load_metric(metric_name)  # Cached; loads in parallel
+            st.line_chart(data)
 ```
+
+Keep `st.dialog` / `st.switch_page` and writes to containers created *outside*
+the fragment out of parallel fragments — gate those behind a widget interaction
+instead, where the fragment reruns sequentially.
 
 ### Data Loading with Caching
 
+Cache the expensive load and bound it with a `ttl` (and/or `max_entries`) so the
+cache stays fresh and doesn't grow without limit:
+
 ```python
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl="1h", show_spinner=False)
 def load_metric_data() -> pd.DataFrame:
     """Load metric data. Replace with your actual data source."""
     # Replace this with:
@@ -152,6 +166,10 @@ def load_metric_data() -> pd.DataFrame:
     # - Data warehouse query via st.connection
     return generate_synthetic_data()
 ```
+
+Guidelines: real-time data → `ttl="1m"`; metrics/reports → `ttl="5m"`–`"15m"`;
+reference data → `ttl="1h"` or more; static data → no TTL. Use `max_entries` for
+parameterized loaders so per-argument entries stay bounded.
 
 ## Dependencies
 

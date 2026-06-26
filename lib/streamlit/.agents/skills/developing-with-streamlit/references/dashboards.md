@@ -159,10 +159,10 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 
 | Template | Features |
 |----------|----------|
-| `dashboard-metrics` | Metric cards with chart/table toggle, time-series charts, date filtering, focus mode |
-| `dashboard-companies` | Company comparison with sparkline columns, filterable data tables |
-| `dashboard-compute` | `@st.fragment` for independent updates, popover filters |
-| `dashboard-feature-usage` | Feature adoption tracking, trend analysis |
+| `dashboard-metrics` | `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, time-series charts, date filtering |
+| `dashboard-companies` | Company comparison with sparkline columns, filterable data tables, `st.skeleton` while loading |
+| `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, popover filters |
+| `dashboard-feature-usage` | Feature adoption tracking, trend analysis, conditional "Raw data" expander |
 | `dashboard-seattle-weather` | Weather data visualization |
 | `dashboard-stock-peers` | Stock peer comparison |
 
