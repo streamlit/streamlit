@@ -251,3 +251,57 @@ class PageLinkTest(DeltaGeneratorTestCase):
             st.page_link(page="https://example.com", label="Test", icon="   ")
 
         assert 'The value "   " is not a valid emoji' in str(exc_info.value)
+
+
+@patch("pathlib.Path.is_file", MagicMock(return_value=True))
+class PageLinkStreamlitPageValidationTest(DeltaGeneratorTestCase):
+    """Test that ``st.page_link`` validates a passed ``StreamlitPage`` against
+    pages registered with ``st.navigation`` and raises when the source does not
+    match the registered page sharing the same URL pathname.
+
+    Regression coverage for https://github.com/streamlit/streamlit/issues/10572.
+    """
+
+    def test_streamlit_page_with_mismatched_file_path_raises(self) -> None:
+        """Linking to a ``StreamlitPage`` whose file path does not match the
+        page registered under the same ``url_path`` raises."""
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        bad_page = st.Page("other.py", url_path="foo")
+        with pytest.raises(StreamlitAPIException, match=r"different page is "):
+            st.page_link(bad_page)
+
+    def test_streamlit_page_with_inferred_url_path_mismatch_raises(self) -> None:
+        """Linking to ``st.Page("foo.py")`` (url_path inferred as ``foo``)
+        raises when a different file is registered under ``url_path="foo"``."""
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        with pytest.raises(StreamlitAPIException, match=r"different page is "):
+            st.page_link(st.Page("foo.py"))
+
+    def test_streamlit_page_callable_with_file_registered_raises(self) -> None:
+        """Linking to a callable-based ``StreamlitPage`` raises when the
+        registered page sharing its ``url_path`` is file-based."""
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        def some_callable() -> None:
+            pass
+
+        with pytest.raises(StreamlitAPIException, match=r"is a callable"):
+            st.page_link(st.Page(some_callable, url_path="foo"))
+
+    def test_streamlit_page_matching_source_does_not_raise(self) -> None:
+        """A ``StreamlitPage`` whose source matches the registered page is
+        accepted by validation."""
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        matching = st.Page("page1.py", url_path="foo")
+        st.page_link(matching)
+
+    def test_streamlit_page_unregistered_url_path_does_not_raise(self) -> None:
+        """If no page with the given ``url_path`` is registered (no hash
+        collision), validation is skipped — preserving previous behavior for
+        apps that don't use ``st.navigation``."""
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        st.page_link(st.Page("other.py", url_path="bar"))
