@@ -90,7 +90,7 @@ describe("ButtonActionMenu", () => {
   it("has correct aria-label for accessibility", () => {
     render(<ButtonActionMenu {...defaultProps} />)
 
-    const menu = screen.getByRole("menu")
+    const menu = screen.getByRole("menu", { name: "Button action menu" })
     expect(menu).toBeVisible()
   })
 

@@ -230,7 +230,7 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
       {children}
       {isOpen && (
         <FloatingPortal>
-          <FloatingFocusManager context={context} initialFocus={-1}>
+          <FloatingFocusManager context={context} initialFocus={panelRef}>
             <StyledColumnVisibilityMenuPanel
               ref={setFloatingCallback}
               style={floatingStyles}

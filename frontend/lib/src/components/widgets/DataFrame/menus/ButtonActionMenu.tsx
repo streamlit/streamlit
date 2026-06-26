@@ -182,7 +182,7 @@ function ButtonActionMenu({
           tabIndex={-1}
           data-testid="stDataFrameButtonActionMenu"
         >
-          <StyledMenuList role="menu">
+          <StyledMenuList role="menu" aria-label="Button action menu">
             {actions.map((label, index) => {
               const { icon, text } = extractLeadingMaterialIcon(label)
               return (
