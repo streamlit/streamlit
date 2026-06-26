@@ -39,16 +39,16 @@ describe("Tag component", () => {
     expect(tag).toBeInTheDocument()
   })
 
-  it("calls onRemove when clicked", async () => {
+  it("calls onRemove with label when clicked", async () => {
     const user = userEvent.setup()
     const onRemove = vi.fn()
     render(<Tag label="hello" onRemove={onRemove} />)
 
     await user.click(screen.getByTitle("Delete"))
-    expect(onRemove).toHaveBeenCalledOnce()
+    expect(onRemove).toHaveBeenCalledExactlyOnceWith("hello")
   })
 
-  it("calls onRemove when Enter is pressed", async () => {
+  it("calls onRemove with label when Enter is pressed", async () => {
     const user = userEvent.setup()
     const onRemove = vi.fn()
     render(<Tag label="hello" onRemove={onRemove} />)
@@ -56,7 +56,7 @@ describe("Tag component", () => {
     const tag = screen.getByTitle("Delete")
     tag.focus()
     await user.keyboard("{Enter}")
-    expect(onRemove).toHaveBeenCalledOnce()
+    expect(onRemove).toHaveBeenCalledExactlyOnceWith("hello")
   })
 
   it("does not call onRemove when disabled", async () => {

@@ -69,12 +69,7 @@ const InlineTagGroup: FC<InlineTagGroupProps> = ({
     data-testid="stMultiSelectTagContainer"
   >
     {items.map(item => (
-      <Tag
-        key={item}
-        label={item}
-        onRemove={() => onRemove(item)}
-        disabled={disabled}
-      />
+      <Tag key={item} label={item} onRemove={onRemove} disabled={disabled} />
     ))}
     {inputElement}
   </StyledTagGroupContainer>

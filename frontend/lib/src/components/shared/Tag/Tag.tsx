@@ -25,8 +25,8 @@ import {
 interface TagProps {
   /** Label text shown inside the tag and used for the overflow tooltip. */
   label: string
-  /** Called when the user clicks/activates the remove button. */
-  onRemove: () => void
+  /** Called with the label string when the user clicks/activates the remove button. */
+  onRemove: (label: string) => void
   /** When true the tag is non-interactive (no hover, no click). */
   disabled?: boolean
 }
@@ -44,7 +44,7 @@ const Tag: FC<TagProps> = ({ label, onRemove, disabled }) => (
     title="Delete"
     type="button"
     disabled={disabled}
-    onClick={disabled ? undefined : onRemove}
+    onClick={disabled ? undefined : () => onRemove(label)}
     $disabled={disabled}
     aria-label={`Remove ${label}`}
     data-testid="stTag"

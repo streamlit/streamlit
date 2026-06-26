@@ -195,9 +195,6 @@ const Multiselect: FC<Props> = props => {
   const inputValueRef = useRef(inputValue)
   inputValueRef.current = inputValue
 
-  const filterActiveRef = useRef(filterActive)
-  filterActiveRef.current = filterActive
-
   // Tracks whether the dropdown is currently open.
   const isOpenRef = useRef(false)
 
@@ -423,6 +420,11 @@ const Multiselect: FC<Props> = props => {
     openDropdownRef.current?.()
   }, [disabled])
 
+  const handleOpenClick = useCallback((): void => {
+    if (disabled) return
+    openDropdownRef.current?.()
+  }, [disabled])
+
   // True when the widget has a proto default (mirrors st.selectbox clearable logic).
   const hasDefault = element.default.length > 0
 
@@ -600,9 +602,7 @@ const Multiselect: FC<Props> = props => {
                 type="button"
                 $disabled={disabled}
                 disabled={disabled}
-                onClick={() => {
-                  if (!disabled) openDropdownRef.current?.()
-                }}
+                onClick={handleOpenClick}
               >
                 <KeyboardArrowDown
                   size={theme.iconSizes.lg}
@@ -621,6 +621,13 @@ const Multiselect: FC<Props> = props => {
             style={floatingStyles}
           >
             {/*
+             * No virtualization: RAC's ListBox doesn't support react-window.
+             * This is acceptable because the popover has max-height with
+             * overflow scroll (only visible items paint), filtering narrows
+             * the rendered set, and SELECT_ALL_THRESHOLD (1000) already
+             * disables bulk operations for very large lists. Matches the
+             * pattern established by the Selectbox migration.
+             *
              * Passing `items` to StyledListBox disables RAC's built-in
              * client-side filtering (which would strip out pseudo-items like
              * "Select all" / "Select X matches" because their textValue doesn't
