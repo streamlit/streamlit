@@ -3888,7 +3888,7 @@ __metadata:
     remark-math: "npm:^6.0.0"
     remend: "npm:^1.2.2"
     styletron-react: "npm:^6.1.0"
-    timezone-mock: "npm:^1.4.2"
+    timezone-mock: "npm:^1.4.3"
     tsc-alias: "npm:^1.8.17"
     typed-signals: "npm:^3.0.0"
     typesync: "npm:^0.14.3"
@@ -17596,10 +17596,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"timezone-mock@npm:^1.4.2":
-  version: 1.4.2
-  resolution: "timezone-mock@npm:1.4.2"
-  checksum: 10c0/1cfebf978517f2800f524394b5f5fd1928dec22c9685a4f082211711f2ab07fe6d0bc34e8698e11b64c2e530cc738f8c42d1b4199393be5f5de8dfa77a3f1115
+"timezone-mock@npm:^1.4.3":
+  version: 1.4.3
+  resolution: "timezone-mock@npm:1.4.3"
+  checksum: 10c0/984e52f711553c8fdc6ad23d756a3518981b9460048d0eec8d670cbe9457ba25217d2dc298af6cf56c5a61ff8f0db745b8170918cda4c6d30fad78d308a75050
   languageName: node
   linkType: hard
 
