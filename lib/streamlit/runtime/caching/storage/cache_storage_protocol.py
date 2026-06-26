@@ -102,6 +102,11 @@ class CacheStorageContext:
         Legacy parameter, that used in Streamlit current cache storage implementation.
         Could be ignored by cache storage implementation, if storage does not support
         persistence or it persistent by default.
+
+    refresh_type : Literal["foreground", "background"]
+        How an expired cache entry is refreshed. When ``"background"``, the storage
+        retains expired entries so that a stale value can be served while a fresh
+        value is computed in the background. Defaults to ``"foreground"``.
     """
 
     function_key: str
@@ -109,6 +114,7 @@ class CacheStorageContext:
     ttl_seconds: float | None = None
     max_entries: int | None = None
     persist: Literal["disk"] | None = None
+    refresh_type: Literal["foreground", "background"] = "foreground"
 
 
 class CacheStorage(Protocol):
@@ -135,6 +141,20 @@ class CacheStorage(Protocol):
             Raised if the key is not in the storage.
         """
         raise NotImplementedError  # pragma: no cover - abstract
+
+    def get_with_status(self, key: str) -> tuple[bytes, bool]:
+        """Returns the stored value for the key along with a staleness flag.
+
+        Returns a ``(value, is_stale)`` tuple. The default implementation never
+        reports a value as stale; storages that support ``refresh_type="background"``
+        override this to retain and report expired entries.
+
+        Raises
+        ------
+        CacheStorageKeyNotFoundError
+            Raised if the key is not in the storage.
+        """
+        return self.get(key), False
 
     @abstractmethod
     def set(self, key: str, value: bytes) -> None:

@@ -41,7 +41,10 @@ from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunc,
     CachedFuncInfo,
+    CacheEntryStatus,
+    CacheReadResult,
     CacheScope,
+    RefreshType,
     get_session_id_or_throw,
     make_cached_func_wrapper,
 )
@@ -107,6 +110,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         show_time: bool = False,
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
+        refresh_type: RefreshType = "foreground",
     ) -> None:
         super().__init__(
             func,
@@ -114,6 +118,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
             show_spinner=show_spinner,
             show_time=show_time,
             scope=scope,
+            refresh_type=refresh_type,
         )
         self.persist = persist
         self.max_entries = max_entries
@@ -142,6 +147,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
             ttl=self.ttl,
             display_name=self.display_name,
             scope=self.scope,
+            refresh_type=self.refresh_type,
         )
 
     def validate_params(self) -> None:
@@ -179,6 +185,7 @@ class DataCaches(StatsProvider):
         ttl: int | float | timedelta | str | None,
         display_name: str,
         scope: CacheScope = "global",
+        refresh_type: RefreshType = "foreground",
     ) -> DataCache[Any]:
         """Return the mem cache for the given key.
 
@@ -214,6 +221,7 @@ class DataCaches(StatsProvider):
                 and cache.ttl_seconds == ttl_seconds
                 and cache.max_entries == max_entries
                 and cache.persist == persist
+                and cache.refresh_type == refresh_type
             ):
                 return cache
 
@@ -245,6 +253,7 @@ class DataCaches(StatsProvider):
                 ttl_seconds=ttl_seconds,
                 max_entries=max_entries,
                 persist=persist,
+                refresh_type=refresh_type,
             )
             cache_storage_manager = self.get_storage_manager()
             storage = cache_storage_manager.create(cache_context)
@@ -256,6 +265,7 @@ class DataCaches(StatsProvider):
                 max_entries=max_entries,
                 ttl_seconds=ttl_seconds,
                 display_name=display_name,
+                refresh_type=refresh_type,
             )
             self._function_caches[session_id][key] = cache
             return cache
@@ -355,6 +365,7 @@ class DataCaches(StatsProvider):
         persist: CachePersistType,
         ttl_seconds: float | None,
         max_entries: int | None,
+        refresh_type: RefreshType = "foreground",
     ) -> CacheStorageContext:
         return CacheStorageContext(
             function_key=function_key,
@@ -362,6 +373,7 @@ class DataCaches(StatsProvider):
             ttl_seconds=ttl_seconds,
             max_entries=max_entries,
             persist=persist,
+            refresh_type=refresh_type,
         )
 
     def get_storage_manager(self) -> CacheStorageManager:
@@ -426,6 +438,7 @@ class CacheDataAPI:
         persist: CachePersistType | bool = None,
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
+        refresh_type: RefreshType = "foreground",
     ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
     def __call__(
@@ -439,6 +452,7 @@ class CacheDataAPI:
         persist: CachePersistType | bool = None,
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
+        refresh_type: RefreshType = "foreground",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(
             func,  # ty: ignore[invalid-argument-type]
@@ -449,6 +463,7 @@ class CacheDataAPI:
             show_time=show_time,
             hash_funcs=hash_funcs,
             scope=scope,
+            refresh_type=refresh_type,
         )
 
     def _decorator(
@@ -462,6 +477,7 @@ class CacheDataAPI:
         persist: CachePersistType | bool,
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
+        refresh_type: RefreshType = "foreground",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
 
@@ -555,6 +571,26 @@ class CacheDataAPI:
             multiple times in a single session. If this is a problem, you might
             consider adjusting the ``server.websocketPingInterval``
             configuration option.
+
+        refresh_type : "foreground" or "background"
+            How an expired cache entry is refreshed when its ``ttl`` elapses.
+
+            - ``"foreground"`` (default): The next call after expiration blocks
+              while the function re-executes, then returns the new value. This is
+              the standard caching behavior.
+            - ``"background"``: The next call after expiration immediately returns
+              the stale (expired) value and triggers a refresh in a background
+              thread. When the refresh completes, the cached value is replaced. If
+              the refresh fails, the stale entry is evicted and the next call
+              recomputes the value in the foreground (surfacing any error). This is
+              useful for slow functions where serving slightly stale data is
+              preferable to making users wait.
+
+            ``refresh_type="background"`` requires a ``ttl`` and cannot be combined
+            with ``persist``. Because background refreshes run without a script
+            context, ``st.*`` element calls inside the cached function are not
+            replayed for the background refresh, and no spinner is shown when a
+            stale value is returned.
 
         Examples
         --------
@@ -665,6 +701,25 @@ class CacheDataAPI:
                 f"Unsupported scope option '{scope}'. Valid values are 'global' or 'session'."
             )
 
+        if refresh_type not in {"foreground", "background"}:
+            raise StreamlitAPIException(
+                f"Unsupported refresh_type option '{refresh_type}'. Valid values "
+                "are 'foreground' or 'background'."
+            )
+
+        if refresh_type == "background":
+            if ttl is None:
+                raise StreamlitAPIException(
+                    "refresh_type='background' requires a ttl. Set a ttl or use "
+                    "refresh_type='foreground' (default)."
+                )
+            if persist_string is not None:
+                raise StreamlitAPIException(
+                    "refresh_type='background' cannot be used with persist, because "
+                    "persisted cache entries do not expire based on ttl. Use "
+                    "persist=None (default) with refresh_type='background'."
+                )
+
         def wrapper(f: Callable[P, R]) -> CachedFunc[P, R]:
             return make_cached_func_wrapper(
                 CachedDataFuncInfo(
@@ -676,6 +731,7 @@ class CacheDataAPI:
                     ttl=ttl,
                     hash_funcs=hash_funcs,
                     scope=scope,
+                    refresh_type=refresh_type,
                 )
             )
 
@@ -692,6 +748,7 @@ class CacheDataAPI:
                 ttl=ttl,
                 hash_funcs=hash_funcs,
                 scope=scope,
+                refresh_type=refresh_type,
             )
         )
 
@@ -712,6 +769,7 @@ class DataCache(Cache[R]):
         max_entries: int | None,
         ttl_seconds: float | None,
         display_name: str,
+        refresh_type: RefreshType = "foreground",
     ) -> None:
         super().__init__()
         self.key = key
@@ -720,6 +778,7 @@ class DataCache(Cache[R]):
         self.ttl_seconds = ttl_seconds
         self.max_entries = max_entries
         self.persist = persist
+        self.refresh_type = refresh_type
 
     def get_stats(
         self, _family_names: Sequence[str] | None = None
@@ -743,6 +802,34 @@ class DataCache(Cache[R]):
         except CacheStorageError as e:
             raise CacheError(str(e)) from e
 
+        return self._deserialize_entry(key, pickled_entry)
+
+    def read_result_with_status(self, key: str) -> CacheReadResult[R]:
+        if self.refresh_type != "background":
+            return super().read_result_with_status(key)
+
+        try:
+            pickled_entry, is_stale = self.storage.get_with_status(key)
+        except CacheStorageKeyNotFoundError:
+            return CacheReadResult(CacheEntryStatus.MISS, None)
+        except CacheStorageError as e:
+            raise CacheError(str(e)) from e
+
+        try:
+            entry = self._deserialize_entry(key, pickled_entry)
+        except CacheKeyNotFoundError:
+            # Old cache file format was encountered and removed.
+            return CacheReadResult(CacheEntryStatus.MISS, None)
+
+        status = CacheEntryStatus.STALE if is_stale else CacheEntryStatus.HIT
+        return CacheReadResult(status, entry)
+
+    def _deserialize_entry(self, key: str, pickled_entry: bytes) -> CachedResult[R]:
+        """Unpickle a stored cache entry into a ``CachedResult``.
+
+        Raises ``CacheKeyNotFoundError`` if an old/invalid cache format is found
+        (the stale entry is removed), and ``CacheError`` if unpickling fails.
+        """
         try:
             entry = pickle.loads(pickled_entry)  # noqa: S301
             if not isinstance(entry, CachedResult):

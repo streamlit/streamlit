@@ -26,6 +26,7 @@ from typing import (
     Final,
     TypeAlias,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -42,8 +43,11 @@ from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunc,
     CachedFuncInfo,
+    CacheEntryStatus,
+    CacheReadResult,
     CacheScope,
     OnRelease,
+    RefreshType,
     get_session_id_or_throw,
     make_cached_func_wrapper,
 )
@@ -52,6 +56,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     CachedResult,
     MsgData,
 )
+from streamlit.runtime.caching.stale_aware_cache import StaleAwareCache
 from streamlit.runtime.caching.ttl_cleanup_cache import TTLCleanupCache
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.stats import (
@@ -109,6 +114,7 @@ class ResourceCaches(StatsProvider):
         validate: ValidateFunc | None,
         on_release: OnRelease,
         scope: CacheScope = "global",
+        refresh_type: RefreshType = "foreground",
     ) -> ResourceCache[Any]:
         """Return the mem cache for the given key.
 
@@ -145,6 +151,7 @@ class ResourceCaches(StatsProvider):
                 cache is not None
                 and cache.ttl_seconds == ttl_seconds
                 and cache.max_entries == max_entries
+                and cache.refresh_type == refresh_type
                 and _equal_validate_funcs(cache.validate, validate)
             ):
                 return cache
@@ -158,6 +165,7 @@ class ResourceCaches(StatsProvider):
                 ttl_seconds=ttl_seconds,
                 validate=validate,
                 on_release=on_release,
+                refresh_type=refresh_type,
             )
             self._function_caches[session_id][key] = cache
             return cache
@@ -247,6 +255,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
         show_time: bool = False,
         on_release: OnRelease | None = None,
         scope: CacheScope = "global",
+        refresh_type: RefreshType = "foreground",
     ) -> None:
         super().__init__(
             func,
@@ -254,6 +263,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
             show_spinner=show_spinner,
             show_time=show_time,
             scope=scope,
+            refresh_type=refresh_type,
         )
         self.max_entries = max_entries
         self.ttl = ttl
@@ -282,6 +292,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
             validate=self.validate,
             on_release=self.on_release,
             scope=self.scope,
+            refresh_type=self.refresh_type,
         )
 
 
@@ -323,6 +334,7 @@ class CacheResourceAPI:
         hash_funcs: HashFuncsDict | None = None,
         on_release: OnRelease | None = None,
         scope: CacheScope = "global",
+        refresh_type: RefreshType = "foreground",
     ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
     def __call__(
@@ -337,6 +349,7 @@ class CacheResourceAPI:
         hash_funcs: HashFuncsDict | None = None,
         on_release: OnRelease | None = None,
         scope: CacheScope = "global",
+        refresh_type: RefreshType = "foreground",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(  # ty: ignore[missing-argument]
             func,  # ty: ignore[invalid-argument-type]
@@ -348,6 +361,7 @@ class CacheResourceAPI:
             hash_funcs=hash_funcs,
             on_release=on_release,
             scope=scope,
+            refresh_type=refresh_type,
         )
 
     def _decorator(
@@ -362,6 +376,7 @@ class CacheResourceAPI:
         hash_funcs: HashFuncsDict | None = None,
         on_release: OnRelease | None = None,
         scope: CacheScope = "global",
+        refresh_type: RefreshType = "foreground",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return resource objects (e.g. database connections, ML models).
 
@@ -486,6 +501,27 @@ class CacheResourceAPI:
             consider adjusting the ``server.websocketPingInterval``
             configuration option.
 
+        refresh_type : "foreground" or "background"
+            How an expired cache entry is refreshed when its ``ttl`` elapses.
+
+            - ``"foreground"`` (default): The next call after expiration blocks
+              while the function re-executes, then returns the new value. This is
+              the standard caching behavior.
+            - ``"background"``: The next call after expiration immediately returns
+              the stale (expired) resource and triggers a refresh in a background
+              thread. When the refresh completes, the cached resource is replaced.
+              Callers that already hold a reference to the previous resource keep
+              using it (the old resource is not closed automatically). If the
+              refresh fails, the stale entry is evicted and the next call recomputes
+              the resource in the foreground (surfacing any error). This is useful
+              for slow resource initialization where serving a slightly stale
+              resource is preferable to making users wait.
+
+            ``refresh_type="background"`` requires a ``ttl``. Because background
+            refreshes run without a script context, ``st.*`` element calls inside
+            the cached function are not replayed for the background refresh, and no
+            spinner is shown when a stale resource is returned.
+
         Examples
         --------
         **Example 1: Global cache**
@@ -598,6 +634,18 @@ class CacheResourceAPI:
                 f"Unsupported scope option '{scope}'. Valid values are 'global' or 'session'."
             )
 
+        if refresh_type not in {"foreground", "background"}:
+            raise StreamlitAPIException(
+                f"Unsupported refresh_type option '{refresh_type}'. Valid values "
+                "are 'foreground' or 'background'."
+            )
+
+        if refresh_type == "background" and ttl is None:
+            raise StreamlitAPIException(
+                "refresh_type='background' requires a ttl. Set a ttl or use "
+                "refresh_type='foreground' (default)."
+            )
+
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)
         if func is None:
@@ -612,6 +660,7 @@ class CacheResourceAPI:
                     hash_funcs=hash_funcs,
                     on_release=on_release,
                     scope=scope,
+                    refresh_type=refresh_type,
                 )
             )
 
@@ -626,6 +675,7 @@ class CacheResourceAPI:
                 hash_funcs=hash_funcs,
                 on_release=on_release,
                 scope=scope,
+                refresh_type=refresh_type,
             )
         )
 
@@ -646,6 +696,7 @@ class ResourceCache(Cache[R]):
         validate: ValidateFunc | None,
         display_name: str,
         on_release: OnRelease,
+        refresh_type: RefreshType = "foreground",
     ) -> None:
         super().__init__()
 
@@ -658,12 +709,27 @@ class ResourceCache(Cache[R]):
 
         self.key = key
         self.display_name = display_name
-        self._mem_cache: TTLCleanupCache[str, CachedResult[R]] = TTLCleanupCache(
-            maxsize=max_entries,
-            ttl=ttl_seconds,
-            timer=cache_utils.TTLCACHE_TIMER,
-            on_release=wrapped_on_release,
+        self.refresh_type = refresh_type
+        self._mem_cache: (
+            TTLCleanupCache[str, CachedResult[R]]
+            | StaleAwareCache[str, CachedResult[R]]
         )
+        if refresh_type == "background":
+            # Background refresh needs to keep expired entries so a stale value can
+            # be served while a fresh value is recomputed in the background.
+            self._mem_cache = StaleAwareCache(
+                maxsize=max_entries,
+                ttl=ttl_seconds,
+                timer=cache_utils.TTLCACHE_TIMER,
+                on_release=wrapped_on_release,
+            )
+        else:
+            self._mem_cache = TTLCleanupCache(
+                maxsize=max_entries,
+                ttl=ttl_seconds,
+                timer=cache_utils.TTLCACHE_TIMER,
+                on_release=wrapped_on_release,
+            )
         self._mem_cache_lock = threading.Lock()
         self.validate = validate
 
@@ -694,6 +760,25 @@ class ResourceCache(Cache[R]):
                 raise CacheKeyNotFoundError()
 
             return result
+
+    def read_result_with_status(self, key: str) -> CacheReadResult[R]:
+        if self.refresh_type != "background":
+            return super().read_result_with_status(key)
+
+        mem_cache = cast("StaleAwareCache[str, CachedResult[R]]", self._mem_cache)
+        with self._mem_cache_lock:
+            try:
+                result, is_stale = mem_cache.get_with_status(key)
+            except KeyError:
+                return CacheReadResult(CacheEntryStatus.MISS, None)
+
+            if self.validate is not None and not self.validate(result.value):
+                # Validate failed: delete the entry and report a miss.
+                mem_cache.safe_del(key)
+                return CacheReadResult(CacheEntryStatus.MISS, None)
+
+            status = CacheEntryStatus.STALE if is_stale else CacheEntryStatus.HIT
+            return CacheReadResult(status, result)
 
     @gather_metrics("_cache_resource_object")
     def write_result(self, key: str, value: R, messages: list[MsgData]) -> None:

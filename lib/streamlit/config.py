@@ -785,6 +785,18 @@ _create_option(
     type_=int,
 )
 
+_create_option(
+    "runner.cacheRefreshMaxWorkers",
+    description="""
+        Maximum number of worker threads used to refresh cached values in the
+        background when using refresh_type="background" with st.cache_data or
+        st.cache_resource. Sizes a single process-wide thread pool shared across
+        all background cache refreshes. Defaults to 4.
+    """,
+    default_val=None,
+    type_=int,
+)
+
 # Config Section: Server #
 
 _create_section("server", "Settings for the Streamlit server")

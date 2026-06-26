@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import contextlib
+import enum
 import functools
 import inspect
 import threading
@@ -24,6 +25,7 @@ import time
 from abc import abstractmethod
 from collections import defaultdict
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -86,6 +88,31 @@ OnRelease: TypeAlias = Callable[[Any], None]
 CacheScope: TypeAlias = Literal["global", "session"]
 
 
+# How a cache entry is refreshed when its TTL expires.
+RefreshType: TypeAlias = Literal["foreground", "background"]
+
+
+class CacheEntryStatus(enum.Enum):
+    """The freshness of a cache entry returned by ``read_result_with_status``."""
+
+    # The entry exists and is within its TTL.
+    HIT = "hit"
+    # The entry exists but its TTL has expired. Only returned by caches that use
+    # ``refresh_type="background"``.
+    STALE = "stale"
+    # The entry does not exist (or is expired and not retained).
+    MISS = "miss"
+
+
+@dataclass
+class CacheReadResult(Generic[R]):
+    """The result of reading a cache entry along with its freshness status."""
+
+    status: CacheEntryStatus
+    # The cached result. ``None`` if and only if ``status`` is ``MISS``.
+    result: CachedResult[R] | None
+
+
 def get_session_id_or_throw() -> str:
     """Returns the active session ID from the thread-local run context.
 
@@ -144,6 +171,24 @@ class Cache(Generic[R]):
         # a compute_value_lock for this value_key after the result is written.
         raise NotImplementedError
 
+    def read_result_with_status(self, value_key: str) -> CacheReadResult[R]:
+        """Read a value, its messages, and its freshness status from the cache.
+
+        The default implementation only ever returns ``HIT`` or ``MISS``. Caches
+        that support ``refresh_type="background"`` override this to additionally
+        return ``STALE`` for expired-but-retained entries.
+
+        Raises
+        ------
+        StreamlitAPIException
+            Raised when a thread attempts to read from a session-scoped cache but that
+            thread does not have a session associated with it.
+        """
+        try:
+            return CacheReadResult(CacheEntryStatus.HIT, self.read_result(value_key))
+        except CacheKeyNotFoundError:
+            return CacheReadResult(CacheEntryStatus.MISS, None)
+
     def compute_value_lock(self, value_key: str) -> threading.Lock:
         """Return the lock that should be held while computing a new cached value.
         In a popular app with a cache that hasn't been pre-warmed, many sessions may try
@@ -186,12 +231,14 @@ class CachedFuncInfo(Generic[P, R]):
         show_spinner: bool | str,
         show_time: bool = False,
         scope: CacheScope = "global",
+        refresh_type: RefreshType = "foreground",
     ) -> None:
         self.func = func
         self.hash_funcs = hash_funcs
         self.show_spinner = show_spinner
         self.show_time = show_time
         self.scope = scope
+        self.refresh_type = refresh_type
 
     @property
     def cache_type(self) -> CacheType:
@@ -301,9 +348,15 @@ class CachedFunc(Generic[P, R]):
             hash_funcs=self._info.hash_funcs,
         )
 
-        with contextlib.suppress(CacheKeyNotFoundError):
-            cached_result = cache.read_result(value_key)
-            return self._handle_cache_hit(cached_result)
+        cache_read = cache.read_result_with_status(value_key)
+        if cache_read.status is CacheEntryStatus.HIT:
+            return self._handle_cache_hit(cast("CachedResult[R]", cache_read.result))
+        if cache_read.status is CacheEntryStatus.STALE:
+            # The entry is expired but retained (refresh_type="background"). Return
+            # the stale value immediately and refresh it in the background. We
+            # deliberately do not show a spinner since there is no blocking wait.
+            self._schedule_background_refresh(cache, value_key, func_args, func_kwargs)
+            return self._handle_cache_hit(cast("CachedResult[R]", cache_read.result))
 
         # only show spinner if there is a message to show and always only for the
         # outermost cache function if cache functions are nested, because the outermost
@@ -410,6 +463,63 @@ class CachedFunc(Generic[P, R]):
                 raise UnserializableReturnValueError(
                     return_value=computed_value, func=self._info.func
                 ) from ex
+
+    def _schedule_background_refresh(
+        self,
+        cache: Cache[R],
+        value_key: str,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+    ) -> None:
+        """Schedule a deduplicated background refresh for an expired cache entry.
+
+        The stale value has already been returned to the caller; this recomputes
+        the value off the main thread so that future calls get a fresh value.
+        """
+        # Imported lazily to avoid an import cycle and to make the scheduler easy
+        # to patch in tests.
+        from streamlit.runtime.caching.background_refresh import (
+            schedule_background_refresh,
+        )
+
+        # Dedup per cache instance + value key. Different sessions with their own
+        # (session-scoped) caches refresh independently.
+        refresh_key = (id(cache), value_key)
+
+        def _refresh() -> None:
+            self._run_background_refresh(cache, value_key, func_args, func_kwargs)
+
+        schedule_background_refresh(refresh_key, _refresh)
+
+    def _run_background_refresh(
+        self,
+        cache: Cache[R],
+        value_key: str,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+    ) -> None:
+        """Recompute and store a cache value off the main thread.
+
+        This runs without a ``ScriptRunContext``, so ``st.*`` calls inside the
+        cached function are not replayed (the value is written with no replay
+        messages). On failure, the stale entry is evicted and a warning is logged
+        so that the next call falls back to a foreground (user-visible) refresh.
+        """
+        try:
+            # Hold the compute lock so a concurrent foreground miss (e.g. if the
+            # entry was evicted) does not recompute the same value in parallel.
+            with cache.compute_value_lock(value_key):
+                new_value = self._info.func(*func_args, **func_kwargs)
+                cache.write_result(value_key, new_value, [])
+        except Exception:
+            _LOGGER.warning(
+                "Background refresh failed for %s. Evicting the stale cache entry; "
+                "the next call will recompute it in the foreground.",
+                get_cached_func_name_md(self._info.func),
+                exc_info=True,
+            )
+            with contextlib.suppress(Exception):
+                cache.clear(key=value_key)
 
     @overload
     def clear(self) -> None: ...

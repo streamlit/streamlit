@@ -771,6 +771,7 @@ class ConfigTest(unittest.TestCase):
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
                 "runner.parallelMaxWorkers",
+                "runner.cacheRefreshMaxWorkers",
                 "runner.postScriptGC",
                 "runner.fastReruns",
                 "runner.enumCoercion",

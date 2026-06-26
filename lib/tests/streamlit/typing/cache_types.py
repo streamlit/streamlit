@@ -29,6 +29,12 @@ if TYPE_CHECKING:
     def cached_data_fn_with_decorator_args(arg1: int, arg2: str) -> bool:
         return True
 
+    @st.cache_data(ttl=1, refresh_type="background")
+    def cached_data_fn_background_refresh(arg1: int, arg2: str) -> bool:
+        return True
+
+    assert_type(cached_data_fn_background_refresh(1, "2"), bool)
+
     assert_type(cached_data_fn(1, "2"), bool)
     assert_type(cached_data_fn.clear(), None)
     assert_type(cached_data_fn.clear(1), None)
@@ -54,6 +60,12 @@ if TYPE_CHECKING:
     @st.cache_resource(ttl=1)
     def cached_resource_fn_with_decorator_args(arg1: int, arg2: str) -> bool:
         return True
+
+    @st.cache_resource(ttl=1, refresh_type="background")
+    def cached_resource_fn_background_refresh(arg1: int, arg2: str) -> bool:
+        return True
+
+    assert_type(cached_resource_fn_background_refresh(1, "2"), bool)
 
     assert_type(cached_resource_fn(1, "2"), bool)
     assert_type(cached_resource_fn.clear(), None)

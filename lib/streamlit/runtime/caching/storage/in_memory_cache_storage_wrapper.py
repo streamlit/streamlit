@@ -15,12 +15,13 @@ from __future__ import annotations
 
 import math
 import threading
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from cachetools import TTLCache
 
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
+from streamlit.runtime.caching.stale_aware_cache import StaleAwareCache
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorage,
     CacheStorageContext,
@@ -68,11 +69,22 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self.function_display_name = context.function_display_name
         self._ttl_seconds = context.ttl_seconds
         self._max_entries = context.max_entries
-        self._mem_cache: TTLCache[str, bytes] = TTLCache(
-            maxsize=self.max_entries,
-            ttl=self.ttl_seconds,
-            timer=cache_utils.TTLCACHE_TIMER,
-        )
+        self._is_background_refresh = context.refresh_type == "background"
+        self._mem_cache: TTLCache[str, bytes] | StaleAwareCache[str, bytes]
+        if self._is_background_refresh:
+            # Background refresh needs to keep expired entries so a stale value can
+            # be served while a fresh value is recomputed in the background.
+            self._mem_cache = StaleAwareCache(
+                maxsize=self.max_entries,
+                ttl=self.ttl_seconds,
+                timer=cache_utils.TTLCACHE_TIMER,
+            )
+        else:
+            self._mem_cache = TTLCache(
+                maxsize=self.max_entries,
+                ttl=self.ttl_seconds,
+                timer=cache_utils.TTLCACHE_TIMER,
+            )
         self._mem_cache_lock = threading.Lock()
         self._persist_storage = persist_storage
 
@@ -99,6 +111,25 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             entry_bytes = self._persist_storage.get(key)
             self._write_to_mem_cache(key, entry_bytes)
         return entry_bytes
+
+    def get_with_status(self, key: str) -> tuple[bytes, bool]:
+        """Returns the stored value for the key along with a staleness flag.
+
+        When ``refresh_type="background"`` is used, expired entries are retained in
+        the in-memory cache and returned with ``is_stale=True``.
+        """
+        if not self._is_background_refresh:
+            return self.get(key), False
+
+        try:
+            return self._read_from_mem_cache_with_status(key)
+        except CacheStorageKeyNotFoundError:
+            # No in-memory entry: fall back to the persistence layer. Persistence
+            # is disabled when background refresh is enabled, but we keep this for
+            # completeness/symmetry with ``get``.
+            entry_bytes = self._persist_storage.get(key)
+            self._write_to_mem_cache(key, entry_bytes)
+            return entry_bytes, False
 
     def set(self, key: str, value: bytes) -> None:
         """Sets the value for a given key."""
@@ -149,6 +180,20 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
             _LOGGER.debug("Memory cache MISS: %s", key)
             raise CacheStorageKeyNotFoundError("Key not found in mem cache")
+
+    def _read_from_mem_cache_with_status(self, key: str) -> tuple[bytes, bool]:
+        """Read from the stale-aware mem cache, returning ``(value, is_stale)``."""
+        mem_cache = cast("StaleAwareCache[str, bytes]", self._mem_cache)
+        with self._mem_cache_lock:
+            try:
+                value, is_stale = mem_cache.get_with_status(key)
+            except KeyError:
+                _LOGGER.debug("Memory cache MISS: %s", key)
+                raise CacheStorageKeyNotFoundError(
+                    "Key not found in mem cache"
+                ) from None
+            _LOGGER.debug("Memory cache HIT (stale=%s): %s", is_stale, key)
+            return bytes(value), is_stale
 
     def _write_to_mem_cache(self, key: str, entry_bytes: bytes) -> None:
         with self._mem_cache_lock:
