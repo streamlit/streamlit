@@ -164,6 +164,30 @@ def test_markdown_anchors_false_hides_anchor_icons(app: Page):
     expect(hidden_block.get_by_role("link", name="Link to heading")).to_have_count(0)
 
 
+def test_markdown_anchors_false_visual(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the hovered heading state: the anchor icon appears next to the
+    default heading but not when anchors=False (gh-13913).
+    """
+    default_heading = themed_app.locator("h1#anchors-default-heading")
+    hidden_heading = themed_app.locator("h1#anchors-hidden-heading")
+
+    reset_hovering(themed_app)
+    default_heading.hover()
+    assert_snapshot(
+        get_element_by_key(themed_app, "markdown_anchors_default"),
+        name="st_markdown-anchors_default_hovered",
+    )
+
+    reset_hovering(themed_app)
+    hidden_heading.hover()
+    assert_snapshot(
+        get_element_by_key(themed_app, "markdown_anchors_hidden"),
+        name="st_markdown-anchors_hidden_hovered",
+    )
+
+
 def test_match_snapshot_for_headers_in_sidebar(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
