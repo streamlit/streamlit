@@ -601,8 +601,8 @@ class SessionState:
 
         if ctx is not None:
             widget_id = self._key_id_mapper.get_id_from_key(user_key, None)
-            widget_ids = ctx.widget_ids_this_run
-            form_ids = ctx.form_ids_this_run
+            widget_ids = ctx.shared.widget_ids_this_run
+            form_ids = ctx.shared.form_ids_this_run
 
             if widget_id in widget_ids or user_key in form_ids:
                 raise StreamlitAPIException(
@@ -1008,6 +1008,20 @@ class SessionState:
         """
         widget_id = metadata.id
 
+        # Capture the stored wire value *before* swapping in this run's
+        # serializer, so it reflects the value as it was actually stored (using
+        # the serializer it was stored with). For string widgets we expose this
+        # so callers can reconcile a stored value against freshly computed state
+        # without re-deriving it from the deserialized value.
+        incoming_serialized_value: str | None = None
+        if metadata.value_type == "string_value":
+            stored_proto = self._new_widget_state.get_serialized(widget_id)
+            if (
+                stored_proto is not None
+                and stored_proto.WhichOneof("value") == "string_value"
+            ):
+                incoming_serialized_value = stored_proto.string_value
+
         self._set_widget_metadata(metadata)
         if user_key is not None:
             # If the widget has a user_key, update its user_key:widget_id mapping
@@ -1106,7 +1120,11 @@ class SessionState:
             user_key is not None and self.is_new_state_value(user_key)
         ) or restored_bound_value
 
-        return RegisterWidgetResult(widget_value, widget_value_changed)
+        return RegisterWidgetResult(
+            widget_value,
+            widget_value_changed,
+            incoming_serialized_value=incoming_serialized_value,
+        )
 
     def _handle_query_param_binding(
         self, metadata: WidgetMetadata[T], user_key: str, widget_id: str
@@ -1281,9 +1299,16 @@ class SessionState:
     def get_stats(
         self, _family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
-        from streamlit.runtime.stats import safe_sizeof
+        if config.get_option("server.enableExpensiveMemoryStats"):
+            from streamlit.runtime.stats import safe_sizeof
 
-        stat = CacheStat("st_session_state", "", safe_sizeof(self))
+            byte_length = safe_sizeof(self)
+        else:
+            # Use a cheap item-count proxy instead of traversing the session
+            # state values, which can be very expensive.
+            byte_length = len(self)
+
+        stat = CacheStat("st_session_state", "", byte_length)
         # In general, get_stats methods need to be able to return only requested stat
         # families, but this method only returns a single family, and we're guaranteed
         # that it was one of those requested if we make it here.

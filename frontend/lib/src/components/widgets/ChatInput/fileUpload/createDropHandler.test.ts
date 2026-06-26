@@ -210,6 +210,46 @@ describe("createDropHandler", () => {
     expect(params.deleteExistingFiles).toHaveBeenCalledTimes(1)
   })
 
+  it("keeps only the first file and rejects the rest in single-file mode when multiple files bypass react-dropzone", () => {
+    const fetchFileURLs = vi.fn().mockResolvedValue([] as IFileURLs[])
+    const params = createMockParams({
+      acceptMultipleFiles: false,
+      uploadClient: { fetchFileURLs } as unknown as FileUploadClient,
+    })
+    const handler = createDropHandler(params)
+    const firstFile = createTestFile("first.txt")
+    const secondFile = createTestFile("second.txt")
+
+    handler([firstFile, secondFile], [])
+
+    expect(fetchFileURLs).toHaveBeenCalledWith([firstFile])
+    expect(getRejectedFileInfo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        file: secondFile,
+        errors: expect.arrayContaining([
+          expect.objectContaining({ code: FileErrorCode.TooManyFiles }),
+        ]),
+      }),
+      expect.any(Number),
+      params.maxFileSize
+    )
+  })
+
+  it("keeps all files in multi-file mode when several bypass react-dropzone", () => {
+    const fetchFileURLs = vi.fn().mockResolvedValue([] as IFileURLs[])
+    const params = createMockParams({
+      acceptMultipleFiles: true,
+      uploadClient: { fetchFileURLs } as unknown as FileUploadClient,
+    })
+    const handler = createDropHandler(params)
+    const firstFile = createTestFile("first.txt")
+    const secondFile = createTestFile("second.txt")
+
+    handler([firstFile, secondFile], [])
+
+    expect(fetchFileURLs).toHaveBeenCalledWith([firstFile, secondFile])
+  })
+
   it("calls uploadClient.fetchFileURLs with accepted files", async () => {
     const file = createTestFile("up.txt")
     const fileURLs = FileURLsProto.create({})

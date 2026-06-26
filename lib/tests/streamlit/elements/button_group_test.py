@@ -139,7 +139,13 @@ class TestButtonGroupSerde:
         assert res is None
 
     def test_single_select_deserialize_unknown_value(self):
-        """Test single-select deserialization of unknown value returns string as-is."""
+        """Test single-select deserialization of an unrecognised value returns None.
+
+        When the options mapping doesn't contain the received wire value (e.g.
+        a stale formatted string left over from a previous format_func), the
+        deserializer must not pass that raw string to session_state or callbacks.
+        Without a configured default, the correct fallback is None.
+        """
         options = ["apple", "banana", "cherry"]
         formatted_options = ["Apple", "Banana", "Cherry"]
         formatted_option_to_option_index = {
@@ -152,7 +158,7 @@ class TestButtonGroupSerde:
             format_func=lambda x: x.capitalize(),
         )
         res = serde.deserialize(["Unknown"])
-        assert res == "Unknown"
+        assert res is None
 
     def test_multi_select_serialize(self):
         """Test multi-select serialization returns list of formatted strings."""
@@ -220,7 +226,13 @@ class TestButtonGroupSerde:
         assert res == ["apple", "cherry"]
 
     def test_multi_select_deserialize_unknown_value(self):
-        """Test multi-select deserialization with unknown value includes it as-is."""
+        """Test multi-select deserialization with unknown value silently drops it.
+
+        Stale wire values that don't exist in the current options mapping (e.g.
+        formatted strings from a previous format_func) must be dropped rather
+        than passed through to session_state or callbacks. Known valid values in
+        the same list are still resolved correctly.
+        """
         options = ["apple", "banana", "cherry"]
         formatted_options = ["Apple", "Banana", "Cherry"]
         formatted_option_to_option_index = {
@@ -233,7 +245,131 @@ class TestButtonGroupSerde:
             format_func=lambda x: x.capitalize(),
         )
         res = serde.deserialize(["Apple", "Unknown"])
-        assert res == ["apple", "Unknown"]
+        assert res == ["apple"]
+
+    def test_single_select_deserialize_stale_value_session_fallback_beats_default(self):
+        """Session-state fallback takes priority over configured default for stale values.
+
+        When the user has selected a non-default option (e.g. "B" while default="A")
+        and format_func changes, the serde must return the user's live selection ("B"),
+        not the configured default ("A"). Returning the default would cause
+        _widget_changed("B", "A") to fire the spurious on_change callback.
+        """
+        options = ["A", "B"]
+        formatted_options = ["manzana", "naranja"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_index=0,  # default is "A"
+            format_func=lambda x: {"A": "manzana", "B": "naranja"}[x],
+            session_state_fallback="B",  # user had "B" selected (non-default)
+        )
+        # Frontend sends stale EN string "orange" (for "B"); should return "B", not "A"
+        res = serde.deserialize(["orange"])
+        assert res == "B", (
+            "Expected session_state_fallback ('B') to take priority over default ('A')"
+        )
+
+    def test_multi_select_deserialize_stale_values_are_dropped(self):
+        """Stale multi-select wire values are dropped; valid values are resolved.
+
+        When format_func changes dynamically, the frontend may send a mix of
+        stale formatted strings from the old mapping and strings that happen to
+        match the new mapping. Only the valid ones should survive.
+        """
+        options = ["A", "B", "C"]
+        formatted_options = ["manzana", "naranja", "cereza"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: {"A": "manzana", "B": "naranja", "C": "cereza"}[x],
+        )
+        # "apple" is a stale EN string; "naranja" is valid in the ES mapping
+        res = serde.deserialize(["apple", "naranja"])
+        assert res == ["B"]  # Only the valid ES option is returned
+
+    def test_multi_select_deserialize_all_stale_session_fallback_beats_default(self):
+        """Session-state fallback takes priority over configured default for multi-select.
+
+        When the user has ["A","B"] selected (default is only ["A"]) and format_func
+        changes so all wire values go stale, the serde must return ["A","B"] (the live
+        selection), not ["A"] (the configured default). Returning the default would
+        cause _widget_changed(["A","B"], ["A"]) to fire a spurious on_change callback.
+        """
+        options = ["A", "B", "C"]
+        formatted_options = ["manzana", "naranja", "cereza"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: {"A": "manzana", "B": "naranja", "C": "cereza"}[x],
+            default_option_indices=[0],  # default is ["A"]
+            session_state_fallback=["A", "B"],  # user had A+B selected
+        )
+        # Both wire values are stale EN strings; should return ["A","B"], not ["A"]
+        res = serde.deserialize(["apple", "orange"])
+        assert res == ["A", "B"], (
+            "Expected session_state_fallback (['A','B']) to take priority over default (['A'])"
+        )
+
+    def test_single_select_deserialize_stale_value_no_default_uses_session_fallback(
+        self,
+    ):
+        """Single-select with a stale value, no default, but an active session-state value.
+
+        When format_func changes and no default is configured, the serde falls back
+        to the session_state_fallback value so _widget_changed sees no difference
+        and suppresses the spurious on_change callback.
+        """
+        options = ["A", "B"]
+        formatted_options = ["manzana", "naranja"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: {"A": "manzana", "B": "naranja"}[x],
+            session_state_fallback="A",  # user had "A" selected; no default
+        )
+        # Frontend sends stale EN string "apple"; should resolve to "A" via fallback
+        res = serde.deserialize(["apple"])
+        assert res == "A"
+
+    def test_multi_select_deserialize_all_stale_values_uses_session_fallback(self):
+        """Multi-select with all stale values uses session_state_fallback when no default.
+
+        When format_func changes, all selections go stale, and no default is
+        configured, the serde falls back to the last known session-state value so
+        that _widget_changed sees no difference and suppresses the spurious callback.
+        """
+        options = ["A", "B", "C"]
+        formatted_options = ["manzana", "naranja", "cereza"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: {"A": "manzana", "B": "naranja", "C": "cereza"}[x],
+            session_state_fallback=["A", "B"],  # user had A+B selected; no default
+        )
+        # Both wire values are stale EN strings; none match the ES mapping
+        res = serde.deserialize(["apple", "orange"])
+        assert res == ["A", "B"]
 
 
 def get_command_matrix(
@@ -1200,6 +1336,330 @@ class TestButtonGroupAppTest:
         at.button_group("sc").select("y").run()
         assert at.button_group("sc").value == "y"
         assert not at.exception
+
+
+class TestDynamicFormatFuncCallback:
+    """Integration tests for on_change callback correctness with dynamic format_func.
+
+    Covers GitHub issue #15493: callbacks should receive the original option value,
+    not the formatted string, even when format_func changes between reruns.
+    """
+
+    def test_callback_not_invoked_after_format_func_change_same_selection(self):
+        """on_change must not fire when format_func changes but selection is unchanged.
+
+        When a language switch changes format_func so that the same underlying
+        option ("A") is now displayed as "manzana" instead of "apple", the widget
+        value hasn't actually changed. The on_change callback must therefore NOT
+        be invoked on the rerun that follows the language switch.
+        """
+
+        def script():
+            import streamlit as st
+
+            lang = st.session_state.get("lang", "en")
+            fmt_en = {"A": "apple", "B": "orange"}
+            fmt_es = {"A": "manzana", "B": "naranja"}
+            fmt = fmt_en if lang == "en" else fmt_es
+
+            if "callback_count" not in st.session_state:
+                st.session_state["callback_count"] = 0
+
+            def on_change() -> None:
+                st.session_state["callback_count"] += 1
+                st.session_state["last_callback_value"] = st.session_state["fruit"]
+
+            st.pills(
+                "Fruit",
+                ["A", "B"],
+                format_func=lambda x: fmt[x],
+                default="A",
+                key="fruit",
+                on_change=on_change,
+            )
+
+        # Initial EN run - widget shows "apple" selected, callback never called
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+        assert at.button_group("fruit").value == "A"
+        assert at.session_state["callback_count"] == 0
+
+        # Switch language to ES without changing the selection
+        at.session_state["lang"] = "es"
+        at = at.run()
+        assert not at.exception
+
+        # The on_change callback must not have fired - only the format changed
+        assert at.session_state["callback_count"] == 0, (
+            "on_change fired unexpectedly after a format_func change with no "
+            f"selection change (callback_count={at.session_state['callback_count']})"
+        )
+        assert at.button_group("fruit").value == "A"
+
+    def test_callback_invoked_with_original_option_when_user_changes_selection(self):
+        """on_change receives the original option value, not the formatted string."""
+
+        def script():
+            import streamlit as st
+
+            lang = st.session_state.get("lang", "es")
+            fmt_es = {"A": "manzana", "B": "naranja"}
+            fmt = fmt_es if lang == "es" else {"A": "apple", "B": "orange"}
+
+            if "last_callback_value" not in st.session_state:
+                st.session_state["last_callback_value"] = None
+
+            def on_change() -> None:
+                st.session_state["last_callback_value"] = st.session_state["fruit"]
+
+            st.pills(
+                "Fruit",
+                ["A", "B"],
+                format_func=lambda x: fmt[x],
+                default="A",
+                key="fruit",
+                on_change=on_change,
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        # User clicks "naranja" (B) - callback should receive "B", not "naranja"
+        at.button_group("fruit").select("B").run()
+        assert not at.exception
+        assert at.session_state["last_callback_value"] == "B"
+        assert at.button_group("fruit").value == "B"
+
+    def test_multi_select_callback_not_invoked_after_format_func_change(self):
+        """on_change must not fire for multi-select when format_func changes but
+        selection is unchanged.
+
+        Regression test for gh-15493 (multi-select path): when a language switch
+        changes format_func so ["A", "B"] are now displayed as ["manzana", "naranja"]
+        instead of ["apple", "orange"], the widget value is unchanged. The on_change
+        callback must NOT fire on the rerun that follows the language switch.
+        """
+
+        def script():
+            import streamlit as st
+
+            lang = st.session_state.get("lang", "en")
+            fmt_en = {"A": "apple", "B": "orange"}
+            fmt_es = {"A": "manzana", "B": "naranja"}
+            fmt = fmt_en if lang == "en" else fmt_es
+
+            if "callback_count" not in st.session_state:
+                st.session_state["callback_count"] = 0
+
+            def on_change() -> None:
+                st.session_state["callback_count"] += 1
+                st.session_state["last_callback_value"] = st.session_state["fruits"]
+
+            st.pills(
+                "Fruits",
+                ["A", "B"],
+                format_func=lambda x: fmt[x],
+                default=["A", "B"],
+                selection_mode="multi",
+                key="fruits",
+                on_change=on_change,
+            )
+
+        # Initial EN run - ["A", "B"] selected, callback never called
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+        assert at.session_state["callback_count"] == 0
+
+        # Switch language to ES without changing the selection
+        at.session_state["lang"] = "es"
+        at = at.run()
+        assert not at.exception
+
+        # The on_change callback must not have fired - only the format changed
+        assert at.session_state["callback_count"] == 0, (
+            "on_change fired unexpectedly after a multi-select format_func change "
+            f"with no selection change (callback_count={at.session_state['callback_count']})"
+        )
+
+    def test_non_default_selection_callback_not_invoked_after_format_func_change(self):
+        """on_change must not fire when format_func changes and a non-default option is selected.
+
+        Regression test for gh-15493: when the user has selected a non-default
+        option (e.g. "B" while default="A") and format_func changes dynamically,
+        the deserialized value must remain "B" (via session_state_fallback) so
+        that _widget_changed("B", "B") suppresses the spurious callback.
+        """
+
+        def script():
+            import streamlit as st
+
+            lang = st.session_state.get("lang", "en")
+            fmt_en = {"A": "apple", "B": "orange"}
+            fmt_es = {"A": "manzana", "B": "naranja"}
+            fmt = fmt_en if lang == "en" else fmt_es
+
+            if "callback_count" not in st.session_state:
+                st.session_state["callback_count"] = 0
+
+            def on_change() -> None:
+                st.session_state["callback_count"] += 1
+
+            st.pills(
+                "Fruit",
+                ["A", "B"],
+                format_func=lambda x: fmt[x],
+                default="A",
+                key="fruit",
+                on_change=on_change,
+            )
+
+        # Initial EN run — "A" is selected by default, callback_count=0
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+        assert at.button_group("fruit").value == "A"
+        assert at.session_state["callback_count"] == 0
+
+        # User selects "B" (non-default) — callback fires once for the real user action
+        at.button_group("fruit").select("B").run()
+        assert not at.exception
+        assert at.button_group("fruit").value == "B"
+        assert at.session_state["callback_count"] == 1
+
+        # Switch language to ES — format_func changes, but the selection ("B") is unchanged
+        at.session_state["callback_count"] = 0
+        at.session_state["lang"] = "es"
+        at = at.run()
+        assert not at.exception
+
+        # Callback must NOT fire — only the display string changed, not the selected value
+        assert at.session_state["callback_count"] == 0, (
+            "on_change fired unexpectedly after a format_func change with a "
+            f"non-default selection (callback_count={at.session_state['callback_count']})"
+        )
+        assert at.button_group("fruit").value == "B", (
+            "Selection must remain 'B' after format_func change, "
+            f"got {at.button_group('fruit').value!r}"
+        )
+
+    def test_multi_select_non_default_selection_callback_not_invoked_after_format_func_change(
+        self,
+    ):
+        """on_change must not fire for multi-select when a non-default combo is selected and
+        format_func changes.
+
+        When the user has selected ["A","B"] (while default is only ["A"]) and
+        format_func changes, session_state_fallback must return ["A","B"] so that
+        _widget_changed(["A","B"], ["A","B"]) suppresses the spurious callback.
+        """
+
+        def script():
+            import streamlit as st
+
+            lang = st.session_state.get("lang", "en")
+            fmt_en = {"A": "apple", "B": "orange"}
+            fmt_es = {"A": "manzana", "B": "naranja"}
+            fmt = fmt_en if lang == "en" else fmt_es
+
+            if "callback_count" not in st.session_state:
+                st.session_state["callback_count"] = 0
+
+            def on_change() -> None:
+                st.session_state["callback_count"] += 1
+
+            st.pills(
+                "Fruits",
+                ["A", "B"],
+                format_func=lambda x: fmt[x],
+                default=["A"],
+                selection_mode="multi",
+                key="fruits",
+                on_change=on_change,
+            )
+
+        # Initial EN run — ["A"] selected by default
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+        assert at.session_state["callback_count"] == 0
+
+        # User adds "B" to the selection — callback fires once for the real user action
+        at.button_group("fruits").select("B").run()
+        assert not at.exception
+        assert sorted(at.button_group("fruits").value) == ["A", "B"]
+        assert at.session_state["callback_count"] == 1
+
+        # Switch language to ES — format_func changes, selection is still ["A","B"]
+        at.session_state["callback_count"] = 0
+        at.session_state["lang"] = "es"
+        at = at.run()
+        assert not at.exception
+
+        # Callback must NOT fire — only the display strings changed, not the selection
+        assert at.session_state["callback_count"] == 0, (
+            "on_change fired unexpectedly after a multi-select format_func change "
+            f"with a non-default selection (callback_count={at.session_state['callback_count']})"
+        )
+        assert sorted(at.button_group("fruits").value) == ["A", "B"], (
+            "Selection must remain ['A','B'] after format_func change, "
+            f"got {at.button_group('fruits').value!r}"
+        )
+
+    def test_single_select_no_default_callback_not_invoked_after_format_func_change(
+        self,
+    ):
+        """on_change must not fire for single-select with no default when format_func changes.
+
+        Regression test for gh-15493 (no-default path): when the user has manually
+        selected an option and format_func changes, the callback must NOT fire even
+        though no default was configured.
+        """
+
+        def script():
+            import streamlit as st
+
+            lang = st.session_state.get("lang", "en")
+            fmt_en = {"A": "apple", "B": "orange"}
+            fmt_es = {"A": "manzana", "B": "naranja"}
+            fmt = fmt_en if lang == "en" else fmt_es
+
+            if "callback_count" not in st.session_state:
+                st.session_state["callback_count"] = 0
+
+            def on_change() -> None:
+                st.session_state["callback_count"] += 1
+
+            st.pills(
+                "Fruit",
+                ["A", "B"],
+                format_func=lambda x: fmt[x],
+                # No default - user must manually select
+                key="fruit",
+                on_change=on_change,
+            )
+
+        # Initial run - nothing selected
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        # User clicks option "A" in EN mode
+        at.button_group("fruit").select("A").run()
+        assert not at.exception
+        assert (
+            at.session_state["callback_count"] == 1
+        )  # callback fired for user selection
+        assert at.button_group("fruit").value == "A"
+
+        # Reset callback count, then switch language to ES
+        at.session_state["callback_count"] = 0
+        at.session_state["lang"] = "es"
+        at = at.run()
+        assert not at.exception
+
+        # The on_change callback must NOT have fired after the format_func change
+        assert at.session_state["callback_count"] == 0, (
+            "on_change fired unexpectedly after a no-default format_func change "
+            f"(callback_count={at.session_state['callback_count']})"
+        )
+        assert at.button_group("fruit").value == "A"
 
 
 class PillsBindQueryParamsTest(DeltaGeneratorTestCase):

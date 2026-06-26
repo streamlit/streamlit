@@ -24,11 +24,8 @@ import {
   useState,
 } from "react"
 
-import { Textarea as UITextArea } from "baseui/textarea"
-
 import { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
 
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
@@ -47,7 +44,11 @@ import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { getTextAreaHeight } from "./heightUtils"
-import { StyledTextAreaContainer } from "./styled-components"
+import {
+  StyledTextAreaContainer,
+  StyledTextAreaInput,
+  StyledTextAreaRoot,
+} from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -262,61 +263,24 @@ const TextArea: FC<Props> = ({
         )}
       </WidgetLabel>
 
-      <UITextArea
-        inputRef={isAutoHeight ? textareaRef : undefined}
-        value={uiValue ?? ""}
-        placeholder={placeholder}
-        onBlur={onBlur}
-        onFocus={onFocus}
-        onChange={onChange}
-        onKeyDown={onKeyDown}
-        aria-label={element.label}
-        disabled={disabled}
-        id={id}
-        overrides={{
-          Input: {
-            style: {
-              fontWeight: theme.fontWeights.normal,
-              lineHeight: theme.lineHeights.inputWidget,
-              // The default height of the text area is calculated to perfectly fit 3 lines of text.
-              height: isAutoHeight ? autoExpandHeight : inputHeight,
-              maxHeight: isAutoHeight ? autoExpandMaxHeight : "",
-              minHeight: theme.sizes.largestElementHeight,
-              resize: isStretchHeight ? "none" : "vertical",
-              // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              paddingRight: theme.spacing.md,
-              paddingLeft: theme.spacing.md,
-              paddingBottom: theme.spacing.md,
-              paddingTop: theme.spacing.md,
-              "::placeholder": {
-                color: theme.colors.fadedText60,
-              },
-            },
-          },
-          Root: {
-            props: {
-              "data-testid": "stTextAreaRootElement",
-            },
-            style: ({ $isFocused }: { $isFocused: boolean }) => {
-              const borderColor = getBorderColor(theme.colors, $isFocused)
-              return {
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: theme.sizes.borderWidth,
-                borderRightWidth: theme.sizes.borderWidth,
-                borderTopWidth: theme.sizes.borderWidth,
-                borderBottomWidth: theme.sizes.borderWidth,
-
-                borderTopColor: borderColor,
-                borderRightColor: borderColor,
-                borderBottomColor: borderColor,
-                borderLeftColor: borderColor,
-
-                flexGrow: 1,
-              }
-            },
-          },
-        }}
-      />
+      <StyledTextAreaRoot data-testid="stTextAreaRootElement">
+        <StyledTextAreaInput
+          ref={isAutoHeight ? textareaRef : undefined}
+          value={uiValue ?? ""}
+          placeholder={placeholder}
+          onBlur={onBlur}
+          onFocus={onFocus}
+          onChange={onChange}
+          onKeyDown={onKeyDown}
+          aria-label={element.label}
+          disabled={disabled}
+          id={id}
+          rows={3}
+          $height={isAutoHeight ? autoExpandHeight : inputHeight}
+          $maxHeight={isAutoHeight ? autoExpandMaxHeight : ""}
+          $resize={isStretchHeight ? "none" : "vertical"}
+        />
+      </StyledTextAreaRoot>
 
       {shouldShowInstructions && (
         <InputInstructions

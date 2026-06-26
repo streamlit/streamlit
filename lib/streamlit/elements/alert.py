@@ -133,6 +133,9 @@ class AlertMixin:
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
 
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         Examples
         --------
         >>> import streamlit as st
@@ -239,6 +242,9 @@ class AlertMixin:
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
 
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         Examples
         --------
         >>> import streamlit as st
@@ -343,6 +349,9 @@ class AlertMixin:
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         Examples
         --------
@@ -450,6 +459,9 @@ class AlertMixin:
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
 
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         Examples
         --------
         >>> import streamlit as st
@@ -480,5 +492,5 @@ class AlertMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

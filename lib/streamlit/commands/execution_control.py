@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Literal, NoReturn
 import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import StreamlitPage, _validate_registered_page
 from streamlit.runtime.fragment import _check_not_parallel_worker
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
@@ -302,6 +302,7 @@ def switch_page(  # type: ignore[misc]
                 "Cannot use st.switch_page with external URL pages. "
                 "Use st.page_link instead to create a link to external pages."
             )
+        _validate_registered_page(page)
         page_script_hash = page._script_hash
     else:
         # Convert Path to string if necessary

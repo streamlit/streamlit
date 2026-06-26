@@ -63,9 +63,8 @@ def test_supports_navigating_to_page_directly_via_url(page: Page, app_base_url: 
 
 def test_can_switch_between_pages_and_edit_widgets(app: Page):
     """Test that we can switch between pages and edit widgets."""
-    slider = app.get_by_test_id("stSlider").locator('[role="slider"]')
-    expect(slider).to_be_visible()
-    slider.click()
+    slider = app.get_by_test_id("stSlider").get_by_role("slider")
+    expect(slider).to_be_attached()
     slider.press("ArrowRight")
     wait_for_app_run(app, wait_delay=500)
 
@@ -78,9 +77,8 @@ def test_can_switch_between_pages_and_edit_widgets(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 3")
     expect(app.get_by_test_id("stMarkdown")).to_contain_text("x is 0")
 
-    expect(slider).to_be_visible()
+    expect(app.get_by_test_id("stSlider")).to_be_visible()
 
-    slider.click()
     slider.press("ArrowRight")
     wait_for_app_run(app)
 
@@ -232,8 +230,7 @@ def test_widget_state_reset_on_page_switch(app: Page):
 
     expect(app.get_by_role("heading", name="Page 3")).to_be_visible()
 
-    slider = app.locator('.stSlider [role="slider"]')
-    slider.click()
+    slider = app.get_by_test_id("stSlider").get_by_role("slider")
     slider.press("ArrowRight")
     wait_for_app_run(app, wait_delay=500)
     expect(app.get_by_test_id("stMarkdown")).to_contain_text("x is 1")

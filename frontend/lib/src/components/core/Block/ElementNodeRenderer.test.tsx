@@ -59,6 +59,14 @@ vi.mock("./ElementContainer", async importOriginal => {
   }
 })
 
+vi.mock("~lib/components/elements/Metric/Metric", () => ({
+  default: () => null,
+}))
+
+vi.mock("~lib/components/elements/ImageList/ImageList", () => ({
+  default: () => null,
+}))
+
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
 function createElementNode(

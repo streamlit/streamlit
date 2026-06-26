@@ -1177,7 +1177,7 @@ class ResilientBrowser:
 
     @property
     def contexts(self) -> list[BrowserContext]:
-        """Return list of browser contexts."""
+        """The browser contexts."""
         if self._browser is None or not self._browser.is_connected():
             return []
         try:
@@ -1189,7 +1189,7 @@ class ResilientBrowser:
 
     @property
     def browser_type(self) -> BrowserType:
-        """Return the browser type."""
+        """The browser type."""
         return self._browser_type
 
     def is_connected(self) -> bool:

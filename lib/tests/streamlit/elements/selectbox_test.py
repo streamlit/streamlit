@@ -624,6 +624,79 @@ def test_selectbox_enum_coercion():
         test_enum()
 
 
+def test_selectbox_keeps_selection_with_identity_dependent_format_func():
+    """Selection persists when format_func does an identity-dependent lookup.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15618.
+    The option class is defined at module scope (redefined every rerun), so the
+    stored value is an instance of a previous run's class. A format_func that
+    looks the option up in a dict keyed on the current options would raise for
+    that stale instance; the label-based resolver avoids calling format_func on
+    the stored value and keeps the selection.
+    """
+
+    def script():
+        from dataclasses import dataclass
+
+        import streamlit as st
+
+        @dataclass(frozen=True)
+        class MyDataClass:
+            id: int
+            name: str
+
+        a = MyDataClass(1, "one")
+        b = MyDataClass(2, "two")
+        lookup = {a: "I", b: "II"}
+
+        def format_func(option: MyDataClass) -> str:
+            _ = lookup[option]
+            return option.name
+
+        selected = st.selectbox("selectbox", [a, b], format_func=format_func, key="sb")
+        st.text(f"Selected: {selected.name}")
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "Selected: one"
+
+    at = at.selectbox[0].set_value("two").run()
+    assert at.text[0].value == "Selected: two"
+
+
+def test_selectbox_keeps_enum_selection_with_identity_dependent_format_func():
+    """Enum options keep their selection with an identity-dependent format_func.
+
+    Regression test for the gap where ``maybe_coerce_enum`` dropped the stored
+    wire label. With ``runner.enumCoercion="off"`` the stored value is a stale
+    enum member, so an identity-dependent ``format_func`` raises; the wire label
+    must still be available to keep the selection instead of resetting.
+    """
+
+    def script():
+        from enum import Enum
+
+        import streamlit as st
+
+        class Color(Enum):
+            RED = 1
+            GREEN = 2
+
+        labels = {Color.RED: "I", Color.GREEN: "II"}
+
+        def format_func(color: Color) -> str:
+            return labels[color]
+
+        selected = st.selectbox("color", list(Color), format_func=format_func, key="c")
+        st.text(f"Selected: {selected.name}")
+
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        at = AppTest.from_function(script).run()
+        assert at.text[0].value == "Selected: RED"
+
+        at = at.selectbox[0].set_value("II").run()
+        assert at.text[0].value == "Selected: GREEN"
+
+
 def test_None_session_state_value_retained():
     def script():
         import streamlit as st

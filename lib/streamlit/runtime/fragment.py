@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from datetime import timedelta
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -171,6 +172,44 @@ class FragmentStorage(Protocol):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def register_outside_wrapper(
+        self, fragment_id: str, container_id: str, wrapper: OutsideContainerWrapper
+    ) -> None:
+        """Store the implicit wrapper for a (fragment, outside container) pair."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_outside_wrapper(
+        self, fragment_id: str, container_id: str
+    ) -> OutsideContainerWrapper | None:
+        """Return the cached wrapper for a (fragment, outside container) pair."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def outside_wrappers_for(self, fragment_id: str) -> list[OutsideContainerWrapper]:
+        """Return all wrapper records belonging to the given fragment."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def evict_outside_wrappers_created_by(self, fragment_id: str) -> None:
+        """Drop every wrapper whose outside container was created by the given
+        fragment's scope. Called when that fragment reruns and is about to rebuild
+        those containers.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def clear_outside_wrappers(self) -> None:
+        """Drop every stored wrapper record.
+
+        Called at the start of a full app run, before the main script recreates
+        its outside containers as new DG objects. Wrappers must survive a full
+        run so the fragment reruns that follow it can reuse them, so clearing
+        happens before — not after — the script body executes.
+        """
+        raise NotImplementedError
+
 
 # NOTE: Ideally, we'd like to add a MemoryFragmentStorageStatProvider implementation to
 # keep track of memory usage due to fragments, but doing something like this ends up
@@ -192,6 +231,7 @@ class MemoryFragmentStorage(FragmentStorage):
         self._parent_by_id: dict[str, str | None] = {}
         self._registration_sequence_by_id: dict[str, int] = {}
         self._registration_sequence = 0
+        self._outside_wrappers: dict[tuple[str, str], OutsideContainerWrapper] = {}
 
     def _iter_ancestor_ids(self, fragment_id: str) -> Iterator[str]:
         """Yield ancestors from the immediate parent outward.
@@ -210,10 +250,16 @@ class MemoryFragmentStorage(FragmentStorage):
             seen_ids.add(parent_id)
             current = parent_id
 
-    def _remove(self, fragment_id: str) -> None:
+    def _remove(self, fragment_id: str, *, evict_wrappers: bool = True) -> None:
         del self._fragments[fragment_id]
         self._parent_by_id.pop(fragment_id, None)
         self._registration_sequence_by_id.pop(fragment_id, None)
+        if evict_wrappers:
+            self._outside_wrappers = {
+                key: wrapper
+                for key, wrapper in self._outside_wrappers.items()
+                if key[0] != fragment_id
+            }
 
     def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
         with self._lock:
@@ -222,7 +268,7 @@ class MemoryFragmentStorage(FragmentStorage):
 
             for fragment_id in list(self._fragments):
                 if fragment_id not in new_fragment_ids:
-                    self._remove(fragment_id)
+                    self._remove(fragment_id, evict_wrappers=False)
 
     def lookup(self, key: str) -> Fragment:
         try:
@@ -316,6 +362,41 @@ class MemoryFragmentStorage(FragmentStorage):
         with self._lock:
             return key in self._fragments
 
+    def register_outside_wrapper(
+        self, fragment_id: str, container_id: str, wrapper: OutsideContainerWrapper
+    ) -> None:
+        with self._lock:
+            self._outside_wrappers[fragment_id, container_id] = wrapper
+
+    def get_outside_wrapper(
+        self, fragment_id: str, container_id: str
+    ) -> OutsideContainerWrapper | None:
+        with self._lock:
+            return self._outside_wrappers.get((fragment_id, container_id))
+
+    def outside_wrappers_for(self, fragment_id: str) -> list[OutsideContainerWrapper]:
+        with self._lock:
+            return [
+                wrapper
+                for (
+                    stored_fragment_id,
+                    _container_id,
+                ), wrapper in self._outside_wrappers.items()
+                if stored_fragment_id == fragment_id
+            ]
+
+    def evict_outside_wrappers_created_by(self, fragment_id: str) -> None:
+        with self._lock:
+            self._outside_wrappers = {
+                key: wrapper
+                for key, wrapper in self._outside_wrappers.items()
+                if wrapper.creating_fragment_id != fragment_id
+            }
+
+    def clear_outside_wrappers(self) -> None:
+        with self._lock:
+            self._outside_wrappers.clear()
+
     def __deepcopy__(self, memo: dict[int, object]) -> NoReturn:
         raise TypeError(
             "MemoryFragmentStorage does not support deepcopy; "
@@ -327,6 +408,35 @@ class MemoryFragmentStorage(FragmentStorage):
             "MemoryFragmentStorage does not support copy; "
             "it holds a threading.Lock and shared mutable state."
         )
+
+
+def _reset_outside_wrappers(
+    fragment_storage: FragmentStorage, fragment_id: str
+) -> None:
+    """Re-emit and reset every wrapper belonging to a fragment before it reruns.
+
+    Re-emitting sends a fresh add_block delta so the frontend doesn't garbage-
+    collect the wrapper as stale. Resetting the cursor returns its index to 0 so
+    the fragment's children overwrite in place instead of accumulating.
+
+    Each re-emitted delta carries ``fragment_id`` so the frontend's
+    ``ClearStaleNodeVisitor`` can recognize the wrapper as fragment-owned and
+    garbage-collect children that weren't re-emitted — otherwise a fragment
+    that shrinks its element count leaves stale children behind.
+    """
+    from streamlit.cursor import RunningCursor
+    from streamlit.delta_generator import _enqueue_add_block
+
+    # See docstring — tag wrappers with fragment_id for stale-child GC.
+    with ThreadState.scoped(fragment_id=fragment_id):
+        for wrapper in fragment_storage.outside_wrappers_for(fragment_id):
+            _enqueue_add_block(wrapper.creation_delta_path, wrapper.block_proto)
+
+            wrapper_cursor = wrapper.delta_generator._cursor
+            if not isinstance(wrapper_cursor, RunningCursor):
+                # LockedCursor (st.empty wrappers) always points at index 0.
+                continue
+            wrapper_cursor.reset()
 
 
 def _fragment(
@@ -393,11 +503,18 @@ def _fragment(
                 ctx.cursors = deepcopy(cursors_snapshot)
                 context_dg_stack.set(deepcopy(dg_stack_snapshot))
 
+                # Evict wrappers whose outside containers will be rebuilt by this
+                # fragment, then re-emit and reset the surviving wrappers. Order
+                # matters: eviction must happen first so we don't re-emit a wrapper
+                # that's about to be replaced.
+                ctx.fragment_storage.evict_outside_wrappers_created_by(fragment_id)
+                _reset_outside_wrappers(ctx.fragment_storage, fragment_id)
+
             # Always add the fragment id to new_fragment_ids. For full app runs
             # we need to add them anyways and for fragment runs we add them
             # in case the to-be-executed fragment id was cleared from the storage
             # by the full app run.
-            ctx.new_fragment_ids.check_and_add(fragment_id)
+            ctx.shared.new_fragment_ids.check_and_add(fragment_id)
             # Pin the active script hash to the value captured at fragment
             # definition (consistent widget IDs across reruns). Computed
             # above ThreadState.scoped() so the comparison isn't coupled
@@ -414,7 +531,11 @@ def _fragment(
             if skip_container:
                 ThreadState.update(pre_allocated_container_fragment_id=None)
 
-            with ThreadState.scoped(fragment_id=fragment_id):
+            # Set delta_path initial value to None. When the fragment container
+            # is established below, this will be initialized with the fragment's
+            # delta path. Without this, we would inherit the delta path from the
+            # parent scope.
+            with ThreadState.scoped(fragment_id=fragment_id, delta_path=None):
                 result = None
                 with active_hash_context:
                     container_ctx = (
@@ -527,24 +648,23 @@ def fragment(
     When Streamlit element commands are called directly in a fragment, the
     elements are cleared and redrawn on each fragment rerun, just like all
     elements are redrawn on each app rerun. The rest of the app is persisted
-    during a fragment rerun. When a fragment renders elements into externally
-    created containers, the elements will not be cleared with each fragment
-    rerun. Instead, elements will accumulate in those containers with each
-    fragment rerun, until the next app rerun.
+    during a fragment rerun.
 
-    Calling ``st.sidebar`` in a fragment is not supported. To write elements to
-    the sidebar with a fragment, call your fragment function inside a
-    ``with st.sidebar`` context manager.
+    A fragment can also write elements and widgets into a container created
+    outside of it, including directly to ``st.sidebar`` or ``st.bottom``. The
+    fragment's writes to that outside container are cleared and redrawn in
+    place on each fragment rerun, while content written to the same container
+    outside of the fragment keeps its position and is unaffected. Interacting
+    with a widget that a fragment rendered into an outside container reruns the
+    writing fragment, not the full app.
+
+    To populate an outside container from a fragment, the container must first
+    receive at least one write during the initial full app run.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these
     interactions are additive across multiple fragment reruns. You are
     responsible for handling any side effects of that behavior.
-
-    .. warning::
-
-        - Fragments can only contain widgets in their main body. Fragments
-          can't render widgets to externally created containers.
 
     Parameters
     ----------
@@ -676,6 +796,18 @@ def fragment(
     return _fragment(func, run_every=run_every, parallel=parallel)
 
 
+def _prepare_dg_stack_for_worker(
+    dg_stack: tuple[DeltaGenerator, ...],
+) -> tuple[DeltaGenerator, ...]:
+    """Deep-copy the DG stack for dispatch to a parallel worker thread.
+
+    The deepcopy creates independent cursor state (separate _index, parent_path,
+    etc.) so the worker doesn't race with the main thread. Each worker operates
+    in its own cursor space within a pre-allocated container.
+    """
+    return deepcopy(dg_stack)
+
+
 def _dispatch_parallel_fragment(
     ctx: ScriptRunContext,
     fragment_id: str,
@@ -687,9 +819,9 @@ def _dispatch_parallel_fragment(
     sees the container delta immediately), then submits the fragment body to
     run on a worker thread.
 
-    The coordinator's submit() handles context propagation: it captures
-    copy_context() and get_script_run_ctx() at submit time, and the worker
-    runs inside captured.run() with _scoped_ctx_attach().
+    The coordinator's submit() handles context propagation: the caller passes
+    ctx explicitly and submit() captures copy_context() at submit time, and the
+    worker runs inside captured.run() with _scoped_ctx_attach().
     """
     import streamlit as st
     from streamlit.delta_generator_singletons import context_dg_stack
@@ -703,10 +835,11 @@ def _dispatch_parallel_fragment(
         return
 
     with st.container():
-        dg_stack_with_container = deepcopy(context_dg_stack.get())
+        dg_stack_with_container = _prepare_dg_stack_for_worker(context_dg_stack.get())
 
     coordinator.submit(
         _run_parallel_fragment,
+        ctx,
         fragment_id,
         wrapped_fragment,
         dg_stack_with_container,

@@ -33,6 +33,7 @@ from e2e_playwright.shared.app_utils import (
     expect_text,
     get_element_by_key,
     get_multiselect,
+    open_popover,
 )
 
 MULTISELECT_COUNT = 29
@@ -272,6 +273,32 @@ def test_multiselect_deselect_option(app: Page):
     select_for_multiselect(app, "multiselect 2", "Male", True)
     del_from_multiselect(app, "multiselect 2", "Female")
     expect_text(app, "value 2: ['male']")
+
+
+def test_multiselect_esc_in_popover_preserves_selection(app: Page):
+    """Pressing ESC should close a containing popover without clearing the
+    multiselect selection.
+
+    Regression test for issue #15637.
+    """
+    popover_container = open_popover(app, "Popover with multiselect")
+    multiselect = popover_container.get_by_test_id("stMultiSelect")
+    expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(4)
+
+    multiselect.locator("input").first.click()
+    # First ESC closes the open dropdown.
+    app.keyboard.press("Escape")
+    # Second ESC closes the popover; it must not clear the selection.
+    app.keyboard.press("Escape")
+    expect(app.get_by_test_id("stPopoverBody")).not_to_be_visible()
+
+    # Reopen the popover and verify the selection is preserved.
+    popover_container = open_popover(app, "Popover with multiselect")
+    multiselect = popover_container.get_by_test_id("stMultiSelect")
+    expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(4)
+    expect_text(
+        popover_container, "value esc popover: ['Green', 'Yellow', 'Red', 'Blue']"
+    )
 
 
 def test_multiselect_option_over_max_selections(app: Page):

@@ -557,3 +557,43 @@ with st.container(key="shimmer_elements"):
     st.markdown(
         "Normal text before :red[:shimmer[:material/hourglass_empty: :blue[Please] **wait**...]] and after"
     )
+
+# Mermaid diagram support tests - verifies mermaid works within markdown context
+st.header("Mermaid Charts")
+
+with st.container(key="mermaid_elements"):
+    # Markdown with mermaid embedded - tests that markdown before/after mermaid works
+    st.markdown(
+        """
+Here is a **flowchart** showing a simple decision process:
+
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[OK]
+    B -->|No| D[Cancel]
+```
+
+The diagram above demonstrates mermaid rendering within markdown.
+"""
+    )
+
+    # Second mermaid type to verify different diagram types work
+    st.markdown(
+        """
+```mermaid
+sequenceDiagram
+    User->>App: Click
+    App-->>User: Response
+```
+"""
+    )
+
+    # Invalid mermaid syntax (should show error)
+    st.markdown(
+        """
+```mermaid
+this is not valid mermaid syntax
+```
+"""
+    )

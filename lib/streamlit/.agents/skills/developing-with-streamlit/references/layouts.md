@@ -3,6 +3,24 @@
 
 How you structure your app affects usability more than you think.
 
+## Layout container overview
+
+| Container | Use when |
+|-----------|----------|
+| `st.container` | You need a general-purpose group of elements, a bordered section, a horizontal row, custom alignment, fixed height, scrolling, or out-of-order insertion of multiple elements. |
+| `st.columns` | You need a simple proportional grid, such as two-column comparisons or up to four KPI cards. |
+| `st.sidebar` | You need app-level navigation, global filters, settings, or small app metadata that should stay separate from the main content. |
+| `st.tabs` | You need multiple peer views of related content, and users should switch between them without leaving the page. All tab content is computed by default; for lazy execution where only the selected tab runs, use `on_change="rerun"` (or a callable) and check each tab's `.open` property. |
+| `st.expander` | You need optional details, advanced settings, explanations, or diagnostic output that should not dominate the main view. |
+| `st.status` | You need to show progress, logs, or multi-step work in a collapsible status block that can update from running to complete or error. |
+| `st.popover` | You need compact on-demand controls, filters, or secondary actions without changing page layout. |
+| `@st.dialog` | You need a focused modal flow, such as confirmation, short editing, or settings that should temporarily interrupt the main page. |
+| `st.form` | You need to batch multiple widget inputs and rerun only when the user submits. |
+| `st.empty` | You need a placeholder that can be filled, replaced, or cleared later, including inserting elements out of order. |
+| `st.chat_message` | You need a message container with chat-specific styling and avatars. See `chat-ui.md` for chat interface patterns. |
+| `st.bottom` | You need content pinned to the bottom of the main app area, commonly persistent chat input or bottom action controls. |
+| `st.space` | You need explicit vertical or horizontal spacing inside the current layout direction. |
+
 ## Sidebar: navigation + global filters only
 
 The sidebar should only contain navigation and app-level filters. Main content goes in the main area.
@@ -89,6 +107,26 @@ with st.container(border=True):
     st.write("Grouped content here")
 ```
 
+## Placeholders with st.empty
+
+Use `st.empty()` when you need to reserve a slot and fill it later, replace one element with another, clear an element, or insert content out of order. The returned placeholder is a single-element container. If you need to replace a group of elements, put a child `st.container()` inside the placeholder.
+
+```python
+dataframe_slot = st.empty()
+
+rows_per_page = 25
+num_pages = max(1, (len(df) + rows_per_page - 1) // rows_per_page)
+
+with st.container(horizontal_alignment="right"):
+    page = st.pagination(num_pages, key="results_page")
+
+start = (page - 1) * rows_per_page
+end = start + rows_per_page
+dataframe_slot.dataframe(df.iloc[start:end], width="stretch")
+```
+
+This is useful when a control should appear below an element but the control's value is needed before that element renders, such as pagination below a dataframe. It also works for progress updates, temporary status messages, wizard-like flows, and cases where later code needs to render above content that has already been written. For persistent multi-element sections that do not need replacement, use `st.container()` instead.
+
 ## Dialogs for focused interactions
 
 Use `@st.dialog` for UI that doesn't need to be always visible:
@@ -155,7 +193,19 @@ st.container(height=300)
 
 ## References
 
+- [Using layouts and containers](https://docs.streamlit.io/develop/concepts/design/layouts-and-containers)
 - [st.container](https://docs.streamlit.io/develop/api-reference/layout/st.container)
 - [st.columns](https://docs.streamlit.io/develop/api-reference/layout/st.columns)
 - [st.sidebar](https://docs.streamlit.io/develop/api-reference/layout/st.sidebar)
+- [st.tabs](https://docs.streamlit.io/develop/api-reference/layout/st.tabs)
+- [st.expander](https://docs.streamlit.io/develop/api-reference/layout/st.expander)
+- [st.status](https://docs.streamlit.io/develop/api-reference/status/st.status)
+- [st.popover](https://docs.streamlit.io/develop/api-reference/layout/st.popover)
 - [st.dialog](https://docs.streamlit.io/develop/api-reference/execution-flow/st.dialog)
+- [st.form](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form)
+- [st.empty](https://docs.streamlit.io/develop/api-reference/layout/st.empty)
+- [Insert elements out of order](https://docs.streamlit.io/knowledge-base/using-streamlit/insert-elements-out-of-order)
+- [st.chat_message](https://docs.streamlit.io/develop/api-reference/chat/st.chat_message)
+- [Chat UI reference](chat-ui.md)
+- [st.bottom](https://docs.streamlit.io/develop/api-reference/layout/st.bottom)
+- [st.space](https://docs.streamlit.io/develop/api-reference/layout/st.space)

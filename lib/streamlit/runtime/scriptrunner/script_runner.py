@@ -775,6 +775,13 @@ class ScriptRunner:
                                 )
 
                     else:
+                        # Drop wrappers from the previous run before the main
+                        # script recreates its outside containers as new DG
+                        # objects. Clearing here (rather than after the script
+                        # body) lets the wrappers created during this run survive
+                        # for the fragment reruns that follow it.
+                        self._fragment_storage.clear_outside_wrappers()
+
                         # Expect parallel_coordinator to be initialized;
                         # cast makes this clear to the type checker.
                         coordinator = cast(
@@ -796,7 +803,7 @@ class ScriptRunner:
                             coordinator.drain()
                             raise
                         self._fragment_storage.clear(
-                            new_fragment_ids=ctx.new_fragment_ids.snapshot()
+                            new_fragment_ids=ctx.shared.new_fragment_ids.snapshot()
                         )
 
                     self._session_state.maybe_check_serializable()
@@ -829,7 +836,7 @@ class ScriptRunner:
                     # Create and send page profile information
                     ctx.enqueue(
                         create_page_profile_message(
-                            commands=ctx.tracked_commands,
+                            commands=ctx.shared.tracked_commands,
                             exec_time=to_microseconds(timer() - start_time),
                             prep_time=to_microseconds(prep_time),
                             uncaught_exception=(
@@ -865,7 +872,9 @@ class ScriptRunner:
 
         # Tell session_state to update itself in response
         if not premature_stop:
-            self._session_state.on_script_finished(ctx.widget_ids_this_run.snapshot())
+            self._session_state.on_script_finished(
+                ctx.shared.widget_ids_this_run.snapshot()
+            )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
