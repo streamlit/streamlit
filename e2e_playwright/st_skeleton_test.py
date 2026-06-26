@@ -73,24 +73,25 @@ def test_skeleton_context_manager_instant(app: Page):
 
 def test_skeleton_context_manager_with_delay(app: Page):
     """Test context manager mode shows skeleton during delay then clears."""
-    # Auto-wait for the static skeletons to render before capturing the count,
-    # so the baseline is stable regardless of initial load timing.
-    skeletons = app.get_by_test_id("stSkeletonElement")
-    # The app renders 5 static skeletons; assert that baseline before acting.
-    expect(skeletons).to_have_count(5)
-    initial_skeleton_count = 5
+    # Scope the skeleton-count assertions to the delayed context manager's keyed
+    # container, so the test does not depend on the total number of static
+    # skeletons rendered elsewhere in the app.
+    cm_skeletons = get_element_by_key(app, "delay_cm_container").get_by_test_id(
+        "stSkeletonElement"
+    )
+    expect(cm_skeletons).to_have_count(0)
 
     # Click the button to run the context manager
     get_button(app, "Run skeleton context manager (with delay)").click()
 
-    # Verify the skeleton is visible during the delay (1s sleep > 0.5s delay threshold).
-    # The skeleton count should increase by 1 during the delay.
-    expect(app.get_by_test_id("stSkeletonElement")).to_have_count(
-        initial_skeleton_count + 1, timeout=3000
-    )
+    # The skeleton appears within the container during the delay (1s sleep > 0.5s
+    # delay threshold).
+    expect(cm_skeletons).to_have_count(1, timeout=3000)
 
-    # Wait for the success message which appears after the skeleton clears.
+    # The success message appears after the skeleton clears...
     expect(app.get_by_text("Data loaded after delay!")).to_be_visible(timeout=10000)
+    # ...and the transient skeleton must be gone.
+    expect(cm_skeletons).to_have_count(0)
 
 
 def test_skeleton_context_manager_with_exception(app: Page):

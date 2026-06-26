@@ -40,11 +40,14 @@ if st.button("Run skeleton context manager (instant)"):
         pass
     st.success("Context manager completed!")
 
-# Context manager - with delay
-if st.button("Run skeleton context manager (with delay)"):
-    with st.skeleton(height=150):
-        time.sleep(1)
-    st.success("Data loaded after delay!")
+# Context manager - with delay. Wrapped in a keyed container so the e2e test can
+# scope its skeleton-count assertion to this block instead of depending on the
+# total number of static skeletons rendered elsewhere in the app.
+with st.container(key="delay_cm_container"):
+    if st.button("Run skeleton context manager (with delay)"):
+        with st.skeleton(height=150):
+            time.sleep(1)
+        st.success("Data loaded after delay!")
 
 # Context manager - with exception
 if st.button("Run skeleton context manager (with exception)"):
