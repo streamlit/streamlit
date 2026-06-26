@@ -36,9 +36,6 @@ event-driven "upgrade":
 - **Shiny for Python** builds a reactive dependency graph and "minimally re-renders" only the outputs
   whose inputs changed.
 
-(See the companion analysis `event-driven-alternatives-research.md` at the repo root for a full,
-cited execution-model comparison.)
-
 The demand shows up directly in our own issue tracker. Read in full, these requests all describe the
 same gap — *update only what an event affects, without a full rerun*:
 
