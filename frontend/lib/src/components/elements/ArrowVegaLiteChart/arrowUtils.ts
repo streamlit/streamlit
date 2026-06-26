@@ -129,17 +129,13 @@ export function getDataSets(
 }
 
 /**
- * Retrieves an array of data from Quiver starting from a specified index.
+ * Retrieves an array of data from Quiver.
  * Converts data values to a format compatible with VegaLite visualization.
  *
  * @param {Quiver} quiverData - The Quiver data object to extract data from.
- * @param {number} [startIndex=0] - The starting index for data extraction.
  * @returns {VegaLiteDataRow[]} An array of data objects for visualization.
  */
-export function getDataArray(
-  quiverData: Quiver,
-  startIndex = 0
-): VegaLiteDataRow[] {
+export function getDataArray(quiverData: Quiver): VegaLiteDataRow[] {
   if (quiverData.dimensions.numDataRows === 0) {
     return []
   }
@@ -157,7 +153,7 @@ export function getDataArray(
       isDatetimeType(firstIndexColumnType) ||
       isDateType(firstIndexColumnType))
 
-  for (let rowIndex = startIndex; rowIndex < numDataRows; rowIndex++) {
+  for (let rowIndex = 0; rowIndex < numDataRows; rowIndex++) {
     const row: VegaLiteDataRow = {}
 
     if (hasSupportedIndex) {

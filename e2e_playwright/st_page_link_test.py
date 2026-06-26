@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
-from e2e_playwright.shared.app_utils import get_element_by_key, get_expander
+from e2e_playwright.shared.app_utils import (
+    get_element_by_key,
+    get_expander,
+    reset_hovering,
+)
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 PAGE_LINK_COUNT = 18
@@ -64,7 +68,9 @@ def test_page_link_help_tooltip(app: Page):
     hover_target = page_links.nth(7).get_by_test_id("stTooltipHoverTarget")
     expect(hover_target).to_be_visible()
 
-    # Hover over the tooltip target
+    # Prime the interaction modality to 'pointer' before hovering.
+    # React Aria requires a document-level pointermove before pointerenter.
+    reset_hovering(app)
     hover_target.hover()
 
     expect(app.get_by_text("Some help text")).to_be_visible()

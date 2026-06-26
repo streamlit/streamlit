@@ -89,7 +89,7 @@ Subagents run autonomously in a fresh context, which optimizes for context size 
 
 ## Style Guide
 
-Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [oxfmt](https://github.com/nicolo-ribaudo/oxfmt), [oxlint](https://oxc.rs/docs/guide/usage/linter), [ESLint](https://eslint.org/), and [Ruff](https://github.com/astral-sh/ruff) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
+Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [oxfmt](https://oxc.rs/docs/guide/usage/formatter), [oxlint](https://oxc.rs/docs/guide/usage/linter), [ESLint](https://eslint.org/), and [Ruff](https://github.com/astral-sh/ruff) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
 
 ## How to build Streamlit
 
@@ -154,6 +154,31 @@ $ curl -LsSf https://astral.sh/uv/install.sh | sh
 # (Recommended) Install ripgrep - used by AI agents for fast log/code search
 $ sudo apt-get install -y ripgrep
 ```
+
+#### Rocky Linux / RHEL / Fedora
+
+```bash
+# Install some essentials
+$ sudo dnf install -y make gcc-c++ curl git rsync unzip protobuf-compiler
+
+# Set frontend dependencies:
+$ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+$ source ~/.bashrc
+$ nvm install node
+$ corepack enable
+
+# Install uv for Python
+$ curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# (Recommended) Install GitHub CLI - used by AI agents for PR and issue management
+# See https://cli.github.com/ for installation instructions
+
+# (Recommended) Install ripgrep - used by AI agents for fast log/code search
+$ sudo dnf install -y ripgrep
+```
+
+> [!NOTE]
+> If you're not on Debian, Ubuntu, or macOS, `make python-init` skips `playwright install --with-deps`. That command only officially supports those platforms. Browser binaries still download fine. If e2e tests later complain about missing system libraries, grab them through your package manager. See Playwright's [system requirements](https://playwright.dev/python/docs/intro#system-requirements) for the list. To force or skip the deps step, set `INSTALL_PLAYWRIGHT_DEPS=true` or `false`.
 
 #### Windows
 

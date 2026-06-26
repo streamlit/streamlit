@@ -726,11 +726,14 @@ class NumberInputMixin:
         layout_config = create_layout_config(width=width)
 
         self.dg._enqueue(
-            "number_input", number_input_proto, layout_config=layout_config
+            "number_input",
+            number_input_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
         )
         return current_value
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

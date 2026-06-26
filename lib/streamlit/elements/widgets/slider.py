@@ -1109,10 +1109,15 @@ class SliderMixin:
 
         layout_config = create_layout_config(width=width)
 
-        self.dg._enqueue("slider", slider_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "slider",
+            slider_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
+        )
         return cast("SliderReturn", widget_state.value)
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

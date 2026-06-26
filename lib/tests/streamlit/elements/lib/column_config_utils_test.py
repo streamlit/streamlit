@@ -38,10 +38,12 @@ from streamlit.elements.lib.column_config_utils import (
     _determine_data_kind_via_pandas_dtype,
     apply_data_specific_configs,
     determine_dataframe_schema,
+    extract_button_column_configs,
     is_type_compatible,
     process_config_mapping,
     update_column_config,
 )
+from streamlit.elements.lib.column_types import ButtonColumn
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
@@ -414,6 +416,76 @@ class ColumnConfigUtilsTest(unittest.TestCase):
 
         with pytest.raises(StreamlitAPIException):
             process_config_mapping({"col1": ["a", "b"]})  # type: ignore
+
+    def test_extract_button_column_configs(self):
+        """Test extraction of interactive ButtonColumn wrapper configs."""
+        button_column = ButtonColumn("Actions", key="action_click")
+        processed_config, button_columns = extract_button_column_configs(
+            {
+                "name": "Name",
+                2: button_column,
+            }
+        )
+
+        assert processed_config == {
+            "name": "Name",
+            2: button_column.config,
+        }
+        assert button_columns == {"_pos:2": button_column}
+
+    def test_extract_button_column_configs_with_none(self):
+        """Test that a None column config returns (None, {})."""
+        processed_config, button_columns = extract_button_column_configs(None)
+
+        assert processed_config is None
+        assert button_columns == {}
+
+    def test_extract_button_column_configs_with_empty_dict(self):
+        """Test that an empty column config returns ({}, {})."""
+        processed_config, button_columns = extract_button_column_configs({})
+
+        assert processed_config == {}
+        assert button_columns == {}
+
+    def test_extract_button_column_configs_with_string_key(self):
+        """Test that a string-keyed ButtonColumn is extracted under its raw name."""
+        button_column = ButtonColumn("Actions", key="action_click")
+        processed_config, button_columns = extract_button_column_configs(
+            {"actions": button_column}
+        )
+
+        assert processed_config == {"actions": button_column.config}
+        # String keys are used as-is, without the positional "_pos:" prefix.
+        assert button_columns == {"actions": button_column}
+
+    def test_extract_button_column_configs_with_mixed_config_types(self):
+        """Test extraction with multiple button columns alongside other config value types."""
+        str_button = ButtonColumn("Edit", key="edit_click")
+        pos_button = ButtonColumn("Delete", key="delete_click")
+        processed_config, button_columns = extract_button_column_configs(
+            {
+                "name": "Name",  # str config
+                "details": {"label": "Details"},  # ColumnConfig dict
+                "hidden_col": None,  # None config
+                "edit": str_button,  # string-keyed button
+                1: pos_button,  # positional button
+            }
+        )
+
+        # Non-button configs pass through unchanged, button configs are replaced
+        # with their serializable .config attribute.
+        assert processed_config == {
+            "name": "Name",
+            "details": {"label": "Details"},
+            "hidden_col": None,
+            "edit": str_button.config,
+            1: pos_button.config,
+        }
+        # Both button columns are extracted, keyed by name (str) or "_pos:" prefix (int).
+        assert button_columns == {
+            "edit": str_button,
+            "_pos:1": pos_button,
+        }
 
     def test_update_column_config(self):
         """Test that the update_column_config function correctly updates a column's configuration."""

@@ -112,7 +112,7 @@ steps:
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `nightly.yml` | Daily schedule (6:30 UTC) | Creates nightly tag, runs full test suite, publishes to PyPI |
+| `nightly.yml` | Daily schedule (4:30 UTC) | Creates nightly tag, runs full test suite, publishes to PyPI |
 | `release.yml` | Manual (on tag) | Builds and publishes official releases to PyPI and GitHub |
 | `release-branch-creation.yml` | Manual | Creates release branch from a nightly tag |
 | `release-tag-and-pr-creation.yml` | Manual | Creates release tag and PR to merge back to develop |
@@ -135,7 +135,8 @@ steps:
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `ai-pr-review.yml` | `ai-review` label or manual | AI-powered code review using Cursor CLI |
+| `ai-pr-review.yml` | `ai-review`/`ai-final-review` label or manual | AI-powered code review using Cursor CLI |
+| `ai-qa-testing.yml` | `ai-qa-test` label or manual | AI-powered QA testing on PR branches |
 | `ai-issue-triage.yml` | `ai-review` label on issue or manual | AI-powered issue triage (duplicates, labels) |
 | `ai-update-docs.yml` | Weekly (Tuesdays) or manual | AI-powered documentation review and updates |
 | `ai-fix-flaky-e2e-tests.yml` | Weekly (Fridays) or manual | AI-powered flaky E2E test diagnosis and fixing |

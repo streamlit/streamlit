@@ -22,6 +22,7 @@ from e2e_playwright.shared.app_utils import (
     click_checkbox,
     expect_markdown,
     get_element_by_key,
+    reset_hovering,
 )
 
 
@@ -172,6 +173,7 @@ def test_menu_button_help_tooltip(app: Page):
     """Test that help tooltip shows on hover."""
     menu_button = get_menu_button(app, "Button with Help")
     # Use first button due to duplicate rendering for mobile/desktop tooltip views
+    reset_hovering(app)
     menu_button.get_by_test_id("stMenuButtonButton").first.hover()
 
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("This is helpful text")
@@ -246,9 +248,9 @@ def test_menu_button_short_options(app: Page, assert_snapshot: ImageCompareFunct
     expect(menu_body).to_be_visible()
 
     # Check that short options are visible (not exact match due to markdown rendering)
-    expect(menu_body.locator("li").filter(has_text="A")).to_be_visible()
-    expect(menu_body.locator("li").filter(has_text="B")).to_be_visible()
-    expect(menu_body.locator("li").filter(has_text="C")).to_be_visible()
+    expect(menu_body.get_by_role("menuitem").filter(has_text="A")).to_be_visible()
+    expect(menu_body.get_by_role("menuitem").filter(has_text="B")).to_be_visible()
+    expect(menu_body.get_by_role("menuitem").filter(has_text="C")).to_be_visible()
 
     # Menu should be narrower than default
     assert_snapshot(menu_body, name="st_menu_button-short_options")

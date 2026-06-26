@@ -22,6 +22,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -157,8 +158,7 @@ class StPagesTest(DeltaGeneratorTestCase):
     def test_page_run_can_be_run_if_ordained(self):
         """Test that a page can be run if ordained."""
 
-        # Indicates we are in V2
-        self.script_run_ctx.pages_manager.set_pages({})
+        enable_mpa_v2_mode(self.script_run_ctx.pages_manager)
 
         page = st.Page(lambda: True)
         page._can_be_called = True

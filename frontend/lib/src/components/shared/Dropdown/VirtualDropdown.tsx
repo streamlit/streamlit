@@ -152,10 +152,20 @@ const VirtualDropdown = forwardRef<HTMLUListElement, VirtualDropdownProps>(
         (child.props as OptionListProps & { $isHighlighted?: boolean })
           .$isHighlighted
     )
-    // Center the highlighted item in view; stay at top if first or none highlighted
+    // Center the highlighted item in view; stay at top if first or none highlighted.
+    // Clamp to maxScrollOffset so we don't virtualize away items at the top
+    // when the list fits without overflow (offsets past the end are unreachable
+    // because the browser pins scrollTop to 0).
+    const maxScrollOffset = Math.max(0, contentHeight - height)
     const initialScrollOffset =
       highlightedIndex > 0
-        ? Math.max(0, highlightedIndex * itemSize - height / 2 + itemSize / 2)
+        ? Math.min(
+            Math.max(
+              0,
+              highlightedIndex * itemSize - height / 2 + itemSize / 2
+            ),
+            maxScrollOffset
+          )
         : 0
 
     return (

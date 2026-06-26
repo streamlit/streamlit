@@ -46,9 +46,11 @@ from streamlit.elements.lib.column_config_utils import (
     DataframeSchema,
     apply_data_specific_configs,
     determine_dataframe_schema,
+    extract_button_column_configs,
     is_type_compatible,
     marshall_column_config,
     process_config_mapping,
+    register_button_column_widgets,
     update_column_config,
 )
 from streamlit.elements.lib.form_utils import current_form_id
@@ -73,7 +75,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import is_list_like, is_type
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -1033,8 +1035,12 @@ class DataEditorMixin:
         # Check if the column names are valid and unique.
         _check_column_names(data_df)
 
+        processed_column_config, button_columns = extract_button_column_configs(
+            column_config
+        )
+
         # Convert the user provided column config into the frontend compatible format:
-        column_config_mapping = process_config_mapping(column_config)
+        column_config_mapping = process_config_mapping(processed_column_config)
 
         # Deactivate editing for columns that are not compatible with arrow
         for column_name, column_data in data_df.items():
@@ -1151,7 +1157,7 @@ class DataEditorMixin:
 
         if dataframe_util.is_pandas_styler(data):
             # Pandas styler will only work for non-editable/disabled columns.
-            # Get first 10 chars of md5 hash of the key or delta path as styler uuid
+            # Get first 10 chars of content hash of the key or delta path as styler uuid
             # and set it as styler uuid.
             # We are only using the first 10 chars to keep the uuid short since
             # it will be used for all the cells in the dataframe. Therefore, this
@@ -1159,13 +1165,23 @@ class DataEditorMixin:
             # should be good enough to avoid  potential collisions in this case.
             # Even on collisions, there should not be a big issue with the
             # rendering in the data editor.
-            styler_uuid = calc_md5(key or self.dg._get_delta_path_str())[:10]
+            styler_uuid = calc_hash(key or self.dg._get_delta_path_str())[:10]
             data.set_uuid(styler_uuid)  # ty: ignore[call-non-callable, unresolved-attribute]
             marshall_styler(proto.arrow_data, data, styler_uuid)
 
         proto.arrow_data.data = arrow_bytes
 
         marshall_column_config(proto, column_config_mapping)
+
+        # Skip registration when the entire data_editor is disabled (disabled=True)
+        # since button-column clicks should not fire in that case.
+        if disabled is not True:
+            register_button_column_widgets(
+                dg=self.dg,
+                proto=proto,
+                button_columns=button_columns,
+                ctx=ctx,
+            )
 
         # Create layout configuration
         # For height, only include it in LayoutConfig if it's not "auto"
@@ -1193,5 +1209,5 @@ class DataEditorMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

@@ -15,13 +15,20 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
+from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 import pytest
 
+from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.element_tree import _format_value_for_widget
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_alert():
@@ -48,6 +55,49 @@ def test_alert():
     repr(at.warning[0])
 
 
+def test_app_test_discovers_installed_v2_components_with_file_backed_assets(
+    tmp_path: Path,
+):
+    """Installed CCv2 components with file-backed assets resolve under AppTest."""
+    package_root = tmp_path / "apptest_pkg"
+    asset_dir = package_root / "assets"
+    asset_dir.mkdir(parents=True)
+    (asset_dir / "style.css").write_text("#demo { color: purple; }")
+    (asset_dir / "script.js").write_text("console.log('loaded');")
+
+    manifest = ComponentManifest(
+        name="apptest_pkg",
+        version="0.0.1",
+        components=[ComponentConfig(name="demo", asset_dir="assets")],
+    )
+
+    def script():
+        import streamlit as st
+        from streamlit.components.v2 import component
+
+        component(
+            "apptest_pkg.demo",
+            html='<div id="demo">hi</div>',
+            css="style.css",
+            js="script.js",
+        )
+        st.success("Done")
+
+    with patch(
+        "streamlit.components.v2.manifest_scanner.scan_component_manifests",
+        return_value=[(manifest, package_root)],
+    ) as scan_mock:
+        at = AppTest.from_function(script)
+        at.run()
+        # Rerun to ensure the discovered component manager is cached on the
+        # AppTest instance and components are not rescanned on every rerun.
+        at.run()
+
+    assert at.success[0].value == "Done"
+    assert not at.exception
+    assert scan_mock.call_count == 1
+
+
 def test_button():
     def script():
         import streamlit as st
@@ -68,6 +118,35 @@ def test_button():
     assert sr3.button[1].value is False
 
     repr(sr.button[0])
+
+
+def test_download_button():
+    def script():
+        import streamlit as st
+
+        clicked = st.download_button(
+            "Download",
+            data="contents",
+            file_name="example.txt",
+            mime="text/plain",
+            key="download",
+        )
+        st.write(clicked)
+
+    at = AppTest.from_function(script).run()
+    assert at.download_button[0].label == "Download"
+    assert at.download_button(key="download").value is False
+    assert at.markdown[0].value == "`False`"
+
+    at.download_button[0].click().run()
+    assert at.download_button[0].value is True
+    assert at.markdown[0].value == "`True`"
+
+    at.run()
+    assert at.download_button[0].value is False
+    assert at.markdown[0].value == "`False`"
+
+    repr(at.download_button[0])
 
 
 def test_chat():
@@ -152,6 +231,35 @@ def test_columns():
     assert at.columns[1].radio[0].value == "a"
 
     repr(at.columns[0])
+
+
+def test_image():
+    def script():
+        import streamlit as st
+
+        st.image("https://example.com/image.png", caption="A caption")
+        st.image(
+            [
+                "https://example.com/first.png",
+                "https://example.com/second.png",
+            ],
+            caption=["First", "Second"],
+        )
+        st.image("https://example.com/no_caption.png")
+
+    at = AppTest.from_function(script).run()
+    assert at.image.len == 3
+    assert at.image[0].value == ["https://example.com/image.png"]
+    assert at.image[0].captions == ["A caption"]
+    assert at.image[1].value == [
+        "https://example.com/first.png",
+        "https://example.com/second.png",
+    ]
+    assert at.image[1].captions == ["First", "Second"]
+    assert at.image[2].value == ["https://example.com/no_caption.png"]
+    assert at.image[2].captions == [""]
+
+    repr(at.image[0])
 
 
 def test_dataframe():
@@ -709,6 +817,110 @@ def test_format_func():
     assert at.select_slider("s").value == (2, 5)
 
     assert not at.exception
+
+
+def test_format_func_accepts_formatted_labels():
+    """Selection widgets accept already-formatted labels via format_func (#9476)."""
+    expected_inventories = [
+        {"id_inventory": 1, "description": "Inventory 1"},
+        {"id_inventory": 2, "description": "Inventory 2"},
+        {"id_inventory": 3, "description": "Inventory 3"},
+    ]
+
+    def script():
+        import streamlit as st
+
+        inventories = [
+            {"id_inventory": 1, "description": "Inventory 1"},
+            {"id_inventory": 2, "description": "Inventory 2"},
+            {"id_inventory": 3, "description": "Inventory 3"},
+        ]
+
+        selected_items = st.multiselect(
+            "Multi inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="multi_inventory",
+        )
+        st.button(
+            "Run multi",
+            disabled=not selected_items,
+            key="multi_button",
+            on_click=lambda: st.session_state.update(multi_clicked=True),
+        )
+
+        selected_item = st.selectbox(
+            "Single inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="single_inventory",
+        )
+        st.button(
+            "Run single",
+            disabled=selected_item["description"] == "Inventory 1",
+            key="single_button",
+        )
+
+        st.radio(
+            "Radio inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="radio_inventory",
+        )
+
+        st.segmented_control(
+            "Segmented inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="segmented_inventory",
+        )
+
+    at = AppTest.from_function(script).run()
+
+    at.multiselect("multi_inventory").set_value(["Inventory 1"])
+    at = at.button("multi_button").click().run()
+
+    assert at.session_state.multi_clicked
+    assert at.multiselect("multi_inventory").value == [expected_inventories[0]]
+    assert at.multiselect("multi_inventory").indices == [0]
+    assert not at.button("multi_button").disabled
+
+    at = at.selectbox("single_inventory").set_value("Inventory 2").run()
+
+    assert at.selectbox("single_inventory").value == expected_inventories[1]
+    assert at.selectbox("single_inventory").index == 1
+    assert not at.button("single_button").disabled
+
+    at = at.radio("radio_inventory").set_value("Inventory 3").run()
+
+    assert at.radio("radio_inventory").value == expected_inventories[2]
+    assert at.radio("radio_inventory").index == 2
+
+    at = at.segmented_control("segmented_inventory").set_value("Inventory 1").run()
+
+    assert at.segmented_control("segmented_inventory").value == expected_inventories[0]
+    assert not at.exception
+
+
+def test_format_value_for_widget_error_semantics():
+    """_format_value_for_widget falls back only for string labels, else re-raises."""
+
+    def format_func(value: dict[str, str]) -> str:
+        return value["description"]
+
+    # Raw option formats normally.
+    assert format_func({"description": "Inventory 1"}) == "Inventory 1"
+    assert (
+        _format_value_for_widget(format_func, {"description": "Inventory 1"})
+        == "Inventory 1"
+    )
+
+    # Formatted string label is accepted.
+    assert _format_value_for_widget(format_func, "Inventory 1") == "Inventory 1"
+
+    # Non-string value with a raising format_func is a real bug and must propagate.
+    with pytest.raises(TypeError):
+        _format_value_for_widget(format_func, 123)
 
 
 def test_select_slider():

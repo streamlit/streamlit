@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -68,7 +67,6 @@ from streamlit.type_util import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from streamlit.dataframe_util import OptionSequence
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import (
         WidgetArgs,
@@ -695,11 +693,16 @@ class MultiSelectMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue(widget_name, proto, layout_config=layout_config)
+        self.dg._enqueue(
+            widget_name,
+            proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+        )
 
         return current_values
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

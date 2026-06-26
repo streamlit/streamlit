@@ -212,6 +212,59 @@ describe("Markdown element with help", () => {
     expect(helpContent).toHaveTextContent("Next line")
     expect(helpContent).toHaveTextContent("bold")
   })
+
+  it("renders single-line HTML body with help as an icon and no literal :help[] text (gh-15211)", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      body: "<p>an example</p>",
+      allowHtml: true,
+      help: "HTML help tooltip",
+    })
+    render(<Markdown {...props} />)
+
+    expect(await screen.findByText("an example")).toBeVisible()
+
+    // The literal ":help[]" must not leak into the rendered output.
+    const markdown = screen.getByTestId("stMarkdown")
+    expect(markdown).not.toHaveTextContent(":help[]")
+
+    await user.hover(screen.getByTestId("stTooltipHoverTarget"))
+
+    const helpContent = await screen.findByTestId("stTooltipContent")
+    expect(helpContent).toBeVisible()
+    expect(helpContent).toHaveTextContent("HTML help tooltip")
+  })
+
+  it("renders multi-line HTML body with help as an icon (gh-15211)", async () => {
+    const props = getProps({
+      body: "<div>\n<p>line 1</p>\n<p>line 2</p>\n</div>",
+      allowHtml: true,
+      help: "HTML help tooltip",
+    })
+    render(<Markdown {...props} />)
+
+    expect(await screen.findByText("line 1")).toBeVisible()
+    expect(screen.getByText("line 2")).toBeVisible()
+
+    const markdown = screen.getByTestId("stMarkdown")
+    expect(markdown).not.toHaveTextContent(":help[]")
+    expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
+  })
+
+  it("renders LaTeX body with help via the LaTeX branch (anti-regression)", () => {
+    const props = getProps({
+      body: "\\KaTeX",
+      elementType: MarkdownProto.Type.LATEX,
+      allowHtml: false,
+      help: "LaTeX help tooltip",
+    })
+    render(<Markdown {...props} />)
+
+    // LaTeX branch must render the inline tooltip icon, not inject :help[].
+    const markdown = screen.getByTestId("stMarkdown")
+    expect(markdown).not.toHaveTextContent(":help[]")
+    expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
+  })
 })
 
 describe("Markdown badge with help", () => {

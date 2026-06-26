@@ -14,11 +14,12 @@
 
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 import streamlit as st
-from streamlit.elements.iframe import marshall
+from streamlit.elements.iframe import IframeMixin, _is_file, marshall
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -58,6 +59,40 @@ def test_marshall_basic_fields() -> None:
 
     assert proto.src == "https://example.com"
     assert proto.scrolling is False
+
+
+def test_is_file_with_null_byte_string() -> None:
+    """Test that _is_file returns False for paths that raise ValueError (e.g., null bytes)."""
+    # Strings with a null byte raise ValueError on many platforms when passed to Path
+    assert _is_file("invalid\x00path") is False
+
+
+def test_is_file_with_path_raising_oserror() -> None:
+    """Test that _is_file returns False when Path.is_file raises an OSError."""
+    with patch("streamlit.elements.iframe.Path") as mock_path:
+        mock_path.return_value.is_file.side_effect = OSError("filesystem error")
+        assert _is_file("/some/path") is False
+
+
+def test_is_file_with_long_string() -> None:
+    """Test that _is_file short-circuits for very long strings (likely HTML)."""
+    long_html = "x" * 5000
+    assert _is_file(long_html) is False
+
+
+def test_is_file_with_html_tag_substring() -> None:
+    """Test that _is_file short-circuits for strings containing '<'."""
+    assert _is_file("not<a>file") is False
+
+
+def test_iframe_mixin_dg_returns_self() -> None:
+    """``IframeMixin.dg`` returns the mixin instance."""
+
+    class _OnlyIframe(IframeMixin):
+        pass
+
+    iframe_mixin = _OnlyIframe()
+    assert iframe_mixin.dg is iframe_mixin
 
 
 class IFrameComponentTest(DeltaGeneratorTestCase):
@@ -401,5 +436,56 @@ class StIframeLocalFileTest(DeltaGeneratorTestCase):
             # The file should be uploaded and exposed via a media URL
             assert element.iframe.src != ""
             assert element.iframe.src.startswith("/media/")
+        finally:
+            temp_path.unlink()
+
+    def test_iframe_with_unreadable_html_file_raises(self):
+        """Test st.iframe raises an exception when reading an HTML file fails."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".html", delete=False, encoding="utf-8"
+        ) as f:
+            f.write("<html></html>")
+            temp_path = Path(f.name)
+
+        try:
+            with patch(
+                "streamlit.elements.iframe.open",
+                side_effect=PermissionError("denied"),
+            ):
+                with pytest.raises(StreamlitAPIException, match="Unable to read file"):
+                    st.iframe(str(temp_path), height=400)
+        finally:
+            temp_path.unlink()
+
+    def test_iframe_with_unreadable_non_html_file_raises(self):
+        """Test st.iframe raises an exception when reading a non-HTML file fails."""
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".pdf", delete=False) as f:
+            f.write(b"%PDF-1.4")
+            temp_path = Path(f.name)
+
+        try:
+            with patch(
+                "streamlit.elements.iframe.open",
+                side_effect=PermissionError("denied"),
+            ):
+                with pytest.raises(StreamlitAPIException, match="Unable to read file"):
+                    st.iframe(str(temp_path), height=400)
+        finally:
+            temp_path.unlink()
+
+    def test_iframe_with_non_html_file_without_runtime(self):
+        """Test st.iframe sets src to empty when runtime is not available."""
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".pdf", delete=False) as f:
+            f.write(b"%PDF-1.4 test")
+            temp_path = Path(f.name)
+
+        try:
+            with patch("streamlit.elements.iframe.runtime.exists", return_value=False):
+                st.iframe(str(temp_path), height=300)
+
+                element = self.get_delta_from_queue().new_element
+                # Without runtime, src should be empty for non-HTML files
+                assert element.iframe.src == ""
+                assert element.iframe.srcdoc == ""
         finally:
             temp_path.unlink()

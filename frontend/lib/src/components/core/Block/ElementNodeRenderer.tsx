@@ -51,6 +51,7 @@ import {
   MultiSelect as MultiSelectProto,
   NumberInput as NumberInputProto,
   PageLink as PageLinkProto,
+  Pagination as PaginationProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
   Radio as RadioProto,
@@ -64,6 +65,7 @@ import {
   Text as TextProto,
   TimeInput as TimeInputProto,
   Toast as ToastProto,
+  VegaLiteChart as VegaLiteChartProto,
   Video as VideoProto,
 } from "@streamlit/protobuf"
 
@@ -77,6 +79,7 @@ import { getAlertElementKind } from "~lib/components/elements/AlertElement/utils
 import ExceptionElement from "~lib/components/elements/ExceptionElement/ExceptionElement"
 import Help from "~lib/components/elements/Help/Help"
 import Markdown from "~lib/components/elements/Markdown/Markdown"
+import { AppSkeleton } from "~lib/components/elements/Skeleton/AppSkeleton"
 import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
 import TextElement from "~lib/components/elements/TextElement/TextElement"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
@@ -192,6 +195,9 @@ const MenuButton = lazy(
 const NumberInput = lazy(
   () => import("~lib/components/widgets/NumberInput/NumberInput")
 )
+const Pagination = lazy(
+  () => import("~lib/components/widgets/Pagination/Pagination")
+)
 const Radio = lazy(() => import("~lib/components/widgets/Radio/Radio"))
 const Selectbox = lazy(
   () => import("~lib/components/widgets/Selectbox/Selectbox")
@@ -278,7 +284,7 @@ const RawElementNodeRenderer = (
         >
           <Table
             element={tableProto}
-            data={node.quiverElement}
+            elementHash={node.elementHash}
             {...elementProps}
           />
         </ElementContainer>
@@ -561,20 +567,43 @@ const RawElementNodeRenderer = (
         </ElementContainer>
       )
 
-    case "skeleton":
-      // Without this style, the skeleton width relies on the flex container that
-      // wraps the page contents having align-items: stretch. There was a regression
-      // where this default was changed. It is more robust to ensure that the skeleton
-      // has this width.
+    case "skeleton": {
+      const skeletonProto = node.element.skeleton as SkeletonProto
+      // AppSkeleton (internal full-page loading) uses FULL_WIDTH to fill the app container.
+      // Regular st.skeleton() uses LARGE_ELEMENT which respects the layout config's
+      // widthConfig and heightConfig from the public API.
+      const isAppSkeleton =
+        skeletonProto.style === SkeletonProto.SkeletonStyle.APP
+      // The public st.skeleton() API drives sizing through the layout config:
+      // when an explicit stretch/pixel/rem height is set, the container is
+      // sized and the skeleton fills it (100%). Otherwise it falls back to the
+      // default element height instead of collapsing in an auto-height
+      // container. The deprecated internal _skeleton() carries no layout config,
+      // so it always renders at the default element height.
+      const { heightConfig } = node.element
+      const fillContainerHeight = Boolean(
+        heightConfig?.useStretch ||
+        heightConfig?.pixelHeight ||
+        heightConfig?.remHeight
+      )
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.FULL_WIDTH}
+          config={
+            isAppSkeleton
+              ? ElementContainerConfig.FULL_WIDTH
+              : ElementContainerConfig.LARGE_ELEMENT
+          }
           isStale={isStale}
         >
-          <Skeleton element={node.element.skeleton as SkeletonProto} />
+          {isAppSkeleton ? (
+            <AppSkeleton />
+          ) : (
+            <Skeleton fillContainerHeight={fillContainerHeight} />
+          )}
         </ElementContainer>
       )
+    }
 
     case "snow":
       // Specifically use node.scriptRunId vs. scriptRunId from context
@@ -689,7 +718,7 @@ const RawElementNodeRenderer = (
             // be undefined.
             key={dataframeProto.id || undefined}
             element={dataframeProto}
-            data={node.quiverElement}
+            elementHash={node.elementHash}
             {...widgetProps}
           />
         </ElementContainer>
@@ -697,7 +726,7 @@ const RawElementNodeRenderer = (
     }
 
     case "vegaLiteChart": {
-      const vegaLiteElement = node.vegaLiteChartElement
+      const vegaLiteProto = node.element.vegaLiteChart as VegaLiteChartProto
 
       // VegaLite charts with embedded dataframes need a defined parent width
       // (not fit-content) for proper measurement and rendering due to the resize feature.
@@ -720,12 +749,13 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
           <ArrowVegaLiteChart
-            element={vegaLiteElement}
+            element={vegaLiteProto}
+            elementHash={node.elementHash}
             // Vega-lite chart can be used as a widget (when selections are activated) or
             // an element. We only want to set the key in case of it being used as a widget
             // since otherwise it might break some apps that show the same charts multiple times.
             // So we only compute an element ID if it's a widget, otherwise its an empty string.
-            key={vegaLiteElement.id || undefined}
+            key={vegaLiteProto.id || undefined}
             {...widgetProps}
           />
         </ElementContainer>
@@ -824,6 +854,25 @@ const RawElementNodeRenderer = (
           <Feedback
             key={feedbackProto.id}
             element={feedbackProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
+      )
+    }
+
+    case "pagination": {
+      const paginationProto = node.element.pagination as PaginationProto
+      widgetProps.disabled = widgetProps.disabled || paginationProto.disabled
+
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.FULL_WIDTH}
+          isStale={isStale}
+        >
+          <Pagination
+            key={paginationProto.id}
+            element={paginationProto}
             {...widgetProps}
           />
         </ElementContainer>

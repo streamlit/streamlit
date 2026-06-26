@@ -27,7 +27,7 @@ from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.GraphVizChart_pb2 import GraphVizChart as GraphVizChartProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     import graphviz
@@ -54,7 +54,7 @@ class GraphvizMixin:
 
         .. Important::
             You must install ``graphviz>=0.19.0`` to use this command. You can
-            install all charting dependencies (except Bokeh) as an extra with
+            install all charting dependencies as an extra with
             Streamlit:
 
             .. code-block:: shell
@@ -171,7 +171,7 @@ class GraphvizMixin:
 
         # Generate element ID from delta path
         delta_path = self.dg._get_delta_path_str()
-        element_id = calc_md5(delta_path.encode())
+        element_id = calc_hash(delta_path.encode())
 
         graphviz_chart_proto = GraphVizChartProto()
 
@@ -191,7 +191,7 @@ class GraphvizMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 

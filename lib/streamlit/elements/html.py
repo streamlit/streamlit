@@ -148,12 +148,12 @@ class HtmlMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
     @property
     def _event_dg(self) -> DeltaGenerator:
-        """Get the event delta generator."""
+        """The event delta generator."""
         return get_dg_singleton_instance().event_dg
 
 

@@ -34,7 +34,7 @@ Inputs can include:
 Generated format:
 
 ```text
-$$ID-<md5_hash>-<user_key>
+$$ID-<hash>-<user_key>
 ```
 
 Registration also enforces uniqueness within a run and records the ID/key in the current `ScriptRunContext`.

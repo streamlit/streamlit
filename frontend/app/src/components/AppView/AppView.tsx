@@ -19,32 +19,39 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react"
 
-import EventContainer from "@streamlit/app/src/components/EventContainer/EventContainer"
 import Header from "@streamlit/app/src/components/Header/Header"
 import LogoComponent from "@streamlit/app/src/components/Logo/LogoComponent"
 import TopNav from "@streamlit/app/src/components/Navigation/TopNav"
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import ThemedSidebar from "@streamlit/app/src/components/Sidebar/ThemedSidebar"
 import {
+  calculateMaxBreakpoint,
   getSavedSidebarState,
   saveSidebarState,
   shouldCollapse,
 } from "@streamlit/app/src/components/Sidebar/utils"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
+  AppNode,
   AppRoot,
   BlockNode,
   ComponentRegistry,
   ContainerContentsWrapper,
+  ElementNode,
   FileUploadClient,
   IGuestToHostMessage,
   NavigationContext,
   Profiler,
   SidebarConfigContext,
+  StreamlitToastItem,
+  StyledToastRegion,
   ThemeContext,
+  toastQueue,
+  TransientNode,
   useExecuteWhenChanged,
   useWindowDimensionsContext,
   WidgetStateManager,
@@ -65,6 +72,33 @@ import {
   StyledSidebarBlockContainer,
   StyledStickyBottomContainer,
 } from "./styled-components"
+
+/**
+ * Recursively checks if the given node contains a chat input element.
+ */
+function containsChatInput(node: AppNode): boolean {
+  if (node instanceof ElementNode) {
+    return node.element.type === "chatInput"
+  }
+
+  if (node instanceof BlockNode) {
+    return node.children.some(containsChatInput)
+  }
+
+  if (node instanceof TransientNode) {
+    const anchorHasChatInput = node.anchor
+      ? containsChatInput(node.anchor)
+      : false
+    const transientHasChatInput = node.transientNodes.some(
+      el => el.element.type === "chatInput"
+    )
+    return anchorHasChatInput || transientHasChatInput
+  }
+
+  // Unknown AppNode subtypes are assumed to not contain a chat input.
+  // Update this function if a new node type is added that could contain one.
+  return false
+}
 
 export interface AppViewProps {
   elements: AppRoot
@@ -141,11 +175,19 @@ function AppView(props: AppViewProps): ReactElement {
 
   const { appPages, pageLinkBaseUrl } = useContext(NavigationContext)
 
-  const { initialSidebarState, appLogo, hideSidebarNav } = useContext(
-    SidebarConfigContext
-  )
+  const { initialSidebarState, appLogo, hideSidebarNav, isSidebarLocked } =
+    useContext(SidebarConfigContext)
 
   const { innerWidth } = useWindowDimensionsContext()
+
+  // LOCKED is desktop-only: on mobile the sidebar renders as an overlay that
+  // covers the main content, so the lock degrades gracefully — users can still
+  // collapse it to access the page. innerWidth > 0 guards against the
+  // unmeasured initial state before dimensions have been read from the DOM.
+  const isMobileViewport =
+    innerWidth > 0 &&
+    innerWidth <= calculateMaxBreakpoint(activeTheme.emotion.breakpoints.md)
+  const isEffectivelyLocked = isSidebarLocked && !isMobileViewport
 
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
@@ -165,7 +207,6 @@ function AppView(props: AppViewProps): ReactElement {
   useEffect(() => {
     // Handle sidebar flicker/unmount with MPA & hideSidebarNav
     if (showSidebar && hideSidebarNav && !showSidebarOverride) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
       setShowSidebarOverride(true)
     }
   }, [showSidebar, hideSidebarNav, showSidebarOverride])
@@ -188,8 +229,12 @@ function AppView(props: AppViewProps): ReactElement {
     removeScriptFinishedHandler,
   ])
 
-  // Activate scroll to bottom whenever there are bottom elements:
-  const Component = hasBottomElements
+  // Activate scroll to bottom only when there's a chat input in the bottom container:
+  const hasBottomChatInput = useMemo(
+    () => hasBottomElements && containsChatInput(elements.bottom),
+    [hasBottomElements, elements.bottom]
+  )
+  const Component = hasBottomChatInput
     ? ScrollToBottomContainer
     : StyledAppViewMain
 
@@ -208,6 +253,11 @@ function AppView(props: AppViewProps): ReactElement {
   )
 
   const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(() => {
+    // Locked sidebar (desktop only) always starts open; ignore saved preference.
+    if (isEffectivelyLocked) {
+      return false
+    }
+
     const savedSidebarState = getSavedSidebarState(pageLinkBaseUrl)
     if (savedSidebarState !== null) {
       // User has adjusted the sidebar, respect it
@@ -224,6 +274,12 @@ function AppView(props: AppViewProps): ReactElement {
 
   useExecuteWhenChanged(() => {
     if (innerWidth > 0 && showSidebar) {
+      // Locked sidebar (desktop only) always stays open; skip saved preference.
+      if (isEffectivelyLocked) {
+        setSidebarIsCollapsed(false)
+        return
+      }
+
       const savedSidebarState = getSavedSidebarState(pageLinkBaseUrl)
 
       if (savedSidebarState !== null) {
@@ -245,16 +301,21 @@ function AppView(props: AppViewProps): ReactElement {
     initialSidebarState,
     activeTheme.emotion.breakpoints.md,
     pageLinkBaseUrl,
+    isEffectivelyLocked,
   ])
 
   const setSidebarCollapsedWithOptionalPersistence = useCallback(
     (isCollapsed: boolean, shouldPersist: boolean = true) => {
+      // Locked sidebar (desktop only) cannot be collapsed; skip localStorage writes.
+      if (isEffectivelyLocked) {
+        return
+      }
       setSidebarIsCollapsed(isCollapsed)
       if (shouldPersist) {
         saveSidebarState(pageLinkBaseUrl, isCollapsed)
       }
     },
-    [pageLinkBaseUrl]
+    [isEffectivelyLocked, pageLinkBaseUrl]
   )
 
   const toggleSidebar = useCallback(() => {
@@ -382,16 +443,19 @@ function AppView(props: AppViewProps): ReactElement {
           )}
         </Component>
       </StyledMainContent>
+      <StyledToastRegion
+        queue={toastQueue}
+        aria-label="Notifications"
+        data-testid="stToastContainer"
+        className="stToastContainer"
+      >
+        {({ toast }) => <StreamlitToastItem toast={toast} />}
+      </StyledToastRegion>
       {hasEventElements && (
         <Profiler id="Event">
-          <EventContainer>
-            <StyledEventBlockContainer
-              className="stEvent"
-              data-testid="stEvent"
-            >
-              {renderBlock(elements.event)}
-            </StyledEventBlockContainer>
-          </EventContainer>
+          <StyledEventBlockContainer className="stEvent" data-testid="stEvent">
+            {renderBlock(elements.event)}
+          </StyledEventBlockContainer>
         </Profiler>
       )}
     </StyledAppViewContainer>

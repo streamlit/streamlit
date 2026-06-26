@@ -51,6 +51,7 @@ from streamlit.testing.v1.element_tree import (
     DateInput,
     DateTimeInput,
     Divider,
+    DownloadButton,
     ElementList,
     ElementTree,
     Error,
@@ -59,6 +60,7 @@ from streamlit.testing.v1.element_tree import (
     Feedback,
     FileUploader,
     Header,
+    Image,
     Info,
     Json,
     Latex,
@@ -90,7 +92,7 @@ from streamlit.testing.v1.element_tree import (
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.testing.v1.util import patch_config_options
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
@@ -176,6 +178,9 @@ class AppTest:
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
+        # Cache the discovered component manager so installed CCv2 components are
+        # only scanned once per AppTest instance instead of on every rerun.
+        self._bidi_component_manager: BidiComponentManager | None = None
 
         tree = ElementTree()
         tree._runner = self
@@ -219,7 +224,7 @@ class AppTest:
         args: tuple[Any, ...] | None = None,
         kwargs: dict[str, Any] | None = None,
     ) -> AppTest:
-        script_name = calc_md5(bytes(script, "utf-8"))
+        script_name = calc_hash(bytes(script, "utf-8"))
 
         path = Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
@@ -341,7 +346,13 @@ class AppTest:
             MemoryMediaFileStorage("/mock/media")
         )
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
-        mock_runtime.bidi_component_registry = BidiComponentManager()
+        if self._bidi_component_manager is None:
+            bidi_component_manager = BidiComponentManager()
+            bidi_component_manager.discover_and_register_components(
+                start_file_watching=False
+            )
+            self._bidi_component_manager = bidi_component_manager
+        mock_runtime.bidi_component_registry = self._bidi_component_manager
         Runtime._instance = mock_runtime
         script_cache = ScriptCache()
         # Reset to ensure st.navigation works correctly regardless of prior test state.
@@ -453,7 +464,7 @@ class AppTest:
             )
         page_path_str = str(full_page_path.resolve())
         _, page_name = page_icon_and_name(Path(page_path_str))
-        self._page_hash = calc_md5(page_name)
+        self._page_hash = calc_hash(page_name)
         return self
 
     @property
@@ -700,6 +711,20 @@ class AppTest:
         return self._tree.divider
 
     @property
+    def download_button(self) -> WidgetList[DownloadButton]:
+        """Sequence of all ``st.download_button`` widgets.
+
+        Returns
+        -------
+        WidgetList of DownloadButton
+            Sequence of all ``st.download_button`` widgets. Individual widgets
+            can be accessed from a WidgetList by index (order on the page) or
+            key. For example, ``at.download_button[0]`` for the first widget or
+            ``at.download_button(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.download_button
+
+    @property
     def error(self) -> ElementList[Error]:
         """Sequence of all ``st.error`` elements.
 
@@ -782,6 +807,20 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.header
+
+    @property
+    def image(self) -> ElementList[Image]:
+        """Sequence of all ``st.image`` elements.
+
+        Returns
+        -------
+        ElementList of Image
+            Sequence of all ``st.image`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.image[0]`` for the first element. Image is an
+            extension of the Element class.
+        """
+        return self._tree.image
 
     @property
     def info(self) -> ElementList[Info]:

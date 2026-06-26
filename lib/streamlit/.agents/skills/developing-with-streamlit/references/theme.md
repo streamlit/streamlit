@@ -246,7 +246,7 @@ borderColor = "#E4E4E7"
 grayColor = "#71717A"
 ```
 
-**Brand accent:** Neutral base with one brand color (e.g., Stripe's purple)
+**Brand accent:** Neutral base with one brand color (e.g., a signature indigo)
 ```toml
 primaryColor = "#635bff"           # Brand purple
 backgroundColor = "#ffffff"
@@ -255,8 +255,8 @@ textColor = "#425466"              # Neutral gray
 
 **Complementary:** Brand primary with supporting accent colors
 ```toml
-primaryColor = "#29B5E8"           # Brand blue (Snowflake)
-textColor = "#11567F"              # Darker blue for text
+primaryColor = "#0969DA"           # Brand blue
+textColor = "#1F2328"              # Near-black for text
 greenColor = "#36B37E"             # Success states
 redColor = "#DE350B"               # Error states
 ```
@@ -276,53 +276,6 @@ Main content:        #ffffff (lightest)
 Secondary elements:  #f6f8fa (slightly darker)
 Sidebar:             #f6f8fa or contrasting brand color
 Code blocks:         #f6f8fa (matches secondary or distinct)
-```
-
-## Example: Snowflake brand theme
-
-Clean, professional theme with brand blue accents:
-
-```toml
-[theme]
-primaryColor = "#29B5E8"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f4f9fc"
-codeBackgroundColor = "#e8f4f8"
-textColor = "#11567F"
-linkColor = "#29B5E8"
-borderColor = "#d0e8f2"
-showWidgetBorder = true
-showSidebarBorder = true
-baseRadius = "8px"
-buttonRadius = "8px"
-
-font = "'Inter':https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
-codeFontSize = "13px"
-codeTextColor = "#11567F"
-baseFontSize = 14
-baseFontWeight = 400
-headingFontSizes = ["32px", "24px", "20px", "16px", "14px", "12px"]
-headingFontWeights = [600, 600, 600, 500, 500, 500]
-linkUnderline = false
-
-chartCategoricalColors = ["#29B5E8", "#11567F", "#71C8E5", "#174D6A", "#A5DDF2", "#0E4D6B", "#52B8D9"]
-
-blueColor = "#29B5E8"
-greenColor = "#36B37E"
-yellowColor = "#FFAB00"
-redColor = "#DE350B"
-violetColor = "#6554C0"
-
-dataframeBorderColor = "#d0e8f2"
-dataframeHeaderBackgroundColor = "#e8f4f8"
-
-[theme.sidebar]
-backgroundColor = "#11567F"
-secondaryBackgroundColor = "#174D6A"
-codeBackgroundColor = "#0E4D6B"
-textColor = "#ffffff"
-borderColor = "#1E6D94"
 ```
 
 ## Example: VS Code dark theme
@@ -450,6 +403,29 @@ st.html("""<style>.st-key-submit button { width: 100%; }</style>""")
 Most theme options update live after saving `config.toml` and rerunning. Font-related options (`fontFaces`) require a server restart.
 
 Test your theme with: buttons (primary contrast), forms (borders, focus), dataframes (headers), code blocks, charts, and sidebar.
+
+## Theme templates
+
+Ready-to-use theme configs (Google Fonts, no local font files) are available in
+`assets/templates/themes/configs/`. Copy one to `.streamlit/config.toml` in your
+app:
+
+| Theme | Base | Primary Color | Fonts |
+|-------|------|---------------|-------|
+| **dracula** | Dark | `#BD93F9` (purple) | Fira Sans, JetBrains Mono |
+| **financial-dashboard** | Dark | `#60A5FA` (blue) | Inter, JetBrains Mono |
+| **fluent** | Light | `#0078D4` (blue) | Segoe UI, Cascadia Code |
+| **jupyter** | Light | `#F37626` (orange) | Source Sans 3, Source Code Pro |
+| **material-ui** | Light | `#6750A4` (violet) | Roboto, Roboto Mono |
+| **minimal** | Dark | `#6366F1` (indigo) | Inter, JetBrains Mono |
+| **nord** | Dark | `#88C0D0` (frost blue) | Inter, JetBrains Mono |
+| **one-dark-pro** | Dark | `#61AFEF` (blue) | IBM Plex Sans, JetBrains Mono |
+| **shadcn** | Light | `#18181B` (zinc) | Inter, JetBrains Mono |
+| **solarized-light** | Light | `#268BD2` (blue) | Source Sans 3, Source Code Pro |
+| **ubuntu** | Light | `#E95420` (orange) | Ubuntu, Ubuntu Mono |
+| **vscode** | Dark | `#0078D4` (blue) | Segoe UI, Fira Code |
+
+See `assets/templates/themes/README.md`.
 
 ## References
 

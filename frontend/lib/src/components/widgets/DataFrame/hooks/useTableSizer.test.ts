@@ -721,4 +721,163 @@ describe("useTableSizer hook", () => {
     expect(result.current.resizableSize.width).toEqual("100%")
     expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
   })
+
+  describe("with useContent height", () => {
+    it("uses content-based height for fewer rows than the cap", () => {
+      const NUMBER_OF_ROWS = 5
+      const heightConfig = new streamlit.HeightConfig({ useContent: true })
+
+      const { result } = renderHook(() =>
+        useTableSizer(
+          DataframeProto.create({ arrowData: { data: TEN_BY_TEN } }),
+          mockTheme,
+          NUMBER_OF_ROWS,
+          false,
+          700,
+          undefined,
+          false,
+          undefined,
+          heightConfig
+        )
+      )
+
+      // height="content" shows all rows + 1px for grid spacing.
+      const EXPECTED_CONTENT_HEIGHT =
+        calculateTableHeight({
+          numRows: NUMBER_OF_ROWS,
+          rowHeight: mockTheme.defaultRowHeight,
+          theme: mockTheme,
+        }) + 1
+
+      expect(result.current.resizableSize.height).toEqual(
+        EXPECTED_CONTENT_HEIGHT
+      )
+      expect(result.current.maxHeight).toEqual(EXPECTED_CONTENT_HEIGHT)
+    })
+
+    it("caps content height by row count derived from 10,000px threshold", () => {
+      // The cap is row-based: Math.ceil(10000 / rowHeight). With 1000 rows
+      // and a 35px row height, the cap kicks in at ~286 rows.
+      const NUMBER_OF_ROWS = 1000
+      const heightConfig = new streamlit.HeightConfig({ useContent: true })
+
+      const { result } = renderHook(() =>
+        useTableSizer(
+          DataframeProto.create({ arrowData: { data: VERY_TALL } }),
+          mockTheme,
+          NUMBER_OF_ROWS,
+          false,
+          700,
+          undefined,
+          false,
+          undefined,
+          heightConfig
+        )
+      )
+
+      const maxRowsForHeightCap = Math.ceil(10000 / mockTheme.defaultRowHeight)
+      const EXPECTED_CAPPED_HEIGHT =
+        calculateTableHeight({
+          numRows: maxRowsForHeightCap,
+          rowHeight: mockTheme.defaultRowHeight,
+          theme: mockTheme,
+        }) + 1
+
+      expect(result.current.resizableSize.height).toEqual(
+        EXPECTED_CAPPED_HEIGHT
+      )
+      // With 1000 rows of full height, calculatedHeight exceeds the cap, so
+      // maxHeight is the larger of the two.
+      expect(result.current.maxHeight).toBeGreaterThanOrEqual(
+        EXPECTED_CAPPED_HEIGHT
+      )
+    })
+
+    it("enforces the 1-row minimum for content height when 0 rows", () => {
+      const heightConfig = new streamlit.HeightConfig({ useContent: true })
+
+      const { result } = renderHook(() =>
+        useTableSizer(
+          DataframeProto.create({ arrowData: { data: UNICODE } }),
+          mockTheme,
+          0,
+          false,
+          700,
+          undefined,
+          false,
+          undefined,
+          heightConfig
+        )
+      )
+
+      const BASE_MIN_HEIGHT = calculateTableHeight({
+        numRows: 1,
+        rowHeight: mockTheme.defaultRowHeight,
+        theme: mockTheme,
+      })
+
+      expect(result.current.resizableSize.height).toEqual(BASE_MIN_HEIGHT)
+      expect(result.current.minHeight).toEqual(BASE_MIN_HEIGHT)
+    })
+  })
+
+  it("uses content-based width when widthConfig has useContent set", () => {
+    const CONTAINER_WIDTH = 700
+    const widthConfig = new streamlit.WidthConfig({ useContent: true })
+
+    const { result } = renderHook(() =>
+      useTableSizer(
+        DataframeProto.create({ arrowData: { data: TEN_BY_TEN } }),
+        mockTheme,
+        10,
+        false,
+        CONTAINER_WIDTH,
+        undefined,
+        false,
+        widthConfig
+      )
+    )
+
+    // width="content" falls back to "100%" with no initialWidth, letting the
+    // data grid auto-size to its content.
+    expect(result.current.resizableSize.width).toEqual("100%")
+    expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
+  })
+
+  it("re-syncs width to the available container width on resize when stretching", () => {
+    const widthConfig = new streamlit.WidthConfig({ useStretch: true })
+    const INITIAL_CONTAINER_WIDTH = 700
+    const NEW_CONTAINER_WIDTH = 900
+
+    const { result, rerender } = renderHook(
+      ({ containerWidth }: { containerWidth: number }) =>
+        useTableSizer(
+          DataframeProto.create({ arrowData: { data: TEN_BY_TEN } }),
+          mockTheme,
+          10,
+          false,
+          containerWidth,
+          undefined,
+          false,
+          widthConfig
+        ),
+      { initialProps: { containerWidth: INITIAL_CONTAINER_WIDTH } }
+    )
+
+    expect(result.current.resizableSize.width).toEqual(INITIAL_CONTAINER_WIDTH)
+
+    act(() => {
+      result.current.setResizableSize({
+        width: "100%",
+        height: result.current.resizableSize.height,
+      })
+    })
+
+    rerender({ containerWidth: NEW_CONTAINER_WIDTH })
+
+    // The [availableWidth] effect picks up "100%" and replaces it with the
+    // newly available container width.
+    expect(result.current.resizableSize.width).toEqual(NEW_CONTAINER_WIDTH)
+    expect(result.current.maxWidth).toEqual(NEW_CONTAINER_WIDTH)
+  })
 })

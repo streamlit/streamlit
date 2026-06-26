@@ -66,6 +66,9 @@ class LoggerTest(unittest.TestCase):
         """Test streamlit.logger.setup_log_formatter."""
 
         LOGGER = logger.get_logger("test")
+        # Keep the handler-count assertion isolated from other tests.
+        for handler in list(LOGGER.handlers):
+            LOGGER.removeHandler(handler)
 
         config._set_option("logger.messageFormat", messageFormat, "test")
         config._set_option("logger.level", logging.DEBUG, "test")
@@ -83,6 +86,12 @@ class LoggerTest(unittest.TestCase):
     def test_init_uvicorn_logs(self):
         """Test streamlit.logger.init_uvicorn_logs."""
         logger.init_uvicorn_logs()
-        loggers = [x for x in logger._loggers if "uvicorn" in x]
-        truth = ["uvicorn", "uvicorn.access", "uvicorn.error"]
-        assert sorted(truth) == sorted(loggers)
+        loggers = [x for x in logger._loggers if "uvicorn" in x or "websockets" in x]
+        expected = [
+            "uvicorn",
+            "uvicorn.access",
+            "uvicorn.asgi",
+            "uvicorn.error",
+            "websockets",
+        ]
+        assert sorted(expected) == sorted(loggers)

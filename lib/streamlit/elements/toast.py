@@ -167,9 +167,9 @@ class ToastMixin:
                 "duration", ["short", "long", "infinite", "a positive integer"]
             )
 
-        return self.dg._enqueue("toast", toast_proto)
+        return self.dg._enqueue("toast", toast_proto, has_one_shot_effect=True)
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

@@ -1,8 +1,8 @@
 # TypeScript Development Guide
 
 - TypeScript: v6
-- Linters: oxlint v1 + eslint v9
-- Formatter: oxfmt v0.44
+- Linters: oxlint v1 + eslint v10
+- Formatter: oxfmt v0.x
 - Framework: React v18
 - Styling: @emotion/styled v11
 - Build tool: vite v8

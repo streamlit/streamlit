@@ -99,6 +99,48 @@ with st.container(border=True):
     st.dataframe(orders_df, hide_index=True)
 ```
 
+## Smooth loading with parallel fragments + skeletons
+
+When each card loads its own independent, slow data (separate queries or API calls), combine `@st.fragment(parallel=True)` with `st.skeleton`. The fragments load concurrently, and each card shows a skeleton until its own data is ready—so the dashboard fills in card-by-card instead of blocking on the slowest query.
+
+```python
+@st.cache_data(ttl="15m")
+def load_revenue():
+    ...  # Slow query / API call
+
+
+@st.cache_data(ttl="15m")
+def load_orders():
+    ...  # Independent slow query / API call
+
+
+@st.fragment(parallel=True)
+def revenue_card():
+    with st.container(border=True):
+        st.subheader("Revenue by Region")
+        with st.skeleton(height=260):
+            data = load_revenue()
+            st.bar_chart(data, x="region", y="revenue")
+
+
+@st.fragment(parallel=True)
+def orders_card():
+    with st.container(border=True):
+        st.subheader("Recent Orders")
+        with st.skeleton(height=260):
+            data = load_orders()
+            st.dataframe(data, hide_index=True)
+
+
+col1, col2 = st.columns(2)
+with col1:
+    revenue_card()
+with col2:
+    orders_card()
+```
+
+The `st.skeleton` context manager shows the placeholder while its block runs (after a short delay) and clears it once the content is rendered—anything written inside stays visible. Keep the card title outside the `with` block so it stays stable while the body loads, and cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. See `performance.md` for more on parallel fragments and caching.
+
 ## Sidebar filters
 
 Put filters in the sidebar to maximize dashboard space:
@@ -110,6 +152,21 @@ with st.sidebar:
 
 # Main area is all dashboard content
 ```
+
+## Dashboard templates
+
+Ready-to-use dashboard templates are available in `assets/templates/apps/`:
+
+| Template | Features |
+|----------|----------|
+| `dashboard-metrics` | Metric cards with chart/table toggle, time-series charts, date filtering, focus mode |
+| `dashboard-companies` | Company comparison with sparkline columns, filterable data tables |
+| `dashboard-compute` | `@st.fragment` for independent updates, popover filters |
+| `dashboard-feature-usage` | Feature adoption tracking, trend analysis |
+| `dashboard-seattle-weather` | Weather data visualization |
+| `dashboard-stock-peers` | Stock peer comparison |
+
+Each template uses synthetic data that can be replaced with real queries. See `assets/templates/apps/README.md` for setup instructions.
 
 ## References
 

@@ -241,6 +241,41 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
             return val
 
 
+def _format_number_for_query_url(v: Any) -> str:
+    """Format a number for the query string (matches set_corrected_value rules).
+
+    Examples: 5.0 -> "5", 5.5 -> "5.5", 5 -> "5".
+    NaN and Inf are returned via str() without int coercion.
+    """
+    if isinstance(v, float) and math.isfinite(v) and v == int(v):
+        return str(int(v))
+    return str(v)
+
+
+def _coerce_value_for_query_url(value: Any, value_type: str) -> str | list[str]:
+    """Convert a widget/serializer value to the form stored in ``_query_params``."""
+    if value_type in {
+        "string_array_value",
+        "int_array_value",
+        "double_array_value",
+    }:
+        if isinstance(value, (list, tuple)):
+            return [
+                _format_number_for_query_url(v)
+                if value_type == "double_array_value"
+                else str(v)
+                for v in value
+            ]
+        return (
+            _format_number_for_query_url(value)
+            if value_type == "double_array_value"
+            else str(value)
+        )
+    if value_type == "bool_value" and isinstance(value, bool):
+        return str(value).lower()
+    return str(value)
+
+
 @dataclass
 class QueryParams(MutableMapping[str, str]):
     """A lightweight wrapper of a dict that sends forwardMsgs when state changes.
@@ -649,6 +684,19 @@ class QueryParams(MutableMapping[str, str]):
             return values[0]
         return values
 
+    def stored_param_matches_corrected_value(
+        self, param_key: str, value: Any, value_type: str
+    ) -> bool:
+        """Return True if the stored URL param equals ``set_corrected_value`` output.
+
+        Used to skip redundant ``page_info_changed`` messages when programmatic
+        session state already matches the backend query-param snapshot.
+        """
+        if param_key not in self._query_params:
+            return False
+        coerced = _coerce_value_for_query_url(value, value_type)
+        return coerced == self._query_params[param_key]
+
     def set_corrected_value(self, param_key: str, value: Any, value_type: str) -> None:
         """Set a corrected value for a query parameter.
 
@@ -665,45 +713,7 @@ class QueryParams(MutableMapping[str, str]):
         value_type : str
             The WidgetState value type (e.g., "double_value", "int_value").
         """
-
-        def format_number(v: Any) -> str:
-            """Format a number, using integer format if value is a whole number.
-
-            Examples: 5.0 -> "5", 5.5 -> "5.5", 5 -> "5"
-            Handles special float values (NaN, Inf) by returning them as-is.
-            """
-            # math.isfinite returns False for NaN, inf, -inf
-            # which would raise ValueError/OverflowError when converting to int
-            if isinstance(v, float) and math.isfinite(v) and v == int(v):
-                return str(int(v))
-            return str(v)
-
-        # Convert the value to a string representation for the URL
-        # All array types use repeated params: ?foo=a&foo=b
-        if value_type in {
-            "string_array_value",
-            "int_array_value",
-            "double_array_value",
-        }:
-            if isinstance(value, (list, tuple)):
-                # Store as list for repeated params
-                self._query_params[param_key] = [
-                    format_number(v) if value_type == "double_array_value" else str(v)
-                    for v in value
-                ]
-                self._send_query_param_msg()
-                return
-            str_value = (
-                format_number(value)
-                if value_type == "double_array_value"
-                else str(value)
-            )
-        elif value_type == "bool_value" and isinstance(value, bool):
-            str_value = str(value).lower()
-        else:
-            str_value = str(value)
-
-        self._query_params[param_key] = str_value
+        self._query_params[param_key] = _coerce_value_for_query_url(value, value_type)
         self._send_query_param_msg()
 
     # Keep alias for compatibility with existing internal call sites/tests.
@@ -768,7 +778,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def remove_stale_bindings(
         self,
-        active_widget_ids: set[str],
+        active_widget_ids: frozenset[str],
         fragment_ids_this_run: list[str] | None = None,
         widget_metadata: dict[str, Any] | None = None,
     ) -> None:
@@ -782,7 +792,7 @@ class QueryParams(MutableMapping[str, str]):
 
         Parameters
         ----------
-        active_widget_ids : set[str]
+        active_widget_ids : frozenset[str]
             Set of widget IDs that are currently active/rendered.
         fragment_ids_this_run : list[str] | None
             List of fragment IDs being run, or None for full script runs.
