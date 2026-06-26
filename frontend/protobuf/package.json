@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/protobuf",
-  "version": "1.56.0",
+  "version": "1.58.0",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -24,7 +24,8 @@
     "not op_mini all"
   ],
   "devDependencies": {
-    "protobufjs-cli": "^2.0.1",
+    "protobufjs": "^8.6.4",
+    "protobufjs-cli": "^2.5.5",
     "typesync": "^0.14.3"
   }
 }

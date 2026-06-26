@@ -38,6 +38,8 @@ skills/*
 # Allow agents
 !agents/
 agents/*
+!agents/AGENTS.md
+!agents/CLAUDE.md
 !agents/reviewing-local-changes.md
 !agents/simplifying-local-changes.md
 !agents/fixing-pr.md

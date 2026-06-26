@@ -1,0 +1,368 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react"
+
+import { FloatingPortal } from "@floating-ui/react"
+
+import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
+import { Quiver } from "~lib/dataframes/Quiver"
+import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import useTimeout from "~lib/hooks/useTimeout"
+
+import StatisticsChart from "./StatisticsChart"
+import {
+  ColumnStatistics,
+  computeEmptyPercentage,
+  computeStatistics,
+  formatCountWithPercent,
+  formatDatetime,
+  formatNumber,
+  getNullOrEmptyCount,
+  supportsStatistics,
+} from "./statisticsUtils"
+import {
+  StyledStatisticsContainer,
+  StyledStatisticsDivider,
+  StyledStatisticsEmpty,
+  StyledStatisticsLabel,
+  StyledStatisticsMetrics,
+  StyledStatisticsNote,
+  StyledStatisticsRow,
+  StyledStatisticsValue,
+  StyledSubMenuAnchor,
+  StyledSubMenuPanel,
+} from "./styled-components"
+
+export interface StatisticsMenuProps {
+  /** The column to show statistics for. */
+  column: BaseColumn
+  /** The Arrow data containing column values. */
+  data: Quiver
+  /** Whether the menu is open. */
+  isOpen: boolean
+  /** Callback when the open state changes (fired by hover interactions). */
+  onOpenChange: (open: boolean) => void
+  /** The menu item trigger element. */
+  children: ReactElement
+}
+
+/** A single row in the statistics metrics display. */
+interface MetricRow {
+  label: string
+  value: string
+}
+
+/**
+ * Render a statistics row.
+ */
+function StatisticsRow({ label, value }: MetricRow): ReactElement {
+  return (
+    <StyledStatisticsRow>
+      <StyledStatisticsLabel>{label}</StyledStatisticsLabel>
+      <StyledStatisticsValue>{value}</StyledStatisticsValue>
+    </StyledStatisticsRow>
+  )
+}
+
+/**
+ * Build metrics rows for each statistics type.
+ */
+function getMetricRows(statistics: ColumnStatistics): MetricRow[] {
+  switch (statistics.type) {
+    case "numeric": {
+      const emptyPct = computeEmptyPercentage(
+        statistics.count,
+        statistics.nullCount
+      )
+      // Ordered to mirror the familiar pandas df.describe() layout: counts
+      // first, then central tendency/spread (average + std dev), then the
+      // five-number summary, with the aggregate sum last. Variance is omitted
+      // since it is redundant with the standard deviation in a compact panel.
+      return [
+        { label: "Values", value: formatNumber(statistics.count, 0) },
+        {
+          label: "Empty",
+          value: formatCountWithPercent(statistics.nullCount, emptyPct),
+        },
+        {
+          label: "Distinct",
+          value: formatNumber(statistics.unique, 0),
+        },
+        { label: "Average", value: formatNumber(statistics.mean) },
+        {
+          label: "Standard deviation",
+          value: formatNumber(statistics.stdDev),
+        },
+        { label: "Minimum", value: formatNumber(statistics.min) },
+        { label: "25th percentile", value: formatNumber(statistics.q25) },
+        { label: "Median", value: formatNumber(statistics.median) },
+        { label: "75th percentile", value: formatNumber(statistics.q75) },
+        { label: "Maximum", value: formatNumber(statistics.max) },
+        { label: "Sum", value: formatNumber(statistics.sum) },
+      ]
+    }
+    case "text": {
+      const emptyPct = computeEmptyPercentage(
+        statistics.count,
+        statistics.empty
+      )
+      return [
+        { label: "Values", value: formatNumber(statistics.count, 0) },
+        {
+          label: "Empty",
+          value: formatCountWithPercent(statistics.empty, emptyPct),
+        },
+        {
+          label: "Distinct",
+          value: formatNumber(statistics.unique, 0),
+        },
+        {
+          label: "Minimum length",
+          value: formatNumber(statistics.minLength, 0),
+        },
+        {
+          label: "Maximum length",
+          value: formatNumber(statistics.maxLength, 0),
+        },
+        {
+          label: "Average length",
+          value: formatNumber(statistics.avgLength, 1),
+        },
+      ]
+    }
+    case "datetime": {
+      const emptyPct = computeEmptyPercentage(
+        statistics.count,
+        statistics.nullCount
+      )
+      const fmt = (ts: number): string =>
+        formatDatetime(ts, statistics.isDateOnly, statistics.timezone)
+      return [
+        { label: "Values", value: formatNumber(statistics.count, 0) },
+        {
+          label: "Empty",
+          value: formatCountWithPercent(statistics.nullCount, emptyPct),
+        },
+        { label: "Minimum", value: fmt(statistics.min) },
+        { label: "25th percentile", value: fmt(statistics.q25) },
+        { label: "Median", value: fmt(statistics.median) },
+        { label: "75th percentile", value: fmt(statistics.q75) },
+        { label: "Maximum", value: fmt(statistics.max) },
+        { label: "Average", value: fmt(statistics.mean) },
+        { label: "Range", value: statistics.range },
+      ]
+    }
+    case "boolean": {
+      const emptyPct = computeEmptyPercentage(
+        statistics.count,
+        statistics.nullCount
+      )
+      // The true/false split (counts + percentages) is already shown by the
+      // chart above, so the metrics list only adds the totals to avoid
+      // duplicating the same numbers twice.
+      return [
+        { label: "Values", value: formatNumber(statistics.count, 0) },
+        {
+          label: "Empty",
+          value: formatCountWithPercent(statistics.nullCount, emptyPct),
+        },
+      ]
+    }
+  }
+}
+
+/**
+ * Render statistics metrics from a list of rows.
+ */
+function MetricsDisplay({ rows }: { rows: MetricRow[] }): ReactElement {
+  return (
+    <StyledStatisticsMetrics data-testid="stDataFrameStatisticsMetrics">
+      {rows.map(row => (
+        <StatisticsRow key={row.label} label={row.label} value={row.value} />
+      ))}
+    </StyledStatisticsMetrics>
+  )
+}
+
+/**
+ * Build reduced metrics for all-null/empty columns.
+ * Shows only Values and Empty counts.
+ */
+function getReducedMetricRows(statistics: ColumnStatistics): MetricRow[] {
+  const emptyCount = getNullOrEmptyCount(statistics)
+  const emptyPct = computeEmptyPercentage(statistics.count, emptyCount)
+  return [
+    { label: "Values", value: formatNumber(statistics.count, 0) },
+    { label: "Empty", value: formatCountWithPercent(emptyCount, emptyPct) },
+  ]
+}
+
+/**
+ * Statistics content displayed in the submenu.
+ */
+function StatisticsContent({
+  statistics,
+}: {
+  statistics: ColumnStatistics | null
+}): ReactElement | null {
+  if (!statistics) {
+    return <StyledStatisticsEmpty>No data</StyledStatisticsEmpty>
+  }
+
+  // If count is 0 but we have null/empty values, show reduced metrics
+  const emptyCount = getNullOrEmptyCount(statistics)
+  if (statistics.count === 0) {
+    if (emptyCount > 0) {
+      return (
+        <StyledStatisticsContainer data-testid="stDataFrameStatisticsContent">
+          <MetricsDisplay rows={getReducedMetricRows(statistics)} />
+          {statistics.isSampled && (
+            <StyledStatisticsNote>Based on sample</StyledStatisticsNote>
+          )}
+        </StyledStatisticsContainer>
+      )
+    }
+    return <StyledStatisticsEmpty>No data</StyledStatisticsEmpty>
+  }
+
+  return (
+    <StyledStatisticsContainer data-testid="stDataFrameStatisticsContent">
+      <StatisticsChart statistics={statistics} />
+      {/* The chart always renders in this branch (count > 0), so the divider
+          always separates a visible chart from the metrics below it. */}
+      <StyledStatisticsDivider />
+      <MetricsDisplay rows={getMetricRows(statistics)} />
+      {statistics.isSampled && (
+        <StyledStatisticsNote>Based on sample</StyledStatisticsNote>
+      )}
+    </StyledStatisticsContainer>
+  )
+}
+
+/**
+ * StatisticsMenu displays column statistics in a submenu.
+ * Statistics are computed lazily when the menu is opened.
+ */
+function StatisticsMenu({
+  column,
+  data,
+  isOpen,
+  onOpenChange,
+  children,
+}: StatisticsMenuProps): ReactElement {
+  // Compute statistics only when menu is open.
+  // Note: This useMemo caches within a single open session only, not across
+  // open/close cycles (the component unmounts when the parent ColumnMenu closes).
+  // For large datasets, computation is bounded by SAMPLE_SIZE (10k values).
+  const statistics = useMemo((): ColumnStatistics | null => {
+    if (!isOpen) return null
+    // Extract timezone from column's Arrow type metadata for datetime columns
+    const timezone = getTimezone(column.arrowType)
+    return computeStatistics(column.kind, data, column.indexNumber, timezone)
+  }, [isOpen, column.kind, column.indexNumber, column.arrowType, data])
+
+  // Refs to the anchor and panel DOM nodes — needed for the mouseover check.
+  const anchorRef = useRef<HTMLDivElement | null>(null)
+  const panelRef = useRef<HTMLDivElement | null>(null)
+
+  const { refs, floatingStyles } = useFloatingOverlay({
+    open: isOpen,
+    placement: "right",
+    offsetPx: 2,
+  })
+
+  // Merge floating-ui's callback refs with our local refs.
+  const setAnchorRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      anchorRef.current = node
+      refs.setReference(node)
+    },
+    [refs]
+  )
+  const setPanelRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      panelRef.current = node
+      refs.setFloating(node)
+    },
+    [refs]
+  )
+
+  const { clear: clearClose, restart: scheduleClose } = useTimeout(
+    () => onOpenChange(false),
+    500,
+    { autoStart: false }
+  )
+
+  // Document-level mouseover listener for reliable cross-browser hover detection.
+  // Element-level onPointerEnter is unreliable in WebKit with Playwright because
+  // synthetic click events don't always fire pointerenter on FloatingPortal elements
+  // when crossing portal boundaries. mouseover bubbles to document unconditionally,
+  // so it fires regardless of portal structure or browser engine.
+  useEffect(() => {
+    const handleMouseOver = (e: MouseEvent): void => {
+      const target = e.target as Element
+      if (anchorRef.current?.contains(target)) {
+        clearClose()
+        onOpenChange(true)
+      } else if (isOpen && panelRef.current?.contains(target)) {
+        clearClose()
+      } else if (isOpen) {
+        scheduleClose()
+      }
+    }
+    document.addEventListener("mouseover", handleMouseOver)
+    return () => document.removeEventListener("mouseover", handleMouseOver)
+  }, [isOpen, clearClose, onOpenChange, scheduleClose])
+
+  // Defensive fallback: parent ColumnMenu already guards this, but keep for safety.
+  // This ensures the component renders nothing if called directly without the guard.
+  if (!supportsStatistics(column.kind)) {
+    return <>{children}</>
+  }
+
+  return (
+    <>
+      <StyledSubMenuAnchor role="presentation" ref={setAnchorRef}>
+        {children}
+      </StyledSubMenuAnchor>
+      {isOpen && (
+        <FloatingPortal>
+          {/* No tabIndex/autoFocus — intentionally omitted for this read-only panel.
+              Allows keyboard users to navigate the parent column menu while
+              viewing statistics. */}
+          <StyledSubMenuPanel
+            ref={setPanelRef}
+            style={floatingStyles}
+            data-testid="stDataFrameStatisticsMenu"
+          >
+            <StatisticsContent statistics={statistics} />
+          </StyledSubMenuPanel>
+        </FloatingPortal>
+      )}
+    </>
+  )
+}
+
+export default memo(StatisticsMenu)

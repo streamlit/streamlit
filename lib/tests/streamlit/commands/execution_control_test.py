@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,9 +23,11 @@ from streamlit.commands.execution_control import (
     rerun,
     switch_page,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.navigation.page import StreamlitPage
 from streamlit.runtime.scriptrunner import RerunData
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class NewFragmentIdQueueTest(unittest.TestCase):
@@ -41,7 +44,7 @@ class NewFragmentIdQueueTest(unittest.TestCase):
     def test_asserts_if_curr_id_not_in_queue(self):
         ctx = MagicMock()
         ctx.fragment_ids_this_run = ["some_fragment_id"]
-        ctx.current_fragment_id = "some_other_fragment_id"
+        ThreadState.initialize(fragment_id="some_other_fragment_id")
 
         with pytest.raises(
             RuntimeError,
@@ -59,7 +62,7 @@ class NewFragmentIdQueueTest(unittest.TestCase):
             "id4",
             "id5",
         ]
-        ctx.current_fragment_id = "curr_id"
+        ThreadState.initialize(fragment_id="curr_id")
 
         assert _new_fragment_id_queue(ctx, scope="fragment") == [
             "curr_id",
@@ -161,7 +164,7 @@ def test_st_switch_page_applies_query_params(patched_get_script_run_ctx):
     """Test that providing query_params sets them before rerunning."""
     ctx = MagicMock()
     ctx.query_string = ""
-    ctx.cached_message_hashes = set()
+    ctx.cached_message_hashes = frozenset()
     ctx.context_info = {"foo": "bar"}
     ctx.script_requests = MagicMock()
     ctx.session_state = MagicMock()
@@ -201,7 +204,7 @@ def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx
     """Test that tuple-based query_params are accepted."""
     ctx = MagicMock()
     ctx.query_string = ""
-    ctx.cached_message_hashes = set()
+    ctx.cached_message_hashes = frozenset()
     ctx.context_info = {}
     ctx.script_requests = MagicMock()
     ctx.session_state = MagicMock()
@@ -248,7 +251,7 @@ def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx)
     ctx.session_state = MagicMock()
     ctx.script_requests = MagicMock()
     ctx.query_string = ""
-    ctx.cached_message_hashes = set()
+    ctx.cached_message_hashes = frozenset()
     ctx.context_info = {}
 
     query_params_cm = MagicMock()
@@ -288,3 +291,188 @@ def test_st_switch_page_raises_for_external_page(patched_get_script_run_ctx):
         switch_page(mock_page)
 
     ctx.script_requests.request_rerun.assert_not_called()
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_raises_no_session_context_when_no_ctx(
+    patched_get_script_run_ctx,
+):
+    """``switch_page`` raises ``NoSessionContext`` when called without a session."""
+    patched_get_script_run_ctx.return_value = None
+
+    with pytest.raises(NoSessionContext):
+        switch_page("any_page.py")
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_raises_no_session_context_when_ctx_has_no_requests(
+    patched_get_script_run_ctx,
+):
+    """``switch_page`` raises ``NoSessionContext`` if ``ctx`` lacks script requests."""
+    ctx = MagicMock()
+    ctx.script_requests = None
+    patched_get_script_run_ctx.return_value = ctx
+
+    with pytest.raises(NoSessionContext):
+        switch_page("any_page.py")
+
+
+def test_switch_page_raises_from_parallel_worker() -> None:
+    """st.switch_page raises StreamlitAPIException when called from a parallel worker."""
+    ThreadState.initialize(is_parallel_worker=True)
+    try:
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            switch_page("pages/test.py")
+
+        assert "st.switch_page" in str(exc_info.value)
+        assert "parallel fragment" in str(exc_info.value)
+    finally:
+        ThreadState.initialize(is_parallel_worker=False)
+
+
+def _make_pages_lookup_ctx(resolved_script_path: str) -> MagicMock:
+    """Return a mocked ``ScriptRunContext`` with a single registered page."""
+    ctx = MagicMock()
+    ctx.script_requests = MagicMock()
+    ctx.session_state = MagicMock()
+    ctx.query_string = ""
+    ctx.cached_message_hashes = MagicMock()
+    ctx.context_info = {}
+    ctx.main_script_path = "/some/path/your_app.py"
+    ctx.pages_manager.get_pages.return_value = {
+        "hash_1": {
+            "script_path": resolved_script_path,
+            "page_script_hash": "page_1_hash",
+        },
+    }
+
+    query_params_cm = MagicMock()
+    query_params_cm.__enter__.return_value = MagicMock()
+    query_params_cm.__exit__.return_value = False
+    ctx.session_state.query_params.return_value = query_params_cm
+
+    return ctx
+
+
+@pytest.mark.parametrize(
+    "page_arg",
+    [
+        pytest.param("pages/page_1.py", id="string_path"),
+        pytest.param(Path("pages/page_1.py"), id="path_object"),
+    ],
+)
+@patch("streamlit.commands.execution_control.normalize_path_join")
+@patch(
+    "streamlit.commands.execution_control.get_main_script_directory",
+    return_value="/some/path",
+)
+@patch("os.path.realpath", side_effect=lambda p: p)
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_with_path_argument(
+    patched_get_script_run_ctx,
+    _patched_realpath,
+    _patched_get_main_script_directory,
+    patched_normalize_path_join,
+    page_arg,
+):
+    """``switch_page`` resolves both ``str`` and ``pathlib.Path`` arguments via the pages manager."""
+    patched_normalize_path_join.return_value = "/some/path/pages/page_1.py"
+    ctx = _make_pages_lookup_ctx("/some/path/pages/page_1.py")
+    patched_get_script_run_ctx.return_value = ctx
+
+    switch_page(page_arg)
+
+    ctx.script_requests.request_rerun.assert_called_once()
+    rerun_arg = ctx.script_requests.request_rerun.call_args[0][0]
+    assert rerun_arg.page_script_hash == "page_1_hash"
+
+
+@patch("streamlit.commands.execution_control.normalize_path_join")
+@patch(
+    "streamlit.commands.execution_control.get_main_script_directory",
+    return_value="/some/path",
+)
+@patch("os.path.realpath", side_effect=lambda p: p)
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_string_path_unknown_page_raises(
+    patched_get_script_run_ctx,
+    _patched_realpath,
+    _patched_get_main_script_directory,
+    patched_normalize_path_join,
+):
+    """``switch_page`` raises ``StreamlitAPIException`` if the resolved path is unknown."""
+    patched_normalize_path_join.return_value = "/some/path/missing.py"
+    ctx = _make_pages_lookup_ctx("/some/path/pages/page_1.py")
+    patched_get_script_run_ctx.return_value = ctx
+
+    with pytest.raises(StreamlitAPIException, match=r"Could not find page"):
+        switch_page("missing.py")
+
+    ctx.script_requests.request_rerun.assert_not_called()
+
+
+@patch("pathlib.Path.is_file", MagicMock(return_value=True))
+class SwitchPageStreamlitPageValidationTest(DeltaGeneratorTestCase):
+    """Test that ``st.switch_page`` validates a passed ``StreamlitPage`` against
+    pages registered with ``st.navigation`` and raises when the source does not
+    match the registered page sharing the same URL pathname.
+
+    Regression coverage for https://github.com/streamlit/streamlit/issues/10572.
+    """
+
+    def test_streamlit_page_with_mismatched_file_path_raises(self) -> None:
+        """Switching to a ``StreamlitPage`` whose file path does not match the
+        page registered under the same ``url_path`` raises."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        bad_page = st.Page("other.py", url_path="foo")
+        with pytest.raises(StreamlitAPIException, match=r"different page is "):
+            st.switch_page(bad_page)
+
+    def test_streamlit_page_with_inferred_url_path_mismatch_raises(self) -> None:
+        """Switching to ``st.Page("foo.py")`` (url_path inferred as ``foo``)
+        raises when a different file is registered under ``url_path="foo"``."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        with pytest.raises(StreamlitAPIException, match=r"different page is "):
+            st.switch_page(st.Page("foo.py"))
+
+    def test_streamlit_page_callable_with_file_registered_raises(self) -> None:
+        """Switching to a callable-based ``StreamlitPage`` raises when the
+        registered page sharing its ``url_path`` is file-based."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        def some_callable() -> None:
+            pass
+
+        with pytest.raises(StreamlitAPIException, match=r"is a callable"):
+            st.switch_page(st.Page(some_callable, url_path="foo"))
+
+    def test_streamlit_page_matching_source_does_not_raise(self) -> None:
+        """A ``StreamlitPage`` whose source matches the registered page is
+        accepted by validation (no ``StreamlitAPIException`` raised)."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        matching = st.Page("page1.py", url_path="foo")
+        # Validation passes — the rerun side effect is harmless for this test.
+        st.switch_page(matching)
+
+    def test_streamlit_page_unregistered_url_path_does_not_raise(self) -> None:
+        """If no page with the given ``url_path`` is registered (no hash
+        collision), validation is skipped — preserving previous behavior for
+        apps that don't use ``st.navigation``."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        # url_path "bar" is not registered; hash lookup misses, so the
+        # validator silently passes and the rerun side effect proceeds.
+        st.switch_page(st.Page("other.py", url_path="bar"))

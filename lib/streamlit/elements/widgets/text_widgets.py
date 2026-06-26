@@ -49,7 +49,6 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.string_util import validate_icon_or_emoji
-from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -465,7 +464,12 @@ class TextWidgetsMixin:
 
         layout_config = create_layout_config(width=width)
 
-        self.dg._enqueue("text_input", text_input_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "text_input",
+            text_input_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
+        )
         return widget_state.value
 
     @overload
@@ -813,10 +817,15 @@ class TextWidgetsMixin:
             width=width, height=height, allow_content_height=True
         )
 
-        self.dg._enqueue("text_area", text_area_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "text_area",
+            text_area_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
+        )
         return widget_state.value
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

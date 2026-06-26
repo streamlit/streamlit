@@ -78,7 +78,7 @@ function AlertElement({
                     source={title}
                     allowHTML={false}
                     isLabel
-                    largerLabel
+                    inheritFont
                   />
                 </StyledAlertTitle>
               </StyledAlertHeader>

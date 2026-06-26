@@ -129,6 +129,40 @@ prod_conn = st.connection("snowflake")
 staging_conn = st.connection("snowflake_staging")
 ```
 
+## Named connections from a Snowflake config file
+
+If you already manage connections in a Snowflake `connections.toml` file (the same
+file the Snowflake CLI and Python connector use), you can select one by name without
+duplicating the credentials in `secrets.toml`. When you call `st.connection` with a
+name other than `"snowflake"` and provide no `[connections.<name>]` secrets and no
+connection keyword arguments, Streamlit uses that name as the Snowflake connection
+name.
+
+```toml
+# ~/.snowflake/connections.toml
+[my_connection]
+account = "ORGNAME-ACCTNAME"
+user = "your_user"
+authenticator = "externalbrowser"
+warehouse = "your_warehouse"
+database = "your_database"
+schema = "your_schema"
+```
+
+```python
+# Uses the [my_connection] entry from connections.toml
+conn = st.connection("my_connection", type="snowflake")
+df = conn.query("SELECT * FROM my_table")
+```
+
+The `type="snowflake"` argument is required here because the connection name is not the
+built-in `"snowflake"` shorthand. Streamlit secrets still take precedence: if a
+`[connections.my_connection]` section exists in `secrets.toml`, those values are used
+instead of the `connections.toml` entry. Likewise, passing connection keyword arguments
+(e.g. `st.connection("my_connection", type="snowflake", warehouse="wh")`) bypasses the
+named entry entirely—those kwargs are forwarded to the connector as-is, so the
+`connections.toml` entry is not used in that case.
+
 ## Chat with Cortex (Snowflake Cortex required)
 
 > **Prerequisite:** This feature requires the `snowflake.cortex` package and a Snowflake account with Cortex access. It is primarily used in Streamlit in Snowflake deployments.

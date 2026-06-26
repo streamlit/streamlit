@@ -18,6 +18,8 @@ import { createContext } from "react"
 
 import { ScriptRunState } from "~lib/ScriptRunState"
 
+export const INITIAL_SCRIPT_RUN_ID = "<null>"
+
 export interface ScriptRunContextProps {
   /**
    * The app's current ScriptRunState. This is used in combination with
@@ -68,7 +70,7 @@ export interface ScriptRunContextProps {
  */
 export const ScriptRunContext = createContext<ScriptRunContextProps>({
   scriptRunState: ScriptRunState.NOT_RUNNING,
-  scriptRunId: "<null>",
+  scriptRunId: INITIAL_SCRIPT_RUN_ID,
   fragmentIdsThisRun: [],
 })
 

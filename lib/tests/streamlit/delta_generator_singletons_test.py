@@ -19,6 +19,8 @@ import pytest
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import (
+    ContextVarWithLazyDefault,
+    DeltaGeneratorSingleton,
     context_dg_stack,
     get_default_dg_stack_value,
     get_dg_singleton_instance,
@@ -161,3 +163,58 @@ def test_bottom_raises_exception_inside_event_container() -> None:
             st.bottom.write("test")
     finally:
         context_dg_stack.reset(token)
+
+
+def test_singleton_instance_raises_when_not_initialized() -> None:
+    """``DeltaGeneratorSingleton.instance()`` raises if no instance has been created."""
+    saved = DeltaGeneratorSingleton._instance
+    DeltaGeneratorSingleton._instance = None
+    try:
+        with pytest.raises(RuntimeError, match=r"hasn't been created"):
+            DeltaGeneratorSingleton.instance()
+    finally:
+        DeltaGeneratorSingleton._instance = saved
+
+
+def test_singleton_init_raises_when_already_initialized() -> None:
+    """Initializing ``DeltaGeneratorSingleton`` while one exists raises ``RuntimeError``."""
+    # The streamlit import path always initializes the singleton, so calling
+    # __init__ a second time should fail fast.
+    with pytest.raises(RuntimeError, match=r"already exists"):
+        DeltaGeneratorSingleton(
+            delta_generator_cls=DeltaGenerator,
+            status_container_cls=DeltaGenerator,
+            dialog_container_cls=DeltaGenerator,
+            expander_container_cls=DeltaGenerator,
+            tab_container_cls=DeltaGenerator,
+            popover_container_cls=DeltaGenerator,
+        )
+
+
+def test_context_var_with_lazy_default_eq_compares_identity() -> None:
+    """``ContextVarWithLazyDefault.__eq__`` is identity-based and rejects non-wrappers."""
+    var_a: ContextVarWithLazyDefault[int] = ContextVarWithLazyDefault(
+        "a", default=lambda: 0
+    )
+    var_b: ContextVarWithLazyDefault[int] = ContextVarWithLazyDefault(
+        "a", default=lambda: 0
+    )
+
+    assert var_a != var_b
+    assert (var_a == "not a wrapper") is False
+
+
+def test_context_var_with_lazy_default_is_hashable_and_stable() -> None:
+    """``ContextVarWithLazyDefault`` is hashable, returns a stable hash, and can be
+    used as a dict key.
+    """
+    var: ContextVarWithLazyDefault[int] = ContextVarWithLazyDefault(
+        "lazy_hash_test", default=lambda: 0
+    )
+
+    # Cache the hash to verify stability across calls.
+    h1 = hash(var)
+    assert hash(var) == h1
+    # Usable as a dict key without raising.
+    container: dict[ContextVarWithLazyDefault[int], str] = {var: "ok"}
+    assert container[var] == "ok"

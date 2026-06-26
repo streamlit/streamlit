@@ -40,6 +40,9 @@ if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+    )
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
@@ -56,10 +59,12 @@ class MockSessionManager(SessionManager):
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
+        on_script_error: OnScriptErrorHandler | None = None,
     ) -> None:
         self._uploaded_file_mgr = uploaded_file_manager
         self._script_cache = script_cache
         self._message_enqueued_callback = message_enqueued_callback
+        self._on_script_error = on_script_error
 
         # Mapping of AppSession.id -> SessionInfo.
         self._session_info_by_id: dict[str, SessionInfo] = {}
@@ -87,6 +92,7 @@ class MockSessionManager(SessionManager):
                 message_enqueued_callback=self._message_enqueued_callback,
                 user_info=user_info,
                 session_id_override=session_id_override,
+                on_script_error=self._on_script_error,
             )
 
         assert session.id not in self._session_info_by_id, (

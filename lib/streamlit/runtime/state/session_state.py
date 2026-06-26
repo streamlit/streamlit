@@ -16,7 +16,13 @@ from __future__ import annotations
 
 import json
 import pickle  # noqa: S403
-from collections.abc import Iterator, KeysView, Mapping, MutableMapping, Sequence
+from collections.abc import (
+    Iterator,
+    KeysView,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from typing import (
@@ -33,7 +39,10 @@ from streamlit.errors import StreamlitAPIException, UnserializableSessionStateEr
 from streamlit.logger import get_logger
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
+    get_script_run_ctx,
+)
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
@@ -109,14 +118,14 @@ def _sanitize_url_array(
     return result if result != parsed else None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Serialized:
     """A widget value that's serialized to a protobuf. Immutable."""
 
     value: WidgetStateProto
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Value:
     """A widget value that's not serialized. Immutable."""
 
@@ -126,7 +135,7 @@ class Value:
 WState: TypeAlias = Value | Serialized
 
 
-@dataclass
+@dataclass(slots=True)
 class WStates(MutableMapping[str, Any]):
     """A mapping of widget IDs to values. Widget values can be stored in
     serialized or deserialized form, but when values are retrieved from the
@@ -238,7 +247,7 @@ class WStates(MutableMapping[str, Any]):
 
     def remove_stale_widgets(
         self,
-        active_widget_ids: set[str],
+        active_widget_ids: frozenset[str],
         fragment_ids_this_run: list[str] | None,
     ) -> None:
         """Remove widget state for stale widgets."""
@@ -328,9 +337,8 @@ class WStates(MutableMapping[str, Any]):
 
         ctx = get_script_run_ctx()
         if ctx and metadata.fragment_id is not None:
-            ctx.in_fragment_callback = True
-            callback(*args, **kwargs)
-            ctx.in_fragment_callback = False
+            with ThreadState.scoped(in_fragment_callback=True):
+                callback(*args, **kwargs)
         else:
             callback(*args, **kwargs)
 
@@ -342,7 +350,7 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class KeyIdMapper:
     """A mapping of user-provided keys to element IDs.
     It also maps element IDs to user-provided keys so that this reverse mapping
@@ -392,7 +400,7 @@ class KeyIdMapper:
         del self._id_key_mapping[widget_id]
 
 
-@dataclass
+@dataclass(slots=True)
 class SessionState:
     """SessionState allows users to store values that persist between app
     reruns.
@@ -593,8 +601,8 @@ class SessionState:
 
         if ctx is not None:
             widget_id = self._key_id_mapper.get_id_from_key(user_key, None)
-            widget_ids = ctx.widget_ids_this_run
-            form_ids = ctx.form_ids_this_run
+            widget_ids = ctx.shared.widget_ids_this_run
+            form_ids = ctx.shared.form_ids_this_run
 
             if widget_id in widget_ids or user_key in form_ids:
                 raise StreamlitAPIException(
@@ -711,15 +719,13 @@ class SessionState:
 
         ctx = get_script_run_ctx()
         if ctx and cb_metadata.fragment_id is not None:
-            ctx.in_fragment_callback = True
-            try:
-                callback_fn(*cb_args, **cb_kwargs)
-            except RerunException:
-                get_dg_singleton_instance().main_dg.warning(
-                    "Calling st.rerun() within a callback is a no-op."
-                )
-            finally:
-                ctx.in_fragment_callback = False
+            with ThreadState.scoped(in_fragment_callback=True):
+                try:
+                    callback_fn(*cb_args, **cb_kwargs)
+                except RerunException:
+                    get_dg_singleton_instance().main_dg.warning(
+                        "Calling st.rerun() within a callback is a no-op."
+                    )
         else:
             try:
                 callback_fn(*cb_args, **cb_kwargs)
@@ -857,13 +863,13 @@ class SessionState:
         changed: bool = new_value != old_value
         return changed
 
-    def on_script_finished(self, widget_ids_this_run: set[str]) -> None:
+    def on_script_finished(self, widget_ids_this_run: frozenset[str]) -> None:
         """Called by ScriptRunner after its script finishes running.
          Updates widgets to prepare for the next script run.
 
         Parameters
         ----------
-        widget_ids_this_run: set[str]
+        widget_ids_this_run: frozenset[str]
             The IDs of the widgets that were accessed during the script
             run. Any widget state whose ID does *not* appear in this set
             is considered "stale" and will be removed.
@@ -897,7 +903,7 @@ class SessionState:
                 }:
                     self._old_state[state_id] = None
 
-    def _remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
+    def _remove_stale_widgets(self, active_widget_ids: frozenset[str]) -> None:
         """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
         ctx = get_script_run_ctx()
         if ctx is None:
@@ -1002,6 +1008,20 @@ class SessionState:
         """
         widget_id = metadata.id
 
+        # Capture the stored wire value *before* swapping in this run's
+        # serializer, so it reflects the value as it was actually stored (using
+        # the serializer it was stored with). For string widgets we expose this
+        # so callers can reconcile a stored value against freshly computed state
+        # without re-deriving it from the deserialized value.
+        incoming_serialized_value: str | None = None
+        if metadata.value_type == "string_value":
+            stored_proto = self._new_widget_state.get_serialized(widget_id)
+            if (
+                stored_proto is not None
+                and stored_proto.WhichOneof("value") == "string_value"
+            ):
+                incoming_serialized_value = stored_proto.string_value
+
         self._set_widget_metadata(metadata)
         if user_key is not None:
             # If the widget has a user_key, update its user_key:widget_id mapping
@@ -1044,25 +1064,50 @@ class SessionState:
         # Compacted programmatic sets (st.session_state["k"] = v) are stored
         # under widget IDs only, so the guard correctly excludes them.
         #
+        # Programmatic set (user_key in _new_session_state): sync URL when the
+        # resolved value differs from the backend query snapshot, so reloads
+        # stay consistent (see issue #14670).
+        #
         # Default collapsing: remove stale params the frontend already cleared.
         # The backend's _query_params is not refreshed on same-page reruns, so
         # it can hold entries the frontend already deleted.  Cleaning them here
         # prevents _send_query_param_msg from re-broadcasting stale params.
+        # Programmatic reset to default uses remove_param so the browser URL
+        # is updated when the frontend still shows the old query string.
         restored_bound_value = False
         if metadata.bind == "query-params" and user_key is not None:
             default_value = metadata.deserializer(None)
-            if (
-                widget_value != default_value
-                and user_key in self._old_state
-                and not self.query_params.has_param(user_key)
-                and user_key not in self._new_session_state
+            if widget_value != default_value:
+                if (
+                    user_key in self._old_state
+                    and not self.query_params.has_param(user_key)
+                    and user_key not in self._new_session_state
+                ):
+                    serialized = metadata.serializer(widget_value)
+                    self.query_params.set_corrected_value(
+                        user_key, serialized, metadata.value_type
+                    )
+                    restored_bound_value = True
+                elif (
+                    user_key in self._new_session_state
+                    and not url_value_seeded
+                    and (widget_id in self._old_state or user_key in self._old_state)
+                ):
+                    serialized = metadata.serializer(widget_value)
+                    if not self.query_params.stored_param_matches_corrected_value(
+                        user_key, serialized, metadata.value_type
+                    ):
+                        self.query_params.set_corrected_value(
+                            user_key, serialized, metadata.value_type
+                        )
+            elif (
+                user_key in self._new_session_state
+                and not url_value_seeded
+                and self.query_params.has_param(user_key)
+                and (widget_id in self._old_state or user_key in self._old_state)
             ):
-                serialized = metadata.serializer(widget_value)
-                self.query_params.set_corrected_value(
-                    user_key, serialized, metadata.value_type
-                )
-                restored_bound_value = True
-            elif widget_value == default_value:
+                self.query_params.remove_param(user_key)
+            else:
                 self.query_params.discard_param_no_forward_msg(user_key)
 
         # widget_value_changed indicates to the caller that the widget's
@@ -1075,7 +1120,11 @@ class SessionState:
             user_key is not None and self.is_new_state_value(user_key)
         ) or restored_bound_value
 
-        return RegisterWidgetResult(widget_value, widget_value_changed)
+        return RegisterWidgetResult(
+            widget_value,
+            widget_value_changed,
+            incoming_serialized_value=incoming_serialized_value,
+        )
 
     def _handle_query_param_binding(
         self, metadata: WidgetMetadata[T], user_key: str, widget_id: str
@@ -1093,7 +1142,7 @@ class SessionState:
         """
         # Register the widget binding
         ctx = get_script_run_ctx()
-        script_hash = ctx.active_script_hash if ctx is not None else ""
+        script_hash = ThreadState.get().active_script_hash if ctx is not None else ""
         self.query_params.bind_widget(
             param_key=user_key,
             widget_id=widget_id,
@@ -1250,10 +1299,16 @@ class SessionState:
     def get_stats(
         self, _family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
-        # Lazy-load vendored package to prevent import of numpy
-        from streamlit.vendor.pympler.asizeof import asizeof
+        if config.get_option("server.enableExpensiveMemoryStats"):
+            from streamlit.runtime.stats import safe_sizeof
 
-        stat = CacheStat("st_session_state", "", asizeof(self))
+            byte_length = safe_sizeof(self)
+        else:
+            # Use a cheap item-count proxy instead of traversing the session
+            # state values, which can be very expensive.
+            byte_length = len(self)
+
+        stat = CacheStat("st_session_state", "", byte_length)
         # In general, get_stats methods need to be able to return only requested stat
         # families, but this method only returns a single family, and we're guaranteed
         # that it was one of those requested if we make it here.
@@ -1294,7 +1349,7 @@ def _is_internal_key(key: str) -> bool:
 
 def _is_stale_widget(
     metadata: WidgetMetadata[Any] | None,
-    active_widget_ids: set[str],
+    active_widget_ids: frozenset[str],
     fragment_ids_this_run: list[str] | None,
 ) -> bool:
     if not metadata:

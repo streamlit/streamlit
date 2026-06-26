@@ -60,6 +60,7 @@ import {
 } from "@streamlit/connection"
 import {
   AppRoot,
+  BackendOperationClient,
   CircularBuffer,
   ComponentRegistry,
   createAutoTheme,
@@ -90,6 +91,7 @@ import {
   hasLightBackgroundColor,
   HostCommunicationManager,
   IMenuItem,
+  INITIAL_SCRIPT_RUN_ID,
   isEmbed,
   isInChildFrame,
   isKeyboardEventFromEditableTarget,
@@ -114,10 +116,10 @@ import {
 import {
   AuthRedirect,
   AutoRerun,
+  BackendOperationResponse,
   BackMsg,
   Config,
   CustomThemeConfig,
-  DeferredFileResponse,
   Delta,
   FileURLsResponse,
   ForwardMsg,
@@ -222,8 +224,6 @@ interface State {
   scriptChangedOnDisk: boolean
 }
 
-const INITIAL_SCRIPT_RUN_ID = "<null>"
-
 export const LOG = getLogger("App")
 
 declare global {
@@ -276,11 +276,8 @@ export class App extends PureComponent<Props, State> {
    */
   private readonly appRootRef = createRef<HTMLDivElement>()
 
-  // Listener registry for deferred file responses: fileId -> set of listeners
-  private readonly deferredFileListeners = new Map<
-    string,
-    Set<(response: DeferredFileResponse) => void>
-  >()
+  /** Client for backend operation requests (lazy loading, validation, etc.) */
+  private readonly backendOperationClient: BackendOperationClient
 
   private readonly appNavigation: AppNavigation
 
@@ -472,6 +469,21 @@ export class App extends PureComponent<Props, State> {
       this.onPageNotFound,
       this.onPageIconChanged
     )
+
+    this.backendOperationClient = new BackendOperationClient({
+      sendRequest: request => {
+        // Check connection before sending to fail fast instead of timing out
+        if (!this.isServerConnected() || !this.sessionInfo.isSet) {
+          throw new Error(
+            "Cannot send backend operation request: not connected to server"
+          )
+        }
+        const backMsg = new BackMsg({ backendOperationRequest: request })
+        backMsg.type = "backendOperationRequest"
+        this.sendBackMsg(backMsg)
+      },
+      getSessionId: () => this.sessionInfo.current.sessionId,
+    })
 
     window.streamlitDebug = {
       clearForwardMsgCache: this.debugClearForwardMsgCache,
@@ -906,6 +918,9 @@ export class App extends PureComponent<Props, State> {
       if (this.sessionInfo.isSet) {
         this.sessionInfo.disconnect()
       }
+
+      // Clean up pending backend operation requests on disconnect
+      this.backendOperationClient.cleanup()
     }
 
     if (this.isInitializingConnectionManager) {
@@ -914,7 +929,7 @@ export class App extends PureComponent<Props, State> {
       // The setState will be applied in the expected render cycle in this case.
       this.setState({ connectionState: newState })
     } else {
-      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+      /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
        * We are using `flushSync` here because there is code that expects every
        * state to be observed. With React batched updates, it is possible that
        * multiple `connectionState` changes are applied in 1 render cycle, leading
@@ -980,7 +995,8 @@ export class App extends PureComponent<Props, State> {
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(
             deltaMsg,
-            msgProto.metadata as ForwardMsgMetadata
+            msgProto.metadata as ForwardMsgMetadata,
+            msgProto.hash
           ),
         pageConfigChanged: (pageConfig: PageConfig) =>
           this.handlePageConfigChanged(pageConfig),
@@ -997,8 +1013,6 @@ export class App extends PureComponent<Props, State> {
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
-        deferredFileResponse: (deferredFileResponse: DeferredFileResponse) =>
-          this.handleDeferredFileResponse(deferredFileResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
         logo: (logo: Logo) =>
@@ -1016,6 +1030,8 @@ export class App extends PureComponent<Props, State> {
           }
         },
         heartbeatAck: () => this.handleHeartbeatAck(),
+        backendOperationResponse: (response: BackendOperationResponse) =>
+          this.backendOperationClient.onResponse(response),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -1739,14 +1755,16 @@ export class App extends PureComponent<Props, State> {
    */
   handleDeltaMsg = (
     deltaMsg: Delta,
-    metadataMsg: ForwardMsgMetadata
+    metadataMsg: ForwardMsgMetadata,
+    elementHash?: string
   ): void => {
     // Use functional state update to ensure we have latest elements
     this.setState(prevState => ({
       elements: prevState.elements.applyDelta(
         prevState.scriptRunId,
         deltaMsg,
-        metadataMsg
+        metadataMsg,
+        elementHash
       ),
     }))
   }
@@ -2093,8 +2111,9 @@ export class App extends PureComponent<Props, State> {
       LOG.info(msg)
       this.connectionManager.sendMessage(msg)
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-      LOG.error(`Not connected. Cannot send back message: ${msg}`)
+      LOG.error(
+        `Not connected. Cannot send back message: ${msg.type ?? "unknown"}`
+      )
     }
   }
 
@@ -2278,57 +2297,6 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  requestDeferredFile = (fileId: string): Promise<DeferredFileResponse> => {
-    const isConnected = this.isServerConnected()
-    const isSessionInfoSet = this.sessionInfo.isSet
-
-    if (!isConnected || !isSessionInfoSet) {
-      return Promise.reject(
-        new Error("Not connected to server or session not initialized")
-      )
-    }
-
-    const resolver = Promise.withResolvers<DeferredFileResponse>()
-
-    // Register a one-time listener for this fileId
-    const listeners =
-      this.deferredFileListeners.get(fileId) ??
-      new Set<(response: DeferredFileResponse) => void>()
-    const once = (response: DeferredFileResponse): void => {
-      listeners.delete(once)
-      resolver.resolve(response)
-    }
-    listeners.add(once)
-    this.deferredFileListeners.set(fileId, listeners)
-
-    const backMsg = new BackMsg({
-      deferredFileRequest: {
-        fileId,
-        sessionId: this.sessionInfo.current.sessionId,
-      },
-    })
-
-    backMsg.type = "deferredFileRequest"
-    this.sendBackMsg(backMsg)
-
-    return resolver.promise
-  }
-
-  handleDeferredFileResponse = (response: DeferredFileResponse): void => {
-    const listeners = this.deferredFileListeners.get(response.fileId)
-    if (!listeners || listeners.size === 0) return
-
-    // Notify and clear all listeners for this fileId
-    for (const listener of Array.from(listeners)) {
-      try {
-        listener(response)
-      } catch {
-        // Swallow listener errors to avoid breaking notification fanout
-      }
-    }
-    this.deferredFileListeners.delete(response.fileId)
-  }
-
   handleKeyDown = (keyName: string, keyboardEvent?: KeyboardEvent): void => {
     // See `isKeyboardEventFromEditableTarget` for editable/shadow DOM behavior.
     // We never fire global single-letter shortcuts while the user is typing.
@@ -2495,7 +2463,7 @@ export class App extends PureComponent<Props, State> {
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
         resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
         showErrorLinks={this.state.showErrorLinks}
-        requestDeferredFile={this.requestDeferredFile}
+        backendOperationClient={this.backendOperationClient}
       >
         <Hotkeys
           keyName="r,c,esc"

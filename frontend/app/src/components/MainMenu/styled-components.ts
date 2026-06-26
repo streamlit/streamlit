@@ -154,7 +154,7 @@ export const StyledMenuItemShortcut = styled.kbd(({ theme }) => ({
   justifyContent: "center",
   whiteSpace: "nowrap",
   fontSize: theme.fontSizes.sm,
-  opacity: 0.6,
+  opacity: theme.opacities.secondary,
   fontFamily: "inherit",
   lineHeight: theme.lineHeights.tight,
   letterSpacing: "0.01em",
@@ -355,7 +355,7 @@ export const StyledMenuVersionRow = styled.div(({ theme }) => ({
 export const StyledMenuVersionText = styled.span(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  opacity: 0.6,
+  opacity: theme.opacities.secondary,
   fontSize: theme.fontSizes.twoSm,
   lineHeight: theme.lineHeights.menuItem,
   color: theme.colors.bodyText,

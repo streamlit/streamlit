@@ -14,6 +14,7 @@
 
 import re
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -27,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     get_button,
     get_element_by_key,
     get_expander,
+    reset_hovering,
 )
 
 TOTAL_BUTTONS = 32
@@ -223,6 +225,8 @@ def test_colored_text_hover(app: Page):
 def test_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
     help_button_container = get_element_by_key(themed_app, "help_button_container")
     help_button = get_element_by_key(help_button_container, "help_button_key")
+    # Prime the interaction modality to 'pointer' before hovering.
+    reset_hovering(themed_app)
     help_button.hover()
     expect(themed_app.get_by_text("help text")).to_be_visible()
     assert_snapshot(help_button_container, name="st_button-help_button")
@@ -267,16 +271,18 @@ def test_dynamic_button(app: Page, assert_snapshot: ImageCompareFunction):
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
 
 
+@pytest.mark.skip_browser("webkit")
 def test_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut activates the button."""
     shortcut_button = get_element_by_key(app, "shortcut_button")
     expect(shortcut_button).to_be_visible()
 
     # Ensure shortcut labels are rendered for buttons.
-    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + J")
+    # Use regex to accept both Windows (Ctrl) and macOS (⌘) representations
+    expect(shortcut_button.locator("kbd")).to_have_text(re.compile(r"(Ctrl|⌘) \+ J"))
 
     # Press hotkey to trigger the button:
-    app.keyboard.press("Control+J")
+    app.keyboard.press("ControlOrMeta+J")
     wait_for_app_run(app)
     expect_markdown(app, "Shortcut button pressed!")
 

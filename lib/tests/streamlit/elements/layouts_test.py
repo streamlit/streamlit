@@ -27,6 +27,7 @@ from streamlit.errors import (
     StreamlitInvalidFormCallbackError,
     StreamlitInvalidHorizontalAlignmentError,
     StreamlitInvalidVerticalAlignmentError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapSize
@@ -492,6 +493,23 @@ class ExpanderTest(DeltaGeneratorTestCase):
         # Widget state should match the initial expanded value
         assert not expander_block.add_block.expandable.expanded
         assert expander.open is False
+
+    @parameterized.expand(
+        [
+            ("default", BlockProto.Expandable.Type.DEFAULT),
+            ("compact", BlockProto.Expandable.Type.COMPACT),
+        ]
+    )
+    def test_type_parameter(self, type_param: str, expected_proto_type: int):
+        """Test that the type parameter sets the correct proto type."""
+        st.expander("label", type=type_param)
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.expandable.type == expected_proto_type
+
+    def test_invalid_type(self):
+        """Test that invalid type values raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.expander("label", type="invalid")
 
     def test_on_change_callback_without_key_works(self):
         """Test that a callback works without an explicit key."""
@@ -1342,6 +1360,23 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise an error"""
         with pytest.raises(StreamlitAPIException):
             st.status("label", width=invalid_width)
+
+    @parameterized.expand(
+        [
+            ("default", BlockProto.Expandable.Type.DEFAULT),
+            ("compact", BlockProto.Expandable.Type.COMPACT),
+        ]
+    )
+    def test_type_parameter(self, type_param: str, expected_proto_type: int):
+        """Test that the type parameter sets the correct proto type."""
+        st.status("label", type=type_param)
+        status_block = self.get_delta_from_queue()
+        assert status_block.add_block.expandable.type == expected_proto_type
+
+    def test_invalid_type(self):
+        """Test that invalid type values raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.status("label", type="invalid")
 
 
 class TabsTest(DeltaGeneratorTestCase):

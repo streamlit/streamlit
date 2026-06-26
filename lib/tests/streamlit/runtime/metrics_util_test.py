@@ -37,6 +37,7 @@ from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_pep649_function
@@ -56,8 +57,7 @@ def _mock_script_run_ctx() -> MagicMock:
     ctx = MagicMock()
     ctx.gather_usage_stats = True
     ctx.command_tracking_deactivated = False
-    ctx.tracked_commands = []
-    ctx.tracked_commands_counter = Counter()
+    ctx.shared = SharedRunState()
     ctx.fragment_ids_this_run = []
     return ctx
 
@@ -313,24 +313,24 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
         test_function(param1=10, param2="foobar")
 
-        assert len(ctx.tracked_commands) == 1
-        assert ctx.tracked_commands[0].name.endswith("test_function")
-        assert ctx.tracked_commands[0].name.startswith("external:")
+        assert len(ctx.shared.tracked_commands) == 1
+        assert ctx.shared.tracked_commands[0].name.endswith("test_function")
+        assert ctx.shared.tracked_commands[0].name.startswith("external:")
 
         st.markdown("This function should be tracked")
 
-        assert len(ctx.tracked_commands) == 2
-        assert ctx.tracked_commands[0].name.endswith("test_function")
-        assert ctx.tracked_commands[0].name.startswith("external:")
-        assert ctx.tracked_commands[1].name == "markdown"
+        assert len(ctx.shared.tracked_commands) == 2
+        assert ctx.shared.tracked_commands[0].name.endswith("test_function")
+        assert ctx.shared.tracked_commands[0].name.startswith("external:")
+        assert ctx.shared.tracked_commands[1].name == "markdown"
 
         ctx.reset()
         # Deactivate usage stats gathering
         ctx.gather_usage_stats = False
 
-        assert len(ctx.tracked_commands) == 0
+        assert len(ctx.shared.tracked_commands) == 0
         test_function(param1=10, param2="foobar")
-        assert len(ctx.tracked_commands) == 0
+        assert len(ctx.shared.tracked_commands) == 0
 
     @parameterized.expand(
         [
@@ -364,12 +364,14 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         with contextlib.suppress(Exception):
             command()
 
-        assert len(ctx.tracked_commands) > 0, f"No command tracked for {expected_name}"
+        assert len(ctx.shared.tracked_commands) > 0, (
+            f"No command tracked for {expected_name}"
+        )
 
         # Sometimes multiple commands are executed
         # so we check the full list of tracked commands
         assert expected_name in [
-            tracked_commands.name for tracked_commands in ctx.tracked_commands
+            tracked_commands.name for tracked_commands in ctx.shared.tracked_commands
         ], f"Command {expected_name} was not tracked."
 
     def test_public_api_commands(self):
@@ -421,7 +423,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # Assert that the API name is in the list of tracked commands.
             # (It's possible for multiple tracked commands to be issued as
             # the result of a single API call.)
-            assert api_name in [cmd.name for cmd in ctx.tracked_commands], (
+            assert api_name in [cmd.name for cmd in ctx.shared.tracked_commands], (
                 (
                     f"When executing `st.{api_name}()`, we expect the string "
                     f'"{api_name}" to be in the list of tracked commands.'
@@ -460,7 +462,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # (It's possible for multiple tracked commands to be issued as
             # the result of a single API call.)
             assert f"column_config.{api_name}" in [
-                cmd.name for cmd in ctx.tracked_commands
+                cmd.name for cmd in ctx.shared.tracked_commands
             ], (
                 (
                     f"When executing `st.{api_name}()`, we expect the string "
@@ -471,15 +473,20 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
     def test_command_tracking_limits(self):
         """Command tracking limits should be respected.
 
-        Current limits are 25 per unique command and 200 in total.
+        Current limits are _MAX_TRACKED_PER_COMMAND (25) per unique command
+        and _MAX_TRACKED_COMMANDS (400) in total.
         """
         ctx = get_script_run_ctx()
         assert ctx is not None
         ctx.reset()
         ctx.gather_usage_stats = True
 
+        # Create enough unique command names to exceed _MAX_TRACKED_COMMANDS
+        # when each is called _MAX_TRACKED_PER_COMMAND + 1 times.
+        # With 20 commands * 25 per command = 500, which exceeds the 400 limit.
+        num_unique_commands = 20
         funcs = []
-        for i in range(10):
+        for i in range(num_unique_commands):
 
             def test_function() -> str:
                 return "foo"
@@ -492,11 +499,11 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             for func in funcs:
                 func()
 
-        assert len(ctx.tracked_commands) <= metrics_util._MAX_TRACKED_COMMANDS
+        assert len(ctx.shared.tracked_commands) <= metrics_util._MAX_TRACKED_COMMANDS
 
         # Test that no individual command is tracked more than _MAX_TRACKED_PER_COMMAND
         command_counts = Counter(
-            [command.name for command in ctx.tracked_commands]
+            [command.name for command in ctx.shared.tracked_commands]
         ).most_common()
         assert command_counts[0][1] <= metrics_util._MAX_TRACKED_PER_COMMAND
 
@@ -705,8 +712,8 @@ def test_gather_metrics_empty_name_logs_warning_and_tracks_as_undefined() -> Non
         assert tracked() == "x"
 
     mock_warning.assert_called_once_with("gather_metrics: name is empty")
-    assert len(ctx.tracked_commands) == 1
-    assert ctx.tracked_commands[0].name == "undefined"
+    assert len(ctx.shared.tracked_commands) == 1
+    assert ctx.shared.tracked_commands[0].name == "undefined"
 
 
 def test_gather_metrics_swallows_command_telemetry_errors() -> None:
@@ -731,7 +738,7 @@ def test_gather_metrics_swallows_command_telemetry_errors() -> None:
 
     mock_debug.assert_called_once()
     assert mock_debug.call_args[0][0] == "Failed to collect command telemetry"
-    assert ctx.tracked_commands == []
+    assert ctx.shared.tracked_commands == ()
 
 
 def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
@@ -753,8 +760,8 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         with pytest.raises(RerunException):
             raises_rerun()
 
-    assert len(ctx.tracked_commands) == 1
-    assert ctx.tracked_commands[0].time == metrics_util.to_microseconds(0.25)
+    assert len(ctx.shared.tracked_commands) == 1
+    assert ctx.shared.tracked_commands[0].time == metrics_util.to_microseconds(0.25)
 
 
 @pytest.mark.parametrize("server_mode", ["tornado", "starlette-app"])
@@ -800,6 +807,7 @@ def _clear_skills_cache() -> Iterator[None]:
         ("agents", ".agents/skills", ".agents/skills"),
         ("claude", ".claude/skills", ".claude/skills"),
         ("codex", ".codex/skills", ".codex/skills"),
+        ("copilot", ".github/skills", ".copilot/skills"),
         ("cortex", ".cortex/skills", ".snowflake/cortex/skills"),
         ("cursor", ".cursor/skills", ".cursor/skills"),
         ("gemini", ".gemini/skills", ".gemini/skills"),
@@ -808,7 +816,7 @@ def _clear_skills_cache() -> Iterator[None]:
 )
 @pytest.mark.parametrize(
     "skill",
-    ["developing-with-streamlit", "finding-streamlit-skills"],
+    ["developing-with-streamlit", "developing-with-streamlit-in-snowflake"],
 )
 def test_detect_installed_skills_emits_expected_token(
     tmp_path: Path,
@@ -889,12 +897,12 @@ def test_detect_installed_skills_walks_up_to_repo_root(
     home.mkdir()
     app.mkdir(parents=True)
     (repo / ".git").mkdir()
-    _make_skill_dir(repo, ".agents/skills", "finding-streamlit-skills")
+    _make_skill_dir(repo, ".agents/skills", "developing-with-streamlit-in-snowflake")
 
     monkeypatch.setenv("HOME", str(home))
     tokens = metrics_util._detect_installed_skills(str(app))
 
-    assert tokens == ["repo:agents:finding-streamlit-skills"]
+    assert tokens == ["repo:agents:developing-with-streamlit-in-snowflake"]
 
 
 def test_detect_installed_skills_returns_sorted_deduped_tokens(
@@ -908,14 +916,14 @@ def test_detect_installed_skills_returns_sorted_deduped_tokens(
     app.mkdir(parents=True)
     (repo / ".git").mkdir()
     _make_skill_dir(home, ".cursor/skills", "developing-with-streamlit")
-    _make_skill_dir(app, ".agents/skills", "finding-streamlit-skills")
+    _make_skill_dir(app, ".agents/skills", "developing-with-streamlit-in-snowflake")
     _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit")
 
     monkeypatch.setenv("HOME", str(home))
     tokens = metrics_util._detect_installed_skills(str(app))
 
     assert tokens == [
-        "app:agents:finding-streamlit-skills",
+        "app:agents:developing-with-streamlit-in-snowflake",
         "home:cursor:developing-with-streamlit",
         "repo:claude:developing-with-streamlit",
     ]
@@ -938,15 +946,45 @@ def test_detect_installed_skills_finds_project_skills_when_home_harness_absent(
     # Note: no ``~/.claude`` directory is created — the user has never run
     # Claude Code. But the project ships skills under its own .claude dir.
     _make_skill_dir(app, ".claude/skills", "developing-with-streamlit")
-    _make_skill_dir(repo, ".claude/skills", "finding-streamlit-skills")
+    _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit-in-snowflake")
 
     monkeypatch.setenv("HOME", str(home))
     tokens = metrics_util._detect_installed_skills(str(app))
 
     assert tokens == [
         "app:claude:developing-with-streamlit",
-        "repo:claude:finding-streamlit-skills",
+        "repo:claude:developing-with-streamlit-in-snowflake",
     ]
+
+
+def test_detect_installed_skills_detects_symlinked_skill_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Symlinked skill directories are detected as if they were real directories."""
+    home = tmp_path / "home"
+    app = tmp_path / "app"
+    home.mkdir()
+    app.mkdir()
+
+    # Create a real skill directory elsewhere
+    real_skill = tmp_path / "external" / "developing-with-streamlit"
+    real_skill.mkdir(parents=True)
+    (real_skill / "SKILL.md").write_text("---\nname: developing-with-streamlit\n---\n")
+
+    # Symlink it into the .claude/skills directory
+    skills_dir = app / ".claude" / "skills"
+    skills_dir.mkdir(parents=True)
+    try:
+        (skills_dir / "developing-with-streamlit").symlink_to(
+            real_skill, target_is_directory=True
+        )
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported in this environment")
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert tokens == ["app:claude:developing-with-streamlit"]
 
 
 @pytest.mark.parametrize(
@@ -971,6 +1009,7 @@ def test_create_page_profile_message_sets_installed_skills(
         ("agents", ".agents"),
         ("claude", ".claude"),
         ("codex", ".codex"),
+        ("copilot", ".copilot"),
         ("cortex", ".snowflake/cortex"),
         ("cursor", ".cursor"),
         ("gemini", ".gemini"),
@@ -1024,6 +1063,27 @@ def test_detect_installed_agents_returns_sorted_deduped_tokens(
 
     monkeypatch.setenv("HOME", str(home))
     assert metrics_util._detect_installed_agents() == ["claude", "cursor", "opencode"]
+
+
+def test_detect_installed_agents_detects_symlinked_harness_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Symlinked harness directories are detected as if they were real directories."""
+    home = tmp_path / "home"
+    home.mkdir()
+
+    # Create a real .claude directory elsewhere
+    real_claude = tmp_path / "external" / ".claude"
+    real_claude.mkdir(parents=True)
+
+    # Symlink it into the home directory
+    try:
+        (home / ".claude").symlink_to(real_claude, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported in this environment")
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == ["claude"]
 
 
 @pytest.mark.parametrize(

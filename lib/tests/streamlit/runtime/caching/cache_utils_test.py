@@ -14,14 +14,18 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching.cache_utils import (
+    BoundCachedFunc,
+    Cache,
+    CachedFunc,
+    CachedFuncInfo,
     _get_positional_arg_name,
     get_session_id_or_throw,
 )
@@ -29,7 +33,6 @@ from streamlit.runtime.scriptrunner_utils import script_run_context
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Any
 
 
 def function_for_testing(
@@ -97,3 +100,89 @@ def test_get_positional_arg_name(
 ) -> None:
     """Returns the parameter name for positional args, None otherwise."""
     assert _get_positional_arg_name(func, arg_index) == expected
+
+
+def _placeholder_func() -> None:
+    """Stand-in for a cached function in tests that only need a reference."""
+
+
+def _make_info() -> CachedFuncInfo[[], None]:
+    return CachedFuncInfo(func=_placeholder_func, hash_funcs=None, show_spinner=False)
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda: Cache().read_result("k"),
+        lambda: Cache().write_result("k", "v", []),
+        lambda: Cache()._clear(key=None),
+        lambda: _make_info().cache_type,
+        lambda: _make_info().cached_message_replay_ctx,
+        lambda: _make_info().get_function_cache("function_key"),
+    ],
+    ids=[
+        "Cache.read_result",
+        "Cache.write_result",
+        "Cache._clear",
+        "CachedFuncInfo.cache_type",
+        "CachedFuncInfo.cached_message_replay_ctx",
+        "CachedFuncInfo.get_function_cache",
+    ],
+)
+def test_abstract_members_raise_not_implemented(call: Callable[[], Any]) -> None:
+    """Abstract members of the base ``Cache`` / ``CachedFuncInfo`` classes raise."""
+    with pytest.raises(NotImplementedError):
+        call()
+
+
+def _build_cached_func() -> CachedFunc[..., Any]:
+    info = MagicMock(spec=CachedFuncInfo)
+    info.func = _placeholder_func
+    info.cache_type = MagicMock(name="cache_type")
+    return CachedFunc(info)
+
+
+def test_cached_func_repr_and_descriptor_protocol() -> None:
+    """``CachedFunc.__repr__`` includes the wrapped function, and ``__get__``
+    on the class (instance is ``None``) returns ``self``."""
+    cached_func = _build_cached_func()
+
+    assert "CachedFunc:" in repr(cached_func)
+    assert cached_func.__get__(None, owner=object) is cached_func
+
+
+def test_bound_cached_func_repr_includes_instance_and_function() -> None:
+    """``BoundCachedFunc.__repr__`` includes both the wrapped function and the
+    bound instance for easy debugging when inspecting cached methods."""
+
+    class _Sentinel:
+        def __repr__(self) -> str:
+            return "instance_repr"
+
+    bound = BoundCachedFunc(_build_cached_func(), _Sentinel())
+    repr_str = repr(bound)
+    assert "BoundCachedFunc:" in repr_str
+    assert "instance_repr" in repr_str
+
+
+def test_cache_clear_only_removes_specified_key() -> None:
+    """``Cache.clear(key=...)`` removes the named lock and dispatches to
+    ``_clear``; other locks survive and ``clear()`` removes everything."""
+    cleared_keys: list[str | None] = []
+
+    class _ConcreteCache(Cache[Any]):
+        def _clear(self, key: str | None = None) -> None:
+            cleared_keys.append(key)
+
+    cache = _ConcreteCache()
+    cache.compute_value_lock("keep_me")
+    cache.compute_value_lock("remove_me")
+
+    cache.clear(key="remove_me")
+    assert "remove_me" not in cache._value_locks
+    assert "keep_me" in cache._value_locks
+    assert cleared_keys == ["remove_me"]
+
+    cache.clear()
+    assert cache._value_locks == {}
+    assert cleared_keys == ["remove_me", None]

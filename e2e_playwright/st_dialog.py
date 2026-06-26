@@ -14,11 +14,12 @@
 
 import time
 
+import altair as alt
 import numpy as np
 import pandas as pd
 
 import streamlit as st
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 
 np.random.seed(0)
 data = np.random.randint(low=0, high=20, size=(20, 3))
@@ -141,7 +142,7 @@ with st.sidebar:
 @st.dialog("Submit-button Dialog")
 def submit_button_dialog() -> None:
     st.write("This dialog has a submit button.")
-    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")  # type: ignore[union-attr]
+    st.write(f"Fragment Id: {ThreadState.get().fragment_id}")
 
     if st.button("Submit", key="dialog6-btn"):
         st.rerun()
@@ -159,7 +160,7 @@ def level2_dialog() -> None:
 @st.dialog("Level1 Dialog")
 def level1_dialog() -> None:
     st.write("First level dialog")
-    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")  # type: ignore[union-attr]
+    st.write(f"Fragment Id: {ThreadState.get().fragment_id}")
     level2_dialog()
 
 
@@ -207,6 +208,33 @@ def dialog_with_chart() -> None:
 
 if st.button("Open Chart Dialog"):
     dialog_with_chart()
+
+
+@st.dialog("Dialog with layered chart")
+def dialog_with_layered_chart() -> None:
+    df = pd.DataFrame(
+        {
+            "x": list(range(1, 11)),
+            "y": list(range(5, 15)),
+            "y2": list(range(1, 11)),
+            "kpi": ["kpi1"] * 10,
+        }
+    )
+    chart1 = (
+        alt.Chart(df)
+        .mark_area()
+        .encode(x="x", y="y2", color="kpi", tooltip=["x", "y2"])
+    )
+    chart2 = (
+        alt.Chart(df)
+        .mark_line(point=alt.OverlayMarkDef(size=80))
+        .encode(x="x", y="y", color="kpi", tooltip=["x", "y"])
+    )
+    st.altair_chart(alt.layer(chart1, chart2).interactive())
+
+
+if st.button("Open Layered Chart Dialog"):
+    dialog_with_layered_chart()
 
 
 @st.dialog("Dialog with dataframe")

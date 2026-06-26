@@ -50,13 +50,22 @@ import ElementNodeRenderer, {
 
 vi.mock("./ElementContainer", async importOriginal => {
   const mod = await importOriginal<typeof import("./ElementContainer")>()
+  const { createElement } = await import("react")
   return {
     ...mod,
     ElementContainer: vi.fn((props: ElementContainerProps) =>
-      mod.ElementContainer(props)
+      createElement(mod.ElementContainer, props)
     ),
   }
 })
+
+vi.mock("~lib/components/elements/Metric/Metric", () => ({
+  default: () => null,
+}))
+
+vi.mock("~lib/components/elements/ImageList/ImageList", () => ({
+  default: () => null,
+}))
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
