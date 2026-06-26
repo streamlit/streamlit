@@ -187,6 +187,11 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
         # show_skeleton could see _should_display=False after the clear is enqueued.
         with self._display_lock:
             self._should_display = False
+            # Reset so the placeholder is back in a clean (non-context-manager)
+            # state. Re-entering the context manager works because __enter__ sets
+            # this back to True, but resetting here keeps the state machine
+            # explicit.
+            self._in_context_manager = False
             if self._clear_transient is not None:
                 enqueue_message(self._clear_transient())
 
