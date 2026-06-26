@@ -126,7 +126,45 @@ export const StyledErrorEnhancer = styled.div(({ theme }) => ({
   alignItems: "center",
   color: theme.colors.redTextColor,
   paddingLeft: theme.spacing.xs,
+  paddingRight: theme.spacing.sm,
 }))
+
+interface StyledInputInstructionsContainerProps {
+  $hasErrorIcon: boolean
+  $hasPasswordToggle: boolean
+}
+
+/**
+ * Positions the input instructions (e.g. "Press Enter to apply") so they don't
+ * overlap the end enhancers (validation error icon and/or password visibility
+ * toggle) anchored to the right edge of the input. The `right` offset clears
+ * the combined width of whichever end enhancers are currently shown.
+ */
+export const StyledInputInstructionsContainer =
+  styled.div<StyledInputInstructionsContainerProps>(
+    ({ theme, $hasErrorIcon, $hasPasswordToggle }) => {
+      const enhancerWidths: string[] = []
+      if ($hasErrorIcon) {
+        enhancerWidths.push(
+          `${theme.spacing.xs} + ${theme.iconSizes.base} + ${theme.spacing.sm}`
+        )
+      }
+      if ($hasPasswordToggle) {
+        enhancerWidths.push(
+          `${theme.spacing.sm} + ${theme.iconSizes.base} + ${theme.spacing.sm}`
+        )
+      }
+
+      return {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: enhancerWidths.length
+          ? `calc(${enhancerWidths.join(" + ")})`
+          : 0,
+      }
+    }
+  )
 
 export const StyledPasswordToggle = styled.button(({ theme }) => ({
   display: "flex",
