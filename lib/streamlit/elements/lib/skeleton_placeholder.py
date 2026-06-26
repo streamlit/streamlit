@@ -72,6 +72,12 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
         In context manager mode, the immediate skeleton is cleared and replaced
         with a delayed transient skeleton (like st.spinner).
         """
+        # At runtime the base class is `object`, so this resolves to
+        # `object.__init__()` and is a harmless no-op. We keep the explicit call
+        # because, under TYPE_CHECKING, the base is `DeltaGenerator` (see
+        # `_SkeletonPlaceholderBase`); the call keeps type-checkers and static
+        # analysis satisfied that the superclass is initialized.
+        super().__init__()
         self._parent = parent
         self._skeleton_proto = skeleton_proto
         self._layout_config = layout_config

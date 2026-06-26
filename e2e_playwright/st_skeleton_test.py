@@ -76,8 +76,9 @@ def test_skeleton_context_manager_with_delay(app: Page):
     # Auto-wait for the static skeletons to render before capturing the count,
     # so the baseline is stable regardless of initial load timing.
     skeletons = app.get_by_test_id("stSkeletonElement")
+    # The app renders 5 static skeletons; assert that baseline before acting.
     expect(skeletons).to_have_count(5)
-    initial_skeleton_count = skeletons.count()
+    initial_skeleton_count = 5
 
     # Click the button to run the context manager
     get_button(app, "Run skeleton context manager (with delay)").click()
