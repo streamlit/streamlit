@@ -540,3 +540,6 @@ def _validate_registered_page(page: StreamlitPage) -> None:
             "returned by `st.navigation` or re-create the page with the "
             "matching source."
         )
+    # Callable-vs-callable collisions fall through intentionally: PageInfo
+    # only stores an empty script_path for callables, so we have no identity
+    # to compare the two functions against.
