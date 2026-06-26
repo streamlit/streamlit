@@ -414,10 +414,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
-          TRIGGER_LABEL: ${{ needs.parse-models.outputs.trigger_label }}
+          EVENT_LABEL: ${{ github.event.label.name }}
         run: |
-          if [ -n "$TRIGGER_LABEL" ]; then
-            gh pr edit "$PR_NUMBER_ENV" --remove-label "$TRIGGER_LABEL" --repo "$REPOSITORY" || true
+          # Derive the label to remove from the triggering event rather than the
+          # parse-models output, so the label is still cleaned up even if the parse
+          # step failed. The equality checks keep removal limited to known labels.
+          if [ "$EVENT_LABEL" = "ai-review" ] || [ "$EVENT_LABEL" = "ai-final-review" ]; then
+            gh pr edit "$PR_NUMBER_ENV" --remove-label "$EVENT_LABEL" --repo "$REPOSITORY" || true
           fi
 
       - name: Download consolidated review
