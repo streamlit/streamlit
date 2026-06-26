@@ -263,6 +263,12 @@ function TextInput({
       }
 
       if (inForm) {
+        // Inside a form, intermediate commits (blur, or Enter without submit)
+        // intentionally skip validation: the value only stages into the form's
+        // pending state and isn't sent to the server until submit, where the
+        // registered form submit validator gates the entire form. Deferring
+        // field-level errors to submit time is the intended form UX, so don't
+        // run the regex check here.
         if (dirty) {
           commitWidgetValue()
         }
@@ -306,6 +312,8 @@ function TextInput({
           return
         }
 
+        // See `handleBlur`: in-form commits intentionally defer validation to
+        // form submit, so the staged value is committed without the regex check.
         if (dirty) {
           commitWidgetValue()
         }

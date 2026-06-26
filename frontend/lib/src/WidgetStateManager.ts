@@ -352,7 +352,12 @@ export class WidgetStateManager {
   }
 
   public removeFormSubmitValidator(formId: string, widgetId: string): void {
-    this.getOrCreateFormState(formId).submitValidators.delete(widgetId)
+    // Use a non-creating lookup here: this runs from the widget's unmount
+    // cleanup, where the form may already have been evicted (e.g. the form was
+    // removed from the page before this widget unmounts). Calling
+    // `getOrCreateFormState` would resurrect a phantom, empty `FormState` that
+    // is never submitted or cleaned up, so we no-op when the form is gone.
+    this.forms.get(formId)?.submitValidators.delete(widgetId)
   }
 
   /**

@@ -740,6 +740,38 @@ describe("Widget State Manager", () => {
         undefined
       )
     })
+
+    it("does not run a validator after it is removed", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      const validator = vi.fn(() => false)
+      widgetMgr.addFormSubmitValidator(formId, "widget1", validator)
+      widgetMgr.removeFormSubmitValidator(formId, "widget1")
+
+      widgetMgr.submitForm(formId, undefined)
+
+      // The removed validator must not run and must no longer block submission.
+      expect(validator).not.toHaveBeenCalled()
+      expect(sendBackMsg).toHaveBeenCalled()
+    })
+
+    it("does not resurrect a phantom FormState when removing a validator for an evicted form", () => {
+      const formId = "neverCreatedForm"
+
+      // This mirrors the widget unmount cleanup path: if the form was already
+      // evicted, removing the validator must be a no-op and must not recreate
+      // an empty, dangling FormState that is never submitted or cleaned up.
+      expect(() =>
+        widgetMgr.removeFormSubmitValidator(formId, "widget1")
+      ).not.toThrow()
+
+      // @ts-expect-error - inspect internal state: no phantom form was created
+      expect(widgetMgr.forms.get(formId)).toBeFalsy()
+    })
   })
 
   describe("allowFormEnterToSubmit", () => {
