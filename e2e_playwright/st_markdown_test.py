@@ -695,6 +695,72 @@ def test_tooltip_with_complex_markdown_gh_13339(
     )
 
 
+def test_copy_to_clipboard_toolbar_visibility(app: Page):
+    """Test copy-to-clipboard toolbar visibility based on copy_to_clipboard parameter (gh-6726).
+
+    Verifies that:
+    - Toolbar and copy button appear when copy_to_clipboard=True
+    - Toolbar is absent when copy_to_clipboard=False
+    """
+    # Test with copy_to_clipboard=True
+    copy_enabled = get_element_by_key(app, "markdown_copy_to_clipboard")
+    copy_enabled.scroll_into_view_if_needed()
+    expect(copy_enabled).to_be_visible()
+    expect(copy_enabled.get_by_test_id("stMarkdown")).to_be_visible()
+    expect(copy_enabled.get_by_test_id("stElementToolbar")).to_be_attached()
+    expect(copy_enabled.get_by_test_id("stBaseButton-elementToolbar")).to_be_attached()
+
+    # Test with copy_to_clipboard=False
+    copy_disabled = get_element_by_key(app, "markdown_no_copy")
+    copy_disabled.scroll_into_view_if_needed()
+    expect(copy_disabled).to_be_visible()
+    expect(copy_disabled.get_by_test_id("stMarkdown")).to_be_visible()
+    expect(copy_disabled.get_by_test_id("stElementToolbar")).to_have_count(0)
+
+
+def test_copy_to_clipboard_toolbar_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test copy-to-clipboard toolbar visual appearance when hovered (gh-6726)."""
+    element_container = get_element_by_key(themed_app, "markdown_copy_to_clipboard")
+    element_container.scroll_into_view_if_needed()
+
+    markdown_element = element_container.get_by_test_id("stMarkdown")
+    expect(markdown_element).to_be_visible()
+
+    # Hover to show the toolbar
+    markdown_element.hover()
+
+    # Wait for toolbar to be visible
+    toolbar = element_container.get_by_test_id("stElementToolbar")
+    expect(toolbar).to_be_visible()
+
+    assert_snapshot(markdown_element, name="st_markdown-copy_to_clipboard_toolbar")
+
+
+def test_copy_to_clipboard_with_help_tooltip(app: Page):
+    """Test that copy_to_clipboard works correctly when combined with help tooltip (gh-6726)."""
+    element_container = get_element_by_key(app, "markdown_copy_with_help")
+    element_container.scroll_into_view_if_needed()
+    expect(element_container).to_be_visible()
+
+    markdown_element = element_container.get_by_test_id("stMarkdown")
+    expect(markdown_element).to_be_visible()
+
+    # Toolbar should be attached (copy_to_clipboard=True)
+    expect(element_container.get_by_test_id("stElementToolbar")).to_be_attached()
+
+    # Help icon should be present
+    help_icon = element_container.get_by_test_id("stTooltipIcon")
+    expect(help_icon).to_be_visible()
+
+    # Verify help tooltip works by hovering directly on the help icon
+    help_icon.hover()
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).to_be_visible()
+    expect(tooltip_content).to_have_text("This is a help tooltip!")
+
+
 # Mermaid chart tests
 
 

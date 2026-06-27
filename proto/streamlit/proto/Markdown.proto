@@ -39,4 +39,7 @@ message Markdown {
 
   // Enables frontend unterminated markdown completion (via remend) during streaming.
   bool unterminated_parsing = 6;
+
+  // If true, show a copy-to-clipboard button in a toolbar overlay.
+  bool copy_to_clipboard = 7;
 }

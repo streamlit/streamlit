@@ -45,6 +45,7 @@ class MarkdownMixin:
         width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
         unterminated_parsing: bool = False,
+        copy_to_clipboard: bool = False,
     ) -> DeltaGenerator:
         """Internal markdown method with extended options."""
         markdown_proto = MarkdownProto()
@@ -53,6 +54,7 @@ class MarkdownMixin:
         markdown_proto.allow_html = unsafe_allow_html
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
         markdown_proto.unterminated_parsing = unterminated_parsing
+        markdown_proto.copy_to_clipboard = copy_to_clipboard
         if help:
             markdown_proto.help = help
 
@@ -76,6 +78,7 @@ class MarkdownMixin:
         help: str | None = None,
         width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
+        copy_to_clipboard: bool = False,
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
@@ -203,6 +206,11 @@ class MarkdownMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        copy_to_clipboard : bool
+            Whether to display a copy-to-clipboard button. If this is ``True``,
+            a toolbar with a copy icon appears on hover, allowing users to copy
+            the raw Markdown text to the clipboard. Defaults to ``False``.
+
         Examples
         --------
         >>> import streamlit as st
@@ -232,6 +240,7 @@ class MarkdownMixin:
             help=help,
             width=width,
             text_alignment=text_alignment,
+            copy_to_clipboard=copy_to_clipboard,
         )
 
     @gather_metrics("caption")

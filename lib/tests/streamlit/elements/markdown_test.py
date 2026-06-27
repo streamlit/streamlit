@@ -68,6 +68,34 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
         assert el.markdown.body == "some markdown"
         assert el.markdown.help == "help text"
 
+    @parameterized.expand(
+        [
+            (True, True),
+            (False, False),
+            (None, False),  # Default case
+        ]
+    )
+    def test_st_markdown_copy_to_clipboard(
+        self, copy_to_clipboard: bool | None, expected: bool
+    ):
+        """Test st.markdown copy_to_clipboard parameter.
+
+        Parameters
+        ----------
+        copy_to_clipboard : bool | None
+            The copy_to_clipboard value to test, or None for default behavior.
+        expected : bool
+            The expected protobuf copy_to_clipboard value.
+        """
+        if copy_to_clipboard is None:
+            st.markdown("some markdown")
+        else:
+            st.markdown("some markdown", copy_to_clipboard=copy_to_clipboard)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "some markdown"
+        assert el.markdown.copy_to_clipboard is expected
+
     def test_st_markdown_with_width(self):
         """Test st.markdown with different width types."""
         test_cases = [

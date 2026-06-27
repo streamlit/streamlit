@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, ReactElement, useCallback } from "react"
+
+import { Check, ContentCopy } from "@emotion-icons/material-outlined"
 
 import { Markdown as MarkdownProto } from "@streamlit/protobuf"
 
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/styled-components"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
+import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
+
+import { StyledMarkdownWithToolbar } from "./styled-components"
 
 export interface MarkdownProps {
   element: MarkdownProto
@@ -37,10 +43,27 @@ const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
  * Functional element representing Markdown formatted text.
  */
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
-  const { allowHtml, body, elementType, help, unterminatedParsing } = element
+  const {
+    allowHtml,
+    body,
+    copyToClipboard,
+    elementType,
+    help,
+    unterminatedParsing,
+  } = element
 
   const isCaption = elementType === MarkdownProto.Type.CAPTION
   const isLatex = elementType === MarkdownProto.Type.LATEX
+
+  const {
+    isCopied,
+    copyToClipboard: copyText,
+    label: copyLabel,
+  } = useCopyToClipboard()
+
+  const handleCopy = useCallback((): void => {
+    copyText(body)
+  }, [copyText, body])
 
   // Determine if the markdown is a single badge only
   const isSingleBadgeOnly =
@@ -106,6 +129,25 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           unterminatedParsing={unterminatedParsing}
         />
       </StyledLabelHelpWrapper>
+    )
+  }
+
+  // Wrap with toolbar container when copy_to_clipboard is enabled
+  if (copyToClipboard) {
+    return (
+      <StyledMarkdownWithToolbar
+        className="stMarkdown"
+        data-testid="stMarkdown"
+      >
+        <Toolbar target={StyledMarkdownWithToolbar} disableFullscreenMode>
+          <ToolbarAction
+            label={copyLabel}
+            icon={isCopied ? Check : ContentCopy}
+            onClick={handleCopy}
+          />
+        </Toolbar>
+        {content}
+      </StyledMarkdownWithToolbar>
     )
   }
 

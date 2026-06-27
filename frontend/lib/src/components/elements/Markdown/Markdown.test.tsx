@@ -395,8 +395,53 @@ describe("Markdown badge with help", () => {
   })
 })
 
-// Integration tests for Markdown auto width behavior via ElementNodeRenderer
-// These tests verify that width="auto" (no widthConfig) applies container-aware sizing
+describe("Markdown copy to clipboard", () => {
+  it("hides toolbar when copyToClipboard is false", () => {
+    const props = getProps({ copyToClipboard: false })
+    render(<Markdown {...props} />)
+
+    expect(screen.queryByTestId("stElementToolbar")).not.toBeInTheDocument()
+  })
+
+  it("renders toolbar with copy button when copyToClipboard is true", () => {
+    const props = getProps({ copyToClipboard: true })
+    render(<Markdown {...props} />)
+
+    // Toolbar is hidden by default (shown on hover), so just verify presence
+    expect(screen.getByTestId("stElementToolbar")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stBaseButton-elementToolbar")
+    ).toBeInTheDocument()
+  })
+
+  it("copies raw markdown body to clipboard when copy button is clicked", async () => {
+    const user = userEvent.setup()
+    const writeTextMock = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal("navigator", {
+      clipboard: { writeText: writeTextMock },
+    })
+
+    const markdownBody = "Test content with **bold** and *italic*"
+    const props = getProps({ body: markdownBody, copyToClipboard: true })
+    render(<Markdown {...props} />)
+
+    const copyButton = screen.getByTestId("stBaseButton-elementToolbar")
+    await user.click(copyButton)
+
+    // Verify the raw markdown body (not rendered HTML) was copied
+    expect(writeTextMock).toHaveBeenCalledWith(markdownBody)
+
+    // Button should still exist after click (icon changes to checkmark)
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("stBaseButton-elementToolbar")
+      ).toBeInTheDocument()
+    })
+
+    vi.unstubAllGlobals()
+  })
+})
+
 describe("Markdown auto width behavior", () => {
   const FAKE_SCRIPT_HASH = "fake_script_hash"
 

@@ -552,6 +552,27 @@ Links: [Streamlit](https://streamlit.io) Colors: :red[red] :blue[blue]
 Emoji: 🎉 Array: array[index] Dict: dict[key]""",
 )
 
+# Copy to clipboard functionality
+st.header("Copy to Clipboard (gh-6726)")
+
+st.container(key="markdown_copy_to_clipboard").markdown(
+    "This markdown has a **copy button** that appears on hover.",
+    copy_to_clipboard=True,
+    width="content",
+)
+
+st.container(key="markdown_no_copy").markdown(
+    "This markdown does **not** have a copy button.",
+    copy_to_clipboard=False,
+)
+
+st.container(key="markdown_copy_with_help").markdown(
+    "Markdown with **both** copy button and help tooltip.",
+    copy_to_clipboard=True,
+    help="This is a help tooltip!",
+    width="content",
+)
+
 # Shimmer directive test
 with st.container(key="shimmer_elements"):
     st.markdown(
