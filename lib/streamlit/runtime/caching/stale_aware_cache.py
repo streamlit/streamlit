@@ -97,7 +97,8 @@ class StaleAwareCache(Generic[K, V]):
             The timer function used to compute and check expiry timestamps.
         on_release : OnRelease or None
             An optional function called with an entry's value when it is removed
-            from the cache via LRU eviction, ``safe_del``, or ``clear``.
+            from the cache via LRU eviction, ``safe_del``, ``clear``, or when an
+            existing entry is overwritten by a new value.
         """
         # The underlying cache stores ``_StaleAwareEntry[V]`` values internally
         # (wrapping each value with its expiry), not the bare ``V`` values.
@@ -124,7 +125,15 @@ class StaleAwareCache(Generic[K, V]):
         return self._cache[key].value
 
     def __setitem__(self, key: K, value: V) -> None:
+        # Releasing the value being overwritten mirrors the foreground
+        # TTLCleanupCache, where an expired entry is released (via ``expire``)
+        # before the recomputed value replaces it. Without this, a background
+        # refresh that overwrites a stale entry would drop the previous value
+        # (e.g. a cache_resource connection) without running ``on_release``.
+        old_entry = self._cache.get(key) if self._on_release is not None else None
         self._cache[key] = _StaleAwareEntry(value, self._timer() + self._ttl)
+        if old_entry is not None and self._on_release is not None:
+            self._on_release(old_entry.value)
 
     def __delitem__(self, key: K) -> None:
         # Plain deletion does not call ``on_release`` (mirrors TTLCleanupCache).

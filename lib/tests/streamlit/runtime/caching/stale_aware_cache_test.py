@@ -87,6 +87,24 @@ def test_overwrite_resets_expiry() -> None:
     assert is_stale is False
 
 
+def test_overwrite_calls_on_release_for_replaced_value() -> None:
+    """Overwriting an existing key releases the previous value (mirrors the
+    foreground TTLCleanupCache, which releases an expired entry before replacing
+    it).
+    """
+    released: list[int] = []
+    cache: StaleAwareCache[str, int] = StaleAwareCache(
+        maxsize=math.inf, ttl=10, timer=_FakeTimer(), on_release=released.append
+    )
+    cache["a"] = 1
+    # First write of a key has no previous value, so nothing is released yet.
+    assert released == []
+
+    cache["a"] = 2
+    assert released == [1]
+    assert cache["a"] == 2
+
+
 def test_infinite_ttl_never_stale() -> None:
     """With an infinite ttl, entries never become stale."""
     timer = _FakeTimer()

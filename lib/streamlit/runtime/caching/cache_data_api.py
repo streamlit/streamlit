@@ -162,6 +162,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
             persist=self.persist,
             max_entries=self.max_entries,
             ttl=self.ttl,
+            refresh_type=self.refresh_type,
         )
 
 
@@ -329,6 +330,7 @@ class DataCaches(StatsProvider):
         persist: CachePersistType,
         max_entries: int | None,
         ttl: int | float | timedelta | str | None,
+        refresh_type: RefreshType = "foreground",
     ) -> None:
         """Validate that the cache params are valid for given storage.
 
@@ -347,6 +349,7 @@ class DataCaches(StatsProvider):
             ttl_seconds=ttl_seconds,
             max_entries=max_entries,
             persist=persist,
+            refresh_type=refresh_type,
         )
         try:
             self.get_storage_manager().check_context(cache_context)
@@ -590,7 +593,10 @@ class CacheDataAPI:
             with ``persist``. Because background refreshes run without a script
             context, ``st.*`` element calls inside the cached function are not
             replayed for the background refresh, and no spinner is shown when a
-            stale value is returned.
+            stale value is returned. Unlike ``"foreground"``, stale entries are
+            retained (so they can be served while a refresh runs) and are not
+            evicted on expiration, so set ``max_entries`` when caching many
+            distinct keys to bound memory usage.
 
         Examples
         --------

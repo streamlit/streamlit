@@ -868,3 +868,49 @@ class AlwaysFailingTestCacheStorageManager(CacheStorageManager):
 
     def check_context(self, context: CacheStorageContext) -> None:
         raise InvalidCacheStorageContextError("This CacheStorageManager always fails")
+
+
+class ContextCapturingCacheStorageManager(CacheStorageManager):
+    """A CacheStorageManager that records the contexts passed to check_context."""
+
+    def __init__(self) -> None:
+        self.checked_contexts: list[CacheStorageContext] = []
+
+    def create(self, context: CacheStorageContext) -> CacheStorage:
+        return DummyCacheStorage()
+
+    def clear_all(self) -> None:
+        pass
+
+    def check_context(self, context: CacheStorageContext) -> None:
+        self.checked_contexts.append(context)
+
+
+class CacheDataRefreshTypeValidationTest(DeltaGeneratorTestCase):
+    """Tests that refresh_type is threaded into cache param validation."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        mock_runtime = MagicMock(spec=Runtime)
+        self.storage_manager = ContextCapturingCacheStorageManager()
+        mock_runtime.cache_storage_manager = self.storage_manager
+        Runtime._instance = mock_runtime
+
+    def tearDown(self) -> None:
+        st.cache_data.clear()
+        super().tearDown()
+
+    def test_refresh_type_passed_to_check_context(self) -> None:
+        """validate_cache_params forwards refresh_type so custom storage managers
+        can reject unsupported background-refresh semantics at decoration time.
+        """
+
+        @st.cache_data(ttl=100, refresh_type="background")
+        def foo() -> str:
+            return "data"
+
+        assert self.storage_manager.checked_contexts
+        assert all(
+            ctx.refresh_type == "background"
+            for ctx in self.storage_manager.checked_contexts
+        )

@@ -520,7 +520,10 @@ class CacheResourceAPI:
             ``refresh_type="background"`` requires a ``ttl``. Because background
             refreshes run without a script context, ``st.*`` element calls inside
             the cached function are not replayed for the background refresh, and no
-            spinner is shown when a stale resource is returned.
+            spinner is shown when a stale resource is returned. Unlike
+            ``"foreground"``, stale entries are retained (so they can be served
+            while a refresh runs) and are not evicted on expiration, so set
+            ``max_entries`` when caching many distinct keys to bound memory usage.
 
         Examples
         --------
@@ -773,8 +776,11 @@ class ResourceCache(Cache[R]):
                 return CacheReadResult(CacheEntryStatus.MISS, None)
 
             if self.validate is not None and not self.validate(result.value):
-                # Validate failed: delete the entry and report a miss.
-                mem_cache.safe_del(key)
+                # Validate failed: delete the entry and report a miss. Use a plain
+                # delete (no ``on_release``) to mirror the foreground ``read_result``
+                # path above, so a validate failure has the same release semantics
+                # regardless of ``refresh_type``.
+                del mem_cache[key]
                 return CacheReadResult(CacheEntryStatus.MISS, None)
 
             status = CacheEntryStatus.STALE if is_stale else CacheEntryStatus.HIT

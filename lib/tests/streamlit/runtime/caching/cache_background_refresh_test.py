@@ -230,6 +230,73 @@ class BackgroundRefreshBehaviorTest(DeltaGeneratorTestCase):
         assert foo() == 2
         assert call_count[0] == 2
 
+    @patch(
+        "streamlit.runtime.caching.background_refresh.schedule_background_refresh",
+        _sync_schedule,
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_resource_validate_failure_does_not_call_on_release(
+        self, timer: Mock
+    ) -> None:
+        """A failed validate must not call on_release, mirroring the foreground
+        path (which deletes the invalid entry without releasing it).
+        """
+        released: list[int] = []
+        validate_ok = [True]
+        call_count = [0]
+
+        @cache_resource(
+            ttl=100,
+            refresh_type="background",
+            validate=lambda _value: validate_ok[0],
+            on_release=released.append,
+        )
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer.return_value = 0
+        assert foo() == 1
+
+        # Validate now fails, so the entry is treated as a miss and recomputed,
+        # but on_release must not fire for the invalid entry.
+        validate_ok[0] = False
+        timer.return_value = 50
+        assert foo() == 2
+        assert released == []
+
+    @patch(
+        "streamlit.runtime.caching.background_refresh.schedule_background_refresh",
+        _sync_schedule,
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_resource_background_refresh_releases_replaced_value(
+        self, timer: Mock
+    ) -> None:
+        """A successful background refresh releases the previous resource it
+        replaces, matching the foreground behavior where an expired entry is
+        released before being recomputed.
+        """
+        released: list[int] = []
+        call_count = [0]
+
+        @cache_resource(ttl=100, refresh_type="background", on_release=released.append)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer.return_value = 0
+        assert foo() == 1
+        # The initial computation has no previous value to release.
+        assert released == []
+
+        # After ttl: the stale value (1) is replaced by the refreshed value (2),
+        # so the previous resource must be released.
+        timer.return_value = 150
+        assert foo() == 1
+        assert call_count[0] == 2
+        assert released == [1]
+
     @parameterized.expand(_BG_PARAMS)
     @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
     def test_real_background_thread_refresh(
