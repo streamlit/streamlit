@@ -990,7 +990,9 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   }, [])
 
   // FocusLock's handleReturnFocus manages focus restoration — omit restoreFocusFn.
-  // closeMenu() (reason "other") and closeMenu("escape") both route to button.focus().
+  // useOverlayDismissal calls onClose() without a reason argument, so closeMenu()
+  // defaults to reason "other". handleReturnFocus routes "other" to button.focus(),
+  // the same as "escape", so the focus behaviour is identical.
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: isMenuOpen,
     onClose: closeMenu,

@@ -81,7 +81,8 @@ function MenuButton(props: Props): ReactElement {
   // avoiding the ref duplication issue that occurs when BaseButtonTooltip
   // renders its children twice (desktop tooltip + mobile variant). Used by
   // restoreFocusFn to find and focus the trigger button after Escape.
-  const containerRef = useRef<HTMLDivElement>(null)
+  // useRef<T | null>(null) gives MutableRefObject so .current is assignable.
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
   // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
   // fully replaced with FloatingPortal here because Menu is a self-contained
@@ -106,6 +107,16 @@ function MenuButton(props: Props): ReactElement {
         ?.focus(),
     closeOnTab: true,
   })
+
+  // Merge containerRef (for restoreFocusFn's querySelector) with setReferenceRef
+  // (for floating-ui positioning + outside-click hit-testing) on the same <Box>.
+  const setContainerRef = useCallback(
+    (node: HTMLDivElement | null): void => {
+      containerRef.current = node
+      setReferenceRef(node)
+    },
+    [setReferenceRef]
+  )
 
   const kind = BUTTON_TYPE_TO_KIND[element.type] ?? BaseButtonKind.SECONDARY
 
@@ -139,7 +150,7 @@ function MenuButton(props: Props): ReactElement {
 
   return (
     <Box
-      ref={setReferenceRef}
+      ref={setContainerRef}
       className="stMenuButton"
       data-testid="stMenuButton"
     >

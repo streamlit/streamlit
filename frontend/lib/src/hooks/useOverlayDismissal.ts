@@ -38,10 +38,9 @@ interface UseOverlayDismissalOptions {
    */
   restoreFocusFn?: () => void
   /**
-   * When true, Tab also triggers onClose().
-   * NOTE: e.preventDefault() is NOT called for Tab — the keypress must propagate
-   * naturally so focus advances to the next element. e.stopPropagation() IS called
-   * to prevent parent overlays from also reacting.
+   * When true, Tab also triggers onClose(). Neither stopPropagation nor
+   * preventDefault is called — the Tab event propagates normally so parent
+   * focus managers (FocusLock, dialogs) can route focus correctly.
    */
   closeOnTab?: boolean
 }
@@ -69,10 +68,9 @@ interface UseOverlayDismissalReturn {
  * TopNavSection, MainMenu.
  *
  * Behavior notes:
- * - `e.stopPropagation()` fires for both Escape and Tab so parent overlays
- *   don't also react.
- * - `e.preventDefault()` fires ONLY for Escape. Calling it on Tab would
- *   suppress the keypress and prevent focus from advancing naturally.
+ * - `e.stopPropagation()` and `e.preventDefault()` fire only for Escape.
+ *   Tab must propagate so parent focus managers (FocusLock, dialogs) can
+ *   route focus correctly.
  */
 export function useOverlayDismissal({
   isOpen,
@@ -124,11 +122,12 @@ export function useOverlayDismissal({
       const isEscape = e.key === "Escape"
       const isTab = closeOnTab && e.key === "Tab"
       if (!isEscape && !isTab) return
-      // stopPropagation for both Escape and Tab: only the innermost open overlay
-      // should close per WAI-ARIA pattern.
-      e.stopPropagation()
-      // preventDefault only for Escape — Tab must propagate so focus advances.
-      if (isEscape) e.preventDefault()
+      // stopPropagation and preventDefault only for Escape — Tab must
+      // propagate so parent focus managers (FocusLock, dialogs) can handle it.
+      if (isEscape) {
+        e.stopPropagation()
+        e.preventDefault()
+      }
       onClose()
       if (isEscape) restoreFocusFn?.()
     }
