@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect, useRef } from "react"
+import { memo, ReactElement, useEffect, useRef } from "react"
 
 import { FloatingFocusManager, FloatingPortal } from "@floating-ui/react"
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
-import { convertRemToPx } from "~lib/theme/utils"
 
+import { COLUMN_MENU_OFFSET } from "./constants"
 import {
   StyledCheckboxInput,
   StyledCheckboxLabel,
@@ -34,9 +35,6 @@ import {
 } from "./styled-components"
 
 const NAMELESS_INDEX_NAME = "(index)"
-
-/** Margin between the popover and its anchor element. */
-const POPOVER_MARGIN = convertRemToPx("0.375rem")
 
 /**
  * Determines if a non-index column is effectively hidden by the configured column order.
@@ -149,49 +147,18 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   const { refs, floatingStyles, context } = useFloatingOverlay({
     open: isOpen,
     placement: "bottom-end",
-    offsetPx: POPOVER_MARGIN,
+    offsetPx: COLUMN_MENU_OFFSET,
   })
 
-  // Local ref for the panel — needed for click-outside detection.
-  const panelRef = useRef<HTMLDivElement | null>(null)
-  const setFloatingCallback = useCallback(
-    (node: HTMLDivElement | null) => {
-      panelRef.current = node
-      refs.setFloating(node)
-    },
-    [refs]
-  )
-
-  // Ref for the reference wrapper — needed to exclude it from click-outside detection.
-  // The parent's toggle handler manages open/close for clicks on the trigger.
-  const referenceRef = useRef<HTMLDivElement | null>(null)
-
-  // Click-outside and Escape handlers (only active when the menu is open).
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handlePointerDown = (e: PointerEvent): void => {
-      // Don't close if click is inside the panel or on the reference (trigger button).
-      // The reference exclusion prevents double-close with the parent's toggle handler.
-      if (panelRef.current?.contains(e.target as Node)) return
-      if (referenceRef.current?.contains(e.target as Node)) return
-      onClose()
-    }
-
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        e.stopPropagation()
-        onClose()
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown, true)
-    document.addEventListener("keydown", handleKeyDown, true)
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown, true)
-      document.removeEventListener("keydown", handleKeyDown, true)
-    }
-  }, [isOpen, onClose])
+  // useOverlayDismissal provides click-outside and Escape handlers.
+  // setReferenceRef (passed to the wrapper div below) excludes the trigger from
+  // outside-click detection, preventing double-close with the parent's toggle handler.
+  const { panelRef, setFloatingRef, setReferenceRef } = useOverlayDismissal({
+    isOpen,
+    onClose,
+    floatingSetFn: refs.setFloating,
+    referenceSetFn: refs.setReference,
+  })
 
   // Determine column visibility based on hidden property and column order:
   const isColumnVisible = (c: BaseColumn): boolean =>
@@ -221,18 +188,13 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   }
 
   return (
-    <div
-      ref={(node: HTMLDivElement | null) => {
-        referenceRef.current = node
-        refs.setReference(node)
-      }}
-    >
+    <div ref={setReferenceRef}>
       {children}
       {isOpen && (
         <FloatingPortal>
           <FloatingFocusManager context={context} initialFocus={panelRef}>
             <StyledColumnVisibilityMenuPanel
-              ref={setFloatingCallback}
+              ref={setFloatingRef}
               style={floatingStyles}
               tabIndex={-1}
               data-testid="stDataFrameColumnVisibilityMenu"

@@ -108,6 +108,7 @@ export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
 export { useFloatingOverlay } from "./hooks/useFloatingOverlay"
 export { useHoverSubmenu } from "./hooks/useHoverSubmenu"
+export { useOverlayDismissal } from "./hooks/useOverlayDismissal"
 export {
   ensureHotkeysFilterConfigured,
   isKeyboardEventFromEditableTarget,

@@ -21,7 +21,6 @@ import {
   ReactElement,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -48,6 +47,7 @@ import {
   ThemeContext,
   useEmotionTheme,
   useFloatingOverlay,
+  useOverlayDismissal,
 } from "@streamlit/lib"
 import { Config, PageConfig } from "@streamlit/protobuf"
 
@@ -938,31 +938,14 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   // Track popover open state for aria-expanded on the menu button.
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
-  // useRef<T | null>(null) gives MutableRefObject so .current is directly assignable.
+  // triggerRef is still needed by handleReturnFocus for Tab/Shift+Tab focus routing.
   const triggerRef = useRef<HTMLButtonElement | null>(null)
-  const popoverRef = useRef<HTMLDivElement | null>(null)
 
   const { refs, floatingStyles } = useFloatingOverlay({
     open: isMenuOpen,
     placement: "bottom-end",
     offsetPx: convertRemToPx(theme.spacing.twoXS),
   })
-
-  const setReferenceRef = useCallback(
-    (node: HTMLButtonElement | null): void => {
-      triggerRef.current = node
-      refs.setReference(node)
-    },
-    [refs]
-  )
-
-  const setFloatingRef = useCallback(
-    (node: HTMLDivElement | null): void => {
-      popoverRef.current = node
-      refs.setFloating(node)
-    },
-    [refs]
-  )
 
   // Tracks *why* the menu was closed so handleReturnFocus can route focus.
   // Set by closeMenu, read + reset in handleReturnFocus.
@@ -1006,39 +989,23 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     return false
   }, [])
 
-  // Outside-click and Escape dismissal via capture-phase listeners.
-  // Escape is handled here (not in MenuContent) so stopPropagation() fires
-  // before any parent overlay (e.g. st.dialog) sees the event — only the
-  // innermost open overlay should close per WAI-ARIA pattern.
-  useEffect(() => {
-    if (!isMenuOpen) return
+  // FocusLock's handleReturnFocus manages focus restoration — omit restoreFocusFn.
+  // closeMenu() (reason "other") and closeMenu("escape") both route to button.focus().
+  const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
+    isOpen: isMenuOpen,
+    onClose: closeMenu,
+    floatingSetFn: refs.setFloating,
+    referenceSetFn: refs.setReference,
+  })
 
-    const handlePointerDown = (e: PointerEvent): void => {
-      const target = e.target
-      if (!(target instanceof Node)) return
-      if (
-        !triggerRef.current?.contains(target) &&
-        !popoverRef.current?.contains(target)
-      ) {
-        closeMenu()
-      }
-    }
-
-    const handleKeyDown = (e: globalThis.KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        e.stopPropagation()
-        e.preventDefault()
-        closeMenu("escape")
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown, true)
-    document.addEventListener("keydown", handleKeyDown, true)
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown, true)
-      document.removeEventListener("keydown", handleKeyDown, true)
-    }
-  }, [isMenuOpen, closeMenu])
+  // Attach triggerRef (for handleReturnFocus focus routing) alongside setReferenceRef.
+  const setTriggerAndReferenceRef = useCallback(
+    (node: HTMLButtonElement | null): void => {
+      triggerRef.current = node
+      setReferenceRef(node)
+    },
+    [setReferenceRef]
+  )
 
   // Check if menu has any content (for minimal mode visibility)
   const hasContent = sections.some(section => section.length > 0)
@@ -1056,7 +1023,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
         data-testid="stMainMenu"
       >
         <BaseButton
-          ref={setReferenceRef}
+          ref={setTriggerAndReferenceRef}
           kind={BaseButtonKind.HEADER_NO_PADDING}
           data-testid="stMainMenuButton"
           aria-label="Main menu"

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react"
+import { Fragment, useCallback, useRef, useState } from "react"
 
 import {
   KeyboardArrowDown,
@@ -29,6 +29,7 @@ import {
   StreamlitMarkdown,
   useEmotionTheme,
   useFloatingOverlay,
+  useOverlayDismissal,
 } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
@@ -70,9 +71,7 @@ const TopNavSection = ({
   const theme = useEmotionTheme()
   const showSections = sections.length > 1
 
-  // useRef<T | null>(null) gives MutableRefObject so .current is directly assignable.
   const triggerRef = useRef<HTMLButtonElement | null>(null)
-  const popoverRef = useRef<HTMLDivElement | null>(null)
 
   const { refs, floatingStyles } = useFloatingOverlay({
     open,
@@ -80,53 +79,23 @@ const TopNavSection = ({
     offsetPx: convertRemToPx(theme.spacing.twoXS),
   })
 
-  const setReferenceRef = useCallback(
-    (node: HTMLButtonElement | null): void => {
+  const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
+    isOpen: open,
+    onClose: () => setOpen(false),
+    floatingSetFn: refs.setFloating,
+    referenceSetFn: refs.setReference,
+    restoreFocusFn: () => triggerRef.current?.focus(),
+  })
+
+  // Attach both triggerRef (for focus restoration) and setReferenceRef
+  // (for floating-ui + dismissal hit-testing) to the same button element.
+  const setNavSectionRef = useCallback(
+    (node: HTMLButtonElement | null) => {
       triggerRef.current = node
-      refs.setReference(node)
+      setReferenceRef(node)
     },
-    [refs]
+    [setReferenceRef]
   )
-
-  const setFloatingRef = useCallback(
-    (node: HTMLDivElement | null): void => {
-      popoverRef.current = node
-      refs.setFloating(node)
-    },
-    [refs]
-  )
-
-  // Custom dismissal: outside-click and Escape via capture-phase listeners.
-  useEffect(() => {
-    if (!open) return
-
-    const handlePointerDown = (e: PointerEvent): void => {
-      const target = e.target
-      if (!(target instanceof Node)) return
-      if (
-        !triggerRef.current?.contains(target) &&
-        !popoverRef.current?.contains(target)
-      ) {
-        setOpen(false)
-      }
-    }
-
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        e.stopPropagation()
-        e.preventDefault()
-        setOpen(false)
-        triggerRef.current?.focus()
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown, true)
-    document.addEventListener("keydown", handleKeyDown, true)
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown, true)
-      document.removeEventListener("keydown", handleKeyDown, true)
-    }
-  }, [open])
 
   if (
     isNullOrUndefined(sections) ||
@@ -194,7 +163,7 @@ const TopNavSection = ({
   return (
     <>
       <StyledNavSection
-        ref={setReferenceRef}
+        ref={setNavSectionRef}
         type="button"
         onClick={() => setOpen(prev => !prev)}
         isOpen={open}
