@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect, useRef } from "react"
+import { memo, ReactElement } from "react"
 
 import { FloatingPortal } from "@floating-ui/react"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
-import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
-import useTimeout from "~lib/hooks/useTimeout"
+import { useHoverSubmenu } from "~lib/hooks/useHoverSubmenu"
 
 import {
   StyledMenuList,
@@ -186,66 +185,11 @@ function FormattingMenu({
 }: FormattingMenuProps): ReactElement {
   const formats = COLUMN_KIND_FORMAT_MAPPING[columnKind] || []
 
-  // Note: FloatingPortal panels may render at (0,0) for one frame before
-  // floating-ui measures and positions them. A visibility:hidden guard until
-  // placement is stable would fix this, but no other overlay in the codebase
-  // (MenuButton, Popover, TopNav, ColorPicker) uses that pattern. If a flash
-  // is observed on slow machines, add `visibility: isPositioned ? 'visible' :
-  // 'hidden'` using useFloating's `isPositioned` return value.
-
-  // Refs to the anchor and panel DOM nodes — needed for the mouseover check.
-  const anchorRef = useRef<HTMLDivElement | null>(null)
-  const panelRef = useRef<HTMLDivElement | null>(null)
-
-  const { refs, floatingStyles } = useFloatingOverlay({
-    open: isOpen,
-    placement: "right",
-    offsetPx: 2,
+  const { floatingStyles, setAnchorRef, setFloatingRef } = useHoverSubmenu({
+    isOpen,
+    onOpenChange,
+    enabled: formats.length > 0,
   })
-
-  // Merge floating-ui's callback refs with our local refs.
-  const setAnchorRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      anchorRef.current = node
-      refs.setReference(node)
-    },
-    [refs]
-  )
-  const setPanelRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      panelRef.current = node
-      refs.setFloating(node)
-    },
-    [refs]
-  )
-
-  const { clear: clearClose, restart: scheduleClose } = useTimeout(
-    () => onOpenChange(false),
-    150,
-    { autoStart: false }
-  )
-
-  // Document-level mouseover listener for reliable cross-browser hover detection.
-  // Element-level onPointerEnter is unreliable in WebKit with Playwright because
-  // synthetic click events don't always fire pointerenter on FloatingPortal elements
-  // when crossing portal boundaries. mouseover bubbles to document unconditionally,
-  // so it fires regardless of portal structure or browser engine.
-  useEffect(() => {
-    if (formats.length === 0) return
-    const handleMouseOver = (e: MouseEvent): void => {
-      const target = e.target as Element
-      if (anchorRef.current?.contains(target)) {
-        clearClose()
-        onOpenChange(true)
-      } else if (isOpen && panelRef.current?.contains(target)) {
-        clearClose()
-      } else if (isOpen) {
-        scheduleClose()
-      }
-    }
-    document.addEventListener("mouseover", handleMouseOver)
-    return () => document.removeEventListener("mouseover", handleMouseOver)
-  }, [isOpen, formats.length, clearClose, onOpenChange, scheduleClose])
 
   if (formats.length === 0) {
     // If there are no formats available for the column kind,
@@ -261,7 +205,7 @@ function FormattingMenu({
       {isOpen && (
         <FloatingPortal>
           <StyledSubMenuPanel
-            ref={setPanelRef}
+            ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDataFrameColumnFormattingMenu"
             tabIndex={-1}
