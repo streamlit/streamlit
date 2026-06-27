@@ -26,8 +26,8 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/Streamli
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 
-import { COLUMN_MENU_OFFSET } from "./constants"
 import {
+  COLUMN_MENU_OFFSET,
   StyledButtonActionMenuPanel,
   StyledMenuList,
   StyledMenuListItem,
@@ -95,7 +95,7 @@ function ButtonActionMenu({
       document.removeEventListener("scroll", handleScroll, { capture: true })
       window.removeEventListener("wheel", handleScroll)
     }
-  }, [onCloseMenu])
+  }, [onCloseMenu, panelRef])
 
   const handleSelectAction = useCallback(
     (label: string) => {

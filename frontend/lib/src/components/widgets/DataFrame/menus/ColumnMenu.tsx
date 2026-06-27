@@ -32,11 +32,11 @@ import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 
-import { COLUMN_MENU_OFFSET } from "./constants"
 import FormattingMenu from "./FormattingMenu"
 import StatisticsMenu from "./StatisticsMenu"
 import { supportsStatistics } from "./statisticsUtils"
 import {
+  COLUMN_MENU_OFFSET,
   StyledColumnHeaderRow,
   StyledColumnMenuPanel,
   StyledColumnNameText,

@@ -20,6 +20,10 @@ import {
   getOverlayZIndex,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
+import { convertRemToPx } from "~lib/theme/utils"
+
+/** Pixel offset between a column menu panel and its anchor element. */
+export const COLUMN_MENU_OFFSET = convertRemToPx("0.375rem")
 
 /**
  * Wrapper div that gives floating-ui a measurable bounding rect for sub-menu

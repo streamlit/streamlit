@@ -23,8 +23,8 @@ import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 
-import { COLUMN_MENU_OFFSET } from "./constants"
 import {
+  COLUMN_MENU_OFFSET,
   StyledCheckboxInput,
   StyledCheckboxLabel,
   StyledCheckboxMark,

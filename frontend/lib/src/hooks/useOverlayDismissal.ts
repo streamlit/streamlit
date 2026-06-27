@@ -114,8 +114,8 @@ export function useOverlayDismissal({
 
     const handlePointerDown = (e: PointerEvent): void => {
       const target = e.target as Element
-      if (panelRef.current?.contains(target as Node)) return
-      if (referenceRef.current?.contains(target as Node)) return
+      if (panelRef.current?.contains(target)) return
+      if (referenceRef.current?.contains(target)) return
       if (excludeSelectorsRef.current?.some(sel => target.closest(sel))) return
       onClose()
     }
