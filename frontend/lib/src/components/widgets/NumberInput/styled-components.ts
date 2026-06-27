@@ -128,20 +128,6 @@ export const StyledStartEnhancer = styled.div<StyledStartEnhancerProps>(
   })
 )
 
-/**
- * SVG icon for the clear button — the exact "circle with ×" path borrowed from
- * BaseWeb's deleteAlt icon. Using an inline SVG (rather than a Material font
- * glyph) ensures the × is a genuine evenodd transparent cutout, so the input's
- * background colour shows through correctly in every theme.
- */
-export const StyledClearSvg = styled.svg(({ theme }) => ({
-  width: theme.iconSizes.base,
-  height: theme.iconSizes.base,
-  fill: "currentColor",
-  flexShrink: 0,
-  display: "block",
-}))
-
 /** Clear (×) button shown when the widget has no default and holds a value. */
 export const StyledClearButton = styled.button(({ theme }) => ({
   display: "flex",

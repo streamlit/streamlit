@@ -212,6 +212,7 @@ export const StyledListBoxItem = styled(ListBoxItem, {
   paddingRight: getRightInset(theme),
   cursor: "pointer",
   background: "transparent",
+  fontSize: theme.fontSizes.sm,
   fontWeight: theme.fontWeights.normal,
   color: theme.colors.bodyText,
   outline: "none",

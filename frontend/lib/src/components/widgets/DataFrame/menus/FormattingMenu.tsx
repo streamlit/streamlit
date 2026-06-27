@@ -221,7 +221,7 @@ function FormattingMenu({
 
   const { clear: clearClose, restart: scheduleClose } = useTimeout(
     () => onOpenChange(false),
-    500,
+    150,
     { autoStart: false }
   )
 

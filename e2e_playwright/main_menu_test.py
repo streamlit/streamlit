@@ -153,7 +153,7 @@ def test_keyboard_activates_menu_item(app: Page):
 
 # WebKit (Safari) does not allow programmatic .focus() on buttons outside a
 # user-activation context. Our focus-return fires from react-focus-lock's
-# returnFocus callback (after BaseWeb's close animation timer), which
+# returnFocus callback (during FocusLock's unmount cleanup), which
 # Chromium/Firefox accept but WebKit silently ignores.
 @pytest.mark.skip_browser("webkit")
 def test_focus_returns_to_menu_button_after_close(app: Page):
