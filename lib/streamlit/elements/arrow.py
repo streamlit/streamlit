@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -35,8 +36,10 @@ from streamlit.deprecation_util import (
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
+    _determine_data_kind_via_pandas_dtype,
     apply_data_specific_configs,
     extract_button_column_configs,
+    is_display_type_compatible,
     marshall_column_config,
     process_config_mapping,
     register_button_column_widgets,
@@ -53,7 +56,7 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitAPIWarning
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -995,6 +998,35 @@ class ArrowMixin:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
             )
+
+        # Validating the compatibility of column configuration types with table data
+        if column_config_mapping:
+            df_check = data.to_pandas() if isinstance(data, pa.Table) else data_df
+
+            for col_name, config_dict in column_config_mapping.items():
+                if col_name in df_check.columns and isinstance(config_dict, dict):
+                    data_kind = _determine_data_kind_via_pandas_dtype(
+                        df_check[col_name]
+                    )
+
+                    type_config = config_dict.get("type_config", {})
+                    st_column_type = (
+                        type_config.get("type")
+                        if isinstance(type_config, dict)
+                        else None
+                    )
+
+                    if st_column_type and not is_display_type_compatible(
+                        st_column_type, data_kind
+                    ):
+                        warnings.warn(
+                            f'column_config for "{col_name}" specifies '
+                            f' "{st_column_type}" format, '
+                            f'but the column dtype is "{data_kind.value}". '
+                            f"The config may not be applied as expected.",
+                            StreamlitAPIWarning,
+                            stacklevel=2,
+                        )
 
         marshall_column_config(proto, column_config_mapping)
 

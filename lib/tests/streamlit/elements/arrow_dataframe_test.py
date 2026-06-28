@@ -16,6 +16,7 @@
 
 import enum
 import json
+import warnings
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -38,8 +39,10 @@ from streamlit.elements.arrow import (
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ButtonClickSerde,
+    _determine_data_kind_via_pandas_dtype,
+    is_display_type_compatible,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitAPIWarning
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.testing.v1 import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -605,6 +608,30 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             st.dataframe(styler)
 
         self.benchmark(large_styler_df)
+
+    def test_column_config_type_compatibility_warning(self):
+        """Test that a StreamlitAPIWarning is raised when an incompatible column config is used."""
+
+        df = pd.DataFrame({"age": ["25", "30"]})
+        data_kind = _determine_data_kind_via_pandas_dtype(df["age"])
+
+        # Checking the pure logic of mapping
+        assert not is_display_type_compatible("number", data_kind)
+        assert not is_display_type_compatible("progress", data_kind)
+
+        # Intercepting warnings using a Python isolated list (without pytest.warns)
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            # This filter is isolated within the unittest context
+            # manager and does not leak to other threads.
+            warnings.simplefilter("always", StreamlitAPIWarning)
+
+            st.dataframe(
+                df, column_config={"age": st.column_config.NumberColumn(format="%.1f")}
+            )
+
+            assert any(
+                issubclass(w.category, StreamlitAPIWarning) for w in caught_warnings
+            )
 
 
 class DataframeSelectionsStableIdTest(DeltaGeneratorTestCase):

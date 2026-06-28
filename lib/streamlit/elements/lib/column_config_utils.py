@@ -127,6 +127,46 @@ _EDITING_COMPATIBILITY_MAPPING: Final[dict[ColumnType, list[ColumnDataKind]]] = 
     "markdown": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
 }
 
+# Strict type mapping for DISPLAY only (st.dataframe)
+# Matches the _EDITING_COMPATIBILITY_MAPPING style,
+# but excludes STRING for numbers and dates
+_DISPLAY_COMPATIBILITY_MAPPING: Final[dict[str, list[ColumnDataKind]]] = {
+    "number": [
+        ColumnDataKind.INTEGER,
+        ColumnDataKind.FLOAT,
+        ColumnDataKind.DECIMAL,
+        ColumnDataKind.TIMEDELTA,
+        ColumnDataKind.EMPTY,
+    ],
+    "progress": [
+        ColumnDataKind.INTEGER,
+        ColumnDataKind.FLOAT,
+        ColumnDataKind.DECIMAL,
+        ColumnDataKind.EMPTY,
+    ],
+    "bar_chart": [
+        ColumnDataKind.INTEGER,
+        ColumnDataKind.FLOAT,
+        ColumnDataKind.DECIMAL,
+        ColumnDataKind.EMPTY,
+    ],
+    "line_chart": [
+        ColumnDataKind.INTEGER,
+        ColumnDataKind.FLOAT,
+        ColumnDataKind.DECIMAL,
+        ColumnDataKind.EMPTY,
+    ],
+    "area_chart": [
+        ColumnDataKind.INTEGER,
+        ColumnDataKind.FLOAT,
+        ColumnDataKind.DECIMAL,
+        ColumnDataKind.EMPTY,
+    ],
+    "date": [ColumnDataKind.DATE, ColumnDataKind.DATETIME, ColumnDataKind.EMPTY],
+    "time": [ColumnDataKind.TIME, ColumnDataKind.DATETIME, ColumnDataKind.EMPTY],
+    "datetime": [ColumnDataKind.DATETIME, ColumnDataKind.DATE, ColumnDataKind.EMPTY],
+}
+
 
 def is_type_compatible(column_type: ColumnType, data_kind: ColumnDataKind) -> bool:
     """Check if the column type is compatible with the underlying data kind.
@@ -153,6 +193,16 @@ def is_type_compatible(column_type: ColumnType, data_kind: ColumnDataKind) -> bo
         return True
 
     return data_kind in _EDITING_COMPATIBILITY_MAPPING[column_type]
+
+
+def is_display_type_compatible(
+    column_type: ColumnType, data_kind: ColumnDataKind
+) -> bool:
+    """Checks if the column type and ColumnDataKind are compatible for display."""
+    if column_type not in _DISPLAY_COMPATIBILITY_MAPPING:
+        return True
+
+    return data_kind in _DISPLAY_COMPATIBILITY_MAPPING[column_type]
 
 
 def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
