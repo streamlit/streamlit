@@ -497,7 +497,7 @@ text justification properly. The text stretches to fill the available width.""",
     help="This is a help tooltip!",
 )
 
-# Regression test for gh-13913: hide_anchors=True hides the anchor link icon
+# hide_anchors=True hides the anchor link icon
 # while preserving heading IDs so URL fragments still deep-link.
 st.container(key="markdown_anchors_default").markdown(
     "# Anchors Default Heading\n## Anchors Default Subheading"

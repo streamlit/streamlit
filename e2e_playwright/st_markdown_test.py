@@ -168,7 +168,7 @@ def test_markdown_hide_anchors_visual(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Snapshot the hovered heading state: the anchor icon appears next to the
-    default heading but not when hide_anchors=True (gh-13913).
+    default heading but not when hide_anchors=True.
     """
     default_heading = themed_app.locator("h1#anchors-default-heading")
     hidden_heading = themed_app.locator("h1#anchors-hidden-heading")
