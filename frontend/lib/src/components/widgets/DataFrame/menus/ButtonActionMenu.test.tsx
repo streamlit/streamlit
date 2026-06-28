@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-import type { ReactElement } from "react"
-
-import { screen, waitFor } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { BaseProvider, LightTheme } from "baseui"
 
 import { render } from "~lib/test_util"
 
@@ -30,23 +27,6 @@ interface ButtonActionMenuProps {
   actions: string[]
   onSelectAction: (label: string) => void
   onCloseMenu: () => void
-}
-
-/**
- * Renders ButtonActionMenu and waits for the popover to fully mount.
- */
-async function renderAndWaitForPopover(
-  ui: ReactElement
-): Promise<ReturnType<typeof render>> {
-  // Wrap in BaseProvider so BaseWeb's LayersManager is present, which is
-  // required for the popover's Escape-key handling to work.
-  const result = render(<BaseProvider theme={LightTheme}>{ui}</BaseProvider>)
-  await waitFor(() => {
-    expect(
-      screen.queryByTestId("stDataFrameButtonActionMenu")
-    ).toBeInTheDocument()
-  })
-  return result
 }
 
 describe("ButtonActionMenu", () => {
@@ -62,8 +42,8 @@ describe("ButtonActionMenu", () => {
     vi.clearAllMocks()
   })
 
-  it("renders the menu at the correct position", async () => {
-    await renderAndWaitForPopover(<ButtonActionMenu {...defaultProps} />)
+  it("renders the menu at the correct position", () => {
+    render(<ButtonActionMenu {...defaultProps} />)
 
     const menuTarget = screen.getByTestId("stDataFrameButtonActionMenuTarget")
     expect(menuTarget).toHaveStyle("position: fixed")
@@ -71,8 +51,8 @@ describe("ButtonActionMenu", () => {
     expect(menuTarget).toHaveStyle("left: 200px")
   })
 
-  it("renders all action items", async () => {
-    await renderAndWaitForPopover(<ButtonActionMenu {...defaultProps} />)
+  it("renders all action items", () => {
+    render(<ButtonActionMenu {...defaultProps} />)
 
     expect(screen.getByText("Action 1")).toBeVisible()
     expect(screen.getByText("Action 2")).toBeVisible()
@@ -83,7 +63,7 @@ describe("ButtonActionMenu", () => {
     const onSelectAction = vi.fn()
     const onCloseMenu = vi.fn()
 
-    await renderAndWaitForPopover(
+    render(
       <ButtonActionMenu
         {...defaultProps}
         onSelectAction={onSelectAction}
@@ -97,27 +77,25 @@ describe("ButtonActionMenu", () => {
     expect(onCloseMenu).toHaveBeenCalled()
   })
 
-  it("renders actions with material icons", async () => {
+  it("renders actions with material icons", () => {
     const actions = [":material/edit: Edit", ":material/delete: Delete"]
 
-    await renderAndWaitForPopover(
-      <ButtonActionMenu {...defaultProps} actions={actions} />
-    )
+    render(<ButtonActionMenu {...defaultProps} actions={actions} />)
 
     // The text content should be rendered (icon is handled by DynamicIcon)
     expect(screen.getByText("Edit")).toBeVisible()
     expect(screen.getByText("Delete")).toBeVisible()
   })
 
-  it("has correct aria-label for accessibility", async () => {
-    await renderAndWaitForPopover(<ButtonActionMenu {...defaultProps} />)
+  it("has correct aria-label for accessibility", () => {
+    render(<ButtonActionMenu {...defaultProps} />)
 
-    const menu = screen.getByRole("menu")
+    const menu = screen.getByRole("menu", { name: "Button action menu" })
     expect(menu).toBeVisible()
   })
 
-  it("renders menu items with menuitem role", async () => {
-    await renderAndWaitForPopover(<ButtonActionMenu {...defaultProps} />)
+  it("renders menu items with menuitem role", () => {
+    render(<ButtonActionMenu {...defaultProps} />)
 
     const menuItems = screen.getAllByRole("menuitem")
     expect(menuItems).toHaveLength(3)
@@ -127,7 +105,7 @@ describe("ButtonActionMenu", () => {
     const onCloseMenu = vi.fn()
     const onSelectAction = vi.fn()
 
-    await renderAndWaitForPopover(
+    render(
       <ButtonActionMenu
         {...defaultProps}
         onCloseMenu={onCloseMenu}
@@ -135,15 +113,43 @@ describe("ButtonActionMenu", () => {
       />
     )
 
-    // Move focus into the menu first (matches a keyboard user's flow and is
-    // required for BaseWeb's popover to route the Escape key to onEsc).
-    const menuItems = screen.getAllByRole("menuitem")
-    menuItems[0].focus()
+    // Capture-phase keydown fires regardless of focus position
     await userEvent.keyboard("{Escape}")
 
     expect(onCloseMenu).toHaveBeenCalled()
     // Escape should only dismiss the menu, not select an action:
     expect(onSelectAction).not.toHaveBeenCalled()
+  })
+
+  it("closes the menu when clicking outside the menu panel", async () => {
+    const onCloseMenu = vi.fn()
+    render(<ButtonActionMenu {...defaultProps} onCloseMenu={onCloseMenu} />)
+
+    await userEvent.click(document.body)
+
+    expect(onCloseMenu).toHaveBeenCalled()
+  })
+
+  it("does not close when clicking the menu target anchor", () => {
+    const onCloseMenu = vi.fn()
+    render(<ButtonActionMenu {...defaultProps} onCloseMenu={onCloseMenu} />)
+
+    const menuTarget = screen.getByTestId("stDataFrameButtonActionMenuTarget")
+    // The anchor has pointer-events:none, so userEvent.click refuses to interact with it.
+    // Use fireEvent to test the capture-phase exclusion logic directly.
+    // eslint-disable-next-line testing-library/prefer-user-event
+    fireEvent.pointerDown(menuTarget)
+
+    expect(onCloseMenu).not.toHaveBeenCalled()
+  })
+
+  it("closes the menu when scrolling outside the menu panel", () => {
+    const onCloseMenu = vi.fn()
+    render(<ButtonActionMenu {...defaultProps} onCloseMenu={onCloseMenu} />)
+
+    fireEvent.scroll(document.body)
+
+    expect(onCloseMenu).toHaveBeenCalled()
   })
 
   it.each(["{Enter}", " "])(
@@ -152,7 +158,7 @@ describe("ButtonActionMenu", () => {
       const onSelectAction = vi.fn()
       const onCloseMenu = vi.fn()
 
-      await renderAndWaitForPopover(
+      render(
         <ButtonActionMenu
           {...defaultProps}
           onSelectAction={onSelectAction}

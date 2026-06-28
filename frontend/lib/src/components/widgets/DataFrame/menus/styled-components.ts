@@ -57,6 +57,119 @@ export const StyledSubMenuPanel = styled.div(({ theme }) => ({
 }))
 
 /**
+ * Portal panel wrapper for the ButtonActionMenu content.
+ * position/top/left/transform are set by floatingStyles at render time.
+ */
+export const StyledButtonActionMenuPanel = styled.div(({ theme }) => ({
+  ...getPopoverContainerStyle(theme),
+  zIndex: getOverlayZIndex(theme),
+  backgroundColor: theme.colors.bgColor,
+  color: theme.colors.bodyText,
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.normal,
+  overflow: "auto",
+}))
+
+/**
+ * Portal panel wrapper for the ColumnVisibilityMenu content.
+ * position/top/left/transform are set by floatingStyles at render time.
+ */
+export const StyledColumnVisibilityMenuPanel = styled.div(({ theme }) => ({
+  ...getPopoverContainerStyle(theme),
+  zIndex: getOverlayZIndex(theme),
+  backgroundColor: theme.colors.bgColor,
+  color: theme.colors.bodyText,
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.normal,
+  overflow: "hidden",
+  minWidth: theme.sizes.minMenuWidth,
+  maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,
+}))
+
+/** Styled label wrapping an entire checkbox row (input + mark + text). */
+export const StyledCheckboxRoot = styled.label(({ theme }) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: theme.spacing.sm,
+  paddingLeft: theme.spacing.md,
+  paddingRight: theme.spacing.md,
+  paddingTop: theme.spacing.twoXS,
+  paddingBottom: theme.spacing.twoXS,
+  cursor: "pointer",
+  marginBottom: theme.spacing.none,
+  marginTop: theme.spacing.none,
+  "&:hover": { backgroundColor: theme.colors.darkenedBgMix15 },
+  "&:focus-within": { backgroundColor: theme.colors.darkenedBgMix25 },
+}))
+
+/** Visually hidden native checkbox that preserves accessible role and keyboard behavior. */
+export const StyledCheckboxInput = styled.input({
+  position: "absolute",
+  opacity: 0,
+  width: 0,
+  height: 0,
+  margin: 0,
+})
+
+/**
+ * Custom visual checkmark square.
+ * Checked/indeterminate state is driven by data-checked and data-indeterminate attributes.
+ * Styling mirrors StyledCheckboxIndicator from the Checkbox widget.
+ */
+export const StyledCheckboxMark = styled.span(({ theme }) => ({
+  flexShrink: 0,
+  width: theme.sizes.checkbox,
+  height: theme.sizes.checkbox,
+  // Vertically center the indicator with the first text line.
+  // = (lineHeight × fontSize − indicatorSize) / 2 = (1.5 × 0.875rem − 1rem) / 2 ≈ 2.5px
+  marginTop: `calc((${theme.lineHeights.small} * ${theme.fontSizes.sm} - ${theme.sizes.checkbox}) / 2)`,
+  borderWidth: theme.sizes.borderWidth,
+  borderStyle: "solid",
+  borderColor: theme.colors.borderColor,
+  borderRadius: theme.radii.sm,
+  backgroundColor: theme.colors.lightenedBg05,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  transition: "background-color 100ms ease, border-color 100ms ease",
+  '&[data-checked="true"], &[data-indeterminate="true"]': {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary,
+  },
+  "input:focus-visible + &": {
+    boxShadow: theme.shadows.focusRing,
+  },
+  "& svg": {
+    width: "65%",
+    height: "65%",
+    fill: "none",
+    stroke: "white",
+    strokeWidth: "2.5px",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  },
+}))
+
+/**
+ * Scrollable inner content div for the ColumnVisibilityMenu panel.
+ * Scrollbar is clipped by the outer panel's border-radius.
+ */
+export const StyledColumnVisibilityMenuContent = styled.div(({ theme }) => ({
+  paddingTop: theme.spacing.twoXS,
+  paddingBottom: theme.spacing.twoXS,
+  maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+  overflow: "auto",
+}))
+
+/** Text label for a checkbox row. */
+export const StyledCheckboxLabel = styled.span(({ theme }) => ({
+  lineHeight: theme.lineHeights.small,
+  color: theme.colors.bodyText,
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.normal,
+}))
+
+/**
  * A styled menu list component used by the column menu.
  */
 export const StyledMenuList = styled.div(({ theme }) => ({

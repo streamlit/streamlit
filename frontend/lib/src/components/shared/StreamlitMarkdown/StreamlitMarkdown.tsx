@@ -50,13 +50,11 @@ import { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
 
-import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
-
 import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
-import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
@@ -528,11 +526,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
       <ErrorBoundary>
         <Suspense
           fallback={
-            <Skeleton
-              element={SkeletonProto.create({
-                style: SkeletonProto.SkeletonStyle.ELEMENT,
-              })}
-            />
+            <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
           }
         >
           <MermaidChart source={codeText} />
@@ -545,11 +539,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
     <ErrorBoundary>
       <Suspense
         fallback={
-          <Skeleton
-            element={SkeletonProto.create({
-              style: SkeletonProto.SkeletonStyle.ELEMENT,
-            })}
-          />
+          <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
         }
       >
         <StreamlitSyntaxHighlighter
@@ -1284,11 +1274,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   if (isLoadingPlugins) {
     return (
       <ErrorBoundary>
-        <Skeleton
-          element={SkeletonProto.create({
-            style: SkeletonProto.SkeletonStyle.ELEMENT,
-          })}
-        />
+        <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
       </ErrorBoundary>
     )
   }

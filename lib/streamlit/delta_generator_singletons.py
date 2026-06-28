@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.mutable_popover_container import PopoverContainer
     from streamlit.elements.lib.mutable_status_container import StatusContainer
     from streamlit.elements.lib.mutable_tab_container import TabContainer
+    from streamlit.elements.lib.skeleton_placeholder import SkeletonPlaceholder
 
 
 class DeltaGeneratorSingleton:
@@ -60,6 +61,7 @@ class DeltaGeneratorSingleton:
         expander_container_cls: type[ExpanderContainer],
         tab_container_cls: type[TabContainer],
         popover_container_cls: type[PopoverContainer],
+        skeleton_placeholder_cls: type[SkeletonPlaceholder],
     ) -> None:
         """Registers and initializes all delta-generator classes.
 
@@ -78,6 +80,8 @@ class DeltaGeneratorSingleton:
             in `st.tabs`.
         popover_container_cls : type[PopoverContainer]
             The delta-generator class used as return value for `st.popover`.
+        skeleton_placeholder_cls : type[SkeletonPlaceholder]
+            The delta-generator class used as return value for `st.skeleton`.
 
         Raises
         ------
@@ -103,6 +107,7 @@ class DeltaGeneratorSingleton:
         self._expander_container_cls = expander_container_cls
         self._tab_container_cls = tab_container_cls
         self._popover_container_cls = popover_container_cls
+        self._skeleton_placeholder_cls = skeleton_placeholder_cls
 
     @property
     def main_dg(self) -> DeltaGenerator:
@@ -156,6 +161,13 @@ class DeltaGeneratorSingleton:
         DeltaGenerator, this is used to avoid circular imports.
         """
         return self._popover_container_cls
+
+    @property
+    def skeleton_placeholder_cls(self) -> type[SkeletonPlaceholder]:
+        """Stub for SkeletonPlaceholder. Registered via the singleton to avoid
+        circular imports between skeleton_placeholder.py and delta_generator.py.
+        """
+        return self._skeleton_placeholder_cls
 
 
 def get_dg_singleton_instance() -> DeltaGeneratorSingleton:

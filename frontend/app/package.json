@@ -51,6 +51,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-feather": "^2.0.10",
+    "react-focus-lock": "^2.13.2",
     "react-helmet-async": "^3.0.0",
     "react-hot-keys": "^3.0.0",
     "react-transition-group": "^4.4.5",
@@ -59,7 +60,7 @@
     "styletron-react": "^6.1.0",
     "typed-signals": "^3.0.0",
     "ua-parser-js": "^1.0.41",
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "@swc/plugin-emotion": "^14.13.0",
