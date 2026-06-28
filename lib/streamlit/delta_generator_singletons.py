@@ -84,6 +84,9 @@ class DeltaGeneratorSingleton:
             The delta-generator class used as return value for `st.popover`.
         skeleton_placeholder_cls : type[SkeletonPlaceholder]
             The delta-generator class used as return value for `st.skeleton`.
+        accordion_container_cls : type[AccordionContainer]
+            The delta-generator class used as return value for individual
+            accordion sections in `st.accordion`.
 
         Raises
         ------
@@ -172,6 +175,7 @@ class DeltaGeneratorSingleton:
         """
         return self._skeleton_placeholder_cls
 
+    @property
     def accordion_container_cls(self) -> type[AccordionContainer]:
         """Stub for AccordionContainer. Since AccordionContainer inherits from
         DeltaGenerator, this is used to avoid circular imports.

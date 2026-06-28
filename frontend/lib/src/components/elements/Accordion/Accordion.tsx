@@ -156,17 +156,20 @@ const Accordion: React.FC<Readonly<AccordionProps>> = ({
       defaultValue: defaultOpenLabel,
     })
 
-  const initialOpenLabel = isPassivelyKeyed
-    ? storedOpenLabel
-    : defaultOpenLabel
+  const initialOpenIndex = isPassivelyKeyed
+    ? labels.indexOf(storedOpenLabel)
+    : defaultOpenIndex
 
-  const [openLabel, setOpenLabel] = useState<string>(initialOpenLabel)
+  const [openIndex, setOpenIndex] = useState<number | undefined>(
+    initialOpenIndex >= 0 ? initialOpenIndex : defaultOpenIndex
+  )
 
   const handleSectionToggle = useCallback(
-    (label: string, newOpen: boolean): void => {
-      const nextOpenLabel = newOpen ? label : ""
+    (index: number, label: string): void => {
+      const nextOpenIndex = openIndex === index ? undefined : index
+      const nextOpenLabel = nextOpenIndex === undefined ? "" : label
 
-      setOpenLabel(nextOpenLabel)
+      setOpenIndex(nextOpenIndex)
 
       if (isPassivelyKeyed) {
         setStoredOpenLabel(nextOpenLabel)
@@ -185,6 +188,7 @@ const Accordion: React.FC<Readonly<AccordionProps>> = ({
       fragmentId,
       isPassivelyKeyed,
       isWidget,
+      openIndex,
       setStoredOpenLabel,
       widgetId,
       widgetMgr,
@@ -203,13 +207,14 @@ const Accordion: React.FC<Readonly<AccordionProps>> = ({
 
         return (
           <AccordionItem
-            key={accordionNode.deltaBlock.accordion?.label ?? label}
+            // eslint-disable-next-line @eslint-react/no-array-index-key
+            key={`accordion-item-${index}`}
             node={accordionNode}
             accordionNode={accordionNode}
             label={label}
-            isOpen={openLabel === label}
+            isOpen={openIndex === index}
             isStale={isStale}
-            onToggle={handleSectionToggle}
+            onToggle={() => handleSectionToggle(index, label)}
             renderAccordionContent={renderAccordionContent}
             widgetMgr={widgetMgr}
             {...props}

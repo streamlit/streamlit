@@ -15,6 +15,7 @@
 import unittest
 
 import pytest
+
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import (
