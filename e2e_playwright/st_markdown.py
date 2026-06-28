@@ -497,13 +497,13 @@ text justification properly. The text stretches to fill the available width.""",
     help="This is a help tooltip!",
 )
 
-# hide_anchors=True hides the anchor link icon
-# while preserving heading IDs so URL fragments still deep-link.
+# anchors=False hides the anchor link icon while preserving heading IDs so URL
+# fragments still deep-link.
 st.container(key="markdown_anchors_default").markdown(
     "# Anchors Default Heading\n## Anchors Default Subheading"
 )
-st.container(key="markdown_anchors_hidden").markdown(
-    "# Anchors Hidden Heading\n## Anchors Hidden Subheading", hide_anchors=True
+st.container(key="markdown_anchors_disabled").markdown(
+    "# Anchors Disabled Heading\n## Anchors Disabled Subheading", anchors=False
 )
 
 # Test for gh-13339: Tooltip with newlines should render correctly

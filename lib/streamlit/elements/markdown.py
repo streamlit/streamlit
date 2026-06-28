@@ -45,7 +45,7 @@ class MarkdownMixin:
         width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
         unterminated_parsing: bool = False,
-        hide_anchors: bool = False,
+        anchors: bool = True,
     ) -> DeltaGenerator:
         """Internal markdown method with extended options."""
         markdown_proto = MarkdownProto()
@@ -54,7 +54,7 @@ class MarkdownMixin:
         markdown_proto.allow_html = unsafe_allow_html
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
         markdown_proto.unterminated_parsing = unterminated_parsing
-        markdown_proto.hide_anchors = hide_anchors
+        markdown_proto.hide_anchors = not anchors
         if help:
             markdown_proto.help = help
 
@@ -78,7 +78,7 @@ class MarkdownMixin:
         help: str | None = None,
         width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
-        hide_anchors: bool = False,
+        anchors: bool = True,
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
@@ -206,10 +206,10 @@ class MarkdownMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
-        hide_anchors : bool
-            Whether to hide the clickable anchor link icons next to Markdown
-            headings (h1-h6). If this is ``False`` (default), each heading
-            gets a visible link icon on hover. If this is ``True``, the
+        anchors : bool
+            Whether to show clickable anchor link icons next to Markdown
+            headings (h1-h6). If this is ``True`` (default), each heading
+            gets a visible link icon on hover. If this is ``False``, the
             link icon is not rendered. Headings still receive an ``id``
             attribute in either case, so URL fragment deep links (e.g.,
             ``https://example.com/#my-heading``) continue to work.
@@ -246,7 +246,7 @@ class MarkdownMixin:
             help=help,
             width=width,
             text_alignment=text_alignment,
-            hide_anchors=hide_anchors,
+            anchors=anchors,
         )
 
     @gather_metrics("caption")

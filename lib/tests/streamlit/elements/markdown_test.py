@@ -45,26 +45,26 @@ class StInternalMarkdownTest(DeltaGeneratorTestCase):
         assert el.markdown.unterminated_parsing is False
 
 
-class StMarkdownHideAnchorsTest(DeltaGeneratorTestCase):
-    """Test the ``hide_anchors`` parameter of st.markdown."""
+class StMarkdownAnchorsTest(DeltaGeneratorTestCase):
+    """Test the ``anchors`` parameter of st.markdown."""
 
     @parameterized.expand(
         [
             ("default", {}, False),
-            ("explicit_true", {"hide_anchors": True}, True),
-            ("explicit_false", {"hide_anchors": False}, False),
+            ("explicit_true", {"anchors": True}, False),
+            ("explicit_false", {"anchors": False}, True),
         ]
     )
-    def test_hide_anchors_sets_proto(self, _name, kwargs, expected):
-        """``hide_anchors`` forwards to the proto field (default False)."""
+    def test_anchors_sets_proto(self, _name, kwargs, expected_hide_anchors):
+        """``anchors`` forwards to the proto ``hide_anchors`` field (negated)."""
         st.markdown("# Heading", **kwargs)
 
         el = self.get_delta_from_queue().new_element
-        assert el.markdown.hide_anchors is expected
+        assert el.markdown.hide_anchors is expected_hide_anchors
 
-    def test_hide_anchors_true_does_not_affect_body(self):
-        """``hide_anchors=True`` doesn't alter body, allow_html, or help fields."""
-        st.markdown("# Heading", hide_anchors=True, help="tip")
+    def test_anchors_false_does_not_affect_body(self):
+        """``anchors=False`` doesn't alter body, allow_html, or help fields."""
+        st.markdown("# Heading", anchors=False, help="tip")
 
         el = self.get_delta_from_queue().new_element
         assert el.markdown.body == "# Heading"
