@@ -434,5 +434,5 @@ email = st.text_input(
 | No breaking API changes      | ✅ Additive `type` values; existing values unchanged |
 | No new dependencies          | ✅                      |
 | Metrics collected            | `gather_metrics("text_input")` records that `type` is passed but not its literal value (string args log only `len:`); capturing per-type adoption needs explicit value tracking added during implementation |
-| Any security/legal impact?   | Client-side default validation can be bypassed, so security-relevant checks must use server-side `validate` callables (inherited from the `validate` spec). Default email/url validation only ships once `validate` is available, so there's no window where this guidance points to a missing feature |
+| Any security/legal impact?   | Client-side default validation can be bypassed. Once `validate` is available, security-relevant checks should use server-side `validate` callables (inherited from the `validate` spec). If these specialized types ship before `validate`, no default email/url validation ships, so security-sensitive apps must keep performing their own server-side checks outside `st.text_input` until then |
 | Any docs changes needed?     | Yes — document the new `type` values and their smart defaults in the `st.text_input` reference |
