@@ -239,8 +239,13 @@ distinguishing (1) from (3), since neither is a "real" value. Three ways to enco
   `default`/`password` inputs have no type default, so `None` still means "nothing").
 - Cons: `""` is less self-documenting as "off" than `None`; and for `validate` an empty string isn't a
   natural rule — we'd define `validate==""` to mean "disabled" explicitly in the backend (rather than
-  "a regex that matches everything"), and document it. Minor: `icon=""` currently raises, so we'd map
-  it to "no icon" before validation.
+  "a regex that matches everything"), and document it. **Crucially, this collides with the merged
+  validation spec, which already defines `validate=None` as *no validation*.** Option B would have to
+  redefine `validate=None` as "use the type default" — reversing an already-specced meaning — which is
+  exactly why the `autocomplete` precedent doesn't transfer cleanly to `validate`: `autocomplete=None`
+  means "derive", but `validate=None` already means "off". So `validate` is the one param where Option
+  B fights an existing definition. Minor: `icon=""` currently raises, so we'd map it to "no icon"
+  before validation.
 
 **Option C — `None` = use default, no opt-out**
 - Simplest, but you can't remove a type's icon or auto-validation. Rejected — don't ship
@@ -248,12 +253,13 @@ distinguishing (1) from (3), since neither is a "real" value. Three ways to enco
 
 **Recommendation: Option B.** It extends the rule `text_input` *already* uses for `autocomplete`
 (`None` = derive, `""` = off) to the other type-derived params instead of inventing a new mechanism,
-and it avoids the surprising "omission ≠ `None`" behavior of the sentinel. The only rough edge is
-`validate=""`, which we'd treat as an explicit "no validation" sentinel value and document. If
-reviewers dislike overloading empty string (especially for `validate`), **Option A (sentinel)** is
-the clean fallback, accepting the omit-vs-`None` subtlety. (My previous draft leaned sentinel; the
-`autocomplete` precedent changed my mind — but this is genuinely a coin-flip and I'm flagging it for
-sign-off.)
+and it avoids the surprising "omission ≠ `None`" behavior of the sentinel. The main rough edge is
+`validate`: the merged validation spec already defines `validate=None` as "no validation", so Option
+B would have to flip that to "use the type default" and use `validate=""` for "off" — a redefinition
+reviewers may dislike. If so, **Option A (sentinel)** is the clean fallback, and notably it keeps
+`validate=None` meaning "off" (consistent with the validation spec), at the cost of the omit-vs-`None`
+subtlety. (My previous draft leaned sentinel; the `autocomplete` precedent changed my mind — but with
+this `validate` collision it is genuinely a coin-flip, so I'm flagging it for sign-off.)
 
 Either way, the **guiding principle holds**: never ship a type-derived default that users can't turn
 off. If neither opt-out mechanism is in scope for the MVP, ship only the non-visual defaults (native
