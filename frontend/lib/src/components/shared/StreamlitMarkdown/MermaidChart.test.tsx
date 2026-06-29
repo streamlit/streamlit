@@ -30,6 +30,10 @@ describe("MermaidChart", () => {
       "aria-busy",
       "true"
     )
+    // The loading placeholder uses the internal "stSkeleton" test ID (tracked
+    // by the app-loaded gate), not the public "stSkeletonElement" element.
+    expect(screen.getByTestId("stSkeleton")).toBeVisible()
+    expect(screen.queryByTestId("stSkeletonElement")).not.toBeInTheDocument()
     // Negative assertion: error element should not be present during loading
     expect(screen.queryByTestId("stMermaidError")).not.toBeInTheDocument()
   })

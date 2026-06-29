@@ -32,9 +32,7 @@ import {
 import { getLuminance } from "color2k"
 import { getLogger } from "loglevel"
 
-import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
-
-import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
@@ -608,11 +606,7 @@ const MermaidChart = memo(function MermaidChart({
           aria-busy="true"
           aria-label="Loading mermaid diagram"
         >
-          <Skeleton
-            element={SkeletonProto.create({
-              style: SkeletonProto.SkeletonStyle.ELEMENT,
-            })}
-          />
+          <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
         </StyledMermaidContainer>
       </StyledToolbarElementContainer>
     )

@@ -103,6 +103,16 @@ function ColumnMenu({
   const [formatMenuOpen, setFormatMenuOpen] = useState(false)
   const [statsMenuOpen, setStatsMenuOpen] = useState(false)
 
+  const handleFormatOpenChange = useCallback((open: boolean): void => {
+    setFormatMenuOpen(open)
+    if (open) setStatsMenuOpen(false)
+  }, [])
+
+  const handleStatsOpenChange = useCallback((open: boolean): void => {
+    setStatsMenuOpen(open)
+    if (open) setFormatMenuOpen(false)
+  }, [])
+
   const { isCopied, copyToClipboard } = useCopyToClipboard()
 
   const { refs, floatingStyles } = useFloatingOverlay({
@@ -281,10 +291,10 @@ function ColumnMenu({
                 column={column}
                 data={data}
                 isOpen={statsMenuOpen}
-                onOpenChange={setStatsMenuOpen}
+                onOpenChange={handleStatsOpenChange}
               >
                 <StyledMenuListItem
-                  onFocus={() => setStatsMenuOpen(true)}
+                  onFocus={() => handleStatsOpenChange(true)}
                   onBlur={e => {
                     if (pointerDownRef.current) return
                     const related = e.relatedTarget
@@ -325,12 +335,12 @@ function ColumnMenu({
               <FormattingMenu
                 columnKind={column.kind}
                 isOpen={formatMenuOpen}
-                onOpenChange={setFormatMenuOpen}
+                onOpenChange={handleFormatOpenChange}
                 onChangeFormat={onChangeFormat}
                 onCloseMenu={onCloseMenu}
               >
                 <StyledMenuListItem
-                  onFocus={() => setFormatMenuOpen(true)}
+                  onFocus={() => handleFormatOpenChange(true)}
                   onBlur={e => {
                     if (pointerDownRef.current) return
                     const related = e.relatedTarget

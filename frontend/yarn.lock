@@ -3723,6 +3723,7 @@ __metadata:
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
     react-feather: "npm:^2.0.10"
+    react-focus-lock: "npm:^2.13.2"
     react-helmet-async: "npm:^3.0.0"
     react-hot-keys: "npm:^3.0.0"
     react-transition-group: "npm:^4.4.5"
@@ -3736,7 +3737,7 @@ __metadata:
     typesync: "npm:^0.14.3"
     ua-parser-js: "npm:^1.0.41"
     util: "npm:^0.12.5"
-    uuid: "npm:^14.0.0"
+    uuid: "npm:^14.0.1"
     vite: "npm:^8.0.16"
     vite-bundle-analyzer: "npm:^1.3.8"
     vite-plugin-svgr: "npm:^5.2.0"
@@ -3888,7 +3889,7 @@ __metadata:
     remark-math: "npm:^6.0.0"
     remend: "npm:^1.2.2"
     styletron-react: "npm:^6.1.0"
-    timezone-mock: "npm:^1.4.2"
+    timezone-mock: "npm:^1.4.3"
     tsc-alias: "npm:^1.8.17"
     typed-signals: "npm:^3.0.0"
     typesync: "npm:^0.14.3"
@@ -3896,7 +3897,7 @@ __metadata:
     unified: "npm:^11.0.5"
     unist-util-visit: "npm:^5.1.0"
     urlpattern-polyfill: "npm:^10.1.0"
-    uuid: "npm:^14.0.0"
+    uuid: "npm:^14.0.1"
     vega: "npm:^6.2.0"
     vega-embed: "npm:^7.1.0"
     vega-interpreter: "npm:^2.2.1"
@@ -10142,12 +10143,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"focus-lock@npm:^1.3.5":
-  version: 1.3.5
-  resolution: "focus-lock@npm:1.3.5"
+"focus-lock@npm:^1.3.6":
+  version: 1.3.6
+  resolution: "focus-lock@npm:1.3.6"
   dependencies:
     tslib: "npm:^2.0.3"
-  checksum: 10c0/240fe013c2945200d3391856789d381bf3e09f488342a7965e00d0933de93ac2e8b0ccfa7da6353c11a30e369035f3b7e54cac9b0ebaf6825252a9ffc6445978
+  checksum: 10c0/9fc9aee762d9fc41a339cbee328b6fa9d8fdaea545aac10c7ce77358ba7800c47918a583613174d059dedc909d7a6ddd550895caf3449ca995bd66644368ec8f
   languageName: node
   linkType: hard
 
@@ -15537,14 +15538,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-clientside-effect@npm:^1.2.6":
-  version: 1.2.6
-  resolution: "react-clientside-effect@npm:1.2.6"
+"react-clientside-effect@npm:^1.2.7":
+  version: 1.2.8
+  resolution: "react-clientside-effect@npm:1.2.8"
   dependencies:
     "@babel/runtime": "npm:^7.12.13"
   peerDependencies:
-    react: ^15.3.0 || ^16.0.0 || ^17.0.0 || ^18.0.0
-  checksum: 10c0/aba0adb666018e5c64657c31f4914a8558be73f71d6e2210fa871ebfcab94d786c83082868d7c7fa66feddc2aec19e375745cf0903e0619f2efffef08b92d941
+    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
+  checksum: 10c0/7240cfc64b2b1615d1aa4ea050d8aa9c5a427d871eab94cf7e39dba737d89554edb46a53da26c6096cc04d58a29779222bd3790ffb8d21eaa57a85492eaed31b
   languageName: node
   linkType: hard
 
@@ -15631,23 +15632,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-focus-lock@npm:^2.7.1":
-  version: 2.13.2
-  resolution: "react-focus-lock@npm:2.13.2"
+"react-focus-lock@npm:^2.13.2, react-focus-lock@npm:^2.7.1":
+  version: 2.13.7
+  resolution: "react-focus-lock@npm:2.13.7"
   dependencies:
     "@babel/runtime": "npm:^7.0.0"
-    focus-lock: "npm:^1.3.5"
+    focus-lock: "npm:^1.3.6"
     prop-types: "npm:^15.6.2"
-    react-clientside-effect: "npm:^1.2.6"
-    use-callback-ref: "npm:^1.3.2"
-    use-sidecar: "npm:^1.1.2"
+    react-clientside-effect: "npm:^1.2.7"
+    use-callback-ref: "npm:^1.3.3"
+    use-sidecar: "npm:^1.1.3"
   peerDependencies:
-    "@types/react": ^16.8.0 || ^17.0.0 || ^18.0.0
-    react: ^16.8.0 || ^17.0.0 || ^18.0.0
+    "@types/react": "*"
+    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
   peerDependenciesMeta:
     "@types/react":
       optional: true
-  checksum: 10c0/6d4539e9ec5943de8a7eb856df7ab97c3da751ce6515512ca337dfb2bd06499ebc1051f8c96b142ad093637825a0ddcceb884282c1ec246dd02f293a8aafa688
+  checksum: 10c0/f82706667e7a50d7d7d7570eb12e183572e92184de2d35bb1a011fe82419b2b5f5f238284e455ce2c2b0655cc817fc718f4f51ed23aec630ff782484373685d3
   languageName: node
   linkType: hard
 
@@ -17596,10 +17597,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"timezone-mock@npm:^1.4.2":
-  version: 1.4.2
-  resolution: "timezone-mock@npm:1.4.2"
-  checksum: 10c0/1cfebf978517f2800f524394b5f5fd1928dec22c9685a4f082211711f2ab07fe6d0bc34e8698e11b64c2e530cc738f8c42d1b4199393be5f5de8dfa77a3f1115
+"timezone-mock@npm:^1.4.3":
+  version: 1.4.3
+  resolution: "timezone-mock@npm:1.4.3"
+  checksum: 10c0/984e52f711553c8fdc6ad23d756a3518981b9460048d0eec8d670cbe9457ba25217d2dc298af6cf56c5a61ff8f0db745b8170918cda4c6d30fad78d308a75050
   languageName: node
   linkType: hard
 
@@ -18412,18 +18413,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"use-callback-ref@npm:^1.3.2":
-  version: 1.3.2
-  resolution: "use-callback-ref@npm:1.3.2"
+"use-callback-ref@npm:^1.3.3":
+  version: 1.3.3
+  resolution: "use-callback-ref@npm:1.3.3"
   dependencies:
     tslib: "npm:^2.0.0"
   peerDependencies:
-    "@types/react": ^16.8.0 || ^17.0.0 || ^18.0.0
-    react: ^16.8.0 || ^17.0.0 || ^18.0.0
+    "@types/react": "*"
+    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
   peerDependenciesMeta:
     "@types/react":
       optional: true
-  checksum: 10c0/d232c37160fe3970c99255da19b5fb5299fb5926a5d6141d928a87feb47732c323d29be2f8137d3b1e5499c70d284cd1d9cfad703cc58179db8be24d7dd8f1f2
+  checksum: 10c0/f887488c6e6075cdad4962979da1714b217bcb1ee009a9e57ce9a844bcfc4c3a99e93983dfc2e5af9e0913824d24e730090ff255e902c516dcb58d2d3837e01c
   languageName: node
   linkType: hard
 
@@ -18462,19 +18463,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"use-sidecar@npm:^1.1.2":
-  version: 1.1.2
-  resolution: "use-sidecar@npm:1.1.2"
+"use-sidecar@npm:^1.1.3":
+  version: 1.1.3
+  resolution: "use-sidecar@npm:1.1.3"
   dependencies:
     detect-node-es: "npm:^1.1.0"
     tslib: "npm:^2.0.0"
   peerDependencies:
-    "@types/react": ^16.9.0 || ^17.0.0 || ^18.0.0
-    react: ^16.8.0 || ^17.0.0 || ^18.0.0
+    "@types/react": "*"
+    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
   peerDependenciesMeta:
     "@types/react":
       optional: true
-  checksum: 10c0/89f0018fd9aee1fc17c85ac18c4bf8944d460d453d0d0e04ddbc8eaddf3fa591e9c74a1f8a438a1bff368a7a2417fab380bdb3df899d2194c4375b0982736de0
+  checksum: 10c0/161599bf921cfaa41c85d2b01c871975ee99260f3e874c2d41c05890d41170297bdcf314bc5185e7a700de2034ac5b888e3efc8e9f35724f4918f53538d717c9
   languageName: node
   linkType: hard
 
@@ -18507,12 +18508,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:*, uuid@npm:^11.1.0 || ^12 || ^13 || ^14.0.0, uuid@npm:^14.0.0":
-  version: 14.0.0
-  resolution: "uuid@npm:14.0.0"
+"uuid@npm:*, uuid@npm:^11.1.0 || ^12 || ^13 || ^14.0.0, uuid@npm:^14.0.1":
+  version: 14.0.1
+  resolution: "uuid@npm:14.0.1"
   bin:
     uuid: dist-node/bin/uuid
-  checksum: 10c0/a57ae7794c45005c1a9208989196c5baf79a7679c30f43c1bee9033a2c4d113a2cea216fa6fcc9663b08b0d55635df1a7c6eb7e7f3d21c3e50688c698fa39a50
+  checksum: 10c0/2d961289097cb68c37d93d1da0b5c3aafc1eb9948a455cca8d0ae53a099b2fe583b8933254a84097f700e6bac2e23033364904df0467c22551d5d9611febcaf6
   languageName: node
   linkType: hard
 
