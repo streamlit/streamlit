@@ -871,6 +871,8 @@ class ArrowMixin:
         """
         import pyarrow as pa
 
+        data_df: Any = None
+
         if on_select not in {"ignore", "rerun"} and not callable(on_select):
             raise StreamlitAPIException(
                 f"You have passed {on_select} to `on_select`. But only 'ignore', "
