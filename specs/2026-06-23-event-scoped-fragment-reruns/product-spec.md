@@ -179,11 +179,12 @@ doesn't declare a `key` param, else forward it. Non-breaking and ergonomic, but 
 different things depending on the function signature — "clever but too clever" and a *Same Name, Same
 Behavior* violation.
 
-### 2. Fragment dependencies — and the cycle problem
+### 2. Fragment dependencies
 
-Targeted reruns compose into **dependencies between fragments** without any new "dependency" API: a
-fragment (or a callback) simply reruns the fragments that depend on it. Because the request layer
-coalesces multiple targets into one ordered pass, an event can refresh several dependents at once:
+Dependencies between fragments need **no new API**: a fragment (or a callback) expresses "when I
+change, update my dependents" by simply calling `st.rerun(target=...)` for them. Because the request
+layer coalesces multiple targeted reruns into one ordered pass, a single event can refresh several
+dependents together:
 
 ```python
 def on_filter_change():
@@ -191,30 +192,48 @@ def on_filter_change():
     st.rerun(target="table")   # both queued into a single ordered rerun pass
 ```
 
-**Why not a declarative `depends_on=[...]` graph?** Targeted reruns and a declared dependency graph
-are two **mutually exclusive** ways to express the same thing — cross-fragment dependencies — so this
-is an either/or, and we choose targeted reruns. `depends_on` is *not* a later addition layered on top:
-once a fragment can call `st.rerun(target=...)`, a declared graph would be redundant. Targeted reruns
-also express *conditional* dependencies (`if expensive_input_changed: st.rerun(target="charts")`) that
-a static graph cannot, and they avoid introducing a new dependency concept (*Extend Before
-Inventing*). The one thing a declared graph would add is cycle detection *before* execution (see
-below) — which we judge insufficient to justify a second, overlapping mechanism.
+Dependencies can also be *conditional*, because they're just code:
 
-**The cycle problem.** Because this is imperative and developer-driven, nothing structurally prevents
-a fragment from triggering a rerun that (directly or transitively) triggers itself — an infinite rerun
-loop. This is the same class of footgun that `st.rerun()` already has today (calling it
-unconditionally loops), but cross-fragment targeting makes indirect cycles (`A → B → A`) easier to
-create accidentally. Mitigations to decide during tech-spec:
+```python
+if expensive_input_changed:
+    st.rerun(target="charts")
+```
 
-- **Detection over prevention.** Track the chain of fragment reruns triggered within a single
-  interaction and raise a clear `StreamlitAPIException` ("Fragment rerun cycle detected: A → B → A …")
-  rather than hanging — *Fail Fast, Fail Helpfully*.
-- **Guidance.** Document that targeted reruns should be triggered by events/conditions, not
-  unconditionally on every fragment run (mirroring existing `st.rerun` guidance).
-- **Static vs. runtime detection.** A declared `depends_on` graph could be checked for cycles *before*
-  execution; with imperative targets the edges are only known as fragments run, so we rely on
-  **runtime** detection. That's an acceptable trade — runtime detection is also more precise, flagging
-  only cycles that *actually* fire (a conditional self-target that terminates is not an error).
+**Cycles.** Because this is imperative and developer-driven, nothing structurally prevents a fragment
+from triggering a rerun that (directly or transitively) triggers itself — an infinite rerun loop.
+This is the same footgun `st.rerun()` already has today (calling it unconditionally loops); targeting
+just makes indirect cycles (`A → B → A`) easier to create by accident. For the MVP, avoiding cycles is
+the **developer's responsibility** — consistent with `st.rerun` today — so cycle handling is *not*
+blocking. As a debugging aid and a possible future addition, Streamlit could track the chain of
+targeted reruns within one interaction and raise a clear error when a fragment is re-triggered without
+progress (the React "Maximum update depth exceeded" pattern). Whether and when to add this is left
+open and can be driven by user demand.
+
+#### Alternatives considered
+
+**Declarative `depends_on=[...]` dependency graph.** Each fragment declares the
+fragments/state it depends on, and the framework cascades reruns automatically. Not chosen for two
+reasons:
+
+- **Overlapping** — it provides essentially the same capability as `st.rerun(target=...)`, and
+  offering both would mean two ways to do the same thing. To keep the API minimal and guide users
+  down one path, we provide one (*Start Minimal*, *Extend Before Inventing*, *One Use Case, One
+  Command*).
+- **Strictly more limited** — a declared graph is pure data-flow with nowhere to run imperative logic,
+  so it *cannot* express several things targeted reruns can:
+  - **Event-handler-driven reruns** — running work in an `on_click`/`on_change` callback and then
+    refreshing specific fragments (the entire §3 "event-based" model). A declared graph reacts to
+    "data X changed," not to an event, and has no handler hook — so `depends_on` would actually
+    *prevent* §3.
+  - **Conditional dependencies** — a declared edge fires whenever its source changes; it can't be
+    gated on a runtime condition.
+  - **Dynamic targets** — `st.rerun(target=...)` can target a computed key; `depends_on` is a static
+    list fixed at decoration time.
+  - **Triggers from anywhere** — a manual "refresh" button, the main script, or an unrelated fragment
+    can call `target=`; a declared graph only reruns on changes to declared upstreams.
+
+  Its only advantage over targeted reruns is enabling cycle detection *before* execution (the declared
+  graph is known up front). We judge that insufficient to justify a second, more limited mechanism.
 
 ### 3. A full "event-based" mode: fragment reruns in widget callbacks
 
