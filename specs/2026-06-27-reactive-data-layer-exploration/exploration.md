@@ -1,5 +1,5 @@
 ---
-author: github-name
+author: lawilby
 created: 2026-06-27
 status: exploration
 ---

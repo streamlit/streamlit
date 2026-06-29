@@ -1,7 +1,6 @@
 ---
-author: github-name
+author: lawilby
 created: 2026-06-23
-status: draft
 ---
 
 # Event-scoped fragment reruns
