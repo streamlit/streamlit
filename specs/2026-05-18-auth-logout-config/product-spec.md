@@ -7,9 +7,9 @@ created: 2026-05-18
 
 ## Summary
 
-Add an `[auth.logout]` config section in `secrets.toml` that lets developers override the
-query parameters sent during OIDC RP-Initiated Logout, fixing providers that diverge from
-the spec (AWS Cognito, MS Entra).
+Add an `auth.logout_params` config option in `secrets.toml` that lets developers override
+the query parameters sent during OIDC RP-Initiated Logout, fixing providers that diverge
+from the spec (AWS Cognito, MS Entra).
 
 ## Problem
 
@@ -20,7 +20,7 @@ Several major providers deviate:
 | Provider   | Issue                                                        | GitHub Issue |
 |------------|--------------------------------------------------------------|--------------|
 | AWS Cognito | Expects `redirect_uri` instead of `post_logout_redirect_uri` | [#14601](https://github.com/streamlit/streamlit/issues/14601) |
-| MS Entra   | Needs `logout_hint` (from user email) to skip account picker | [#14290](https://github.com/streamlit/streamlit/issues/14290) |
+| MS Entra   | Shows an account picker on logout; may need a `logout_hint` param to skip it | [#14290](https://github.com/streamlit/streamlit/issues/14290) |
 
 Both break or degrade the logout UX with no workaround available to users today.
 
@@ -30,124 +30,97 @@ surface exists to change these.
 
 ## Proposal
 
-### Section name: `[auth.logout]`
-
-The section is named `[auth.logout]` to be consistent with Streamlit's noun-based config
-sections (`[auth]`, `[auth.google]`, `[server]`). It also reads unambiguously as a config
-section -- not a provider name -- even though it sits at the same TOML nesting level as
-`[auth.google]`. And it's extensible: future keys like `end_session_endpoint` can live here
-without the name becoming misleading.
-
-`logout` becomes a **reserved name** under `[auth.*]` and cannot be used as a provider name.
-The existing provider validation (which already rejects names with underscores) will be
-extended to reject `logout` explicitly with a clear error message.
-
 ### Configuration
 
-In `secrets.toml`:
+A single `logout_params` key under `[auth]` holds a table of query parameters to apply on
+top of the ones Streamlit builds by default:
 
 ```toml
-[auth.logout]
-redirect_uri_name = "post_logout_redirect_uri"  # default
-include_id_token_hint = true                     # default
-id_token_hint_name = "id_token_hint"             # default
-
-[auth.logout.additional_params]
-# Static or template-substituted params appended to the logout URL.
-# {field} references are resolved from user_info (st.user).
-logout_hint = "{email}"
+[auth]
+logout_params = { logout_hint = "{email}" }
 ```
 
-### Config keys
+`logout_params` is a `dict[str, str]`. Its default is `{}`, which produces today's behavior
+exactly. A single flat option (rather than a dedicated `[auth.logout]` section with named
+keys) keeps the config surface minimal, avoids reserving `logout` as a provider name, and
+is more generic -- renaming, suppressing, and adding params all go through one mechanism.
 
-| Key | Type | Default | Purpose |
-|-----|------|---------|---------|
-| `redirect_uri_name` | `str` | `"post_logout_redirect_uri"` | Query param name for the post-logout redirect URI |
-| `include_id_token_hint` | `bool` | `true` | Whether to include the ID token hint |
-| `id_token_hint_name` | `str` | `"id_token_hint"` | Query param name for the ID token hint |
-| `additional_params` | `dict[str, str]` | `{}` | Extra query params; values support `{field}` template substitution from `st.user` |
+### Semantics
+
+Streamlit builds a default param set: `client_id`, `post_logout_redirect_uri`, and (when an
+ID token is available) `id_token_hint`. `logout_params` is **merged on top** of that set:
+
+- **Add or override** -- a key with a non-empty value sets that query param. Values support
+  `{field}` template substitution (see below).
+- **Remove** -- a key mapped to an empty string (`""`) drops that param from the URL. This
+  is how a standard param like `id_token_hint` is suppressed.
+- **Untouched** -- params not named in `logout_params` keep their default values.
+
+Param order is not significant; resolved values are URL-encoded.
 
 ### Template substitution
 
-Values in `additional_params` support `{field}` placeholders resolved from the current
-user's info (the same data available via `st.user`). Common fields: `email`, `name`, `sub`.
+Values support `{field}` placeholders resolved from a single namespace containing:
 
-- If a referenced field is missing from user info, the param is **omitted silently** (no
-  error, no empty value sent to provider).
-- Static values (no `{}` placeholder) are always included as-is.
+- The standard values Streamlit computes: `{post_logout_redirect_uri}`, `{client_id}`,
+  `{id_token_hint}`.
+- The current user's claims, the same data available via `st.user` (e.g. `{email}`,
+  `{name}`, `{sub}`, `{login_hint}`).
+
+Rules:
+
+- If a referenced field is missing, the param is **omitted silently** (no error, no empty
+  value sent to the provider).
+- Values with no `{}` placeholder are sent as-is.
 
 ### Behavior
 
-`build_logout_url()` changes:
-
-1. Read `[auth.logout]` from secrets (fall back to defaults if absent).
-2. Use `redirect_uri_name` as the query param key for the redirect URI.
-3. Include/exclude the ID token hint based on `include_id_token_hint`.
-4. If included, use `id_token_hint_name` as the query param key.
-5. Resolve and append `additional_params`.
-
-No change to `st.logout()` API signature. Fully backward-compatible: absent config
-produces identical behavior to today.
-
-### Per-provider logout config
-
-In multi-provider apps, providers may need different logout params. Per-provider config
-overrides the global `[auth.logout]` section:
-
-```toml
-[auth.cognito.logout]
-redirect_uri_name = "redirect_uri"
-include_id_token_hint = false
-
-[auth.microsoft.logout.additional_params]
-logout_hint = "{email}"
-```
-
-Per-provider config is a **complete override**, not a key-by-key merge -- consistent with
-how `[auth.<provider>]` sections work elsewhere. If `[auth.cognito.logout]` exists, the
-global `[auth.logout]` is ignored entirely for that provider. Keys not specified in the
-provider section fall back to the built-in defaults, not to the global section.
-
-If a provider has no `[auth.<provider>.logout]`, the global `[auth.logout]` applies.
-If neither exists, the OIDC-spec defaults are used.
+`build_logout_url()` reads `logout_params`, resolves templates, and applies the merge rules
+above to the default param set. No change to the `st.logout()` API signature. Fully
+backward-compatible: an absent or empty `logout_params` produces identical behavior to
+today.
 
 ### Examples
 
-**AWS Cognito** (uses `redirect_uri`, no ID token hint):
+**AWS Cognito** (uses `redirect_uri` instead of `post_logout_redirect_uri`, and no ID token
+hint). Rename is expressed as add-new-key + remove-old-key:
 
 ```toml
-[auth.logout]
-redirect_uri_name = "redirect_uri"
-include_id_token_hint = false
+[auth]
+logout_params = { redirect_uri = "{post_logout_redirect_uri}", post_logout_redirect_uri = "", id_token_hint = "" }
 ```
 
-**MS Entra** (skip account picker via `logout_hint`):
+(If a provider simply ignores unknown params, the `post_logout_redirect_uri = ""` removal
+can be omitted -- but the explicit form above is unambiguous.)
+
+**MS Entra** (attempt to skip the account picker) -- **experimental, unverified**:
 
 ```toml
-[auth.logout.additional_params]
-logout_hint = "{email}"
+[auth]
+logout_params = { logout_hint = "{email}" }
 ```
 
-**Custom provider** (non-standard param names + static param):
+> The exact value that suppresses Entra's account picker is not yet confirmed. Reports in
+> [#14290](https://github.com/streamlit/streamlit/issues/14290) show `id_token_hint` alone
+> does not reliably work, and the correct `logout_hint` source may be the `login_hint`
+> claim (`"{login_hint}"`) rather than `email`. This example must be validated against a
+> real Entra tenant before being documented as a supported fix.
+
+**Custom provider** (non-standard param names + a static param):
 
 ```toml
-[auth.logout]
-redirect_uri_name = "returnTo"
-include_id_token_hint = false
-
-[auth.logout.additional_params]
-audience = "{sub}"
-federated = "true"
+[auth]
+logout_params = { returnTo = "{post_logout_redirect_uri}", post_logout_redirect_uri = "", id_token_hint = "", audience = "{sub}", federated = "true" }
 ```
 
 ### What's OIDC spec vs our addition
 
 | Parameter | OIDC RP-Initiated Logout Spec | Our addition |
 |-----------|-------------------------------|--------------|
-| `post_logout_redirect_uri` | Defined in spec (Section 2) | We allow renaming the key |
-| `id_token_hint` | Defined in spec (Section 2) | We allow renaming/suppressing |
-| `client_id` | Defined in spec (Section 2) | Always included automatically; not configurable |
-| `additional_params` | N/A | Arbitrary extra query params appended after the standard ones |
+| `post_logout_redirect_uri` | Defined in spec (Section 2) | Can be renamed (add new key + remove this one) or removed |
+| `id_token_hint` | Defined in spec (Section 2) | Can be renamed or suppressed (`""`) |
+| `client_id` | Defined in spec (Section 2) | Included by default; can be overridden or removed like any other param |
+| arbitrary params | N/A | Any extra key in `logout_params` is appended to the URL |
 
 The OIDC spec defines the standard parameter names. Our configuration exists solely to
 accommodate providers that don't follow the spec.
@@ -155,7 +128,10 @@ accommodate providers that don't follow the spec.
 ## Out of Scope (Future Work)
 
 - **`end_session_endpoint` override** -- Some providers don't advertise this in their
-  metadata. Could be added to `[auth.logout]` later.
+  metadata. Could be added as a sibling `[auth]` key later.
+- **Disable the logout redirect entirely** -- Restoring the pre-1.53 "clear the cookie
+  only" behavior (requested in [#14290](https://github.com/streamlit/streamlit/issues/14290))
+  is a separate, complementary change tracked on its own.
 - **Logout callback/hook** -- Server-side post-logout actions.
 
 ## Checklist
@@ -165,6 +141,6 @@ accommodate providers that don't follow the spec.
 | Works on SiS, Cloud, etc?    | N/A on SiS (auth disabled). Works on Cloud and self-hosted. |
 | No breaking API changes      | Additive config only; absent config = current behavior    |
 | No new dependencies          | None                                                      |
-| Metrics collected            | Could track `[auth.logout]` presence in secrets           |
+| Metrics collected            | Could track `auth.logout_params` presence in secrets       |
 | Any security/legal impact?   | No -- only changes query param names on logout redirect   |
-| Any docs changes needed?     | Auth docs: add "Provider-specific logout" section         |
+| Any docs changes needed?     | Auth docs: document `auth.logout_params` for non-standard providers |
