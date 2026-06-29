@@ -33,6 +33,7 @@ from streamlit.proto.openmetrics_data_model_pb2 import (
 )
 from streamlit.runtime.stats import (
     CACHE_MEMORY_FAMILY,
+    USER_SESSION_EVENTS_FAMILY,
     CacheStat,
     CounterStat,
     GaugeStat,
@@ -647,4 +648,39 @@ def test_stats_to_otlp_dict_is_json_serializable() -> None:
     )
 
     # Should not raise, and should round-trip unchanged.
+    assert json.loads(json.dumps(result)) == result
+
+
+def test_stats_to_otlp_dict_user_session_events_preserves_special_label_values() -> (
+    None
+):
+    """The user_session_events family carries user-controlled identity labels
+    (e.g. email) on the unauthenticated metrics endpoint. Unlike the text format
+    (which must escape them), the OTLP JSON body relies on JSON encoding to carry
+    special characters verbatim without breaking the payload.
+    """
+    stats = {
+        USER_SESSION_EVENTS_FAMILY: [
+            CounterStat(
+                family_name=USER_SESSION_EVENTS_FAMILY,
+                value=3,
+                labels={"email": 'a"b\\c\nd', "type": "connect"},
+            )
+        ]
+    }
+
+    result = stats_to_otlp_dict(
+        stats, time_unix_nano=_TIME_NS, start_time_unix_nano=_START_TIME_NS
+    )
+
+    metric = result["resourceMetrics"][0]["scopeMetrics"][0]["metrics"][0]
+    # Emitted as a cumulative monotonic sum, like any other counter family.
+    assert metric["name"] == USER_SESSION_EVENTS_FAMILY
+    assert metric["sum"]["isMonotonic"] is True
+    data_point = metric["sum"]["dataPoints"][0]
+    # The raw value is preserved in the attribute (no text-format escaping).
+    assert {"key": "email", "value": {"stringValue": 'a"b\\c\nd'}} in data_point[
+        "attributes"
+    ]
+    # The body must survive JSON serialization with the value intact.
     assert json.loads(json.dumps(result)) == result
