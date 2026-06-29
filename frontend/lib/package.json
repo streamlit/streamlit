@@ -138,7 +138,7 @@
     "not op_mini all"
   ],
   "devDependencies": {
-    "@swc/plugin-emotion": "^14.13.0",
+    "@swc/plugin-emotion": "^14.14.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -168,8 +168,8 @@
     "timezone-mock": "^1.4.3",
     "tsc-alias": "^1.8.17",
     "typesync": "^0.14.3",
-    "vite": "^8.0.16",
-    "vite-plugin-dts": "^5.0.1",
+    "vite": "^8.1.0",
+    "vite-plugin-dts": "^5.0.3",
     "vite-plugin-svgr": "^5.2.0",
     "vitest": "^4.1.9",
     "vitest-canvas-mock": "^1.1.4",

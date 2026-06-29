@@ -40,8 +40,8 @@
     "@types/lodash-es": "^4.17.12",
     "axios-mock-adapter": "^2.1.0",
     "typesync": "^0.14.3",
-    "vite": "^8.0.16",
-    "vite-plugin-dts": "^5.0.1",
+    "vite": "^8.1.0",
+    "vite-plugin-dts": "^5.0.3",
     "vite-plugin-svgr": "^5.2.0",
     "vitest": "^4.1.9",
     "vitest-websocket-mock": "^0.5.0"
