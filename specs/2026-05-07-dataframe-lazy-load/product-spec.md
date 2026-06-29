@@ -96,9 +96,12 @@ Semantics:
   dataframe and serve row slices from server memory. If lazy delivery conflicts with the input or
   options, raise a clear `StreamlitAPIException`.
 
-`lazy=True` should apply lazy delivery for inputs with more than 1,000 rows. For inputs with
-1,000 rows or fewer, Streamlit may keep eager rendering as a small-data optimization because the
-full payload is already bounded.
+`lazy=True` always uses lazy mode when the input is supported, regardless of row count, so the
+flag stays a predictable force flag rather than a hint. For small inputs Streamlit may put every
+row into the initial chunk so no follow-up chunk requests are needed, but the dataframe still
+renders as a lazy source with consistent lazy semantics (server-side sorting, disabled search,
+etc.). Streamlit must not silently fall back to the eager path when `lazy=True` is set on a
+supported input.
 
 The pandas fallback for `lazy=True` reduces the initial frontend payload and browser memory
 usage. It does not reduce server memory usage or the cost of converting the input to pandas. For
@@ -174,8 +177,20 @@ searching only loaded chunks would be misleading. This is an intentional user-vi
 change for the first version in exchange for bounded initial payload and browser memory usage.
 Server-side search can restore search for auto-lazy dataframes in a later phase.
 
+**Rollout and Migration:** Because auto-lazy removes the search affordance from existing >150k-row
+dataframes without any code change, it is more than a purely additive change and needs explicit
+sign-off before release. To keep a migration path:
+
+- Gate auto-lazy for in-memory dataframes behind a config option (e.g.
+  `config.toml [dataframe] auto_lazy`). Users can disable it to restore today's eager large-table
+  behavior, including search, during the transition.
+- Explicit `lazy=True` / `lazy=False` always win over the config default, so opting into or out of
+  lazy delivery per element is never blocked by the global setting.
+- The default value of the config option (on vs. off for the first release) requires human
+  product sign-off and should be decided alongside the server-side search timeline.
+
 For smaller in-memory dataframes, Streamlit should keep eager rendering by default. Users can set
-`lazy=True` to force lazy delivery for inputs above the forced-lazy minimum row threshold.
+`lazy=True` to force lazy delivery for any supported input regardless of size.
 
 ### 4. Advanced Custom Sources
 
@@ -189,25 +204,16 @@ code should not interpolate raw frontend-provided column names into SQL.
 
 ## API
 
-Add one keyword-only parameter to `st.dataframe`:
+This feature adds a single new keyword-only parameter, `lazy`, to `st.dataframe`. No existing
+parameters change, so only the new parameter is shown here:
 
 ```python
-def dataframe(
-    data: Data = None,
-    width: int | None = None,
-    height: int | None = None,
+st.dataframe(
+    data,
     *,
-    use_container_width: bool | None = None,
-    hide_index: bool | None = None,
-    column_order: Iterable[str] | None = None,
-    column_config: ColumnConfigMappingInput | None = None,
-    key: Key | None = None,
-    on_select: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
-    selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-    row_height: int | None = None,
-    lazy: bool | None = None,
-) -> DeltaGenerator | DataframeState:
-    ...
+    # ...all existing st.dataframe parameters are unchanged...
+    lazy: bool | None = None,  # NEW
+)
 ```
 
 `lazy` controls frontend delivery mode:
@@ -457,7 +463,7 @@ capability declarations are clearer and make unsupported UI states easier to exp
 | Item                         | ✅ or comment                                          |
 |------------------------------|--------------------------------------------------------|
 | Works on SiS, Cloud, etc?    | Yes, chunk loading stays server-side and session-bound |
-| No breaking API changes      | API additive; auto-lazy changes large-table search UI  |
+| No breaking API changes      | API additive; auto-lazy search removal is config-gated + needs sign-off |
 | No new dependencies          | Yes, adapters use optional detection                   |
 | Metrics collected            | Track lazy source type, chunks loaded, errors, bytes   |
 | Any security/legal impact?   | Needs request/source id validation per session         |

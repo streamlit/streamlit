@@ -150,8 +150,11 @@ signatures.
 For remote unevaluated inputs, `lazy=True` must not silently materialize the full dataset just to
 use the pandas fallback. It should use a native adapter or raise a clear error.
 
-The forced-lazy small-data threshold is 1,000 rows. Inputs with 1,000 rows or fewer may stay on
-the eager path even when `lazy=True` because the payload is bounded and eager rendering is simpler.
+`lazy=True` always resolves to lazy mode for supported inputs, regardless of row count, so the
+flag is a predictable force flag rather than a hint. For small inputs (e.g. 1,000 rows or fewer)
+the source can place every row in the initial chunk so no follow-up chunk requests are needed,
+but the element is still rendered as a lazy source with lazy semantics. There is no silent eager
+fallback when `lazy=True` is set on a supported input.
 
 ### Session Source Manager
 
@@ -219,7 +222,9 @@ message Dataframe {
   ArrowData arrow_data = 1;
   // existing fields...
 
-  optional LazyDataframe lazy_data = 13;
+  // Field numbers 1-13 are already used in Dataframe.proto (13 is
+  // button_click_widgets), so lazy_data takes the next free number, 14.
+  optional LazyDataframe lazy_data = 14;
 }
 
 message LazyDataframe {
