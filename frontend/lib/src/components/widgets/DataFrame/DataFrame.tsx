@@ -49,6 +49,7 @@ import { createPortal } from "react-dom"
 
 import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
+import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -81,6 +82,8 @@ import useDataEditor from "./hooks/useDataEditor"
 import useDataExporter from "./hooks/useDataExporter"
 import useDataFrameCapabilities from "./hooks/useDataFrameCapabilities"
 import useDataLoader from "./hooks/useDataLoader"
+import useLazyColumnSort from "./hooks/useLazyColumnSort"
+import useLazyDataLoader from "./hooks/useLazyDataLoader"
 import useRowHover from "./hooks/useRowHover"
 import useSelectionHandler from "./hooks/useSelectionHandler"
 import useTableSizer from "./hooks/useTableSizer"
@@ -141,12 +144,23 @@ function DataFrame({
   widthConfig,
   heightConfig,
 }: Readonly<DataFrameProps>): ReactElement {
-  // Use provided Quiver data or construct from proto's arrowData. The
-  // elementHash serves as the primary memoization key to avoid unnecessary
-  // re-parsing when the payload hasn't changed.
+  // Lazy mode metadata. When present, rows are loaded on demand in chunks from
+  // the backend instead of being delivered eagerly in `arrowData`.
+  const lazyData = element.lazyData ?? null
+  const isLazy = lazyData !== null
+
+  const { backendOperationClient } = useContext(BackendOperationContext)
+
+  // Use provided Quiver data, the lazy initial chunk, or the eager arrowData.
+  // For lazy dataframes the initial chunk carries the schema plus the first
+  // visible rows. The elementHash serves as the primary memoization key to
+  // avoid unnecessary re-parsing when the payload hasn't changed.
   const data = useMemo(() => {
     if (dataProp !== undefined) {
       return dataProp
+    }
+    if (lazyData?.initialChunk) {
+      return new Quiver(lazyData.initialChunk)
     }
     if (!element.arrowData) {
       throw new Error("DataFrame element is missing arrowData")
@@ -154,7 +168,7 @@ function DataFrame({
     return new Quiver(element.arrowData)
     // elementHash is intentionally included as a stability anchor for memoization
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataProp, elementHash, element.arrowData])
+  }, [dataProp, elementHash, element.arrowData, lazyData?.initialChunk])
 
   const {
     expanded: isFullScreen,
@@ -221,9 +235,17 @@ function DataFrame({
   const editingMode =
     element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
 
-  // Number of rows of the table minus 1 for the header row:
+  // Number of rows of the table minus 1 for the header row. For lazy
+  // dataframes the total row count comes from the lazy metadata, not from the
+  // (partial) initial chunk.
   const dataDimensions = data.dimensions
-  const originalNumRows = Math.max(0, dataDimensions.numDataRows)
+  const lazyRowCount =
+    typeof lazyData?.rowCount === "number"
+      ? lazyData.rowCount
+      : (lazyData?.rowCount?.toNumber() ?? 0)
+  const originalNumRows = isLazy
+    ? Math.max(0, lazyRowCount)
+    : Math.max(0, dataDimensions.numDataRows)
 
   // Centralized capability layer that determines which features are enabled
   const {
@@ -244,6 +266,8 @@ function DataFrame({
     disabled,
     numDataRows: originalNumRows,
     numDataColumns: dataDimensions.numDataColumns,
+    isLazy,
+    lazySortable: lazyData?.sortable ?? false,
   })
 
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)
@@ -287,8 +311,35 @@ function DataFrame({
     editingState
   )
 
-  const { columns, sortColumn, getOriginalIndex, getCellContent } =
-    useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
+  // Both eager and lazy hooks are always called to satisfy the Rules of Hooks;
+  // the active set of results is selected by `isLazy` below.
+  const eagerSort = useColumnSort(
+    originalNumRows,
+    originalColumns,
+    getOriginalCellContent
+  )
+
+  const lazySort = useLazyColumnSort(originalColumns)
+  const { getCellContent: getLazyCellContent, onVisibleRegionChanged } =
+    useLazyDataLoader({
+      initialChunk: data,
+      columns: originalColumns,
+      numRows: originalNumRows,
+      sourceId: lazyData?.sourceId ?? "",
+      generation: lazyData?.generation ?? "",
+      pageSize: lazyData?.pageSize || 1,
+      sortState: lazySort.sortState,
+      backendOperationClient,
+    })
+
+  const { columns, sortColumn, getOriginalIndex, getCellContent } = isLazy
+    ? {
+        columns: lazySort.columns,
+        sortColumn: lazySort.sortColumn,
+        getOriginalIndex: lazySort.getOriginalIndex,
+        getCellContent: getLazyCellContent,
+      }
+    : eagerSort
 
   const {
     buttonActionMenu,
@@ -966,18 +1017,28 @@ function DataFrame({
           // Activate keybindings:
           keybindings={{
             downFill: true,
-            ...(isCellSelectionActivated || isLargeTable
+            ...(isCellSelectionActivated || isLargeTable || isLazy
               ? {
                   // Deactivate select all to prevent potential performance issues
-                  // with too many selected cells being processed for cell selection:
+                  // with too many selected cells being processed for cell selection.
+                  // For lazy dataframes this also prevents triggering load
+                  // requests for the entire dataset.
                   selectAll: false,
                 }
               : {}),
           }}
+          // Request chunks for the visible range (plus a small buffer) when the
+          // user scrolls a lazy dataframe.
+          onVisibleRegionChanged={isLazy ? onVisibleRegionChanged : undefined}
           // Search needs to be activated manually, to support search
-          // via the toolbar:
+          // via the toolbar. Disabled for lazy dataframes since search would
+          // only operate on loaded chunks.
           onKeyDown={event => {
-            if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+            if (
+              canSearch &&
+              (event.ctrlKey || event.metaKey) &&
+              event.key === "f"
+            ) {
               setShowSearch(cv => !cv)
               event.stopPropagation()
               event.preventDefault()

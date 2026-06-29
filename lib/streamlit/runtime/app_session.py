@@ -43,6 +43,7 @@ from streamlit.runtime.backend_operation_handler import (
     BackendOperationDispatcher,
     DeferredFileHandler,
 )
+from streamlit.runtime.dataframe_chunk_handler import DataframeChunkHandler
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
@@ -218,6 +219,11 @@ class AppSession:
             DeferredFileHandler(lambda: runtime.get_instance().media_file_mgr),
         )
 
+        dispatcher.register(
+            "dataframe_chunk",
+            DataframeChunkHandler(lambda: runtime.get_instance().dataframe_source_mgr),
+        )
+
         return dispatcher
 
     def register_file_watchers(self) -> None:
@@ -300,6 +306,7 @@ class AppSession:
                 rt = runtime.get_instance()
                 rt.media_file_mgr.clear_session_refs(self.id)
                 rt.media_file_mgr.remove_orphaned_files()
+                rt.dataframe_source_mgr.clear_all_for_session(self.id)
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -747,6 +754,9 @@ class AppSession:
                 # Only clear media files and session caches if the script is done
                 # running AND the session is actually shutting down.
                 runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
+                runtime.get_instance().dataframe_source_mgr.clear_all_for_session(
+                    self.id
+                )
                 self.clear_session_caches()
 
             self._client_state = client_state

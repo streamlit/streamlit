@@ -27,6 +27,7 @@ from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
+from streamlit.runtime.dataframe_source_manager import DataframeSourceManager
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.pages_manager import PagesManager
@@ -345,6 +346,7 @@ class AppTest:
         mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )
+        mock_runtime.dataframe_source_mgr = DataframeSourceManager()
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         if self._bidi_component_manager is None:
             bidi_component_manager = BidiComponentManager()

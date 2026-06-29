@@ -55,6 +55,12 @@ message Dataframe {
   // so a single widget ID per column is sufficient to handle clicks on any row.
   map<string, string> button_click_widgets = 13;
 
+  // Lazy-loading metadata. When set, the frontend renders this dataframe in
+  // lazy mode: it requests row chunks from the backend on demand instead of
+  // receiving the full data in `arrow_data`. The eager `arrow_data` field is
+  // left empty for lazy dataframes.
+  optional LazyDataframe lazy_data = 14;
+
   // Available editing modes:
   enum EditingMode {
     READ_ONLY = 0; // Read-only table.
@@ -73,5 +79,66 @@ message Dataframe {
     SINGLE_CELL = 4; // Only one cell can be selected at a time.
     MULTI_CELL = 5; // Multiple cells (continuous range) can be selected.
     SINGLE_ROW_REQUIRED = 6; // Single row, cannot be cleared (radio-like behavior).
+  }
+}
+
+// Metadata for a lazily loaded dataframe. The data itself is fetched on demand
+// in row chunks via BackendOperationRequest/BackendOperationResponse, keyed by
+// `source_id` and `generation`.
+message LazyDataframe {
+  // Session-scoped, unguessable id of the backend data source. Used by the
+  // frontend to request row chunks. Not usable across sessions.
+  string source_id = 1;
+
+  // Total number of rows in the source. Always set in the first version
+  // (known-size sources). Reserved as optional for future sequential sources.
+  optional uint64 row_count = 2;
+
+  // Row offset of the rows contained in `initial_chunk`.
+  uint64 initial_offset = 3;
+
+  // Number of rows the backend serves per chunk. The frontend aligns its chunk
+  // requests to this page size.
+  uint32 page_size = 4;
+
+  // Generation token (UUID) that changes whenever the source is re-registered
+  // (rerun or source-config change). Chunk responses with a stale generation
+  // are ignored by the frontend.
+  string generation = 5;
+
+  // How the source can be accessed.
+  AccessMode access_mode = 6;
+
+  // The initial row chunk as an Arrow IPC table including the full schema.
+  // For lazy dataframes this carries the schema and the first visible rows.
+  ArrowData initial_chunk = 7;
+
+  // Arrow IPC schema bytes. Only used as a fallback when `initial_chunk` is
+  // empty and a zero-row Arrow table is impractical for an adapter.
+  bytes serialized_schema = 8;
+
+  // Whether server-side sorting is enabled for this source.
+  bool sortable = 9;
+
+  enum AccessMode {
+    ACCESS_MODE_UNSPECIFIED = 0;
+    // Arbitrary row ranges can be requested (known-size sources).
+    RANDOM_ACCESS = 1;
+    // Rows can only be read sequentially (reserved for future streaming
+    // sources).
+    SEQUENTIAL = 2;
+  }
+}
+
+// Server-side sort state for a lazy dataframe. The `column` value is a stable
+// backend field name from the Arrow schema, not the displayed column label.
+message SortState {
+  string column = 1;
+  SortDirection direction = 2;
+
+  enum SortDirection {
+    SORT_DIRECTION_UNSPECIFIED = 0;
+    ASCENDING = 1;
+    DESCENDING = 2;
   }
 }

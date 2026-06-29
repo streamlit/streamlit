@@ -39,6 +39,8 @@ interface DataFrameCapabilities {
   isEmptyTable: boolean
   /** Whether the table exceeds the large table threshold. */
   isLargeTable: boolean
+  /** Whether the dataframe is rendered in lazy (chunk-loaded) mode. */
+  isLazy: boolean
   /** Whether the device primarily uses touch input. */
   isTouchDevice: boolean
   /** Whether column resizing via drag is supported. Disabled on touch devices. */
@@ -58,6 +60,10 @@ interface UseDataFrameCapabilitiesParams {
   numDataRows: number
   /** Number of data columns in the table. */
   numDataColumns: number
+  /** Whether the dataframe is rendered in lazy (chunk-loaded) mode. */
+  isLazy?: boolean
+  /** Whether the lazy source supports server-side sorting. */
+  lazySortable?: boolean
 }
 
 /**
@@ -91,6 +97,8 @@ function useDataFrameCapabilities({
   disabled,
   numDataRows,
   numDataColumns,
+  isLazy = false,
+  lazySortable = false,
 }: UseDataFrameCapabilitiesParams): DataFrameCapabilities {
   return useMemo(() => {
     const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
@@ -107,17 +115,22 @@ function useDataFrameCapabilities({
     )
     const isLargeTable = numDataRows > LARGE_TABLE_ROWS_THRESHOLD
 
-    const canSort =
-      !isLargeTable &&
-      !isEmptyTable &&
-      editingMode !== DYNAMIC &&
-      editingMode !== ADD_ONLY
+    // In lazy mode, sorting is handled server-side and gated on the source's
+    // `sortable` capability (not the large-table threshold). Search and CSV
+    // export are disabled because they would only operate on loaded chunks.
+    const canSort = isLazy
+      ? lazySortable && !isEmptyTable
+      : !isLargeTable &&
+        !isEmptyTable &&
+        editingMode !== DYNAMIC &&
+        editingMode !== ADD_ONLY
 
-    const canSearch = !isEmptyTable
+    const canSearch = !isLazy && !isEmptyTable
 
-    const canExportCsv = !isLargeTable && !isEmptyTable
+    const canExportCsv = !isLazy && !isLargeTable && !isEmptyTable
 
-    const canEdit = !isEmptyTable && editingMode !== READ_ONLY && !disabled
+    const canEdit =
+      !isLazy && !isEmptyTable && editingMode !== READ_ONLY && !disabled
 
     const canAddRows =
       !isEmptyTable &&
@@ -144,12 +157,20 @@ function useDataFrameCapabilities({
       canDeleteRows,
       isEmptyTable,
       isLargeTable,
+      isLazy,
       isTouchDevice,
       canResizeColumns,
       supportsFillHandle,
       supportsRectangleSelection,
     }
-  }, [editingMode, disabled, numDataRows, numDataColumns])
+  }, [
+    editingMode,
+    disabled,
+    numDataRows,
+    numDataColumns,
+    isLazy,
+    lazySortable,
+  ])
 }
 
 export default useDataFrameCapabilities

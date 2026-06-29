@@ -60,6 +60,46 @@ describe("BackendOperationClient", () => {
     expect(client.pendingCount).toBe(0)
   })
 
+  it("sends dataframe chunk requests with the chunk payload", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestDataframeChunk({
+      sourceId: "source-1",
+      offset: 500,
+      limit: 500,
+      generation: "gen-1",
+    })
+
+    expect(sendRequest).toHaveBeenCalledTimes(1)
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+    expect(request.requestId).toBeTruthy()
+    expect(request.sessionId).toBe("session-id")
+    expect(request.dataframeChunk?.sourceId).toBe("source-1")
+    expect(Number(request.dataframeChunk?.offset)).toBe(500)
+    expect(request.dataframeChunk?.limit).toBe(500)
+    expect(request.dataframeChunk?.generation).toBe("gen-1")
+    expect(client.pendingCount).toBe(1)
+
+    const arrowData = { data: new Uint8Array([1, 2, 3]) }
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        dataframeChunk: {
+          sourceId: "source-1",
+          offset: 500,
+          generation: "gen-1",
+          arrowData,
+        },
+      })
+    )
+
+    const resolved = await promise
+    expect(resolved.sourceId).toBe("source-1")
+    expect(Number(resolved.offset)).toBe(500)
+    expect(client.pendingCount).toBe(0)
+  })
+
   it("rejects the pending promise when the response contains an error", async () => {
     const sendRequest = vi.fn()
     const client = createClient(sendRequest)

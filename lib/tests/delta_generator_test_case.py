@@ -26,6 +26,7 @@ from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
+from streamlit.runtime.dataframe_source_manager import DataframeSourceManager
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.media_file_manager import MediaFileManager
@@ -90,6 +91,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         mock_runtime.bidi_component_registry = self.bidi_component_manager
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         mock_runtime.media_file_mgr = MediaFileManager(self.media_file_storage)
+        mock_runtime.dataframe_source_mgr = DataframeSourceManager()
         mock_runtime.uploaded_file_mgr = self.script_run_ctx.uploaded_file_mgr
         mock_runtime._session_mgr = MagicMock(spec=SessionManager)
         Runtime._instance = mock_runtime

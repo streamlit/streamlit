@@ -21,6 +21,8 @@ import {
   BackendOperationRequest,
   IBackendOperationRequest,
   IBackendOperationResponse,
+  IDataframeChunkRequestPayload,
+  IDataframeChunkResponsePayload,
 } from "@streamlit/protobuf"
 
 const LOG = getLogger("BackendOperationClient")
@@ -30,6 +32,9 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
 
 /** Timeout for deferred file requests (3 minutes). */
 const DEFERRED_FILE_REQUEST_TIMEOUT_MS = 180_000
+
+/** Timeout for lazy dataframe chunk requests (60 seconds). */
+const DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS = 60_000
 
 /** Information about a pending request. */
 interface PendingRequest<T> {
@@ -75,7 +80,10 @@ export class BackendOperationClient {
    * Send a backend operation request to the server.
    */
   public request<TResponse>(
-    payloadField: keyof Pick<IBackendOperationRequest, "deferredFile">,
+    payloadField: keyof Pick<
+      IBackendOperationRequest,
+      "deferredFile" | "dataframeChunk"
+    >,
     payload: IBackendOperationRequest[typeof payloadField],
     timeoutMs?: number
   ): Promise<TResponse> {
@@ -136,6 +144,24 @@ export class BackendOperationClient {
       "deferredFile",
       { fileId },
       timeoutMs ?? DEFERRED_FILE_REQUEST_TIMEOUT_MS
+    )
+  }
+
+  /**
+   * Request a chunk of rows for a lazy dataframe source.
+   *
+   * @param payload - The chunk request (source id, offset, limit, generation, sort)
+   * @param timeoutMs - Optional timeout override
+   * @returns A promise that resolves with the chunk response payload
+   */
+  public requestDataframeChunk(
+    payload: IDataframeChunkRequestPayload,
+    timeoutMs?: number
+  ): Promise<IDataframeChunkResponsePayload> {
+    return this.request<IDataframeChunkResponsePayload>(
+      "dataframeChunk",
+      payload,
+      timeoutMs ?? DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS
     )
   }
 
@@ -206,6 +232,7 @@ export class BackendOperationClient {
   ): unknown {
     // Return the first non-null payload field
     if (response.deferredFile) return response.deferredFile
+    if (response.dataframeChunk) return response.dataframeChunk
     // Future: Add other payload types here
 
     LOG.warn("Response contained no recognized payload", response)

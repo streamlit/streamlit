@@ -340,6 +340,73 @@ describe("useDataFrameCapabilities", () => {
     })
   })
 
+  describe("lazy mode", () => {
+    it("disables search and CSV export in lazy mode", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({
+          ...defaultParams,
+          isLazy: true,
+          lazySortable: true,
+        })
+      )
+      expect(result.current.isLazy).toBe(true)
+      expect(result.current.canSearch).toBe(false)
+      expect(result.current.canExportCsv).toBe(false)
+    })
+
+    it("enables sorting only when the lazy source is sortable", () => {
+      const sortable = renderHook(() =>
+        useDataFrameCapabilities({
+          ...defaultParams,
+          isLazy: true,
+          lazySortable: true,
+        })
+      )
+      expect(sortable.result.current.canSort).toBe(true)
+
+      const notSortable = renderHook(() =>
+        useDataFrameCapabilities({
+          ...defaultParams,
+          isLazy: true,
+          lazySortable: false,
+        })
+      )
+      expect(notSortable.result.current.canSort).toBe(false)
+    })
+
+    it("allows sorting large lazy tables (server-side sort)", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({
+          ...defaultParams,
+          numDataRows: LARGE_TABLE_ROWS_THRESHOLD + 1,
+          isLazy: true,
+          lazySortable: true,
+        })
+      )
+      // Unlike eager large tables, lazy large tables can still sort because
+      // sorting happens server-side.
+      expect(result.current.canSort).toBe(true)
+    })
+
+    it("disables editing in lazy mode", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({
+          ...defaultParams,
+          editingMode: DYNAMIC,
+          isLazy: true,
+        })
+      )
+      expect(result.current.canEdit).toBe(false)
+    })
+
+    it("defaults isLazy to false when not provided", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities(defaultParams)
+      )
+      expect(result.current.isLazy).toBe(false)
+    })
+  })
+
   describe("touch device capabilities", () => {
     it("returns isTouchDevice as boolean and touch-dependent flags are inversely related", () => {
       const { result } = renderHook(() =>

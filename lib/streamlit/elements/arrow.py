@@ -28,6 +28,7 @@ from typing import (
 )
 
 from streamlit import dataframe_util
+from streamlit.dataframe import source as dataframe_source
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
@@ -54,7 +55,12 @@ from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.proto.Dataframe_pb2 import (
+    Dataframe as DataframeProto,
+)
+from streamlit.proto.Dataframe_pb2 import (
+    LazyDataframe as LazyDataframeProto,
+)
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
@@ -473,6 +479,58 @@ def _validate_selection_state(
     return {"selection": validated_selection}
 
 
+def _get_dataframe_source_mgr() -> Any:
+    """Return the runtime's dataframe source manager, or ``None`` if no runtime.
+
+    Lazy delivery requires a running Streamlit server to serve chunk requests.
+    In bare "python myscript.py" mode there is no frontend, so callers fall back
+    to eager rendering.
+    """
+    from streamlit import runtime
+
+    if not runtime.exists():
+        return None
+    return runtime.get_instance().dataframe_source_mgr
+
+
+def _marshall_lazy_dataframe(
+    proto: DataframeProto,
+    source: dataframe_source.DataframeSource,
+    dg: DeltaGenerator,
+) -> bool:
+    """Register ``source`` and populate ``proto.lazy_data``.
+
+    Returns ``True`` if the source was registered and lazy metadata was set, or
+    ``False`` if lazy delivery is unavailable (no active runtime), in which case
+    the caller should fall back to eager rendering.
+    """
+    source_mgr = _get_dataframe_source_mgr()
+    if source_mgr is None:
+        return False
+
+    coordinates = dg._get_delta_path_str()
+    registered = source_mgr.register_source(
+        source, coordinates, page_size=dataframe_source.DEFAULT_PAGE_SIZE
+    )
+
+    lazy_data = proto.lazy_data
+    lazy_data.source_id = registered.source_id
+    lazy_data.generation = registered.generation
+    lazy_data.page_size = registered.page_size
+    lazy_data.initial_offset = 0
+    lazy_data.access_mode = LazyDataframeProto.AccessMode.RANDOM_ACCESS
+    lazy_data.sortable = source.sortable
+    lazy_data.row_count = source.row_count
+
+    # Serve the first page as the initial chunk. It carries the Arrow schema and
+    # the first visible rows so the frontend can render columns immediately.
+    initial_table = source.load_rows(0, registered.page_size)
+    lazy_data.initial_chunk.data = dataframe_util.convert_arrow_table_to_arrow_bytes(
+        initial_table
+    )
+    return True
+
+
 class ArrowMixin:
     @overload
     def dataframe(
@@ -491,6 +549,7 @@ class ArrowMixin:
         selection_default: DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        lazy: bool | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -510,6 +569,7 @@ class ArrowMixin:
         selection_default: DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        lazy: bool | None = None,
     ) -> DataframeState: ...
 
     @gather_metrics("dataframe")
@@ -529,6 +589,7 @@ class ArrowMixin:
         selection_default: DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        lazy: bool | None = None,
     ) -> DeltaGenerator | DataframeState:
         """Display a dataframe as an interactive table.
 
@@ -744,6 +805,34 @@ class ArrowMixin:
             leave a cell empty, use an empty string (``""``). Other common
             values are ``"null"``, ``"NaN"`` and ``"-"``.
 
+        lazy : bool or None
+            Whether to load rows lazily from the server instead of sending the
+            full dataset to the browser. This is useful for datasets that are
+            too large to render eagerly. This can be one of the following:
+
+            - ``None`` (default): Streamlit chooses automatically. Compatible
+              in-memory ``pandas`` and ``polars`` dataframes with more than
+              150,000 rows are delivered lazily. Everything else uses the
+              regular eager rendering (and the existing capped preview for
+              unevaluated data objects).
+            - ``True``: Force lazy delivery. Streamlit uses a native lazy
+              adapter when available (for example, a Polars ``LazyFrame`` or a
+              Snowpark dataframe) and otherwise converts a supported input to
+              an in-memory ``pandas.DataFrame`` and serves row ranges from
+              server memory. For small inputs (1,000 rows or fewer), Streamlit
+              keeps eager rendering as an optimization. If lazy delivery is
+              incompatible with the input or other options, Streamlit raises a
+              ``StreamlitAPIException``.
+            - ``False``: Never use lazy delivery. Streamlit uses the regular
+              eager rendering and the existing capped-preview behavior for
+              unevaluated data objects.
+
+            .. note::
+                In lazy mode, search, CSV download, selections (``on_select``),
+                and ``pandas.Styler`` styling are not supported. Server-side
+                sorting is supported. To use these features, set
+                ``lazy=False``.
+
         Returns
         -------
         element or dict
@@ -920,6 +1009,12 @@ class ArrowMixin:
             additional_allowed=["auto"],
         )
 
+        # Resolve whether this dataframe should be delivered lazily. This may
+        # raise a StreamlitAPIException for incompatible `lazy=True` requests.
+        lazy_source = dataframe_source.resolve_lazy_source(
+            data, lazy, is_selection_activated=is_selection_activated
+        )
+
         processed_column_config, button_columns = extract_button_column_configs(
             column_config
         )
@@ -945,7 +1040,24 @@ class ArrowMixin:
         column_names: list[str] = []
 
         has_range_index: bool = False
-        if isinstance(data, pa.Table):
+
+        # Try lazy delivery first. If there's no active runtime (e.g. bare
+        # "python myscript.py" mode), fall back to eager rendering below.
+        lazy_marshalled = False
+        if lazy_source is not None:
+            lazy_marshalled = _marshall_lazy_dataframe(proto, lazy_source, self.dg)
+            if lazy_marshalled:
+                apply_data_specific_configs(
+                    column_config_mapping, dataframe_util.determine_data_format(data)
+                )
+                num_rows = lazy_source.row_count
+                column_names = list(lazy_source.schema.names)
+
+        if lazy_marshalled:
+            # Lazy data is already marshalled into proto.lazy_data; the eager
+            # arrow_data field stays empty.
+            pass
+        elif isinstance(data, pa.Table):
             # For pyarrow tables, we can just serialize the table directly
             proto.arrow_data.data = dataframe_util.convert_arrow_table_to_arrow_bytes(
                 data

@@ -555,6 +555,11 @@ class ScriptRunner:
                 # download buttons/links to them present in the app, which will result
                 # in a 404 should the user click on them.
                 runtime.get_instance().media_file_mgr.clear_session_refs()
+                # Same reasoning for lazy dataframe sources: on a fragment rerun
+                # we keep references so sources outside the fragment stay valid.
+                # Sources re-registered by the fragment overwrite their previous
+                # generation, and orphaned sources are pruned after the run.
+                runtime.get_instance().dataframe_source_mgr.clear_session_refs()
 
             self._pages_manager.set_script_intent(
                 rerun_data.page_script_hash, rerun_data.page_name
@@ -883,6 +888,9 @@ class ScriptRunner:
         # Remove orphaned files now that the script has run and files in use
         # are marked as active.
         runtime.get_instance().media_file_mgr.remove_orphaned_files()
+
+        # Prune lazy dataframe sources that were not re-registered this run.
+        runtime.get_instance().dataframe_source_mgr.remove_orphaned_sources()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and
