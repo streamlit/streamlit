@@ -79,6 +79,7 @@ import { getAlertElementKind } from "~lib/components/elements/AlertElement/utils
 import ExceptionElement from "~lib/components/elements/ExceptionElement/ExceptionElement"
 import Help from "~lib/components/elements/Help/Help"
 import Markdown from "~lib/components/elements/Markdown/Markdown"
+import { AppSkeleton } from "~lib/components/elements/Skeleton/AppSkeleton"
 import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
 import TextElement from "~lib/components/elements/TextElement/TextElement"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
@@ -566,20 +567,43 @@ const RawElementNodeRenderer = (
         </ElementContainer>
       )
 
-    case "skeleton":
-      // Without this style, the skeleton width relies on the flex container that
-      // wraps the page contents having align-items: stretch. There was a regression
-      // where this default was changed. It is more robust to ensure that the skeleton
-      // has this width.
+    case "skeleton": {
+      const skeletonProto = node.element.skeleton as SkeletonProto
+      // AppSkeleton (internal full-page loading) uses FULL_WIDTH to fill the app container.
+      // Regular st.skeleton() uses LARGE_ELEMENT which respects the layout config's
+      // widthConfig and heightConfig from the public API.
+      const isAppSkeleton =
+        skeletonProto.style === SkeletonProto.SkeletonStyle.APP
+      // The public st.skeleton() API drives sizing through the layout config:
+      // when an explicit stretch/pixel/rem height is set, the container is
+      // sized and the skeleton fills it (100%). Otherwise it falls back to the
+      // default element height instead of collapsing in an auto-height
+      // container. The deprecated internal _skeleton() carries no layout config,
+      // so it always renders at the default element height.
+      const { heightConfig } = node.element
+      const fillContainerHeight = Boolean(
+        heightConfig?.useStretch ||
+        heightConfig?.pixelHeight ||
+        heightConfig?.remHeight
+      )
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.FULL_WIDTH}
+          config={
+            isAppSkeleton
+              ? ElementContainerConfig.FULL_WIDTH
+              : ElementContainerConfig.LARGE_ELEMENT
+          }
           isStale={isStale}
         >
-          <Skeleton element={node.element.skeleton as SkeletonProto} />
+          {isAppSkeleton ? (
+            <AppSkeleton />
+          ) : (
+            <Skeleton fillContainerHeight={fillContainerHeight} />
+          )}
         </ElementContainer>
       )
+    }
 
     case "snow":
       // Specifically use node.scriptRunId vs. scriptRunId from context

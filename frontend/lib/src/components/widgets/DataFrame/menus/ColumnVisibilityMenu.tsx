@@ -14,23 +14,29 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, ReactElement, useCallback, useEffect, useRef } from "react"
+
+import { FloatingFocusManager, FloatingPortal } from "@floating-ui/react"
+
+import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import {
-  LABEL_PLACEMENT,
-  STYLE_TYPE,
-  Checkbox as UICheckbox,
-} from "baseui/checkbox"
-import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
-
-import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
-
-import { StyledMenuDivider } from "./styled-components"
+  StyledCheckboxInput,
+  StyledCheckboxLabel,
+  StyledCheckboxMark,
+  StyledCheckboxRoot,
+  StyledColumnVisibilityMenuContent,
+  StyledColumnVisibilityMenuPanel,
+  StyledMenuDivider,
+} from "./styled-components"
 
 const NAMELESS_INDEX_NAME = "(index)"
+
+/** Margin between the popover and its anchor element. */
+const POPOVER_MARGIN = convertRemToPx("0.375rem")
 
 /**
  * Determines if a non-index column is effectively hidden by the configured column order.
@@ -49,13 +55,13 @@ function isHiddenViaColumnOrder(
 }
 
 interface CheckboxItemProps {
-  // The label to display for the checkbox.
+  /** The label to display for the checkbox. */
   label: string
-  // The initial value of the checkbox.
+  /** The initial value of the checkbox. */
   initialValue: boolean
-  // The state of the checkbox.
+  /** The state of the checkbox. */
   isIndeterminate?: boolean
-  // The callback that is called when the checkbox is checked/unchecked.
+  /** The callback that is called when the checkbox is checked/unchecked. */
   onChange: (checked: boolean) => void
 }
 
@@ -65,104 +71,63 @@ const CheckboxItem: React.FC<CheckboxItemProps> = ({
   isIndeterminate,
   onChange,
 }) => {
-  const theme = useEmotionTheme()
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Set the indeterminate property imperatively — it cannot be set via HTML attributes.
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.indeterminate = isIndeterminate ?? false
+    }
+  }, [isIndeterminate])
 
   return (
-    <UICheckbox
-      isIndeterminate={isIndeterminate}
-      checked={initialValue}
-      onChange={(e: React.ChangeEvent<HTMLInputElement>): void => {
-        onChange(e.target.checked)
-      }}
-      aria-label={label}
-      checkmarkType={STYLE_TYPE.default}
-      labelPlacement={LABEL_PLACEMENT.right}
-      overrides={{
-        Root: {
-          style: ({ $isFocusVisible }: { $isFocusVisible: boolean }) => ({
-            marginBottom: theme.spacing.none,
-            marginTop: theme.spacing.none,
-            paddingLeft: theme.spacing.md,
-            paddingRight: theme.spacing.md,
-            paddingTop: theme.spacing.twoXS,
-            paddingBottom: theme.spacing.twoXS,
-            backgroundColor: $isFocusVisible
-              ? theme.colors.darkenedBgMix25
-              : "",
-            display: "flex",
-            alignItems: "start",
-          }),
-        },
-        Checkmark: {
-          style: ({
-            $isFocusVisible,
-            $checked,
-            $isIndeterminate,
-          }: {
-            $isFocusVisible: boolean
-            $checked: boolean
-            $isIndeterminate: boolean
-          }) => {
-            const borderColor =
-              $checked || $isIndeterminate
-                ? theme.colors.primary
-                : theme.colors.borderColor
-
-            return {
-              outline: 0,
-              width: theme.sizes.checkbox,
-              height: theme.sizes.checkbox,
-              marginTop: theme.spacing.twoXS,
-              marginLeft: 0,
-              marginBottom: 0,
-              boxShadow:
-                $isFocusVisible && ($checked || $isIndeterminate)
-                  ? theme.shadows.focusRing
-                  : "",
-              borderLeftWidth: theme.sizes.borderWidth,
-              borderRightWidth: theme.sizes.borderWidth,
-              borderTopWidth: theme.sizes.borderWidth,
-              borderBottomWidth: theme.sizes.borderWidth,
-              borderLeftColor: borderColor,
-              borderRightColor: borderColor,
-              borderTopColor: borderColor,
-              borderBottomColor: borderColor,
-            }
-          },
-        },
-        Label: {
-          style: {
-            lineHeight: theme.lineHeights.small,
-            paddingLeft: theme.spacing.sm,
-            position: "relative",
-            color: theme.colors.bodyText,
-            fontSize: theme.fontSizes.sm,
-            fontWeight: theme.fontWeights.normal,
-          },
-        },
-      }}
-    >
-      {label}
-    </UICheckbox>
+    <StyledCheckboxRoot>
+      <StyledCheckboxInput
+        ref={inputRef}
+        type="checkbox"
+        checked={initialValue}
+        aria-label={label}
+        aria-checked={isIndeterminate ? "mixed" : undefined}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>): void => {
+          onChange(e.target.checked)
+        }}
+      />
+      <StyledCheckboxMark
+        aria-hidden="true"
+        data-checked={initialValue ? "true" : undefined}
+        data-indeterminate={isIndeterminate ? "true" : undefined}
+      >
+        {isIndeterminate ? (
+          <svg viewBox="0 0 10 2" aria-hidden="true">
+            <line x1="1" y1="1" x2="9" y2="1" />
+          </svg>
+        ) : initialValue ? (
+          <svg viewBox="0 0 10 8" aria-hidden="true">
+            <polyline points="1 4 4 7 9 1" />
+          </svg>
+        ) : null}
+      </StyledCheckboxMark>
+      <StyledCheckboxLabel>{label}</StyledCheckboxLabel>
+    </StyledCheckboxRoot>
   )
 }
 
 export interface ColumnVisibilityMenuProps {
-  // The columns to display in the menu.
+  /** The columns to display in the menu. */
   columns: BaseColumn[]
-  // The order of the columns.
+  /** The order of the columns. */
   columnOrder: string[]
-  // The callback to set the order of the columns.
+  /** The callback to set the order of the columns. */
   setColumnOrder: React.Dispatch<React.SetStateAction<string[]>>
-  // The callback to hide a column.
+  /** The callback to hide a column. */
   hideColumn: (columnId: string) => void
-  // The callback to show a column.
+  /** The callback to show a column. */
   showColumn: (columnId: string) => void
-  // The toolbar action that opens the menu.
+  /** The toolbar action that opens the menu. */
   children: React.ReactNode
-  // Whether the menu is open.
+  /** Whether the menu is open. */
   isOpen: boolean
-  // A callback called when the menu is closed.
+  /** A callback called when the menu is closed. */
   onClose: () => void
 }
 
@@ -179,8 +144,54 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   isOpen,
   onClose,
 }): ReactElement => {
-  const theme = useEmotionTheme()
   const scrollbarGutterSize = useScrollbarGutterSize()
+
+  const { refs, floatingStyles, context } = useFloatingOverlay({
+    open: isOpen,
+    placement: "bottom-end",
+    offsetPx: POPOVER_MARGIN,
+  })
+
+  // Local ref for the panel — needed for click-outside detection.
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  const setFloatingCallback = useCallback(
+    (node: HTMLDivElement | null) => {
+      panelRef.current = node
+      refs.setFloating(node)
+    },
+    [refs]
+  )
+
+  // Ref for the reference wrapper — needed to exclude it from click-outside detection.
+  // The parent's toggle handler manages open/close for clicks on the trigger.
+  const referenceRef = useRef<HTMLDivElement | null>(null)
+
+  // Click-outside and Escape handlers (only active when the menu is open).
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handlePointerDown = (e: PointerEvent): void => {
+      // Don't close if click is inside the panel or on the reference (trigger button).
+      // The reference exclusion prevents double-close with the parent's toggle handler.
+      if (panelRef.current?.contains(e.target as Node)) return
+      if (referenceRef.current?.contains(e.target as Node)) return
+      onClose()
+    }
+
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        e.stopPropagation()
+        onClose()
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown, true)
+    document.addEventListener("keydown", handleKeyDown, true)
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true)
+      document.removeEventListener("keydown", handleKeyDown, true)
+    }
+  }, [isOpen, onClose])
 
   // Determine column visibility based on hidden property and column order:
   const isColumnVisible = (c: BaseColumn): boolean =>
@@ -210,115 +221,81 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   }
 
   return (
-    <UIPopover
-      triggerType={TRIGGER_TYPE.click}
-      placement={PLACEMENT.bottomRight}
-      autoFocus={true}
-      focusLock={true}
-      content={() => (
-        <div
-          style={
-            {
-              paddingTop: theme.spacing.sm,
-              paddingBottom: theme.spacing.sm,
-              // Scrolling here so scrollbar is clipped by Body's border-radius
-              maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
-              overflow: "auto",
-              // Pass scrollbar gutter size to children via CSS custom property
-              "--scrollbar-gutter-size": `${scrollbarGutterSize}px`,
-            } as React.CSSProperties
-          }
-        >
-          <CheckboxItem
-            label={"Select all"}
-            isIndeterminate={isIndeterminate}
-            initialValue={allChecked}
-            onChange={checked => {
-              onSelectAll(checked)
-            }}
-          />
-          <StyledMenuDivider />
-          <div>
-            {columns.map(column => {
-              // A column can be hidden if configured in column config
-              // or if the user has configured a column order that doesn't
-              // include the column.
-              const hiddenViaColumnOrder = isHiddenViaColumnOrder(
-                column,
-                columnOrder
-              )
-
-              return (
-                <CheckboxItem
-                  key={column.id}
-                  label={
-                    !column.title && column.isIndex
-                      ? NAMELESS_INDEX_NAME
-                      : column.title
-                  }
-                  initialValue={
-                    !(column.isHidden === true || hiddenViaColumnOrder)
-                  }
-                  onChange={checked => {
-                    if (checked) {
-                      showColumn(column.id)
-                      if (hiddenViaColumnOrder) {
-                        // Add the column to the column order list:
-                        setColumnOrder((prevColumnOrder: string[]) => [
-                          ...prevColumnOrder,
-                          column.id,
-                        ])
-                      }
-                    } else {
-                      hideColumn(column.id)
-                    }
-                  }}
-                />
-              )
-            })}
-          </div>
-        </div>
-      )}
-      isOpen={isOpen}
-      onClickOutside={onClose}
-      onClick={() => (isOpen ? onClose() : undefined)}
-      onEsc={onClose}
-      ignoreBoundary={false}
-      overrides={{
-        Body: {
-          props: {
-            "data-testid": "stDataFrameColumnVisibilityMenu",
-          },
-          style: () => ({
-            ...getPopoverContainerStyle(theme),
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
-            backgroundColor: "transparent",
-            // Clip scrollbar within rounded corners
-            overflow: "hidden",
-          }),
-        },
-        Inner: {
-          style: () => ({
-            backgroundColor: theme.colors.bgColor,
-            color: theme.colors.bodyText,
-            fontSize: theme.fontSizes.sm,
-            fontWeight: theme.fontWeights.normal,
-            minWidth: theme.sizes.minMenuWidth,
-            maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,
-            // No scroll here - handled by content div so scrollbar is clipped
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
-          }),
-        },
+    <div
+      ref={(node: HTMLDivElement | null) => {
+        referenceRef.current = node
+        refs.setReference(node)
       }}
     >
-      {<div>{children}</div>}
-    </UIPopover>
+      {children}
+      {isOpen && (
+        <FloatingPortal>
+          <FloatingFocusManager context={context} initialFocus={panelRef}>
+            <StyledColumnVisibilityMenuPanel
+              ref={setFloatingCallback}
+              style={floatingStyles}
+              tabIndex={-1}
+              data-testid="stDataFrameColumnVisibilityMenu"
+            >
+              <StyledColumnVisibilityMenuContent
+                style={
+                  {
+                    // Pass scrollbar gutter size to children via CSS custom property
+                    "--scrollbar-gutter-size": `${scrollbarGutterSize}px`,
+                  } as React.CSSProperties
+                }
+              >
+                <CheckboxItem
+                  label={"Select all"}
+                  isIndeterminate={isIndeterminate}
+                  initialValue={allChecked}
+                  onChange={checked => {
+                    onSelectAll(checked)
+                  }}
+                />
+                <StyledMenuDivider />
+                <div>
+                  {columns.map(column => {
+                    const hiddenViaColumnOrder = isHiddenViaColumnOrder(
+                      column,
+                      columnOrder
+                    )
+
+                    return (
+                      <CheckboxItem
+                        key={column.id}
+                        label={
+                          !column.title && column.isIndex
+                            ? NAMELESS_INDEX_NAME
+                            : column.title
+                        }
+                        initialValue={
+                          !(column.isHidden === true || hiddenViaColumnOrder)
+                        }
+                        onChange={checked => {
+                          if (checked) {
+                            showColumn(column.id)
+                            if (hiddenViaColumnOrder) {
+                              // Add the column to the column order list:
+                              setColumnOrder((prevColumnOrder: string[]) => [
+                                ...prevColumnOrder,
+                                column.id,
+                              ])
+                            }
+                          } else {
+                            hideColumn(column.id)
+                          }
+                        }}
+                      />
+                    )
+                  })}
+                </div>
+              </StyledColumnVisibilityMenuContent>
+            </StyledColumnVisibilityMenuPanel>
+          </FloatingFocusManager>
+        </FloatingPortal>
+      )}
+    </div>
   )
 }
 

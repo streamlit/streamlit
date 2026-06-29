@@ -24,6 +24,7 @@ from e2e_playwright.shared.app_utils import (
     click_toggle,
     expect_prefixed_markdown,
     get_element_by_key,
+    reset_hovering,
     select_selectbox_option,
 )
 
@@ -145,6 +146,7 @@ def test_form_with_stretched_button(
     expect(submit_buttons).to_have_count(2)
 
     submit_button = submit_buttons.nth(0)
+    reset_hovering(themed_app)
     submit_button.hover()
     expect(themed_app.get_by_test_id("stTooltipContent")).to_have_text(
         "Submit by clicking"

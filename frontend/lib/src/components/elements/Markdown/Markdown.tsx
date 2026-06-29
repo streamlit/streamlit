@@ -37,7 +37,14 @@ const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
  * Functional element representing Markdown formatted text.
  */
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
-  const { allowHtml, body, elementType, help, unterminatedParsing } = element
+  const {
+    allowHtml,
+    body,
+    elementType,
+    help,
+    hideAnchors,
+    unterminatedParsing,
+  } = element
 
   const isCaption = elementType === MarkdownProto.Type.CAPTION
   const isLatex = elementType === MarkdownProto.Type.LATEX
@@ -57,6 +64,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           source={body}
           allowHTML={allowHtml}
           unterminatedParsing={unterminatedParsing}
+          hideAnchors={hideAnchors}
         />
       </BaseButtonTooltip>
     )
@@ -70,6 +78,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           source={body}
           allowHTML={allowHtml}
           unterminatedParsing={unterminatedParsing}
+          hideAnchors={hideAnchors}
         />
         <InlineTooltipIcon content={help} isLatex={isLatex} />
       </StyledLabelHelpWrapper>
@@ -85,6 +94,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           source={body}
           allowHTML={allowHtml}
           unterminatedParsing={unterminatedParsing}
+          hideAnchors={hideAnchors}
         />
         <InlineTooltipIcon content={help} />
       </StyledLabelHelpWrapper>
@@ -104,6 +114,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           allowHTML={allowHtml}
           helpText={help}
           unterminatedParsing={unterminatedParsing}
+          hideAnchors={hideAnchors}
         />
       </StyledLabelHelpWrapper>
     )

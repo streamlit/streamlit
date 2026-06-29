@@ -17,6 +17,7 @@ How you structure your app affects usability more than you think.
 | `@st.dialog` | You need a focused modal flow, such as confirmation, short editing, or settings that should temporarily interrupt the main page. |
 | `st.form` | You need to batch multiple widget inputs and rerun only when the user submits. |
 | `st.empty` | You need a placeholder that can be filled, replaced, or cleared later, including inserting elements out of order. |
+| `st.skeleton` | You need an animated loading placeholder that reserves space while content loads. Use it standalone like `st.empty` (replace it with content later) or as a context manager like `st.spinner` (auto-clears when the block exits). |
 | `st.chat_message` | You need a message container with chat-specific styling and avatars. See `chat-ui.md` for chat interface patterns. |
 | `st.bottom` | You need content pinned to the bottom of the main app area, commonly persistent chat input or bottom action controls. |
 | `st.space` | You need explicit vertical or horizontal spacing inside the current layout direction. |
@@ -107,9 +108,14 @@ with st.container(border=True):
     st.write("Grouped content here")
 ```
 
-## Placeholders with st.empty
+## Placeholders with st.empty or st.skeleton
 
-Use `st.empty()` when you need to reserve a slot and fill it later, replace one element with another, clear an element, or insert content out of order. The returned placeholder is a single-element container. If you need to replace a group of elements, put a child `st.container()` inside the placeholder.
+Use a placeholder when you need to reserve a slot and fill it later, replace one element with another, clear an element, or insert content out of order. Both return a single-element container; to replace a group of elements, put a child `st.container()` inside the placeholder.
+
+- `st.empty()` — a blank slot that shows nothing until you fill it.
+- `st.skeleton()` — an animated loading placeholder that reserves space and signals that content is loading.
+
+### st.empty
 
 ```python
 dataframe_slot = st.empty()
@@ -126,6 +132,30 @@ dataframe_slot.dataframe(df.iloc[start:end], width="stretch")
 ```
 
 This is useful when a control should appear below an element but the control's value is needed before that element renders, such as pagination below a dataframe. It also works for progress updates, temporary status messages, wizard-like flows, and cases where later code needs to render above content that has already been written. For persistent multi-element sections that do not need replacement, use `st.container()` instead.
+
+### st.skeleton
+
+`st.skeleton()` works like `st.empty()` but shows an animated loading placeholder. It can be used in two modes.
+
+Standalone (like `st.empty`): the skeleton appears immediately and is replaced when you call a method on the returned placeholder.
+
+```python
+placeholder = st.skeleton(height=200)
+data = load_data()  # Expensive work
+placeholder.dataframe(data)  # Replaces the skeleton with content
+```
+
+Context manager (like `st.spinner`, **recommended**): the skeleton appears while the `with` block runs (after a short delay) and clears automatically when the block exits. Any `st.*` calls inside the block render in the parent container and remain visible after the skeleton clears.
+
+```python
+with st.skeleton(height=200):
+    data = expensive_operation()
+st.success("Data loaded!")
+```
+
+Prefer context manager mode; use standalone mode only when you need to reserve a slot and fill it later (like `st.empty`).
+
+By default (`height=None`), the skeleton uses the standard element height. Pass an integer for a fixed pixel height, or `"stretch"` to fill a parent container with a bounded height.
 
 ## Dialogs for focused interactions
 

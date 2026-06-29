@@ -14,40 +14,50 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useState } from "react"
+import { memo, ReactElement, useEffect } from "react"
 
-import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
+import styled from "@emotion/styled"
+import { FloatingPortal } from "@floating-ui/react"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { StyledTooltipContentWrapper } from "~lib/components/shared/Tooltip/styled-components"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+
+/**
+ * Floating container rendered via FloatingPortal. Floating UI's floatingStyles
+ * (position: fixed + transform: translate) position it relative to the anchor.
+ * Fixed-position elements naturally shrink-wrap to content, so no explicit
+ * width is needed.
+ */
+const StyledDataFrameTooltipContainer = styled.div(({ theme }) => ({
+  zIndex: theme.zIndices.popup,
+  pointerEvents: "none",
+}))
 
 export interface TooltipProps {
-  // The top position of the tooltip.
+  /** The top position of the tooltip anchor (viewport coordinates). */
   top: number
-  // The left position of the tooltip.
+  /** The left position of the tooltip anchor (viewport coordinates). */
   left: number
-  // The markdown content of the tooltip.
+  /** The markdown content of the tooltip. */
   content: string
-  // Callback from useTooltips hook to clear the tooltip
+  /** Callback from useTooltips hook to clear the tooltip. */
   clearTooltip: () => void
 }
 
 /**
- * A tooltip that can be positioned anywhere on the screen.
+ * A tooltip that can be positioned anywhere on the screen using virtual
+ * viewport coordinates from glide-data-grid's onItemHovered event.
  *
- * This is mostly the same as the shared tooltip implementation, but
- * we cannot use that one since it is a StatefulTooltip and requires
- * a target component and cannot be triggered programmatically.
- * We need to be able to position the tooltip anywhere on the screen, so we use a Popover
- * instead. Since Popover doesn't support positioning to a virtual position,
- * we are using an invisible div as a workaround.
+ * An invisible fixed-position `<div>` serves as the Floating UI reference
+ * element. The tooltip content renders via FloatingPortal into document.body,
+ * escaping any stacking context inside the DataFrame container.
  *
- * @param top The top position of the tooltip.
- * @param left The left position of the tooltip.
- * @param content The markdown content of the tooltip.
- * @returns The tooltip react element.
+ * The component is always open while mounted — the parent (DataFrame.tsx)
+ * controls visibility by only rendering this component when tooltip content
+ * is present. Escape and click-outside both call clearTooltip() which causes
+ * the parent to unmount this component.
  */
 function Tooltip({
   top,
@@ -55,85 +65,68 @@ function Tooltip({
   content,
   clearTooltip,
 }: TooltipProps): ReactElement {
-  const [open, setOpen] = useState(true)
   const theme = useEmotionTheme()
-  const { colors, fontSizes, radii, fontWeights } = theme
 
-  const closeTooltip = useCallback((): void => {
-    setOpen(false)
-    clearTooltip()
-  }, [clearTooltip, setOpen])
+  const { refs, floatingStyles } = useFloatingOverlay({
+    open: true,
+    placement: "top",
+    offsetPx: 5,
+  })
+
+  // Dismiss on Escape or a pointer-down outside the tooltip content (capture
+  // phase, consistent with ColumnMenu pattern). Clicks inside the tooltip
+  // (e.g. to copy text or follow a link) do not dismiss it.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") clearTooltip()
+    }
+    const handlePointerDown = (e: Event): void => {
+      if (refs.floating.current?.contains(e.target as Node)) return
+      clearTooltip()
+    }
+
+    document.addEventListener("keydown", handleKeyDown, true)
+    document.addEventListener("pointerdown", handlePointerDown, true)
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true)
+      document.removeEventListener("pointerdown", handlePointerDown, true)
+    }
+  }, [clearTooltip, refs.floating])
 
   return (
-    <Popover
-      content={
-        <StyledTooltipContentWrapper data-testid="stDataFrameTooltipContent">
-          <StreamlitMarkdown
-            style={{ fontSize: fontSizes.sm }}
-            source={content}
-            allowHTML={false}
-          />
-        </StyledTooltipContentWrapper>
-      }
-      placement={PLACEMENT.top}
-      accessibilityType={ACCESSIBILITY_TYPE.tooltip}
-      showArrow={false}
-      popoverMargin={5}
-      onClickOutside={closeTooltip}
-      onEsc={closeTooltip}
-      overrides={{
-        Body: {
-          style: {
-            // This is annoying, but a bunch of warnings get logged when the
-            // shorthand version `borderRadius` is used here since the long
-            // names are used by BaseWeb and mixing the two is apparently
-            // bad :(
-            borderTopLeftRadius: radii.default,
-            borderTopRightRadius: radii.default,
-            borderBottomLeftRadius: radii.default,
-            borderBottomRightRadius: radii.default,
-
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
-
-            backgroundColor: "transparent",
-          },
-        },
-        Inner: {
-          style: {
-            backgroundColor: hasLightBackgroundColor(theme)
-              ? colors.bgColor
-              : colors.secondaryBg,
-            color: colors.bodyText,
-            fontSize: fontSizes.sm,
-            fontWeight: fontWeights.normal,
-            // See the long comment about `borderRadius`. The same applies here
-            // to `padding`.
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
-          },
-        },
-      }}
-      isOpen={open}
-    >
+    <>
+      {/*
+       * Invisible anchor div — gives Floating UI a real DOM reference element
+       * at the cell's viewport coordinates so autoUpdate and flip/shift
+       * middleware work correctly. Width/height 0 keeps it truly invisible.
+       */}
       <div
+        ref={refs.setReference}
         data-testid="stDataFrameTooltipTarget"
         style={{
-          // This is an invisible div that's used to position the tooltip.
-          // The position is provided from outside via the `top` and `left` properties.
-          // This a workaround for the fact that BaseWeb's Popover  doesn't support
-          // positioning to a virtual position and always requires a target
-          // component for positioning.
           position: "fixed",
           top,
           left,
+          width: 0,
+          height: 0,
         }}
-      ></div>
-    </Popover>
+      />
+      <FloatingPortal>
+        <StyledDataFrameTooltipContainer
+          ref={refs.setFloating}
+          style={floatingStyles}
+          role="tooltip"
+        >
+          <StyledTooltipContentWrapper data-testid="stDataFrameTooltipContent">
+            <StreamlitMarkdown
+              style={{ fontSize: theme.fontSizes.sm }}
+              source={content}
+              allowHTML={false}
+            />
+          </StyledTooltipContentWrapper>
+        </StyledDataFrameTooltipContainer>
+      </FloatingPortal>
+    </>
   )
 }
 
