@@ -341,6 +341,15 @@ const ResizableColumnsBlock = (
     [columnWidths]
   )
 
+  /**
+   * Resets all columns back to their original `spec` proportions. Clearing the
+   * measured widths makes the columns fall back to their natural flex-based
+   * sizing, which the layout effect then re-measures.
+   */
+  const resetColumnWidths = useCallback((): void => {
+    setColumnWidths(null)
+  }, [])
+
   return (
     <>
       {columns.map((columnNode, index): ReactElement => {
@@ -420,6 +429,7 @@ const ResizableColumnsBlock = (
                 aria-valuemax={100}
                 tabIndex={0}
                 onMouseDown={handleResizeStart}
+                onDoubleClick={resetColumnWidths}
                 onKeyDown={handleKeyDown}
               />
             )}

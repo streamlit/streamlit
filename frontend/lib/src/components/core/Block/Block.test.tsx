@@ -189,6 +189,60 @@ describe("FlexBoxContainer Block Component", () => {
     }
   })
 
+  it("should reset resizable column widths on double-click", () => {
+    const getBoundingClientRectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(() => ({
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: 100,
+        right: 300,
+        width: 300,
+        height: 100,
+        toJSON: () => ({}),
+      }))
+
+    try {
+      const block: BlockNode = makeVerticalBlock([
+        makeHorizontalBlockWithResizableColumns(3),
+      ])
+      renderWithContexts(makeVerticalBlockComponent(block))
+
+      const columns = screen.getAllByTestId("stColumn")
+      const handle = screen.getAllByTestId("stColumnResizeHandle")[0]
+
+      // Drag to change the column widths away from their spec proportions.
+      act(() => {
+        // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
+        fireEvent.mouseDown(handle, { clientX: 300 })
+      })
+      act(() => {
+        // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
+        fireEvent.mouseMove(window, { clientX: 360 })
+      })
+      act(() => {
+        // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
+        fireEvent.mouseUp(window)
+      })
+
+      expect(columns[0]).toHaveStyle("width: 360px")
+      expect(columns[1]).toHaveStyle("width: 240px")
+
+      // Double-clicking the handle should reset the columns back to their
+      // measured (spec) proportions, i.e. 300px each.
+      act(() => {
+        fireEvent.doubleClick(handle)
+      })
+
+      expect(columns[0]).toHaveStyle("width: 300px")
+      expect(columns[1]).toHaveStyle("width: 300px")
+    } finally {
+      getBoundingClientRectSpy.mockRestore()
+    }
+  })
+
   it("should add the user-specified key as class", () => {
     const block: BlockNode = makeVerticalBlock([], {
       id: "$$ID-899e9b72e1539f21f8e82565d36609d0-first container",
