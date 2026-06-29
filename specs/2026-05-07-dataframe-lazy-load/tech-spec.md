@@ -150,11 +150,11 @@ signatures.
 For remote unevaluated inputs, `lazy=True` must not silently materialize the full dataset just to
 use the pandas fallback. It should use a native adapter or raise a clear error.
 
-`lazy=True` always resolves to lazy mode for supported inputs, regardless of row count, so the
-flag is a predictable force flag rather than a hint. For small inputs (e.g. 1,000 rows or fewer)
-the source can place every row in the initial chunk so no follow-up chunk requests are needed,
-but the element is still rendered as a lazy source with lazy semantics. There is no silent eager
-fallback when `lazy=True` is set on a supported input.
+The forced-lazy small-data threshold is 1,000 rows. For inputs with 1,000 rows or fewer, the
+resolution logic should short-circuit to the eager path even when `lazy=True`, before normalizing
+to a lazy source. This is a deliberate optimization: lazy loading a small dataset only adds
+downsides (extra chunk round-trips and disabled lazy-incompatible features such as search) without
+reducing the already-bounded payload.
 
 ### Session Source Manager
 

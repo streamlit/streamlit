@@ -96,12 +96,11 @@ Semantics:
   dataframe and serve row slices from server memory. If lazy delivery conflicts with the input or
   options, raise a clear `StreamlitAPIException`.
 
-`lazy=True` always uses lazy mode when the input is supported, regardless of row count, so the
-flag stays a predictable force flag rather than a hint. For small inputs Streamlit may put every
-row into the initial chunk so no follow-up chunk requests are needed, but the dataframe still
-renders as a lazy source with consistent lazy semantics (server-side sorting, disabled search,
-etc.). Streamlit must not silently fall back to the eager path when `lazy=True` is set on a
-supported input.
+`lazy=True` requests lazy delivery, but for small inputs (1,000 rows or fewer) Streamlit keeps
+eager rendering as an optimization. Lazy loading a small dataset only adds downsides — extra
+chunk round-trips and disabled lazy-incompatible features such as search — without reducing the
+already-bounded payload. This small-data optimization is deliberate, documented behavior, not a
+silent fallback: for these inputs `lazy=True` renders a normal, fully featured eager dataframe.
 
 The pandas fallback for `lazy=True` reduces the initial frontend payload and browser memory
 usage. It does not reduce server memory usage or the cost of converting the input to pandas. For
@@ -190,7 +189,7 @@ sign-off before release. To keep a migration path:
   product sign-off and should be decided alongside the server-side search timeline.
 
 For smaller in-memory dataframes, Streamlit should keep eager rendering by default. Users can set
-`lazy=True` to force lazy delivery for any supported input regardless of size.
+`lazy=True` to force lazy delivery for inputs above the small-data threshold.
 
 ### 4. Advanced Custom Sources
 
