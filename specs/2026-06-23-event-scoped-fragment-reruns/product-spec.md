@@ -273,17 +273,15 @@ model exists to provide.
   targeted reruns are still client/script-initiated.
 - **Automatic dependency inference** (Shiny/Reflex-style "read a value → subscribe") — a much larger
   change to the execution model; not proposed here.
-- **Cross-fragment writes to outside containers** — tracked separately
-  ([#15413](https://github.com/streamlit/streamlit/issues/15413)).
 
 ## Checklist
 
 | Item                         | ✅ or comment          |
 |------------------------------|------------------------|
-| Works on SiS, Cloud, etc?    | Should — builds on existing fragment rerun + WebSocket delta path; needs cross-platform e2e (embedded/mobile) for multi-fragment passes. |
-| No breaking API changes      | ✅ — additive only; `st.rerun` gains an optional `target`, `st.fragment` gains an optional `key`. The future opt-in call-time `key` complement (A1) is also additive. The rejected always-on call-time `key` (A2) and signature-aware variants would break compat. |
+| Works on SiS, Cloud, etc?    | ✅ — the mechanism is internal to Streamlit's existing fragment-rerun model. |
+| No breaking API changes      | ✅ — additive only (`st.rerun` gains an optional `target`, `st.fragment` gains an optional `key`). |
 | No new dependencies          | ✅ |
-| Metrics collected            | TODO — track `st.rerun(target=...)` usage and cycle-detection triggers via `gather_metrics`. |
+| Metrics collected            | ✅ — add metrics for `st.rerun(target=...)`. |
 | Any security/legal impact?   | None identified. |
 | Any docs changes needed?     | Yes — `st.rerun` reference, fragment concept docs, and a "event-driven / partial updates" guide. |
 
