@@ -50,10 +50,11 @@ keyboards, and browser autofill can't recognize the field.
 
 **Consistency gap:**
 
-This builds directly on the `validate` parameter proposed in
+This builds directly on the `validate` parameter from
 [`specs/2025-12-03-text-input-validation`](../2025-12-03-text-input-validation/product-spec.md)
-(not yet merged). That spec already lists #6704 as motivation; specialized types are the ergonomic
-"front door" that makes common validations a one-liner.
+(the spec is merged; the feature isn't implemented yet). That spec already lists #6704 as
+motivation; specialized types are the ergonomic "front door" that makes common validations a
+one-liner.
 
 ## Proposal
 
@@ -134,9 +135,12 @@ the `st.text_input` mental model. Everything else either duplicates a dedicated 
 
 ### Smart defaults
 
-When a specialized type is selected and the user has **not** provided a value for `icon`,
-`placeholder`, `validate`, or `autocomplete`, the type fills in a sensible default. Any value the
-user passes always wins.
+When a specialized type is selected and the user hasn't supplied a value for `icon`,
+`placeholder`, `validate`, or `autocomplete`, the type fills in a sensible default. Any explicit
+value the user passes overrides that default — how an *omitted* argument, `None`, and an empty
+value (`""`) are distinguished (use-the-default vs. opt-out) is the subject of
+[Decision: "use the type default" vs. "no value"](#decision-use-the-type-default-vs-no-value)
+below.
 
 | `type` | Default `icon` | Default validation | Default `placeholder` | Default `autocomplete` |
 |--------|----------------|--------------------|-----------------------|------------------------|
@@ -156,7 +160,9 @@ Notes:
   skip validation). The *source* of the email/url check is a design decision — see
   [Validation source](#validation-source-native-validity-vs-regex) below.
 - **`placeholder`** examples are intentionally conservative format hints. This is the most debatable
-  default (see Out of scope); it can be dropped without affecting the rest.
+  default (see Out of scope); it can be dropped without affecting the rest. The `tel` example above
+  is US-formatted and illustrative only — final values (including a locale-neutral phone format) are
+  part of the deferred placeholder-default decision.
 - **`autocomplete`** maps to the standard HTML autocomplete tokens so browser autofill works. This
   extends the existing behavior where `type="password"` already defaults `autocomplete` to
   `"new-password"`. `search` defaults to `"off"` so private search terms don't leak into the
@@ -322,9 +328,10 @@ email = st.text_input(
 - **`bind="query-params"`:** allowed for `email`, `url`, `tel`, and `search` (only `password` is
   blocked, unchanged). The `search` type pairs naturally with query-param binding for shareable
   search URLs.
-- **Shipping before `validate` lands:** the `validate` parameter is specced but not yet merged. The
-  type values, native HTML type, icon, placeholder, and autocomplete defaults can ship
-  independently; the `validate` defaults are layered on once `validate` is available.
+- **Shipping before `validate` lands:** the `validate` parameter is specced but not yet implemented.
+  The type values, native HTML type, icon, placeholder, and autocomplete defaults can ship
+  independently; the `validate` defaults (including any default email/url validation) are layered on
+  only once `validate` is available — until then no default validation ships.
 
 ### Out of scope (future work)
 
@@ -373,6 +380,6 @@ email = st.text_input(
 | Works on SiS, Cloud, etc?    | ✅ Pure frontend rendering + existing widget plumbing |
 | No breaking API changes      | ✅ Additive `type` values; existing values unchanged |
 | No new dependencies          | ✅                      |
-| Metrics collected            | ✅ `type` value already captured via `gather_metrics("text_input")` |
-| Any security/legal impact?   | Client-side default validation can be bypassed; security-relevant checks must use server-side `validate` callables (inherited from the `validate` spec) |
+| Metrics collected            | `gather_metrics("text_input")` records that `type` is passed but not its literal value (string args log only `len:`); capturing per-type adoption needs explicit value tracking added during implementation |
+| Any security/legal impact?   | Client-side default validation can be bypassed, so security-relevant checks must use server-side `validate` callables (inherited from the `validate` spec). Default email/url validation only ships once `validate` is available, so there's no window where this guidance points to a missing feature |
 | Any docs changes needed?     | Yes — document the new `type` values and their smart defaults in the `st.text_input` reference |
