@@ -120,6 +120,17 @@ preserved. The only discipline this requires is that data shared across fragment
   re-running the script body, and the request layer already coalesces multiple fragment-rerun requests
   into one ordered pass. Targeted reruns mostly need an *addressing* layer on top.
 
+**Alternative parameter names considered:**
+
+- **Expanding `scope`** (e.g. `st.rerun(scope="fragment", key=...)`) — rejected: `scope` is the
+  app-vs-fragment *level* (a `Literal["app", "fragment"]`); overloading it to also carry *which*
+  fragment conflates two distinct concerns.
+- **`fragment=` / `fragments=`** — rejected: ties the name to fragments specifically and reads
+  awkwardly for the single-or-list case; `target` is neutral and works for one key or many.
+- **`key=`** — rejected: ambiguous on `st.rerun` ("the key of what?"). `target` states intent
+  ("rerun this target").
+- **`target`** (chosen) — reads clearly and leaves `scope` free for the app/fragment distinction.
+
 ### Addressing fragments
 
 To target a fragment, it needs a stable, user-facing name. Fragment identity today is an internal
@@ -289,8 +300,6 @@ model exists to provide.
 
 ## Open questions
 
-- **Parameter name:** `st.rerun(target=...)` vs reusing/expanding `scope`. `target` reads clearly and
-  leaves `scope` for the app/fragment distinction.
 - **Cycle handling:** detect-and-raise (preferred) vs a max-depth cap vs documentation only.
 - **Stale-state semantics:** confirm a targeted rerun always produces the same output a full rerun
   would (i.e., dependents must read from `session_state`); decide whether to warn when a fragment
