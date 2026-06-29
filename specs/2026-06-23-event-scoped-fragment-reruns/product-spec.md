@@ -146,30 +146,11 @@ Why this shape:
   Inventing*, and *Pythonic* (the decorator configures the function).
 - **Rerun-all is usually what's wanted** (a fragment shown in three tabs refreshes in all three), and
   it nudges good factoring — one fragment function per independently-updatable region.
-- **Loops / dynamic instances are still addressable individually.** Because `key` is just a string, a
-  developer who needs to target one instance among many gives each instance a distinct key — either by
-  defining the fragment inside the loop with a templated key, or by building a list of keyed fragments
-  and calling them by index:
-
-```python
-for row in rows:
-    @st.fragment(key=f"row_{row.id}")     # distinct key per instance
-    def render(row=row):
-        st.write(row)
-    render()
-
-st.rerun(target=f"row_{rows[3].id}")       # target just one instance
-```
-
-  So the per-function default doesn't *preclude* per-instance targeting — it just asks the developer
-  to make the per-instance name explicit. (Note `key` here names a *fragment*, which may be a function
-  or a per-iteration instance — slightly unlike widget `key`, which is always per-instance. A mild,
-  defensible *Same Name, Same Behavior* nuance.)
 
 #### Alternatives considered
 
 **Call-time `key` (per-instance addressing).** The name is passed where the fragment is *called*, so
-the same function can back many independently-addressable fragments (one per tab/row). Two variants:
+the same function can back many independently-addressable fragments. Two variants:
 
 ```python
 # A1: opt in via a decorator flag, then pass key at the call site
@@ -189,10 +170,9 @@ charts(key="charts")
   Evolution*).
 - **Why not the default:** versus the decorator `key`, call-time `key` loses on *Extend Before
   Inventing* (A1 needs a new `addressable` flag), *Simplicity* (two steps vs. one), and *Pythonic
-  Idioms* (a reserved call-time kwarg). Its main draw is more ergonomic per-instance targeting in
-  loops — but the decorator `key` already covers that with a templated key (shown above), so call-time
-  `key` is mostly sugar (and an instance's own widgets already trigger its own scoped rerun today). We
-  therefore keep **A1 as a possible future, opt-in convenience** rather than the default.
+  Idioms* (a reserved call-time kwarg), without a benefit compelling enough to justify a second calling
+  convention. We therefore keep **A1 as a possible future, opt-in convenience** rather than the
+  default.
 
 **Signature-aware call-time `key`** (rejected). Consume `key` as identity only if the user's function
 doesn't declare a `key` param, else forward it. Non-breaking and ergonomic, but the same argument means
