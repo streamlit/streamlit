@@ -300,7 +300,7 @@ model exists to provide.
 
 ## Open questions
 
-- **Cycle handling:** detect-and-raise (preferred) vs a max-depth cap vs documentation only.
-- **Stale-state semantics:** confirm a targeted rerun always produces the same output a full rerun
-  would (i.e., dependents must read from `session_state`); decide whether to warn when a fragment
-  reads a value that only exists in the skipped script body.
+- **Cycle handling (post-MVP).** The MVP leaves cycle-avoidance to the developer (see §2). Whether to
+  add automatic protection — and in what form (e.g. detect-and-raise, a max-rerun-depth cap, or
+  documentation only) — is a follow-up to explore. The options and their trade-offs have not been
+  evaluated yet, and this does not need to be resolved before releasing the feature.
