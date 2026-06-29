@@ -127,10 +127,17 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             # No in-memory entry: fall back to the persistence layer. Combining
             # persist with background refresh is rejected at decoration time, so
             # this fall-through is effectively unreachable; we keep it for
-            # completeness/symmetry with ``get``.
+            # completeness/symmetry with ``get``. The persist layer raises
+            # ``CacheStorageKeyNotFoundError`` here, so the success continuation
+            # below cannot be reached under background refresh.
             entry_bytes = self._persist_storage.get(key)
-            self._write_to_mem_cache(key, entry_bytes)
-            return entry_bytes, False
+            self._write_to_mem_cache(
+                key, entry_bytes
+            )  # pragma: no cover - background refresh excludes persist
+            return (
+                entry_bytes,
+                False,
+            )  # pragma: no cover - background refresh excludes persist
 
     def set(self, key: str, value: bytes) -> None:
         """Sets the value for a given key."""

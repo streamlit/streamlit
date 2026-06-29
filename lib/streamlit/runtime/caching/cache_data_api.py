@@ -591,12 +591,14 @@ class CacheDataAPI:
 
             ``refresh_type="background"`` requires a ``ttl`` and cannot be combined
             with ``persist``. Because background refreshes run without a script
-            context, ``st.*`` element calls inside the cached function are not
-            replayed for the background refresh, and no spinner is shown when a
-            stale value is returned. Unlike ``"foreground"``, stale entries are
-            retained (so they can be served while a refresh runs) and are not
-            evicted on expiration, so set ``max_entries`` when caching many
-            distinct keys to bound memory usage.
+            context, any ``st.*`` element output produced by the cached function is
+            not captured during a background refresh. As a result, after the first
+            background refresh this output is no longer replayed on cache hits until
+            the value is next recomputed in the foreground, and no spinner is shown
+            when a stale value is returned. Unlike ``"foreground"``, stale entries
+            are retained (so they can be served while a refresh runs) and are not
+            evicted on expiration, so set ``max_entries`` when caching many distinct
+            keys to bound memory usage.
 
         Examples
         --------
