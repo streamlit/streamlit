@@ -451,8 +451,15 @@ exclude = [
 unresolved-import = "ignore"
 possibly-unresolved-reference = "error"
 unused-type-ignore-comment = "ignore"
+
 # We type-check across multiple environments (e.g. min vs. max dependency
-# versions), so a `# ty: ignore` that is required in one environment can be
-# flagged as unused in another. Ignore unused `ty: ignore` directives to avoid
-# these unavoidable cross-environment false positives.
+# versions). In `image_utils.py`, the numpy stubs shipped with our minimum
+# supported versions don't narrow `isinstance(image, np.ndarray)` to
+# `npt.NDArray[Any]`, so two `# ty: ignore[invalid-argument-type]` directives
+# are required under the min env but flagged as unused under the max env.
+# Scope the exemption to just this file instead of disabling the rule globally.
+[[tool.ty.overrides]]
+include = ["lib/streamlit/elements/lib/image_utils.py"]
+
+[tool.ty.overrides.rules]
 unused-ignore-comment = "ignore"
