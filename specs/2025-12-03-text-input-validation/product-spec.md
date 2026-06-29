@@ -332,6 +332,30 @@ password = st.text_input(
   form submits with a single rerun—server-side validation does not trigger an extra per-field
   rerun inside forms.
 
+### Why not React Aria's built-in validation?
+
+The frontend `TextInput` renders React Aria's `TextField`/`Input`, which ships its own
+validation props (`pattern`, `isInvalid`, `validate`, `validationBehavior`). We intentionally
+implement validation ourselves instead of using them:
+
+- **`pattern`** — applies the native HTML `pattern` attribute, which is implicitly anchored to
+  the whole value and uses different regex semantics (no dotAll, `v`-flag Unicode). We instead
+  compile the regex with `us` flags and match with a non-anchored `.test()` to stay consistent
+  with `st.column_config.TextColumn`. Native `pattern` also only blocks submission for native
+  HTML forms, which Streamlit forms are not.
+- **`validate`** / **`validationBehavior`** — these integrate with React Aria's `Form`
+  context and native form submission. Streamlit forms are a custom abstraction, so we gate
+  submission through our own form-submit validators (`widgetMgr.addFormSubmitValidator`) and
+  our own per-widget commit pipeline rather than React Aria's.
+- **`isInvalid`** — React Aria's controlled-invalid prop would auto-wire `aria-invalid`, but we
+  already set `aria-invalid` and `aria-describedby` ourselves and render a custom error tooltip
+  (not React Aria's `FieldError`). Adopting it would be a cosmetic refactor with no added
+  capability.
+
+In short, these props are designed around native/React-Aria form validation, whereas this
+feature needs `TextColumn`-aligned regex semantics plus Streamlit's own commit and form-submit
+gating, so the custom implementation is the right fit.
+
 ### Future extensions
 
 This validation pattern can be extended to other input widgets:
