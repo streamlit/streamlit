@@ -133,6 +133,45 @@ the `st.text_input` mental model. Everything else either duplicates a dedicated 
 | `range` | Exclude | `st.slider` exists. |
 | `checkbox`, `radio`, `button`, `submit`, `reset`, `image`, `hidden` | Exclude | Not text fields, or conflict with existing widgets / control flow. |
 
+### Mobile keyboard hints (`inputMode` and `enterKeyHint`)
+
+Setting the native `type` raises a natural follow-on question — should we also set the related
+`inputMode` and `enterKeyHint` attributes per type? (The underlying
+[React Aria `TextField`](https://react-aria.adobe.com/TextField) forwards both as standard DOM props
+on its `<input>`, so either is straightforward to set.) **Recommendation: don't set `inputMode`, and
+don't auto-derive `enterKeyHint` in the MVP.**
+
+**`inputMode` — rely on the native `type`, don't set it.** The HTML `type` already selects the
+appropriate mobile virtual keyboard, so an explicit `inputMode` would be redundant and can even fight
+the browser default:
+
+| `type` | Mobile keyboard implied by the native type |
+|--------|--------------------------------------------|
+| `email` | text keyboard with visible `@` and `.` keys |
+| `url` | text keyboard with `/` and `.com` keys |
+| `tel` | numeric phone keypad |
+| `search` | text keyboard (often with a "search"/"go" return key) |
+
+This mirrors `st.number_input`, which deliberately omits `inputMode` and relies on the native
+`type="number"` keyboard (per its inline note referencing #8867). `inputMode` only earns its keep
+when a field stays `type="text"` but wants a *different* keyboard than the type implies (e.g.
+`type="text" inputmode="numeric"` for OTP/codes) — exactly the deferred `type="otp"` case in
+[Out of scope](#out-of-scope-future-work), not these types.
+
+**`enterKeyHint` — not implied by `type`; skip in MVP.** `enterKeyHint` only controls the *label* of
+the virtual keyboard's Return key (`enter`/`go`/`search`/`send`/`done`); it is **not** set by the
+input `type` (the lone fuzzy exception — `type="search"` showing a "search" key — is inconsistent
+across platforms). The honest hint depends on Streamlit's *Enter behavior*, not the input type:
+
+- Inside a form where Enter submits (`allowFormEnterToSubmit`), `"send"`/`"go"` would be accurate.
+- Outside a form, Enter just commits the value and reruns — there's no navigation, so the neutral
+  default is the most accurate, and `"go"`/`"done"` could mislead.
+
+Because the value is purely cosmetic and driven by form/submit context rather than the input type, we
+don't auto-derive it from `type` in the MVP. The one low-risk, type-aligned tweak we may include is
+`enterKeyHint="search"` for `type="search"`. General `enterKeyHint` control belongs with Streamlit's
+existing Enter-to-submit logic and is deferred (see [Out of scope](#out-of-scope-future-work)).
+
 ### Smart defaults
 
 When a specialized type is selected and the user hasn't supplied a value for `icon`,
@@ -347,6 +386,10 @@ email = st.text_input(
 - **`type="otp"` for one-time codes:** appealing but not an HTML input type — it would map to
   `type="text"` + `autocomplete="one-time-code"` + `inputmode="numeric"`. Worth considering as a
   follow-up if there's demand, since it doesn't fit the "native type" mental model of this spec.
+- **General `enterKeyHint` / custom mobile keyboard hints:** beyond an optional `enterKeyHint="search"`
+  for `type="search"`, setting or exposing `enterKeyHint` should align with Streamlit's Enter-to-submit
+  behavior (see [Mobile keyboard hints](#mobile-keyboard-hints-inputmode-and-enterkeyhint)) rather than
+  the input type, so it's deferred.
 - **Default `placeholder` values:** lowest-confidence default; we may ship types + icon + validation
   + autocomplete first and add placeholder defaults later based on feedback.
 - **`st.text_area` / `st.column_config.TextColumn` types:** the multi-line and table-cell variants
@@ -378,6 +421,10 @@ email = st.text_input(
   feature this builds on.
 - [MDN: HTML5 input types](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/HTML5_input_types)
   and the [WHATWG `input` element](https://html.spec.whatwg.org/multipage/input.html).
+- [React Aria `TextField`](https://react-aria.adobe.com/TextField) — the underlying component; its
+  `Input` forwards `type`, `inputMode`, and `enterKeyHint` as standard DOM props.
+- [MDN: `inputmode`](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/inputmode)
+  and [MDN: `enterkeyhint`](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/enterkeyhint).
 
 ## Checklist
 
