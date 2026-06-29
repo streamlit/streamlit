@@ -631,6 +631,7 @@ const StyledBaseToggleButton = styled(ToggleButton)(({ theme }) => ({
   fontWeight: theme.fontWeights.normal,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   background: theme.colors.bgColor,
+  color: theme.colors.bodyText,
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.base,
   height: theme.sizes.largeLogoHeight,

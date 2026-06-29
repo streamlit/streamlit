@@ -27,6 +27,7 @@ from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.navigation.page import StreamlitPage
 from streamlit.runtime.scriptrunner import RerunData
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class NewFragmentIdQueueTest(unittest.TestCase):
@@ -408,3 +409,70 @@ def test_st_switch_page_string_path_unknown_page_raises(
         switch_page("missing.py")
 
     ctx.script_requests.request_rerun.assert_not_called()
+
+
+@patch("pathlib.Path.is_file", MagicMock(return_value=True))
+class SwitchPageStreamlitPageValidationTest(DeltaGeneratorTestCase):
+    """Test that ``st.switch_page`` validates a passed ``StreamlitPage`` against
+    pages registered with ``st.navigation`` and raises when the source does not
+    match the registered page sharing the same URL pathname.
+
+    Regression coverage for https://github.com/streamlit/streamlit/issues/10572.
+    """
+
+    def test_streamlit_page_with_mismatched_file_path_raises(self) -> None:
+        """Switching to a ``StreamlitPage`` whose file path does not match the
+        page registered under the same ``url_path`` raises."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        bad_page = st.Page("other.py", url_path="foo")
+        with pytest.raises(StreamlitAPIException, match=r"different page is "):
+            st.switch_page(bad_page)
+
+    def test_streamlit_page_with_inferred_url_path_mismatch_raises(self) -> None:
+        """Switching to ``st.Page("foo.py")`` (url_path inferred as ``foo``)
+        raises when a different file is registered under ``url_path="foo"``."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        with pytest.raises(StreamlitAPIException, match=r"different page is "):
+            st.switch_page(st.Page("foo.py"))
+
+    def test_streamlit_page_callable_with_file_registered_raises(self) -> None:
+        """Switching to a callable-based ``StreamlitPage`` raises when the
+        registered page sharing its ``url_path`` is file-based."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        def some_callable() -> None:
+            pass
+
+        with pytest.raises(StreamlitAPIException, match=r"is a callable"):
+            st.switch_page(st.Page(some_callable, url_path="foo"))
+
+    def test_streamlit_page_matching_source_does_not_raise(self) -> None:
+        """A ``StreamlitPage`` whose source matches the registered page is
+        accepted by validation (no ``StreamlitAPIException`` raised)."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        matching = st.Page("page1.py", url_path="foo")
+        # Validation passes — the rerun side effect is harmless for this test.
+        st.switch_page(matching)
+
+    def test_streamlit_page_unregistered_url_path_does_not_raise(self) -> None:
+        """If no page with the given ``url_path`` is registered (no hash
+        collision), validation is skipped — preserving previous behavior for
+        apps that don't use ``st.navigation``."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        # url_path "bar" is not registered; hash lookup misses, so the
+        # validator silently passes and the rerun side effect proceeds.
+        st.switch_page(st.Page("other.py", url_path="bar"))

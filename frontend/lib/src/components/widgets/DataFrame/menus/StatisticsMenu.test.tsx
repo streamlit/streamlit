@@ -95,8 +95,7 @@ describe("StatisticsMenu", () => {
     column: numberColumn,
     data: mockQuiver,
     isOpen: true,
-    onMouseEnter: vi.fn(),
-    onMouseLeave: vi.fn(),
+    onOpenChange: vi.fn(),
   }
 
   beforeEach(() => {
@@ -419,8 +418,7 @@ describe("StatisticsMenu", () => {
         column={unsupportedColumn}
         data={mockQuiver}
         isOpen={true}
-        onMouseEnter={vi.fn()}
-        onMouseLeave={vi.fn()}
+        onOpenChange={vi.fn()}
       >
         <div data-testid="unsupported-trigger">Unsupported</div>
       </StatisticsMenu>

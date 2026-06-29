@@ -14,11 +14,11 @@ on:
         description: "Model to use for QA testing"
         required: false
         type: string
-        default: "claude-opus-4-7-thinking-xhigh"
+        default: "claude-opus-4-8-thinking-xhigh"
 
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
-  MODEL: ${{ github.event.inputs.model || 'claude-opus-4-7-thinking-xhigh' }}
+  MODEL: ${{ github.event.inputs.model || 'claude-opus-4-8-thinking-xhigh' }}
 
 jobs:
   check-secrets:

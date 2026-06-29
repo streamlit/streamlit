@@ -43,7 +43,7 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Restore pre-commit cache
         id: cache-pre-commit
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/pre-commit
           key: v1-pre-commit-${{ env.pythonLocation }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
