@@ -191,10 +191,14 @@ def on_filter_change():
     st.rerun(target="table")   # both queued into a single ordered rerun pass
 ```
 
-This deliberately avoids a declarative `depends_on=[...]` graph. A declared graph adds concepts
-(subscription direction, framework-managed ordering) that targeted reruns already cover, and it can't
-express *conditional* dependencies (`if expensive_input_changed: st.rerun(target="charts")`) that a
-plain function can. (Recorded under Out of Scope.)
+**Why not a declarative `depends_on=[...]` graph?** Targeted reruns and a declared dependency graph
+are two **mutually exclusive** ways to express the same thing — cross-fragment dependencies — so this
+is an either/or, and we choose targeted reruns. `depends_on` is *not* a later addition layered on top:
+once a fragment can call `st.rerun(target=...)`, a declared graph would be redundant. Targeted reruns
+also express *conditional* dependencies (`if expensive_input_changed: st.rerun(target="charts")`) that
+a static graph cannot, and they avoid introducing a new dependency concept (*Extend Before
+Inventing*). The one thing a declared graph would add is cycle detection *before* execution (see
+below) — which we judge insufficient to justify a second, overlapping mechanism.
 
 **The cycle problem.** Because this is imperative and developer-driven, nothing structurally prevents
 a fragment from triggering a rerun that (directly or transitively) triggers itself — an infinite rerun
@@ -207,8 +211,10 @@ create accidentally. Mitigations to decide during tech-spec:
   rather than hanging — *Fail Fast, Fail Helpfully*.
 - **Guidance.** Document that targeted reruns should be triggered by events/conditions, not
   unconditionally on every fragment run (mirroring existing `st.rerun` guidance).
-- A declarative graph would let us detect cycles *statically*, but that's a reason to revisit
-  `depends_on` later, not to ship it now.
+- **Static vs. runtime detection.** A declared `depends_on` graph could be checked for cycles *before*
+  execution; with imperative targets the edges are only known as fragments run, so we rely on
+  **runtime** detection. That's an acceptable trade — runtime detection is also more precise, flagging
+  only cycles that *actually* fire (a conditional self-target that terminates is not an error).
 
 ### 3. A full "event-based" mode: fragment reruns in widget callbacks
 
@@ -246,8 +252,6 @@ model exists to provide.
   background threads): [#9052](https://github.com/streamlit/streamlit/issues/9052),
   [#11665](https://github.com/streamlit/streamlit/issues/11665). This needs a separate push primitive;
   targeted reruns are still client/script-initiated.
-- **Declarative `depends_on=[...]` dependency graph** — revisit only if imperative composition proves
-  insufficient; would enable static cycle detection.
 - **Automatic dependency inference** (Shiny/Reflex-style "read a value → subscribe") — a much larger
   change to the execution model; not proposed here.
 - **Cross-fragment writes to outside containers** — tracked separately
