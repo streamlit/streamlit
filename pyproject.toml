@@ -451,3 +451,8 @@ exclude = [
 unresolved-import = "ignore"
 possibly-unresolved-reference = "error"
 unused-type-ignore-comment = "ignore"
+# We type-check across multiple environments (e.g. min vs. max dependency
+# versions), so a `# ty: ignore` that is required in one environment can be
+# flagged as unused in another. Ignore unused `ty: ignore` directives to avoid
+# these unavoidable cross-environment false positives.
+unused-ignore-comment = "ignore"

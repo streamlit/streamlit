@@ -316,7 +316,7 @@ def image_to_url(
 
     # Numpy Arrays (ie opencv)
     elif isinstance(image, np.ndarray):
-        image = _clip_image(_verify_np_shape(image), clamp)  # ty: ignore[invalid-argument-type, unused-ignore-comment]
+        image = _clip_image(_verify_np_shape(image), clamp)  # ty: ignore[invalid-argument-type]
 
         if channels == "BGR":
             if len(image.shape) == 3:
@@ -403,7 +403,7 @@ def marshall_images(
     if isinstance(image, (list, set, tuple)):
         images = list(image)  # ty: ignore[invalid-assignment]
     elif isinstance(image, np.ndarray) and len(image.shape) == 4:
-        images = _4d_to_list_3d(image)  # ty: ignore[invalid-argument-type, unused-ignore-comment]
+        images = _4d_to_list_3d(image)  # ty: ignore[invalid-argument-type]
     else:
         images = cast("Sequence[AtomicImage]", [image])
 
