@@ -174,19 +174,10 @@ table behavior:
 sorting and CSV download but still shows search UI. Auto-lazy additionally disables search since
 searching only loaded chunks would be misleading. This is an intentional user-visible behavior
 change for the first version in exchange for bounded initial payload and browser memory usage.
-Server-side search can restore search for auto-lazy dataframes in a later phase.
-
-**Rollout and Migration:** Because auto-lazy removes the search affordance from existing >150k-row
-dataframes without any code change, it is more than a purely additive change and needs explicit
-sign-off before release. To keep a migration path:
-
-- Gate auto-lazy for in-memory dataframes behind a config option (e.g.
-  `config.toml [dataframe] auto_lazy`). Users can disable it to restore today's eager large-table
-  behavior, including search, during the transition.
-- Explicit `lazy=True` / `lazy=False` always win over the config default, so opting into or out of
-  lazy delivery per element is never blocked by the global setting.
-- The default value of the config option (on vs. off for the first release) requires human
-  product sign-off and should be decided alongside the server-side search timeline.
+It only affects very large tables (>150k rows) where the search affordance is already limited,
+so it is a contained, non-breaking change rather than an API break, and users who want to keep
+the old behavior can set `lazy=False`. Server-side search can restore search for auto-lazy
+dataframes in a later phase.
 
 For smaller in-memory dataframes, Streamlit should keep eager rendering by default. Users can set
 `lazy=True` to force lazy delivery for inputs above the small-data threshold.
@@ -462,7 +453,7 @@ capability declarations are clearer and make unsupported UI states easier to exp
 | Item                         | ✅ or comment                                          |
 |------------------------------|--------------------------------------------------------|
 | Works on SiS, Cloud, etc?    | Yes, chunk loading stays server-side and session-bound |
-| No breaking API changes      | API additive; auto-lazy search removal is config-gated + needs sign-off |
+| No breaking API changes      | API additive; auto-lazy only changes search UI for >150k-row tables, opt out with lazy=False |
 | No new dependencies          | Yes, adapters use optional detection                   |
 | Metrics collected            | Track lazy source type, chunks loaded, errors, bytes   |
 | Any security/legal impact?   | Needs request/source id validation per session         |
