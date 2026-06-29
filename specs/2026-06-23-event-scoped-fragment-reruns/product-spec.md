@@ -102,6 +102,9 @@ st.selectbox(
 )
 ```
 
+`target` accepts a **single fragment key or a list of keys**; passing a list reruns all of them in one
+ordered pass.
+
 Crucially this stays on the right side of Streamlit's model: `st.rerun(target=...)` triggers a
 **re-evaluation** of the targeted fragment (it re-runs `charts()`), it does **not** hand the developer
 an imperative `chart.update(data)`. The UI remains a pure function of state, so determinism is
@@ -182,14 +185,13 @@ Behavior* violation.
 ### 2. Fragment dependencies
 
 Dependencies between fragments need **no new API**: a fragment (or a callback) expresses "when I
-change, update my dependents" by simply calling `st.rerun(target=...)` for them. Because the request
-layer coalesces multiple targeted reruns into one ordered pass, a single event can refresh several
-dependents together:
+change, update my dependents" by simply calling `st.rerun(target=...)` for them. Pass a list of keys
+(or issue several `st.rerun` calls, which the request layer coalesces) to refresh several dependents
+in one ordered pass:
 
 ```python
 def on_filter_change():
-    st.rerun(target="charts")
-    st.rerun(target="table")   # both queued into a single ordered rerun pass
+    st.rerun(target=["charts", "table"])   # both rerun in a single ordered pass
 ```
 
 Dependencies can also be *conditional*, because they're just code:
@@ -287,10 +289,6 @@ model exists to provide.
 
 ## Open questions
 
-- **Addressing:** ship the decorator `key` (rerun-all) alone first, or together with the call-time
-  `key` complement for instance-level targeting? Confirm the "rerun all call sites" semantics (and
-  behavior when a keyed fragment has zero or many call sites). Does `target` accept a single key, a
-  list of keys, or also a fragment handle object?
 - **Parameter name:** `st.rerun(target=...)` vs reusing/expanding `scope`. `target` reads clearly and
   leaves `scope` for the app/fragment distinction.
 - **Cycle handling:** detect-and-raise (preferred) vs a max-depth cap vs documentation only.
