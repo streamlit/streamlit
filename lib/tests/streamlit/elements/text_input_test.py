@@ -21,6 +21,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidBindValueError,
@@ -413,6 +414,47 @@ class TextInputTest(DeltaGeneratorTestCase):
             c2 = self.get_delta_from_queue().new_element.text_input
             id2 = c2.id
             assert id1 == id2
+
+    def test_validate_none_preserves_backwards_compatible_id(self):
+        """Test that an input without validation keeps the same widget ID as
+        before `validate` became part of the identity.
+
+        This guards against widget-ID churn on upgrade: a `validate=None`
+        placeholder must not contribute to the element ID, otherwise every
+        pre-existing text input would reset and lose its session state.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input(
+                label="Label",
+                key="text_input_key",
+                value="abc",
+                max_chars=50,
+            )
+            actual_id = self.get_delta_from_queue().new_element.text_input.id
+
+            # Reproduce the pre-`validate` identity computation (i.e. without
+            # the `validate` kwarg and using the old `key_as_main_identity`
+            # whitelist). For a keyed widget, dg-derived keys are dropped, so
+            # `dg=None` yields the same result as passing the real dg.
+            expected_id = compute_and_register_element_id(
+                "text_input",
+                user_key="text_input_key",
+                key_as_main_identity={"max_chars"},
+                dg=None,
+                label="Label",
+                value="abc",
+                max_chars=50,
+                type="default",
+                help=None,
+                autocomplete=None,
+                placeholder=str(None),
+                icon=None,
+                width="stretch",
+            )
+            assert actual_id == expected_id
 
     def test_bind_query_params_sets_query_param_key(self) -> None:
         """Test that bind='query-params' with a key sets query_param_key in proto."""

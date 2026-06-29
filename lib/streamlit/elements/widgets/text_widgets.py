@@ -426,6 +426,18 @@ class TextWidgetsMixin:
         value = str(value) if value is not None else None
         validate_regex, validate_message = _parse_text_input_validate(validate)
 
+        # Only contribute the validation regex to the element identity when
+        # validation is actually configured. This keeps element IDs (and thus
+        # widget state) stable across upgrades for the common case of inputs
+        # without validation, instead of hashing a `validate=None` placeholder
+        # that would reset every pre-existing text input on the first run after
+        # upgrade. When a regex is set, it still affects identity so that
+        # changing the regex resets the widget (its value may no longer be
+        # valid). The message is intentionally excluded since it is cosmetic.
+        validate_identity_kwarg = (
+            {"validate": validate_regex} if validate_regex is not None else {}
+        )
+
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
@@ -443,8 +455,8 @@ class TextWidgetsMixin:
             autocomplete=autocomplete,
             placeholder=str(placeholder),
             icon=icon,
-            validate=validate_regex,
             width=width,
+            **validate_identity_kwarg,
         )
 
         session_state = get_session_state().filtered_state
