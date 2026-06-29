@@ -1270,6 +1270,44 @@ describe("ChatInput widget", () => {
       expect(stopScriptMock).toHaveBeenCalledTimes(1)
     })
 
+    it("defers a stop click until the triggered run starts", async () => {
+      const user = userEvent.setup()
+      const stopScriptMock = vi.fn()
+      const props = getProps({
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_STOP,
+      })
+
+      const { rerenderWithContexts } = renderWithContexts(
+        <ChatInput {...props} />,
+        {
+          scriptRunContext: {
+            scriptRunState: ScriptRunState.NOT_RUNNING,
+            stopScript: stopScriptMock,
+          },
+        }
+      )
+
+      // Submit. The stop button appears immediately, while the app is still
+      // NOT_RUNNING (the submission sends the rerun request directly).
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "Hello{enter}")
+
+      // Click stop before the server reports the run as running. stopScript is a
+      // no-op while NOT_RUNNING, so the request must be deferred, not dropped.
+      const stopButton = screen.getByTestId("stChatInputStopButton")
+      await user.click(stopButton)
+      expect(stopScriptMock).not.toHaveBeenCalled()
+
+      // Once the run starts, the deferred stop is flushed exactly once.
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+          stopScript: stopScriptMock,
+        },
+      })
+      expect(stopScriptMock).toHaveBeenCalledTimes(1)
+    })
+
     it("reverts to a disabled submit button once a stop has been requested", async () => {
       const user = userEvent.setup()
       const props = getProps({

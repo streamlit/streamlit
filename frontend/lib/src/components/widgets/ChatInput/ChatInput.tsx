@@ -470,6 +470,38 @@ function ChatInput({
     wasDisabledDuringRunRef.current = isDisabledDuringRun
   }, [isDisabledDuringRun, disabled])
 
+  // In "stop" mode the stop button is shown the moment the user submits, before
+  // the server reports the triggered run as running: a submission sends the
+  // rerun request directly without first moving the app into RERUN_REQUESTED.
+  // `stopScript` is a no-op while the app is still NOT_RUNNING, so a stop click
+  // in that window would be silently dropped. We remember the intent and flush
+  // it once the run actually starts (effect below).
+  const pendingStopRef = useRef(false)
+  const handleStopClick = useCallback((): void => {
+    if (
+      scriptRunState === ScriptRunState.RUNNING ||
+      scriptRunState === ScriptRunState.RERUN_REQUESTED
+    ) {
+      // The run is already active, so stop it immediately.
+      stopScript()
+      return
+    }
+    // The triggered run has not started yet; defer the stop until it does.
+    pendingStopRef.current = true
+  }, [scriptRunState, stopScript])
+
+  // Flush a deferred stop request once the run the user wanted to stop starts.
+  useEffect(() => {
+    if (
+      pendingStopRef.current &&
+      (scriptRunState === ScriptRunState.RUNNING ||
+        scriptRunState === ScriptRunState.RERUN_REQUESTED)
+    ) {
+      pendingStopRef.current = false
+      stopScript()
+    }
+  }, [scriptRunState, stopScript])
+
   // eslint-disable-next-line react-hooks/preserve-manual-memoization -- dropHandlerRef is a ref, setFiles is a stable setter
   const handleRetry = useCallback((fileInfo: UploadFileInfo): void => {
     if (!fileInfo.file || fileInfo.status.type !== "error") {
@@ -657,6 +689,9 @@ function ChatInput({
 
       // Track submission for submit_mode behavior
       if (submitMode !== ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT) {
+        // A new submission starts a fresh run scope, so drop any stop intent
+        // left over from a previous (never-started) run.
+        pendingStopRef.current = false
         // `fragmentId` is an empty string for top-level (non-fragment) widgets
         // because it comes from a protobuf string field. Normalize falsy values
         // to null so the run-scope matcher treats them as full-script runs.
@@ -937,7 +972,7 @@ function ChatInput({
   const renderActionButton = (): React.ReactElement =>
     showStopButton ? (
       <StyledSendIconButton
-        onClick={stopScript}
+        onClick={handleStopClick}
         disabled={disabled}
         data-testid="stChatInputStopButton"
         aria-label="Stop script"
