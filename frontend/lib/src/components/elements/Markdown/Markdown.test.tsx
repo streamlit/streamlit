@@ -64,6 +64,31 @@ describe("Markdown element", () => {
   })
 })
 
+describe("Markdown headings with anchors", () => {
+  it("renders the anchor link icon and heading id by default", () => {
+    const props = getProps({ body: "# My Heading" })
+    render(<Markdown {...props} />)
+
+    const heading = screen.getByRole("heading", { name: "My Heading" })
+    expect(heading).toHaveAttribute("id", "my-heading")
+    // The hover-revealed anchor link is in the DOM (visibility is controlled by hover CSS).
+    expect(
+      screen.getByRole("link", { name: "Link to heading" })
+    ).toBeInTheDocument()
+  })
+
+  it("keeps heading id but hides the anchor link icon when hideAnchors is set", () => {
+    const props = getProps({ body: "# My Heading", hideAnchors: true })
+    render(<Markdown {...props} />)
+
+    const heading = screen.getByRole("heading", { name: "My Heading" })
+    expect(heading).toHaveAttribute("id", "my-heading")
+    expect(
+      screen.queryByRole("link", { name: "Link to heading" })
+    ).not.toBeInTheDocument()
+  })
+})
+
 describe("Markdown element with help", () => {
   it("renders markdown with help tooltip as expected", async () => {
     const user = userEvent.setup()
@@ -211,6 +236,59 @@ describe("Markdown element with help", () => {
     expect(helpContent).toHaveTextContent("array]")
     expect(helpContent).toHaveTextContent("Next line")
     expect(helpContent).toHaveTextContent("bold")
+  })
+
+  it("renders single-line HTML body with help as an icon and no literal :help[] text (gh-15211)", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      body: "<p>an example</p>",
+      allowHtml: true,
+      help: "HTML help tooltip",
+    })
+    render(<Markdown {...props} />)
+
+    expect(await screen.findByText("an example")).toBeVisible()
+
+    // The literal ":help[]" must not leak into the rendered output.
+    const markdown = screen.getByTestId("stMarkdown")
+    expect(markdown).not.toHaveTextContent(":help[]")
+
+    await user.hover(screen.getByTestId("stTooltipHoverTarget"))
+
+    const helpContent = await screen.findByTestId("stTooltipContent")
+    expect(helpContent).toBeVisible()
+    expect(helpContent).toHaveTextContent("HTML help tooltip")
+  })
+
+  it("renders multi-line HTML body with help as an icon (gh-15211)", async () => {
+    const props = getProps({
+      body: "<div>\n<p>line 1</p>\n<p>line 2</p>\n</div>",
+      allowHtml: true,
+      help: "HTML help tooltip",
+    })
+    render(<Markdown {...props} />)
+
+    expect(await screen.findByText("line 1")).toBeVisible()
+    expect(screen.getByText("line 2")).toBeVisible()
+
+    const markdown = screen.getByTestId("stMarkdown")
+    expect(markdown).not.toHaveTextContent(":help[]")
+    expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
+  })
+
+  it("renders LaTeX body with help via the LaTeX branch (anti-regression)", () => {
+    const props = getProps({
+      body: "\\KaTeX",
+      elementType: MarkdownProto.Type.LATEX,
+      allowHtml: false,
+      help: "LaTeX help tooltip",
+    })
+    render(<Markdown {...props} />)
+
+    // LaTeX branch must render the inline tooltip icon, not inject :help[].
+    const markdown = screen.getByTestId("stMarkdown")
+    expect(markdown).not.toHaveTextContent(":help[]")
+    expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
   })
 })
 

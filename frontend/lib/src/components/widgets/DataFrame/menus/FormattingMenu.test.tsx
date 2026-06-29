@@ -14,31 +14,12 @@
  * limitations under the License.
  */
 
-import type { ReactElement } from "react"
-
-import { screen, waitFor } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
 
 import FormattingMenu, { FormattingMenuProps } from "./FormattingMenu"
-
-/**
- * Renders FormattingMenu and waits for the popover to fully mount.
- * Baseui's Popover performs internal async state updates (focus/positioning),
- * which can cause act() warnings if not awaited.
- */
-async function renderAndWaitForPopover(
-  ui: ReactElement
-): Promise<ReturnType<typeof render>> {
-  const result = render(ui)
-  await waitFor(() => {
-    expect(
-      screen.queryByTestId("stDataFrameColumnFormattingMenu")
-    ).toBeInTheDocument()
-  })
-  return result
-}
 
 describe("DataFrame FormattingMenu", () => {
   const defaultChildren = <div>Trigger</div>
@@ -46,8 +27,7 @@ describe("DataFrame FormattingMenu", () => {
   const defaultProps: Omit<FormattingMenuProps, "children"> = {
     columnKind: "number",
     isOpen: true,
-    onMouseEnter: vi.fn(),
-    onMouseLeave: vi.fn(),
+    onOpenChange: vi.fn(),
     onChangeFormat: vi.fn(),
     onCloseMenu: vi.fn(),
   }
@@ -56,8 +36,8 @@ describe("DataFrame FormattingMenu", () => {
     vi.clearAllMocks()
   })
 
-  it("renders number format options when columnKind is number", async () => {
-    await renderAndWaitForPopover(
+  it("renders number format options when columnKind is number", () => {
+    render(
       <FormattingMenu {...defaultProps}>{defaultChildren}</FormattingMenu>
     )
 
@@ -71,8 +51,8 @@ describe("DataFrame FormattingMenu", () => {
     expect(screen.getByText("Accounting")).toBeInTheDocument()
   })
 
-  it("renders datetime format options when columnKind is datetime", async () => {
-    await renderAndWaitForPopover(
+  it("renders datetime format options when columnKind is datetime", () => {
+    render(
       <FormattingMenu {...defaultProps} columnKind="datetime">
         {defaultChildren}
       </FormattingMenu>
@@ -89,8 +69,8 @@ describe("DataFrame FormattingMenu", () => {
     expect(screen.queryByText("Scientific")).not.toBeInTheDocument()
   })
 
-  it("renders date format options when columnKind is date", async () => {
-    await renderAndWaitForPopover(
+  it("renders date format options when columnKind is date", () => {
+    render(
       <FormattingMenu {...defaultProps} columnKind="date">
         {defaultChildren}
       </FormattingMenu>
@@ -105,8 +85,8 @@ describe("DataFrame FormattingMenu", () => {
     expect(screen.queryByText("Calendar")).not.toBeInTheDocument()
   })
 
-  it("renders time format options when columnKind is time", async () => {
-    await renderAndWaitForPopover(
+  it("renders time format options when columnKind is time", () => {
+    render(
       <FormattingMenu {...defaultProps} columnKind="time">
         {defaultChildren}
       </FormattingMenu>
@@ -123,7 +103,6 @@ describe("DataFrame FormattingMenu", () => {
 
   it("renders no format options for unknown column kind", () => {
     // When columnKind is unknown, the component returns an empty fragment
-    // and there's no popover to wait for
     render(
       <FormattingMenu {...defaultProps} columnKind="unknown">
         {defaultChildren}
@@ -136,7 +115,7 @@ describe("DataFrame FormattingMenu", () => {
   })
 
   it("calls onChangeFormat and onCloseMenu when clicking a format option", async () => {
-    await renderAndWaitForPopover(
+    render(
       <FormattingMenu {...defaultProps}>{defaultChildren}</FormattingMenu>
     )
 
@@ -148,14 +127,31 @@ describe("DataFrame FormattingMenu", () => {
     expect(defaultProps.onCloseMenu).toHaveBeenCalled()
   })
 
-  it("renders children as trigger element", async () => {
+  it("renders children as trigger element", () => {
     const triggerText = "Custom Trigger"
-    await renderAndWaitForPopover(
+    render(
       <FormattingMenu {...defaultProps}>
         <div>{triggerText}</div>
       </FormattingMenu>
     )
 
     expect(screen.getByText(triggerText)).toBeInTheDocument()
+  })
+
+  it("calls onOpenChange(true) when pointer enters the anchor", async () => {
+    const onOpenChange = vi.fn()
+    render(
+      <FormattingMenu
+        {...defaultProps}
+        isOpen={false}
+        onOpenChange={onOpenChange}
+      >
+        {defaultChildren}
+      </FormattingMenu>
+    )
+
+    const anchor = screen.getByRole("presentation")
+    await userEvent.hover(anchor)
+    expect(onOpenChange).toHaveBeenCalledWith(true)
   })
 })

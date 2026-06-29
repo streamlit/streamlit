@@ -23,6 +23,7 @@ from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.session_manager import SessionStorage
 from streamlit.runtime.stats import CounterStat, GaugeStat, Stat
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
+from streamlit.testing.v1.util import patch_config_options
 
 
 class MockSessionStorage(SessionStorage):
@@ -593,3 +594,246 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         # Duration from connect (0) to disconnect (5) = 5 seconds
         # Duration from reconnect (6) to close (16) = 10 seconds
         assert self._get_stat_value(stats, "session_duration_seconds") == 15
+
+
+_USER_ATTRS = {"server.unsafeMetricsUserAttributes": ["email"]}
+
+
+@patch(
+    "streamlit.runtime.app_session.asyncio.get_running_loop",
+    new=MagicMock(),
+)
+@patch("streamlit.runtime.app_session.LocalSourcesWatcher", new=MagicMock())
+@patch("streamlit.runtime.app_session.ScriptRunner", new=MagicMock())
+@patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+@patch(
+    "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+    new=MagicMock(),
+)
+@patch("streamlit.runtime.app_session.AppSession.request_script_stop", new=MagicMock())
+@patch(
+    "streamlit.runtime.app_session.AppSession.register_file_watchers", new=MagicMock()
+)
+class WebsocketSessionManagerUserMetricsTests(unittest.TestCase):
+    """Tests for per-user session-event metrics in WebsocketSessionManager."""
+
+    def setUp(self) -> None:
+        self.session_mgr = WebsocketSessionManager(
+            session_storage=MockSessionStorage(),
+            uploaded_file_manager=MagicMock(),
+            script_cache=MagicMock(),
+            message_enqueued_callback=MagicMock(),
+        )
+
+    def connect_session(
+        self,
+        user_info: dict[str, str | bool | None] | None = None,
+        existing_session_id: str | None = None,
+        session_id_override: str | None = None,
+    ) -> str:
+        return self.session_mgr.connect_session(
+            client=MagicMock(),
+            script_data=ScriptData("/fake/script_path.py", is_hello=False),
+            user_info={} if user_info is None else user_info,
+            existing_session_id=existing_session_id,
+            session_id_override=session_id_override,
+        )
+
+    @staticmethod
+    def _user_event_series(
+        stats: dict[str, list[Stat]],
+    ) -> dict[frozenset[tuple[str, str]], int]:
+        """Map each user_session_events series to {frozenset(labels): value}."""
+        series: dict[frozenset[tuple[str, str]], int] = {}
+        for stat in stats.get("user_session_events", []):
+            assert isinstance(stat, CounterStat)
+            assert stat.labels is not None
+            series[frozenset(stat.labels.items())] = stat.value
+        return series
+
+    def test_disabled_default_emits_no_user_family(self) -> None:
+        """With the default empty option, no user_session_events family is emitted."""
+        session_id = self.connect_session(user_info={"email": "alice@example.com"})
+        self.session_mgr.disconnect_session(session_id)
+        self.session_mgr.close_session(session_id)
+
+        stats = self.session_mgr.get_stats()
+        assert "user_session_events" not in stats
+        # The default endpoint shape is unchanged (still the original 3 families).
+        assert len(stats) == 3
+
+    def test_enabled_records_connect(self) -> None:
+        """A fresh connect records a connect event labeled with the user's email."""
+        with patch_config_options(_USER_ATTRS):
+            self.connect_session(user_info={"email": "alice@example.com"})
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        assert series == {
+            frozenset({("email", "alice@example.com"), ("type", "connect")}): 1
+        }
+
+    def test_enabled_records_full_lifecycle(self) -> None:
+        """connect -> disconnect -> reconnect -> close records each event type."""
+        with patch_config_options(_USER_ATTRS):
+            session_id = self.connect_session(user_info={"email": "alice@example.com"})
+            self.session_mgr.disconnect_session(session_id)
+            self.connect_session(
+                user_info={"email": "alice@example.com"},
+                existing_session_id=session_id,
+            )
+            self.session_mgr.close_session(session_id)
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        email = ("email", "alice@example.com")
+        assert series[frozenset({email, ("type", "connect")})] == 1
+        assert series[frozenset({email, ("type", "disconnect")})] == 1
+        assert series[frozenset({email, ("type", "reconnect")})] == 1
+        assert series[frozenset({email, ("type", "close")})] == 1
+
+    def test_missing_attribute_becomes_empty_string(self) -> None:
+        """A configured attribute absent from user_info yields an empty-string label."""
+        with patch_config_options(_USER_ATTRS):
+            self.connect_session(user_info={})
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        assert series == {frozenset({("email", ""), ("type", "connect")}): 1}
+
+    def test_multiple_users_tracked_independently(self) -> None:
+        """Distinct users produce distinct labeled series."""
+        with patch_config_options(_USER_ATTRS):
+            self.connect_session(user_info={"email": "alice@example.com"})
+            self.connect_session(user_info={"email": "bob@example.com"})
+            self.connect_session(user_info={"email": "alice@example.com"})
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        assert (
+            series[frozenset({("email", "alice@example.com"), ("type", "connect")})]
+            == 2
+        )
+        assert (
+            series[frozenset({("email", "bob@example.com"), ("type", "connect")})] == 1
+        )
+
+    def test_reordered_config_attributes_share_series(self) -> None:
+        """Same label set with config attrs reordered must not emit duplicate series."""
+        user_info = {"email": "alice@example.com", "user_name": "alice"}
+        with patch_config_options(
+            {"server.unsafeMetricsUserAttributes": ["email", "user_name"]}
+        ):
+            self.connect_session(user_info=user_info)
+
+        with patch_config_options(
+            {"server.unsafeMetricsUserAttributes": ["user_name", "email"]}
+        ):
+            self.connect_session(user_info=user_info)
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        assert series == {
+            frozenset(
+                {
+                    ("email", "alice@example.com"),
+                    ("user_name", "alice"),
+                    ("type", "connect"),
+                }
+            ): 2
+        }
+
+    def test_families_filter_returns_only_user_family(self) -> None:
+        """Requesting only user_session_events returns just that family."""
+        with patch_config_options(_USER_ATTRS):
+            self.connect_session(user_info={"email": "alice@example.com"})
+            stats = self.session_mgr.get_stats(family_names=["user_session_events"])
+
+        assert set(stats.keys()) == {"user_session_events"}
+
+    def test_active_close_records_close_not_disconnect(self) -> None:
+        """Closing an active session (no prior disconnect) records close, not disconnect."""
+        with patch_config_options(_USER_ATTRS):
+            session_id = self.connect_session(user_info={"email": "alice@example.com"})
+            self.session_mgr.close_session(session_id)
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        email = ("email", "alice@example.com")
+        assert series[frozenset({email, ("type", "connect")})] == 1
+        assert series[frozenset({email, ("type", "close")})] == 1
+        assert frozenset({email, ("type", "disconnect")}) not in series
+
+    def test_runtime_disable_stops_emission_but_pops_cache(self) -> None:
+        """Disabling at runtime stops new events but the identity cache is still popped."""
+        with patch_config_options(_USER_ATTRS):
+            session_id = self.connect_session(user_info={"email": "alice@example.com"})
+            assert session_id in self.session_mgr._session_user_labels
+
+        # Now disabled (default empty option). Disconnect + close should not record
+        # new per-user events, but must still pop the cached identity.
+        self.session_mgr.disconnect_session(session_id)
+        self.session_mgr.close_session(session_id)
+        assert session_id not in self.session_mgr._session_user_labels
+
+        with patch_config_options(_USER_ATTRS):
+            stats = self.session_mgr.get_stats()
+        series = self._user_event_series(stats)
+        email = ("email", "alice@example.com")
+        assert series.get(frozenset({email, ("type", "connect")})) == 1
+        assert frozenset({email, ("type", "disconnect")}) not in series
+        assert frozenset({email, ("type", "close")}) not in series
+
+    def test_identity_refreshed_on_reconnect(self) -> None:
+        """A changed identity on reconnect attributes later events to the new identity."""
+        with patch_config_options(_USER_ATTRS):
+            session_id = self.connect_session(user_info={"email": "alice@example.com"})
+            self.session_mgr.disconnect_session(session_id)
+            self.connect_session(
+                user_info={"email": "bob@example.com"},
+                existing_session_id=session_id,
+            )
+            self.session_mgr.close_session(session_id)
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        # The close (after reconnect as bob) is attributed to bob, not alice.
+        assert series[frozenset({("email", "bob@example.com"), ("type", "close")})] == 1
+        assert (
+            frozenset({("email", "alice@example.com"), ("type", "close")}) not in series
+        )
+
+    def test_fail_open_on_malformed_user_info(self) -> None:
+        """A user_info whose .get raises must not break the session lifecycle."""
+
+        class BadUserInfo(dict):
+            def get(self, *args: object, **kwargs: object) -> object:
+                raise ValueError("boom")
+
+        with patch_config_options(_USER_ATTRS):
+            # connect_session must not raise despite the malformed user_info.
+            session_id = self.connect_session(user_info=BadUserInfo())
+            self.session_mgr.disconnect_session(session_id)
+            self.session_mgr.close_session(session_id)
+
+            # No event was recorded since label resolution failed.
+            stats = self.session_mgr.get_stats()
+        assert self._user_event_series(stats) == {}
+
+    def test_disconnect_does_not_leak_identity_cache(self) -> None:
+        """A disconnect without reconnect/close must drop the cached identity.
+
+        Disconnected sessions can be silently evicted from storage without an
+        explicit close, so retaining the identity past disconnect would leak.
+        """
+        with patch_config_options(_USER_ATTRS):
+            session_id = self.connect_session(user_info={"email": "alice@example.com"})
+            assert session_id in self.session_mgr._session_user_labels
+            self.session_mgr.disconnect_session(session_id)
+            # The identity cache is bounded: the entry is gone after disconnect.
+            assert session_id not in self.session_mgr._session_user_labels
+
+            # The disconnect was still attributed to the connect-time user.
+            series = self._user_event_series(self.session_mgr.get_stats())
+        email = ("email", "alice@example.com")
+        assert series[frozenset({email, ("type", "disconnect")})] == 1

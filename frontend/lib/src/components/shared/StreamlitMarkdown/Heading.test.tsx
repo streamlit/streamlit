@@ -42,7 +42,11 @@ const getHeadingProps = (
 })
 
 describe("Heading", () => {
-  it("renders properly after a new line", { timeout: 10_000 }, async () => {
+  beforeAll(async () => {
+    await import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
+  }, 30_000)
+
+  it("renders properly after a new line", async () => {
     const props = getHeadingProps()
     render(<Heading {...props} />)
 
@@ -50,9 +54,7 @@ describe("Heading", () => {
     expect(heading).toHaveTextContent("hello world")
     expect(heading).not.toHaveTextContent("this is a new line")
 
-    // Wait for the lazy-loaded code block to render
     await screen.findByText("this is a new line")
-    expect(screen.getByText("this is a new line")).toBeInTheDocument()
     expect(screen.getAllByTestId("stMarkdownContainer")).toHaveLength(1)
 
     const headingElement = screen.getByTestId("stHeading")

@@ -357,7 +357,7 @@ class HeadingMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
     @staticmethod
@@ -376,7 +376,7 @@ class HeadingMixin:
             "rainbow",
         ]
         if divider in valid_colors:
-            return cast("str", divider)  # ty: ignore[redundant-cast]
+            return divider
         raise StreamlitAPIException(
             f"Divider parameter has invalid value: `{divider}`. Please choose from: {', '.join(valid_colors)}."
         )

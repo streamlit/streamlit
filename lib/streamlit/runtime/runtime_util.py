@@ -29,9 +29,17 @@ _LOGGER: Final = getLogger(__name__)
 
 # The interval (in seconds) between message flush cycles in the runtime event loop.
 # Also reused by callers that need to wait for outstanding messages to be delivered
-# before requesting a rerun (e.g. `st.switch_page`). Note: message batching is
-# enforced at the queue level (flush_browser_queue), not via this sleep interval.
-MESSAGE_FLUSH_INTERVAL_SECS: Final[float] = 0.001
+# before requesting a rerun (e.g. `st.switch_page`).
+#
+# Message coalescing is implemented at the queue level (`_maybe_compose_delta_msgs`),
+# but this interval is the window during which it can happen. A small non-zero value
+# is important for single-element placeholders like `st.empty` and `st.skeleton`:
+# when a placeholder is shown and then replaced within the same run, both deltas
+# share a delta_path and coalesce into the final element, so the browser never
+# renders the intermediate state. A too-small interval can flush the placeholder
+# first and briefly unmount/remount the real element (e.g. flash a skeleton) on
+# reruns.
+MESSAGE_FLUSH_INTERVAL_SECS: Final[float] = 0.005
 
 
 class MessageSizeError(MarkdownFormattedException):

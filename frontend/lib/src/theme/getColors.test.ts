@@ -19,6 +19,7 @@ import { transparentize } from "color2k"
 import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 
 import {
+  computeDerivedColors,
   getDividerColors,
   getMarkdownTextColors,
   getThemeBackgroundColors,
@@ -26,6 +27,30 @@ import {
   resolveNamedBackgroundColor,
   resolveNamedColor,
 } from "./getColors"
+
+describe("computeDerivedColors", () => {
+  it.each([
+    ["light", lightTheme],
+    ["dark", darkTheme],
+  ])("derives the darkenedBgMix opacity variants for %s theme", (_, theme) => {
+    const result = computeDerivedColors(theme.emotion.colors)
+
+    // The darkenedBgMixXX tokens are darkenedBgMix100 at decreasing opacity
+    // (the number suffix is the approximate opacity percentage).
+    expect(result.darkenedBgMix40).toBe(
+      transparentize(result.darkenedBgMix100, 0.6)
+    )
+    expect(result.darkenedBgMix25).toBe(
+      transparentize(result.darkenedBgMix100, 0.75)
+    )
+    expect(result.darkenedBgMix15).toBe(
+      transparentize(result.darkenedBgMix100, 0.85)
+    )
+
+    // darkenedBgMix40 is more opaque (less transparent) than darkenedBgMix25.
+    expect(result.darkenedBgMix40).not.toBe(result.darkenedBgMix25)
+  })
+})
 
 describe("getDividerColors", () => {
   describe("light theme", () => {

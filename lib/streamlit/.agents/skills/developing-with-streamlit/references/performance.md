@@ -1,4 +1,3 @@
-
 # Streamlit performance
 
 Performance is the biggest win. Without caching and fragments, your app reruns everything on every interaction.
@@ -49,6 +48,7 @@ def load_reference_data():
 ```
 
 **Guidelines:**
+
 - Real-time dashboards → `ttl="1m"` or less
 - Metrics/reports → `ttl="5m"` to `ttl="15m"`
 - Reference data → `ttl="1h"` or more
@@ -97,6 +97,7 @@ live_metrics()
 ```
 
 For auto-refreshing metrics, use `run_every`:
+
 ```python
 @st.fragment(run_every="30s")
 def auto_refresh_metrics():
@@ -106,6 +107,62 @@ auto_refresh_metrics()
 ```
 
 Use for: live metrics, refresh buttons, interactive charts that don't affect global state.
+
+### Parallel fragments
+
+Use `parallel=True` to run independent fragments concurrently during full app reruns. Each parallel fragment is dispatched to a thread pool, so multiple slow operations overlap instead of running sequentially.
+
+```python
+# BAD: Three slow queries run sequentially (~9s total)
+@st.fragment
+def revenue():
+    st.metric("Revenue", query_revenue())  # ~3s
+
+@st.fragment
+def users():
+    st.metric("Users", query_users())  # ~3s
+
+@st.fragment
+def orders():
+    st.metric("Orders", query_orders())  # ~3s
+
+revenue()
+users()
+orders()
+
+# GOOD: Three slow queries run concurrently (~3s total)
+@st.fragment(parallel=True)
+def revenue():
+    st.metric("Revenue", query_revenue())
+
+@st.fragment(parallel=True)
+def users():
+    st.metric("Users", query_users())
+
+@st.fragment(parallel=True)
+def orders():
+    st.metric("Orders", query_orders())
+
+revenue()
+users()
+orders()
+```
+
+**When to use `parallel=True`:**
+
+- Independent, slow operations (DB queries, API calls, model inference)
+- Multiple fragments that don't depend on each other's output
+
+**When NOT to use:**
+
+- Fragments that depend on each other's Session State writes
+
+**Thread safety rules:**
+
+- Each parallel fragment should write to its own Session State keys
+- Avoid unsynchronized mutations of shared mutable objects across fragments
+
+Note: `parallel=True` applies to full-app reruns; `run_every` triggers fragment-scoped reruns, which execute sequentially.
 
 ## Forms to batch interactions
 
@@ -138,6 +195,7 @@ with st.form("search", border=False):
 ```
 
 **When to use forms:**
+
 - Multiple related inputs (signup, filters, settings)
 - Text inputs where typing triggers expensive operations
 - Any UI where "submit" semantics make sense
@@ -218,9 +276,19 @@ if st.toggle("Show advanced options"):
 ## Pre-computation
 
 Move expensive work outside the main flow:
+
 - Compute aggregations in SQL/dbt, not Python
 - Pre-compute metrics in scheduled jobs
 - Use materialized views for complex queries
+
+## Perceived performance (loading states)
+
+The techniques above reduce _actual_ work. When a wait is unavoidable, give immediate loading feedback so the app _feels_ responsive. These don't speed up computation — pair them with caching and fragments. See `layouts.md` for details:
+
+- `st.spinner` — lightweight indicator wrapped around a block of slow work.
+- `st.skeleton` — animated placeholder that reserves layout space while content loads.
+- `st.progress` — determinate progress bar when you can report percent complete (e.g., looping over a known number of steps).
+- `st.status` — progress and intermediate output for multi-step, long-running tasks.
 
 ## References
 

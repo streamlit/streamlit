@@ -110,6 +110,18 @@ class StreamlitAuthError(StreamlitAPIException):  # pragma: no cover - trivial s
     pass
 
 
+class StreamlitMissingAuthlibError(StreamlitAuthError):
+    """Raised when authentication features are used but Authlib is not installed
+    (or is older than the minimum supported version).
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Authentication requires Authlib>=1.3.2. "
+            "Install it via `pip install streamlit[auth]`."
+        )
+
+
 class StreamlitDuplicateElementId(
     DuplicateWidgetID
 ):  # pragma: no cover - simple f-string
@@ -201,7 +213,7 @@ class StreamlitInvalidSidebarStateError(LocalizableStreamlitException):
 
     def __init__(self, initial_sidebar_state: str) -> None:
         super().__init__(
-            '`initial_sidebar_state` must be `"auto"`, `"expanded"`, `"collapsed"`, '
+            '`initial_sidebar_state` must be `"auto"`, `"expanded"`, `"collapsed"`, `"locked"`, '
             'or a positive integer for width in pixels (got `"{initial_sidebar_state}"`)',
             initial_sidebar_state=initial_sidebar_state,
         )
@@ -542,13 +554,6 @@ class BidiComponentUnserializableDataError(LocalizableStreamlitException):
 
 
 # policies
-class StreamlitFragmentWidgetsNotAllowedOutsideError(LocalizableStreamlitException):
-    """Exception raised when the fragment attempts to write to an element outside of its container."""
-
-    def __init__(self) -> None:
-        super().__init__("Fragments cannot write widgets to outside containers.")
-
-
 class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
     """Exception raised a `on_change` callback is set on any element in a form except for
     the `st.form_submit_button`.

@@ -15,6 +15,7 @@
  */
 
 import { screen } from "@testing-library/react"
+import { enableMapSet, enablePatches } from "immer"
 
 import { Button as SubmitButtonProto } from "@streamlit/protobuf"
 
@@ -27,6 +28,11 @@ import {
 } from "~lib/WidgetStateManager"
 
 import Form, { Props } from "./Form"
+import { FormSubmitButton } from "./FormSubmitButton"
+
+// Required by ImmerJS
+enablePatches()
+enableMapSet()
 
 describe("Form", () => {
   function getProps(props: Partial<Props> = {}): Props {
@@ -61,6 +67,62 @@ describe("Form", () => {
     const formElement = screen.getByTestId("stForm")
     expect(formElement).toBeInTheDocument()
     expect(formElement).toHaveClass("stForm")
+  })
+
+  it("does not show missing submit button error when submit button registers after form renders", () => {
+    const formId = "mockFormId"
+    let formsData = createFormsData()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: vi.fn(),
+      formsDataChanged: newData => {
+        formsData = newData
+      },
+    })
+
+    const submitButtonElement = SubmitButtonProto.create({
+      id: "submit-button-id",
+      label: "Submit",
+      formId,
+    })
+
+    const { rerenderWithContexts } = renderWithContexts(
+      <Form {...getProps({ formId, widgetMgr })}>
+        <FormSubmitButton
+          disabled={false}
+          element={submitButtonElement}
+          widgetMgr={widgetMgr}
+        />
+      </Form>,
+      {
+        formsContext: {
+          formsData,
+        },
+        scriptRunContext: {
+          scriptRunId: "script run 123",
+          scriptRunState: ScriptRunState.RUNNING,
+        },
+      }
+    )
+
+    rerenderWithContexts(
+      <Form {...getProps({ formId, widgetMgr })}>
+        <FormSubmitButton
+          disabled={false}
+          element={submitButtonElement}
+          widgetMgr={widgetMgr}
+        />
+      </Form>,
+      {
+        formsContext: {
+          formsData,
+        },
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+        },
+      }
+    )
+
+    expect(screen.queryByText("Missing Submit Button")).not.toBeInTheDocument()
   })
 
   it("shows error if !hasSubmitButton && scriptRunState==NOT_RUNNING", () => {

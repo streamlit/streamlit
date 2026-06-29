@@ -37,7 +37,14 @@ const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
  * Functional element representing Markdown formatted text.
  */
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
-  const { allowHtml, body, elementType, help, unterminatedParsing } = element
+  const {
+    allowHtml,
+    body,
+    elementType,
+    help,
+    hideAnchors,
+    unterminatedParsing,
+  } = element
 
   const isCaption = elementType === MarkdownProto.Type.CAPTION
   const isLatex = elementType === MarkdownProto.Type.LATEX
@@ -57,6 +64,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           source={body}
           allowHTML={allowHtml}
           unterminatedParsing={unterminatedParsing}
+          hideAnchors={hideAnchors}
         />
       </BaseButtonTooltip>
     )
@@ -70,8 +78,25 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           source={body}
           allowHTML={allowHtml}
           unterminatedParsing={unterminatedParsing}
+          hideAnchors={hideAnchors}
         />
         <InlineTooltipIcon content={help} isLatex={isLatex} />
+      </StyledLabelHelpWrapper>
+    )
+  } else if (help && allowHtml) {
+    // For raw HTML with help, render the inline tooltip icon directly:
+    // CommonMark's HTML-block rule swallows a trailing `:help[]` directive
+    // appended to block-level HTML (gh-15211).
+    content = (
+      <StyledLabelHelpWrapper>
+        <StreamlitMarkdown
+          isCaption={isCaption}
+          source={body}
+          allowHTML={allowHtml}
+          unterminatedParsing={unterminatedParsing}
+          hideAnchors={hideAnchors}
+        />
+        <InlineTooltipIcon content={help} />
       </StyledLabelHelpWrapper>
     )
   } else {
@@ -89,6 +114,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           allowHTML={allowHtml}
           helpText={help}
           unterminatedParsing={unterminatedParsing}
+          hideAnchors={hideAnchors}
         />
       </StyledLabelHelpWrapper>
     )

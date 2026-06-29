@@ -25,8 +25,9 @@ import {
   useState,
 } from "react"
 
+import { Cancel } from "@emotion-icons/material-rounded"
 import { Minus, Plus } from "@emotion-icons/open-iconic"
-import { Input as UIInput } from "baseui/input"
+import { TextField } from "react-aria-components"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
@@ -51,10 +52,13 @@ import {
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  StyledClearButton,
   StyledInputContainer,
   StyledInputControl,
   StyledInputControls,
+  StyledInputElement,
   StyledInstructionsContainer,
+  StyledStartEnhancer,
 } from "./styled-components"
 import {
   canDecrement,
@@ -160,7 +164,7 @@ const NumberInput: React.FC<Props> = ({
 
   // Additional local state for UI interactions
   const [isFocused, setIsFocused] = useState(false)
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const id = useId()
 
   const inForm = isInForm({ formId: elementFormId })
@@ -210,6 +214,14 @@ const NumberInput: React.FC<Props> = ({
     [min, max, elementDefault, formatCurrentValue, setValueWithSource]
   )
 
+  // When the widget has no default, the user can clear the value to null.
+  // `clearable` is false when disabled, so the clear button is never shown in that state.
+  const clearable = isNullOrUndefined(element.default) && !disabled
+
+  const handleClear = useCallback(() => {
+    commitValue({ value: null, fromUi: true })
+  }, [commitValue])
+
   const handleFocus = useCallback((): void => {
     setIsFocused(true)
   }, [])
@@ -233,10 +245,8 @@ const NumberInput: React.FC<Props> = ({
     return undefined
   }, [])
 
-  const clearable = isNullOrUndefined(element.default) && !disabled
-
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
       const { value: targetValue } = e.target
 
       if (targetValue === "") {
@@ -303,7 +313,7 @@ const NumberInput: React.FC<Props> = ({
   }, [currentNumericValue, max, step, canDec, commitValue])
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+    (e: React.KeyboardEvent<HTMLInputElement>): void => {
       const { key } = e
 
       switch (key) {
@@ -315,26 +325,31 @@ const NumberInput: React.FC<Props> = ({
           e.preventDefault()
           decrement()
           break
+        case "Escape":
+          // Replaces BaseWeb's clearOnEscape — clear the value when widget has no default.
+          if (clearable) {
+            e.preventDefault()
+            handleClear()
+          }
+          break
+        case "Enter":
+          if (dirty) {
+            // When committing, if currentNumericValue is null (empty input),
+            // commitValue will fall back to elementDefault
+            commitValue({ value: currentNumericValue, fromUi: true })
+          }
+          if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
+            widgetMgr.submitForm(elementFormId, fragmentId)
+          }
+          break
         default:
       }
     },
-    [increment, decrement]
-  )
-
-  const handleKeyPress = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
-      if (e.key === "Enter") {
-        if (dirty) {
-          // When committing, if currentNumericValue is null (empty input),
-          // commitValue will fall back to elementDefault
-          commitValue({ value: currentNumericValue, fromUi: true })
-        }
-        if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
-          widgetMgr.submitForm(elementFormId, fragmentId)
-        }
-      }
-    },
     [
+      increment,
+      decrement,
+      clearable,
+      handleClear,
       dirty,
       currentNumericValue,
       commitValue,
@@ -348,7 +363,7 @@ const NumberInput: React.FC<Props> = ({
   // is same when input controls hidden
   const iconAdjustment =
     // Account for icon size + its left/right padding
-    convertRemToPx(theme.iconSizes.lg) +
+    convertRemToPx(theme.iconSizes.base) +
     2 * convertRemToPx(theme.spacing.twoXS)
 
   const hideControlsBreakpoint = convertRemToPx(
@@ -376,148 +391,100 @@ const NumberInput: React.FC<Props> = ({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <StyledInputContainer
-        className={isFocused ? "focused" : ""}
-        data-testid="stNumberInputContainer"
-      >
-        <UIInput
-          type="number"
-          inputRef={inputRef}
-          value={formattedValue ?? ""}
-          placeholder={element.placeholder}
-          onBlur={handleBlur}
-          onFocus={handleFocus}
-          onChange={handleChange}
-          onKeyPress={handleKeyPress}
-          onKeyDown={handleKeyDown}
-          clearable={clearable}
-          clearOnEscape={clearable}
-          disabled={disabled}
-          aria-label={element.label}
-          startEnhancer={
-            element.icon && (
+      {/*
+       * We use React Aria's generic TextField rather than NumberField as
+       * NumberField manages display formatting exclusively through
+       * Intl.NumberFormat (formatOptions), which is incompatible with the
+       * printf-style format strings supported by st.number_input's `format`
+       * parameter (e.g. "%0.2f", "%e", "%g").
+       */}
+      <TextField isDisabled={disabled} aria-label={element.label}>
+        <StyledInputContainer
+          $isFocused={isFocused}
+          data-testid="stNumberInputContainer"
+        >
+          {element.icon && (
+            <StyledStartEnhancer
+              $isMaterialIcon={isMaterialIcon(element.icon)}
+            >
               <DynamicIcon
                 data-testid="stNumberInputIcon"
                 iconValue={element.icon}
-                size="lg"
+                size="base"
               />
-            )
-          }
-          id={id}
-          overrides={{
-            ClearIconContainer: {
-              style: {
-                padding: 0,
-              },
-            },
-            ClearIcon: {
-              props: {
-                overrides: {
-                  Svg: {
-                    style: {
-                      color: theme.colors.grayTextColor,
-                      // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
-                      padding: theme.spacing.threeXS,
-                      height: theme.sizes.clearIconSize,
-                      width: theme.sizes.clearIconSize,
-                      ":hover": {
-                        fill: theme.colors.bodyText,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            Input: {
-              props: {
-                "data-testid": "stNumberInputField",
-                step: step,
-                min: min,
-                max: max,
-                // We specify the type as "number" to have numeric keyboard on mobile devices.
-                // We also set inputMode to "" since by default BaseWeb sets "text",
-                // and for "decimal" / "numeric" IOS shows keyboard without a minus sign.
-                type: "number",
-                inputMode: "",
-              },
-              style: {
-                fontWeight: theme.fontWeights.normal,
-                lineHeight: theme.lineHeights.inputWidget,
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                paddingRight: theme.spacing.sm,
-                paddingLeft: theme.spacing.md,
-                paddingBottom: theme.spacing.sm,
-                paddingTop: theme.spacing.sm,
-                "::placeholder": {
-                  color: theme.colors.fadedText60,
-                },
-              },
-            },
-            InputContainer: {
-              style: () => ({
-                borderTopRightRadius: 0,
-                borderBottomRightRadius: 0,
-              }),
-            },
-            Root: {
-              style: {
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderTopRightRadius: 0,
-                borderBottomRightRadius: 0,
-                borderTopLeftRadius: 0,
-                borderBottomLeftRadius: 0,
-                borderLeftWidth: 0,
-                borderRightWidth: 0,
-                borderTopWidth: 0,
-                borderBottomWidth: 0,
-                paddingRight: 0,
-                paddingLeft: icon ? theme.spacing.sm : 0,
-              },
-            },
-            StartEnhancer: {
-              style: {
-                paddingLeft: 0,
-                paddingRight: 0,
-                // Keeps emoji icons from being cut off on the right
-                minWidth: theme.iconSizes.lg,
-                // Material icons color changed as inactionable
-                color: isMaterialIcon(icon)
-                  ? theme.colors.fadedText60
-                  : "inherit",
-              },
-            },
-          }}
-        />
-        {/* We only want to show the increment/decrement controls when there is sufficient room to display the value and these controls. */}
-        {width > numberInputControlBreakpoint && (
-          <StyledInputControls>
-            <StyledInputControl
-              data-testid="stNumberInputStepDown"
-              onClick={decrement}
-              disabled={!canDec || disabled}
+            </StyledStartEnhancer>
+          )}
+          <StyledInputElement
+            ref={inputRef}
+            id={id}
+            data-testid="stNumberInputField"
+            type="number"
+            // Omit inputMode here — the native browser default for type="number"
+            // already provides the right mobile keyboard. The original BaseWeb
+            // code set inputMode="" to undo BaseWeb's own override to "text" (#8867).
+            step={step}
+            min={min}
+            max={max}
+            value={formattedValue ?? ""}
+            placeholder={element.placeholder}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+          />
+          {clearable && notNullOrUndefined(formattedValue) && (
+            <StyledClearButton
+              type="button"
+              data-testid="stNumberInputClearButton"
+              aria-label="Clear value"
+              // Plain <button> does not inherit isDisabled from React Aria's
+              // TextField context — must be passed explicitly.
+              disabled={disabled}
               tabIndex={-1}
+              // Prevent mousedown from moving focus away from the input before
+              // the click fires. Without this, handleBlur commits the current
+              // dirty value first, causing a spurious extra Streamlit rerun.
+              onMouseDown={e => e.preventDefault()}
+              onClick={handleClear}
             >
-              <Icon
-                content={Minus}
-                size="xs"
-                color={canDec ? "inherit" : theme.colors.fadedText40}
-              />
-            </StyledInputControl>
-            <StyledInputControl
-              data-testid="stNumberInputStepUp"
-              onClick={increment}
-              disabled={!canInc || disabled}
-              tabIndex={-1}
-            >
-              <Icon
-                content={Plus}
-                size="xs"
-                color={canInc ? "inherit" : theme.colors.fadedText40}
-              />
-            </StyledInputControl>
-          </StyledInputControls>
-        )}
-      </StyledInputContainer>
+              <Cancel size={theme.iconSizes.base} aria-hidden="true" />
+            </StyledClearButton>
+          )}
+          {/* Show the increment/decrement controls only when there is sufficient room. */}
+          {width > numberInputControlBreakpoint && (
+            <StyledInputControls>
+              <StyledInputControl
+                type="button"
+                data-testid="stNumberInputStepDown"
+                aria-label="Decrement"
+                onClick={decrement}
+                disabled={!canDec || disabled}
+                tabIndex={-1}
+              >
+                <Icon
+                  content={Minus}
+                  size="xs"
+                  color={canDec ? "inherit" : theme.colors.fadedText40}
+                />
+              </StyledInputControl>
+              <StyledInputControl
+                type="button"
+                data-testid="stNumberInputStepUp"
+                aria-label="Increment"
+                onClick={increment}
+                disabled={!canInc || disabled}
+                tabIndex={-1}
+              >
+                <Icon
+                  content={Plus}
+                  size="xs"
+                  color={canInc ? "inherit" : theme.colors.fadedText40}
+                />
+              </StyledInputControl>
+            </StyledInputControls>
+          )}
+        </StyledInputContainer>
+      </TextField>
       {shouldShowInstructions && (
         <StyledInstructionsContainer clearable={clearable}>
           <InputInstructions

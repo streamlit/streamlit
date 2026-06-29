@@ -17,10 +17,12 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import sys
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from unittest.mock import patch
 
 import pytest
 from starlette.applications import Starlette
@@ -30,6 +32,7 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from streamlit import file_util
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 from streamlit.runtime.media_file_manager import MediaFileManager, MediaFileMetadata
@@ -64,6 +67,24 @@ if TYPE_CHECKING:
     from starlette.requests import Request
 
 
+@pytest.fixture(autouse=True)
+def _reset_main_script_path_and_config_options() -> Iterator[None]:
+    """Snapshot and restore module-level config state between tests.
+
+    `App.__init__` now sets `config._main_script_path` (so script-level
+    `.streamlit/config.toml` is discoverable under direct uvicorn launches).
+    That mutation, plus the lazily cached `_config_options` dict that depends
+    on it, would leak across tests without this autouse reset.
+    """
+    from streamlit import config
+
+    original_main_script_path = config._main_script_path
+    original_config_options = config._config_options
+    yield
+    config._main_script_path = original_main_script_path
+    config._config_options = original_config_options
+
+
 class _DummyStatsManager:
     def __init__(self) -> None:
         self._stats: dict[str, list[CacheStat | CounterStat | GaugeStat]] = {
@@ -89,6 +110,14 @@ class _DummyStatsManager:
                     family_name="active_sessions",
                     value=3,
                     help="Current number of active sessions.",
+                )
+            ],
+            "user_session_events": [
+                CounterStat(
+                    family_name="user_session_events",
+                    value=7,
+                    labels={"type": "connect", "email": "alice@example.com"},
+                    help="Total count of session events by type and user.",
                 )
             ],
         }
@@ -359,6 +388,67 @@ def test_metrics_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) ->
     assert "# UNIT active_sessions " not in response.text
 
 
+def test_metrics_endpoint_includes_user_session_events(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """The user_session_events family is rendered in text when provided by the runtime."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics")
+    assert response.status_code == 200
+    assert "# TYPE user_session_events counter" in response.text
+    assert (
+        "# HELP user_session_events Total count of session events by type and user."
+        in response.text
+    )
+    assert (
+        'user_session_events_total{email="alice@example.com",type="connect"} 7'
+        in response.text
+    )
+
+
+def test_metrics_endpoint_user_session_events_protobuf(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """The user_session_events family is included in the protobuf response."""
+    client, _ = starlette_client
+    response = client.get(
+        "/_stcore/metrics",
+        headers={"Accept": "application/x-protobuf"},
+    )
+    assert response.status_code == 200
+
+    metric_set = MetricSetProto()
+    metric_set.ParseFromString(response.content)
+    family_names = {metric_family.name for metric_family in metric_set.metric_families}
+    assert "user_session_events" in family_names
+
+
+def test_metrics_endpoint_filters_user_session_events(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Filtering by user_session_events returns only that family."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics?families=user_session_events")
+    assert response.status_code == 200
+    assert "user_session_events_total" in response.text
+    # The aggregate session_events family should be excluded. Guard against the
+    # substring overlap with user_session_events_total by checking the family
+    # header line instead.
+    assert "# TYPE session_events counter" not in response.text
+    assert "cache_memory_bytes" not in response.text
+
+
+def test_metrics_endpoint_session_events_excludes_user_family(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Filtering by session_events must not leak the user_session_events family."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics?families=session_events")
+    assert response.status_code == 200
+    assert "session_events_total" in response.text
+    assert "user_session_events" not in response.text
+
+
 def test_metrics_endpoint_filters_single_family(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
@@ -617,6 +707,28 @@ def test_upload_put_adds_file(
     assert response.status_code == 204
     stored = runtime.uploaded_file_mgr.file_storage["session123"]["fileid"]
     assert stored.data == b"payload"
+
+
+def test_upload_put_inactive_session_explains_session_affinity(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Test that inactive session uploads explain multi-replica deployments."""
+    client, _ = starlette_client
+
+    response = client.put(
+        "_stcore/upload_file/inactive-session/fileid",
+        files={"file": ("foo.txt", b"payload", "text/plain")},
+    )
+
+    assert response.status_code == 400
+    assert "Invalid session_id" in response.text
+    assert "multi-replica deployment without sticky sessions / session affinity" in (
+        response.text
+    )
+    assert (
+        "https://docs.streamlit.io/develop/concepts/architecture/"
+        "architecture#websockets-and-session-management"
+    ) in response.text
 
 
 def test_upload_put_enforces_max_size(
@@ -1361,6 +1473,244 @@ class TestAppRouteValidation:
         assert len(app._user_routes) == 3
 
 
+class TestAppRun:
+    """Tests for App.run()."""
+
+    def test_run_uses_existing_app_instance_and_bootstrap_helpers(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """App.run should bootstrap direct launch without re-importing the app."""
+        from streamlit import config
+
+        launcher = tmp_path / "app.py"
+        launcher.write_text("import streamlit as st\n")
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_server_mode", config._server_mode)
+        monkeypatch.setattr(sys, "argv", [str(launcher), "--date", "2026-06-14"])
+
+        app = App(script)
+
+        with (
+            patch("streamlit.web.bootstrap.load_config_options") as load_config_options,
+            patch(
+                "streamlit.web.bootstrap._prepare_asgi_app_run_context"
+            ) as prepare_asgi_context,
+            patch(
+                "streamlit.web.server.starlette.starlette_server.UvicornRunner"
+            ) as runner_cls,
+        ):
+            app.run(config={"server.port": 8502})
+
+        launcher_path = str(launcher.resolve())
+        assert config._main_script_path == launcher_path
+        load_config_options.assert_called_once_with({"server.port": 8502})
+        prepare_asgi_context.assert_called_once_with(
+            launcher_path,
+            ["--date", "2026-06-14"],
+            {"server.port": 8502},
+            server_mode="starlette-app-direct",
+        )
+        runner_cls.assert_called_once_with(app)
+        runner_cls.return_value.run.assert_called_once()
+
+    def test_run_with_default_config_loads_empty_overrides(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """App.run with no config should load an empty set of flag overrides."""
+        from streamlit import config
+
+        launcher = tmp_path / "app.py"
+        launcher.write_text("import streamlit as st\n")
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_server_mode", config._server_mode)
+        monkeypatch.setattr(sys, "argv", [str(launcher)])
+
+        app = App(script)
+
+        with (
+            patch("streamlit.web.bootstrap.load_config_options") as load_config_options,
+            patch(
+                "streamlit.web.bootstrap._prepare_asgi_app_run_context"
+            ) as prepare_asgi_context,
+            patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
+        ):
+            app.run()
+
+        load_config_options.assert_called_once_with({})
+        prepare_asgi_context.assert_called_once_with(
+            str(launcher.resolve()), [], {}, server_mode="starlette-app-direct"
+        )
+
+    def test_run_reresolves_relative_script_path_against_launcher_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """App.run should re-resolve a relative script_path against the launcher.
+
+        When the process is launched via ``python /proj/app.py`` from a
+        different working directory, a relative ``script_path`` must resolve
+        against the launcher module's directory, not the cwd that was captured
+        when the App was constructed.
+        """
+        from streamlit import config
+
+        app_dir = tmp_path / "proj"
+        app_dir.mkdir()
+        launcher = app_dir / "app.py"
+        launcher.write_text("import streamlit as st\n")
+        (app_dir / "dashboard.py").write_text("import streamlit as st\n")
+
+        other_dir = tmp_path / "elsewhere"
+        other_dir.mkdir()
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_server_mode", config._server_mode)
+        monkeypatch.setattr(sys, "argv", [str(launcher)])
+
+        # Construct the App from a working directory that is NOT the launcher's
+        # directory so __init__ caches the (wrong) cwd-relative path.
+        monkeypatch.chdir(other_dir)
+        app = App("dashboard.py")
+        assert app._resolve_script_path() == (other_dir / "dashboard.py").resolve()
+
+        with (
+            patch("streamlit.web.bootstrap.load_config_options"),
+            patch("streamlit.web.bootstrap._prepare_asgi_app_run_context"),
+            patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
+        ):
+            app.run()
+
+        assert app._resolve_script_path() == (app_dir / "dashboard.py").resolve()
+
+    @pytest.mark.parametrize("argv0", ["", "-c", "-"])
+    def test_run_falls_back_to_script_path_when_argv0_is_not_script(
+        self,
+        argv0: str,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        reset_runtime: None,
+    ) -> None:
+        """App.run should not use non-script sys.argv[0] as the launcher path.
+
+        Python always provides at least ``['']`` for sys.argv, and interactive
+        sessions, ``python -c``, or ``python -`` use ``sys.argv[0]`` values
+        that are not script paths. Resolving those would silently yield bogus
+        cwd-relative paths, so the launcher path must fall back to the resolved
+        script path instead.
+        """
+        from streamlit import config
+
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_server_mode", config._server_mode)
+        monkeypatch.setattr(sys, "argv", [argv0, "--ignored"])
+
+        app = App(script)
+        expected_path = str(script.resolve())
+
+        with (
+            patch("streamlit.web.bootstrap.load_config_options"),
+            patch(
+                "streamlit.web.bootstrap._prepare_asgi_app_run_context"
+            ) as prepare_asgi_context,
+            patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
+        ):
+            app.run()
+
+        assert config._main_script_path == expected_path
+        prepare_asgi_context.assert_called_once_with(
+            expected_path, [], {}, server_mode="starlette-app-direct"
+        )
+
+    def test_run_preserves_cached_relative_script_path_when_no_launcher(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """App.run should not re-anchor relative paths without a launcher file."""
+        from streamlit import config
+
+        script_dir = tmp_path / "sub"
+        script_dir.mkdir()
+        script = script_dir / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_server_mode", config._server_mode)
+        monkeypatch.setattr(sys, "argv", ["-c"])
+
+        app = App("sub/dashboard.py")
+        expected_path = script.resolve()
+        assert app._resolve_script_path() == expected_path
+
+        with (
+            patch("streamlit.web.bootstrap.load_config_options"),
+            patch("streamlit.web.bootstrap._prepare_asgi_app_run_context"),
+            patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
+        ):
+            app.run()
+
+        assert config._main_script_path == str(expected_path)
+        assert app._resolve_script_path() == expected_path
+
+    def test_run_rejects_when_runtime_already_exists(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """App.run should fail clearly when a Runtime singleton already exists."""
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+        app = App(script)
+
+        with (
+            patch("streamlit.runtime.exists", return_value=True),
+            patch(
+                "streamlit.web.server.starlette.starlette_server.UvicornRunner"
+            ) as runner_cls,
+            pytest.raises(StreamlitAPIException, match="already running"),
+        ):
+            app.run()
+
+        runner_cls.assert_not_called()
+
+    def test_run_rejects_unknown_config_key(self, tmp_path: Path) -> None:
+        """App.run should reject unknown config keys before config loading."""
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+        app = App(script)
+
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"Unrecognized config option: 'unknown\.option'",
+        ):
+            app.run(config={"unknown.option": True})
+
+    def test_run_rejects_sensitive_config_key(self, tmp_path: Path) -> None:
+        """App.run should reject sensitive options like the CLI does."""
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+        app = App(script)
+
+        with pytest.raises(
+            StreamlitAPIException, match=r"server\.cookieSecret.*not allowed"
+        ):
+            app.run(config={"server.cookieSecret": "secret"})
+
+    def test_run_rejects_non_mapping_config(self, tmp_path: Path) -> None:
+        """App.run config must be a mapping."""
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+        app = App(script)
+
+        with pytest.raises(StreamlitAPIException, match="config must be a mapping"):
+            app.run(config=["server.port"])  # type: ignore[arg-type]
+
+
 class TestAppLifespan:
     """Tests for App lifespan handling."""
 
@@ -1592,14 +1942,26 @@ class TestAppScriptPathResolution:
         resolved = app._resolve_script_path()
         assert resolved == script_path
 
-    def test_relative_path_is_resolved_to_cwd(self) -> None:
+    def test_relative_path_is_resolved_to_cwd(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that relative script paths are resolved relative to cwd."""
+        from streamlit import config
+
+        # Ensure _main_script_path is None at construction so __init__ takes
+        # the CWD branch. The autouse fixture restores state between tests but
+        # does not reset to None at start, so we pin it here for robustness
+        # against any cross-module test-order pollution.
+        monkeypatch.setattr(config, "_main_script_path", None)
+
         app = App("main.py")
-        # The relative path should be resolved to an absolute path
+        # The relative path should be resolved to an absolute path. Note that
+        # App.__init__ caches the resolved path and sets config._main_script_path
+        # as a side-effect, so this call returns the cached value computed via
+        # the CWD branch during __init__.
         resolved = app._resolve_script_path()
         assert resolved.is_absolute()
         assert resolved.name == "main.py"
-        # Without config._main_script_path set, should resolve relative to cwd
         assert resolved == (Path.cwd() / "main.py").resolve()
 
     def test_relative_path_uses_main_script_path_when_set(
@@ -1636,6 +1998,154 @@ class TestAppScriptPathResolution:
         # Error message should include the path and be descriptive
         assert "does_not_exist.py" in str(exc_info.value)
         assert "not found" in str(exc_info.value).lower()
+
+    def test_init_sets_main_script_path_when_unset(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """App.__init__ sets config._main_script_path when it is unset.
+
+        This makes the script-level `.streamlit/config.toml` discoverable when
+        st.App is launched directly via an external ASGI server (regression
+        guard for issue #15215).
+        """
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\n")
+        monkeypatch.chdir(tmp_path)
+
+        App("app.py")
+
+        assert config._main_script_path == str(script.resolve())
+
+    def test_init_does_not_overwrite_main_script_path_when_set(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """App.__init__ must not clobber a value already set by `streamlit run`."""
+        from streamlit import config
+
+        cli_script = tmp_path / "cli_entry.py"
+        cli_script.touch()
+        monkeypatch.setattr(config, "_main_script_path", str(cli_script))
+
+        App("dashboard/app.py")
+
+        assert config._main_script_path == str(cli_script)
+
+    def test_init_caches_resolved_script_path_against_main_script_path_mutation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The cached _resolved_script_path keeps _resolve_script_path() stable.
+
+        After __init__ assigns config._main_script_path, a second call to
+        _resolve_script_path() must NOT re-route the relative path through the
+        CLI branch (which would mis-resolve `myapp/app.py` to
+        `<cwd>/myapp/myapp/app.py`).
+        """
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+
+        project = tmp_path / "myproject"
+        myapp = project / "myapp"
+        myapp.mkdir(parents=True)
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(project)
+
+        app = App("myapp/app.py")
+
+        expected = (myapp / "app.py").resolve()
+        # Calling _resolve_script_path() again must return the original cached
+        # value, not a path with a duplicated `myapp/` segment.
+        assert app._resolve_script_path() == expected
+        assert app._resolve_script_path() == expected
+        # And the public script_path property still reflects the user input.
+        assert app.script_path == Path("myapp/app.py")
+
+
+class TestAppConfigDiscovery:
+    """Regression tests for issue #15215.
+
+    `st.App` launched directly via uvicorn (or another external ASGI server)
+    from a working directory that is not the script's directory must still
+    discover the script-level `.streamlit/config.toml`.
+    """
+
+    def test_script_level_config_discovered_with_relative_script_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Reproduce issue #15215: cwd != script dir, relative script path."""
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_config_options", None)
+
+        project = tmp_path / "myproject"
+        myapp = project / "myapp"
+        (myapp / ".streamlit").mkdir(parents=True)
+        (myapp / ".streamlit" / "config.toml").write_text(
+            '[theme]\nprimaryColor = "#ff0000"\n'
+        )
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(project)
+
+        App("myapp/app.py")
+        # Stub out the config-parsed signal: any prior test that constructed
+        # an `AppSession` and registered file watchers leaves a strong
+        # reference on `_on_config_parsed`. Firing those receivers here would
+        # touch closed asyncio event loops from those defunct sessions.
+        with patch.object(config._on_config_parsed, "send"):
+            config.get_config_options(force_reparse=True)
+
+        assert config.get_option("theme.primaryColor") == "#ff0000"
+
+    def test_script_level_config_discovered_with_absolute_script_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Same regression as #15215, but with an absolute script path."""
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_config_options", None)
+
+        myapp = tmp_path / "myapp"
+        (myapp / ".streamlit").mkdir(parents=True)
+        (myapp / ".streamlit" / "config.toml").write_text(
+            '[theme]\nprimaryColor = "#00ff00"\n'
+        )
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(tmp_path)
+
+        App(str((myapp / "app.py").resolve()))
+        # See note in the relative-path variant above.
+        with patch.object(config._on_config_parsed, "send"):
+            config.get_config_options(force_reparse=True)
+
+        assert config.get_option("theme.primaryColor") == "#00ff00"
+
+    def test_get_config_files_includes_script_level_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Anti-regression: `config.get_config_files` must include the
+        script-level config path after `App.__init__` runs."""
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+
+        myapp = tmp_path / "myapp"
+        myapp.mkdir()
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(tmp_path)
+
+        App("myapp/app.py")
+
+        expected = file_util.get_main_script_streamlit_file_path(
+            str((myapp / "app.py").resolve()), "config.toml"
+        )
+        files = config.get_config_files("config.toml")
+        assert expected in files
 
 
 class TestAppExports:
@@ -2145,9 +2655,11 @@ class TestAppSecrets:
     @pytest.mark.parametrize(
         ("secrets", "expected_match"),
         [
-            pytest.param({"bad": [1, 2, 3]}, "Unsupported type 'list'", id="list"),
+            pytest.param({"bad": None}, "Unsupported type 'NoneType'", id="none"),
             pytest.param(
-                {"outer": {"inner": [1, 2]}}, r"at 'outer\.inner'", id="nested_list"
+                {"outer": {"inner": [1, None]}},
+                r"at 'outer\.inner\[1\]'",
+                id="nested_none_in_list",
             ),
             pytest.param(
                 {1: "value"}, r"Dictionary keys.*must be strings", id="int_key"
@@ -2192,6 +2704,7 @@ class TestAppSecrets:
             secrets={
                 "api_key": "secret123",
                 "database": {"host": "localhost", "port": 5432},
+                "auth": {"expose_tokens": ["id", "access"]},
             },
         )
 
@@ -2202,6 +2715,7 @@ class TestAppSecrets:
             assert secrets_singleton["api_key"] == "secret123"
             assert secrets_singleton["database"]["host"] == "localhost"
             assert secrets_singleton["database"]["port"] == 5432
+            assert secrets_singleton["auth"]["expose_tokens"] == ["id", "access"]
 
     @patch_config_options(
         {

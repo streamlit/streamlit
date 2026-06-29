@@ -452,6 +452,36 @@ def test_mixed_empty_and_named_sections(app: Page):
     expect(app.get_by_test_id("stHeading").filter(has_text="Page 1")).to_be_visible()
 
 
+def test_top_nav_section_keyboard_and_aria(app: Page):
+    """Test keyboard dismissal and ARIA state for top nav section popovers.
+
+    Covers behavior introduced when replacing BaseWeb's popover with a custom
+    FloatingPortal + useEffect dismissal handler: Escape closes the popover and
+    returns focus to the trigger, and aria-expanded reflects open/closed state.
+    """
+    app.set_viewport_size({"width": 1280, "height": 800})
+
+    click_checkbox(app, "Test Sections")
+    wait_for_app_run(app)
+
+    section_trigger = app.get_by_test_id("stTopNavSection").first
+
+    # Trigger starts closed with correct ARIA state
+    expect(section_trigger).to_have_attribute("aria-expanded", "false")
+    expect(app.get_by_test_id("stTopNavPopover")).not_to_be_visible()
+
+    # Click to open — aria-expanded updates and popover appears
+    section_trigger.click()
+    expect(section_trigger).to_have_attribute("aria-expanded", "true")
+    expect(app.get_by_test_id("stTopNavPopover").first).to_be_visible()
+
+    # Escape closes the popover and returns focus to the trigger
+    app.keyboard.press("Escape")
+    expect(section_trigger).to_have_attribute("aria-expanded", "false")
+    expect(app.get_by_test_id("stTopNavPopover")).not_to_be_visible()
+    expect(section_trigger).to_be_focused()
+
+
 def test_mixed_sections_visual_regression(
     app: Page, assert_snapshot: ImageCompareFunction
 ):

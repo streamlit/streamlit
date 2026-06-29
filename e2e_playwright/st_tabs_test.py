@@ -200,6 +200,34 @@ def test_dynamic_tabs_programmatic_control(app: Page):
     expect(prog_tabs.get_by_text("Beta tab content")).not_to_be_visible()
 
 
+def test_programmatic_nav_preserves_lazy_loading(app: Page):
+    """Regression test for #15458: tab.open must stay True after programmatic
+    nav followed by a widget interaction in the new tab.
+    """
+    prog_tabs = (
+        app.get_by_test_id("stTabs")
+        .filter(has=app.get_by_role("tab", name="Alpha"))
+        .first
+    )
+    counts_text = app.get_by_text("Prog tab counts -", exact=False)
+
+    # Step 1: interact with a widget while in Alpha (sets widgetMgr to "Alpha")
+    click_button(app, "Increment Alpha")
+    expect(counts_text).to_contain_text("Alpha: 1")
+
+    # Step 2: programmatic nav to Beta via session_state
+    click_button(app, "Go to Beta")
+    expect(prog_tabs.get_by_text("Beta tab content")).to_be_visible()
+    expect(prog_tabs.get_by_text("Alpha tab content")).not_to_be_visible()
+
+    # Step 3: interact with widget inside Beta — before the fix this silently
+    # failed because the stale widgetMgr value caused tab.open=False for Beta
+    click_button(app, "Increment Beta")
+    expect(counts_text).to_contain_text("Beta: 1")
+    # Alpha must not have re-executed
+    expect(counts_text).to_contain_text("Alpha: 1")
+
+
 def test_tabs_key_only_does_not_trigger_rerun(app: Page):
     """Test that tabs with key but no on_change does not trigger reruns."""
     rerun_text = app.get_by_text("Tabs key-only rerun count:")

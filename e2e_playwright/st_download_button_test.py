@@ -32,6 +32,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_expander,
     goto_app,
+    reset_hovering,
 )
 
 DOWNLOAD_BUTTON_ELEMENTS = 19
@@ -103,6 +104,7 @@ def test_download_button_widget_rendering(
 
 def test_show_tooltip_on_hover(app: Page):
     download_button = app.get_by_test_id("stDownloadButton").nth(9)
+    reset_hovering(app)
     download_button.hover()
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
 
@@ -295,6 +297,7 @@ def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunctio
     # Initial state
     expect(dynamic_button).to_contain_text("Initial dynamic button")
     assert_snapshot(dynamic_button, name="st_download_button-dynamic_initial")
+    reset_hovering(app)
     dynamic_button.hover()
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("initial help")
     # Clean hovering before clicking the toggle:
@@ -308,6 +311,7 @@ def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunctio
     expect(dynamic_button).to_contain_text("Updated dynamic button")
     dynamic_button.scroll_into_view_if_needed()
     assert_snapshot(dynamic_button, name="st_download_button-dynamic_updated")
+    reset_hovering(app)
     dynamic_button.hover()
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("updated help")
 
