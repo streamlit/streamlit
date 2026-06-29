@@ -431,12 +431,12 @@ class TextWidgetsMixin:
         # widget state) stable across upgrades for the common case of inputs
         # without validation, instead of hashing a `validate=None` placeholder
         # that would reset every pre-existing text input on the first run after
-        # upgrade. When a regex is set, it still affects identity so that
-        # changing the regex resets the widget (its value may no longer be
-        # valid). The message is intentionally excluded since it is cosmetic.
-        validate_identity_kwarg = (
-            {"validate": validate_regex} if validate_regex is not None else {}
-        )
+        # upgrade. A falsy regex (`None` or `""`) is identity-neutral, matching
+        # the frontend, which treats an empty regex as "no validation". When a
+        # regex is set, it still affects identity so that changing the regex
+        # resets the widget (its value may no longer be valid). The message is
+        # intentionally excluded since it is cosmetic.
+        validate_identity_kwarg = {"validate": validate_regex} if validate_regex else {}
 
         element_id = compute_and_register_element_id(
             "text_input",

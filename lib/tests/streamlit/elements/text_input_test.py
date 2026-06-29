@@ -415,13 +415,24 @@ class TextInputTest(DeltaGeneratorTestCase):
             id2 = c2.id
             assert id1 == id2
 
-    def test_validate_none_preserves_backwards_compatible_id(self):
-        """Test that an input without validation keeps the same widget ID as
-        before `validate` became part of the identity.
+    @parameterized.expand(
+        [
+            ("absent", {}),
+            ("none", {"validate": None}),
+            ("empty_string", {"validate": ""}),
+        ]
+    )
+    def test_falsy_validate_preserves_backwards_compatible_id(
+        self, _name: str, validate_kwarg: dict
+    ):
+        """Test that an input without effective validation keeps the same
+        widget ID as before `validate` became part of the identity.
 
-        This guards against widget-ID churn on upgrade: a `validate=None`
-        placeholder must not contribute to the element ID, otherwise every
-        pre-existing text input would reset and lose its session state.
+        This guards against widget-ID churn on upgrade: a falsy `validate`
+        (absent, ``None``, or ``""``) must not contribute to the element ID,
+        otherwise pre-existing text inputs would reset and lose their session
+        state. ``validate=""`` is a frontend no-op, so it must be treated the
+        same as no validation here.
         """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
@@ -432,6 +443,7 @@ class TextInputTest(DeltaGeneratorTestCase):
                 key="text_input_key",
                 value="abc",
                 max_chars=50,
+                **validate_kwarg,
             )
             actual_id = self.get_delta_from_queue().new_element.text_input.id
 
