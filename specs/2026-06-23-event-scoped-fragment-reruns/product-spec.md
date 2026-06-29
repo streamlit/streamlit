@@ -88,13 +88,13 @@ already supports `scope="fragment"`. The proposal extends it so it can target a 
 from anywhere — a callback, the main script, or another fragment:
 
 ```python
-@st.fragment(addressable=True)            # opt the fragment into being key-addressable
+@st.fragment(key="charts")                # name the fragment (see §"Addressing fragments")
 def charts():
     df = load(st.session_state.region)    # read shared state, recompute
     st.line_chart(df)
     st.dataframe(df)
 
-charts(key="charts")                       # addressable call site (see §"Addressing fragments")
+charts()
 
 st.selectbox(
     "Region", REGIONS, key="region",
@@ -120,26 +120,43 @@ preserved. The only discipline this requires is that data shared across fragment
 ### Addressing fragments (the one real design decision)
 
 To target a fragment, it needs a stable, user-facing name. Fragment identity today is an internal
-positional hash, and the same decorated function can have **multiple call sites**, so a name on the
-*decorator* would collide. We need a name tied to the **call site**, and it must be **backwards
-compatible** (the fragment wrapper currently forwards `**kwargs` straight to the user's function, so
-silently reserving `key` at call time would break any fragment whose function already takes a `key`
-argument).
+positional hash. There are two fundamentally different places to attach a name, which leads to two
+families of options:
 
-**Option A — opt-in call-time `key` via a decorator flag** ✅ PREFERRED
+- **Per call site** (Option A): the name identifies one *instance* of a fragment, so the same function
+  called twice yields two independently-targetable fragments.
+- **Per function definition** (Option C): the name identifies the *fragment function*, and targeting
+  reruns **all** of its call sites; users get instance-level granularity by defining distinct
+  functions.
+
+Whatever we pick must be **backwards compatible**: the fragment wrapper currently forwards `**kwargs`
+straight to the user's function, so silently reserving `key` *at call time* would break any fragment
+whose function already declares a `key` argument.
+
+**Option A — call-time `key` (per-instance addressing)**
 
 ```python
+# A1 (preferred within Option A): opt in via a decorator flag, then pass key at the call site
 @st.fragment(addressable=True)   # opts the function into reserving a call-time `key`
 def charts(): ...
 charts(key="charts")
 st.rerun(target="charts")
+
+# A2 (variation): always reserve `key` at call time, no flag
+@st.fragment
+def charts(): ...
+charts(key="charts")
 ```
 
-- Pros: the key reads as "on the fragment," exactly where it belongs; call-site-scoped, so the same
-  function can back many independently-addressable fragments; non-breaking because the flag is off by
-  default (existing fragments keep forwarding `**kwargs` untouched).
-- Cons: a second calling convention (a fragment is only key-addressable when declared `addressable`);
-  the flag is a boolean (prefer enums — revisit if a third mode emerges).
+- Pros: instance-level — the same function can back many independently-addressable fragments (e.g. one
+  per tab or per row); the key reads as "on this fragment."
+- Cons (A1): a second calling convention (a fragment is only key-addressable once declared
+  `addressable`); the flag is a boolean (prefer enums — revisit if a third mode emerges).
+- Cons (A2): **breaking** — unconditionally reserving `key` at call time collides with any existing
+  fragment function that already takes a `key` parameter, violating *Minimize Migration Distance* and
+  *Graceful Evolution*. A2 only becomes non-breaking via signature inspection, which is Option B.
+- **Within Option A, A1 (opt-in) is preferred** over A2 precisely because A2 is not backwards
+  compatible.
 
 **Option B — signature-aware call-time `key`** (rejected)
 
@@ -148,9 +165,59 @@ Non-breaking and ergonomic, but the same argument means different things dependi
 signature — "clever but too clever" and a "same name, same behavior" violation. Documented here only
 to record why we rejected it.
 
-We recommend **Option A** for the first release: it puts the `key` on the fragment (matching how `key`
-identifies widgets), stays fully backwards compatible via the opt-in flag, and avoids any indirection
-between the addressable name and the thing it addresses.
+**Option C — decorator `key`, rerun all of the fragment's call sites** ✅ PREFERRED
+
+The name lives on the decorator and identifies the *fragment function*. `st.rerun(target=...)` reruns
+**every** call site of that function. If a developer needs two independently-targetable regions, they
+define two fragment functions and factor any shared logic into a plain helper:
+
+```python
+@st.fragment(key="charts")       # names the fragment function
+def charts():
+    df = load(st.session_state.region)   # shared logic lives in a cached helper
+    st.line_chart(df)
+    st.dataframe(df)
+
+charts()                          # any number of call sites; all rerun together on target
+st.rerun(target="charts")
+```
+
+- Pros: **fully backwards compatible** — `key` is a new *decorator* parameter (like `run_every`,
+  `parallel`); it never touches the user function's call signature. Simplest mental model ("the
+  fragment function has a name; rerun reruns it"). Pure *Extend Before Inventing* — no new flag, no
+  reserved call-time kwarg. Reruns-all is often what's wanted (a fragment shown in three tabs refreshes
+  in all three).
+- Cons: coarser — you cannot target a *single* instance of a function rendered in a loop; to get
+  instance-level targeting you must define distinct functions (awkward for highly dynamic/looped
+  content). `key` here means "per function," whereas widget `key` means "per instance" — a mild
+  *Same Name, Same Behavior* nuance (defensible, since a fragment *is* its function).
+
+#### Critical analysis: A vs. C, and why C is preferred
+
+Per the [API design principles](../AGENTS.md), Option C is the stronger default:
+
+| Principle | A1 (opt-in call-time key) | C (decorator key, rerun-all) |
+|---|---|---|
+| #26 Minimize Migration Distance / #25 Graceful Evolution | ✅ non-breaking (via flag) | ✅ non-breaking (decorator param) |
+| #18 Extend Before Inventing | ⚠️ adds a new `addressable` flag concept | ✅ just another `@st.fragment` parameter |
+| #1 Simplicity / #8 Semantic Names | ⚠️ two steps (declare flag, pass key) | ✅ one step ("name the fragment") |
+| #27 Pythonic Idioms | ⚠️ reserved call-time kwarg | ✅ decorator configures the function |
+| #20 One Use Case, One Command | ✅ | ✅ — and it nudges good factoring (one fragment fn per region) |
+| #2 Progressive Disclosure | — | ✅ simple default; A layers on for instance targeting |
+| Instance-level targeting (loops) | ✅ first-class | ❌ requires distinct functions |
+
+The only thing C gives up is targeting an individual instance of a looped fragment — and that is an
+**advanced, less-common** need for *external* targeting (an instance's own widgets already trigger its
+own scoped rerun today). The common case the proposal exists for — "a filter updates these named
+panels" — is fully and more simply served by naming functions. Crucially, the multi-call-site concern
+that originally argued *against* decorator keys dissolves under the user's observation: **shared code
+moves into a plain helper function, and each independently-targetable region becomes its own named
+fragment function.** That is good app structure, not a workaround.
+
+**Recommendation:** ship **Option C** as the default addressing mechanism, and treat **Option A1**
+(opt-in call-time `key`) as a *progressive-disclosure* complement for the advanced case where a single
+instance of a looped/dynamic fragment must be targeted externally. Option A2 and Option B are recorded
+as rejected (compat and "too clever," respectively).
 
 ### 2. Fragment dependencies — and the cycle problem
 
@@ -190,7 +257,7 @@ genuine **event-based programming model** — events map to handlers that update
 regions — expressed entirely in normal Python and the existing widget API:
 
 ```python
-@st.fragment(addressable=True)
+@st.fragment(key="results")
 def results():
     data = run_query(st.session_state.filters)   # only re-runs on relevant events
     st.dataframe(data)
@@ -199,7 +266,7 @@ def results():
 st.multiselect("Filters", OPTIONS, key="filters",
                on_change=lambda: st.rerun(target="results"))
 
-results(key="results")
+results()
 ```
 
 A widget callback firing `st.rerun(target=...)` is the event; the targeted fragment re-evaluation is
@@ -231,7 +298,7 @@ model exists to provide.
 | Item                         | ✅ or comment          |
 |------------------------------|------------------------|
 | Works on SiS, Cloud, etc?    | Should — builds on existing fragment rerun + WebSocket delta path; needs cross-platform e2e (embedded/mobile) for multi-fragment passes. |
-| No breaking API changes      | ✅ with Option A (opt-in `addressable` flag) — additive only; `st.rerun` gains an optional `target`, `st.fragment` gains an optional `addressable`. Option B (signature-aware `key`) would break compat and is rejected. |
+| No breaking API changes      | ✅ with Option C (decorator `key`) — additive only; `st.rerun` gains an optional `target`, `st.fragment` gains an optional `key`. The opt-in call-time `key` complement (A1) is also additive. Option A2 (always-on call-time `key`) and Option B (signature-aware) would break compat and are rejected. |
 | No new dependencies          | ✅ |
 | Metrics collected            | TODO — track `st.rerun(target=...)` usage and cycle-detection triggers via `gather_metrics`. |
 | Any security/legal impact?   | None identified. |
@@ -239,9 +306,10 @@ model exists to provide.
 
 ## Open questions
 
-- **Addressing:** is the opt-in `addressable` flag the right shape, or should fragments always accept
-  a call-time `key` once we find a compat-safe way to reserve it? Does `target` accept a single key, a
-  list of keys, or also a fragment handle object?
+- **Addressing:** ship Option C (decorator `key`, rerun-all) alone first, or C + the A1 call-time
+  complement together for instance-level targeting? For C, confirm the "rerun all call sites"
+  semantics (and behavior when a keyed fragment has zero or many call sites). Does `target` accept a
+  single key, a list of keys, or also a fragment handle object?
 - **Parameter name:** `st.rerun(target=...)` vs reusing/expanding `scope`. `target` reads clearly and
   leaves `scope` for the app/fragment distinction.
 - **Cycle handling:** detect-and-raise (preferred) vs a max-depth cap vs documentation only.
