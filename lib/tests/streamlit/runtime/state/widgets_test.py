@@ -457,6 +457,12 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         sig = inspect.signature(widget_func)
         expected_sig = self.signature_to_expected_kwargs(sig)
 
+        # `validate` only contributes to the text_input element ID when a
+        # validation regex is actually configured. Since this test calls the
+        # widget without `validate`, it isn't passed to the ID computation.
+        if widget_func == st.text_input:
+            del expected_sig["validate"]
+
         patched_compute_and_register_element_id.assert_called_with(ANY, **expected_sig)
 
         # Double check that we get a DuplicateWidgetID error since the `disabled`
