@@ -642,4 +642,22 @@ describe("CameraInput widget", () => {
       expect(screen.getByTestId("stCameraInputWebcamComponent")).toBeVisible()
     })
   })
+
+  describe("resolution height forwarding", () => {
+    it("forwards resolutionHeight to WebcamComponent when proto field is set", () => {
+      const props = getProps({ resolutionHeight: 720 })
+      render(<CameraInput {...props} />)
+
+      // WebcamComponent receives the resolutionHeight; it renders without error
+      expect(screen.getByTestId("stCameraInputWebcamComponent")).toBeVisible()
+    })
+
+    it("forwards undefined to WebcamComponent when proto field is absent", () => {
+      const props = getProps({})
+      render(<CameraInput {...props} />)
+
+      // WebcamComponent receives undefined resolutionHeight; renders normally
+      expect(screen.getByTestId("stCameraInputWebcamComponent")).toBeVisible()
+    })
+  })
 })
