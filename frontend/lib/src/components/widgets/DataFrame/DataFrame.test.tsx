@@ -146,6 +146,36 @@ describe("DataFrame widget", () => {
     )
   })
 
+  it("shows search when Cmd+F is pressed and search is enabled", () => {
+    render(<DataFrame {...props} />)
+
+    const event = {
+      ctrlKey: false,
+      metaKey: true,
+      key: "f",
+      stopPropagation: vi.fn(),
+      preventDefault: vi.fn(),
+    }
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: false,
+      })
+    )
+
+    act(() => {
+      dataEditorMockFn.mock.lastCall?.[0].onKeyDown(event)
+    })
+
+    expect(event.stopPropagation).toHaveBeenCalled()
+    expect(event.preventDefault).toHaveBeenCalled()
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: true,
+      })
+    )
+  })
+
   it("does not handle Ctrl+F when search is disabled", () => {
     render(<DataFrame {...getProps(EMPTY)} />)
 
@@ -163,6 +193,37 @@ describe("DataFrame widget", () => {
 
     expect(event.stopPropagation).not.toHaveBeenCalled()
     expect(event.preventDefault).not.toHaveBeenCalled()
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: false,
+      })
+    )
+  })
+
+  it("hides the search overlay when search becomes disabled while open", () => {
+    const { rerender } = render(<DataFrame {...props} />)
+
+    act(() => {
+      dataEditorMockFn.mock.lastCall?.[0].onKeyDown({
+        ctrlKey: true,
+        metaKey: false,
+        key: "f",
+        stopPropagation: vi.fn(),
+        preventDefault: vi.fn(),
+      })
+    })
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: true,
+      })
+    )
+
+    // The dataframe becomes empty, which disables search. The overlay must
+    // not stay stuck open since both the toolbar button and the keyboard
+    // shortcut are disabled in that case.
+    rerender(<DataFrame {...getProps(EMPTY)} />)
+
     expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
       expect.objectContaining({
         showSearch: false,
