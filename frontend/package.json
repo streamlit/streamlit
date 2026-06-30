@@ -71,7 +71,7 @@
     "eslint-plugin-react-hooks": "^7.1.0",
     "eslint-plugin-streamlit-custom": "workspace:^",
     "eslint-plugin-testing-library": "^7.16.2",
-    "globals": "^17.6.0",
+    "globals": "^17.7.0",
     "jiti": "^2.7.0",
     "knip": "^6.17.1",
     "oxfmt": "^0.56.0",
