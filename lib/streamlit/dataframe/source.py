@@ -107,16 +107,21 @@ class DataframeSource(Protocol):
 
 
 def _pandas_to_arrow_table(df: DataFrame) -> pa.Table:
-    """Convert a pandas DataFrame to a ``pyarrow.Table``.
+    """Convert a pandas DataFrame to a ``pyarrow.Table`` for lazy slicing.
 
-    Mirrors the eager serialization in
-    ``dataframe_util.convert_pandas_df_to_arrow_bytes`` so the lazy and eager
-    paths produce identical Arrow schemas (including pandas index metadata).
+    Unlike the eager serialization, this materializes the index as a real column
+    (``preserve_index=True``). A default ``RangeIndex`` is otherwise stored only
+    as schema metadata (start=0), so slicing a chunk would leave the metadata
+    unchanged and every chunk would display an index restarting at 0. With the
+    index materialized, each chunk slice carries the correct absolute index
+    values, and the index travels with the rows through server-side sorting
+    (matching the eager behavior). The index column is still marked as an index
+    in the pandas metadata, so the frontend renders it in the index gutter.
     """
     import pyarrow as pa
 
     try:
-        return pa.Table.from_pandas(df)
+        return pa.Table.from_pandas(df, preserve_index=True)
     except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
         _LOGGER.info(
             "Serialization of dataframe to Arrow table was unsuccessful. "
@@ -125,7 +130,7 @@ def _pandas_to_arrow_table(df: DataFrame) -> pa.Table:
             exc_info=ex,
         )
         fixed = dataframe_util.fix_arrow_incompatible_column_types(df)
-        return pa.Table.from_pandas(fixed)
+        return pa.Table.from_pandas(fixed, preserve_index=True)
 
 
 class InMemoryDataframeSource:

@@ -29,6 +29,10 @@ from streamlit.dataframe.source import (
     SortSpec,
     resolve_lazy_source,
 )
+from streamlit.dataframe_util import (
+    convert_arrow_bytes_to_pandas_df,
+    convert_arrow_table_to_arrow_bytes,
+)
 from streamlit.errors import StreamlitAPIException
 
 
@@ -119,6 +123,33 @@ def test_resolve_forced_lazy_medium_data() -> None:
     df = pd.DataFrame({"a": np.arange(FORCED_LAZY_MIN_ROWS + 1)})
     source = resolve_lazy_source(df, True, is_selection_activated=False)
     assert isinstance(source, InMemoryDataframeSource)
+
+
+def test_in_memory_pandas_source_carries_absolute_index() -> None:
+    """Chunks from a pandas source keep absolute index values (not per-chunk 0).
+
+    A default RangeIndex is materialized so a chunk at offset N displays the
+    index starting at N rather than restarting at 0.
+    """
+    df = pd.DataFrame({"a": np.arange(2000)})
+    source = resolve_lazy_source(df, True, is_selection_activated=False)
+    assert isinstance(source, InMemoryDataframeSource)
+
+    chunk = source.load_rows(500, 5)
+    result = convert_arrow_bytes_to_pandas_df(convert_arrow_table_to_arrow_bytes(chunk))
+    assert list(result.index) == [500, 501, 502, 503, 504]
+
+
+def test_in_memory_pandas_source_index_follows_sort() -> None:
+    """The materialized index travels with rows through server-side sorting."""
+    df = pd.DataFrame({"a": np.arange(2000)})
+    source = resolve_lazy_source(df, True, is_selection_activated=False)
+    assert isinstance(source, InMemoryDataframeSource)
+
+    chunk = source.load_rows(0, 3, sort=SortSpec("a", descending=True))
+    result = convert_arrow_bytes_to_pandas_df(convert_arrow_table_to_arrow_bytes(chunk))
+    # Descending sort: the first rows are the last original positions.
+    assert list(result.index) == [1999, 1998, 1997]
 
 
 def test_resolve_forced_lazy_pyarrow_table() -> None:
