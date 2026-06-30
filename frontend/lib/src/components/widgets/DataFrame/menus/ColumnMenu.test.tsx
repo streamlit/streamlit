@@ -395,5 +395,14 @@ describe("DataFrame ColumnMenu", () => {
 
       expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
     })
+
+    it("does not render 'Statistics' when isLazy is true", () => {
+      // Statistics are hidden for lazy dataframes because the bound Quiver only
+      // holds the initial chunk, so the stats would reflect a subset of rows
+      // rather than the full dataframe.
+      render(<ColumnMenu {...defaultProps} data={mockQuiver} isLazy={true} />)
+
+      expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
+    })
   })
 })

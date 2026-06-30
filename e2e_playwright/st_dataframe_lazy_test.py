@@ -17,6 +17,7 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.dataframe_utils import (
     expect_canvas_to_be_stable,
+    open_column_menu,
     sort_column,
 )
 
@@ -36,7 +37,7 @@ def _get_dataframe(app: Page, index: int) -> Locator:
 
 def test_lazy_dataframe_renders(app: Page, assert_snapshot: ImageCompareFunction):
     """The lazy dataframe renders its initial chunk."""
-    expect(app.get_by_test_id("stDataFrame")).to_have_count(3)
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(4)
     _expect_run_count(app, 1)
 
     lazy_df = _get_dataframe(app, 0)
@@ -92,3 +93,23 @@ def test_small_lazy_dataframe_stays_eager(app: Page):
     # The eager path keeps search and CSV download available.
     expect(toolbar.get_by_role("button", name="Search")).to_have_count(1)
     expect(toolbar.get_by_role("button", name="Download as CSV")).to_have_count(1)
+
+
+def test_lazy_column_menu_offers_sort_but_hides_statistics(app: Page):
+    """The lazy column menu offers server-side sorting but hides statistics.
+
+    Statistics are hidden because only the initial chunk is loaded client-side,
+    so they would reflect a subset of rows rather than the full dataframe.
+    """
+    # Use the fixed-width, index-hidden lazy dataframe (index 3) so the column
+    # menu opens at a deterministic position over a sortable data column.
+    fixed_df = _get_dataframe(app, 3)
+    open_column_menu(fixed_df, col_pos=0, column_width="medium")
+
+    menu = app.get_by_test_id("stDataFrameColumnMenu")
+    expect(menu).to_be_visible()
+    # Server-side sorting is offered for data columns.
+    expect(menu.get_by_text("Sort ascending")).to_be_visible()
+    expect(menu.get_by_text("Sort descending")).to_be_visible()
+    # Statistics are hidden in lazy mode (only the initial chunk is loaded).
+    expect(menu.get_by_text("Statistics")).to_have_count(0)

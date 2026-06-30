@@ -66,7 +66,12 @@ import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
+import {
+  BaseColumn,
+  getTextCell,
+  ImageCellEditor,
+  toGlideColumn,
+} from "./columns"
 import useButtonColumnInteractions from "./hooks/useButtonColumnInteractions"
 import useColumnFormatting from "./hooks/useColumnFormatting"
 import useColumnLoader from "./hooks/useColumnLoader"
@@ -340,6 +345,14 @@ function DataFrame({
         getCellContent: getLazyCellContent,
       }
     : eagerSort
+
+  // Whether a specific column can be sorted in the current mode. Eager sorting
+  // is client-side and works for any column (incl. the index). Lazy sorting is
+  // server-side and keys on the backend Arrow field name, so columns without
+  // one (e.g. the index column, whose name is empty) cannot be sorted — we hide
+  // the sort affordance for them instead of silently no-op'ing.
+  const isColumnSortable = (column: BaseColumn | undefined): boolean =>
+    canSort && column !== undefined && (!isLazy || column.name !== "")
 
   const {
     buttonActionMenu,
@@ -1052,9 +1065,13 @@ function DataFrame({
           }}
           // Header click is used for column sorting:
           onHeaderClicked={(columnIdx: number, _event) => {
-            if (!canSort || isColumnSelectionActivated) {
-              // Deactivate sorting for empty state, for large dataframes, or
-              // when column selection is activated.
+            if (
+              !isColumnSortable(columns[columnIdx]) ||
+              isColumnSelectionActivated
+            ) {
+              // Deactivate sorting for empty state, large dataframes, columns
+              // that aren't sortable in the current mode (e.g. the index column
+              // in lazy mode), or when column selection is activated.
               return
             }
 
@@ -1269,9 +1286,10 @@ function DataFrame({
             column={originalColumns[showMenu.columnIdx]}
             data={data}
             isEditable={editingMode !== DataframeProto.EditingMode.READ_ONLY}
+            isLazy={isLazy}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
-              canSort
+              isColumnSortable(originalColumns[showMenu.columnIdx])
                 ? (direction: "asc" | "desc" | undefined) => {
                     // Hide search before sorting to clear search results
                     if (showSearch) {

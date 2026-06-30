@@ -47,3 +47,19 @@ st.dataframe(make_df(200_000), height=300, width=400)
 # 3) Small dataframe with lazy=True stays eager (small-data optimization).
 st.header("Small lazy stays eager")
 st.dataframe(make_df(10), lazy=True, width=400)
+
+# 4) Lazy dataframe with hidden index and fixed-width columns. Used to test the
+# column menu at deterministic click positions (the test helpers assume all
+# columns share one width and that there is no visible index column).
+st.header("Lazy dataframe with fixed-width columns")
+st.dataframe(
+    make_df(5_000),
+    lazy=True,
+    hide_index=True,
+    column_config={
+        "index_col": st.column_config.Column(width="medium"),
+        "squared": st.column_config.Column(width="medium"),
+        "label": st.column_config.Column(width="medium"),
+    },
+    width="content",
+)
