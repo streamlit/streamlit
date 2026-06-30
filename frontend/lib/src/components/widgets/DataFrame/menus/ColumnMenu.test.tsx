@@ -102,6 +102,19 @@ describe("DataFrame ColumnMenu", () => {
     expect(screen.getByText("Sort descending")).toBeInTheDocument()
   })
 
+  it("renders menu options without wrapping", () => {
+    render(<ColumnMenu {...defaultProps} />)
+
+    const sortDescendingMenuItem = screen
+      .getByText("Sort descending")
+      .closest('[role="menuitem"]')
+
+    expect(screen.getByRole("menu")).toHaveStyle(
+      "min-width: calc(8rem * 1.25)"
+    )
+    expect(sortDescendingMenuItem).toHaveStyle("white-space: nowrap")
+  })
+
   it("calls sortColumn with 'asc' when clicking sort ascending", async () => {
     render(<ColumnMenu {...defaultProps} />)
 

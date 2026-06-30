@@ -177,7 +177,8 @@ export const StyledMenuList = styled.div(({ theme }) => ({
   paddingBottom: theme.spacing.threeXS,
   paddingLeft: theme.spacing.xs,
   paddingRight: theme.spacing.xs,
-  maxWidth: "10rem",
+  minWidth: `calc(${theme.sizes.minMenuWidth} * 1.25)`,
+  maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,
 }))
 
 interface StyledMenuListItemProps {
@@ -215,6 +216,7 @@ export const StyledMenuListItem = styled.div<StyledMenuListItemProps>(
       boxShadow: theme.shadows.focusRing,
     },
     minWidth: theme.sizes.minMenuWidth,
+    whiteSpace: "nowrap",
     // If the submenu is activated, we need to place the menu icon & label to the left
     // and the submenu indicator to the right:
     ...(hasSubmenu && {
