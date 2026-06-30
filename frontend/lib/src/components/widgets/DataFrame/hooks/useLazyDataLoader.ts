@@ -314,12 +314,18 @@ function useLazyDataLoader({
         chunkIndex <= lastChunk;
         chunkIndex++
       ) {
-        if (
-          !cache.hasChunk(chunkIndex) &&
-          cache.getFailure(chunkIndex) === undefined
-        ) {
-          scheduleRequest(chunkIndex)
+        if (cache.hasChunk(chunkIndex)) {
+          continue
         }
+        // Retry a previously failed chunk when it is scrolled back into view:
+        // the failure may have been transient (e.g. a timeout or a brief
+        // connection drop). Clearing it here lets `requestChunk` issue a fresh
+        // request. This retry is user-driven and debounced/deduplicated, so it
+        // can't turn into a retry storm.
+        if (cache.getFailure(chunkIndex) !== undefined) {
+          cache.clearFailure(chunkIndex)
+        }
+        scheduleRequest(chunkIndex)
       }
     },
     [controller, numRows, scheduleRequest]

@@ -233,6 +233,54 @@ describe("useLazyDataLoader", () => {
     }
   })
 
+  it("retries a previously failed chunk when it is scrolled back into view", async () => {
+    let shouldFail = true
+    const { client, request } = makeClient(() => {
+      if (shouldFail) {
+        return Promise.reject(new Error("transient failure"))
+      }
+      return Promise.resolve({
+        sourceId: SOURCE_ID,
+        generation: GENERATION,
+        offset: PAGE_SIZE,
+        arrowData: { data: UNICODE },
+      })
+    })
+    const { result } = renderLoader(client)
+
+    // First scroll requests chunk 1, which fails and is cached as an error.
+    act(() => {
+      result.current.onVisibleRegionChanged({
+        x: 0,
+        y: 2,
+        width: 1,
+        height: 2,
+      })
+    })
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(1))
+    await waitFor(() =>
+      expect(isErrorCell(result.current.getCellContent([0, 2]))).toBe(true)
+    )
+
+    // The backend recovers; scrolling the failed chunk back into view must
+    // retry it rather than leaving the error cell stuck.
+    shouldFail = false
+    act(() => {
+      result.current.onVisibleRegionChanged({
+        x: 0,
+        y: 2,
+        width: 1,
+        height: 2,
+      })
+    })
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(2))
+    await waitFor(() => {
+      const cell = result.current.getCellContent([0, 2])
+      expect(isErrorCell(cell)).toBe(false)
+      expect(cell.kind).not.toBe(GridCellKind.Loading)
+    })
+  })
+
   it("ignores responses with a stale generation", async () => {
     const { client, request } = makeClient(() =>
       Promise.resolve({
