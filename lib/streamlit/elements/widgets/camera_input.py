@@ -242,7 +242,7 @@ class CameraInputMixin:
         if resolution is not None and resolution not in _RESOLUTION_TO_HEIGHT:
             raise StreamlitAPIException(
                 f"Invalid resolution: {resolution!r}. "
-                f"Must be one of {sorted(_RESOLUTION_TO_HEIGHT)}, or None."
+                f"Must be one of {list(_RESOLUTION_TO_HEIGHT)}, or None."
             )
 
         ctx = get_script_run_ctx()
