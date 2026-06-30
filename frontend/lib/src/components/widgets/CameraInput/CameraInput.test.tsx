@@ -36,8 +36,15 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import CameraInput, { Props } from "./CameraInput"
 import { WebcamPermission } from "./WebcamComponent"
 
+// Records the props passed to the (mocked) react-webcam on each render so tests
+// can assert how CameraInput's props flow through WebcamComponent.
+const webcamMock = vi.hoisted(() => ({
+  calls: [] as Array<Record<string, unknown>>,
+}))
+
 vi.mock("react-webcam", () => {
-  const MockWebcam = forwardRef((_props, ref) => {
+  const MockWebcam = forwardRef((props, ref) => {
+    webcamMock.calls.push(props as Record<string, unknown>)
     useImperativeHandle(ref, () => {
       return {
         getScreenshot: () => "data:image/jpeg;base64,mocked-photo",
@@ -644,20 +651,37 @@ describe("CameraInput widget", () => {
   })
 
   describe("resolution height forwarding", () => {
-    it("forwards resolutionHeight to WebcamComponent when proto field is set", () => {
+    beforeEach(() => {
+      webcamMock.calls.length = 0
+    })
+
+    it("forwards resolutionHeight as a height-only capture constraint", () => {
       const props = getProps({ resolutionHeight: 720 })
       render(<CameraInput {...props} />)
 
-      // WebcamComponent receives the resolutionHeight; it renders without error
-      expect(screen.getByTestId("stCameraInputWebcamComponent")).toBeVisible()
+      // The proto field reaches WebcamComponent, which turns it into a
+      // height-only getUserMedia constraint and forces the screenshot to use
+      // the stream's intrinsic size.
+      const webcamProps = webcamMock.calls.at(-1)
+      expect(webcamProps?.forceScreenshotSourceSize).toBe(true)
+      expect(webcamProps?.videoConstraints).toMatchObject({
+        height: { ideal: 720 },
+      })
+      expect(webcamProps?.videoConstraints).not.toHaveProperty("width")
     })
 
-    it("forwards undefined to WebcamComponent when proto field is absent", () => {
+    it("omits the resolution constraint when the proto field is absent", () => {
       const props = getProps({})
       render(<CameraInput {...props} />)
 
-      // WebcamComponent receives undefined resolutionHeight; renders normally
-      expect(screen.getByTestId("stCameraInputWebcamComponent")).toBeVisible()
+      // Without a resolution, capture falls back to the display-width hint and
+      // the screenshot uses the displayed element size.
+      const webcamProps = webcamMock.calls.at(-1)
+      expect(webcamProps?.forceScreenshotSourceSize).toBe(false)
+      expect(webcamProps?.videoConstraints).toMatchObject({
+        width: { ideal: expect.any(Number) },
+      })
+      expect(webcamProps?.videoConstraints).not.toHaveProperty("height")
     })
   })
 })
