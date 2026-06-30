@@ -177,7 +177,9 @@ export const StyledMenuList = styled.div(({ theme }) => ({
   paddingBottom: theme.spacing.threeXS,
   paddingLeft: theme.spacing.xs,
   paddingRight: theme.spacing.xs,
-  minWidth: `calc(${theme.sizes.minMenuWidth} * 1.25)`,
+  // No explicit minWidth: the menu shrink-wraps to its content (floored by the
+  // item minWidth) so short menus keep their compact default size. The wider
+  // maxWidth lets the menu grow for longer, non-wrapping labels.
   maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,
 }))
 

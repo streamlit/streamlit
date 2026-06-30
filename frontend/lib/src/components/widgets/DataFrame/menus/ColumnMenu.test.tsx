@@ -110,8 +110,10 @@ describe("DataFrame ColumnMenu", () => {
       name: /Sort descending/,
     })
 
+    // The menu keeps its compact default width (no forced minWidth) but can
+    // grow up to maxWidth so longer labels stay on a single line.
     expect(screen.getByRole("menu")).toHaveStyle(
-      `min-width: calc(${sizes.minMenuWidth} * 1.25)`
+      `max-width: calc(${sizes.minMenuWidth} * 2)`
     )
     expect(sortDescendingMenuItem).toHaveStyle("white-space: nowrap")
   })
