@@ -138,7 +138,14 @@ def test_take_photo_button_styling(app: Page):
 
 @pytest.mark.only_browser("chromium")
 def test_captures_photo_with_720p_resolution(app: Page):
-    """Test that a camera input with resolution='720p' captures a photo."""
+    """A resolution='720p' capture is encoded at the requested 720px height.
+
+    The app script opens the uploaded file and writes its pixel height, so this
+    asserts the dimensions of the actual captured image (not just the on-screen
+    preview). The Chromium fake camera streams 1280x720 for an ideal-720 height
+    request, and ``forceScreenshotSourceSize`` makes the screenshot use the
+    stream's intrinsic size.
+    """
     camera = get_element_by_key(app, "camera_720p").get_by_test_id("stCameraInput")
     take_photo_button = camera.get_by_test_id("stCameraInputButton").first
     # Wait until the fake video stream is ready (button becomes enabled)
@@ -147,8 +154,8 @@ def test_captures_photo_with_720p_resolution(app: Page):
     take_photo_button.click()
     # Verify a photo was captured (Clear photo button appears)
     expect(camera.get_by_text("Clear photo")).to_be_visible()
-    # Verify no error occurred (widget still visible)
-    expect(camera).to_be_visible()
+    # The captured JPEG is encoded at the requested 720px height.
+    expect_prefixed_markdown(app, "720p captured height:", "720")
 
 
 def test_check_top_level_class(app: Page):

@@ -160,6 +160,8 @@ const WebcamComponent = ({
             // width/height size the on-screen preview only; the captured image size is
             // governed by videoConstraints + forceScreenshotSourceSize.
             width={debouncedWidth}
+            // We keep Aspect ratio of container always equal 16 / 9.
+            // The aspect ration of video stream may be different depending on a camera.
             height={(debouncedWidth * 9) / 16}
             style={{
               borderRadius: `${theme.radii.default} ${theme.radii.default} 0 0`,
