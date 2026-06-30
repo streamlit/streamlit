@@ -172,17 +172,24 @@ class SnowparkDataframeSource:
         *,
         sort: SortSpec | None = None,
     ) -> pa.Table:
+        from streamlit.dataframe.source import DEFAULT_PAGE_SIZE
+
         # Resolve the schema first; this also caches the unsorted first page.
         schema = self.schema
 
-        # Reuse the cached first page (used to derive the schema) when possible.
+        # Reuse the cached first page (used to derive the schema) when it fully
+        # covers the requested window: either it holds at least ``limit`` rows,
+        # or it is the entire dataset (fewer than a full page exists). Otherwise
+        # (e.g. a client requesting a window larger than the cached page) fall
+        # through to a fresh query so we don't under-return rows.
+        cached = self._initial_table
         if (
             sort is None
             and offset == 0
-            and self._initial_table is not None
-            and self._initial_table.num_rows <= limit
+            and cached is not None
+            and (limit <= cached.num_rows or cached.num_rows < DEFAULT_PAGE_SIZE)
         ):
-            return self._initial_table
+            return cached.slice(0, limit)
 
         if (
             offset > self._DEEP_OFFSET_WARNING_THRESHOLD

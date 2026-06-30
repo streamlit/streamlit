@@ -76,6 +76,20 @@ describe("LazyDataframeCache", () => {
     expect(cache.hasChunk(3)).toBe(true)
   })
 
+  it("evicts the oldest failed chunk when exceeding the max-chunks limit", () => {
+    const maxChunks = 3
+    const cache = new LazyDataframeCache(500, maxChunks)
+    cache.setFailed(0, "err-0")
+    cache.setFailed(1, "err-1")
+    cache.setFailed(2, "err-2")
+    cache.setFailed(3, "err-3")
+
+    // The oldest failure (index 0) should have been evicted.
+    expect(cache.getFailure(0)).toBeUndefined()
+    expect(cache.getFailure(1)).toBe("err-1")
+    expect(cache.getFailure(3)).toBe("err-3")
+  })
+
   it("clears all loaded and failed chunks", () => {
     const cache = new LazyDataframeCache(500)
     cache.addChunk(0, makeChunk(0))
