@@ -44,7 +44,7 @@ const webcamMock = vi.hoisted(() => ({
 
 vi.mock("react-webcam", () => {
   const MockWebcam = forwardRef((props, ref) => {
-    webcamMock.calls.push(props as Record<string, unknown>)
+    webcamMock.calls.push(props)
     useImperativeHandle(ref, () => {
       return {
         getScreenshot: () => "data:image/jpeg;base64,mocked-photo",
