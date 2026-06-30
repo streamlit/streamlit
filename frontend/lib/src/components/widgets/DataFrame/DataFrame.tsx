@@ -87,7 +87,6 @@ import useDataEditor from "./hooks/useDataEditor"
 import useDataExporter from "./hooks/useDataExporter"
 import useDataFrameCapabilities from "./hooks/useDataFrameCapabilities"
 import useDataLoader from "./hooks/useDataLoader"
-import useLazyColumnSort from "./hooks/useLazyColumnSort"
 import useLazyDataLoader from "./hooks/useLazyDataLoader"
 import useRowHover from "./hooks/useRowHover"
 import useSelectionHandler from "./hooks/useSelectionHandler"
@@ -316,15 +315,23 @@ function DataFrame({
     editingState
   )
 
-  // Both eager and lazy hooks are always called to satisfy the Rules of Hooks;
-  // the active set of results is selected by `isLazy` below.
-  const eagerSort = useColumnSort(
-    originalNumRows,
-    originalColumns,
-    getOriginalCellContent
-  )
+  // A single sort hook handles both modes: client-side (eager) sorting and
+  // server-side (lazy) sort state. In server mode it never runs Glide's
+  // client-side sorter over the lazy rows and exposes `serverSortState` for the
+  // lazy loader.
+  const {
+    columns,
+    sortColumn,
+    getOriginalIndex,
+    serverSortState,
+    getCellContent: eagerGetCellContent,
+  } = useColumnSort({
+    mode: isLazy ? "server" : "client",
+    numRows: originalNumRows,
+    columns: originalColumns,
+    getCellContent: getOriginalCellContent,
+  })
 
-  const lazySort = useLazyColumnSort(originalColumns)
   const { getCellContent: getLazyCellContent, onVisibleRegionChanged } =
     useLazyDataLoader({
       initialChunk: data,
@@ -333,18 +340,13 @@ function DataFrame({
       sourceId: lazyData?.sourceId ?? "",
       generation: lazyData?.generation ?? "",
       pageSize: lazyData?.pageSize ?? 1,
-      sortState: lazySort.sortState,
+      sortState: serverSortState,
       backendOperationClient,
     })
 
-  const { columns, sortColumn, getOriginalIndex, getCellContent } = isLazy
-    ? {
-        columns: lazySort.columns,
-        sortColumn: lazySort.sortColumn,
-        getOriginalIndex: lazySort.getOriginalIndex,
-        getCellContent: getLazyCellContent,
-      }
-    : eagerSort
+  // In lazy mode, cells come from the chunked loader; otherwise from the
+  // client-sorted eager getter.
+  const getCellContent = isLazy ? getLazyCellContent : eagerGetCellContent
 
   // Whether a specific column can be sorted in the current mode. Eager sorting
   // is client-side and works for any column (incl. the index). Lazy sorting is

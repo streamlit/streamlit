@@ -32,7 +32,7 @@ import {
   BaseColumn,
   getErrorCell,
 } from "~lib/components/widgets/DataFrame/columns"
-import { LazySortState } from "~lib/components/widgets/DataFrame/hooks/useLazyColumnSort"
+import { ServerSortState } from "~lib/components/widgets/DataFrame/hooks/useColumnSort"
 import { LazyDataframeCache } from "~lib/components/widgets/DataFrame/LazyDataframeCache"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
@@ -65,7 +65,7 @@ interface UseLazyDataLoaderParams {
   /** The number of rows the backend serves per chunk. */
   pageSize: number
   /** The active server-side sort state, or undefined. */
-  sortState: LazySortState | undefined
+  sortState: ServerSortState | undefined
   /** Client used to request chunks without a script rerun. */
   backendOperationClient: BackendOperationClient | undefined
 }

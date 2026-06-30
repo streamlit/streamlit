@@ -16,11 +16,7 @@
 
 import { useCallback, useMemo, useState } from "react"
 
-import {
-  DataEditorProps,
-  GridCell,
-  GridColumn,
-} from "@glideapps/glide-data-grid"
+import { DataEditorProps, GridCell } from "@glideapps/glide-data-grid"
 import { useColumnSort as useGlideColumnSort } from "@glideapps/glide-data-grid-source"
 
 import {
@@ -28,138 +24,171 @@ import {
   toGlideColumn,
 } from "~lib/components/widgets/DataFrame/columns"
 
-/**
- * Configuration type for column sorting hook.
- */
-type ColumnSortConfig = {
-  column: GridColumn
-  mode?: "default" | "raw" | "smart"
-  direction?: "asc" | "desc"
-}
+import {
+  ActiveColumnSort,
+  applySortIndicator,
+  getNextColumnSort,
+} from "./sortUtils"
 
 /**
- * Updates the column headers based on the sorting configuration.
- *
- * @param columns - The columns of the table.
- * @param sort - The current sorting configuration.
- *
- * @returns The updated list of columns.
+ * The sorting strategy for a dataframe:
+ * - ``"client"``: sort all rows in the browser via Glide. Valid only for eager
+ *   dataframes where every row is available locally.
+ * - ``"server"``: only track sort state and the header indicator; the backend
+ *   returns rows already sorted (lazy dataframes). The client-side sorter is
+ *   never run over server rows.
  */
-function updateSortingHeader(
-  columns: BaseColumn[],
-  sort: ColumnSortConfig | undefined
-): BaseColumn[] {
-  if (sort === undefined) {
-    return columns
-  }
-  return columns.map(column => {
-    if (column.id === sort.column.id) {
-      return {
-        ...column,
-        title:
-          sort.direction === "asc" ? `↑ ${column.title}` : `↓ ${column.title}`,
-      }
-    }
-    return column
-  })
+type ColumnSortMode = "client" | "server"
+
+/**
+ * Server-side sort state to send to the backend for lazy dataframes. ``column``
+ * is the backend Arrow field name (not the displayed label).
+ */
+export interface ServerSortState {
+  column: string
+  descending: boolean
+}
+
+interface UseColumnSortParams {
+  /** The sorting strategy (see {@link ColumnSortMode}). */
+  mode: ColumnSortMode
+  /** The number of rows in the table. */
+  numRows: number
+  /** The columns of the table. */
+  columns: BaseColumn[]
+  /** Returns the cell content at the given column and row indices. */
+  getCellContent: ([col, row]: readonly [number, number]) => GridCell
 }
 
 type ColumnSortReturn = {
+  /** Columns with a sort-direction indicator applied to the active column. */
   columns: BaseColumn[]
+  /**
+   * Toggle/apply the sort for the column at the given display index.
+   *
+   * @param index - The display column index.
+   * @param direction - ``"asc"``/``"desc"``, or ``"auto"`` to toggle
+   *   asc → desc → none. If omitted, sorting is removed.
+   * @param autoReset - If ``true``, re-applying the same direction removes the
+   *   sort.
+   */
   sortColumn: (
     index: number,
-    // If undefined, the sorting will be removed
-    // If "auto", the sorting will toggle from asc -> desc -> remove
     direction?: "asc" | "desc" | "auto",
-    // If true, the sorting will be removed if the sortColumn is called
-    // with the same direction as the current sorting direction
     autoReset?: boolean
   ) => void
+  /** Maps a display row index to the original row index. */
   getOriginalIndex: (index: number) => number
+  /**
+   * The active server-side sort state in ``"server"`` mode, or ``undefined``
+   * (also ``undefined`` in ``"client"`` mode). Passed to the lazy data loader
+   * so chunk requests include the sort state.
+   */
+  serverSortState: ServerSortState | undefined
 } & Pick<DataEditorProps, "getCellContent">
 
+const identity = (index: number): number => index
+
 /**
- * A React hook that provides column sorting functionality.
+ * A React hook that provides column sorting for both eager (client-side) and
+ * lazy (server-side) dataframes behind one contract.
  *
- * @param numRows - The number of rows in the table.
- * @param columns - The columns of the table.
- * @param getCellContent - A function that returns the content of the cell at the given column and row indices.
- *
- * @returns An object containing the following properties:
- * - `columns`: The updated list of columns.
- * - `sortColumn`: A function that sorts the column at the given index.
- * - `getOriginalIndex`: A function that returns the original index of the row at the given index.
- * - `getCellContent`: An updated function that returns the content of the cell at the given column and row indices.
+ * In ``"server"`` mode the hook only manages sort state and the header
+ * indicator and exposes {@link ServerSortState}; it never invokes Glide's
+ * client-side sorter (which would scan the full table), and ``getOriginalIndex``
+ * is the identity because the backend returns already-sorted rows.
  */
-function useColumnSort(
-  numRows: number,
-  columns: BaseColumn[],
-  getCellContent: ([col, row]: readonly [number, number]) => GridCell
-): ColumnSortReturn {
-  const [sort, setSort] = useState<ColumnSortConfig>()
+function useColumnSort({
+  mode,
+  numRows,
+  columns,
+  getCellContent,
+}: UseColumnSortParams): ColumnSortReturn {
+  const [sort, setSort] = useState<ActiveColumnSort>()
+
+  const columnsById = useMemo(() => {
+    const map = new Map<string, BaseColumn>()
+    for (const column of columns) {
+      map.set(column.id, column)
+    }
+    return map
+  }, [columns])
+
+  const glideColumns = useMemo(
+    () => columns.map(column => toGlideColumn(column)),
+    [columns]
+  )
+
+  // The Glide sort config is only built in client mode. Hooks must run
+  // unconditionally, so useGlideColumnSort is always called; in server mode it
+  // receives no sort and zero rows, so it never scans the (potentially lazy)
+  // rows or calls the cell getter across the whole table.
+  const glideSort = useMemo(() => {
+    if (mode !== "client" || sort === undefined) {
+      return undefined
+    }
+    const column = columnsById.get(sort.columnId)
+    if (column === undefined) {
+      return undefined
+    }
+    return {
+      column: toGlideColumn(column),
+      direction: sort.direction,
+      mode: column.sortMode,
+    }
+  }, [mode, sort, columnsById])
 
   const { getCellContent: getCellContentSorted, getOriginalIndex } =
     useGlideColumnSort({
-      columns: columns.map(column => toGlideColumn(column)),
+      columns: glideColumns,
       getCellContent,
-      rows: numRows,
-      sort,
+      rows: mode === "client" ? numRows : 0,
+      sort: glideSort,
     })
 
-  const updatedColumns = useMemo(() => {
-    return updateSortingHeader(columns, sort)
-  }, [columns, sort])
+  const updatedColumns = useMemo(
+    () => applySortIndicator(columns, sort),
+    [columns, sort]
+  )
 
   const sortColumn = useCallback(
     (
       index: number,
       direction?: "asc" | "desc" | "auto",
       autoReset?: boolean
-    ) => {
-      const clickedColumn = updatedColumns[index]
-      let sortDirection: "asc" | "desc" | undefined
-
-      if (direction === "auto") {
-        // Toggle from asc -> desc -> remove
-        sortDirection = "asc"
-        if (sort?.column.id === clickedColumn.id) {
-          // The clicked column is already sorted
-          if (sort.direction === "asc") {
-            // Sort column descending
-            sortDirection = "desc"
-          } else {
-            // Remove sorting of column
-            sortDirection = undefined
-          }
-        }
-      } else {
-        sortDirection = direction
+    ): void => {
+      const clickedColumn = columns[index]
+      if (clickedColumn === undefined) {
+        return
       }
-
-      if (sortDirection === undefined) {
-        // Remove sorting:
-        setSort(undefined)
-      } else if (autoReset && sortDirection === sort?.direction) {
-        // Remove sorting if autoReset is true and the new
-        // sortDirection is the same as the current sorting direction
-        setSort(undefined)
-      } else {
-        // Set the new sorting direction:
-        setSort({
-          column: toGlideColumn(clickedColumn),
-          direction: sortDirection,
-          mode: clickedColumn.sortMode,
-        })
+      // Server-side sorting keys on the backend Arrow field name; columns
+      // without one (e.g. the index column, whose name is empty) cannot be
+      // sorted server-side, so we ignore the request.
+      if (mode === "server" && !clickedColumn.name) {
+        return
       }
+      setSort(getNextColumnSort(sort, clickedColumn.id, direction, autoReset))
     },
-    [sort, updatedColumns]
+    [columns, sort, mode]
   )
+
+  const serverSortState = useMemo<ServerSortState | undefined>(() => {
+    if (mode !== "server" || sort === undefined) {
+      return undefined
+    }
+    const column = columnsById.get(sort.columnId)
+    if (!column?.name) {
+      return undefined
+    }
+    return { column: column.name, descending: sort.direction === "desc" }
+  }, [mode, sort, columnsById])
 
   return {
     columns: updatedColumns,
     sortColumn,
-    getOriginalIndex,
-    getCellContent: getCellContentSorted,
+    getOriginalIndex: mode === "client" ? getOriginalIndex : identity,
+    getCellContent: mode === "client" ? getCellContentSorted : getCellContent,
+    serverSortState,
   }
 }
 
