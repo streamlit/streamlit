@@ -27,6 +27,8 @@ import { ConnectionState } from "./ConnectionState"
 import {
   PING_MAXIMUM_RETRY_PERIOD_MS,
   PING_MINIMUM_RETRY_PERIOD_MS,
+  RECONNECT_BASE_RETRY_PERIOD_MS,
+  RECONNECT_MAXIMUM_RETRY_PERIOD_MS,
   WEBSOCKET_STREAM_PATH,
   WEBSOCKET_TIMEOUT_MS,
 } from "./constants"
@@ -224,6 +226,17 @@ export class WebsocketConnection {
    */
   private wsConnectionTimeout?: ReturnType<typeof setTimeout>
 
+  /**
+   * Timeout used to spread WebSocket reconnection attempts before they re-probe
+   * the health endpoint.
+   */
+  private reconnectDelayTimeout?: ReturnType<typeof setTimeout>
+
+  /**
+   * Consecutive WebSocket reconnect attempts since the last successful connect.
+   */
+  private reconnectAttempt = 0
+
   constructor(props: Args) {
     this.args = props
     this.cache = new ForwardMsgCache()
@@ -261,7 +274,8 @@ export class WebsocketConnection {
   // This should only be called inside stepFsm().
   private setFsmState(
     state: ConnectionState,
-    errDetails?: ErrorDetails
+    errDetails?: ErrorDetails,
+    pingDelayMs = 0
   ): void {
     LOG.info(`New state: ${state}`)
     this.state = state
@@ -269,8 +283,12 @@ export class WebsocketConnection {
     // Perform pre-callback actions when entering certain states.
     switch (this.state) {
       case ConnectionState.PINGING_SERVER:
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-        this.pingServer()
+        this.schedulePingServer(pingDelayMs)
+        break
+
+      case ConnectionState.CONNECTED:
+        this.reconnectAttempt = 0
+        this.clearReconnectDelayTimeout()
         break
 
       default:
@@ -358,14 +376,22 @@ export class WebsocketConnection {
           event === "CONNECTION_ERROR" ||
           event === "CONNECTION_CLOSED"
         ) {
-          this.setFsmState(ConnectionState.PINGING_SERVER)
+          this.setFsmState(
+            ConnectionState.PINGING_SERVER,
+            undefined,
+            this.nextReconnectDelayMs()
+          )
           return
         }
         break
 
       case ConnectionState.CONNECTED:
         if (event === "CONNECTION_CLOSED" || event === "CONNECTION_ERROR") {
-          this.setFsmState(ConnectionState.PINGING_SERVER)
+          this.setFsmState(
+            ConnectionState.PINGING_SERVER,
+            undefined,
+            this.nextReconnectDelayMs()
+          )
           return
         }
         break
@@ -396,6 +422,45 @@ export class WebsocketConnection {
         `State: ${this.state}\n` +
         `Event: ${event}`
     )
+  }
+
+  private nextReconnectDelayMs(): number {
+    this.reconnectAttempt += 1
+
+    const retryWindowMs = Math.min(
+      RECONNECT_MAXIMUM_RETRY_PERIOD_MS,
+      RECONNECT_BASE_RETRY_PERIOD_MS * 2 ** (this.reconnectAttempt - 1)
+    )
+    const minimumDelayMs = retryWindowMs / 2
+
+    return Math.floor(minimumDelayMs + Math.random() * minimumDelayMs)
+  }
+
+  private schedulePingServer(delayMs: number): void {
+    this.clearReconnectDelayTimeout()
+
+    if (delayMs <= 0) {
+      void this.pingServer()
+      return
+    }
+
+    // eslint-disable-next-line no-restricted-properties -- Reconnect retry scheduler requires a raw timer outside React.
+    this.reconnectDelayTimeout = globalThis.setTimeout(() => {
+      this.reconnectDelayTimeout = undefined
+
+      if (this.state !== ConnectionState.PINGING_SERVER) {
+        return
+      }
+
+      void this.pingServer()
+    }, delayMs)
+  }
+
+  private clearReconnectDelayTimeout(): void {
+    if (notNullOrUndefined(this.reconnectDelayTimeout)) {
+      globalThis.clearTimeout(this.reconnectDelayTimeout)
+      this.reconnectDelayTimeout = undefined
+    }
   }
 
   private async pingServer(): Promise<void> {
@@ -651,6 +716,8 @@ export class WebsocketConnection {
       globalThis.clearTimeout(this.wsConnectionTimeout)
       this.wsConnectionTimeout = undefined
     }
+
+    this.clearReconnectDelayTimeout()
 
     if (this.pingRequest) {
       this.pingRequest.cancel()

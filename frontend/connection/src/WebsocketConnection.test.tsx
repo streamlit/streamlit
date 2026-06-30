@@ -36,6 +36,7 @@ import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   MAX_RETRIES_BEFORE_CLIENT_ERROR,
   PING_MINIMUM_RETRY_PERIOD_MS,
+  RECONNECT_BASE_RETRY_PERIOD_MS,
 } from "./constants"
 import { doInitPings } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
@@ -1022,6 +1023,84 @@ describe("WebsocketConnection", () => {
     client.reconnect()
     // @ts-expect-error
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+  })
+
+  it("delays health pings when reconnecting after a websocket disconnect", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+    const expectedReconnectDelayMs = RECONNECT_BASE_RETRY_PERIOD_MS * 0.75
+
+    await vi.runAllTimersAsync()
+    await server.connected
+    vi.mocked(globalThis.fetch).mockClear()
+
+    client.reconnect()
+
+    // @ts-expect-error - accessing private property for testing
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(expectedReconnectDelayMs - 1)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+
+    randomSpy.mockRestore()
+  })
+
+  it("grows the reconnect backoff window on consecutive disconnects", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+
+    await vi.runAllTimersAsync()
+    await server.connected
+    vi.mocked(globalThis.fetch).mockClear()
+
+    // First disconnect: window is the base period, so 0.5 jitter -> 750ms.
+    client.reconnect()
+    await vi.advanceTimersByTimeAsync(
+      RECONNECT_BASE_RETRY_PERIOD_MS * 0.75 - 1
+    )
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    // Force a second consecutive disconnect without a successful connect in
+    // between (assigning the state directly avoids resetting the attempt
+    // counter). This also cancels the still-pending first-attempt ping.
+    // @ts-expect-error - accessing private property for testing
+    client.state = ConnectionState.CONNECTED
+    client.reconnect()
+
+    // The window now doubles to 1000-2000ms, so 0.5 jitter -> 1500ms. The
+    // previously scheduled ping was cancelled, so nothing fires before then.
+    await vi.advanceTimersByTimeAsync(RECONNECT_BASE_RETRY_PERIOD_MS * 1.5 - 1)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+
+    randomSpy.mockRestore()
+  })
+
+  it("cancels the pending reconnect ping when disconnected during the delay", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+
+    await vi.runAllTimersAsync()
+    await server.connected
+    vi.mocked(globalThis.fetch).mockClear()
+
+    client.reconnect()
+    // @ts-expect-error - accessing private property for testing
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+
+    client.disconnect()
+
+    // @ts-expect-error - accessing private property for testing
+    expect(client.state).toBe(ConnectionState.DISCONNECTED_FOREVER)
+
+    // The scheduled ping should never fire after a permanent disconnect.
+    await vi.runAllTimersAsync()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    randomSpy.mockRestore()
   })
 
   it("reconnect does nothing if not connected", () => {
