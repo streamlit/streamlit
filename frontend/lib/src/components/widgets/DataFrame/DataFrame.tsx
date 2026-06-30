@@ -977,7 +977,11 @@ function DataFrame({
           // Search needs to be activated manually, to support search
           // via the toolbar:
           onKeyDown={event => {
-            if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+            if (
+              canSearch &&
+              (event.ctrlKey || event.metaKey) &&
+              event.key === "f"
+            ) {
               setShowSearch(cv => !cv)
               event.stopPropagation()
               event.preventDefault()
