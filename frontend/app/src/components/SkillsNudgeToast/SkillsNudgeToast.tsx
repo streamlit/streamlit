@@ -28,7 +28,6 @@ import {
   BaseButtonSize,
   DynamicIcon,
   StyledMessageWrapper,
-  StyledToastWrapper,
   useEmotionTheme,
 } from "@streamlit/lib"
 
@@ -37,6 +36,7 @@ import {
   StyledSkillsNudgeBody,
   StyledSkillsNudgeCard,
   StyledSkillsNudgeClose,
+  StyledSkillsNudgeContent,
   StyledSkillsNudgeHeading,
 } from "./styled-components"
 
@@ -149,7 +149,7 @@ function SkillsNudgeToast({
       aria-live="polite"
       onKeyDown={handleKeyDown}
     >
-      <StyledToastWrapper>
+      <StyledSkillsNudgeContent>
         <DynamicIcon
           iconValue={
             isSuccess
@@ -164,7 +164,7 @@ function SkillsNudgeToast({
               ? theme.colors.greenColor
               : isError
                 ? theme.colors.redTextColor
-                : theme.colors.primary
+                : theme.colors.fadedText60
           }
         />
         <StyledMessageWrapper>
@@ -220,7 +220,7 @@ function SkillsNudgeToast({
             </>
           )}
         </StyledMessageWrapper>
-      </StyledToastWrapper>
+      </StyledSkillsNudgeContent>
 
       {!isSuccess && (
         <StyledSkillsNudgeClose

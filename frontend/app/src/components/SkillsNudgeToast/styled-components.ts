@@ -38,10 +38,32 @@ const slideIn = keyframes({
  */
 export const StyledSkillsNudgeCard = styled.div(({ theme }) => ({
   ...getToastCardStyle(theme),
+  // Even 1rem padding on all sides. ``getToastCardStyle`` is tuned for the
+  // ``st.toast`` surface (16px vertical / 24px horizontal); the nudge is its
+  // own persistent card, so we square it off to a uniform 1rem per design.
+  paddingLeft: theme.spacing.lg,
+  paddingRight: theme.spacing.lg,
   animation: `${slideIn} 0.2s ease-out`,
   "@media (prefers-reduced-motion: reduce)": {
     animation: "none",
   },
+}))
+
+/**
+ * Row holding the leading icon and the message column. Mirrors the toast's
+ * inner wrapper but pins the icon to the *top* line of text instead of the
+ * vertical center: the toast centers a single line against its icon, whereas
+ * this card is multi-line (heading + body + actions), so centering would leave
+ * the icon stranded next to the body. ``align-items: flex-start`` pins it to the
+ * top so its optical center sits on the bold heading's first line.
+ */
+export const StyledSkillsNudgeContent = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "flex-start",
+  gap: theme.spacing.lg,
+  flex: 1,
+  minWidth: 0,
 }))
 
 /**
@@ -98,4 +120,8 @@ export const StyledSkillsNudgeActions = styled.div(({ theme }) => ({
   alignItems: "center",
   gap: theme.spacing.lg,
   marginTop: theme.spacing.twoXS,
+  // Match ``st.button``'s text size. The card body runs at ``sm``, but the
+  // buttons use ``BaseButton`` (``fontSize: inherit``), so without this they
+  // would render a notch smaller than the real widget they mimic.
+  fontSize: theme.fontSizes.md,
 }))
