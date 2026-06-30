@@ -29,6 +29,7 @@ Adapters use optional detection only and never require new dependencies.
 
 from __future__ import annotations
 
+import threading
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import dataframe_util
@@ -81,21 +82,29 @@ class PolarsLazyFrameSource:
         self._lf: Any = lazy_frame
         self._row_count: int | None = None
         self._schema: pa.Schema | None = None
+        # Guards the lazily-initialized properties below. Chunk requests run in
+        # worker threads (asyncio.to_thread), so concurrent first accesses could
+        # otherwise both run the full Polars query.
+        self._lock = threading.Lock()
 
     @property
     def row_count(self) -> int:
         if self._row_count is None:
             import polars as pl
 
-            self._row_count = int(self._lf.select(pl.len()).collect().item())
+            with self._lock:
+                if self._row_count is None:
+                    self._row_count = int(self._lf.select(pl.len()).collect().item())
         return self._row_count
 
     @property
     def schema(self) -> pa.Schema:
         if self._schema is None:
-            # Collecting zero rows is cheap and yields the full Arrow schema
-            # without materializing data.
-            self._schema = self._lf.head(0).collect().to_arrow().schema
+            with self._lock:
+                if self._schema is None:
+                    # Collecting zero rows is cheap and yields the full Arrow
+                    # schema without materializing data.
+                    self._schema = self._lf.head(0).collect().to_arrow().schema
         return self._schema
 
     @property
@@ -143,11 +152,17 @@ class SnowparkDataframeSource:
         # initial chunk request does not re-query.
         self._initial_table: pa.Table | None = None
         self._warned_deep_offset = False
+        # Guards the lazily-initialized properties below. Chunk requests run in
+        # worker threads (asyncio.to_thread), so concurrent first accesses could
+        # otherwise both issue the same Snowflake query.
+        self._lock = threading.Lock()
 
     @property
     def row_count(self) -> int:
         if self._row_count is None:
-            self._row_count = int(self._df.count())
+            with self._lock:
+                if self._row_count is None:
+                    self._row_count = int(self._df.count())
         return self._row_count
 
     @property
@@ -155,10 +170,15 @@ class SnowparkDataframeSource:
         if self._schema is None:
             from streamlit.dataframe.source import DEFAULT_PAGE_SIZE
 
-            # Loading (and caching) the first page also derives a stable Arrow
-            # schema and avoids a second query on the initial render.
-            self._initial_table = self._query_chunk(0, DEFAULT_PAGE_SIZE, sort=None)
-            self._schema = self._initial_table.schema
+            with self._lock:
+                if self._schema is None:
+                    # Loading (and caching) the first page also derives a stable
+                    # Arrow schema and avoids a second query on the initial
+                    # render.
+                    self._initial_table = self._query_chunk(
+                        0, DEFAULT_PAGE_SIZE, sort=None
+                    )
+                    self._schema = self._initial_table.schema
         return self._schema
 
     @property

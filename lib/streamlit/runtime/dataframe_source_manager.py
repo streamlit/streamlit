@@ -40,16 +40,13 @@ import collections
 import threading
 import uuid
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 from streamlit import dataframe_util
 from streamlit.dataframe.source import DEFAULT_PAGE_SIZE, MAX_CHUNK_ROWS, SortSpec
-from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
     from streamlit.dataframe.source import DataframeSource
-
-_LOGGER: Final = get_logger(__name__)
 
 
 class DataframeSourceError(Exception):
@@ -168,6 +165,14 @@ class DataframeSourceManager:
         # Clamp the limit to a hard maximum to prevent a modified client from
         # requesting arbitrarily large chunks.
         capped_limit = min(max(limit, 0), MAX_CHUNK_ROWS)
+
+        # Short-circuit out-of-bounds requests with an empty (schema-only) chunk
+        # instead of running a row query. This avoids unnecessary work for deep
+        # offsets, which can be expensive for sources like Snowpark.
+        if offset >= entry.source.row_count:
+            empty_table = entry.source.schema.empty_table()
+            arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(empty_table)
+            return arrow_bytes, offset
 
         table = entry.source.load_rows(offset, capped_limit, sort=sort)
         arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(table)

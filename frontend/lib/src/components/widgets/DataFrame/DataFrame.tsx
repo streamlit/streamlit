@@ -327,7 +327,7 @@ function DataFrame({
       numRows: originalNumRows,
       sourceId: lazyData?.sourceId ?? "",
       generation: lazyData?.generation ?? "",
-      pageSize: lazyData?.pageSize || 1,
+      pageSize: lazyData?.pageSize ?? 1,
       sortState: lazySort.sortState,
       backendOperationClient,
     })

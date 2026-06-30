@@ -180,6 +180,59 @@ describe("useLazyDataLoader", () => {
     expect(isErrorCell(result.current.getCellContent([0, 2]))).toBe(true)
   })
 
+  it("changes the getCellContent identity after a chunk loads so the grid repaints", async () => {
+    const { client } = makeClient(() =>
+      Promise.resolve({
+        sourceId: SOURCE_ID,
+        generation: GENERATION,
+        offset: PAGE_SIZE,
+        arrowData: { data: UNICODE },
+      })
+    )
+    const { result } = renderLoader(client)
+
+    const initialGetCellContent = result.current.getCellContent
+    // Request a not-yet-loaded chunk (row 2 lives in chunk 1).
+    result.current.getCellContent([0, 2])
+
+    // When the chunk arrives, the cell getter must change identity so that
+    // glide-data-grid repaints the affected rows instead of leaving them as
+    // loading skeletons.
+    await waitFor(() => {
+      expect(result.current.getCellContent).not.toBe(initialGetCellContent)
+    })
+  })
+
+  it("does not request chunks past the last valid chunk", async () => {
+    const { client, request } = makeClient(() =>
+      Promise.resolve({
+        sourceId: SOURCE_ID,
+        generation: GENERATION,
+        offset: PAGE_SIZE,
+        arrowData: { data: UNICODE },
+      })
+    )
+    const { result } = renderLoader(client)
+
+    // numRows=4 and pageSize=2, so the last valid chunk is index 1 (offset 2).
+    // The prefetch buffer would otherwise also schedule chunk 2 (offset 4),
+    // which can never contain rows.
+    act(() => {
+      result.current.onVisibleRegionChanged({
+        x: 0,
+        y: 2,
+        width: 1,
+        height: 2,
+      })
+    })
+
+    await waitFor(() => expect(request).toHaveBeenCalled())
+    // No request may target an out-of-bounds offset (>= numRows).
+    for (const call of request.mock.calls) {
+      expect(call[0].offset).toBeLessThan(4)
+    }
+  })
+
   it("ignores responses with a stale generation", async () => {
     const { client, request } = makeClient(() =>
       Promise.resolve({

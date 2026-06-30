@@ -132,6 +132,27 @@ def test_load_chunk_caps_limit() -> None:
     assert len(df) == 10_000
 
 
+def test_load_chunk_out_of_bounds_offset_returns_empty_chunk() -> None:
+    """An offset at/after the row count returns a schema-only chunk without querying."""
+    mgr = DataframeSourceManager()
+    reg = _register(mgr, num_rows=1000)
+    # Spy on load_rows to confirm the out-of-bounds request is short-circuited
+    # before any row query runs.
+    with patch.object(
+        reg.source, "load_rows", wraps=reg.source.load_rows
+    ) as load_rows_spy:
+        arrow_bytes, offset = mgr.load_chunk(
+            reg.session_id, reg.source_id, reg.generation, 1000, 5, None
+        )
+
+    assert offset == 1000
+    load_rows_spy.assert_not_called()
+    df = convert_arrow_bytes_to_pandas_df(arrow_bytes)
+    # Empty rows, but the schema (columns) is preserved for the frontend.
+    assert len(df) == 0
+    assert list(df.columns) == ["a", "b"]
+
+
 def test_re_register_same_coordinates_orphans_previous() -> None:
     """Re-registering at the same coordinates orphans the old source on prune."""
     mgr = DataframeSourceManager()

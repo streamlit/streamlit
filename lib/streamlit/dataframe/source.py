@@ -182,8 +182,15 @@ class InMemoryDataframeSource:
             if self._sorted_cache is not None and self._sorted_cache[0] == sort:
                 return self._sorted_cache[1]
 
+        # Sort outside the lock so an expensive sort doesn't serialize all
+        # chunk requests.
         sorted_table = self._sort_table(sort)
         with self._lock:
+            # A concurrent request for the same sort may have populated the
+            # cache while we were sorting; reuse it so both callers share one
+            # table instead of overwriting each other's result.
+            if self._sorted_cache is not None and self._sorted_cache[0] == sort:
+                return self._sorted_cache[1]
             self._sorted_cache = (sort, sorted_table)
         return sorted_table
 

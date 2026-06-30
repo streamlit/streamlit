@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import {
   GridCell,
@@ -106,7 +106,13 @@ function useLazyDataLoader({
   sortState,
   backendOperationClient,
 }: UseLazyDataLoaderParams): UseLazyDataLoaderReturn {
-  const [, setCacheVersion] = useState(0)
+  // Bumped whenever a chunk arrives. It is included in the `getCellContent`
+  // dependency list so the returned cell getter changes identity on every
+  // chunk load, which is what makes glide-data-grid repaint the affected cells
+  // (glide caches cells and won't redraw if `getCellContent` keeps the same
+  // reference). Without this, asynchronously loaded rows can stay stuck as
+  // loading skeletons until an unrelated scroll/sort forces a refresh.
+  const [cacheVersion, setCacheVersion] = useState(0)
   const bumpCacheVersion = useCallback(
     () => setCacheVersion(version => version + 1),
     []
@@ -227,6 +233,13 @@ function useLazyDataLoader({
     [flushPendingRequests]
   )
 
+  // Drop debounced chunk indices queued for a previous controller when the
+  // source, page size, or sort changes, so stale indices can't spill into the
+  // new request cycle (they would target a different cache/sort).
+  useEffect(() => {
+    pendingRef.current.clear()
+  }, [sourceId, generation, pageSize, sortKey])
+
   const getCellContent = useCallback(
     ([col, row]: Item): GridCell => {
       if (col > columns.length - 1) {
@@ -270,18 +283,32 @@ function useLazyDataLoader({
       scheduleRequest(chunkIndex)
       return LOADING_CELL
     },
-    [columns, numRows, controller, pageSize, scheduleRequest]
+    // `cacheVersion` is not read in the body; it is intentionally included so
+    // this getter changes identity whenever a chunk arrives, prompting
+    // glide-data-grid to repaint.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cacheVersion is an intentional repaint signal
+    [columns, numRows, controller, pageSize, scheduleRequest, cacheVersion]
   )
 
   const onVisibleRegionChanged = useCallback(
     (range: Rectangle): void => {
       const { cache } = controller
+      if (numRows <= 0) {
+        return
+      }
       const lastRow = Math.min(range.y + range.height - 1, numRows - 1)
+      // The highest chunk index that can contain rows. Prefetching past this
+      // would request a chunk that can never exist (e.g. when numRows is an
+      // exact multiple of pageSize) and cache a bogus "empty chunk" failure.
+      const maxChunk = cache.getChunkIndex(numRows - 1)
       const firstChunk = Math.max(
         0,
         cache.getChunkIndex(range.y) - PREFETCH_BUFFER_CHUNKS
       )
-      const lastChunk = cache.getChunkIndex(lastRow) + PREFETCH_BUFFER_CHUNKS
+      const lastChunk = Math.min(
+        cache.getChunkIndex(lastRow) + PREFETCH_BUFFER_CHUNKS,
+        maxChunk
+      )
       for (
         let chunkIndex = firstChunk;
         chunkIndex <= lastChunk;
