@@ -59,14 +59,13 @@ export interface ColumnMenuProps {
   // may not have Quiver data bound initially. Statistics menu is only shown
   // when data is available.
   data?: Quiver
-  // Whether the table is in an editable mode (st.data_editor).
-  // Statistics menu is hidden for editable tables since the displayed stats
-  // would reflect the original data, not the user's edits.
-  isEditable?: boolean
-  // Whether the dataframe is rendered in lazy mode. Statistics are hidden for
-  // lazy dataframes because the bound Quiver only holds the initial chunk, so
-  // the stats would reflect a subset of rows rather than the full dataframe.
-  isLazy?: boolean
+  // Whether the column statistics menu may be shown (from
+  // useDataFrameCapabilities). Statistics are computed over the locally-bound
+  // Quiver, so they are hidden for editable tables (stale pre-edit stats) and
+  // lazy dataframes (only loaded chunks are available, not all rows). The
+  // Statistics menu is also gated on `data` being present and the column kind
+  // supporting statistics.
+  canShowStatistics?: boolean
   // Callback used to instruct the parent to close the menu
   onCloseMenu: () => void
   // Callback to sort column
@@ -100,8 +99,7 @@ function ColumnMenu({
   onHideColumn,
   column,
   data,
-  isEditable,
-  isLazy,
+  canShowStatistics,
   onChangeFormat,
   onAutosize,
 }: ColumnMenuProps): ReactElement {
@@ -291,54 +289,51 @@ function ColumnMenu({
                 <StyledMenuDivider />
               </>
             )}
-            {data &&
-              !isEditable &&
-              !isLazy &&
-              supportsStatistics(column.kind) && (
-                <StatisticsMenu
-                  column={column}
-                  data={data}
-                  isOpen={statsMenuOpen}
-                  onOpenChange={handleStatsOpenChange}
+            {data && canShowStatistics && supportsStatistics(column.kind) && (
+              <StatisticsMenu
+                column={column}
+                data={data}
+                isOpen={statsMenuOpen}
+                onOpenChange={handleStatsOpenChange}
+              >
+                <StyledMenuListItem
+                  onFocus={() => handleStatsOpenChange(true)}
+                  onBlur={e => {
+                    if (pointerDownRef.current) return
+                    const related = e.relatedTarget
+                    if (
+                      related?.closest(
+                        '[data-testid="stDataFrameStatisticsMenu"]'
+                      )
+                    ) {
+                      return
+                    }
+                    setStatsMenuOpen(false)
+                  }}
+                  isActive={statsMenuOpen}
+                  hasSubmenu={true}
+                  role="menuitem"
+                  // The statistics popover is a read-only informational panel
+                  // (no focus management/focus lock), so "true" is more accurate
+                  // than "dialog", which implies a focusable dialog widget.
+                  aria-haspopup="true"
+                  aria-expanded={statsMenuOpen}
+                  tabIndex={0}
                 >
-                  <StyledMenuListItem
-                    onFocus={() => handleStatsOpenChange(true)}
-                    onBlur={e => {
-                      if (pointerDownRef.current) return
-                      const related = e.relatedTarget
-                      if (
-                        related?.closest(
-                          '[data-testid="stDataFrameStatisticsMenu"]'
-                        )
-                      ) {
-                        return
-                      }
-                      setStatsMenuOpen(false)
-                    }}
-                    isActive={statsMenuOpen}
-                    hasSubmenu={true}
-                    role="menuitem"
-                    // The statistics popover is a read-only informational panel
-                    // (no focus management/focus lock), so "true" is more accurate
-                    // than "dialog", which implies a focusable dialog widget.
-                    aria-haspopup="true"
-                    aria-expanded={statsMenuOpen}
-                    tabIndex={0}
-                  >
-                    <div>
-                      <DynamicIcon
-                        size="base"
-                        iconValue=":material/bar_chart:"
-                      />
-                      Statistics
-                    </div>
+                  <div>
                     <DynamicIcon
                       size="base"
-                      iconValue=":material/chevron_right:"
+                      iconValue=":material/bar_chart:"
                     />
-                  </StyledMenuListItem>
-                </StatisticsMenu>
-              )}
+                    Statistics
+                  </div>
+                  <DynamicIcon
+                    size="base"
+                    iconValue=":material/chevron_right:"
+                  />
+                </StyledMenuListItem>
+              </StatisticsMenu>
+            )}
             {onChangeFormat && (
               <FormattingMenu
                 columnKind={column.kind}

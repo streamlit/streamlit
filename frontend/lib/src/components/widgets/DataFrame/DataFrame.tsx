@@ -256,6 +256,7 @@ function DataFrame({
     canSort,
     canSearch,
     canExportCsv,
+    canShowStatistics,
     canEdit,
     canAddRows,
     canDeleteRows,
@@ -1287,8 +1288,7 @@ function DataFrame({
             left={showMenu.headerBounds.x + showMenu.headerBounds.width}
             column={originalColumns[showMenu.columnIdx]}
             data={data}
-            isEditable={editingMode !== DataframeProto.EditingMode.READ_ONLY}
-            isLazy={isLazy}
+            canShowStatistics={canShowStatistics}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
               isColumnSortable(originalColumns[showMenu.columnIdx])

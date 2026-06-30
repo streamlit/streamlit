@@ -340,6 +340,34 @@ describe("useDataFrameCapabilities", () => {
     })
   })
 
+  describe("canShowStatistics", () => {
+    it("returns true for read-only, eager tables", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities(defaultParams)
+      )
+      expect(result.current.canShowStatistics).toBe(true)
+    })
+
+    it("returns false in lazy mode", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({ ...defaultParams, isLazy: true })
+      )
+      expect(result.current.canShowStatistics).toBe(false)
+    })
+
+    it.each([
+      ["DYNAMIC", DYNAMIC],
+      ["ADD_ONLY", ADD_ONLY],
+      ["DELETE_ONLY", DELETE_ONLY],
+      ["FIXED", FIXED],
+    ])("returns false for %s (editable) tables", (_name, editingMode) => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({ ...defaultParams, editingMode })
+      )
+      expect(result.current.canShowStatistics).toBe(false)
+    })
+  })
+
   describe("lazy mode", () => {
     it("disables search and CSV export in lazy mode", () => {
       const { result } = renderHook(() =>

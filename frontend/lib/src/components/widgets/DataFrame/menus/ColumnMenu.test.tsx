@@ -69,6 +69,7 @@ describe("DataFrame ColumnMenu", () => {
     onSortColumn: vi.fn(),
     onChangeFormat: vi.fn(),
     onAutosize: vi.fn(),
+    canShowStatistics: true,
   }
 
   beforeEach(() => {
@@ -386,21 +387,17 @@ describe("DataFrame ColumnMenu", () => {
       expect(screen.getByText("Statistics")).toBeVisible()
     })
 
-    it("does not render 'Statistics' when isEditable is true", () => {
-      // Statistics are hidden for editable tables (st.data_editor) because
-      // they would show stale data from the original Quiver, not the edits.
+    it("does not render 'Statistics' when canShowStatistics is false", () => {
+      // canShowStatistics is false for editable tables (stale pre-edit stats)
+      // and lazy dataframes (only loaded chunks available); the capability is
+      // computed by useDataFrameCapabilities and gated here.
       render(
-        <ColumnMenu {...defaultProps} data={mockQuiver} isEditable={true} />
+        <ColumnMenu
+          {...defaultProps}
+          data={mockQuiver}
+          canShowStatistics={false}
+        />
       )
-
-      expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
-    })
-
-    it("does not render 'Statistics' when isLazy is true", () => {
-      // Statistics are hidden for lazy dataframes because the bound Quiver only
-      // holds the initial chunk, so the stats would reflect a subset of rows
-      // rather than the full dataframe.
-      render(<ColumnMenu {...defaultProps} data={mockQuiver} isLazy={true} />)
 
       expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
     })
