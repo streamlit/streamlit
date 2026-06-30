@@ -598,7 +598,11 @@ class CacheDataAPI:
             when a stale value is returned. Unlike ``"foreground"``, stale entries
             are retained (so they can be served while a refresh runs) and are not
             evicted on expiration, so set ``max_entries`` when caching many distinct
-            keys to bound memory usage.
+            keys to bound memory usage. In environments that forbid creating threads
+            (for example, some sandboxed deployments), the refresh instead runs
+            synchronously on the calling thread, so that call blocks while the value
+            is recomputed and still returns the stale value (the fresh value is
+            served on the next call).
 
         Examples
         --------

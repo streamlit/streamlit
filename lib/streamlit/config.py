@@ -793,7 +793,7 @@ _create_option(
         st.cache_resource. Sizes a single process-wide thread pool shared across
         all background cache refreshes. Defaults to 4.
     """,
-    default_val=None,
+    default_val=4,
     type_=int,
 )
 
