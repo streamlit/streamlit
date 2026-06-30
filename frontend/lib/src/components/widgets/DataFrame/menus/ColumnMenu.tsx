@@ -59,10 +59,8 @@ export interface ColumnMenuProps {
   // may not have Quiver data bound initially. Statistics menu is only shown
   // when data is available.
   data?: Quiver
-  // Whether the table is in an editable mode (st.data_editor).
-  // Statistics menu is hidden for editable tables since the displayed stats
-  // would reflect the original data, not the user's edits.
-  isEditable?: boolean
+  // Whether column statistics are enabled for this table. Defaults to true.
+  canShowColumnStatistics?: boolean
   // Callback used to instruct the parent to close the menu
   onCloseMenu: () => void
   // Callback to sort column
@@ -96,7 +94,7 @@ function ColumnMenu({
   onHideColumn,
   column,
   data,
-  isEditable,
+  canShowColumnStatistics = true,
   onChangeFormat,
   onAutosize,
 }: ColumnMenuProps): ReactElement {
@@ -286,51 +284,53 @@ function ColumnMenu({
                 <StyledMenuDivider />
               </>
             )}
-            {data && !isEditable && supportsStatistics(column.kind) && (
-              <StatisticsMenu
-                column={column}
-                data={data}
-                isOpen={statsMenuOpen}
-                onOpenChange={handleStatsOpenChange}
-              >
-                <StyledMenuListItem
-                  onFocus={() => handleStatsOpenChange(true)}
-                  onBlur={e => {
-                    if (pointerDownRef.current) return
-                    const related = e.relatedTarget
-                    if (
-                      related?.closest(
-                        '[data-testid="stDataFrameStatisticsMenu"]'
-                      )
-                    ) {
-                      return
-                    }
-                    setStatsMenuOpen(false)
-                  }}
-                  isActive={statsMenuOpen}
-                  hasSubmenu={true}
-                  role="menuitem"
-                  // The statistics popover is a read-only informational panel
-                  // (no focus management/focus lock), so "true" is more accurate
-                  // than "dialog", which implies a focusable dialog widget.
-                  aria-haspopup="true"
-                  aria-expanded={statsMenuOpen}
-                  tabIndex={0}
+            {canShowColumnStatistics &&
+              data &&
+              supportsStatistics(column.kind) && (
+                <StatisticsMenu
+                  column={column}
+                  data={data}
+                  isOpen={statsMenuOpen}
+                  onOpenChange={handleStatsOpenChange}
                 >
-                  <div>
+                  <StyledMenuListItem
+                    onFocus={() => handleStatsOpenChange(true)}
+                    onBlur={e => {
+                      if (pointerDownRef.current) return
+                      const related = e.relatedTarget
+                      if (
+                        related?.closest(
+                          '[data-testid="stDataFrameStatisticsMenu"]'
+                        )
+                      ) {
+                        return
+                      }
+                      setStatsMenuOpen(false)
+                    }}
+                    isActive={statsMenuOpen}
+                    hasSubmenu={true}
+                    role="menuitem"
+                    // The statistics popover is a read-only informational panel
+                    // (no focus management/focus lock), so "true" is more accurate
+                    // than "dialog", which implies a focusable dialog widget.
+                    aria-haspopup="true"
+                    aria-expanded={statsMenuOpen}
+                    tabIndex={0}
+                  >
+                    <div>
+                      <DynamicIcon
+                        size="base"
+                        iconValue=":material/bar_chart:"
+                      />
+                      Statistics
+                    </div>
                     <DynamicIcon
                       size="base"
-                      iconValue=":material/bar_chart:"
+                      iconValue=":material/chevron_right:"
                     />
-                    Statistics
-                  </div>
-                  <DynamicIcon
-                    size="base"
-                    iconValue=":material/chevron_right:"
-                  />
-                </StyledMenuListItem>
-              </StatisticsMenu>
-            )}
+                  </StyledMenuListItem>
+                </StatisticsMenu>
+              )}
             {onChangeFormat && (
               <FormattingMenu
                 columnKind={column.kind}
