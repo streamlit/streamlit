@@ -184,12 +184,19 @@ export const StyledMenuList = styled.div(({ theme }) => ({
 interface StyledMenuListItemProps {
   isActive?: boolean
   hasSubmenu?: boolean
+  /**
+   * Allow the label to wrap onto multiple lines. Defaults to `false` (single
+   * line) since menu labels are typically short. Menus with user-provided
+   * labels (e.g. ButtonActionMenu) opt into wrapping to avoid horizontal
+   * overflow for long labels.
+   */
+  allowWrap?: boolean
 }
 /**
  * A styled menu list item component used by the column menu.
  */
 export const StyledMenuListItem = styled.div<StyledMenuListItemProps>(
-  ({ theme, isActive, hasSubmenu }) => ({
+  ({ theme, isActive, hasSubmenu, allowWrap }) => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "flex-start",
@@ -216,7 +223,7 @@ export const StyledMenuListItem = styled.div<StyledMenuListItemProps>(
       boxShadow: theme.shadows.focusRing,
     },
     minWidth: theme.sizes.minMenuWidth,
-    whiteSpace: "nowrap",
+    whiteSpace: allowWrap ? "normal" : "nowrap",
     // If the submenu is activated, we need to place the menu icon & label to the left
     // and the submenu indicator to the right:
     ...(hasSubmenu && {

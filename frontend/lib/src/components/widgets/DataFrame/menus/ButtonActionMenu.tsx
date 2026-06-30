@@ -194,6 +194,9 @@ function ButtonActionMenu({
                   onKeyDown={handleKeyDown(label)}
                   role="menuitem"
                   tabIndex={0}
+                  // Labels are user-provided and can be long, so allow wrapping
+                  // instead of forcing a single line (which would overflow).
+                  allowWrap
                   // Provide aria-label for icon-only menu items (where text is empty)
                   aria-label={text || icon || label}
                 >

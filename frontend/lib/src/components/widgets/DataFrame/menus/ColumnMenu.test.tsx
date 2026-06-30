@@ -26,6 +26,7 @@ import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
+import { sizes } from "~lib/theme/primitives/sizes"
 
 import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
 
@@ -105,12 +106,12 @@ describe("DataFrame ColumnMenu", () => {
   it("renders menu options without wrapping", () => {
     render(<ColumnMenu {...defaultProps} />)
 
-    const sortDescendingMenuItem = screen
-      .getByText("Sort descending")
-      .closest('[role="menuitem"]')
+    const sortDescendingMenuItem = screen.getByRole("menuitem", {
+      name: /Sort descending/,
+    })
 
     expect(screen.getByRole("menu")).toHaveStyle(
-      "min-width: calc(8rem * 1.25)"
+      `min-width: calc(${sizes.minMenuWidth} * 1.25)`
     )
     expect(sortDescendingMenuItem).toHaveStyle("white-space: nowrap")
   })
