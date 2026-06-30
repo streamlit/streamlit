@@ -88,7 +88,7 @@ dependencies = [
   # ASGI server:
   "uvicorn>=0.30.0",
   # Faster http parsing for Starlette server:
-  "httptools>=0.6.3",
+  "httptools>=0.8.0",
   # Required by starlette:
   "anyio>=4.0.0",
   # Required for file-upload support:
