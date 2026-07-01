@@ -33,6 +33,7 @@ import threading
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import dataframe_util
+from streamlit.dataframe.source import AccessMode
 from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
@@ -111,6 +112,10 @@ class PolarsLazyFrameSource:
     def sortable(self) -> bool:
         return True
 
+    @property
+    def access_mode(self) -> AccessMode:
+        return AccessMode.RANDOM_ACCESS
+
     def load_rows(
         self,
         offset: int,
@@ -184,6 +189,10 @@ class SnowparkDataframeSource:
     @property
     def sortable(self) -> bool:
         return True
+
+    @property
+    def access_mode(self) -> AccessMode:
+        return AccessMode.RANDOM_ACCESS
 
     def load_rows(
         self,

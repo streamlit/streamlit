@@ -169,7 +169,13 @@ class DataframeSourceManager:
         # Short-circuit out-of-bounds requests with an empty (schema-only) chunk
         # instead of running a row query. This avoids unnecessary work for deep
         # offsets, which can be expensive for sources like Snowpark.
-        if offset >= entry.source.row_count:
+        #
+        # Known-size sources report an integer ``row_count``. Future unknown-size
+        # sequential sources report ``row_count=None``; for those the offset can
+        # never be proven out of bounds up front, so we skip the short-circuit and
+        # let the source decide when it is exhausted.
+        row_count = entry.source.row_count
+        if row_count is not None and offset >= row_count:
             empty_table = entry.source.schema.empty_table()
             arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(empty_table)
             return arrow_bytes, offset

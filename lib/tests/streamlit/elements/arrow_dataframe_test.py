@@ -41,6 +41,7 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.proto.Dataframe_pb2 import LazyDataframe as LazyDataframeProto
 from streamlit.testing.v1 import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
@@ -1468,6 +1469,9 @@ class ArrowDataFrameLazyTest(DeltaGeneratorTestCase):
         assert proto.HasField("lazy_data")
         assert proto.lazy_data.row_count == 150_001
         assert proto.lazy_data.sortable is True
+        assert (
+            proto.lazy_data.access_mode == LazyDataframeProto.AccessMode.RANDOM_ACCESS
+        )
         assert proto.lazy_data.source_id != ""
         assert proto.lazy_data.generation != ""
         assert proto.lazy_data.page_size > 0

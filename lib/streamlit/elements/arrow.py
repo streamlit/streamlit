@@ -360,6 +360,16 @@ _SELECTION_MODE_TO_PROTO: Final[
 }
 
 
+_ACCESS_MODE_TO_PROTO: Final[
+    dict[dataframe_source.AccessMode, LazyDataframeProto.AccessMode.ValueType]
+] = {
+    dataframe_source.AccessMode.RANDOM_ACCESS: (
+        LazyDataframeProto.AccessMode.RANDOM_ACCESS
+    ),
+    dataframe_source.AccessMode.SEQUENTIAL: LazyDataframeProto.AccessMode.SEQUENTIAL,
+}
+
+
 def _selection_mode_set_to_proto_values(
     selection_mode_set: set[SelectionMode],
 ) -> set[DataframeProto.SelectionMode.ValueType]:
@@ -518,9 +528,12 @@ def _marshall_lazy_dataframe(
     lazy_data.generation = registered.generation
     lazy_data.page_size = registered.page_size
     lazy_data.initial_offset = 0
-    lazy_data.access_mode = LazyDataframeProto.AccessMode.RANDOM_ACCESS
+    lazy_data.access_mode = _ACCESS_MODE_TO_PROTO[source.access_mode]
     lazy_data.sortable = source.sortable
-    lazy_data.row_count = source.row_count
+    # ``row_count`` is optional in the proto: unknown-size (future sequential)
+    # sources report ``None`` and leave the field unset.
+    if source.row_count is not None:
+        lazy_data.row_count = source.row_count
 
     # Serve the first page as the initial chunk. It carries the Arrow schema and
     # the first visible rows so the frontend can render columns immediately.
@@ -1050,7 +1063,9 @@ class ArrowMixin:
                 apply_data_specific_configs(
                     column_config_mapping, dataframe_util.determine_data_format(data)
                 )
-                num_rows = lazy_source.row_count
+                # Unknown-size (future sequential) sources report ``None``; the
+                # eager num_rows bookkeeping falls back to 0 for those.
+                num_rows = lazy_source.row_count or 0
                 column_names = list(lazy_source.schema.names)
 
         if lazy_marshalled:

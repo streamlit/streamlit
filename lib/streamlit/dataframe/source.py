@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, Protocol, runtime_checkable
 
 from streamlit import dataframe_util
@@ -70,13 +71,30 @@ class SortSpec:
     descending: bool = False
 
 
+class AccessMode(Enum):
+    """How the rows of a lazy dataframe source can be accessed.
+
+    ``RANDOM_ACCESS`` sources can serve an arbitrary row range on demand; all
+    first-version sources are random-access. ``SEQUENTIAL`` is reserved for
+    future unknown-size streaming sources that can only be read forward and is
+    not produced yet.
+    """
+
+    RANDOM_ACCESS = "random_access"
+    SEQUENTIAL = "sequential"
+
+
 @runtime_checkable
 class DataframeSource(Protocol):
     """Protocol for a known-size, randomly-accessible lazy dataframe source."""
 
     @property
-    def row_count(self) -> int:
-        """Total number of rows the source can serve."""
+    def row_count(self) -> int | None:
+        """Total number of rows the source can serve.
+
+        ``None`` means the size is unknown up front. This is reserved for future
+        sequential sources; all first-version sources report an integer count.
+        """
         ...
 
     @property
@@ -87,6 +105,11 @@ class DataframeSource(Protocol):
     @property
     def sortable(self) -> bool:
         """Whether the source supports server-side sorting."""
+        ...
+
+    @property
+    def access_mode(self) -> AccessMode:
+        """How the source's rows can be accessed (random-access vs sequential)."""
         ...
 
     def load_rows(
@@ -163,6 +186,10 @@ class InMemoryDataframeSource:
     @property
     def sortable(self) -> bool:
         return self._sortable
+
+    @property
+    def access_mode(self) -> AccessMode:
+        return AccessMode.RANDOM_ACCESS
 
     def load_rows(
         self,
@@ -303,7 +330,14 @@ def resolve_lazy_source(
     if lazy is True:
         native = _try_create_native_source(data)
         if native is not None:
-            if native.row_count <= FORCED_LAZY_MIN_ROWS:
+            # Native sources with a known small row count keep eager rendering
+            # (see FORCED_LAZY_MIN_ROWS). Unknown-size sources (row_count=None)
+            # are always served lazily.
+            native_row_count = native.row_count
+            if (
+                native_row_count is not None
+                and native_row_count <= FORCED_LAZY_MIN_ROWS
+            ):
                 return None
             return native
 

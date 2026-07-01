@@ -32,7 +32,7 @@ from streamlit.dataframe.adapters import (
     _align_to_schema,
     try_create_native_source,
 )
-from streamlit.dataframe.source import SortSpec
+from streamlit.dataframe.source import AccessMode, SortSpec
 
 
 class _FakeLimited:
@@ -95,6 +95,7 @@ def test_snowpark_schema_exposes_columns() -> None:
     source = SnowparkDataframeSource(_make_fake())
     assert source.schema.names == ["a", "b"]
     assert source.sortable is True
+    assert source.access_mode is AccessMode.RANDOM_ACCESS
 
 
 def test_snowpark_load_rows_returns_requested_rows() -> None:
@@ -192,3 +193,4 @@ def test_try_create_native_source_detects_polars_lazyframe() -> None:
 
     source = try_create_native_source(pl.LazyFrame({"a": [1, 2, 3]}))
     assert isinstance(source, PolarsLazyFrameSource)
+    assert source.access_mode is AccessMode.RANDOM_ACCESS

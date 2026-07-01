@@ -25,6 +25,7 @@ from streamlit.dataframe import source as dataframe_source
 from streamlit.dataframe.source import (
     AUTO_LAZY_ROW_THRESHOLD,
     FORCED_LAZY_MIN_ROWS,
+    AccessMode,
     InMemoryDataframeSource,
     SortSpec,
     resolve_lazy_source,
@@ -42,11 +43,12 @@ def _make_table(num_rows: int) -> pa.Table:
 
 
 def test_in_memory_source_exposes_metadata() -> None:
-    """The in-memory source reports row count, schema, and sortable flag."""
+    """The in-memory source reports row count, schema, and capability flags."""
     source = InMemoryDataframeSource(_make_table(10))
     assert source.row_count == 10
     assert source.schema.names == ["a", "b"]
     assert source.sortable is True
+    assert source.access_mode is AccessMode.RANDOM_ACCESS
 
 
 def test_in_memory_source_load_rows_slices() -> None:

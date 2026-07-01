@@ -21,7 +21,7 @@ from unittest.mock import patch
 import pyarrow as pa
 import pytest
 
-from streamlit.dataframe.source import InMemoryDataframeSource, SortSpec
+from streamlit.dataframe.source import AccessMode, InMemoryDataframeSource, SortSpec
 from streamlit.dataframe_util import convert_arrow_bytes_to_pandas_df
 from streamlit.runtime.dataframe_source_manager import (
     DataframeSourceError,
@@ -34,6 +34,40 @@ def _make_source(num_rows: int = 1000) -> InMemoryDataframeSource:
     return InMemoryDataframeSource(
         pa.table({"a": list(range(num_rows)), "b": [x * 2 for x in range(num_rows)]})
     )
+
+
+class _UnknownSizeSource:
+    """A fake sequential-style source that reports an unknown (None) row count.
+
+    Simulates a future unknown-size source so the manager's out-of-bounds guard
+    can be exercised without a real streaming source.
+    """
+
+    def __init__(self, table: pa.Table) -> None:
+        self._table = table
+        self.load_rows_calls = 0
+
+    @property
+    def row_count(self) -> int | None:
+        return None
+
+    @property
+    def schema(self) -> pa.Schema:
+        return self._table.schema
+
+    @property
+    def sortable(self) -> bool:
+        return False
+
+    @property
+    def access_mode(self) -> AccessMode:
+        return AccessMode.SEQUENTIAL
+
+    def load_rows(
+        self, offset: int, limit: int, *, sort: SortSpec | None = None
+    ) -> pa.Table:
+        self.load_rows_calls += 1
+        return self._table.slice(offset, limit)
 
 
 def _register(
@@ -151,6 +185,32 @@ def test_load_chunk_out_of_bounds_offset_returns_empty_chunk() -> None:
     # Empty rows, but the schema (columns) is preserved for the frontend.
     assert len(df) == 0
     assert list(df.columns) == ["a", "b"]
+
+
+def test_load_chunk_unknown_row_count_skips_short_circuit() -> None:
+    """A source with ``row_count=None`` is queried instead of short-circuited.
+
+    Unknown-size (future sequential) sources cannot prove an offset is out of
+    bounds up front, so ``load_chunk`` must delegate to the source rather than
+    returning a schema-only chunk without loading.
+    """
+    mgr = DataframeSourceManager()
+    source = _UnknownSizeSource(pa.table({"a": [0, 1, 2]}))
+    with patch(
+        "streamlit.runtime.dataframe_source_manager._get_session_id",
+        return_value="s1",
+    ):
+        reg = mgr.register_source(source, "1.0.0")
+
+    arrow_bytes, offset = mgr.load_chunk(
+        reg.session_id, reg.source_id, reg.generation, 0, 3, None
+    )
+
+    assert offset == 0
+    # The source was queried (not short-circuited to an empty chunk).
+    assert source.load_rows_calls == 1
+    df = convert_arrow_bytes_to_pandas_df(arrow_bytes)
+    assert df["a"].tolist() == [0, 1, 2]
 
 
 def test_re_register_same_coordinates_orphans_previous() -> None:
