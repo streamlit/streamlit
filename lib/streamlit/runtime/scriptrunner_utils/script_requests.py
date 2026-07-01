@@ -222,8 +222,12 @@ class ScriptRequests:
                     if new_data.fragment_id not in fragment_id_queue:
                         fragment_id_queue.append(new_data.fragment_id)
                 elif new_data.fragment_id_queue:
-                    # new_data contains a new fragment_id_queue, so we just use it.
-                    fragment_id_queue = new_data.fragment_id_queue
+                    # Merge into the pending queue so multiple targeted reruns issued during a
+                    # single interaction run in one ordered pass.
+                    fragment_id_queue = [*self._rerun_data.fragment_id_queue]
+                    for fragment_id in new_data.fragment_id_queue:
+                        if fragment_id not in fragment_id_queue:
+                            fragment_id_queue.append(fragment_id)
                 else:
                     # Otherwise, this is a request to rerun the full script, so we want
                     # to clear out any fragments we have queued to run since they'll all

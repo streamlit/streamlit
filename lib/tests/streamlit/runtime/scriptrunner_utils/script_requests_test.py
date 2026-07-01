@@ -205,6 +205,19 @@ class ScriptRequestsTest(unittest.TestCase):
         reqs.request_rerun(RerunData(fragment_id_queue=[]))
         assert reqs._rerun_data.fragment_id_queue == []
 
+    def test_request_rerun_merges_fragment_id_queues(self):
+        """A second fragment_id_queue request is unioned into the pending queue."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_a", "frag_b"]))
+
+        # Sanity check
+        assert reqs._rerun_data.fragment_id_queue == ["frag_a", "frag_b"]
+
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_b", "frag_c"]))
+
+        # frag_b already present; frag_c appended; order is preserved.
+        assert reqs._rerun_data.fragment_id_queue == ["frag_a", "frag_b", "frag_c"]
+
     def test_on_script_yield_with_no_request(self):
         """Return None; remain in the CONTINUE state."""
         reqs = ScriptRequests()

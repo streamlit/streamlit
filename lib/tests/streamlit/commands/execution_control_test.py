@@ -70,6 +70,26 @@ class NewFragmentIdQueueTest(unittest.TestCase):
             "id5",
         ]
 
+    def test_target_delegates_to_resolve_target(self):
+        """When target is set, _new_fragment_id_queue delegates to fragment_storage.resolve_target."""
+        ctx = MagicMock()
+        ctx.fragment_storage.resolve_target.return_value = ["frag_id_1", "frag_id_2"]
+
+        result = _new_fragment_id_queue(ctx, scope="app", target="my_fragment")
+
+        ctx.fragment_storage.resolve_target.assert_called_once_with("my_fragment")
+        assert result == ["frag_id_1", "frag_id_2"]
+
+    def test_target_unknown_name_propagates_exception(self):
+        """resolve_target raising StreamlitAPIException propagates from _new_fragment_id_queue."""
+        ctx = MagicMock()
+        ctx.fragment_storage.resolve_target.side_effect = StreamlitAPIException(
+            "No fragment found for target 'unknown'."
+        )
+
+        with pytest.raises(StreamlitAPIException, match="No fragment found"):
+            _new_fragment_id_queue(ctx, scope="app", target="unknown")
+
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
 def test_st_rerun_is_fragment_scoped_rerun_flag_false(patched_get_script_run_ctx):
@@ -116,6 +136,40 @@ def test_st_rerun_is_fragment_scoped_rerun_flag_true(patched_get_script_run_ctx)
 def test_st_rerun_invalid_scope_throws_error():
     with pytest.raises(StreamlitAPIException):
         rerun(scope="foo")
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_rerun_target_resolves_fragment_ids(patched_get_script_run_ctx):
+    """rerun(target=...) resolves the target name and marks is_fragment_scoped_rerun=True."""
+    ctx = MagicMock()
+    ctx.fragment_storage.resolve_target.return_value = ["frag_id_1"]
+    patched_get_script_run_ctx.return_value = ctx
+
+    rerun(target="my_fragment")
+
+    ctx.script_requests.request_rerun.assert_called_with(
+        RerunData(
+            query_string=ctx.query_string,
+            page_script_hash=ctx.page_script_hash,
+            fragment_id_queue=["frag_id_1"],
+            is_fragment_scoped_rerun=True,
+            cached_message_hashes=ctx.cached_message_hashes,
+            context_info=ctx.context_info,
+        )
+    )
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_rerun_target_unknown_raises(patched_get_script_run_ctx):
+    """rerun(target=...) propagates StreamlitAPIException for unknown names."""
+    ctx = MagicMock()
+    ctx.fragment_storage.resolve_target.side_effect = StreamlitAPIException(
+        "No fragment found for target 'bad'."
+    )
+    patched_get_script_run_ctx.return_value = ctx
+
+    with pytest.raises(StreamlitAPIException, match="No fragment found"):
+        rerun(target="bad")
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")

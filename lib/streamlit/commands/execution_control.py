@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import time
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from itertools import dropwhile
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, NoReturn
@@ -70,7 +70,14 @@ def stop() -> NoReturn:  # type: ignore[misc] # ty: ignore[invalid-return-type]
 def _new_fragment_id_queue(
     ctx: ScriptRunContext,
     scope: Literal["app", "fragment"],
+    target: str | Sequence[str] | None = None,
 ) -> list[str]:
+    if target is not None:
+        # Targeted reruns address fragments by name and may be issued from
+        # anywhere (a callback, the main script, or another fragment), so they
+        # do not depend on the current fragment context.
+        return ctx.fragment_storage.resolve_target(target)
+
     if scope == "app":
         return []
 
@@ -140,6 +147,7 @@ def _set_query_params_for_switch(
 def rerun(  # type: ignore[misc]
     *,  # The scope argument can only be passed via keyword.
     scope: Literal["app", "fragment"] = "app",
+    target: str | Sequence[str] | None = None,
 ) -> NoReturn:  # ty: ignore[invalid-return-type]
     """Rerun the script immediately.
 
@@ -163,6 +171,14 @@ def rerun(  # type: ignore[misc]
         full-app rerun or outside of a fragment, Streamlit will raise a
         ``StreamlitAPIException``.
 
+    target : str, list of str, or None
+        The ``key`` of a fragment (or a list of keys) to rerun. Set the key with
+        ``@st.fragment(key=...)``. When ``target`` is set, Streamlit reruns only
+        the named fragment(s) — in one ordered pass — instead of the full app,
+        and the call may be made from anywhere (a callback, the main script, or
+        another fragment). If this is ``None`` (default), ``scope`` determines
+        what reruns.
+
     """
 
     if scope not in {"app", "fragment"}:
@@ -173,21 +189,17 @@ def rerun(  # type: ignore[misc]
     ctx = get_script_run_ctx()
 
     if ctx and ctx.script_requests:
-        query_string = ctx.query_string
-        page_script_hash = ctx.page_script_hash
-        cached_message_hashes = ctx.cached_message_hashes
-
+        fragment_id_queue = _new_fragment_id_queue(ctx, scope, target)
         ctx.script_requests.request_rerun(
             RerunData(
-                query_string=query_string,
-                page_script_hash=page_script_hash,
-                fragment_id_queue=_new_fragment_id_queue(ctx, scope),
-                is_fragment_scoped_rerun=scope == "fragment",
-                cached_message_hashes=cached_message_hashes,
+                query_string=ctx.query_string,
+                page_script_hash=ctx.page_script_hash,
+                fragment_id_queue=fragment_id_queue,
+                is_fragment_scoped_rerun=scope == "fragment" or target is not None,
+                cached_message_hashes=ctx.cached_message_hashes,
                 context_info=ctx.context_info,
             )
         )
-        # Force a yield point so the runner can do the rerun
         st.empty()
 
 

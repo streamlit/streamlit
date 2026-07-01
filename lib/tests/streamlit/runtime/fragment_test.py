@@ -166,6 +166,54 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert self._storage._fragments["some_key"] == "some_fragment"
         assert "some_other_key" not in self._storage._parent_by_id
 
+    def test_resolve_target_returns_ids_for_named_fragment(self):
+        """resolve_target maps a target key to its registered fragment ids."""
+        self._storage.register("frag_id_1", "frag_1", target_key="my_fragment")
+        result = self._storage.resolve_target("my_fragment")
+        assert result == ["frag_id_1"]
+
+    def test_resolve_target_multiple_call_sites(self):
+        """resolve_target expands one name to all registered call-site ids."""
+        self._storage.register("frag_id_1", "frag_1", target_key="shared")
+        self._storage.register("frag_id_2", "frag_2", target_key="shared")
+        result = self._storage.resolve_target("shared")
+        assert result == ["frag_id_1", "frag_id_2"]
+
+    def test_resolve_target_list_of_names(self):
+        """resolve_target accepts a list and deduplicates across names."""
+        self._storage.register("frag_id_a", "frag_a", target_key="name_a")
+        self._storage.register("frag_id_b", "frag_b", target_key="name_b")
+        result = self._storage.resolve_target(["name_a", "name_b"])
+        assert result == ["frag_id_a", "frag_id_b"]
+
+    def test_resolve_target_unknown_name_raises(self):
+        """resolve_target raises StreamlitAPIException for an unknown name."""
+        with pytest.raises(StreamlitAPIException, match="No fragment found for target"):
+            self._storage.resolve_target("nonexistent")
+
+    def test_remove_prunes_target_key_index(self):
+        """Deleting a fragment removes it from the target key index."""
+        self._storage.register("frag_id_1", "frag_1", target_key="my_fragment")
+        self._storage.delete("frag_id_1")
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("my_fragment")
+
+    def test_clear_prunes_target_key_index(self):
+        """clear() removes evicted fragments from the target key index."""
+        self._storage.register("frag_id_1", "frag_1", target_key="my_fragment")
+        self._storage.clear()
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("my_fragment")
+
+    def test_reregister_with_new_key_repoints_index(self):
+        """Re-registering a fragment id with a different key updates the index."""
+        self._storage.register("frag_id_1", "frag_1", target_key="old_key")
+        self._storage.register("frag_id_1", "frag_1", target_key="new_key")
+
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("old_key")
+        assert self._storage.resolve_target("new_key") == ["frag_id_1"]
+
     def _make_wrapper(
         self, dg_id: str, *, creating_fragment_id: str | None = None
     ) -> OutsideContainerWrapper:
