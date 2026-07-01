@@ -314,8 +314,8 @@ st.caption("Data refreshes hourly. Email support@example.com for access.")  # In
 ```
 
 ```python
-# GOOD: Everything that doesn't depend on the report renders immediately. Only the
-# chart and table wait, and their reserved slots hold the layout while it loads.
+# GOOD: Everything that doesn't depend on the report renders immediately. The
+# chart and table wait, held by reserved containers that keep the layout in place.
 st.title("Account report")
 account = st.selectbox("Account", accounts)
 
@@ -323,22 +323,33 @@ with st.sidebar:  # Independent chrome — render it before the slow call
     st.date_input("Date range")
     st.multiselect("Regions", regions)
 
-chart_slot = st.skeleton(height=320)  # Reserve the report's slots up front
-transactions_slot = st.empty()
+chart_slot = st.container()  # Reserve the report's positions up front
+table_slot = st.container()
 
 st.caption("Data refreshes hourly. Email support@example.com for access.")
 
 report = load_report(account)  # Slow work runs after the page is painted
 
-chart_slot.line_chart(report.history)
-transactions_slot.dataframe(report.transactions)
+with chart_slot:
+    st.line_chart(report.history)
+with table_slot:
+    st.dataframe(report.transactions, key="transactions")
 ```
 
-Use `st.skeleton` when you want visible loading feedback and reserved space. Use `st.empty` when the slot should stay blank until content is ready. For multi-element replacement, call `.container()` on the placeholder and write the whole section inside that container. See `layouts.md` for placeholder details.
+**Reserve slots with `st.container()`, not standalone `st.empty`/`st.skeleton`.** A container keeps the previous run's elements mounted while the rerun is in flight: they go **stale** (greyed) and then update in place, so a dataframe keeps its scroll position, sort, and selection. Standalone `st.empty()`/`st.skeleton()` placeholders clear and refill their slot on every rerun, which unmounts the old element and resets that state. Give stateful elements a stable `key` so their identity survives data changes (without one, a dataframe's identity includes its data, so it remounts whenever the data changes).
 
-**Preserving element state:** `st.empty`/`st.skeleton` clear the slot on every rerun, which unmounts whatever was in it — so a dataframe filled through a placeholder loses its scroll position, sort, and selection each time it reloads. If you want a stateful element (e.g. a dataframe or data editor) to stay usable across slow reruns, render it directly in a container with a stable `key` and let it go **stale** (greyed) in place instead: it updates without remounting and keeps its state. Reserve `st.empty`/`st.skeleton` for the first load, explicit loading feedback, or swapping in a _different_ element. The stable `key` matters — without one, a dataframe's identity includes its data, so changing the data remounts it (and drops its state) even inside a container.
+To also show a loading indicator while the work runs and still keep element state, wrap the slow call and its related output in a `with st.skeleton(...):` block (context-manager mode). The skeleton shows during the wait and clears on exit, while the elements inside render into the parent at stable positions, so their state is preserved:
 
-For independent slow sections, prefer `@st.fragment(parallel=True)` plus per-section skeletons so each card can fill in as soon as its own work completes. Keep fragment writes inside the fragment body; if a fragment must write to an outside container, claim that outside slot during the initial full-app run.
+```python
+with table_slot:
+    with st.skeleton():
+        report = load_report(account)  # skeleton shows while this runs
+        st.dataframe(report.transactions, key="transactions")
+```
+
+Reserve standalone `st.empty()`/`st.skeleton()` for replacing an element with a _different_ one, or for content with no state worth keeping. See `layouts.md` for placeholder details.
+
+For independent slow sections, prefer `@st.fragment(parallel=True)` so each card can fill in as soon as its own work completes. Keep fragment writes inside the fragment body; if a fragment must write to an outside container, claim that outside slot during the initial full-app run.
 
 ## Perceived performance (loading states)
 

@@ -162,7 +162,7 @@ def load_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
 ```
 
-Render stable layout and output slots before slow calls. Streamlit emits UI updates top to bottom during each rerun, so if slow code runs before downstream elements are recreated, users can temporarily see faded stale content from the previous run. Create section headers, containers, and `st.empty`/`st.skeleton` slots first, then fill them after cached or slow work completes.
+Render stable layout and output slots before slow calls. Streamlit emits UI updates top to bottom during each rerun, so if slow code runs before downstream elements are recreated, users can temporarily see faded stale content from the previous run. Reserve output slots with `st.container()` first, then fill them after cached or slow work completes. Prefer `st.container()` over standalone `st.empty`/`st.skeleton` placeholders here — a container keeps its contents mounted (so a dataframe keeps its scroll, sort, and selection), while empty/skeleton unmount and reset them on each rerun. To also show loading feedback, wrap the slow work in a `with st.skeleton(...):` block.
 
 ```python
 # BAD: The whole page is stuck behind a slow load and greys out
