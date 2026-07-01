@@ -41,6 +41,8 @@ if TYPE_CHECKING:
 class modified_sys_path:  # noqa: N801
     """A context for prepending a directory to sys.path for a second.
 
+    If initialized with a file path, its parent directory is prepended instead.
+
     Code inspired by IPython:
     Source: https://github.com/ipython/ipython/blob/master/IPython/utils/syspathcontext.py#L42
     """

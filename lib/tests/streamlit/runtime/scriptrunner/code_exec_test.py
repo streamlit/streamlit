@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -381,26 +382,25 @@ class TestModifiedSysPath(unittest.TestCase):
 
     def test_adds_script_directory_for_script_path(self) -> None:
         """When given a script path, the script directory is added to sys.path."""
-        script_dir = Path("/tmp/streamlit-modified-sys-path-src-layout")
-        script_path = script_dir / "app.py"
-        script_dir.mkdir(exist_ok=True)
-        script_path.touch()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            script_dir = Path(temp_dir) / "src_layout_app"
+            script_path = script_dir / "app.py"
+            script_dir.mkdir()
+            script_path.touch()
 
-        try:
-            assert str(script_dir) not in sys.path
-            assert str(script_path) not in sys.path
-
-            with modified_sys_path(str(script_path)):
-                assert sys.path[0] == str(script_dir)
+            try:
+                assert str(script_dir) not in sys.path
                 assert str(script_path) not in sys.path
 
-            assert str(script_dir) not in sys.path
-        finally:
-            sys.path[:] = [
-                p for p in sys.path if p not in {str(script_dir), str(script_path)}
-            ]
-            script_path.unlink(missing_ok=True)
-            script_dir.rmdir()
+                with modified_sys_path(str(script_path)):
+                    assert sys.path[0] == str(script_dir)
+                    assert str(script_path) not in sys.path
+
+                assert str(script_dir) not in sys.path
+            finally:
+                sys.path[:] = [
+                    p for p in sys.path if p not in {str(script_dir), str(script_path)}
+                ]
 
     def test_does_not_remove_path_already_on_sys_path(self) -> None:
         """If the path is already on sys.path, exit must not remove it."""
