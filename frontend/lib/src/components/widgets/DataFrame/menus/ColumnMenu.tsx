@@ -59,12 +59,7 @@ export interface ColumnMenuProps {
   // may not have Quiver data bound initially. Statistics menu is only shown
   // when data is available.
   data?: Quiver
-  // Whether the column statistics menu may be shown (from
-  // useDataFrameCapabilities). Statistics are computed over the locally-bound
-  // Quiver, so they are hidden for editable tables (stale pre-edit stats) and
-  // lazy dataframes (only loaded chunks are available, not all rows). The
-  // Statistics menu is also gated on `data` being present and the column kind
-  // supporting statistics. Defaults to true.
+  // Whether column statistics are enabled for this table. Defaults to true.
   canShowColumnStatistics?: boolean
   // Callback used to instruct the parent to close the menu
   onCloseMenu: () => void

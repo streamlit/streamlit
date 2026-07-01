@@ -70,7 +70,6 @@ describe("DataFrame ColumnMenu", () => {
     onSortColumn: vi.fn(),
     onChangeFormat: vi.fn(),
     onAutosize: vi.fn(),
-    canShowColumnStatistics: true,
   }
 
   beforeEach(() => {
@@ -403,10 +402,7 @@ describe("DataFrame ColumnMenu", () => {
       expect(screen.getByText("Statistics")).toBeVisible()
     })
 
-    it("does not render 'Statistics' when canShowColumnStatistics is false", () => {
-      // canShowColumnStatistics is false for editable tables (stale pre-edit
-      // stats) and lazy dataframes (only loaded chunks available); the
-      // capability is computed by useDataFrameCapabilities and gated here.
+    it("does not render 'Statistics' when column statistics are disabled", () => {
       render(
         <ColumnMenu
           {...defaultProps}
