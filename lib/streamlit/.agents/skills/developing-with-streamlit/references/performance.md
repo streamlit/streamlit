@@ -285,7 +285,7 @@ Move expensive work outside the main flow:
 
 Streamlit runs your script top to bottom and emits a UI delta as each `st.*` command runs. During a rerun, the elements from the _previous_ run stay on screen and are marked **stale** (faded to ~33% opacity after a short delay) until the new run reaches the same delta paths or finishes and clears the leftovers. So if slow code runs before the app has recreated its downstream layout, users can temporarily see faded old elements, duplicate-looking content, or a stale UI branch from a previous run.
 
-Fast reruns never show this (the fade has a built-in delay). Greying is a symptom of slow work blocking rendering — fix the ordering and the slowness, not the fade.
+Fast reruns usually don't show this, since the fade has a built-in delay — though reruns that run just past that delay can still briefly flash stale content. Greying is a symptom of slow work blocking rendering — fix the ordering and the slowness, not the fade.
 
 Prefer this order:
 

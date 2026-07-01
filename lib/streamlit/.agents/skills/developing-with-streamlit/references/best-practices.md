@@ -171,11 +171,12 @@ st.title("Orders")
 region = st.selectbox("Region", regions)
 st.dataframe(orders)
 
-# GOOD: UI paints immediately; only the table waits
+# GOOD: UI paints immediately; the skeleton reserves the table's slot while it loads
 st.title("Orders")
 region = st.selectbox("Region", regions)
+table_slot = st.skeleton(height=200)  # Reserve layout space up front
 orders = load_orders()
-st.dataframe(orders)
+table_slot.dataframe(orders)
 ```
 
 See `performance.md` for the rendering-order details and a fuller placeholder example.
