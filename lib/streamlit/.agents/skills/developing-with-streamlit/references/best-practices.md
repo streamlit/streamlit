@@ -162,7 +162,7 @@ def load_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
 ```
 
-Render stable layout and output slots before slow calls. Streamlit emits UI updates top to bottom during each rerun, so if slow code runs before downstream elements are recreated, users can temporarily see faded stale content from the previous run. Reserve output slots with `st.container()` first, then fill them after cached or slow work completes. Prefer `st.container()` over standalone `st.empty`/`st.skeleton` placeholders here — a container keeps its contents mounted (so a dataframe keeps its scroll, sort, and selection), while empty/skeleton unmount and reset them on each rerun. To also show loading feedback, wrap the slow work in a `with st.skeleton(...):` block.
+Render stable layout before slow calls. Streamlit emits UI updates top to bottom during each rerun, so slow code before downstream elements leaves faded stale content from the previous run on screen while it runs. Render fast UI first, then either wrap the slow work in a `with st.skeleton(...):` block (shows a loading placeholder) or reserve the position with `st.container()` and fill it afterward. Avoid standalone `st.empty()`/`st.skeleton()` placeholders that you fill after slow work: the delay unmounts the old element and resets stateful widgets (e.g. a dataframe's scroll, sort, and selection), whereas a `with st.skeleton()` block or a container keeps it mounted at a stable position. Give stateful elements a stable `key`.
 
 ```python
 # BAD: The whole page is stuck behind a slow load and greys out
@@ -171,12 +171,13 @@ st.title("Orders")
 region = st.selectbox("Region", regions)
 st.dataframe(orders)
 
-# GOOD: UI paints immediately; the skeleton reserves the table's slot while it loads
+# GOOD: Title and filter paint immediately; a skeleton shows while the table loads,
+# and the table keeps its state because it renders at a stable position.
 st.title("Orders")
 region = st.selectbox("Region", regions)
-table_slot = st.skeleton(height=200)  # Reserve layout space up front
-orders = load_orders()
-table_slot.dataframe(orders)
+with st.skeleton():
+    orders = load_orders()
+    st.dataframe(orders, key="orders")
 ```
 
 See `performance.md` for the rendering-order details and a fuller placeholder example.
