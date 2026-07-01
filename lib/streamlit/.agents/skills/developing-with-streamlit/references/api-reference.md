@@ -43,7 +43,6 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.balloons` | Draw celebratory balloons. Use sparingly for success moments or lightweight feedback. |
 | `st.bar_chart` | Display a bar chart. Use it for straightforward categorical or binned comparisons. |
 | `st.button` | Display a button widget. It returns `True` on the script rerun triggered by a click. |
-| `st.cache` | Legacy caching decorator (deprecated). Do not use in new code; prefer `st.cache_data` for serializable data and `st.cache_resource` for shared resources. |
 | `st.cache_data` | Cache the return value of a function. Use it for expensive computations or data-loading steps that return serializable data; each caller receives a copy of the cached value. |
 | `st.cache_resource` | Cache a shared resource returned by a function. Use it for global objects such as database connections, ML models, or clients that should be reused across reruns and sessions. |
 | `st.camera_input` | Display a widget that returns pictures from the user's webcam. It returns an `UploadedFile` with the captured image when the user takes a picture, and `None` before then. |

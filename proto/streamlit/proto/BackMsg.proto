@@ -22,7 +22,7 @@ import "streamlit/proto/Common.proto";
 // A message from the browser to the server.
 message BackMsg {
   oneof type {
-    // Requests that the app's @st_cache be cleared
+    // Requests that the app's cached data and resources be cleared
     bool clear_cache = 5;
 
     // Requests that the runOnSave behavior for this app be set

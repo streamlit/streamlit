@@ -281,7 +281,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             st.text("foo")
             warning.assert_not_called()
 
-            # Test nested st.cache functions
+            # Test nested cached functions
             @cache_decorator
             def outer():
                 @cache_decorator
@@ -295,7 +295,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
             warning.reset_mock()
 
-            # Test st.cache functions that raise errors
+            # Test cached functions that raise errors
             with pytest.raises(RuntimeError):
 
                 @cache_decorator
@@ -312,7 +312,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             st.text("foo")
             warning.assert_not_called()
 
-            # Test st.cache functions with widgets
+            # Test cached functions with widgets
             @cache_decorator
             def cached_widget():
                 st.button("Press me!")

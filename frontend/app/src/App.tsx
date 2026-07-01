@@ -2063,7 +2063,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Asks the server to clear the st_cache and st_cache_data and st_cache_resource
+   * Asks the server to clear st.cache_data and st.cache_resource caches.
    */
   clearCache = (): void => {
     this.closeDialog()

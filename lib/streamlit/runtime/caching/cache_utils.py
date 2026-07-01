@@ -311,8 +311,8 @@ class CachedFunc(Generic[P, R]):
         # users with slowdowned apps in case the inner functions are called very often,
         # which would lead to a ton of (empty/spinner) proto messages that will make the
         # app slow (see https://github.com/streamlit/streamlit/issues/9951). This is
-        # basically like auto-setting "show_spinner=False" on the @st.cache decorators
-        # on behalf of the user.
+        # basically like auto-setting "show_spinner=False" on the @st.cache_data
+        # and @st.cache_resource decorators on behalf of the user.
         is_nested_cache_function = in_cached_function.get()
 
         spinner_or_no_context = (
