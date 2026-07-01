@@ -314,8 +314,8 @@ st.caption("Data refreshes hourly. Email support@example.com for access.")  # In
 ```
 
 ```python
-# GOOD: Everything that doesn't depend on the report renders immediately. The
-# chart and table wait, held by reserved containers that keep the layout in place.
+# GOOD: Everything that doesn't depend on the report renders immediately. The chart
+# waits in a reserved slot that shows a skeleton while it loads and keeps its state.
 st.title("Account report")
 account = st.selectbox("Account", accounts)
 
@@ -323,31 +323,18 @@ with st.sidebar:  # Independent chrome — render it before the slow call
     st.date_input("Date range")
     st.multiselect("Regions", regions)
 
-chart_slot = st.container()  # Reserve the report's positions up front
-table_slot = st.container()
+chart_slot = st.container()  # Reserve the chart's position up front
 
 st.caption("Data refreshes hourly. Email support@example.com for access.")
 
-report = load_report(account)  # Slow work runs after the page is painted
-
-with chart_slot:
-    st.line_chart(report.history)
-with table_slot:
-    st.dataframe(report.transactions, key="transactions")
+with chart_slot.skeleton():  # Skeleton fills the reserved slot while the work runs
+    report = load_report(account)  # Slow work runs after the page is painted
+    chart_slot.line_chart(report.history)  # Renders into the reserved slot; keeps state
 ```
 
-**Reserve slots with `st.container()`, not standalone `st.empty`/`st.skeleton`.** A container keeps the previous run's elements mounted while the rerun is in flight: they go **stale** (greyed) and then update in place, so a dataframe keeps its scroll position, sort, and selection. Standalone `st.empty()`/`st.skeleton()` placeholders clear their slot at the top of the rerun and refill it later; when slow work runs in between (exactly the case here), the cleared state is committed to the screen, so the old element unmounts and its state resets. (A fast fill with no delay may skip the visible clear, but that isn't this scenario.) Give stateful elements a stable `key` so their identity survives data changes — without one, a dataframe's identity includes its data, so it remounts whenever the data changes.
+`chart_slot = st.container()` claims the chart's position up front, so the caption below it paints immediately instead of waiting behind `load_report`. The chart is then rendered into that reserved container at a stable position, so it goes **stale** (greyed) and updates in place across reruns rather than remounting — a dataframe or chart keeps its scroll, sort, and selection. `chart_slot.skeleton()` used as a context manager shows a skeleton in the slot while the block runs and clears it on exit; write the results explicitly to the container (`chart_slot.line_chart(...)`), since the skeleton block does not redirect bare `st.*` calls into it.
 
-To also show a loading indicator while the work runs and still keep element state, wrap the slow call and its related output in a `with st.skeleton(...):` block (context-manager mode). The skeleton shows during the wait and clears on exit, while the elements inside render into the parent at stable positions, so their state is preserved:
-
-```python
-with table_slot:
-    with st.skeleton():
-        report = load_report(account)  # skeleton shows while this runs
-        st.dataframe(report.transactions, key="transactions")
-```
-
-Reserve standalone `st.empty()`/`st.skeleton()` for replacing an element with a _different_ one, or for content with no state worth keeping. See `layouts.md` for placeholder details.
+Avoid standalone `st.empty()`/`st.skeleton()` placeholders that you fill later here: they clear their slot at the top of the rerun and refill it afterward, so when slow work runs in between, the cleared state is committed to the screen and the old element unmounts and loses its state. (A fast fill with no delay may skip the visible clear, but that isn't this scenario.) Reserve them for replacing an element with a _different_ one, or for content with no state worth keeping. Give stateful elements a stable `key` so their identity survives data changes — without one, a dataframe's identity includes its data, so it remounts whenever the data changes. See `layouts.md` for placeholder details.
 
 For independent slow sections, prefer `@st.fragment(parallel=True)` so each card can fill in as soon as its own work completes. Keep fragment writes inside the fragment body; if a fragment must write to an outside container, claim that outside slot during the initial full-app run.
 
