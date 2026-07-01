@@ -162,6 +162,24 @@ def load_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
 ```
 
+Render stable layout and output slots before slow calls. Streamlit emits UI updates top to bottom during each rerun, so if slow code runs before downstream elements are recreated, users can temporarily see faded stale content from the previous run. Create section headers, containers, and `st.empty`/`st.skeleton` slots first, then fill them after cached or slow work completes.
+
+```python
+# BAD: The whole page is stuck behind a slow load and greys out
+orders = load_orders()  # ~5s
+st.title("Orders")
+region = st.selectbox("Region", regions)
+st.dataframe(orders)
+
+# GOOD: UI paints immediately; only the table waits
+st.title("Orders")
+region = st.selectbox("Region", regions)
+orders = load_orders()
+st.dataframe(orders)
+```
+
+See `performance.md` for the rendering-order details and a fuller placeholder example.
+
 Use fragments for independent sections that can rerun separately from the page.
 
 ```python

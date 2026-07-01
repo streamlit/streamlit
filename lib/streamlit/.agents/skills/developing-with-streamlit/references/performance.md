@@ -281,9 +281,66 @@ Move expensive work outside the main flow:
 - Pre-compute metrics in scheduled jobs
 - Use materialized views for complex queries
 
+## Render stable UI before slow work
+
+Streamlit runs your script top to bottom and emits a UI delta as each `st.*` command runs. During a rerun, the elements from the _previous_ run stay on screen and are marked **stale** (faded to ~33% opacity after a short delay) until the new run reaches the same delta paths or finishes and clears the leftovers. So if slow code runs before the app has recreated its downstream layout, users can temporarily see faded old elements, duplicate-looking content, or a stale UI branch from a previous run.
+
+Fast reruns never show this (the fade has a built-in delay). Greying is a symptom of slow work blocking rendering — fix the ordering and the slowness, not the fade.
+
+Prefer this order:
+
+1. Render stable chrome first: title, filters, tabs/containers, section headers, and output slots — plus anything that does not depend on the slow result (sidebar controls, help text, footers).
+2. Start slow work only after the page has claimed the slots where results will land.
+3. Fill those slots with results when the work completes.
+
+The elements that depend on the slow result genuinely have to wait, but everything that does _not_ depend on it should render first instead of being stuck behind the slow call.
+
+```python
+# BAD: The chart and table depend on the report, so they must wait — but the
+# sidebar filters and the footer below don't, and they still stay faded/stale
+# until load_report returns.
+st.title("Account report")
+account = st.selectbox("Account", accounts)
+
+report = load_report(account)  # Slow query/API/model call
+
+st.line_chart(report.history)  # Depends on report
+st.dataframe(report.transactions)  # Depends on report
+
+with st.sidebar:  # Independent of the report, but stuck behind it
+    st.date_input("Date range")
+    st.multiselect("Regions", regions)
+st.caption("Data refreshes hourly. Email support@example.com for access.")  # Independent
+```
+
+```python
+# GOOD: Everything that doesn't depend on the report renders immediately. Only the
+# chart and table wait, and their reserved slots hold the layout while it loads.
+st.title("Account report")
+account = st.selectbox("Account", accounts)
+
+with st.sidebar:  # Independent chrome — render it before the slow call
+    st.date_input("Date range")
+    st.multiselect("Regions", regions)
+
+chart_slot = st.skeleton(height=320)  # Reserve the report's slots up front
+transactions_slot = st.empty()
+
+st.caption("Data refreshes hourly. Email support@example.com for access.")
+
+report = load_report(account)  # Slow work runs after the page is painted
+
+chart_slot.line_chart(report.history)
+transactions_slot.dataframe(report.transactions)
+```
+
+Use `st.skeleton` when you want visible loading feedback and reserved space. Use `st.empty` when the slot should stay blank until content is ready. For multi-element replacement, call `.container()` on the placeholder and write the whole section inside that container. See `layouts.md` for placeholder details.
+
+For independent slow sections, prefer `@st.fragment(parallel=True)` plus per-section skeletons so each card can fill in as soon as its own work completes. Keep fragment writes inside the fragment body; if a fragment must write to an outside container, claim that outside slot during the initial full-app run.
+
 ## Perceived performance (loading states)
 
-The techniques above reduce _actual_ work. When a wait is unavoidable, give immediate loading feedback so the app _feels_ responsive. These don't speed up computation — pair them with caching and fragments. See `layouts.md` for details:
+The techniques above reduce _actual_ work and keep the UI fresh. When a wait is unavoidable, give immediate loading feedback so the app _feels_ responsive instead of showing greyed, stale content. These don't speed up computation — pair them with caching and fragments. See `layouts.md` for details:
 
 - `st.spinner` — lightweight indicator wrapped around a block of slow work.
 - `st.skeleton` — animated placeholder that reserves layout space while content loads.
