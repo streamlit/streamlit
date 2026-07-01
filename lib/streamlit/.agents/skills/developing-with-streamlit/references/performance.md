@@ -336,6 +336,8 @@ transactions_slot.dataframe(report.transactions)
 
 Use `st.skeleton` when you want visible loading feedback and reserved space. Use `st.empty` when the slot should stay blank until content is ready. For multi-element replacement, call `.container()` on the placeholder and write the whole section inside that container. See `layouts.md` for placeholder details.
 
+**Preserving element state:** `st.empty`/`st.skeleton` clear the slot on every rerun, which unmounts whatever was in it — so a dataframe filled through a placeholder loses its scroll position, sort, and selection each time it reloads. If you want a stateful element (e.g. a dataframe or data editor) to stay usable across slow reruns, render it directly in a container with a stable `key` and let it go **stale** (greyed) in place instead: it updates without remounting and keeps its state. Reserve `st.empty`/`st.skeleton` for the first load, explicit loading feedback, or swapping in a _different_ element. The stable `key` matters — without one, a dataframe's identity includes its data, so changing the data remounts it (and drops its state) even inside a container.
+
 For independent slow sections, prefer `@st.fragment(parallel=True)` plus per-section skeletons so each card can fill in as soon as its own work completes. Keep fragment writes inside the fragment body; if a fragment must write to an outside container, claim that outside slot during the initial full-app run.
 
 ## Perceived performance (loading states)
