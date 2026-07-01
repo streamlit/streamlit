@@ -161,6 +161,48 @@ def test_resolve_forced_lazy_pyarrow_table() -> None:
     assert isinstance(source, InMemoryDataframeSource)
 
 
+def _make_multiindex_pandas(num_rows: int) -> pd.DataFrame:
+    """Build a pandas DataFrame with two-level (MultiIndex) column headers."""
+    columns = pd.MultiIndex.from_tuples(
+        [("group1", "a"), ("group1", "b")], names=["level_0", "level_1"]
+    )
+    return pd.DataFrame(np.arange(num_rows * 2).reshape(num_rows, 2), columns=columns)
+
+
+def test_resolve_multiindex_columns_lazy_true_falls_back_to_eager() -> None:
+    """``lazy=True`` on a MultiIndex-column pandas DataFrame renders eagerly.
+
+    Multi-level column headers are unsupported for lazy loading, so they fall
+    back to eager rendering rather than raising.
+    """
+    df = _make_multiindex_pandas(FORCED_LAZY_MIN_ROWS + 1)
+    assert resolve_lazy_source(df, True, is_selection_activated=False) is None
+
+
+def test_resolve_multiindex_columns_lazy_none_falls_back_to_eager() -> None:
+    """A large MultiIndex-column pandas DataFrame stays eager for ``lazy=None``."""
+    df = _make_multiindex_pandas(AUTO_LAZY_ROW_THRESHOLD + 1)
+    assert resolve_lazy_source(df, None, is_selection_activated=False) is None
+
+
+def test_resolve_multiindex_columns_pyarrow_falls_back_to_eager() -> None:
+    """A pyarrow.Table carrying MultiIndex column metadata stays eager."""
+    df = _make_multiindex_pandas(FORCED_LAZY_MIN_ROWS + 1)
+    table = pa.Table.from_pandas(df)
+    assert resolve_lazy_source(table, True, is_selection_activated=False) is None
+
+
+def test_resolve_single_level_columns_stay_lazy() -> None:
+    """A regular (single-level) column DataFrame is still served lazily.
+
+    Guards against the MultiIndex check accidentally excluding normal
+    dataframes.
+    """
+    df = pd.DataFrame(np.arange(2 * (FORCED_LAZY_MIN_ROWS + 1)).reshape(-1, 2))
+    source = resolve_lazy_source(df, True, is_selection_activated=False)
+    assert isinstance(source, InMemoryDataframeSource)
+
+
 def test_resolve_forced_lazy_numpy_fallback() -> None:
     """``lazy=True`` converts an arbitrary supported eager input to pandas."""
     data = np.arange(FORCED_LAZY_MIN_ROWS + 1).reshape(-1, 1)

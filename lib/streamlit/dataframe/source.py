@@ -265,6 +265,31 @@ def _should_lazy_load_in_memory(lazy: bool | None, num_rows: int) -> bool:
     return False
 
 
+def _has_multi_level_columns(data: object) -> bool:
+    """Return ``True`` if ``data`` has multi-level (MultiIndex) column headers.
+
+    Lazy loading identifies a sort column by its flat Arrow field name, which
+    cannot unambiguously address a single level of a multi-level header. To keep
+    the first version simple, dataframes with multi-level column headers fall
+    back to eager rendering instead of being served lazily.
+    """
+    import pandas as pd
+
+    if isinstance(data, pd.DataFrame):
+        return isinstance(data.columns, pd.MultiIndex)
+
+    import pyarrow as pa
+
+    if isinstance(data, pa.Table):
+        # A pyarrow.Table converted from a MultiIndex-column pandas DataFrame
+        # records more than one column-header level in its pandas metadata.
+        metadata = data.schema.pandas_metadata
+        if metadata is not None:
+            return len(metadata.get("column_indexes", [])) > 1
+
+    return False
+
+
 def _try_create_native_source(data: object) -> DataframeSource | None:
     """Return a native lazy adapter for an unevaluated object, or ``None``.
 
@@ -357,6 +382,10 @@ def resolve_lazy_source(
     import pandas as pd
 
     if isinstance(data, pd.DataFrame):
+        # Multi-level column headers are not supported for lazy loading; keep
+        # eager rendering (this also covers an explicit ``lazy=True``).
+        if _has_multi_level_columns(data):
+            return None
         if _should_lazy_load_in_memory(lazy, len(data)):
             return _in_memory_source_from_pandas(data)
         return None
@@ -365,6 +394,8 @@ def resolve_lazy_source(
     import pyarrow as pa
 
     if isinstance(data, pa.Table):
+        if _has_multi_level_columns(data):
+            return None
         if _should_lazy_load_in_memory(lazy, data.num_rows):
             return InMemoryDataframeSource(data)
         return None
@@ -384,7 +415,9 @@ def resolve_lazy_source(
     # and serve slices from memory.
     if lazy is True:
         df = dataframe_util.convert_anything_to_pandas_df(data, ensure_copy=True)
-        if len(df) <= FORCED_LAZY_MIN_ROWS:
+        # Multi-level column headers are not supported for lazy loading; fall
+        # back to eager rendering.
+        if _has_multi_level_columns(df) or len(df) <= FORCED_LAZY_MIN_ROWS:
             return None
         return _in_memory_source_from_pandas(df)
 

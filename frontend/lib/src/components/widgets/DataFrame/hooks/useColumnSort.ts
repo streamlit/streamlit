@@ -177,10 +177,15 @@ function useColumnSort({
       return undefined
     }
     const column = columnsById.get(sort.columnId)
-    if (!column?.name) {
+    // The backend keys the sort on the stable Arrow field name (which matches
+    // the source schema), not the displayed header title. The title can be a
+    // renamed label (via column_config) or, for multi-level headers, only the
+    // last level, neither of which reliably identifies the backend column.
+    const fieldName = column?.arrowType?.arrowField?.name
+    if (!fieldName) {
       return undefined
     }
-    return { column: column.name, descending: sort.direction === "desc" }
+    return { column: fieldName, descending: sort.direction === "desc" }
   }, [mode, sort, columnsById])
 
   return {

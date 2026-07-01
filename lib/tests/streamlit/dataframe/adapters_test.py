@@ -48,9 +48,19 @@ class _FakeLimited:
 class _FakeSnowparkDataFrame:
     """Minimal stand-in for a Snowpark ``DataFrame`` for query-building tests."""
 
-    def __init__(self, pdf: pd.DataFrame, *, row_count: int | None = None) -> None:
+    def __init__(
+        self,
+        pdf: pd.DataFrame,
+        *,
+        row_count: int | None = None,
+        unsortable_columns: set[str] | None = None,
+    ) -> None:
         self._pdf = pdf
         self._explicit_count = row_count
+        # Columns that cannot appear in an ORDER BY (mimics Snowflake types like
+        # GEOGRAPHY/GEOMETRY). Sorting by one raises, exercising the graceful
+        # ORDER BY degradation.
+        self._unsortable = unsortable_columns or set()
         self.sort_calls: list[tuple[tuple[str, ...], list[bool] | None]] = []
         self.limit_calls: list[tuple[int, int]] = []
 
@@ -67,6 +77,11 @@ class _FakeSnowparkDataFrame:
         self, *cols: str, ascending: list[bool] | None = None
     ) -> _FakeSnowparkDataFrame:
         self.sort_calls.append((cols, ascending))
+        unorderable = self._unsortable.intersection(cols)
+        if unorderable:
+            raise ValueError(
+                f"Columns {sorted(unorderable)} cannot be used in an ORDER BY."
+            )
         return self
 
     def limit(self, n: int, offset: int = 0) -> _FakeLimited:
@@ -125,6 +140,44 @@ def test_snowpark_sort_puts_active_column_first() -> None:
     cols, ascending = fake.sort_calls[-1]
     assert cols == ("b", "a")
     assert ascending == [False, True]
+
+
+def test_snowpark_falls_back_to_primary_sort_column_on_order_error() -> None:
+    """If ordering by every column fails, retry with only the sort column.
+
+    Mimics a Snowflake table with an unorderable column (e.g. GEOGRAPHY): the
+    full ORDER BY raises, so the adapter degrades to ordering by the active
+    sort column instead of failing the request.
+    """
+    fake = _FakeSnowparkDataFrame(
+        pd.DataFrame({"a": [1, 2, 3], "b": [3, 2, 1]}),
+        unsortable_columns={"a"},
+    )
+    source = SnowparkDataframeSource(fake)
+    chunk = source.load_rows(0, 3, sort=SortSpec("b", descending=False))
+    assert isinstance(chunk, pa.Table)
+    attempted = [cols for cols, _ in fake.sort_calls]
+    # The full ordering (with the unorderable "a") was attempted first.
+    assert ("b", "a") in attempted
+    # ...then the adapter retried with just the active sort column.
+    assert fake.sort_calls[-1][0] == ("b",)
+
+
+def test_snowpark_schema_probe_degrades_when_ordering_unsupported() -> None:
+    """The initial schema probe still succeeds if no column is orderable.
+
+    Guards the first-render path: if every column is unorderable, the unsorted
+    schema probe must fall back to no ORDER BY rather than raising.
+    """
+    fake = _FakeSnowparkDataFrame(
+        pd.DataFrame({"a": [1, 2], "b": [3, 4]}),
+        unsortable_columns={"a", "b"},
+    )
+    source = SnowparkDataframeSource(fake)
+    assert source.schema.names == ["a", "b"]
+    # The full ordering was attempted and failed; the adapter then fell back to
+    # no ORDER BY (which issues no sort call) to complete the schema probe.
+    assert fake.sort_calls[-1][0] == ("a", "b")
 
 
 def test_snowpark_caches_initial_page() -> None:
@@ -194,3 +247,32 @@ def test_try_create_native_source_detects_polars_lazyframe() -> None:
     source = try_create_native_source(pl.LazyFrame({"a": [1, 2, 3]}))
     assert isinstance(source, PolarsLazyFrameSource)
     assert source.access_mode is AccessMode.RANDOM_ACCESS
+
+
+@pytest.mark.require_integration
+def test_polars_lazyframe_sort_is_deterministic_across_chunks() -> None:
+    """Paginated sort over a tie-heavy column returns stable, non-overlapping rows.
+
+    The synthetic row-index tiebreaker orders equal values by their original
+    position, so consecutive chunk requests never overlap or skip rows and the
+    tiebreaker column does not leak into the returned schema.
+    """
+    import polars as pl
+
+    from streamlit.dataframe.adapters import PolarsLazyFrameSource
+
+    # Every value in the sort column "k" is a tie, forcing the tiebreaker.
+    lf = pl.LazyFrame({"k": [0] * 100, "v": list(range(100))})
+    source = PolarsLazyFrameSource(lf)
+
+    first = source.load_rows(0, 10, sort=SortSpec("k"))
+    second = source.load_rows(10, 10, sort=SortSpec("k"))
+    first_v = first.column("v").to_pylist()
+    second_v = second.column("v").to_pylist()
+
+    assert first_v == list(range(10))
+    assert second_v == list(range(10, 20))
+    assert set(first_v).isdisjoint(second_v)
+    # The tiebreaker column must not leak into the returned schema.
+    assert first.schema.names == ["k", "v"]
+    assert source.schema.names == ["k", "v"]

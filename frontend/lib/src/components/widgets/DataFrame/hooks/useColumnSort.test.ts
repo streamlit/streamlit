@@ -329,6 +329,19 @@ describe("useColumnSort hook", () => {
       expect(result.current.columns[0].title).toContain("↑")
     })
 
+    it("uses the Arrow field name, not the display title, as the sort key", () => {
+      // column_2's display title ("column_2") differs from its backend Arrow
+      // field name ("column_c2_1"). The server sort key must be the field name
+      // so the backend can match it against the source schema (e.g. renamed
+      // columns or multi-level headers).
+      const { result } = renderHook(() => useColumnSort(serverProps))
+      act(() => result.current.sortColumn(1, "auto"))
+      expect(result.current.serverSortState).toEqual({
+        column: "column_c2_1",
+        descending: false,
+      })
+    })
+
     it("toggles asc -> desc -> none on repeated auto clicks", () => {
       const { result } = renderHook(() => useColumnSort(serverProps))
 

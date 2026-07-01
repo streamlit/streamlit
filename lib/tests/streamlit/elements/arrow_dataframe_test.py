@@ -1522,6 +1522,20 @@ class ArrowDataFrameLazyTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.dataframe(df.style.highlight_max(axis=0), lazy=True)
 
+    def test_lazy_true_multiindex_columns_stays_eager(self):
+        """lazy=True on a MultiIndex-column dataframe falls back to eager render.
+
+        Multi-level column headers are unsupported for lazy loading, so the
+        dataframe renders eagerly instead of raising.
+        """
+        columns = pd.MultiIndex.from_tuples([("g", "a"), ("g", "b")])
+        df = pd.DataFrame(np.arange(10_000).reshape(-1, 2), columns=columns)
+        st.dataframe(df, lazy=True)
+
+        proto = self._last_dataframe_proto()
+        assert not proto.HasField("lazy_data")
+        assert proto.arrow_data.data != b""
+
     def test_lazy_true_with_on_select_raises(self):
         """lazy=True together with on_select raises a StreamlitAPIException."""
         df = pd.DataFrame({"a": np.arange(5_000)})
