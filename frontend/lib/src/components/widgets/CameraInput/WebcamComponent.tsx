@@ -126,15 +126,21 @@ const WebcamComponent = ({
 
   // When a resolution is requested we constrain only height so the camera's
   // native aspect ratio determines width; otherwise we hint the display width.
-  // Memoized so react-webcam only renegotiates the stream when an input changes,
-  // since it uses videoConstraints as a useEffect dependency.
-  const videoConstraints: MediaTrackConstraints = useMemo(
-    () =>
-      isNullOrUndefined(resolutionHeight)
-        ? { width: { ideal: debouncedWidth }, facingMode }
-        : { height: { ideal: resolutionHeight }, facingMode },
-    [resolutionHeight, debouncedWidth, facingMode]
+  // Each branch is memoized separately so the selected reference only changes
+  // with the inputs it actually uses. This keeps react-webcam (which treats
+  // videoConstraints as a useEffect dependency) from renegotiating the stream
+  // on resize while a resolution preset is active, where debouncedWidth is unused.
+  const heightConstraints: MediaTrackConstraints = useMemo(
+    () => ({ height: { ideal: resolutionHeight }, facingMode }),
+    [resolutionHeight, facingMode]
   )
+  const widthConstraints: MediaTrackConstraints = useMemo(
+    () => ({ width: { ideal: debouncedWidth }, facingMode }),
+    [debouncedWidth, facingMode]
+  )
+  const videoConstraints = isNullOrUndefined(resolutionHeight)
+    ? widthConstraints
+    : heightConstraints
 
   return (
     <StyledCameraInput data-testid="stCameraInputWebcamComponent">
