@@ -759,7 +759,7 @@ check:
 	if [ -n "$$PY_TESTS" ] && [ "$$FAST_CHECK" != "true" ]; then \
 		echo "=== Python: tests (pytest) ===" && \
 		echo "Running: $$PY_TESTS" && \
-		uv run pytest -c lib/pyproject.toml -v $$PY_TESTS && \
+		MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v $$PY_TESTS && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
 			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \
