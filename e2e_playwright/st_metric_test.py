@@ -72,12 +72,15 @@ def test_arrow_overrides(app: Page, assert_snapshot: ImageCompareFunction):
     )
 
 
-def test_zero_delta_has_no_arrow(app: Page):
-    metric = get_metric(app, "Zero delta")
+def test_zero_delta_has_no_arrow(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    metric = get_metric(themed_app, "Zero delta")
     expect(metric.get_by_test_id("stMetricValue")).to_have_text("100")
     expect(metric.get_by_test_id("stMetricDelta")).to_have_text("0")
     expect(metric.get_by_test_id("stMetricDeltaIcon-Up")).to_have_count(0)
     expect(metric.get_by_test_id("stMetricDeltaIcon-Down")).to_have_count(0)
+    assert_snapshot(metric, name="st_metric-zero_delta")
 
 
 def test_green_up_arrow_render(themed_app: Page, assert_snapshot: ImageCompareFunction):
