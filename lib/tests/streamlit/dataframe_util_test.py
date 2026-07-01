@@ -1427,6 +1427,40 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         assert "due to data size limitations" in el.markdown.body
         assert el.markdown.element_type == MarkdownProto.Type.CAPTION
 
+    @patch_config_options(
+        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
+    )
+    def test_convert_arrow_table_respects_truncate_flag(self):
+        """`truncate=False` preserves all rows even when truncation is enabled.
+
+        Lazy dataframe chunks must never be truncated: the frontend maps each
+        chunk to a fixed ``page_size`` row window, so dropping rows would
+        misalign offsets. The default (``truncate=True``) must still truncate.
+        """
+        col_data = list(range(200000))
+        original_df = pd.DataFrame(
+            {"col 1": col_data, "col 2": col_data, "col 3": col_data}
+        )
+        original_table = pa.Table.from_pandas(original_df)
+
+        # truncate=False keeps every row (the path used for lazy chunks).
+        untruncated_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(
+            original_table, truncate=False
+        )
+        untruncated_table = pa.ipc.open_stream(
+            pa.BufferReader(untruncated_bytes)
+        ).read_all()
+        assert untruncated_table.num_rows == original_table.num_rows
+
+        # The default still truncates rows to fit under the message-size limit.
+        truncated_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(
+            original_table
+        )
+        truncated_table = pa.ipc.open_stream(
+            pa.BufferReader(truncated_bytes)
+        ).read_all()
+        assert truncated_table.num_rows < original_table.num_rows
+
 
 @pytest.mark.require_integration
 def test_direct_polars_to_arrow_bytes_dataframe() -> None:

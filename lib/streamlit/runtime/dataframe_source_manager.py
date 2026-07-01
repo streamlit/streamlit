@@ -177,11 +177,17 @@ class DataframeSourceManager:
         row_count = entry.source.row_count
         if row_count is not None and offset >= row_count:
             empty_table = entry.source.schema.empty_table()
-            arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(empty_table)
+            # Never truncate lazy chunks: the frontend relies on a fixed
+            # per-chunk row window, so dropping rows would misalign offsets.
+            arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(
+                empty_table, truncate=False
+            )
             return arrow_bytes, offset
 
         table = entry.source.load_rows(offset, capped_limit, sort=sort)
-        arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(table)
+        arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(
+            table, truncate=False
+        )
         return arrow_bytes, offset
 
     def clear_session_refs(self, session_id: str | None = None) -> None:

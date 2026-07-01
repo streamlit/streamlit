@@ -95,7 +95,10 @@ function makeClient(
   return { client, request }
 }
 
-function renderLoader(client: BackendOperationClient | undefined): {
+function renderLoader(
+  client: BackendOperationClient | undefined,
+  pageSize: number = PAGE_SIZE
+): {
   result: { current: ReturnType<typeof useLazyDataLoader> }
 } {
   const initialChunk = new Quiver({ data: UNICODE })
@@ -106,7 +109,7 @@ function renderLoader(client: BackendOperationClient | undefined): {
       numRows: 4,
       sourceId: SOURCE_ID,
       generation: GENERATION,
-      pageSize: PAGE_SIZE,
+      pageSize,
       sortState: undefined,
       backendOperationClient: client,
     })
@@ -279,6 +282,29 @@ describe("useLazyDataLoader", () => {
       expect(isErrorCell(cell)).toBe(false)
       expect(cell.kind).not.toBe(GridCellKind.Loading)
     })
+  })
+
+  it("clamps a non-positive page size so chunk requests stay aligned", async () => {
+    // A proto page_size that defaults to 0 must not produce `limit: 0`
+    // requests or break the row-to-chunk offset math.
+    const { client, request } = makeClient(() =>
+      Promise.resolve({
+        sourceId: SOURCE_ID,
+        generation: GENERATION,
+        offset: 1,
+        arrowData: { data: UNICODE },
+      })
+    )
+    const { result } = renderLoader(client, 0)
+
+    // With an effective page size of 1, row 1 lives in chunk 1 (not seeded).
+    expect(result.current.getCellContent([0, 1]).kind).toBe(
+      GridCellKind.Loading
+    )
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(1))
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({ offset: 1, limit: 1 })
+    )
   })
 
   it("ignores responses with a stale generation", async () => {

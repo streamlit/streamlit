@@ -118,6 +118,12 @@ function useLazyDataLoader({
     []
   )
 
+  // Guard against a non-positive page size (e.g. an unset proto field that
+  // defaults to 0). A zero page size would send `limit: 0` requests and break
+  // the row-to-chunk offset math, so every consumer below uses this clamped
+  // value (the cache applies the same guard internally as defense in depth).
+  const effectivePageSize = Math.max(1, pageSize)
+
   const sortKey = sortState
     ? `${sortState.column}:${sortState.descending ? "desc" : "asc"}`
     : ""
@@ -126,13 +132,13 @@ function useLazyDataLoader({
   // page size, or sort changes. The initial chunk seeds chunk 0 only when there
   // is no active sort (a sorted chunk 0 has different rows).
   const controller = useMemo<LazyLoaderController>(() => {
-    const cache = new LazyDataframeCache(pageSize)
+    const cache = new LazyDataframeCache(effectivePageSize)
     if (sortKey === "") {
       cache.addChunk(0, initialChunk)
     }
     return { cache, inFlight: new Set<number>() }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sortKey captures sortState
-  }, [sourceId, generation, pageSize, sortKey, initialChunk])
+  }, [sourceId, generation, effectivePageSize, sortKey, initialChunk])
 
   const requestChunk = useCallback(
     (chunkIndex: number): void => {
@@ -156,7 +162,7 @@ function useLazyDataLoader({
       }
 
       inFlight.add(chunkIndex)
-      const offset = chunkIndex * pageSize
+      const offset = chunkIndex * effectivePageSize
       const sortPayload = sortState
         ? {
             column: sortState.column,
@@ -170,7 +176,7 @@ function useLazyDataLoader({
         .requestDataframeChunk({
           sourceId,
           offset,
-          limit: pageSize,
+          limit: effectivePageSize,
           generation,
           sort: sortPayload,
         })
@@ -205,7 +211,7 @@ function useLazyDataLoader({
     [
       controller,
       backendOperationClient,
-      pageSize,
+      effectivePageSize,
       sourceId,
       generation,
       sortState,
@@ -238,7 +244,7 @@ function useLazyDataLoader({
   // new request cycle (they would target a different cache/sort).
   useEffect(() => {
     pendingRef.current.clear()
-  }, [sourceId, generation, pageSize, sortKey])
+  }, [sourceId, generation, effectivePageSize, sortKey])
 
   const getCellContent = useCallback(
     ([col, row]: Item): GridCell => {
@@ -262,7 +268,7 @@ function useLazyDataLoader({
       if (chunk !== undefined) {
         try {
           const column = columns[col]
-          const localRow = row - chunkIndex * pageSize
+          const localRow = row - chunkIndex * effectivePageSize
           const arrowCell = chunk.getCell(localRow, column.indexNumber)
           return getCellFromArrow(column, arrowCell, undefined)
         } catch (error) {
@@ -287,7 +293,14 @@ function useLazyDataLoader({
     // this getter changes identity whenever a chunk arrives, prompting
     // glide-data-grid to repaint.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cacheVersion is an intentional repaint signal
-    [columns, numRows, controller, pageSize, scheduleRequest, cacheVersion]
+    [
+      columns,
+      numRows,
+      controller,
+      effectivePageSize,
+      scheduleRequest,
+      cacheVersion,
+    ]
   )
 
   const onVisibleRegionChanged = useCallback(

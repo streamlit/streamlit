@@ -537,9 +537,11 @@ def _marshall_lazy_dataframe(
 
     # Serve the first page as the initial chunk. It carries the Arrow schema and
     # the first visible rows so the frontend can render columns immediately.
+    # Never truncate lazy chunks: the frontend maps each chunk to a fixed
+    # ``page_size`` row window, so dropping rows would misalign offsets.
     initial_table = source.load_rows(0, registered.page_size)
     lazy_data.initial_chunk.data = dataframe_util.convert_arrow_table_to_arrow_bytes(
-        initial_table
+        initial_table, truncate=False
     )
     return True
 

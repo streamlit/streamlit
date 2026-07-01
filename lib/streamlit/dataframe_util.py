@@ -891,7 +891,9 @@ def _downcast_large_list_schema(schema: pa.Schema) -> pa.Schema:
     return pa.schema(new_fields, metadata=schema.metadata)
 
 
-def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
+def convert_arrow_table_to_arrow_bytes(
+    table: pa.Table, *, truncate: bool = True
+) -> bytes:
     """Serialize pyarrow.Table to Arrow IPC bytes.
 
     Parameters
@@ -899,23 +901,30 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     table : pyarrow.Table
         A table to convert.
 
+    truncate : bool
+        Whether to apply ``server.enableArrowTruncation`` row truncation. This
+        must be ``False`` for lazy dataframe chunks: the frontend maps each
+        chunk to a fixed ``page_size`` row window, so silently dropping rows
+        would misalign offsets and corrupt the displayed data.
+
     Returns
     -------
     bytes
         The serialized Arrow IPC bytes.
     """
-    try:
-        table = _maybe_truncate_table(table)
-    except RecursionError as err:  # pragma: no cover - defensive
-        # This is a very unlikely edge case, but we want to make sure that
-        # it doesn't lead to unexpected behavior.
-        # If there is a recursion error, we just return the table as-is
-        # which will lead to the normal message limit exceed error.
-        _LOGGER.warning(
-            "Recursion error while truncating Arrow table. This is not "
-            "supposed to happen.",
-            exc_info=err,
-        )
+    if truncate:
+        try:
+            table = _maybe_truncate_table(table)
+        except RecursionError as err:  # pragma: no cover - defensive
+            # This is a very unlikely edge case, but we want to make sure that
+            # it doesn't lead to unexpected behavior.
+            # If there is a recursion error, we just return the table as-is
+            # which will lead to the normal message limit exceed error.
+            _LOGGER.warning(
+                "Recursion error while truncating Arrow table. This is not "
+                "supposed to happen.",
+                exc_info=err,
+            )
 
     import pyarrow as pa
 
