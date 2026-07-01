@@ -21,8 +21,7 @@ Demonstrates:
 - Time window filtering
 - Growth score calculation
 - Dialog popup for company details
-- ``@st.cache_data(ttl=...)`` loader plus an ``st.skeleton`` placeholder so the
-  leaderboard fills in smoothly while data loads
+- ``@st.cache_data(ttl=...)`` loader with a custom spinner message
 
 This template uses synthetic data. Replace ``generate_company_data()`` with
 your actual data source (e.g., Snowflake queries, CRM APIs, etc.).
@@ -123,7 +122,7 @@ def generate_company_data(days: int = 90) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
-@st.cache_data(ttl="1h", show_spinner=False)
+@st.cache_data(ttl="1h", show_spinner="Loading company data...")
 def load_company_data() -> pd.DataFrame:
     """Load all company data (cached). Replace with your data source."""
     return generate_company_data(days=90)
@@ -319,86 +318,83 @@ with st.container(border=True):
     )
     st.markdown(f"**Companies — {timeframe_text}**")
 
-    # Load, aggregate, and render inside a skeleton so the card shows a
-    # placeholder while the (cached) data loads and the leaderboard is computed.
-    with st.skeleton(height=440):
-        all_data = load_company_data()
-        leaderboard = aggregate_companies(
-            all_data,
-            days=days_filter,
-            account_types=account_types,
-            sort_by=sort_by,
-        )
+    all_data = load_company_data()
+    leaderboard = aggregate_companies(
+        all_data,
+        days=days_filter,
+        account_types=account_types,
+        sort_by=sort_by,
+    )
 
-        if leaderboard.empty:
-            st.warning("No company data found for the selected filters.")
-            st.stop()
+    if leaderboard.empty:
+        st.warning("No company data found for the selected filters.")
+        st.stop()
 
-        # Convert columns to lists for MultiselectColumn display (colored chips)
-        for col in ["account_type", "region", "segment"]:
-            leaderboard[col] = leaderboard[col].apply(_to_list)
+    # Convert columns to lists for MultiselectColumn display (colored chips)
+    for col in ["account_type", "region", "segment"]:
+        leaderboard[col] = leaderboard[col].apply(_to_list)
 
-        # Selection dataframe with cell-click support
-        selection = st.dataframe(
-            leaderboard,
-            column_config={
-                "company_name": st.column_config.TextColumn(
-                    "Company (click to view details)",
-                    width="medium",
-                ),
-                "account_type": st.column_config.MultiselectColumn(
-                    "Type",
-                    options=ACCOUNT_TYPES,
-                    color="auto",
-                    width="small",
-                ),
-                "total_credits": st.column_config.NumberColumn(
-                    "Credits",
-                    format="%.0f",
-                ),
-                "growth_score": st.column_config.NumberColumn(
-                    "Growth",
-                    format="%+.0f",
-                    help="Credit change: second half vs first half of period",
-                ),
-                "usage_trend": st.column_config.LineChartColumn(
-                    "Trend",
-                    width="medium",
-                ),
-                "daily_avg": st.column_config.NumberColumn(
-                    "Daily Avg",
-                    format="%.1f",
-                ),
-                "active_days": st.column_config.NumberColumn(
-                    "Active Days",
-                    format="%d",
-                ),
-                "region": st.column_config.MultiselectColumn(
-                    "Region",
-                    options=REGIONS,
-                    color="auto",
-                ),
-                "segment": st.column_config.MultiselectColumn(
-                    "Segment",
-                    options=SEGMENTS,
-                    color="auto",
-                ),
-            },
-            column_order=[
-                "company_name",
-                "account_type",
-                "total_credits",
-                "growth_score",
-                "usage_trend",
-                "daily_avg",
-                "region",
-                "segment",
-            ],
-            hide_index=True,
-            on_select="rerun",
-            selection_mode="single-cell",
-            key="company_leaderboard",
-        )
+    # Selection dataframe with cell-click support
+    selection = st.dataframe(
+        leaderboard,
+        column_config={
+            "company_name": st.column_config.TextColumn(
+                "Company (click to view details)",
+                width="medium",
+            ),
+            "account_type": st.column_config.MultiselectColumn(
+                "Type",
+                options=ACCOUNT_TYPES,
+                color="auto",
+                width="small",
+            ),
+            "total_credits": st.column_config.NumberColumn(
+                "Credits",
+                format="%.0f",
+            ),
+            "growth_score": st.column_config.NumberColumn(
+                "Growth",
+                format="%+.0f",
+                help="Credit change: second half vs first half of period",
+            ),
+            "usage_trend": st.column_config.LineChartColumn(
+                "Trend",
+                width="medium",
+            ),
+            "daily_avg": st.column_config.NumberColumn(
+                "Daily Avg",
+                format="%.1f",
+            ),
+            "active_days": st.column_config.NumberColumn(
+                "Active Days",
+                format="%d",
+            ),
+            "region": st.column_config.MultiselectColumn(
+                "Region",
+                options=REGIONS,
+                color="auto",
+            ),
+            "segment": st.column_config.MultiselectColumn(
+                "Segment",
+                options=SEGMENTS,
+                color="auto",
+            ),
+        },
+        column_order=[
+            "company_name",
+            "account_type",
+            "total_credits",
+            "growth_score",
+            "usage_trend",
+            "daily_avg",
+            "region",
+            "segment",
+        ],
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-cell",
+        key="company_leaderboard",
+    )
 
 # Company drill-down via dialog when Company column cell is clicked
 if selection.selection.cells:  # type: ignore[attr-defined]
