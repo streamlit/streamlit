@@ -134,7 +134,7 @@ def generate_api_data(
     return pd.DataFrame(records)
 
 
-@st.cache_data(ttl="1h", show_spinner=False)
+@st.cache_data(ttl="1h", show_spinner="Loading API usage data...")
 def load_api_data() -> pd.DataFrame:
     """Load all API usage data (cached). Replace with your data source."""
     end_date = date.today() - timedelta(days=1)

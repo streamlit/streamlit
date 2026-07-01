@@ -154,10 +154,12 @@ instead, where the fragment reruns sequentially.
 ### Data Loading with Caching
 
 Cache the expensive load and bound it with a `ttl` (and/or `max_entries`) so the
-cache stays fresh and doesn't grow without limit:
+cache stays fresh and doesn't grow without limit. Use a custom spinner message
+for loaders that run directly in the page. Use `show_spinner=False` only when a
+surrounding loading UI, such as `st.skeleton`, already provides feedback:
 
 ```python
-@st.cache_data(ttl="1h", show_spinner=False)
+@st.cache_data(ttl="1h", show_spinner="Loading metric data...")
 def load_metric_data() -> pd.DataFrame:
     """Load metric data. Replace with your actual data source."""
     # Replace this with:
