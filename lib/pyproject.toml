@@ -90,7 +90,7 @@ dependencies = [
   # Faster http parsing for Starlette server:
   "httptools>=0.6.3",
   # Required by starlette:
-  "anyio>=4.0.0",
+  "anyio>=4.14.1",
   # Required for file-upload support:
   "python-multipart>=0.0.10",
   # Required for websocket support:
