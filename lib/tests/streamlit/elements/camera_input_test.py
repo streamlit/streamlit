@@ -33,6 +33,71 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
+class CameraInputResolutionTest(DeltaGeneratorTestCase):
+    def test_resolution_none_no_field(self):
+        """Test that resolution=None does not set resolution_height in proto."""
+        st.camera_input("the label", resolution=None)
+        c = self.get_delta_from_queue().new_element.camera_input
+        assert not c.HasField("resolution_height")
+
+    @parameterized.expand(
+        [
+            ("480p", 480),
+            ("720p", 720),
+            ("1080p", 1080),
+        ]
+    )
+    def test_resolution_preset_sets_height(self, resolution: str, expected_height: int):
+        """Test that each resolution preset maps to the correct pixel height."""
+        st.camera_input("the label", resolution=resolution)
+        c = self.get_delta_from_queue().new_element.camera_input
+        assert c.HasField("resolution_height")
+        assert c.resolution_height == expected_height
+
+    @parameterized.expand(
+        [
+            ("4k",),
+            (720,),
+            ("720",),
+        ]
+    )
+    def test_resolution_invalid_raises_exception(self, invalid_resolution):
+        """Test that an invalid resolution raises StreamlitAPIException and no element is enqueued."""
+        queue_length_before = len(self.forward_msg_queue._queue)
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.camera_input("the label", resolution=invalid_resolution)
+        assert "Invalid resolution" in str(exc_info.value)
+        assert len(self.forward_msg_queue._queue) == queue_length_before
+
+    def test_stable_id_with_key_and_resolution(self):
+        """Test that when a key is provided, the widget ID is stable even when resolution changes."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.camera_input("Label", key="cam_key", resolution=None)
+            c1 = self.get_delta_from_queue().new_element.camera_input
+            id1 = c1.id
+
+            st.camera_input("Label", key="cam_key", resolution="720p")
+            c2 = self.get_delta_from_queue().new_element.camera_input
+            id2 = c2.id
+
+            assert id1 == id2
+
+    def test_id_changes_with_resolution_no_key(self):
+        """Test that without a key, changing resolution changes the auto-generated id."""
+        st.camera_input("Label", resolution=None)
+        c1 = self.get_delta_from_queue().new_element.camera_input
+        id1 = c1.id
+
+        st.camera_input("Label", resolution="720p")
+        c2 = self.get_delta_from_queue().new_element.camera_input
+        id2 = c2.id
+
+        assert id1 != id2
+
+
 class CameraInputTest(DeltaGeneratorTestCase):
     def test_just_label(self):
         """Test that it can be called with no other values."""
