@@ -69,3 +69,28 @@ if TYPE_CHECKING:
         ),
         DeltaGenerator,
     )
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+
+    # key is required
+    form()  # type: ignore[call-arg]
+
+    # key must be a string
+    form(123)  # type: ignore[arg-type]
+
+    # clear_on_submit must be a bool
+    form("my_form", clear_on_submit="yes")  # type: ignore[arg-type]
+
+    # enter_to_submit must be a bool
+    form("my_form", enter_to_submit="no")  # type: ignore[arg-type]
+
+    # border must be a bool
+    form("my_form", border="yes")  # type: ignore[arg-type]
+
+    # width only accepts "stretch", "content", or int
+    form("my_form", width="invalid")  # type: ignore[arg-type]
+
+    # height only accepts "content", "stretch", or int
+    form("my_form", height="invalid")  # type: ignore[arg-type]
