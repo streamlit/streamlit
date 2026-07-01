@@ -33,6 +33,17 @@ describe("LazyDataframeCache", () => {
     expect(cache.getChunkIndex(1250)).toBe(2)
   })
 
+  it.each([0, -5])(
+    "clamps a non-positive page size (%i) to at least 1",
+    invalidPageSize => {
+      const cache = new LazyDataframeCache(invalidPageSize)
+      // Without the guard, dividing by 0 would return Infinity.
+      expect(cache.pageSize).toBe(1)
+      expect(cache.getChunkIndex(0)).toBe(0)
+      expect(cache.getChunkIndex(3)).toBe(3)
+    }
+  )
+
   it("stores and retrieves chunks", () => {
     const cache = new LazyDataframeCache(500)
     const chunk = makeChunk(1)

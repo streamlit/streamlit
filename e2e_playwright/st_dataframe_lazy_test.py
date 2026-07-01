@@ -52,6 +52,8 @@ def test_scrolling_does_not_trigger_rerun(app: Page):
     lazy_df.hover()
     for _ in range(5):
         app.mouse.wheel(0, 600)
+        # Pace scroll events to emulate realistic user scrolling and give the
+        # debounced chunk loader time to react between steps.
         app.wait_for_timeout(100)
 
     expect_canvas_to_be_stable(lazy_df)

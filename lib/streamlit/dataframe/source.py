@@ -231,6 +231,8 @@ class InMemoryDataframeSource:
 
         order = "descending" if sort.descending else "ascending"
         try:
+            # ``pc.sort_indices`` is available since pyarrow 1.0 but is not
+            # exposed by the type stubs, hence the suppressions below.
             indices = pc.sort_indices(  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
                 self._table, sort_keys=[(sort.column, order)]
             )

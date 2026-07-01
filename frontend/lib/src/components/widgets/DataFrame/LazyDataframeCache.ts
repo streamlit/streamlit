@@ -36,10 +36,20 @@ export class LazyDataframeCache {
 
   private readonly failedChunks = new Map<number, string>()
 
+  private readonly chunkSize: number
+
+  private readonly maxChunks: number
+
   public constructor(
-    private readonly chunkSize: number,
-    private readonly maxChunks: number = DEFAULT_MAX_CHUNKS
-  ) {}
+    chunkSize: number,
+    maxChunks: number = DEFAULT_MAX_CHUNKS
+  ) {
+    // Guard against a non-positive page size (e.g. an unset proto field that
+    // defaults to 0). A chunk size of 0 would make getChunkIndex divide by
+    // zero and map every row to chunk Infinity.
+    this.chunkSize = Math.max(1, chunkSize)
+    this.maxChunks = maxChunks
+  }
 
   /** The number of rows per chunk (the backend page size). */
   public get pageSize(): number {
