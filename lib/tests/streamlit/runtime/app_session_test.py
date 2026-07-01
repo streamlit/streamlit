@@ -78,6 +78,7 @@ def del_path(monkeypatch):
 def _create_test_session(
     event_loop: asyncio.AbstractEventLoop | None = None,
     session_id_override: str | None = None,
+    is_hello: bool = False,
 ) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
     if event_loop is None:
@@ -94,7 +95,7 @@ def _create_test_session(
         ),
     ):
         return AppSession(
-            script_data=ScriptData("/fake/script_path.py", is_hello=False),
+            script_data=ScriptData("/fake/script_path.py", is_hello=is_hello),
             uploaded_file_manager=MagicMock(spec=UploadedFileManager),
             script_cache=MagicMock(),
             message_enqueued_callback=None,
@@ -2433,6 +2434,109 @@ class GetShowErrorLinksTest(unittest.TestCase):
 
         with pytest.raises(ValueError, match="auto, true, false"):
             _get_show_error_links()
+
+
+def test_create_new_session_message_recommends_skills_install() -> None:
+    """The new-session Initialize carries the skills-nudge recommendation,
+    computed from the directory of the app's main script (the same key the
+    page-profile telemetry uses, so both share the cached detection). Recommend
+    only when the browser is on a direct-loopback connection."""
+    session = _create_test_session()
+
+    with (
+        patch(
+            "streamlit.web.skills.should_show_skills_nudge", return_value=True
+        ) as mock_should_show,
+        patch(
+            "streamlit.runtime.backend_operation_handler.connection_locality",
+            return_value="loopback",
+        ),
+    ):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is True
+    # No suppression telemetry when the nudge is actually recommended.
+    assert msg.new_session.initialize.skills_nudge_suppressed_locality == ""
+    mock_should_show.assert_called_once_with("/fake")
+
+
+def test_create_new_session_message_skips_skills_install_when_not_recommended() -> None:
+    """When detection declines, the recommendation flag stays False so the
+    frontend does not show the nudge."""
+    session = _create_test_session()
+
+    with patch("streamlit.web.skills.should_show_skills_nudge", return_value=False):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    assert msg.new_session.initialize.skills_nudge_suppressed_locality == ""
+
+
+def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
+    """An otherwise-eligible nudge is NOT recommended when the browser is not on
+    a direct-loopback connection (Docker/VM/tunnel). The connection class is
+    surfaced for telemetry instead, so we can measure the excluded audience."""
+    session = _create_test_session()
+
+    with (
+        patch("streamlit.web.skills.should_show_skills_nudge", return_value=True),
+        patch(
+            "streamlit.runtime.backend_operation_handler.connection_locality",
+            return_value="private",
+        ),
+    ):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    assert msg.new_session.initialize.skills_nudge_suppressed_locality == "private"
+
+
+def test_create_new_session_message_recomputes_skills_recommendation() -> None:
+    """The skills-nudge recommendation is recomputed on each NewSession, not
+    memoized for the session's lifetime.
+
+    The heavy filesystem detection is cached in ``skills`` (and that cache is
+    invalidated when skills are installed in-app), so recomputing here is cheap
+    and lets a later NewSession reflect a post-install change instead of a stale
+    "recommend" value.
+    """
+    session = _create_test_session()
+
+    with (
+        patch(
+            "streamlit.web.skills.should_show_skills_nudge",
+            side_effect=[True, False],
+        ) as mock_should_show,
+        patch(
+            "streamlit.runtime.backend_operation_handler.connection_locality",
+            return_value="loopback",
+        ),
+    ):
+        first = session._create_new_session_message(page_script_hash="")
+        second = session._create_new_session_message(page_script_hash="")
+
+    assert mock_should_show.call_count == 2
+    assert first.new_session.initialize.recommend_skills_install is True
+    # The second NewSession reflects the updated detection (e.g. post-install),
+    # not a stale memoized True.
+    assert second.new_session.initialize.recommend_skills_install is False
+
+
+def test_create_new_session_message_skips_skills_install_for_hello_app() -> None:
+    """The skills nudge is never recommended for the bundled ``streamlit hello``
+    demo: its script lives inside the Streamlit package, so a one-click install
+    would write into the install tree. The recommendation short-circuits on
+    ``is_hello`` before the detection is consulted."""
+    session = _create_test_session(is_hello=True)
+
+    with patch(
+        "streamlit.web.skills.should_show_skills_nudge", return_value=True
+    ) as mock_should_show:
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    # Short-circuited on is_hello before the (would-recommend) detection ran.
+    mock_should_show.assert_not_called()
 
 
 # ---- Tests for _handle_git_information_request ----

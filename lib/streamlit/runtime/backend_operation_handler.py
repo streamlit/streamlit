@@ -21,12 +21,15 @@ such as lazy dataframe chunk loading, server-side validation, and autocompletion
 from __future__ import annotations
 
 import asyncio
+from ipaddress import ip_address
 from typing import TYPE_CHECKING, Final, Protocol
 
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import (
     BackendOperationResponse,
     DeferredFileResponsePayload,
+    DismissSkillsNudgeResponsePayload,
+    InstallSkillsResponsePayload,
 )
 
 if TYPE_CHECKING:
@@ -36,6 +39,47 @@ if TYPE_CHECKING:
     from streamlit.runtime.media_file_manager import MediaFileManager
 
 _LOGGER: Final = get_logger(__name__)
+
+
+def connection_locality(session_id: str) -> str:
+    """Classify the WebSocket peer of ``session_id`` for the skills nudge.
+
+    Returns one of:
+      - ``"loopback"`` — the browser is connected directly over a loopback
+        address (``127.0.0.0/8``, ``::1``). The only class treated as eligible
+        local development for the nudge.
+      - ``"private"`` — a private/LAN address (RFC1918, link-local, ULA), i.e.
+        Docker / VM / reverse-proxy / LAN topologies.
+      - ``"other"`` — any other (public / relayed) address.
+      - ``"unknown"`` — the peer IP is unavailable (no client context, the
+        runtime is not running, or an unparseable address).
+
+    Uses the raw ``client_context.remote_ip`` (the unforgeable TCP peer), NOT
+    ``st.context.ip_address`` which normalizes loopback to ``None``. This is an
+    intentionally conservative *eligibility* signal, not a security control:
+    only a direct-loopback connection recommends the nudge or may run the
+    install, so a shared/deployed-ish topology (where someone other than the
+    developer might reach the app) never triggers an unintended filesystem write.
+    """
+    from streamlit.runtime import exists, get_instance
+
+    if not exists():
+        return "unknown"
+    client = get_instance().get_client(session_id)
+    if client is None or client.client_context is None:
+        return "unknown"
+    remote_ip = client.client_context.remote_ip
+    if remote_ip is None:
+        return "unknown"
+    try:
+        ip = ip_address(remote_ip)
+    except ValueError:
+        return "unknown"
+    if ip.is_loopback:
+        return "loopback"
+    if ip.is_private:
+        return "private"
+    return "other"
 
 
 class BackendOperationHandler(Protocol):
@@ -137,3 +181,122 @@ class DeferredFileHandler(BackendOperationHandler):
                 request_id=request.request_id,
                 error_msg="Failed to generate file for download",
             )
+
+
+class InstallSkillsHandler(BackendOperationHandler):
+    """Handler for one-click "install skills" requests from the in-app nudge."""
+
+    def __init__(self, get_app_dir: Callable[[], str]) -> None:
+        """Initialize with a callable returning the running app's directory.
+
+        The app dir is used both to gate the install (same detection as the
+        nudge) and to resolve the install target, so the offer and the action
+        operate on the same project tree.
+        """
+        self._get_app_dir = get_app_dir
+
+    async def handle(
+        self,
+        request: BackendOperationRequest,
+        session_id: str,
+    ) -> BackendOperationResponse:
+        """Install the bundled Streamlit skills in project mode."""
+        from streamlit import config
+        from streamlit.web import skills
+
+        app_dir = self._get_app_dir()
+
+        # Gate the ACTION on install *safety*, not on the nudge's display
+        # predicate. Three conditions make a request anomalous and unsafe to honor:
+        #   - headless mode (deployments / CI / SiS): the nudge is never shown
+        #     there, so the request is a replayed/spoofed BackMsg; refuse the
+        #     filesystem writes (and the GitHub download in the global fallback).
+        #   - no agent harness present: nothing would consume the skills.
+        #   - the browser is not on a direct-loopback connection: the same
+        #     conservative eligibility rule the nudge display uses, so a
+        #     shared/deployed-ish topology (Docker/VM/reverse-proxy/SSH-tunnel)
+        #     can never trigger a filesystem write by a non-developer visitor.
+        # We deliberately do NOT gate on "skills already installed" (which
+        # should_show_skills_nudge does): re-installing is idempotent (it reports
+        # "up to date"), whereas refusing it would reject a legitimate RETRY
+        # after a dropped connection whose first attempt already completed
+        # server-side — surfacing a success as an unrecoverable error and
+        # logging it as a failed install. Idempotent retry is the correct path.
+        if (
+            config.get_option("server.headless")
+            or not skills.detect_installed_agents()
+            or connection_locality(session_id) != "loopback"
+        ):
+            return BackendOperationResponse(
+                request_id=request.request_id,
+                error_msg="Skills install is not available in this environment.",
+            )
+
+        try:
+            # Run off the event loop: installing does filesystem I/O (and, in
+            # the global fallback, a network download). Resolve the install root
+            # from the app dir so it lands in the tree the nudge detection scans.
+            result = await asyncio.to_thread(
+                skills.install_skills, global_mode=False, yes=True, app_dir=app_dir
+            )
+        except Exception as ex:
+            _LOGGER.warning("One-click skills install failed", exc_info=ex)
+            # click.ClickException carries a clean, user-facing message.
+            format_message = getattr(ex, "format_message", None)
+            detail = format_message() if callable(format_message) else str(ex)
+            return BackendOperationResponse(
+                request_id=request.request_id,
+                error_msg=detail or "Failed to install skills.",
+            )
+
+        # Invalidate the cached "skills installed" detection so a later session
+        # in this same process does not re-show the nudge.
+        skills.clear_installed_skills_cache()
+
+        return BackendOperationResponse(
+            request_id=request.request_id,
+            install_skills=InstallSkillsResponsePayload(
+                detail=skills.summarize_install(result)
+            ),
+        )
+
+
+class DismissSkillsNudgeHandler(BackendOperationHandler):
+    """Handler that permanently dismisses the in-app "install skills" nudge."""
+
+    async def handle(
+        self,
+        request: BackendOperationRequest,
+        session_id: str,
+    ) -> BackendOperationResponse:
+        """Write the server-side marker so the nudge is no longer shown."""
+        from streamlit import config
+        from streamlit.web import skills
+
+        if (
+            config.get_option("server.headless")
+            or connection_locality(session_id) != "loopback"
+        ):
+            # The nudge is never shown in headless mode or to a non-loopback
+            # connection, so a dismissal request from there is anomalous; refuse
+            # rather than write a marker file under the server's config dir
+            # (mirrors the install handler's gating).
+            return BackendOperationResponse(
+                request_id=request.request_id,
+                error_msg="Skills nudge is not available in this environment.",
+            )
+
+        try:
+            await asyncio.to_thread(skills.write_nudge_dismissed_marker)
+        except Exception as ex:
+            _LOGGER.warning("Failed to persist skills nudge dismissal", exc_info=ex)
+            return BackendOperationResponse(
+                request_id=request.request_id,
+                error_msg="Failed to save your preference.",
+            )
+
+        # The ack payload's presence signals success (error_msg stays empty).
+        return BackendOperationResponse(
+            request_id=request.request_id,
+            dismiss_skills_nudge=DismissSkillsNudgeResponsePayload(),
+        )

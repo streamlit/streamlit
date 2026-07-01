@@ -82,6 +82,12 @@ pytestmark = pytest.mark.filterwarnings(
                 ("session_status", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("session_id", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("is_hello", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
+                ("recommend_skills_install", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
+                (
+                    "skills_nudge_suppressed_locality",
+                    FD.LABEL_OPTIONAL,
+                    FD.TYPE_STRING,
+                ),
             },
         ),
         (

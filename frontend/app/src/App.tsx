@@ -25,6 +25,15 @@ import Hotkeys from "react-hot-keys"
 import AppView from "@streamlit/app/src/components/AppView/AppView"
 import DeployButton from "@streamlit/app/src/components/DeployButton/DeployButton"
 import MainMenu from "@streamlit/app/src/components/MainMenu/MainMenu"
+import {
+  isSkillsNudgeDismissed,
+  isSkillsNudgeDroppedConnection,
+  isSkillsNudgeSnoozed,
+  setSkillsNudgeDismissed,
+  setSkillsNudgeSnoozed,
+  SKILLS_NUDGE_DROPPED_MESSAGE,
+} from "@streamlit/app/src/components/SkillsNudgeToast/skillsNudge"
+import SkillsNudgeToast from "@streamlit/app/src/components/SkillsNudgeToast/SkillsNudgeToast"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget/StatusWidget"
 import StreamlitContextProvider from "@streamlit/app/src/components/StreamlitContextProvider"
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
@@ -144,6 +153,7 @@ import {
 import {
   isLocalhost,
   isNullOrUndefined,
+  localStorageAvailable,
   notNullOrUndefined,
   StreamlitConfig,
 } from "@streamlit/utils"
@@ -222,6 +232,11 @@ interface State {
   autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
   scriptChangedOnDisk: boolean
+  // Whether the framework "install skills" nudge is currently shown. Set once
+  // per page load in handleInitialization when the server recommends it (and
+  // the localhost / dismissal / snooze gates pass), and cleared when the
+  // developer installs, snoozes (✕), or picks "Don't show again".
+  showSkillsNudge: boolean
 }
 
 export const LOG = getLogger("App")
@@ -288,6 +303,13 @@ export class App extends PureComponent<Props, State> {
   // we have received a NewSession message after the latest rerun request.
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
+
+  // Whether the skills-install nudge has been shown this page load.
+  // `handleInitialization` re-runs on websocket reconnect, so this guards
+  // against enqueuing a duplicate nudge and against logging multiple
+  // `skillsNudgeShown` events (which would inflate the adoption funnel). Reset
+  // only by a full page reload (a new App instance).
+  private skillsNudgeShown: boolean = false
 
   public constructor(props: Props) {
     super(props)
@@ -359,6 +381,7 @@ export class App extends PureComponent<Props, State> {
       inputsDisabled: false,
       navigationPosition: Navigation.Position.SIDEBAR,
       scriptChangedOnDisk: false,
+      showSkillsNudge: false,
     }
 
     this.connectionManager = null
@@ -1461,6 +1484,118 @@ export class App extends PureComponent<Props, State> {
     // Protobuf typing cannot handle complex types, so we need to cast to what
     // we know it should be
     this.handleSessionStatusChanged(initialize.sessionStatus as SessionStatus)
+
+    // Show the framework "install skills" nudge when the server recommends it
+    // (agent present, skills not installed, not headless, no server-side marker)
+    // and we're on localhost, not embedded, not permanently dismissed, and not
+    // snoozed. Require localStorage: it's where a snooze / "don't show again" is
+    // remembered browser-side, so if it's unavailable we fail closed and skip
+    // the nudge rather than show one the user can't make stick. Skip embedded
+    // (?embed=true) apps: they're meant to be chromeless, so a CTA card pinned
+    // over the host page's content is inappropriate (and the developer can't
+    // act on it inside someone else's page anyway).
+    if (
+      initialize.recommendSkillsInstall &&
+      isLocalhost() &&
+      !isEmbed() &&
+      localStorageAvailable() &&
+      !isSkillsNudgeDismissed() &&
+      !isSkillsNudgeSnoozed() &&
+      // `handleInitialization` re-runs on reconnect; show + log the impression
+      // only once per page load so a reconnect can't enqueue a duplicate nudge
+      // or inflate the funnel's numerator.
+      !this.skillsNudgeShown
+    ) {
+      this.skillsNudgeShown = true
+      this.setState({ showSkillsNudge: true })
+      this.trackSkillsNudge("skillsNudgeShown")
+    } else if (
+      initialize.skillsNudgeSuppressedLocality &&
+      !this.skillsNudgeShown
+    ) {
+      // The nudge was eligible server-side but the server suppressed it because
+      // the browser isn't on a direct-loopback connection (Docker/VM/tunnel).
+      // Record the connection class — once per page load, reusing the same
+      // guard so a reconnect can't double-count — so we can measure how much of
+      // the agent-harness audience the conservative loopback gate excludes.
+      this.skillsNudgeShown = true
+      this.trackSkillsNudge(
+        `skillsNudgeSuppressedNonLocal:${initialize.skillsNudgeSuppressedLocality}`
+      )
+    }
+  }
+
+  /**
+   * Record a skills-nudge interaction for telemetry. Routed through the
+   * existing ``menuClick`` event (like the deploy button), so it is only sent
+   * when usage stats are enabled.
+   */
+  private readonly trackSkillsNudge = (label: string): void => {
+    this.metricsMgr.enqueue("menuClick", { label })
+  }
+
+  /** Install the bundled skills via a backend operation (no script rerun). */
+  private readonly handleSkillsNudgeInstall = (): Promise<
+    string | undefined
+  > => {
+    this.trackSkillsNudge("skillsNudgeInstall")
+    return this.backendOperationClient
+      .requestInstallSkills()
+      .then(result => {
+        // The server has re-detected the now-installed skills (it clears its
+        // detection cache), so a later session won't recommend the nudge again
+        // — no need to also write the permanent "don't show again" flag here,
+        // which would conflate "installed" with a permanent opt-out. The card
+        // shows its own success confirmation and auto-dismisses.
+        this.trackSkillsNudge("skillsNudgeInstallSucceeded")
+        return result.detail ?? undefined
+      })
+      .catch((error: unknown) => {
+        // A dropped or timed-out connection during a long install (e.g. the
+        // GitHub global fallback) rejects the request even though the server
+        // install may have completed. Count it separately — not as a failure,
+        // which would over-count the funnel — and surface a reassuring,
+        // retry-friendly message; re-install is idempotent.
+        if (isSkillsNudgeDroppedConnection(error)) {
+          this.trackSkillsNudge("skillsNudgeInstallDropped")
+          throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
+        }
+        this.trackSkillsNudge("skillsNudgeInstallFailed")
+        // Re-throw so the toast renders its error state.
+        throw error
+      })
+  }
+
+  /** Close (✕): snooze the nudge for ~24h. The card removes itself via onClose. */
+  private readonly handleSkillsNudgeSnooze = (): void => {
+    setSkillsNudgeSnoozed()
+    this.trackSkillsNudge("skillsNudgeSnoozed")
+  }
+
+  /**
+   * "Don't show again": dismiss permanently by writing both the browser
+   * localStorage flag and the server-side marker, so it won't show again from
+   * either signal. The card removes itself via onClose.
+   */
+  private readonly handleSkillsNudgeDontShowAgain = (): void => {
+    setSkillsNudgeDismissed()
+    // Best-effort durable suppression: the localStorage flag already suppresses
+    // the nudge in this browser, so a failed marker write only means a fresh
+    // browser could see it again — log it rather than failing the dismissal.
+    this.backendOperationClient.requestDismissSkillsNudge().catch(error => {
+      LOG.warn("Failed to persist skills nudge dismissal", error)
+    })
+    this.trackSkillsNudge("skillsNudgeDontShowAgain")
+  }
+
+  /**
+   * Remove the nudge from view. Called by the nudge card after a snooze /
+   * "Don't show again" and by its post-install auto-dismiss. Only toggles
+   * visibility; the persistence (localStorage / server marker) is handled by
+   * the snooze / don't-show-again / install handlers.
+   */
+  private readonly handleSkillsNudgeClose = (): void => {
+    this.setState({ showSkillsNudge: false })
   }
 
   /**
@@ -2498,6 +2633,16 @@ export class App extends PureComponent<Props, State> {
               showToolbar={showToolbar}
               disableFullscreenMode={libConfig.disableFullscreenMode}
               componentRegistry={this.componentRegistry}
+              skillsNudge={
+                this.state.showSkillsNudge ? (
+                  <SkillsNudgeToast
+                    onInstall={this.handleSkillsNudgeInstall}
+                    onSnooze={this.handleSkillsNudgeSnooze}
+                    onDontShowAgain={this.handleSkillsNudgeDontShowAgain}
+                    onClose={this.handleSkillsNudgeClose}
+                  />
+                ) : undefined
+              }
               topRightContent={
                 <>
                   {!hideTopBar && (
