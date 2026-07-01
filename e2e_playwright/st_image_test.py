@@ -30,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 42
+IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 35
 
 
 def check_image_source_error_count(messages: list[str], expected_count: int):
@@ -102,23 +102,6 @@ def test_image_formats(app: Page):
     )
     expect(get_image(app, "GIF as PNG.").locator("img")).to_have_attribute(
         "src", re.compile(r"^.*\.png$")
-    )
-
-
-def test_use_column_width_parameter(app: Page, assert_snapshot: ImageCompareFunction):
-    columns_container = (
-        get_element_by_key(app, "use_column_width")
-        .get_by_test_id("stHorizontalBlock")
-        .first
-    )
-    expect(columns_container).to_be_visible()
-    columns_container.scroll_into_view_if_needed()
-    expect_no_skeletons(columns_container)
-    assert_snapshot(columns_container, name="st_image-use_column_width")
-
-    expect(app.get_by_test_id("stMainBlockContainer")).to_contain_text(
-        "The use_column_width parameter has been deprecated and will be removed in a "
-        "future release. Please utilize the width parameter instead."
     )
 
 

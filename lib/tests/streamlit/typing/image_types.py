@@ -68,14 +68,6 @@ if TYPE_CHECKING:
     assert_type(image("image.png", use_container_width=False), DeltaGenerator)
     assert_type(image("image.png", use_container_width=None), DeltaGenerator)
 
-    # Image with use_column_width parameter (deprecated but still supported)
-    assert_type(image("image.png", use_column_width=True), DeltaGenerator)
-    assert_type(image("image.png", use_column_width=False), DeltaGenerator)
-    assert_type(image("image.png", use_column_width="auto"), DeltaGenerator)
-    assert_type(image("image.png", use_column_width="always"), DeltaGenerator)
-    assert_type(image("image.png", use_column_width="never"), DeltaGenerator)
-    assert_type(image("image.png", use_column_width=None), DeltaGenerator)
-
     # Image with link parameter
     assert_type(image("image.png", link="https://streamlit.io"), DeltaGenerator)
     assert_type(image("image.png", link="/my_page"), DeltaGenerator)
@@ -114,10 +106,12 @@ if TYPE_CHECKING:
         "image.png",
         None,
         "stretch",
-        None,
         False,
         "RGB",
         "auto",
         None,
         "https://example.com",
     )  # type: ignore[misc]
+
+    # Removed deprecated parameter
+    image("image.png", use_column_width=True)  # type: ignore[call-arg]
