@@ -413,5 +413,131 @@ describe("DataFrame ColumnMenu", () => {
 
       expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
     })
+
+    it("opens the statistics sub-menu on focus and closes the format sub-menu", () => {
+      render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
+
+      const statsMenuItem = screen.getByRole("menuitem", {
+        name: /Statistics/,
+      })
+      const formatMenuItem = screen.getByRole("menuitem", { name: /Format/ })
+
+      // Open the format sub-menu first...
+      fireEvent.focus(formatMenuItem)
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      // ...then focusing statistics should open it and close the format one.
+      fireEvent.focus(statsMenuItem)
+      expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "false")
+    })
+
+    it("keeps the statistics sub-menu open on blur while the pointer is down", () => {
+      render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
+
+      const statsMenuItem = screen.getByRole("menuitem", {
+        name: /Statistics/,
+      })
+      fireEvent.focus(statsMenuItem)
+      expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      // eslint-disable-next-line testing-library/prefer-user-event
+      fireEvent.pointerDown(document.body)
+      fireEvent.blur(statsMenuItem)
+
+      expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      // eslint-disable-next-line testing-library/prefer-user-event
+      fireEvent.pointerUp(document.body)
+    })
+
+    it("keeps the statistics sub-menu open when blur moves focus into the sub-menu", () => {
+      render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
+
+      const statsMenuItem = screen.getByRole("menuitem", {
+        name: /Statistics/,
+      })
+      fireEvent.focus(statsMenuItem)
+      expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      const insideSubMenu = document.createElement("div")
+      insideSubMenu.setAttribute("data-testid", "stDataFrameStatisticsMenu")
+      fireEvent.blur(statsMenuItem, { relatedTarget: insideSubMenu })
+
+      expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+    })
+
+    it("closes the statistics sub-menu on keyboard-driven blur", () => {
+      render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
+
+      const statsMenuItem = screen.getByRole("menuitem", {
+        name: /Statistics/,
+      })
+      fireEvent.focus(statsMenuItem)
+      expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      fireEvent.blur(statsMenuItem)
+      expect(statsMenuItem).toHaveAttribute("aria-expanded", "false")
+    })
+  })
+
+  describe("format sub-menu blur into portal", () => {
+    it("keeps the format sub-menu open when blur moves focus into the sub-menu", () => {
+      render(<ColumnMenu {...defaultProps} />)
+
+      const formatMenuItem = screen.getByRole("menuitem", { name: /Format/ })
+      fireEvent.focus(formatMenuItem)
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      const insideSubMenu = document.createElement("div")
+      insideSubMenu.setAttribute(
+        "data-testid",
+        "stDataFrameColumnFormattingMenu"
+      )
+      fireEvent.blur(formatMenuItem, { relatedTarget: insideSubMenu })
+
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+    })
+  })
+
+  describe("scroll locking", () => {
+    it.each(["wheel", "touchmove"])(
+      "prevents the default %s behavior while the menu is open",
+      eventType => {
+        render(<ColumnMenu {...defaultProps} />)
+
+        const event = new Event(eventType, {
+          cancelable: true,
+          bubbles: true,
+        })
+        document.dispatchEvent(event)
+
+        expect(event.defaultPrevented).toBe(true)
+      }
+    )
+  })
+
+  describe("click-outside sub-menu guard", () => {
+    it.each(["stDataFrameStatisticsMenu", "stDataFrameColumnFormattingMenu"])(
+      "does not close the menu on pointer down inside a %s sub-menu",
+      testId => {
+        render(<ColumnMenu {...defaultProps} />)
+
+        const subMenuNode = document.createElement("div")
+        subMenuNode.setAttribute("data-testid", testId)
+        document.body.appendChild(subMenuNode)
+
+        try {
+          // eslint-disable-next-line testing-library/prefer-user-event
+          fireEvent.pointerDown(subMenuNode)
+
+          expect(defaultProps.onCloseMenu).not.toHaveBeenCalled()
+        } finally {
+          // Always remove the node so a failed assertion can't leak a
+          // testid-bearing element into subsequent tests.
+          document.body.removeChild(subMenuNode)
+        }
+      }
+    )
   })
 })
