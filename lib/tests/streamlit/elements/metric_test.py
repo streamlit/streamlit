@@ -14,6 +14,8 @@
 
 """metric unit tests."""
 
+from decimal import Decimal
+
 import pytest
 from parameterized import parameterized
 
@@ -195,6 +197,71 @@ class MetricTest(DeltaGeneratorTestCase):
             assert c.label == "label_test"
             assert c.color == color_value
             assert c.direction == direction_value
+
+    @parameterized.expand(
+        [
+            (0, "0"),
+            (0.0, "0.0"),
+            (Decimal("0.00"), "0.00"),
+            ("0", "0"),
+        ]
+    )
+    def test_zero_delta_color_and_direction(self, delta, expected_delta):
+        """Test that zero delta values are rendered as neutral."""
+        st.metric("label_test", "123", delta)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.delta == expected_delta
+        assert c.color == MetricProto.MetricColor.GRAY
+        assert c.direction == MetricProto.MetricDirection.NONE
+
+    @parameterized.expand(
+        [
+            ("normal",),
+            ("inverse",),
+            ("off",),
+        ]
+    )
+    def test_zero_delta_color_modes(self, delta_color_value):
+        """Test that zero deltas are gray for computed color modes."""
+        st.metric("label_test", "123", 0, delta_color=delta_color_value)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.color == MetricProto.MetricColor.GRAY
+        assert c.direction == MetricProto.MetricDirection.NONE
+
+    def test_zero_delta_respects_named_color(self):
+        """Test that zero deltas respect explicit named colors."""
+        st.metric("label_test", "123", 0, delta_color="green")
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.color == MetricProto.MetricColor.GREEN
+        assert c.direction == MetricProto.MetricDirection.NONE
+
+    @parameterized.expand(
+        [
+            ("up", MetricProto.MetricDirection.UP),
+            ("down", MetricProto.MetricDirection.DOWN),
+            ("off", MetricProto.MetricDirection.NONE),
+        ]
+    )
+    def test_zero_delta_arrow_override(self, delta_arrow_value, expected_direction):
+        """Test that delta_arrow can override the direction for zero deltas."""
+        st.metric("label_test", "123", 0, delta_arrow=delta_arrow_value)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.color == MetricProto.MetricColor.GRAY
+        assert c.direction == expected_direction
+
+    @parameterized.expand(["0.0", "+0", "0%"])
+    def test_zero_like_strings_keep_positive_direction(self, delta):
+        """Test that only the literal string '0' is treated as zero."""
+        st.metric("label_test", "123", delta)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.color == MetricProto.MetricColor.GREEN
+        assert c.direction == MetricProto.MetricDirection.UP
 
     def test_delta_arrow_default(self):
         """Test that metric delta arrow defaults to auto."""
