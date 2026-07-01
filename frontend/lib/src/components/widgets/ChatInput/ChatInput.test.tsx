@@ -1112,6 +1112,35 @@ describe("ChatInput widget", () => {
       ).not.toBeInTheDocument()
     })
 
+    it("keeps input enabled after submission when submitMode is SUBMIT", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT,
+      })
+
+      const { rerenderWithContexts } = renderWithContexts(
+        <ChatInput {...props} />,
+        {
+          scriptRunContext: {
+            scriptRunState: ScriptRunState.NOT_RUNNING,
+          },
+        }
+      )
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "Hello{enter}")
+
+      // Even while the script runs, the default mode leaves the input enabled so
+      // the user can keep submitting.
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+        },
+      })
+
+      expect(screen.getByTestId("stChatInputTextArea")).not.toBeDisabled()
+    })
+
     it("disables input after submission when submitMode is DISABLE", async () => {
       const user = userEvent.setup()
       const props = getProps({
@@ -1574,6 +1603,53 @@ describe("ChatInput widget", () => {
           fragmentIdsThisRun: [],
           scriptRunFinishedSequence: 1,
           scriptRunFinishedFragmentIds: ["chat-fragment"],
+        },
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stChatInputTextArea")).not.toBeDisabled()
+      })
+    })
+
+    it("re-enables a fragment input when a full-script run supersedes it", async () => {
+      const user = userEvent.setup()
+      const props = getProps(
+        {
+          submitMode: ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLE,
+        },
+        { fragmentId: "chat-fragment" }
+      )
+
+      const { rerenderWithContexts } = renderWithContexts(
+        <ChatInput {...props} />,
+        {
+          scriptRunContext: {
+            scriptRunState: ScriptRunState.NOT_RUNNING,
+          },
+        }
+      )
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "Hello{enter}")
+
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+          scriptRunId: "chat-fragment-run",
+          fragmentIdsThisRun: ["chat-fragment"],
+        },
+      })
+      expect(screen.getByTestId("stChatInputTextArea")).toBeDisabled()
+
+      // A full-script rerun finishes (empty fragment ids) and supersedes the
+      // pending fragment work, so the input re-enables via the full-script
+      // branch even though no fragment id matches.
+      rerenderWithContexts(<ChatInput {...props} />, {
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+          scriptRunId: "page-run",
+          scriptRunFinishedSequence: 1,
+          scriptRunFinishedFragmentIds: [],
         },
       })
 

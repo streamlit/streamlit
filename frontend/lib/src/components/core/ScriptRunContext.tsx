@@ -61,25 +61,25 @@ export interface ScriptRunContextProps {
   fragmentIdsThisRun: Array<string>
 
   /**
-   * Monotonic counter incremented whenever the frontend receives a
-   * scriptFinished message.
+   * Lets widgets detect that a run finished. Bumped on every scriptFinished
+   * message (a monotonic counter, so consecutive finishes stay distinct).
    *
    * Consumed by: ChatInput
    */
   scriptRunFinishedSequence: number
 
   /**
-   * Fragment IDs associated with the latest scriptFinished message. Empty for
-   * full-script runs.
+   * IDs of the fragments that ran in the run that just finished; empty for a
+   * full-script run. A single rerun can batch multiple fragments (e.g. several
+   * run_every auto-reruns coming due at once), so this may contain more than one.
    *
    * Consumed by: ChatInput
    */
   scriptRunFinishedFragmentIds: Array<string>
 
   /**
-   * Callback to stop the currently running script.
-   * Used by widgets that want to provide a stop button (e.g., st.chat_input
-   * with submit_mode="stop").
+   * Stops the currently running script. Used by widgets that provide a stop
+   * button (e.g. st.chat_input with submit_mode="stop").
    *
    * Consumed by: ChatInput
    */

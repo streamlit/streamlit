@@ -208,7 +208,11 @@ interface State {
   mainScriptHash: string
   latestRunTime: number
   fragmentIdsThisRun: Array<string>
+  // Monotonic counter bumped on every scriptFinished message; lets widgets
+  // detect that a run completed. Consumed by ChatInput.
   scriptRunFinishedSequence: number
+  // Fragments that ran in the run that just finished; empty for full-script
+  // runs, and may contain more than one. Consumed by ChatInput.
   scriptRunFinishedFragmentIds: Array<string>
   // host communication info
   isOwner: boolean

@@ -752,10 +752,6 @@ class ChatMixin:
               similar to clicking "Stop" in the app's status widget. The
               text area is disabled while the script runs.
 
-            Use ``"disable"`` to prevent interruptions during streaming
-            responses, or ``"stop"`` to let users cancel long-running
-            generations.
-
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
 
@@ -1074,7 +1070,6 @@ class ChatMixin:
 
         chat_input_proto.disabled = disabled
 
-        # Map submit_mode to proto enum
         if submit_mode == "stop":
             chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_STOP
         elif submit_mode == "disable":

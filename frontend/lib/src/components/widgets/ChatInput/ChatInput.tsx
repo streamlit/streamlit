@@ -99,19 +99,29 @@ import {
   StyledWaveformContainer,
 } from "./styled-components"
 
+/**
+ * Identifies the script run that a submission triggered, so the widget can tell
+ * when *that* run finishes and re-enable itself.
+ *
+ * Set when the user submits in "disable"/"stop" mode and cleared once the
+ * matching run completes. While it's set, the widget is in "running mode" (input
+ * disabled, stop button shown); `undefined` means no submission is in flight.
+ *
+ * The fields pin down which completion counts as "our run" versus an unrelated
+ * run that happened to be in flight at submit time (see field docs below).
+ */
 type SubmittedRunScope = {
   /** The fragment that owns the chat input, or null for a page-level widget. */
   fragmentId: string | null
   /**
-   * The scriptRunId that was active when the message was submitted. The run we
-   * trigger always receives a new id once it starts, so this lets us ignore the
-   * completion of whatever run happened to be active at submit time and avoid
-   * re-enabling the widget too early.
+   * scriptRunId active when the user submitted. The run we trigger gets a fresh
+   * id once it starts, so comparing against this id lets us skip an unrelated run
+   * that was already in flight at submit time and avoid re-enabling too early.
    */
   scriptRunIdAtSubmit: string
   /**
-   * The scriptRunFinishedSequence at submit time. We only react to run
-   * completions that are reported after this baseline.
+   * scriptRunFinishedSequence at submit time. We react only to completions the
+   * frontend reports after this baseline.
    */
   scriptRunFinishedSequence: number
 }
@@ -177,6 +187,8 @@ function ChatInput({
     scriptRunState,
     stopScript,
   } = useContext(ScriptRunContext)
+  // Tracks the run our last submission triggered; undefined when idle. Drives
+  // running mode and re-enable timing (see SubmittedRunScope).
   const [submittedRunScope, setSubmittedRunScope] =
     useWidgetManagerElementState<SubmittedRunScope | undefined>({
       widgetMgr,
@@ -393,16 +405,16 @@ function ChatInput({
     [submittedRunScope]
   )
 
-  // Reset submission tracking once the run this chat input triggered reports
-  // completion. We only act on a scriptFinished that:
-  //   1. is reported after the submission (sequence guard), and
-  //   2. belongs to a run that started after the submission. The run we trigger
-  //      always gets a new scriptRunId once it starts, so ignoring the id that
-  //      was active at submit time prevents re-enabling the widget when an
+  // Stop tracking the submission once the run this chat input triggered
+  // finishes. We act on a scriptFinished only when it:
+  //   1. arrives after the submission (sequence guard), and
+  //   2. comes from a run that started after the submission. The run we trigger
+  //      gets a new scriptRunId when it starts, so ignoring the id that was
+  //      active at submit time keeps us from re-enabling the widget when an
   //      unrelated run that was already in flight finishes.
   // We then re-enable when the completion matches our run: the same fragment, or
   // any full-script run (which supersedes pending fragment work and also covers
-  // st.rerun(), stops, and compilation errors that report no fragment ids).
+  // st.rerun(), stops, and compile errors that report no fragment ids).
   useEffect(() => {
     if (
       submittedRunScope === undefined ||
@@ -448,7 +460,7 @@ function ChatInput({
     isInRunningMode &&
     submitMode === ChatInputProto.SubmitMode.SUBMIT_MODE_STOP &&
     !stopRequested
-  // In both "disable" and "stop" modes, the textarea should be disabled during run
+  // Alias for the disabling call sites below; same condition as isInRunningMode.
   const isDisabledDuringRun = isInRunningMode
 
   // Disabling the textarea makes the browser drop focus from it. When the run
@@ -470,12 +482,9 @@ function ChatInput({
     wasDisabledDuringRunRef.current = isDisabledDuringRun
   }, [isDisabledDuringRun, disabled])
 
-  // In "stop" mode the stop button is shown the moment the user submits, before
-  // the server reports the triggered run as running: a submission sends the
-  // rerun request directly without first moving the app into RERUN_REQUESTED.
-  // `stopScript` is a no-op while the app is still NOT_RUNNING, so a stop click
-  // in that window would be silently dropped. We remember the intent and flush
-  // it once the run actually starts (effect below).
+  // A stop click can land during the submit-before-RUNNING window described
+  // above, where `stopScript` is still a no-op. Remember the intent and flush
+  // it once the run starts (effect below).
   const pendingStopRef = useRef(false)
   const handleStopClick = useCallback((): void => {
     if (
