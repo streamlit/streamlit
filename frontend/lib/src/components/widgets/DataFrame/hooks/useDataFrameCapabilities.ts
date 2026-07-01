@@ -30,11 +30,13 @@ interface DataFrameCapabilities {
   /** Whether CSV export is enabled. */
   canExportCsv: boolean
   /**
-   * Whether the column statistics menu is available. Disabled for editable
-   * tables (stats would reflect the original data, not edits) and for lazy
+   * Whether the column statistics submenu can be shown. Only enabled for
+   * read-only, non-empty, eagerly-loaded tables: statistics are derived from
+   * the original data and would be stale for edited tables (e.g.
+   * st.data_editor), meaningless for empty tables, and incomplete for lazy
    * dataframes (the bound Quiver only holds the loaded chunks, not all rows).
    */
-  canShowStatistics: boolean
+  canShowColumnStatistics: boolean
   /** Whether cell editing is enabled. */
   canEdit: boolean
   /** Whether adding rows is enabled. */
@@ -136,10 +138,11 @@ function useDataFrameCapabilities({
     const canExportCsv = !isLazy && !isLargeTable && !isEmptyTable
 
     // Statistics are computed over the locally-available Quiver, so they are
-    // only meaningful for read-only, eagerly-loaded dataframes. Editable tables
-    // would show stale (pre-edit) stats, and lazy dataframes only hold the
-    // loaded chunks rather than all rows.
-    const canShowStatistics = !isLazy && editingMode === READ_ONLY
+    // only meaningful for read-only, non-empty, eagerly-loaded dataframes.
+    // Editable tables would show stale (pre-edit) stats, and lazy dataframes
+    // only hold the loaded chunks rather than all rows.
+    const canShowColumnStatistics =
+      !isLazy && !isEmptyTable && editingMode === READ_ONLY
 
     const canEdit =
       !isLazy && !isEmptyTable && editingMode !== READ_ONLY && !disabled
@@ -164,7 +167,7 @@ function useDataFrameCapabilities({
       canSort,
       canSearch,
       canExportCsv,
-      canShowStatistics,
+      canShowColumnStatistics,
       canEdit,
       canAddRows,
       canDeleteRows,

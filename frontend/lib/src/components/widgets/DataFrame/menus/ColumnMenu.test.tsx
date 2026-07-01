@@ -26,6 +26,7 @@ import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
+import { sizes } from "~lib/theme/primitives/sizes"
 
 import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
 
@@ -69,7 +70,7 @@ describe("DataFrame ColumnMenu", () => {
     onSortColumn: vi.fn(),
     onChangeFormat: vi.fn(),
     onAutosize: vi.fn(),
-    canShowStatistics: true,
+    canShowColumnStatistics: true,
   }
 
   beforeEach(() => {
@@ -101,6 +102,21 @@ describe("DataFrame ColumnMenu", () => {
 
     expect(screen.getByText("Sort ascending")).toBeInTheDocument()
     expect(screen.getByText("Sort descending")).toBeInTheDocument()
+  })
+
+  it("renders menu options without wrapping", () => {
+    render(<ColumnMenu {...defaultProps} />)
+
+    const sortDescendingMenuItem = screen.getByRole("menuitem", {
+      name: /Sort descending/,
+    })
+
+    // The menu keeps its compact default width (no forced minWidth) but can
+    // grow up to maxWidth so longer labels stay on a single line.
+    expect(screen.getByRole("menu")).toHaveStyle(
+      `max-width: calc(${sizes.minMenuWidth} * 2)`
+    )
+    expect(sortDescendingMenuItem).toHaveStyle("white-space: nowrap")
   })
 
   it("calls sortColumn with 'asc' when clicking sort ascending", async () => {
@@ -387,15 +403,15 @@ describe("DataFrame ColumnMenu", () => {
       expect(screen.getByText("Statistics")).toBeVisible()
     })
 
-    it("does not render 'Statistics' when canShowStatistics is false", () => {
-      // canShowStatistics is false for editable tables (stale pre-edit stats)
-      // and lazy dataframes (only loaded chunks available); the capability is
-      // computed by useDataFrameCapabilities and gated here.
+    it("does not render 'Statistics' when canShowColumnStatistics is false", () => {
+      // canShowColumnStatistics is false for editable tables (stale pre-edit
+      // stats) and lazy dataframes (only loaded chunks available); the
+      // capability is computed by useDataFrameCapabilities and gated here.
       render(
         <ColumnMenu
           {...defaultProps}
           data={mockQuiver}
-          canShowStatistics={false}
+          canShowColumnStatistics={false}
         />
       )
 
