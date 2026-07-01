@@ -133,8 +133,9 @@ def render_page_header(title: str):
 ### Independent and parallel card updates with @st.fragment
 
 Wrap each card in `@st.fragment` so widget interactions rerun only that card,
-not the whole page. Add `parallel=True` so cards that each load their own data
-run concurrently on a full app rerun, and wrap the body in `st.skeleton` so the
+not the whole page. If a dashboard has multiple cards with independent,
+compute-intensive data loads, add `parallel=True` so those cards run
+concurrently on a full app rerun. Wrap the loading body in `st.skeleton` so each
 card shows a placeholder until its data is ready:
 
 ```python

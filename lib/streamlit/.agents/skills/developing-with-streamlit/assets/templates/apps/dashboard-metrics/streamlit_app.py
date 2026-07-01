@@ -309,7 +309,6 @@ def render_point_chart(
 def metric_card(
     title: str,
     metric_name: str,
-    key_prefix: str,
     chart_type: str = "line",
 ) -> None:
     """Display a metric card with chart/table toggle and popover filters.
@@ -324,9 +323,8 @@ def metric_card(
     title : str
         Card title.
     metric_name : str
-        Key into ``METRIC_CONFIG`` used to load this card's data.
-    key_prefix : str
-        Unique prefix for widget keys.
+        Key into ``METRIC_CONFIG`` used to load this card's data and namespace
+        this card's widget state.
     chart_type : str
         One of ``"line"``, ``"area"``, ``"bar"``, ``"point"``.
     """
@@ -352,7 +350,7 @@ def metric_card(
                 "View",
                 options=[":material/show_chart:", ":material/table:"],
                 default=":material/show_chart:",
-                key=f"{key_prefix}_view",
+                key=f"{metric_name}_view",
                 label_visibility="collapsed",
             )
 
@@ -362,13 +360,13 @@ def metric_card(
                     options=["Daily", "7-day MA"],
                     default=["Daily", "7-day MA"],
                     selection_mode="multi",
-                    key=f"{key_prefix}_lines",
+                    key=f"{metric_name}_lines",
                 )
                 time_range = st.segmented_control(
                     "Time range",
                     options=TIME_RANGES,
                     default="All",
-                    key=f"{key_prefix}_time",
+                    key=f"{metric_name}_time",
                 )
 
         # Load this card's data and render inside a skeleton placeholder. The
@@ -436,16 +434,16 @@ render_page_header("# :material/monitoring: Metrics Dashboard")
 row1 = st.columns(2)
 
 with row1[0]:
-    metric_card("Active users", "users", "users", chart_type="line")
+    metric_card("Active users", "users", chart_type="line")
 
 with row1[1]:
-    metric_card("Sessions", "sessions", "sessions", chart_type="area")
+    metric_card("Sessions", "sessions", chart_type="area")
 
 # Row 2: Revenue and Conversions
 row2 = st.columns(2)
 
 with row2[0]:
-    metric_card("Revenue", "revenue", "revenue", chart_type="bar")
+    metric_card("Revenue", "revenue", chart_type="bar")
 
 with row2[1]:
-    metric_card("Conversions", "conversions", "conversions", chart_type="point")
+    metric_card("Conversions", "conversions", chart_type="point")
