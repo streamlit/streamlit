@@ -30,12 +30,13 @@ import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
-import { convertRemToPx } from "~lib/theme/utils"
+import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 
 import FormattingMenu from "./FormattingMenu"
 import StatisticsMenu from "./StatisticsMenu"
 import { supportsStatistics } from "./statisticsUtils"
 import {
+  COLUMN_MENU_OFFSET,
   StyledColumnHeaderRow,
   StyledColumnMenuPanel,
   StyledColumnNameText,
@@ -59,10 +60,8 @@ export interface ColumnMenuProps {
   // may not have Quiver data bound initially. Statistics menu is only shown
   // when data is available.
   data?: Quiver
-  // Whether the table is in an editable mode (st.data_editor).
-  // Statistics menu is hidden for editable tables since the displayed stats
-  // would reflect the original data, not the user's edits.
-  isEditable?: boolean
+  // Whether column statistics are enabled for this table. Defaults to true.
+  canShowColumnStatistics?: boolean
   // Callback used to instruct the parent to close the menu
   onCloseMenu: () => void
   // Callback to sort column
@@ -96,19 +95,29 @@ function ColumnMenu({
   onHideColumn,
   column,
   data,
-  isEditable,
+  canShowColumnStatistics = true,
   onChangeFormat,
   onAutosize,
 }: ColumnMenuProps): ReactElement {
   const [formatMenuOpen, setFormatMenuOpen] = useState(false)
   const [statsMenuOpen, setStatsMenuOpen] = useState(false)
 
+  const handleFormatOpenChange = useCallback((open: boolean): void => {
+    setFormatMenuOpen(open)
+    if (open) setStatsMenuOpen(false)
+  }, [])
+
+  const handleStatsOpenChange = useCallback((open: boolean): void => {
+    setStatsMenuOpen(open)
+    if (open) setFormatMenuOpen(false)
+  }, [])
+
   const { isCopied, copyToClipboard } = useCopyToClipboard()
 
   const { refs, floatingStyles } = useFloatingOverlay({
     open: true,
     placement: "bottom-end",
-    offsetPx: convertRemToPx("0.375rem"),
+    offsetPx: COLUMN_MENU_OFFSET,
   })
 
   // Tracks whether a pointer button is currently pressed. Used by the onBlur
@@ -131,16 +140,15 @@ function ColumnMenu({
     }
   }, [])
 
-  // Local ref for the panel — needed for click-outside detection.
-  // Merged with floating-ui's ref via a callback ref.
-  const panelRef = useRef<HTMLDivElement | null>(null)
-  const setFloatingCallback = useCallback(
-    (node: HTMLDivElement | null) => {
-      panelRef.current = node
-      refs.setFloating(node)
-    },
-    [refs]
-  )
+  const { setFloatingRef } = useOverlayDismissal({
+    isOpen: true,
+    onClose: onCloseMenu,
+    floatingSetFn: refs.setFloating,
+    excludeSelectors: [
+      '[data-testid="stDataFrameColumnFormattingMenu"]',
+      '[data-testid="stDataFrameStatisticsMenu"]',
+    ],
+  })
 
   // Disable page scrolling while the menu is open to keep the menu and
   // column header aligned. The anchor coords are static at open time, so
@@ -158,35 +166,6 @@ function ColumnMenu({
       document.removeEventListener("touchmove", preventScroll)
     }
   }, [])
-
-  // Click-outside and Escape handlers.
-  useEffect(() => {
-    const handlePointerDown = (e: PointerEvent): void => {
-      const target = e.target as Element
-      // Don't close when clicking inside a sub-menu portal.
-      if (
-        target.closest('[data-testid="stDataFrameColumnFormattingMenu"]') ||
-        target.closest('[data-testid="stDataFrameStatisticsMenu"]')
-      ) {
-        return
-      }
-      if (!panelRef.current?.contains(target)) onCloseMenu()
-    }
-
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        e.stopPropagation()
-        onCloseMenu()
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown, true)
-    document.addEventListener("keydown", handleKeyDown, true)
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown, true)
-      document.removeEventListener("keydown", handleKeyDown, true)
-    }
-  }, [onCloseMenu])
 
   const handleCopyNameToClipboard = useCallback((): void => {
     copyToClipboard(column.title)
@@ -214,7 +193,7 @@ function ColumnMenu({
       />
       <FloatingPortal>
         <StyledColumnMenuPanel
-          ref={setFloatingCallback}
+          ref={setFloatingRef}
           data-testid="stDataFrameColumnMenu"
           style={floatingStyles}
           tabIndex={-1}
@@ -276,61 +255,63 @@ function ColumnMenu({
                 <StyledMenuDivider />
               </>
             )}
-            {data && !isEditable && supportsStatistics(column.kind) && (
-              <StatisticsMenu
-                column={column}
-                data={data}
-                isOpen={statsMenuOpen}
-                onOpenChange={setStatsMenuOpen}
-              >
-                <StyledMenuListItem
-                  onFocus={() => setStatsMenuOpen(true)}
-                  onBlur={e => {
-                    if (pointerDownRef.current) return
-                    const related = e.relatedTarget
-                    if (
-                      related?.closest(
-                        '[data-testid="stDataFrameStatisticsMenu"]'
-                      )
-                    ) {
-                      return
-                    }
-                    setStatsMenuOpen(false)
-                  }}
-                  isActive={statsMenuOpen}
-                  hasSubmenu={true}
-                  role="menuitem"
-                  // The statistics popover is a read-only informational panel
-                  // (no focus management/focus lock), so "true" is more accurate
-                  // than "dialog", which implies a focusable dialog widget.
-                  aria-haspopup="true"
-                  aria-expanded={statsMenuOpen}
-                  tabIndex={0}
+            {canShowColumnStatistics &&
+              data &&
+              supportsStatistics(column.kind) && (
+                <StatisticsMenu
+                  column={column}
+                  data={data}
+                  isOpen={statsMenuOpen}
+                  onOpenChange={handleStatsOpenChange}
                 >
-                  <div>
+                  <StyledMenuListItem
+                    onFocus={() => handleStatsOpenChange(true)}
+                    onBlur={e => {
+                      if (pointerDownRef.current) return
+                      const related = e.relatedTarget
+                      if (
+                        related?.closest(
+                          '[data-testid="stDataFrameStatisticsMenu"]'
+                        )
+                      ) {
+                        return
+                      }
+                      setStatsMenuOpen(false)
+                    }}
+                    isActive={statsMenuOpen}
+                    hasSubmenu={true}
+                    role="menuitem"
+                    // The statistics popover is a read-only informational panel
+                    // (no focus management/focus lock), so "true" is more accurate
+                    // than "dialog", which implies a focusable dialog widget.
+                    aria-haspopup="true"
+                    aria-expanded={statsMenuOpen}
+                    tabIndex={0}
+                  >
+                    <div>
+                      <DynamicIcon
+                        size="base"
+                        iconValue=":material/bar_chart:"
+                      />
+                      Statistics
+                    </div>
                     <DynamicIcon
                       size="base"
-                      iconValue=":material/bar_chart:"
+                      iconValue=":material/chevron_right:"
                     />
-                    Statistics
-                  </div>
-                  <DynamicIcon
-                    size="base"
-                    iconValue=":material/chevron_right:"
-                  />
-                </StyledMenuListItem>
-              </StatisticsMenu>
-            )}
+                  </StyledMenuListItem>
+                </StatisticsMenu>
+              )}
             {onChangeFormat && (
               <FormattingMenu
                 columnKind={column.kind}
                 isOpen={formatMenuOpen}
-                onOpenChange={setFormatMenuOpen}
+                onOpenChange={handleFormatOpenChange}
                 onChangeFormat={onChangeFormat}
                 onCloseMenu={onCloseMenu}
               >
                 <StyledMenuListItem
-                  onFocus={() => setFormatMenuOpen(true)}
+                  onFocus={() => handleFormatOpenChange(true)}
                   onBlur={e => {
                     if (pointerDownRef.current) return
                     const related = e.relatedTarget

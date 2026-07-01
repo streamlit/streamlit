@@ -55,7 +55,6 @@ _OBJECT_NAME_MAPPING: Final = {
     "plotly.graph_objs._figure.Figure": "PlotlyFigure",
     "matplotlib.figure.Figure": "MatplotlibFigure",
     "pandas.io.formats.style.Styler": "PandasStyler",
-    "streamlit.connections.snowpark_connection.SnowparkConnection": "SnowparkConnection",
     "streamlit.connections.sql_connection.SQLConnection": "SQLConnection",
 }
 

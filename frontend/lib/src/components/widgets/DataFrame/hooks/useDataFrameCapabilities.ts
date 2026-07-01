@@ -29,6 +29,13 @@ interface DataFrameCapabilities {
   canSearch: boolean
   /** Whether CSV export is enabled. */
   canExportCsv: boolean
+  /**
+   * Whether the column statistics submenu can be shown. Only enabled for
+   * read-only, non-empty tables: statistics are derived from the original data
+   * and would be stale for edited tables (e.g. st.data_editor), and are
+   * meaningless for empty tables.
+   */
+  canShowColumnStatistics: boolean
   /** Whether cell editing is enabled. */
   canEdit: boolean
   /** Whether adding rows is enabled. */
@@ -117,6 +124,8 @@ function useDataFrameCapabilities({
 
     const canExportCsv = !isLargeTable && !isEmptyTable
 
+    const canShowColumnStatistics = !isEmptyTable && editingMode === READ_ONLY
+
     const canEdit = !isEmptyTable && editingMode !== READ_ONLY && !disabled
 
     const canAddRows =
@@ -139,6 +148,7 @@ function useDataFrameCapabilities({
       canSort,
       canSearch,
       canExportCsv,
+      canShowColumnStatistics,
       canEdit,
       canAddRows,
       canDeleteRows,

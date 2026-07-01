@@ -145,6 +145,49 @@ def test_header_attributes(app: Page):
     expect(h6).to_have_count(7)
 
 
+def test_markdown_anchors_hides_anchor_icons(app: Page):
+    """anchors=False hides the anchor link icon but keeps heading IDs for
+    URL fragment deep-linking.
+    """
+    default_block = get_element_by_key(app, "markdown_anchors_default")
+    disabled_block = get_element_by_key(app, "markdown_anchors_disabled")
+
+    # IDs are present in both cases so deep-linking still works.
+    expect(default_block.locator("h1#anchors-default-heading")).to_have_count(1)
+    expect(default_block.locator("h2#anchors-default-subheading")).to_have_count(1)
+    expect(disabled_block.locator("h1#anchors-disabled-heading")).to_have_count(1)
+    expect(disabled_block.locator("h2#anchors-disabled-subheading")).to_have_count(1)
+
+    # The anchor link is rendered (hover-revealed) by default, but absent when
+    # anchors=False.
+    expect(default_block.get_by_role("link", name="Link to heading")).to_have_count(2)
+    expect(disabled_block.get_by_role("link", name="Link to heading")).to_have_count(0)
+
+
+def test_markdown_anchors_visual(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the hovered heading state: the anchor icon appears next to the
+    default heading but not when anchors=False.
+    """
+    default_heading = themed_app.locator("h1#anchors-default-heading")
+    disabled_heading = themed_app.locator("h1#anchors-disabled-heading")
+
+    reset_hovering(themed_app)
+    default_heading.hover()
+    assert_snapshot(
+        get_element_by_key(themed_app, "markdown_anchors_default"),
+        name="st_markdown-anchors_default_hovered",
+    )
+
+    reset_hovering(themed_app)
+    disabled_heading.hover()
+    assert_snapshot(
+        get_element_by_key(themed_app, "markdown_anchors_disabled"),
+        name="st_markdown-anchors_disabled_hovered",
+    )
+
+
 def test_match_snapshot_for_headers_in_sidebar(
     app: Page, assert_snapshot: ImageCompareFunction
 ):

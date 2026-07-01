@@ -115,7 +115,7 @@ export const StyledCheckboxIndicator =
             ? hasLightBackgroundColor(theme)
               ? theme.colors.bgColor
               : theme.colors.bodyText
-            : "white",
+            : theme.colors.white,
           strokeWidth: "2.5px",
           strokeLinecap: "round",
           strokeLinejoin: "round",
@@ -164,7 +164,9 @@ export const StyledToggleTrack = styled.div<StyledToggleTrackProps>(
 
     return {
       flexShrink: 0,
-      marginTop: theme.spacing.twoXS,
+      // Vertically center the track with the first text line — mirrors the
+      // checkbox indicator formula: (lineHeight × fontSize − trackHeight) / 2
+      marginTop: `calc((${theme.lineHeights.small} * ${theme.fontSizes.sm} - ${theme.sizes.checkbox}) / 2)`,
       width: `calc(2 * ${theme.sizes.checkbox})`,
       height: theme.sizes.checkbox,
       paddingLeft: theme.spacing.threeXS,

@@ -32,7 +32,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
-from streamlit.connections import SnowparkConnection, SQLConnection
+from streamlit.connections import SQLConnection
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
@@ -198,7 +198,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # Also support classes as input
             (datetime.date, "datetime.date"),
             (pd.DataFrame, "DataFrame"),
-            (SnowparkConnection, "SnowparkConnection"),
             (SQLConnection, "SQLConnection"),
         ]
     )
