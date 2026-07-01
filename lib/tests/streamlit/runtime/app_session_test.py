@@ -30,7 +30,13 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.NewSession_pb2 import Config, FontFace, FontSource
+from streamlit.proto.GitInfo_pb2 import GitInfo
+from streamlit.proto.NewSession_pb2 import (
+    Config,
+    CustomThemeConfig,
+    FontFace,
+    FontSource,
+)
 from streamlit.runtime import Runtime, app_session, caching
 from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -2427,3 +2433,284 @@ class GetShowErrorLinksTest(unittest.TestCase):
 
         with pytest.raises(ValueError, match="auto, true, false"):
             _get_show_error_links()
+
+
+# ---- Tests for _handle_git_information_request ----
+
+
+@patch("streamlit.git_util.GitRepo")
+def test_handle_git_information_request_no_repo_info(mock_git_repo: MagicMock) -> None:
+    """No ForwardMsg is enqueued when the repo info cannot be determined."""
+    mock_git_repo.return_value.get_repo_info.return_value = None
+    session = _create_test_session()
+
+    with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+        session._handle_git_information_request()
+
+    enqueue_mock.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("is_head_detached", "ahead_commits", "expected_state"),
+    [
+        (True, [], GitInfo.GitStates.HEAD_DETACHED),
+        (False, ["abc123"], GitInfo.GitStates.AHEAD_OF_REMOTE),
+        (False, [], GitInfo.GitStates.DEFAULT),
+    ],
+)
+@patch("streamlit.git_util.GitRepo")
+def test_handle_git_information_request_populates_message(
+    mock_git_repo: MagicMock,
+    is_head_detached: bool,
+    ahead_commits: list[str],
+    expected_state: GitInfo.GitStates.ValueType,
+) -> None:
+    """Git metadata and repository state are populated into the enqueued ForwardMsg."""
+    repo = mock_git_repo.return_value
+    repo.get_repo_info.return_value = ("streamlit/streamlit.git", "develop", "app.py")
+    repo.untracked_files = ["untracked.py"]
+    repo.uncommitted_files = ["uncommitted.py"]
+    repo.is_head_detached = is_head_detached
+    repo.ahead_commits = ahead_commits
+
+    session = _create_test_session()
+    with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+        session._handle_git_information_request()
+
+    enqueue_mock.assert_called_once()
+    git_info = enqueue_mock.call_args[0][0].git_info_changed
+    # The ".git" suffix is stripped from the repository name.
+    assert git_info.repository == "streamlit/streamlit"
+    assert git_info.branch == "develop"
+    assert git_info.module == "app.py"
+    assert list(git_info.untracked_files) == ["untracked.py"]
+    assert list(git_info.uncommitted_files) == ["uncommitted.py"]
+    assert git_info.state == expected_state
+
+
+@patch("streamlit.git_util.GitRepo")
+def test_handle_git_information_request_swallows_errors(
+    mock_git_repo: MagicMock,
+) -> None:
+    """Errors while gathering git info are swallowed and nothing is enqueued."""
+    mock_git_repo.side_effect = Exception("git is not installed")
+    session = _create_test_session()
+
+    with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+        session._handle_git_information_request()
+
+    enqueue_mock.assert_not_called()
+
+
+# ---- Tests for _populate_theme_msg parsing of stringified / edge-case configs ----
+
+
+def _populate_theme_with_overrides(
+    overrides: dict[str, Any],
+) -> CustomThemeConfig:
+    """Run _populate_theme_msg with mocked config overrides and return the theme msg."""
+    with patch("streamlit.runtime.app_session.config") as patched_config:
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(overrides)
+        )
+        msg = ForwardMsg()
+        app_session._populate_theme_msg(msg.new_session.custom_theme)
+        return msg.new_session.custom_theme
+
+
+@pytest.mark.parametrize(
+    ("config_key", "theme_attr"),
+    [
+        ("chartCategoricalColors", "chart_categorical_colors"),
+        ("fontFaces", "font_faces"),
+        ("headingFontSizes", "heading_font_sizes"),
+        ("headingFontWeights", "heading_font_weights"),
+    ],
+    ids=["chart_colors", "font_faces", "heading_font_sizes", "heading_font_weights"],
+)
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_ignores_invalid_json(
+    patched_logger: MagicMock, config_key: str, theme_attr: str
+) -> None:
+    """An invalid JSON string for a list-valued theme option is skipped with a warning."""
+    theme = _populate_theme_with_overrides({config_key: "not-valid-json"})
+    assert not getattr(theme, theme_attr)
+    patched_logger.warning.assert_called_once()
+
+
+def test_populate_theme_msg_parses_chart_colors_from_json_string() -> None:
+    """Chart colors provided as a JSON string (e.g. via env var) are parsed."""
+    theme = _populate_theme_with_overrides(
+        {"chartCategoricalColors": '["#111111", "#222222"]'}
+    )
+    assert list(theme.chart_categorical_colors) == ["#111111", "#222222"]
+
+
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_rejects_chart_colors_with_wrong_length(
+    patched_logger: MagicMock,
+) -> None:
+    """Sequential chart colors with the wrong number of values are rejected."""
+    # chartSequentialColors requires exactly 10 values.
+    theme = _populate_theme_with_overrides(
+        {"chartSequentialColors": ["#111111", "#222222"]}
+    )
+    assert not theme.chart_sequential_colors
+    patched_logger.error.assert_called_once()
+
+
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_skips_invalid_chart_color_value(
+    patched_logger: MagicMock,
+) -> None:
+    """A chart color value that cannot be appended is skipped with a warning."""
+    theme = _populate_theme_with_overrides(
+        {"chartCategoricalColors": ["#123456", 12345]}
+    )
+    assert list(theme.chart_categorical_colors) == ["#123456"]
+    patched_logger.warning.assert_called_once()
+
+
+def test_populate_theme_msg_parses_font_faces_from_json_string() -> None:
+    """fontFaces provided as a JSON string are parsed into FontFace protos."""
+    theme = _populate_theme_with_overrides(
+        {"fontFaces": '[{"family": "Foo", "url": "https://example.com/foo.woff2"}]'}
+    )
+    assert list(theme.font_faces) == [
+        FontFace(family="Foo", url="https://example.com/foo.woff2")
+    ]
+
+
+def test_populate_theme_msg_handles_legacy_font_face_weight() -> None:
+    """Legacy 'weight' keys are migrated to 'weight_range' and stringified."""
+    theme = _populate_theme_with_overrides(
+        {
+            "fontFaces": [
+                {"family": "A", "url": "https://x/a.woff2", "weight": 700},
+                {"family": "B", "url": "https://x/b.woff2", "weight_range": 400},
+                {
+                    "family": "C",
+                    "url": "https://x/c.woff2",
+                    "weight": 300,
+                    "weight_range": "500",
+                },
+            ]
+        }
+    )
+    assert list(theme.font_faces) == [
+        FontFace(family="A", url="https://x/a.woff2", weight_range="700"),
+        FontFace(family="B", url="https://x/b.woff2", weight_range="400"),
+        # When both keys are present, the existing weight_range wins.
+        FontFace(family="C", url="https://x/c.woff2", weight_range="500"),
+    ]
+
+
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_skips_invalid_font_face_entry(
+    patched_logger: MagicMock,
+) -> None:
+    """A font face entry that cannot be parsed is skipped with a warning."""
+    theme = _populate_theme_with_overrides({"fontFaces": ["not-a-dict"]})
+    assert not theme.font_faces
+    patched_logger.warning.assert_called_once()
+
+
+def test_populate_theme_msg_expands_single_heading_font_size() -> None:
+    """A single rem/px headingFontSizes value is applied to all six headings."""
+    theme = _populate_theme_with_overrides({"headingFontSizes": "2rem"})
+    assert list(theme.heading_font_sizes) == ["2rem"] * 6
+
+
+def test_populate_theme_msg_parses_heading_font_sizes_json_string() -> None:
+    """headingFontSizes provided as a JSON list string are parsed."""
+    theme = _populate_theme_with_overrides(
+        {"headingFontSizes": '["1rem", "2rem", "3rem"]'}
+    )
+    assert list(theme.heading_font_sizes) == ["1rem", "2rem", "3rem"]
+
+
+@pytest.mark.parametrize(
+    "value", [[], ["1rem", "2rem", "3rem", "4rem", "5rem", "6rem", "7rem"]]
+)
+def test_populate_theme_msg_rejects_invalid_heading_font_sizes_length(
+    value: list[str],
+) -> None:
+    """headingFontSizes must have between 1 and 6 values."""
+    with pytest.raises(ValueError, match="headingFontSizes should have 1-6 values"):
+        _populate_theme_with_overrides({"headingFontSizes": value})
+
+
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_skips_invalid_heading_font_size_value(
+    patched_logger: MagicMock,
+) -> None:
+    """A heading font size value that cannot be appended is skipped with a warning."""
+    theme = _populate_theme_with_overrides({"headingFontSizes": [123]})
+    assert not theme.heading_font_sizes
+    patched_logger.warning.assert_called_once()
+
+
+def test_populate_theme_msg_parses_heading_font_weights_json_string() -> None:
+    """headingFontWeights provided as a JSON list string are parsed and padded."""
+    theme = _populate_theme_with_overrides({"headingFontWeights": "[700, 600]"})
+    assert list(theme.heading_font_weights) == [700, 600, 600, 600, 600, 600]
+
+
+def test_populate_theme_msg_expands_single_heading_font_weight() -> None:
+    """A single integer headingFontWeights value is applied to all six headings."""
+    theme = _populate_theme_with_overrides({"headingFontWeights": 500})
+    assert list(theme.heading_font_weights) == [500] * 6
+
+
+@pytest.mark.parametrize("value", [[], [700, 700, 700, 700, 700, 700, 700]])
+def test_populate_theme_msg_rejects_invalid_heading_font_weights_length(
+    value: list[int],
+) -> None:
+    """headingFontWeights must have between 1 and 6 values."""
+    with pytest.raises(ValueError, match="headingFontWeights should have 1-6 values"):
+        _populate_theme_with_overrides({"headingFontWeights": value})
+
+
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_skips_invalid_heading_font_weight_value(
+    patched_logger: MagicMock,
+) -> None:
+    """A heading font weight value that cannot be appended is skipped with a warning."""
+    theme = _populate_theme_with_overrides({"headingFontWeights": ["bad"]})
+    # The invalid first value is skipped; the remaining slots use the 600 default.
+    assert list(theme.heading_font_weights) == [600, 600, 600, 600, 600]
+    patched_logger.warning.assert_called_once()
+
+
+# ---- Tests for _handle_set_run_on_save_request and _populate_config_msg ----
+
+
+@pytest.mark.parametrize("new_value", [True, False])
+def test_handle_set_run_on_save_request_updates_flag(new_value: bool) -> None:
+    """Setting run_on_save updates the flag and notifies the browser."""
+    session = _create_test_session()
+    with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+        session._handle_set_run_on_save_request(new_value)
+
+    assert session._run_on_save is new_value
+    enqueue_mock.assert_called_once()
+    msg = enqueue_mock.call_args[0][0]
+    assert msg.session_status_changed.run_on_save is new_value
+
+
+@pytest.mark.parametrize(
+    ("show_sidebar_navigation", "expected_hide_sidebar_nav"),
+    [(False, True), (True, False)],
+    ids=["hidden", "visible"],
+)
+def test_populate_config_msg_sidebar_navigation(
+    show_sidebar_navigation: bool, expected_hide_sidebar_nav: bool
+) -> None:
+    """hide_sidebar_nav is set only when client.showSidebarNavigation is disabled."""
+    with patch_config_options(
+        {"client.showSidebarNavigation": show_sidebar_navigation}
+    ):
+        msg = Config()
+        app_session._populate_config_msg(msg)
+
+    assert msg.hide_sidebar_nav is expected_hide_sidebar_nav
