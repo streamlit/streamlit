@@ -51,7 +51,7 @@
   "packageManager": "yarn@4.13.0",
   "devDependencies": {
     "@bufbuild/buf": "^1.71.0",
-    "@eslint-react/eslint-plugin": "^5.9.2",
+    "@eslint-react/eslint-plugin": "^5.9.3",
     "@eslint/compat": "^2.1.0",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
