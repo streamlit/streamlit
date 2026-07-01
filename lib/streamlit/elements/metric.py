@@ -141,8 +141,7 @@ class MetricMixin:
             to the delta, oriented according to its sign:
 
             - If the delta is ``None`` or an empty string, no arrow is shown.
-            - If the delta is a number equal to zero or the string ``"0"``, no
-              arrow is shown and the delta is gray.
+            - If the delta is zero, no arrow is shown and the delta is gray.
             - If the delta is a negative number or starts with a minus sign,
               the arrow points down and the delta is red.
             - Otherwise, the arrow points up and the delta is green.
