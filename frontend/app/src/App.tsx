@@ -218,6 +218,12 @@ interface State {
   mainScriptHash: string
   latestRunTime: number
   fragmentIdsThisRun: Array<string>
+  // Monotonic counter bumped on every scriptFinished message; lets widgets
+  // detect that a run completed. Consumed by ChatInput.
+  scriptRunFinishedSequence: number
+  // Fragments that ran in the run that just finished; empty for full-script
+  // runs, and may contain more than one. Consumed by ChatInput.
+  scriptRunFinishedFragmentIds: Array<string>
   // host communication info
   isOwner: boolean
   hostMenuItems: IMenuItem[]
@@ -364,6 +370,8 @@ export class App extends PureComponent<Props, State> {
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
       fragmentIdsThisRun: [],
+      scriptRunFinishedSequence: 0,
+      scriptRunFinishedFragmentIds: [],
       // Information sent from the host
       isOwner: false,
       hostMenuItems: [],
@@ -1725,6 +1733,17 @@ export class App extends PureComponent<Props, State> {
    * @param status the ScriptFinishedStatus that the script finished with
    */
   handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
+    // Bump a monotonic counter and snapshot the fragment IDs of the run that
+    // just finished, so widgets (e.g. ChatInput) can react to the completion of
+    // the specific full-script or fragment run they triggered. This runs before
+    // the status-conditional handling below on purpose: the counter must bump
+    // for every finish status (including FINISHED_WITH_COMPILE_ERROR) so widgets
+    // re-enable even when a run ends with a compilation error.
+    this.setState(prevState => ({
+      scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
+      scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
+    }))
+
     if (
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN ||
@@ -2589,10 +2608,13 @@ export class App extends PureComponent<Props, State> {
         setTheme={this.setAndSendTheme}
         availableThemes={this.props.theme.availableThemes}
         fragmentIdsThisRun={this.state.fragmentIdsThisRun}
+        scriptRunFinishedSequence={this.state.scriptRunFinishedSequence}
+        scriptRunFinishedFragmentIds={this.state.scriptRunFinishedFragmentIds}
         locale={window.navigator.language}
         formsData={this.state.formsData}
         scriptRunState={scriptRunState}
         scriptRunId={scriptRunId}
+        stopScript={this.stopScript}
         // LibConfig properties
         mapboxToken={libConfig.mapboxToken}
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
