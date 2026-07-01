@@ -25,7 +25,6 @@ import {
 import {
   BaseButton,
   BaseButtonKind,
-  BaseButtonSize,
   DynamicIcon,
   StyledMessageWrapper,
   useEmotionTheme,
@@ -197,8 +196,7 @@ function SkillsNudgeToast({
 
               <StyledSkillsNudgeActions>
                 <BaseButton
-                  kind={BaseButtonKind.PRIMARY}
-                  size={BaseButtonSize.SMALL}
+                  kind={BaseButtonKind.SECONDARY}
                   onClick={handleInstall}
                   disabled={isInstalling}
                 >
@@ -210,7 +208,6 @@ function SkillsNudgeToast({
                 </BaseButton>
                 <BaseButton
                   kind={BaseButtonKind.TERTIARY}
-                  size={BaseButtonSize.SMALL}
                   onClick={handleDontShowAgain}
                   disabled={isInstalling}
                 >

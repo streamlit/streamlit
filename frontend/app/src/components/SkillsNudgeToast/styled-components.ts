@@ -120,8 +120,8 @@ export const StyledSkillsNudgeActions = styled.div(({ theme }) => ({
   alignItems: "center",
   gap: theme.spacing.lg,
   marginTop: theme.spacing.twoXS,
-  // Match ``st.button``'s text size. The card body runs at ``sm``, but the
-  // buttons use ``BaseButton`` (``fontSize: inherit``), so without this they
-  // would render a notch smaller than the real widget they mimic.
+  // Match the deploy dialog's buttons: stock BaseButton (default size), which
+  // renders against the dialog's 16px text — the card body is 14px, so set the
+  // action row to 16px so the buttons look identical to the deploy dialog.
   fontSize: theme.fontSizes.md,
 }))
