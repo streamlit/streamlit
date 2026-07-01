@@ -454,8 +454,10 @@ function Lens({
         origW: size.width,
         origH: size.height,
       }
+      let didResize = false
       const handleMouseMove = (ev: MouseEvent) => {
         if (!resizeRef.current) return
+        didResize = true
         const dw = ev.clientX - resizeRef.current.startX
         const dh = ev.clientY - resizeRef.current.startY
         setSize({
@@ -467,12 +469,12 @@ function Lens({
         resizeRef.current = null
         window.removeEventListener("mousemove", handleMouseMove)
         window.removeEventListener("mouseup", handleMouseUp)
-      triggerAnalyze()
+        if (didResize) triggerAnalyze()
       }
       window.addEventListener("mousemove", handleMouseMove)
       window.addEventListener("mouseup", handleMouseUp)
     },
-    [disabled, size]
+    [disabled, size, triggerAnalyze]
   )
 
   const handleAnalyze = useCallback(() => {
