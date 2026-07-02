@@ -30,6 +30,8 @@ def test_first_metric_in_first_row(app: Page):
     expect(metric.get_by_test_id("stMetricLabel")).to_have_text("User growth")
     expect(metric.get_by_test_id("stMetricValue")).to_have_text("123")
     expect(metric.get_by_test_id("stMetricDelta")).to_have_text("123")
+    # Anti-regression: a metric without `icon` must NOT render the icon element.
+    expect(metric.get_by_test_id("stMetricIcon")).to_have_count(0)
 
 
 def test_second_metric_in_first_row(app: Page):
@@ -331,3 +333,10 @@ def test_custom_delta_color_render(
         get_metric(themed_app, "Primary delta"),
         name="st_metric-primary_delta",
     )
+
+
+def test_metric_with_icon(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that a metric renders its icon inline before the label."""
+    metric = get_metric(themed_app, "Temperature")
+    expect(metric.get_by_test_id("stMetricIcon")).to_be_visible()
+    assert_snapshot(metric, name="st_metric-with_icon")

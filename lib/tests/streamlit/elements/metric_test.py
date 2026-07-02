@@ -350,6 +350,36 @@ class MetricTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.metric
         assert c.help == "help text"
 
+    def test_icon_default(self):
+        """Test that icon defaults to empty string on the proto."""
+        st.metric("label_test", "123")
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.icon == ""
+
+    def test_icon_none(self):
+        """Test that icon=None serializes to empty string on the proto."""
+        st.metric("label_test", "123", icon=None)
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.icon == ""
+
+    @parameterized.expand(
+        [
+            (":material/thermostat:", ":material/thermostat:"),
+            ("🔥", "🔥"),
+            ("spinner", "spinner"),
+        ]
+    )
+    def test_icon_forwards_to_proto(self, icon_value, expected):
+        """Test that the icon parameter is forwarded to the proto icon field."""
+        st.metric("label_test", "123", icon=icon_value)
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.icon == expected
+
+    def test_icon_invalid_raises(self):
+        """Test that an invalid icon raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.metric("label_test", "123", icon="not-a-valid-icon")
+
     def test_height_default(self):
         """Test that height defaults to content."""
         st.metric("label_test", "123")

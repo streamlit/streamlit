@@ -752,4 +752,21 @@ describe("Metric element", () => {
       )
     })
   })
+
+  describe("Icon", () => {
+    it("renders icon when provided", () => {
+      render(<Metric {...getProps({ icon: ":material/thermostat:" })} />)
+      expect(screen.getByTestId("stMetricIcon")).toBeVisible()
+    })
+
+    it("does not render icon when not provided", () => {
+      render(<Metric {...getProps()} />)
+      expect(screen.queryByTestId("stMetricIcon")).not.toBeInTheDocument()
+    })
+
+    it("does not render icon when icon is empty string", () => {
+      render(<Metric {...getProps({ icon: "" })} />)
+      expect(screen.queryByTestId("stMetricIcon")).not.toBeInTheDocument()
+    })
+  })
 })

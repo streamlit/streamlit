@@ -28,6 +28,7 @@ import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
 import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
@@ -44,6 +45,8 @@ import {
   StyledMetricContainer,
   StyledMetricContent,
   StyledMetricDeltaText,
+  StyledMetricIcon,
+  StyledMetricLabelRow,
   StyledMetricLabelText,
   StyledMetricValueText,
 } from "./styled-components"
@@ -274,6 +277,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     chartType,
     format,
     deltaDescription,
+    icon,
   } = element
 
   // Apply number formatting if a format is specified and the value is numeric
@@ -349,12 +353,23 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           data-testid="stMetricLabel"
           visibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
         >
-          <StreamlitMarkdown
-            source={label}
-            allowHTML={false}
-            isLabel
-            truncate
-          />
+          <StyledMetricLabelRow>
+            {icon && (
+              <StyledMetricIcon>
+                <DynamicIcon
+                  iconValue={icon}
+                  size="lg"
+                  testid="stMetricIcon"
+                />
+              </StyledMetricIcon>
+            )}
+            <StreamlitMarkdown
+              source={label}
+              allowHTML={false}
+              isLabel
+              truncate
+            />
+          </StyledMetricLabelRow>
           {help && (
             <WidgetLabelHelpIconInline
               content={help}
