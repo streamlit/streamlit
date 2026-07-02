@@ -66,11 +66,10 @@ function mockEventListeners(): MockEventListenersResult {
  */
 function newHostMessageEvent(init: MessageEventInit): MessageEvent {
   return {
-    data: init.data,
-    isTrusted: true,
-    origin: init.origin ?? "",
+    origin: "",
     source: window.parent,
     ...init,
+    isTrusted: true,
   } as unknown as MessageEvent
 }
 

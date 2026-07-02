@@ -208,8 +208,8 @@ export default class HostCommunicationManager {
     // labeled as trusted, and only accept trusted postMessage events from the
     // direct parent frame so same-origin child iframes cannot spoof host
     // commands.
-    const isTrustedParentMessage =
-      event.isTrusted && event.source === window.parent
+    const isFromParent = event.source === window.parent
+    const isTrustedParentMessage = event.isTrusted && isFromParent
     const isHostMessage = message?.stCommVersion === HOST_COMM_VERSION
     const isAllowedOrigin = this.allowedOrigins.some(allowed =>
       isValidOrigin(allowed, event.origin)
@@ -225,7 +225,7 @@ export default class HostCommunicationManager {
         LOG.debug(
           "Ignoring host message: isTrusted=%s, sourceIsParent=%s, allowedOrigin=%s, origin=%s",
           event.isTrusted,
-          event.source === window.parent,
+          isFromParent,
           isAllowedOrigin,
           event.origin
         )
