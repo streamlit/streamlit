@@ -69,7 +69,7 @@ dependencies = [
   # the index dtype. Pandas 3.x requires Python >= 3.11.
   "pandas>=1.4.0,<4",
   "pillow>=7.1.0,<13",
-  "pydeck>=0.8.0b4,<1",
+  "pydeck>=0.9.2,<1",
   # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
   "protobuf>=3.20,<8",
   # pyarrow is not semantically versioned, gets new major versions frequently, and
