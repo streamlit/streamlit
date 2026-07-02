@@ -85,6 +85,30 @@ def is_expected_error(
     )
 
 
+@pytest.fixture(scope="module")
+def app_server_extra_args() -> list[str]:
+    return ["--client.allowedOrigins", "http://localhost"]
+
+
+def _send_host_message(
+    app_target: AppTarget, external_iframe_selector: str, message: dict[str, object]
+) -> None:
+    payload = {"stCommVersion": 1, **message}
+
+    if app_target.mode == "external_host":
+        iframe = app_target.page.locator(external_iframe_selector).first
+        iframe.evaluate(
+            "(iframe, payload) => iframe.contentWindow.postMessage(payload, '*')",
+            payload,
+        )
+        return
+
+    app_target.page.evaluate(
+        "payload => window.postMessage(payload, window.location.origin)",
+        payload,
+    )
+
+
 @pytest.mark.external_test(upload_test_assets=True)
 def test_no_console_errors(app_target: AppTarget, browser_name: str) -> None:
     """Test that the app does not log any console errors."""
@@ -340,6 +364,34 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
         expect(pdf_container.locator('[data-index="0"]').first).to_be_visible(
             timeout=30000
         )
+
+
+@pytest.mark.external_test(upload_test_assets=True)
+def test_host_communication_can_disable_and_enable_inputs(
+    app_target: AppTarget, external_iframe_selector: str
+) -> None:
+    if app_target.mode == "external_direct":
+        pytest.skip(
+            "Host communication requires a host page or same-window local mode."
+        )
+
+    button = app_target.locator(".st-key-button").get_by_role("button").first
+    button.scroll_into_view_if_needed()
+    expect(button).to_be_enabled()
+
+    _send_host_message(
+        app_target,
+        external_iframe_selector,
+        {"type": "SET_INPUTS_DISABLED", "disabled": True},
+    )
+    expect(button).to_be_disabled()
+
+    _send_host_message(
+        app_target,
+        external_iframe_selector,
+        {"type": "SET_INPUTS_DISABLED", "disabled": False},
+    )
+    expect(button).to_be_enabled()
 
 
 def test_mega_tester_app_interactions_validate_behavior(app: Page) -> None:
