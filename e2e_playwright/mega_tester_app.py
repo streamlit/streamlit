@@ -243,6 +243,28 @@ def _render_data_display(
         "text/csv",
     )
 
+    if hasattr(st, "pagination"):
+        st.subheader("Paginated sample rows")
+        paginated_df = pd.DataFrame(
+            {
+                "item": [f"Item {idx}" for idx in range(1, 26)],
+                "value": np.arange(10, 260, 10),
+            }
+        )
+        page_size = 5
+        total_pages = (len(paginated_df) + page_size - 1) // page_size
+        page = st.pagination(
+            total_pages,
+            key="mega_sample_pagination",
+            disabled=disabled,
+        )
+        start_idx = (page - 1) * page_size
+        st.dataframe(
+            paginated_df.iloc[start_idx : start_idx + page_size],
+            width="stretch",
+        )
+        st.caption(f"Showing page {page} of {total_pages}")
+
     if hasattr(st, "column_config"):
         st.subheader("Column config matrix")
         column_config_df = pd.DataFrame(
@@ -484,6 +506,14 @@ def _render_charts(minor_version: int) -> None:
         }
     """)
 
+    if hasattr(st, "mermaid_chart"):
+        st.mermaid_chart("""
+            flowchart LR
+                User[User input] --> Script[Python script]
+                Script --> Delta[Delta protocol]
+                Delta --> Browser[Browser render]
+        """)
+
 
 def _render_custom_ui(minor_version: int) -> None:
     st.header("Custom UI elements")
@@ -624,6 +654,18 @@ def _render_inputs(minor_version: int, help_text: str | None, disabled: bool) ->
             help=help_text,
             disabled=disabled,
         )
+
+    if hasattr(st, "menu_button"):
+        selected_action = st.menu_button(
+            "Menu button",
+            ["Export CSV", "Refresh cache", "Archive record"],
+            key="menu_button",
+            help=help_text,
+            icon=":material/more_vert:",
+            disabled=disabled,
+        )
+        if selected_action is not None:
+            st.write(f"Menu button selected: {selected_action}")
 
     st.checkbox("Checkbox", key="checkbox", help=help_text, disabled=disabled)
     toggle_value = st.toggle("Toggle", key="toggle", help=help_text, disabled=disabled)
@@ -885,8 +927,10 @@ def _render_text_elements(minor_version: int, help_text: str | None) -> None:
     st.markdown("Markdown", help=help_text)
     st.markdown(
         "Markdown features: **bold** *italic* ~strikethrough~ [link](https://streamlit.io) "
-        "`code` $a=b$ 🐶 :cat: :material/home: :streamlit: <- -> <-> -- >= <= ~= :small[small] $$a = b$$"
+        "`code` $a=b$ 🐶 :cat: :material/home: :streamlit: <- -> <-> -- >= <= ~= "
+        ":small[small] :shimmer[shimmer] $$a = b$$"
     )
+    st.markdown("Shimmer status: :shimmer[Loading generated summary...]")
     st.markdown("""
 Text colors:
 
