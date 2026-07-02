@@ -40,18 +40,19 @@ export const HOST_CONFIG_PATH = "_stcore/host-config"
  * Min and max wait time between pings in millis.
  */
 export const PING_MINIMUM_RETRY_PERIOD_MS = 100
-export const PING_MAXIMUM_RETRY_PERIOD_MS = 2000
+export const PING_MAXIMUM_RETRY_PERIOD_MS = 4000
 
 /**
  * Backoff windows used to spread out health re-probes after a WebSocket
  * disconnect, preventing a "reconnect storm" when many clients drop at once.
  *
- * The window grows exponentially per consecutive attempt (capped at the max),
- * and the actual delay uses equal jitter: a random value in `[window/2, window)`.
- * So the first attempt waits 500–1000 ms, the second 1000–2000 ms, and so on.
+ * The window grows exponentially per consecutive attempt (capped at the max).
+ * The first attempt waits 250-500 ms to keep transient blips responsive.
+ * Later attempts use equal jitter: a random value in `[window/2, window)`.
  */
-export const RECONNECT_BASE_RETRY_PERIOD_MS = 1000
-export const RECONNECT_MAXIMUM_RETRY_PERIOD_MS = 10000
+export const RECONNECT_MINIMUM_RETRY_PERIOD_MS = 250
+export const RECONNECT_BASE_RETRY_PERIOD_MS = 500
+export const RECONNECT_MAXIMUM_RETRY_PERIOD_MS = 4000
 
 /**
  * Max number of times we retry pinging the server before we show an error.

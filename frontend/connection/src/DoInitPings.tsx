@@ -87,15 +87,19 @@ export function doInitPings(
   }
 
   const retry = (errorDetails: ErrorDetails): void => {
-    // Adjust retry time by +- 20% to spread out load
-    const jitter = Math.random() * 0.4 - 0.2
     // Exponential backoff to reduce load from health pings when experiencing
     // persistent failure. Starts at minimumTimeoutMs.
-    const timeoutMs =
+    const exponentialTimeoutMs =
       totalTries === 1
         ? minimumTimeoutMs
-        : minimumTimeoutMs * 2 ** (totalTries - 1) * (1 + jitter)
-    const retryTimeout = Math.min(maximumTimeoutMs, timeoutMs)
+        : minimumTimeoutMs * 2 ** (totalTries - 1)
+    const cappedTimeoutMs = Math.min(maximumTimeoutMs, exponentialTimeoutMs)
+    // Keep the first retry fast, then jitter between 80-100% of the capped
+    // backoff so clients don't synchronize on the maximum retry period.
+    const retryTimeout =
+      totalTries === 1
+        ? cappedTimeoutMs
+        : Math.floor(cappedTimeoutMs * (0.8 + Math.random() * 0.2))
 
     retryCallback(totalTries, errorDetails, retryTimeout)
 

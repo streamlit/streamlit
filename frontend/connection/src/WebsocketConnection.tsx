@@ -29,6 +29,7 @@ import {
   PING_MINIMUM_RETRY_PERIOD_MS,
   RECONNECT_BASE_RETRY_PERIOD_MS,
   RECONNECT_MAXIMUM_RETRY_PERIOD_MS,
+  RECONNECT_MINIMUM_RETRY_PERIOD_MS,
   WEBSOCKET_STREAM_PATH,
   WEBSOCKET_TIMEOUT_MS,
 } from "./constants"
@@ -431,9 +432,14 @@ export class WebsocketConnection {
       RECONNECT_MAXIMUM_RETRY_PERIOD_MS,
       RECONNECT_BASE_RETRY_PERIOD_MS * 2 ** (this.reconnectAttempt - 1)
     )
-    const minimumDelayMs = retryWindowMs / 2
+    const minimumDelayMs =
+      this.reconnectAttempt === 1
+        ? RECONNECT_MINIMUM_RETRY_PERIOD_MS
+        : retryWindowMs / 2
 
-    return Math.floor(minimumDelayMs + Math.random() * minimumDelayMs)
+    return Math.floor(
+      minimumDelayMs + Math.random() * (retryWindowMs - minimumDelayMs)
+    )
   }
 
   private schedulePingServer(delayMs: number): void {

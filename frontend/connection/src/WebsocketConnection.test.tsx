@@ -38,11 +38,16 @@ import {
   PING_MINIMUM_RETRY_PERIOD_MS,
   RECONNECT_BASE_RETRY_PERIOD_MS,
   RECONNECT_MAXIMUM_RETRY_PERIOD_MS,
+  RECONNECT_MINIMUM_RETRY_PERIOD_MS,
 } from "./constants"
 import { doInitPings } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
 import { ErrorDetails, OnRetry } from "./types"
 import { Args, WebsocketConnection } from "./WebsocketConnection"
+
+const expectedFirstReconnectDelayMs =
+  RECONNECT_MINIMUM_RETRY_PERIOD_MS +
+  (RECONNECT_BASE_RETRY_PERIOD_MS - RECONNECT_MINIMUM_RETRY_PERIOD_MS) * 0.5
 
 const MOCK_ALLOWED_ORIGINS_CONFIG = {
   allowedOrigins: ["list", "of", "allowed", "origins"],
@@ -726,7 +731,8 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     expect(timeouts.length).toEqual(5)
     expect(timeouts[0]).toEqual(10)
-    expect(timeouts[4]).toEqual(100)
+    expect(timeouts[4]).toBeGreaterThanOrEqual(80)
+    expect(timeouts[4]).toBeLessThanOrEqual(100)
     // timeouts should be monotonically increasing until they hit the cap
     expect(
       zip(timeouts.slice(0, -1), timeouts.slice(1)).every(
@@ -1028,7 +1034,6 @@ describe("WebsocketConnection", () => {
 
   it("delays health pings when reconnecting after a websocket disconnect", async () => {
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
-    const expectedReconnectDelayMs = RECONNECT_BASE_RETRY_PERIOD_MS * 0.75
 
     await vi.runAllTimersAsync()
     await server.connected
@@ -1040,7 +1045,7 @@ describe("WebsocketConnection", () => {
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
     expect(globalThis.fetch).not.toHaveBeenCalled()
 
-    await vi.advanceTimersByTimeAsync(expectedReconnectDelayMs - 1)
+    await vi.advanceTimersByTimeAsync(expectedFirstReconnectDelayMs - 1)
     expect(globalThis.fetch).not.toHaveBeenCalled()
 
     await vi.advanceTimersByTimeAsync(1)
@@ -1056,11 +1061,9 @@ describe("WebsocketConnection", () => {
     await server.connected
     vi.mocked(globalThis.fetch).mockClear()
 
-    // First disconnect: window is the base period, so 0.5 jitter -> 750ms.
+    // First disconnect: window is 250-500ms, so 0.5 jitter -> 375ms.
     client.reconnect()
-    await vi.advanceTimersByTimeAsync(
-      RECONNECT_BASE_RETRY_PERIOD_MS * 0.75 - 1
-    )
+    await vi.advanceTimersByTimeAsync(expectedFirstReconnectDelayMs - 1)
     expect(globalThis.fetch).not.toHaveBeenCalled()
 
     // Force a second consecutive disconnect without a successful connect in
@@ -1070,7 +1073,7 @@ describe("WebsocketConnection", () => {
     client.state = ConnectionState.CONNECTED
     client.reconnect()
 
-    // The window now doubles to 1000-2000ms, so 0.5 jitter -> 1500ms. The
+    // The window now doubles to 500-1000ms, so 0.5 jitter -> 750ms. The
     // previously scheduled ping was cancelled, so nothing fires before then.
     await vi.advanceTimersByTimeAsync(RECONNECT_BASE_RETRY_PERIOD_MS * 1.5 - 1)
     expect(globalThis.fetch).not.toHaveBeenCalled()
@@ -1126,12 +1129,10 @@ describe("WebsocketConnection", () => {
 
     vi.mocked(globalThis.fetch).mockClear()
 
-    // The next disconnect must start from the base window again (750ms with
+    // The next disconnect must start from the base window again (375ms with
     // 0.5 jitter), proving the window was not left inflated.
     client.reconnect()
-    await vi.advanceTimersByTimeAsync(
-      RECONNECT_BASE_RETRY_PERIOD_MS * 0.75 - 1
-    )
+    await vi.advanceTimersByTimeAsync(expectedFirstReconnectDelayMs - 1)
     expect(globalThis.fetch).not.toHaveBeenCalled()
 
     await vi.advanceTimersByTimeAsync(1)
