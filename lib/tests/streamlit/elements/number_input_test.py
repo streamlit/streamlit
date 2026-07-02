@@ -813,3 +813,16 @@ def test_serde_resets_out_of_range_to_default(ui_value, expected):
         value=50, data_type=NumberInput.INT, min_value=0, max_value=100
     )
     assert serde.deserialize(ui_value) == expected
+
+
+@pytest.mark.parametrize(
+    "ui_value",
+    [float("nan"), float("inf"), -float("inf")],
+    ids=["nan", "positive_inf", "negative_inf"],
+)
+def test_serde_resets_non_finite_float_to_default(ui_value):
+    """Test that NumberInputSerde.deserialize resets non-finite floats to default."""
+    serde = NumberInputSerde(
+        value=0.5, data_type=NumberInput.FLOAT, min_value=0.0, max_value=1.0
+    )
+    assert serde.deserialize(ui_value) == 0.5

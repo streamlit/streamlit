@@ -655,6 +655,24 @@ def _make_int_serde(
     )
 
 
+def _make_float_serde(
+    value: list[float],
+    *,
+    single_value: bool = True,
+    min_value: float = 0.0,
+    max_value: float = 1.0,
+) -> SliderSerde:
+    """Construct a ``SliderSerde`` for FLOAT data with the provided defaults."""
+    return SliderSerde(
+        value=value,
+        data_type=SliderProto.FLOAT,
+        single_value=single_value,
+        orig_tz=None,
+        min_value=min_value,
+        max_value=max_value,
+    )
+
+
 def test_slider_serde_deserialize_returns_default_when_ui_value_none() -> None:
     """A None ui_value falls back to the default."""
     assert _make_int_serde(value=[42]).deserialize(None) == 42
@@ -690,6 +708,19 @@ def test_slider_serde_deserialize_resets_out_of_range(
     """Out-of-range ui_values revert to the default."""
     serde = _make_int_serde(value=[20], min_value=10, max_value=100)
     assert serde.deserialize(ui_value) == 20
+
+
+@pytest.mark.parametrize(
+    "ui_value",
+    [[float("nan")], [float("inf")], [-float("inf")]],
+    ids=["nan", "positive_inf", "negative_inf"],
+)
+def test_slider_serde_deserialize_resets_non_finite_value(
+    ui_value: list[float],
+) -> None:
+    """Non-finite float ui_values revert to the default."""
+    serde = _make_float_serde(value=[0.5])
+    assert serde.deserialize(ui_value) == 0.5
 
 
 def test_slider_serde_deserialize_passes_through_in_range_value() -> None:
