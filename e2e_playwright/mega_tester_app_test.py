@@ -87,6 +87,9 @@ def is_expected_error(
 
 @pytest.fixture(scope="module")
 def app_server_extra_args() -> list[str]:
+    # Only used for local e2e server startup. In external SiS/host mode, the
+    # local server is not started and the platform host-config must provide the
+    # real allowed host origin.
     return ["--client.allowedOrigins", "http://localhost"]
 
 
