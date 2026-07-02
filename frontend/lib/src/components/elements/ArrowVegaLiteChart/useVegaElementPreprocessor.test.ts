@@ -1044,11 +1044,52 @@ describe("useVegaElementPreprocessor", () => {
       )
       // The streamlit theme is applied to config...
       expect(spec.config).toBeDefined()
-      // ...and the embed theme is cleared so vega-embed doesn't re-apply it.
+      // ...and the embed options are cleared so vega-embed doesn't re-apply them.
+      expect((spec.usermeta as { embedOptions?: unknown }).embedOptions).toBe(
+        undefined
+      )
+    })
+
+    it("preserves a vega-embed theme while removing risky embedOptions", () => {
+      const spec = renderSpec(
+        {
+          mark: "bar",
+          usermeta: {
+            embedOptions: {
+              theme: "dark",
+              actions: true,
+              sourceHeader: "<script>window.evil = true</script>",
+              sourceFooter: "<img src=x onerror=window.evil = true>",
+              editorUrl: "https://example.com/editor/",
+              loader: { http: { credentials: "include" } },
+            },
+          },
+        },
+        { vegaLiteTheme: "default" }
+      )
+
       expect(
-        (spec.usermeta as { embedOptions: { theme?: string } }).embedOptions
-          .theme
-      ).toBeUndefined()
+        (spec.usermeta as { embedOptions?: unknown }).embedOptions
+      ).toEqual({ theme: "dark" })
+    })
+
+    it("preserves a null vega-embed theme for backwards compatibility", () => {
+      const spec = renderSpec(
+        {
+          mark: "bar",
+          usermeta: {
+            embedOptions: {
+              theme: null,
+              actions: true,
+            },
+          },
+        },
+        { vegaLiteTheme: "default" }
+      )
+
+      expect(
+        (spec.usermeta as { embedOptions?: unknown }).embedOptions
+      ).toEqual({ theme: null })
     })
 
     it("skips null children when spreading container width across vconcat", () => {

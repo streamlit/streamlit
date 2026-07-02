@@ -16,10 +16,16 @@
 
 import { useMemo } from "react"
 
-import { screen } from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { VegaLiteChart as VegaLiteChartProto } from "@streamlit/protobuf"
+
+const vegaEmbedMock = vi.hoisted(() => ({
+  exportToPng: vi.fn(),
+  isViewReady: false,
+}))
+const mockWriteText = vi.fn()
 
 // Avoid real Vega embedding side-effects in tests
 vi.mock("./useVegaEmbed", () => ({
@@ -31,14 +37,15 @@ vi.mock("./useVegaEmbed", () => ({
       updateView: () => Promise.resolve(null),
       finalizeView: () => {},
       resizeView: () => Promise.resolve(false),
-      isViewReady: false,
+      exportToPng: vegaEmbedMock.exportToPng,
+      isViewReady: vegaEmbedMock.isViewReady,
     }
   },
 }))
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
-import { render } from "~lib/test_util"
+import { mockWindowLocation, render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ArrowVegaLiteChart, {
@@ -92,9 +99,29 @@ const getProps = (
 
 describe("ArrowVegaLiteChart", () => {
   beforeEach(() => {
+    mockWindowLocation("localhost")
+    vegaEmbedMock.exportToPng.mockResolvedValue("data:image/png;base64,mock")
+    vegaEmbedMock.isViewReady = false
+    mockWriteText.mockReset()
+    mockWriteText.mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: mockWriteText,
+      },
+    })
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
       elementRef: { current: null },
       values: [250],
+    })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: undefined,
     })
   })
 
@@ -167,6 +194,94 @@ describe("ArrowVegaLiteChart", () => {
     render(<ArrowVegaLiteChart {...getProps({ data: null, datasets: [] })} />)
 
     expect(screen.queryByRole("button", { name: "Show data" })).toBeNull()
+  })
+
+  it("renders download and copy actions to the right of the show data action", () => {
+    vegaEmbedMock.isViewReady = true
+
+    render(
+      <ArrowVegaLiteChart
+        {...getProps({ data: { data: UNICODE }, datasets: [] })}
+      />
+    )
+
+    const buttonLabels = screen
+      .getAllByRole("button")
+      .map(button => button.getAttribute("aria-label"))
+
+    expect(buttonLabels.indexOf("Show data")).toBeLessThan(
+      buttonLabels.indexOf("Download as PNG")
+    )
+    expect(buttonLabels.indexOf("Download as PNG")).toBeLessThan(
+      buttonLabels.indexOf("Copy Vega-Lite spec")
+    )
+  })
+
+  it("downloads the chart as a PNG when the toolbar action is clicked", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-02T16:01:00.000Z"))
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    let downloadFilename: string | null = null
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      function (this: HTMLAnchorElement) {
+        downloadFilename = this.getAttribute("download")
+      }
+    )
+    vegaEmbedMock.isViewReady = true
+
+    render(<ArrowVegaLiteChart {...getProps()} />)
+
+    await user.click(screen.getByRole("button", { name: "Download as PNG" }))
+
+    await waitFor(() => expect(vegaEmbedMock.exportToPng).toHaveBeenCalled())
+    expect(downloadFilename).toBe("2026-07-02T16-01_chart.png")
+  })
+
+  it("shows the copy spec toolbar action on localhost", () => {
+    render(<ArrowVegaLiteChart {...getProps()} />)
+
+    expect(
+      screen.getByRole("button", { name: "Copy Vega-Lite spec" })
+    ).toBeInTheDocument()
+  })
+
+  it("does not show the copy spec toolbar action away from localhost", () => {
+    mockWindowLocation("example.com")
+
+    render(<ArrowVegaLiteChart {...getProps()} />)
+
+    expect(
+      screen.queryByRole("button", { name: "Copy Vega-Lite spec" })
+    ).toBeNull()
+  })
+
+  it("copies the rendered Vega-Lite spec to the clipboard", async () => {
+    render(<ArrowVegaLiteChart {...getProps()} />)
+
+    const copyButton = screen.getByRole("button", {
+      name: "Copy Vega-Lite spec",
+    })
+    const checkIconPath =
+      "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"
+
+    expect(copyButton.querySelector(`path[d="${checkIconPath}"]`)).toBeNull()
+
+    // eslint-disable-next-line testing-library/prefer-user-event
+    fireEvent.click(copyButton)
+
+    await waitFor(() =>
+      expect(mockWriteText).toHaveBeenCalledWith(
+        expect.stringContaining('"mark": "bar"')
+      )
+    )
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "Copy Vega-Lite spec" })
+          .querySelector(`path[d="${checkIconPath}"]`)
+      ).toBeInTheDocument()
+    )
   })
 })
 

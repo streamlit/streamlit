@@ -117,14 +117,29 @@ def test_chart_tooltip_styling(app: Page, assert_snapshot: ImageCompareFunction)
     assert_snapshot(tooltip, name="st_altair_chart-tooltip_styling")
 
 
-def test_chart_menu_styling(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    """Check that the chart menu styling is correct."""
-    chart = themed_app.get_by_test_id("stVegaLiteChart").first
+@pytest.mark.only_browser("chromium")
+def test_download_chart_as_png(app: Page):
+    """The 'Download as PNG' toolbar action triggers a PNG download.
+
+    This replaces the built-in vega-embed actions menu, whose action links are
+    disabled so that a chart spec cannot use them to open same-origin pages with
+    serialized spec contents.
+    """
+    chart = app.get_by_test_id("stFullScreenFrame").first
     expect(chart).to_be_visible()
-    chart.locator("summary").click()
-    chart_menu = chart.locator(".vega-actions")
-    expect(chart_menu).to_be_visible()
-    assert_snapshot(chart_menu, name="st_altair_chart-menu_styling")
+    chart.hover(force=True)
+
+    toolbar = chart.get_by_test_id("stElementToolbar")
+    expect(toolbar).to_be_visible()
+    download_button = toolbar.get_by_test_id("stElementToolbarButton").get_by_label(
+        "Download as PNG"
+    )
+    expect(download_button).to_be_visible()
+
+    with app.expect_download() as download_info:
+        download_button.click()
+
+    assert download_info.value.suggested_filename.endswith("_chart.png")
 
 
 def test_show_chart_data_button(app: Page, assert_snapshot: ImageCompareFunction):
@@ -137,7 +152,15 @@ def test_show_chart_data_button(app: Page, assert_snapshot: ImageCompareFunction
     toolbar = chart.get_by_test_id("stElementToolbar")
     expect(toolbar).to_be_visible()
     toolbar_buttons = toolbar.get_by_test_id("stElementToolbarButton")
-    expect(toolbar_buttons).to_have_count(2)
+    # Show Data + Download as PNG + Copy Vega-Lite spec (localhost) + Fullscreen.
+    expect(toolbar_buttons).to_have_count(4)
+    expect(toolbar_buttons.get_by_label("Download as PNG")).to_be_visible()
+    expect(toolbar_buttons.get_by_label("Copy Vega-Lite spec")).to_be_visible()
+
+    # The built-in vega-embed actions menu must no longer be usable: no menu
+    # button (summary) and no action links (View Source / Vega Editor / export).
+    expect(chart.locator("summary")).to_have_count(0)
+    expect(chart.locator(".vega-actions a")).to_have_count(0)
 
     expect(toolbar_buttons.get_by_label("Show Data")).to_be_visible()
     toolbar_buttons.get_by_label("Show Data").click()

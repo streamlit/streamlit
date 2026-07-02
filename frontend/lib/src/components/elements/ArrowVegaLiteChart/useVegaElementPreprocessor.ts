@@ -39,10 +39,44 @@ interface VegaLiteParam {
   [key: string]: unknown
 }
 
+interface VegaLiteUsermeta {
+  embedOptions?: {
+    theme?: string | null
+    [key: string]: unknown
+  } | null
+  [key: string]: unknown
+}
+
 /**
  * Fix bug where Vega Lite was vertically-cropping the x-axis in some cases.
  */
 const BOTTOM_PADDING = 20
+
+function getUsermeta(spec: VegaLiteSpec): VegaLiteUsermeta | undefined {
+  if (
+    spec.usermeta === null ||
+    typeof spec.usermeta !== "object" ||
+    Array.isArray(spec.usermeta)
+  ) {
+    return undefined
+  }
+
+  return spec.usermeta as VegaLiteUsermeta
+}
+
+function sanitizeUsermetaEmbedOptions(spec: VegaLiteSpec): void {
+  const usermeta = getUsermeta(spec)
+  if (!usermeta || !("embedOptions" in usermeta)) {
+    return
+  }
+
+  const theme = usermeta.embedOptions?.theme
+  if (theme !== "streamlit" && (typeof theme === "string" || theme === null)) {
+    usermeta.embedOptions = { theme }
+  } else {
+    delete usermeta.embedOptions
+  }
+}
 
 /**
  * Prepares the vega-lite spec for selections by transforming the select parameters
@@ -129,16 +163,19 @@ const generateSpec = (
   if (typeof spec.width === "number" && spec.width <= 0) {
     delete spec.width
   }
-  if (vegaLiteTheme === "streamlit") {
+  const usermetaTheme = getUsermeta(spec)?.embedOptions?.theme
+
+  if (vegaLiteTheme === "streamlit" || usermetaTheme === "streamlit") {
     spec.config = applyStreamlitTheme(spec.config, theme)
-  } else if (spec.usermeta?.embedOptions?.theme === "streamlit") {
-    spec.config = applyStreamlitTheme(spec.config, theme)
-    // Remove the theme from the usermeta so it doesn't get picked up by vega embed.
-    spec.usermeta.embedOptions.theme = undefined
   } else {
     // Apply minor theming improvements to work better with Streamlit
     spec.config = applyThemeDefaults(spec.config, theme)
   }
+  // Keep only the inert vega-embed theme selector for compatibility. Streamlit's
+  // theme is applied above and removed so vega-embed doesn't try to resolve it.
+  // All other embed options can override host behavior, including chart actions
+  // that open same-origin pages with serialized spec contents.
+  sanitizeUsermetaEmbedOptions(spec)
 
   if (spec.title) {
     if (typeof spec.title === "string") {

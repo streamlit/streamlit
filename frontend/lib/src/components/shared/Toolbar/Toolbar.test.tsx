@@ -15,7 +15,7 @@
  */
 
 import { Info } from "@emotion-icons/material-outlined"
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
@@ -53,6 +53,10 @@ const getToolbarActionsProps = (
 describe("Toolbar element", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it("renders a Toolbar", () => {
@@ -161,6 +165,10 @@ describe("Toolbar element", () => {
 })
 
 describe("ToolbarAction Button element", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it("renders correctly", () => {
     render(<ToolbarAction {...getToolbarActionsProps()} />)
     // Check if toolbar button is rendered:
@@ -211,5 +219,47 @@ describe("ToolbarAction Button element", () => {
 
     // Check that onClick callback was clicked
     expect(onClickMock).toHaveBeenCalled()
+  })
+
+  it("hides its tooltip when the action is no longer hovered", async () => {
+    vi.useFakeTimers()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+    render(<ToolbarAction {...getToolbarActionsProps()} />)
+
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltipTarget)
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+
+    expect(screen.getByTestId("stTooltipContent")).toHaveTextContent("info")
+
+    await user.unhover(tooltipTarget)
+
+    expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+  })
+
+  it("hides its tooltip when the action is clicked", async () => {
+    vi.useFakeTimers()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const onClickMock = vi.fn()
+
+    render(
+      <ToolbarAction {...getToolbarActionsProps({ onClick: onClickMock })} />
+    )
+
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltipTarget)
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+
+    expect(screen.getByTestId("stTooltipContent")).toHaveTextContent("info")
+
+    await user.click(screen.getByRole("button", { name: "info" }))
+
+    expect(onClickMock).toHaveBeenCalled()
+    expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
   })
 })
