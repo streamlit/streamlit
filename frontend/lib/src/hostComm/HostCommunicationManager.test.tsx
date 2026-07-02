@@ -54,6 +54,16 @@ function mockEventListeners(): MockEventListenersResult {
   }
 }
 
+function newHostMessageEvent(init: MessageEventInit): MessageEvent {
+  return {
+    data: init.data,
+    isTrusted: true,
+    origin: init.origin ?? "",
+    source: window.parent,
+    ...init,
+  } as unknown as MessageEvent
+}
+
 describe("HostCommunicationManager messaging", () => {
   let hostCommunicationMgr: HostCommunicationManager
 
@@ -264,7 +274,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received CLOSE_MODAL message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "CLOSE_MODAL",
@@ -279,7 +289,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received STOP_SCRIPT message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "STOP_SCRIPT",
@@ -294,7 +304,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received RERUN_SCRIPT message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "RERUN_SCRIPT",
@@ -309,7 +319,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received CLEAR_CACHE message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "CLEAR_CACHE",
@@ -325,7 +335,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received PRINT_APP message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "PRINT_APP",
@@ -341,7 +351,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received REQUEST_PAGE_CHANGE message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "REQUEST_PAGE_CHANGE",
@@ -359,7 +369,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received SEND_APP_HEARTBEAT message without ackTimeoutMilliseconds", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SEND_APP_HEARTBEAT",
@@ -375,7 +385,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received SEND_APP_HEARTBEAT message with ackTimeoutMilliseconds", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SEND_APP_HEARTBEAT",
@@ -394,7 +404,7 @@ describe("HostCommunicationManager messaging", () => {
   it("treats negative ackTimeoutMilliseconds as 0", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SEND_APP_HEARTBEAT",
@@ -411,7 +421,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received SET_INPUTS_DISABLED message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SET_INPUTS_DISABLED",
@@ -430,7 +440,7 @@ describe("HostCommunicationManager messaging", () => {
   it("should respond to SET_IS_OWNER message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SET_IS_OWNER",
@@ -448,7 +458,7 @@ describe("HostCommunicationManager messaging", () => {
   it("should respond to SET_MENU_ITEMS message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SET_MENU_ITEMS",
@@ -467,7 +477,7 @@ describe("HostCommunicationManager messaging", () => {
   it("should respond to SET_METADATA message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SET_METADATA",
@@ -490,7 +500,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received SET_PAGE_LINK_BASE_URL message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SET_PAGE_LINK_BASE_URL",
@@ -509,7 +519,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received SET_SIDEBAR_CHEVRON_DOWNSHIFT message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SET_SIDEBAR_CHEVRON_DOWNSHIFT",
@@ -528,7 +538,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received SET_SIDEBAR_NAV_VISIBILITY message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SET_SIDEBAR_NAV_VISIBILITY",
@@ -547,7 +557,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received SET_TOOLBAR_ITEMS message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SET_TOOLBAR_ITEMS",
@@ -582,7 +592,7 @@ describe("HostCommunicationManager messaging", () => {
 
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "UPDATE_HASH",
@@ -598,7 +608,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received UPDATE_FROM_QUERY_PARAMS message", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "UPDATE_FROM_QUERY_PARAMS",
@@ -625,7 +635,7 @@ describe("HostCommunicationManager messaging", () => {
     }
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SET_CUSTOM_THEME_CONFIG",
@@ -644,7 +654,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received SET_CUSTOM_THEME_CONFIG message with a dark theme name", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SET_CUSTOM_THEME_CONFIG",
@@ -663,7 +673,7 @@ describe("HostCommunicationManager messaging", () => {
   it("can process a received SET_CUSTOM_THEME_CONFIG message with a light theme name", () => {
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SET_CUSTOM_THEME_CONFIG",
@@ -680,7 +690,7 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("can process a received SET_FILE_UPLOAD_CLIENT_CONFIG message", () => {
-    const message = new MessageEvent("message", {
+    const message = newHostMessageEvent({
       data: {
         stCommVersion: HOST_COMM_VERSION,
         type: "SET_FILE_UPLOAD_CLIENT_CONFIG",
@@ -706,8 +716,83 @@ describe("HostCommunicationManager messaging", () => {
     })
   })
 
-  it("can process a received RESTART_WEBSOCKET_CONNECTION message", () => {
+  it("ignores messages from non-parent frames even when origin is allowed", () => {
+    const iframe = document.createElement("iframe")
+    document.body.appendChild(iframe)
+    const childWindow = iframe.contentWindow
+
+    if (!childWindow) {
+      throw new Error("Expected iframe contentWindow")
+    }
+
+    try {
+      const message = newHostMessageEvent({
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_FILE_UPLOAD_CLIENT_CONFIG",
+          prefix: "https://evil.example/upload/",
+          headers: {
+            "X-Xsrftoken": "exfiltrated-token",
+          },
+        },
+        origin: "https://devel.streamlit.test",
+        source: childWindow,
+      })
+      dispatchEvent("message", message)
+
+      expect(
+        // @ts-expect-error - props are private
+        hostCommunicationMgr.props.fileUploadClientConfigChanged
+      ).not.toHaveBeenCalled()
+    } finally {
+      iframe.remove()
+    }
+  })
+
+  it("ignores script-dispatched host messages even when source and origin match", () => {
     const message = new MessageEvent("message", {
+      data: {
+        stCommVersion: HOST_COMM_VERSION,
+        type: "SET_FILE_UPLOAD_CLIENT_CONFIG",
+        prefix: "https://evil.example/upload/",
+        headers: {
+          "X-Xsrftoken": "exfiltrated-token",
+        },
+      },
+      origin: "https://devel.streamlit.test",
+      source: window.parent,
+    })
+    dispatchEvent("message", message)
+
+    expect(
+      // @ts-expect-error - props are private
+      hostCommunicationMgr.props.fileUploadClientConfigChanged
+    ).not.toHaveBeenCalled()
+  })
+
+  it("ignores host messages with a null source even when origin is allowed", () => {
+    const message = newHostMessageEvent({
+      data: {
+        stCommVersion: HOST_COMM_VERSION,
+        type: "SET_FILE_UPLOAD_CLIENT_CONFIG",
+        prefix: "https://evil.example/upload/",
+        headers: {
+          "X-Xsrftoken": "exfiltrated-token",
+        },
+      },
+      origin: "https://devel.streamlit.test",
+      source: null,
+    })
+    dispatchEvent("message", message)
+
+    expect(
+      // @ts-expect-error - props are private
+      hostCommunicationMgr.props.fileUploadClientConfigChanged
+    ).not.toHaveBeenCalled()
+  })
+
+  it("can process a received RESTART_WEBSOCKET_CONNECTION message", () => {
+    const message = newHostMessageEvent({
       data: {
         stCommVersion: HOST_COMM_VERSION,
         type: "RESTART_WEBSOCKET_CONNECTION",
@@ -723,7 +808,7 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("can process a received TERMINATE_WEBSOCKET_CONNECTION message", () => {
-    const message = new MessageEvent("message", {
+    const message = newHostMessageEvent({
       data: {
         stCommVersion: HOST_COMM_VERSION,
         type: "TERMINATE_WEBSOCKET_CONNECTION",
@@ -783,7 +868,7 @@ describe("Test different origins", () => {
 
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "UPDATE_HASH",
@@ -804,7 +889,7 @@ describe("Test different origins", () => {
 
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "UPDATE_HASH",
@@ -825,7 +910,7 @@ describe("Test different origins", () => {
 
     dispatchEvent(
       "message",
-      new MessageEvent("message", {
+      newHostMessageEvent({
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "UPDATE_HASH",
@@ -900,7 +985,7 @@ describe("HostCommunicationManager external auth token handling", () => {
     setTimeout(() => {
       dispatchEvent(
         "message",
-        new MessageEvent("message", {
+        newHostMessageEvent({
           data: {
             stCommVersion: HOST_COMM_VERSION,
             type: "SET_AUTH_TOKEN",
@@ -931,7 +1016,7 @@ describe("HostCommunicationManager external auth token handling", () => {
     setTimeout(() => {
       dispatchEvent(
         "message",
-        new MessageEvent("message", {
+        newHostMessageEvent({
           data: {
             stCommVersion: HOST_COMM_VERSION,
             type: "SET_AUTH_TOKEN",

@@ -199,12 +199,15 @@ export default class HostCommunicationManager {
 
     // Messages coming from the parent frame of a deployed Streamlit app
     // may not be coming from a trusted source (even if we've set the CSP
-    // frame-anscestors header, it doesn't hurt to be extra safe). We avoid
+    // frame-ancestors header, it doesn't hurt to be extra safe). We avoid
     // processing messages received from origins we haven't explicitly
-    // labeled as trusted here to lower the probability that we end up
-    // processing malicious input.
+    // labeled as trusted, and only accept trusted postMessage events from the
+    // direct parent frame so same-origin child iframes cannot spoof host
+    // commands.
     if (
-      message.stCommVersion !== HOST_COMM_VERSION ||
+      !event.isTrusted ||
+      event.source !== window.parent ||
+      message?.stCommVersion !== HOST_COMM_VERSION ||
       !this.allowedOrigins.find(allowed =>
         isValidOrigin(allowed, event.origin)
       )
