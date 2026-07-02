@@ -26,7 +26,10 @@ from streamlit import config
 from streamlit.auth_util import get_cookie_with_chunks, get_expose_tokens_config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
-from streamlit.runtime.runtime_util import serialize_forward_msg
+from streamlit.runtime.runtime_util import (
+    get_max_widget_state_size_bytes,
+    serialize_forward_msg,
+)
 from streamlit.runtime.session_manager import (
     ClientContext,
     SessionClient,
@@ -467,6 +470,17 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                         "WebSocket text frames are not supported; connection closed. "
                         "Expected binary protobufs."
                     )
+
+                max_client_msg_size = get_max_widget_state_size_bytes()
+                if len(data) > max_client_msg_size:
+                    _LOGGER.warning(
+                        "Client WebSocket message size %s exceeds the limit of %s; "
+                        "closing connection.",
+                        len(data),
+                        max_client_msg_size,
+                    )
+                    await websocket.close(code=1009)  # 1009 = Message Too Big
+                    break
 
                 back_msg = BackMsg()
                 try:

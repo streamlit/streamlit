@@ -48,6 +48,9 @@ from streamlit.proto.Common_pb2 import (
     StringTriggerValue as StringTriggerValueProto,
 )
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
+from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+from streamlit.runtime import runtime_util
+from streamlit.runtime.runtime_util import WidgetStateSizeError
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
@@ -848,6 +851,40 @@ class SessionStateMethodTests(unittest.TestCase):
         session_state._compact_state()
         with pytest.raises(KeyError):
             wstates["baz"]
+
+    def test_set_widgets_from_proto_rejects_oversized_widget_state(self):
+        widget_state = WidgetStateProto()
+        widget_state.id = "large_widget"
+        widget_state.json_value = "x" * 1_100_000
+        widget_states = WidgetStatesProto(widgets=[widget_state])
+
+        with (
+            patch_config_options({"server.maxWidgetStateSize": 1}),
+            patch.object(runtime_util, "_max_widget_state_size_bytes", None),
+            pytest.raises(WidgetStateSizeError, match="widget state size limit"),
+        ):
+            self.session_state.set_widgets_from_proto(widget_states)
+
+        assert "large_widget" not in self.session_state._new_widget_state.states
+
+    def test_set_widgets_from_proto_rejects_oversized_aggregate_widget_state(self):
+        widget_states = WidgetStatesProto()
+        for idx in range(2):
+            widget_state = widget_states.widgets.add()
+            widget_state.id = f"large_widget_{idx}"
+            widget_state.string_value = "x" * 600_000
+
+        with (
+            patch_config_options({"server.maxWidgetStateSize": 1}),
+            patch.object(runtime_util, "_max_widget_state_size_bytes", None),
+            pytest.raises(WidgetStateSizeError, match="widget state size limit"),
+        ):
+            self.session_state.set_widgets_from_proto(widget_states)
+
+        assert self.session_state._new_widget_state.states == {
+            "baz": Value("qux2"),
+            f"{GENERATED_ELEMENT_ID_PREFIX}-foo-None": Value("bar"),
+        }
 
     def test_clear_state(self):
         # Sanity test
