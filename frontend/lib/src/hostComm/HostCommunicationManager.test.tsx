@@ -55,6 +55,15 @@ function mockEventListeners(): MockEventListenersResult {
   }
 }
 
+/**
+ * Builds a trusted host `MessageEvent` originating from the direct parent
+ * frame, matching what the browser delivers for legitimate host messages.
+ *
+ * `isTrusted` is intentionally hard-coded and is not part of
+ * `MessageEventInit`, so callers cannot override it via `init`. Tests that
+ * need an untrusted (script-dispatched) event construct `new MessageEvent(...)`
+ * directly instead.
+ */
 function newHostMessageEvent(init: MessageEventInit): MessageEvent {
   return {
     data: init.data,
@@ -763,6 +772,11 @@ describe("HostCommunicationManager messaging", () => {
       origin: "https://devel.streamlit.test",
       source: window.parent,
     })
+    // Guard the test preconditions so it can only pass by exercising the
+    // `!event.isTrusted` check: a natively constructed event is untrusted while
+    // its source and origin are otherwise valid.
+    expect(message.isTrusted).toBe(false)
+    expect(message.source).toBe(window.parent)
     dispatchEvent("message", message)
 
     expect(
