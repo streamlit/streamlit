@@ -723,6 +723,19 @@ def test_slider_serde_deserialize_resets_non_finite_value(
     assert serde.deserialize(ui_value) == 0.5
 
 
+@pytest.mark.parametrize(
+    "ui_value",
+    [[float("nan"), 0.8], [0.2, float("inf")], [-float("inf"), float("nan")]],
+    ids=["nan_first", "inf_second", "both_non_finite"],
+)
+def test_slider_serde_deserialize_resets_non_finite_value_range(
+    ui_value: list[float],
+) -> None:
+    """Non-finite float values in a range slider revert to the default."""
+    serde = _make_float_serde(value=[0.2, 0.8], single_value=False)
+    assert serde.deserialize(ui_value) == (0.2, 0.8)
+
+
 def test_slider_serde_deserialize_passes_through_in_range_value() -> None:
     """In-range ui_values are returned and converted to the slider's data type."""
     serde = _make_int_serde(value=[20])

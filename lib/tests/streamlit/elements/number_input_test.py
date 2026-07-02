@@ -820,7 +820,7 @@ def test_serde_resets_out_of_range_to_default(ui_value, expected):
     [float("nan"), float("inf"), -float("inf")],
     ids=["nan", "positive_inf", "negative_inf"],
 )
-def test_serde_resets_non_finite_float_to_default(ui_value):
+def test_serde_resets_non_finite_float_to_default(ui_value: float) -> None:
     """Test that NumberInputSerde.deserialize resets non-finite floats to default."""
     serde = NumberInputSerde(
         value=0.5, data_type=NumberInput.FLOAT, min_value=0.0, max_value=1.0
