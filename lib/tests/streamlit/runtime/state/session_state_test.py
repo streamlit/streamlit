@@ -504,8 +504,8 @@ class SessionStateTest(DeltaGeneratorTestCase):
 
 
 def test_callbacks_with_rerun():
-    """Calling 'rerun' from within a widget callback
-    is disallowed and results in a warning.
+    """st.rerun() inside a widget callback is deferred and runs after the script
+    body completes — no warning is emitted.
     """
 
     def script():
@@ -520,8 +520,34 @@ def test_callbacks_with_rerun():
     at = AppTest.from_function(script).run()
     at.checkbox[0].check().run()
     assert at.session_state["message"] == "ran callback"
-    warning = at.warning[0]
-    assert "no-op" in warning.value
+    # Rerun from a callback is now honored: deferred until after the script body
+    # completes, so no "no-op" warning should appear.
+    assert len(at.warning) == 0
+
+
+def test_callbacks_with_targeted_rerun():
+    """st.rerun(target=...) inside a widget callback re-runs the named fragment
+    after the current script body completes — no warning is emitted.
+    """
+
+    def script():
+        import streamlit as st
+
+        @st.fragment(key="my_frag")
+        def my_frag():
+            st.write("in fragment")
+
+        def callback():
+            st.session_state["message"] = "ran callback"
+            st.rerun(target="my_frag")
+
+        my_frag()
+        st.checkbox("cb", on_change=callback)
+
+    at = AppTest.from_function(script).run()
+    at.checkbox[0].check().run()
+    assert at.session_state["message"] == "ran callback"
+    assert len(at.warning) == 0
 
 
 def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
@@ -561,7 +587,7 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        # Callbacks internally catch RerunException and log a warning.
+        # Callbacks internally catch RerunException and re-queue the rerun.
         ss._call_callbacks()
 
     assert ThreadState.get().in_fragment_callback is False

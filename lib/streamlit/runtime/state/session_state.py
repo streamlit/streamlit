@@ -34,7 +34,6 @@ from typing import (
 )
 
 from streamlit import config, util
-from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
 from streamlit.logger import get_logger
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
@@ -667,10 +666,14 @@ class SessionState:
         for wid in changed_widget_ids_for_single_callback:
             try:
                 self._new_widget_state.call_callback(wid)
-            except RerunException:  # noqa: PERF203
-                get_dg_singleton_instance().main_dg.warning(
-                    "Calling st.rerun() within a callback is a no-op."
-                )
+            except RerunException as e:  # noqa: PERF203
+                # Re-queue the rerun data so it is honored after the script body
+                # completes.  on_scriptrunner_yield() already consumed the request
+                # when it raised the exception, so we restore it here to avoid
+                # losing the caller's intent.
+                ctx = get_script_run_ctx()
+                if ctx and ctx.script_requests:
+                    ctx.script_requests.request_rerun(e.rerun_data)
 
         # Path 2: multiple callbacks.
         widget_ids_to_process = list(self._new_widget_state.states.keys())
@@ -701,8 +704,9 @@ class SessionState:
 
         If the widget belongs to a fragment, temporarily marks the current
         script context as being inside a fragment callback to adapt rerun
-        semantics. Attempts to call ``st.rerun()`` inside a widget callback are
-        converted to a user-visible warning and treated as a no-op.
+        semantics.  When ``st.rerun()`` is called inside a widget callback,
+        the rerun request is re-queued so that it takes effect after all
+        callbacks have run and the current script body has completed.
 
         Parameters
         ----------
@@ -722,17 +726,15 @@ class SessionState:
             with ThreadState.scoped(in_fragment_callback=True):
                 try:
                     callback_fn(*cb_args, **cb_kwargs)
-                except RerunException:
-                    get_dg_singleton_instance().main_dg.warning(
-                        "Calling st.rerun() within a callback is a no-op."
-                    )
+                except RerunException as e:
+                    if ctx.script_requests:
+                        ctx.script_requests.request_rerun(e.rerun_data)
         else:
             try:
                 callback_fn(*cb_args, **cb_kwargs)
-            except RerunException:
-                get_dg_singleton_instance().main_dg.warning(
-                    "Calling st.rerun() within a callback is a no-op."
-                )
+            except RerunException as e:
+                if ctx and ctx.script_requests:
+                    ctx.script_requests.request_rerun(e.rerun_data)
 
     def _dispatch_trigger_callbacks(
         self,
