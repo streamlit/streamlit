@@ -214,6 +214,10 @@ export default class HostCommunicationManager {
     const isAllowedOrigin = this.allowedOrigins.some(allowed =>
       isValidOrigin(allowed, event.origin)
     )
+    // When embedded, the guest posts its own GUEST_READY to this window (see
+    // openHostCommunication); that self-post is intentionally ignored here and
+    // should not be logged as a dropped host message.
+    const isSelfPost = event.source === window && window !== window.parent
 
     if (!isTrustedParentMessage || !isHostMessage || !isAllowedOrigin) {
       // Only log when the payload looks like a genuine host message so we
@@ -221,7 +225,7 @@ export default class HostCommunicationManager {
       // handler receives. This helps diagnose cases where a legitimate host's
       // messages are unexpectedly dropped (e.g. an intermediate iframe wrapper
       // posting from a non-direct-parent window).
-      if (isHostMessage) {
+      if (isHostMessage && !isSelfPost) {
         LOG.debug(
           "Ignoring host message: isTrusted=%s, sourceIsParent=%s, allowedOrigin=%s, origin=%s",
           event.isTrusted,

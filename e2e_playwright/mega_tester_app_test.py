@@ -93,6 +93,9 @@ def app_server_extra_args() -> list[str]:
 def _send_host_message(
     app_target: AppTarget, external_iframe_selector: str, message: dict[str, object]
 ) -> None:
+    # stCommVersion must match the frontend HOST_COMM_VERSION constant
+    # (frontend/lib/src/hostComm/HostCommunicationManager.tsx); bump this if
+    # that version ever changes.
     payload = {"stCommVersion": 1, **message}
 
     if app_target.mode == "external_host":

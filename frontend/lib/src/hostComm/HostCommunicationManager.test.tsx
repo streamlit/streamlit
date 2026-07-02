@@ -824,7 +824,16 @@ describe("HostCommunicationManager messaging", () => {
     })
     dispatchEvent("message", message)
 
-    expect(debugSpy).toHaveBeenCalledOnce()
+    // Args mirror the LOG.debug call: isTrusted, sourceIsParent, allowedOrigin,
+    // origin. The event is untrusted (script-constructed) but its source is the
+    // parent and its origin is allowed, so only the isTrusted guard fails.
+    expect(debugSpy).toHaveBeenCalledExactlyOnceWith(
+      expect.stringContaining("Ignoring host message"),
+      false,
+      true,
+      true,
+      "https://devel.streamlit.test"
+    )
     debugSpy.mockRestore()
   })
 
@@ -843,6 +852,44 @@ describe("HostCommunicationManager messaging", () => {
 
     expect(debugSpy).not.toHaveBeenCalled()
     debugSpy.mockRestore()
+  })
+
+  it("does not log a debug message for the guest's own self-posted messages", () => {
+    const debugSpy = vi
+      .spyOn(getLogger("HostCommunicationManager"), "debug")
+      .mockImplementation(() => {})
+
+    // Simulate being embedded so window.parent differs from window; otherwise
+    // jsdom makes window.parent === window and a self-post is indistinguishable
+    // from a top-level parent message.
+    const originalParent = window.parent
+    Object.defineProperty(window, "parent", {
+      value: { postMessage: vi.fn() },
+      configurable: true,
+    })
+
+    try {
+      // Mimics the GUEST_READY message the manager posts to its own window when
+      // embedded: a genuine host-versioned payload whose source is this window
+      // (not the parent). It is intentionally ignored and must not be logged.
+      const message = new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "GUEST_READY",
+        },
+        origin: "https://devel.streamlit.test",
+        source: window,
+      })
+      dispatchEvent("message", message)
+
+      expect(debugSpy).not.toHaveBeenCalled()
+    } finally {
+      Object.defineProperty(window, "parent", {
+        value: originalParent,
+        configurable: true,
+      })
+      debugSpy.mockRestore()
+    }
   })
 
   it("can process a received RESTART_WEBSOCKET_CONNECTION message", () => {
