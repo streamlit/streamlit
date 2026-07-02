@@ -471,11 +471,16 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                         "Expected binary protobufs."
                     )
 
+                # The same config value bounds both the raw inbound frame here and
+                # the parsed aggregate widget state in the runtime layer. Applied to
+                # the raw BackMsg frame, this transport check is slightly stricter
+                # than the runtime check (the frame includes the BackMsg envelope),
+                # which is an intentional defense-in-depth tradeoff.
                 max_client_msg_size = get_max_widget_state_size_bytes()
                 if len(data) > max_client_msg_size:
                     _LOGGER.warning(
-                        "Client WebSocket message size %s exceeds the limit of %s; "
-                        "closing connection.",
+                        "Client WebSocket message size %s bytes exceeds the limit of "
+                        "%s bytes; closing connection.",
                         len(data),
                         max_client_msg_size,
                     )

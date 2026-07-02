@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import runtime_util
@@ -52,6 +53,8 @@ class RuntimeUtilTest(unittest.TestCase):
 
     def test_get_max_widget_state_size_bytes_reads_config(self):
         """The widget state size limit is derived from the config option in bytes."""
-        runtime_util._max_widget_state_size_bytes = None  # Reset cached value
-        with patch_config_options({"server.maxWidgetStateSize": 10}):
+        with (
+            patch.object(runtime_util, "_max_widget_state_size_bytes", None),
+            patch_config_options({"server.maxWidgetStateSize": 10}),
+        ):
             assert runtime_util.get_max_widget_state_size_bytes() == 10 * int(1e6)

@@ -886,6 +886,23 @@ class SessionStateMethodTests(unittest.TestCase):
             f"{GENERATED_ELEMENT_ID_PREFIX}-foo-None": Value("bar"),
         }
 
+    def test_set_widgets_from_proto_accepts_widget_state_at_limit(self):
+        """Widget state exactly at the size limit is accepted (boundary condition)."""
+        widget_state = WidgetStateProto()
+        widget_state.id = "boundary_widget"
+        widget_state.string_value = "x" * 1000
+        widget_states = WidgetStatesProto(widgets=[widget_state])
+
+        # Set the limit to exactly the serialized size so the boundary (==) passes.
+        with patch.object(
+            runtime_util,
+            "_max_widget_state_size_bytes",
+            widget_states.ByteSize(),
+        ):
+            self.session_state.set_widgets_from_proto(widget_states)
+
+        assert "boundary_widget" in self.session_state._new_widget_state.states
+
     def test_clear_state(self):
         # Sanity test
         keys = {"foo", "baz", "corge", f"{GENERATED_ELEMENT_ID_PREFIX}-foo-None"}

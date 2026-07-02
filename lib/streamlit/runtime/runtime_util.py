@@ -86,7 +86,7 @@ setting the config option `server.maxWidgetStateSize`.
 [Click here to learn more about config options](https://docs.streamlit.io/develop/api-reference/configuration/config.toml).
 
 _Note that increasing the limit may lead to long loading times and large memory consumption
-of the client's browser and the Streamlit server._
+of the Streamlit server._
 """
         ).strip("\n")
 
@@ -149,7 +149,13 @@ def get_max_message_size_bytes() -> int:
 
 
 def get_max_widget_state_size_bytes() -> int:
-    """Returns the max client-sent widget state size in bytes."""
+    """Returns the max client-sent message size in bytes.
+
+    This limit is applied both to raw inbound WebSocket frames in the Starlette
+    handler and to the aggregate widget state protobuf in the runtime layer.
+
+    This will lazyload the value from the config and store it in the global symbol table.
+    """
     global _max_widget_state_size_bytes  # noqa: PLW0603
 
     if _max_widget_state_size_bytes is None:
