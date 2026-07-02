@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { getLogger } from "loglevel"
+
 import { ICustomThemeConfig, WidgetStates } from "@streamlit/protobuf"
 
 import { PresetThemeName } from "~lib/theme/types"
@@ -28,6 +30,8 @@ import {
   IToolbarItem,
   VersionedMessage,
 } from "./types"
+
+const LOG = getLogger("HostCommunicationManager")
 
 export const HOST_COMM_VERSION = 1
 
@@ -204,14 +208,28 @@ export default class HostCommunicationManager {
     // labeled as trusted, and only accept trusted postMessage events from the
     // direct parent frame so same-origin child iframes cannot spoof host
     // commands.
-    if (
-      !event.isTrusted ||
-      event.source !== window.parent ||
-      message?.stCommVersion !== HOST_COMM_VERSION ||
-      !this.allowedOrigins.find(allowed =>
-        isValidOrigin(allowed, event.origin)
-      )
-    ) {
+    const isTrustedParentMessage =
+      event.isTrusted && event.source === window.parent
+    const isHostMessage = message?.stCommVersion === HOST_COMM_VERSION
+    const isAllowedOrigin = this.allowedOrigins.some(allowed =>
+      isValidOrigin(allowed, event.origin)
+    )
+
+    if (!isTrustedParentMessage || !isHostMessage || !isAllowedOrigin) {
+      // Only log when the payload looks like a genuine host message so we
+      // don't spam logs for the many unrelated postMessages this global
+      // handler receives. This helps diagnose cases where a legitimate host's
+      // messages are unexpectedly dropped (e.g. an intermediate iframe wrapper
+      // posting from a non-direct-parent window).
+      if (isHostMessage) {
+        LOG.debug(
+          "Ignoring host message: isTrusted=%s, sourceIsParent=%s, allowedOrigin=%s, origin=%s",
+          event.isTrusted,
+          event.source === window.parent,
+          isAllowedOrigin,
+          event.origin
+        )
+      }
       return
     }
 

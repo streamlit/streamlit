@@ -16,6 +16,7 @@
 
 import "../../../utils/src/polyfills/index"
 
+import { getLogger } from "loglevel"
 import { MockInstance } from "vitest"
 
 import HostCommunicationManager, {
@@ -789,6 +790,46 @@ describe("HostCommunicationManager messaging", () => {
       // @ts-expect-error - props are private
       hostCommunicationMgr.props.fileUploadClientConfigChanged
     ).not.toHaveBeenCalled()
+  })
+
+  it("logs a debug message when a genuine host message is rejected by the guards", () => {
+    const debugSpy = vi
+      .spyOn(getLogger("HostCommunicationManager"), "debug")
+      .mockImplementation(() => {})
+
+    const message = new MessageEvent("message", {
+      data: {
+        stCommVersion: HOST_COMM_VERSION,
+        type: "SET_FILE_UPLOAD_CLIENT_CONFIG",
+        prefix: "https://evil.example/upload/",
+        headers: {
+          "X-Xsrftoken": "exfiltrated-token",
+        },
+      },
+      origin: "https://devel.streamlit.test",
+      source: window.parent,
+    })
+    dispatchEvent("message", message)
+
+    expect(debugSpy).toHaveBeenCalledOnce()
+    debugSpy.mockRestore()
+  })
+
+  it("does not log a debug message for non-host postMessages", () => {
+    const debugSpy = vi
+      .spyOn(getLogger("HostCommunicationManager"), "debug")
+      .mockImplementation(() => {})
+
+    dispatchEvent(
+      "message",
+      newHostMessageEvent({
+        data: { some: "unrelated-message" },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    expect(debugSpy).not.toHaveBeenCalled()
+    debugSpy.mockRestore()
   })
 
   it("can process a received RESTART_WEBSOCKET_CONNECTION message", () => {
