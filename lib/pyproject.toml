@@ -82,7 +82,7 @@ dependencies = [
   # Let's make sure to remove this "toml" library when we stop supporting Python 3.10.
   "toml>=0.10.1,<2",
   # Starlette requires typing-extensions >= 4.10.
-  "typing-extensions>=4.10.0,<5",
+  "typing-extensions>=4.15.0,<5",
   # ASGI web-framework:
   "starlette>=0.40.0",
   # ASGI server:
