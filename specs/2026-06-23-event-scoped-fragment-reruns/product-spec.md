@@ -289,11 +289,13 @@ reasons:
   Its only advantage over targeted reruns is enabling cycle detection *before* execution (the declared
   graph is known up front). We judge that insufficient to justify a second, more limited mechanism.
 
-### Rerun coalescing and precedence
+### Rerun handling: coalescing and precedence
 
-A single interaction can produce several rerun requests — a list `target`, multiple
-`st.rerun(target=...)` calls, or reruns issued from more than one widget callback (e.g. a form submit
-that fires several `on_change` handlers). The request layer folds them into one run using two rules:
+Targeted reruns make it normal for a **single interaction to produce several rerun requests at once**
+— a list `target`, multiple `st.rerun(target=...)` calls, or reruns from more than one widget callback
+(e.g. a form submit that fires several `on_change` handlers). The request layer already coalesces
+concurrent rerun requests into one run, but the way it merges them has to change so a cluster of
+fragment targets all run while a full-app rerun still wins. Two rules govern the merge:
 
 - **A full-app rerun trumps everything.** If *any* request in the interaction is a full-app rerun
   (`st.rerun()` with no `target`), the interaction collapses to a single full-app rerun and the
