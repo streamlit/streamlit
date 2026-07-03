@@ -52,7 +52,15 @@ def test_nested_fragment_run_every_can_hide_without_crash(app: Page):
     assert nested_text is not None
 
     click_checkbox(app, "Show nested auto fragment")
-    expect(nested_fragment).not_to_be_attached()
+    # The nested ``run_every`` timer keeps firing on the frontend even after the
+    # outer fragment stops rendering the nested chain (fragment-only reruns don't
+    # cancel the interval). An in-flight auto-rerun tick can therefore briefly
+    # re-attach ``.st-key-nested_auto_fragment`` around the uncheck before the
+    # backend evicts the orphaned fragment and the frontend prunes the stale
+    # node. Allow extra time for the tree to settle so this transient race
+    # doesn't flake; a genuine regression (#15084) keeps the container attached
+    # and still fails this assertion (plus the stException checks below).
+    expect(nested_fragment).not_to_be_attached(timeout=15000)
 
     expect(app.get_by_test_id("stException")).to_have_count(0)
 
