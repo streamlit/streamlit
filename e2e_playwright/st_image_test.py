@@ -223,14 +223,8 @@ def set_fullscreen(image_wrapper: Locator, open: bool):
     )
     expect(fullscreen_button).to_be_visible()
     fullscreen_button.click()
-    # Confirm the fullscreen state actually toggled by waiting for the toolbar
-    # button to flip to its opposite label. The button label and the
-    # stFullScreenFrame's `position: fixed` style are driven by the same
-    # `isExpanded` React state, so once the label flips the frame is already in
-    # the expected layout. This mirrors the fullscreen helpers in
-    # st_graphviz_chart_test.py and avoids relying on the CSS `position` value
-    # settling, which can lag past the default expect timeout on webkit under
-    # load (e.g. the full parallel CI suite) and flake the test.
+    # Wait for the toolbar button to flip to its opposite label, which confirms
+    # the fullscreen state has finished toggling before we take a snapshot.
     toggled_button = image_wrapper.get_by_role(
         "button", name="Close fullscreen" if open else "Fullscreen"
     )
