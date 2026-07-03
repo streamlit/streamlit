@@ -78,6 +78,12 @@ const initializeHeightGuidance = (
   if (textareaRef.current && heightGuidance.current) {
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const { offsetHeight } = textareaRef.current
+    // A hidden textarea (e.g. inside an inactive tab) reports offsetHeight 0.
+    // Bail out instead of caching bogus 0 min/max heights; minHeight stays 0 as a
+    // "not yet measured" marker that updateScrollHeight re-initializes once visible.
+    if (offsetHeight === 0) {
+      return
+    }
     heightGuidance.current.minHeight = offsetHeight
     heightGuidance.current.maxHeight = offsetHeight * MAX_VISIBLE_NUM_LINES
   }
@@ -142,6 +148,11 @@ export const useTextInputAutoExpand = ({
   const [isExtended, setIsExtended] = useState(false)
 
   const updateScrollHeight = useCallback((): void => {
+    // minHeight is still 0 if the textarea was hidden at mount (see
+    // initializeHeightGuidance). Re-measure now that it may have become visible.
+    if (heightGuidanceRef.current.minHeight === 0) {
+      initializeHeightGuidance(textareaRef, heightGuidanceRef)
+    }
     setScrollHeight(getScrollHeight(textareaRef))
   }, [textareaRef, setScrollHeight])
 
