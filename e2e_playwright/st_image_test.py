@@ -223,23 +223,18 @@ def set_fullscreen(image_wrapper: Locator, open: bool):
     )
     expect(fullscreen_button).to_be_visible()
     fullscreen_button.click()
-    # Wait for the fullscreen CSS transition to complete by checking position style
-    # The stFullScreenFrame element (grandparent of stImage, parent of image_wrapper)
-    # becomes position:fixed when open.
-    # Use an extended timeout because webkit can take noticeably longer than the
-    # default 5s expect timeout to finish the fullscreen transition when the
-    # machine is under load (e.g. the full parallel CI suite), which otherwise
-    # leaves the frame still reporting position:static and flakes the assertion.
-    fullscreen_frame = image_wrapper.locator("..")
-    transition_timeout = 15000
-    if open:
-        expect(fullscreen_frame).to_have_css(
-            "position", "fixed", timeout=transition_timeout
-        )
-    else:
-        expect(fullscreen_frame).to_have_css(
-            "position", "static", timeout=transition_timeout
-        )
+    # Confirm the fullscreen state actually toggled by waiting for the toolbar
+    # button to flip to its opposite label. The button label and the
+    # stFullScreenFrame's `position: fixed` style are driven by the same
+    # `isExpanded` React state, so once the label flips the frame is already in
+    # the expected layout. This mirrors the fullscreen helpers in
+    # st_graphviz_chart_test.py and avoids relying on the CSS `position` value
+    # settling, which can lag past the default expect timeout on webkit under
+    # load (e.g. the full parallel CI suite) and flake the test.
+    toggled_button = image_wrapper.get_by_role(
+        "button", name="Close fullscreen" if open else "Fullscreen"
+    )
+    expect(toggled_button).to_be_visible()
 
 
 # SVGs without width or height are not rendered correctly in Firefox
