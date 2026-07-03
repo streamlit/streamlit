@@ -21,6 +21,7 @@ Demonstrates:
 - Time window filtering
 - Growth score calculation
 - Dialog popup for company details
+- ``@st.cache_data(ttl=...)`` loader with a custom spinner message
 
 This template uses synthetic data. Replace ``generate_company_data()`` with
 your actual data source (e.g., Snowflake queries, CRM APIs, etc.).
@@ -72,11 +73,11 @@ REGIONS = ["North America", "EMEA", "APAC", "LATAM"]
 SEGMENTS = ["Technology", "Finance", "Healthcare", "Retail", "Manufacturing"]
 
 
-@st.cache_data(ttl=3600)
 def generate_company_data(days: int = 90) -> pd.DataFrame:
     """Generate synthetic company usage data.
 
-    Replace this function with your actual data source.
+    Replace this function with your actual data source. Caching happens in
+    ``load_company_data`` so the data is fetched once and reused across reruns.
     """
     rng = np.random.default_rng(42)
 
@@ -121,9 +122,9 @@ def generate_company_data(days: int = 90) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl="1h", show_spinner="Loading company data...")
 def load_company_data() -> pd.DataFrame:
-    """Load all company data."""
+    """Load all company data (cached). Replace with your data source."""
     return generate_company_data(days=90)
 
 
@@ -261,9 +262,6 @@ def render_company_dialog(
 # Page Layout
 # =============================================================================
 
-# Load data
-all_data = load_company_data()
-
 st.markdown("# :material/business: Company Analytics")
 st.caption("Track company adoption - usage, growth trends, and account details.")
 
@@ -312,23 +310,6 @@ elif "Top gainers" in (sort_mode or ""):
 else:
     sort_by = "total_credits"
 
-# Get filtered data
-leaderboard = aggregate_companies(
-    all_data,
-    days=days_filter,
-    account_types=account_types,
-    sort_by=sort_by,
-)
-
-if leaderboard.empty:
-    st.warning("No company data found for the selected filters.")
-    st.stop()
-
-
-# Convert columns to lists for MultiselectColumn display (shows nice colored chips)
-for col in ["account_type", "region", "segment"]:
-    leaderboard[col] = leaderboard[col].apply(_to_list)
-
 # Companies dataframe
 with st.container(border=True):
     # Guard against None: segmented_control returns None when deselected.
@@ -336,6 +317,22 @@ with st.container(border=True):
         timeframe.lower() if timeframe and timeframe != "All time" else "all time"
     )
     st.markdown(f"**Companies — {timeframe_text}**")
+
+    all_data = load_company_data()
+    leaderboard = aggregate_companies(
+        all_data,
+        days=days_filter,
+        account_types=account_types,
+        sort_by=sort_by,
+    )
+
+    if leaderboard.empty:
+        st.warning("No company data found for the selected filters.")
+        st.stop()
+
+    # Convert columns to lists for MultiselectColumn display (colored chips)
+    for col in ["account_type", "region", "segment"]:
+        leaderboard[col] = leaderboard[col].apply(_to_list)
 
     # Selection dataframe with cell-click support
     selection = st.dataframe(

@@ -60,8 +60,8 @@
     "react-dom": "^18.2.0",
     "typescript": "^6.0.3",
     "typesync": "^0.14.3",
-    "vite": "^8.0.16",
-    "vite-plugin-dts": "^5.0.1",
+    "vite": "^8.1.0",
+    "vite-plugin-dts": "^5.0.3",
     "vitest": "^4.1.9"
   },
   "resolutions": {

@@ -20,6 +20,10 @@ import {
   getOverlayZIndex,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
+import { convertRemToPx } from "~lib/theme/utils"
+
+/** Pixel offset between a column menu panel and its anchor element. */
+export const COLUMN_MENU_OFFSET = convertRemToPx("0.375rem")
 
 /**
  * Wrapper div that gives floating-ui a measurable bounding rect for sub-menu
@@ -177,18 +181,28 @@ export const StyledMenuList = styled.div(({ theme }) => ({
   paddingBottom: theme.spacing.threeXS,
   paddingLeft: theme.spacing.xs,
   paddingRight: theme.spacing.xs,
-  maxWidth: "10rem",
+  // No explicit minWidth: the menu shrink-wraps to its content (floored by the
+  // item minWidth) so short menus keep their compact default size. The wider
+  // maxWidth lets the menu grow for longer, non-wrapping labels.
+  maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,
 }))
 
 interface StyledMenuListItemProps {
   isActive?: boolean
   hasSubmenu?: boolean
+  /**
+   * Allow the label to wrap onto multiple lines. Defaults to `false` (single
+   * line) since menu labels are typically short. Menus with user-provided
+   * labels (e.g. ButtonActionMenu) opt into wrapping to avoid horizontal
+   * overflow for long labels.
+   */
+  allowWrap?: boolean
 }
 /**
  * A styled menu list item component used by the column menu.
  */
 export const StyledMenuListItem = styled.div<StyledMenuListItemProps>(
-  ({ theme, isActive, hasSubmenu }) => ({
+  ({ theme, isActive, hasSubmenu, allowWrap }) => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "flex-start",
@@ -215,6 +229,7 @@ export const StyledMenuListItem = styled.div<StyledMenuListItemProps>(
       boxShadow: theme.shadows.focusRing,
     },
     minWidth: theme.sizes.minMenuWidth,
+    whiteSpace: allowWrap ? "normal" : "nowrap",
     // If the submenu is activated, we need to place the menu icon & label to the left
     // and the submenu indicator to the right:
     ...(hasSubmenu && {

@@ -230,6 +230,7 @@ function DataFrame({
     canSort,
     canSearch,
     canExportCsv,
+    canShowColumnStatistics,
     canEdit,
     canAddRows,
     canDeleteRows,
@@ -719,6 +720,13 @@ function DataFrame({
       ? true
       : false
 
+  // The search overlay may only be open while search is actually enabled.
+  // Deriving it from `canSearch` ensures the overlay is hidden (instead of
+  // getting stuck open) if the table becomes empty while search is active,
+  // since both the toolbar search button and the Ctrl/Cmd+F shortcut are
+  // disabled in that case.
+  const isSearchOpen = canSearch && showSearch
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
@@ -977,14 +985,18 @@ function DataFrame({
           // Search needs to be activated manually, to support search
           // via the toolbar:
           onKeyDown={event => {
-            if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+            if (
+              canSearch &&
+              (event.ctrlKey || event.metaKey) &&
+              event.key === "f"
+            ) {
               setShowSearch(cv => !cv)
               event.stopPropagation()
               event.preventDefault()
             }
           }}
-          showSearch={showSearch}
-          searchResults={!showSearch ? [] : undefined}
+          showSearch={isSearchOpen}
+          searchResults={!isSearchOpen ? [] : undefined}
           onSearchClose={() => {
             setShowSearch(false)
             clearTooltip()
@@ -1207,7 +1219,7 @@ function DataFrame({
             left={showMenu.headerBounds.x + showMenu.headerBounds.width}
             column={originalColumns[showMenu.columnIdx]}
             data={data}
-            isEditable={editingMode !== DataframeProto.EditingMode.READ_ONLY}
+            canShowColumnStatistics={canShowColumnStatistics}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
               canSort

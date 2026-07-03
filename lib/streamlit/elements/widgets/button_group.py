@@ -57,7 +57,12 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import BindOption, get_session_state, register_widget
+from streamlit.runtime.state import (
+    BindOption,
+    PersistStateOption,
+    get_session_state,
+    register_widget,
+)
 from streamlit.string_util import extract_leading_icon
 
 if TYPE_CHECKING:
@@ -335,6 +340,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V: ...
     # 2. required=True without default -> V | None
     @overload
@@ -356,6 +362,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 3. Single-select (default, required=False) -> V | None
     @overload
@@ -377,6 +384,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select -> list[V]
     @overload
@@ -398,6 +406,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V]: ...
     @gather_metrics("pills")
     def pills(
@@ -418,6 +427,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
         r"""Display a pills widget.
 
@@ -575,6 +585,21 @@ class ButtonGroupMixin:
             repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
             are deduplicated.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         list of V, V, or None
@@ -645,6 +670,7 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            persist_state=persist_state,
         )
 
     # segmented_control overloads:
@@ -668,6 +694,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V: ...
     # 2. required=True without default -> V | None
     @overload
@@ -689,6 +716,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 3. Single-select (default, required=False) -> V | None
     @overload
@@ -710,6 +738,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select -> list[V]
     @overload
@@ -731,6 +760,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V]: ...
 
     @gather_metrics("segmented_control")
@@ -752,6 +782,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
         r"""Display a segmented control widget.
 
@@ -909,6 +940,21 @@ class ButtonGroupMixin:
             repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
             are deduplicated.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         list of V, V, or None
@@ -982,6 +1028,7 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            persist_state=persist_state,
         )
 
     @gather_metrics("_internal_button_group")
@@ -1004,6 +1051,7 @@ class ButtonGroupMixin:
         help: str | None = None,
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -1150,6 +1198,7 @@ class ButtonGroupMixin:
             width=width,
             options_format_func=actual_format_func,
             bind=bind,
+            persist_state=persist_state,
             string_formatted_options=formatted_options,
             stale_fallback_container=_stale_fallback_container,
         )
@@ -1188,6 +1237,7 @@ class ButtonGroupMixin:
         width: Width = "content",
         options_format_func: Callable[[Any], str] | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         string_formatted_options: list[str] | None = None,
         stale_fallback_container: list[bool] | None = None,
     ) -> RegisterWidgetResult[T]:
@@ -1332,6 +1382,7 @@ class ButtonGroupMixin:
             ctx=ctx,
             value_type="string_array_value",
             bind=bind,
+            persist_state=persist_state,
             clearable=True,
             formatted_options=string_formatted_options,
             max_array_length=1 if selection_mode == "single" else None,
