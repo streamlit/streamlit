@@ -35,6 +35,7 @@ from streamlit.errors import (
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from streamlit.runtime.state.widgets import register_widget_from_metadata
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -590,6 +591,22 @@ class SliderBindQueryParamsTest(DeltaGeneratorTestCase):
         """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
         with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
             st.slider("the label", key="my_key", bind="invalid-value")
+
+    def test_persist_state_passed_to_metadata(self) -> None:
+        """Test that persist_state is threaded onto the widget's WidgetMetadata."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched:
+            st.slider("the label", key="my_key", persist_state="session")
+
+        metadata = patched.call_args[0][0]
+        assert metadata.persist_state == "session"
+
+    def test_persist_state_without_key_raises(self) -> None:
+        """Test that persist_state without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.slider("the label", persist_state="session")
 
     def test_bind_with_int_slider(self):
         """Test that bind works with integer slider."""

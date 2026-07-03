@@ -14,6 +14,7 @@
 
 from streamlit.runtime.state.common import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -34,6 +35,7 @@ from streamlit.runtime.state.widgets import register_widget
 __all__ = [
     "SCRIPT_RUN_WITHOUT_ERRORS_KEY",
     "BindOption",
+    "PersistStateOption",
     "QueryParamsProxy",
     "SafeSessionState",
     "SessionState",
