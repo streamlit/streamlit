@@ -227,10 +227,12 @@ function hasReadableContent(text: string): boolean {
   return words.length >= 3
 }
 
+
 function captureTargetContent(
   targetKey: string | null,
   lensRect?: DOMRect
-): Promise<string | null> {
+): string | null {
+
   if (targetKey) {
     const targetEl = document.querySelector(
       `[data-st-key="${CSS.escape(targetKey)}"]`
