@@ -1445,6 +1445,31 @@ describe("AppRoot", () => {
     })
   })
 
+  describe("AppRoot.getActiveIds", () => {
+    it("returns fragment ids for fragments rendered in the tree", () => {
+      const blockDelta = makeProto(DeltaProto, {
+        addBlock: { vertical: {}, allowEmpty: true },
+        fragmentId: "my_fragment",
+      })
+      const elementDelta = makeProto(DeltaProto, {
+        newElement: { text: { body: "fragment_text" } },
+        fragmentId: "my_fragment",
+      })
+      const root = ROOT.applyDelta(
+        "session_id",
+        blockDelta,
+        forwardMsgMetadata([0, 2])
+      ).applyDelta("session_id", elementDelta, forwardMsgMetadata([0, 2, 0]))
+
+      const { fragmentIds } = root.getActiveIds()
+      expect(fragmentIds.has("my_fragment")).toBe(true)
+    })
+
+    it("returns an empty fragment id set when nothing uses fragments", () => {
+      expect(ROOT.getActiveIds().fragmentIds.size).toBe(0)
+    })
+  })
+
   describe("AppRoot.getElements", () => {
     it("returns all elements using ElementsSetVisitor", () => {
       // We have elements at main.[0] and main.[1, 0]

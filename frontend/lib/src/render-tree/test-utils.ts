@@ -38,7 +38,8 @@ export const FAKE_SCRIPT_HASH = "fake_script_hash"
 export function text(
   textArg: string,
   scriptRunId = NO_SCRIPT_RUN_ID,
-  elementHash?: string
+  elementHash?: string,
+  fragmentId?: string
 ): ElementNode {
   const element = makeProto(Element, { text: { body: textArg } })
   return new ElementNode(
@@ -46,7 +47,7 @@ export function text(
     ForwardMsgMetadata.create(),
     scriptRunId,
     FAKE_SCRIPT_HASH,
-    undefined,
+    fragmentId,
     elementHash
   )
 }
@@ -80,13 +81,15 @@ export function textInput(
 /** Create a BlockNode with the given properties. */
 export function block(
   children: AppNode[] = [],
-  scriptRunId = NO_SCRIPT_RUN_ID
+  scriptRunId = NO_SCRIPT_RUN_ID,
+  fragmentId?: string
 ): BlockNode {
   return new BlockNode(
     FAKE_SCRIPT_HASH,
     children,
     makeProto(BlockProto, {}),
-    scriptRunId
+    scriptRunId,
+    fragmentId
   )
 }
 

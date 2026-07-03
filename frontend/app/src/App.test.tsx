@@ -3911,6 +3911,139 @@ describe("App", () => {
         },
       })
     })
+
+    it("does not accumulate duplicate timers when a fragment re-registers its auto-rerun", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        // Register the same fragment twice, as happens when a run_every
+        // fragment re-renders.
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "myFragmentId",
+        })
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(1000)
+      })
+
+      // Only one interval should be active despite two registrations; without
+      // deduping, two timers would each fire and send two messages per tick.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(1)
+    })
+
+    it("stops a nested fragment's auto-rerun once it is removed, but keeps sibling timers", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // Full run: a top-level run_every fragment ("standalone") plus a nested
+      // run_every fragment ("nested") rendered inside a parent fragment.
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage(
+        "delta",
+        {
+          type: "addBlock",
+          addBlock: { vertical: {} },
+          fragmentId: "standalone",
+        },
+        { deltaPath: [0, 0] }
+      )
+      sendForwardMessage(
+        "delta",
+        { type: "addBlock", addBlock: { vertical: {} }, fragmentId: "parent" },
+        { deltaPath: [0, 1] }
+      )
+      sendForwardMessage(
+        "delta",
+        { type: "addBlock", addBlock: { vertical: {} }, fragmentId: "nested" },
+        { deltaPath: [0, 1, 0] }
+      )
+      sendForwardMessage("autoRerun", {
+        interval: 1.0,
+        fragmentId: "standalone",
+      })
+      sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "nested" })
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      type SentRerun = { fragmentId?: string; isAutoRerun?: boolean }
+      const autoRerunFragmentIdsSince = (
+        fromIndex: number
+      ): (string | undefined)[] => {
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        const calls = connectionManager.sendMessage.mock.calls as Array<
+          [{ rerunScript?: SentRerun }]
+        >
+        return calls
+          .slice(fromIndex)
+          .map(call => call[0].rerunScript)
+          .filter((rerunScript): rerunScript is SentRerun =>
+            Boolean(rerunScript?.isAutoRerun)
+          )
+          .map(rerunScript => rerunScript.fragmentId)
+      }
+
+      // Both timers are active and tick.
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+      expect(new Set(autoRerunFragmentIdsSince(0))).toEqual(
+        new Set(["standalone", "nested"])
+      )
+
+      // Fragment-only rerun of the parent that no longer renders the nested
+      // fragment (mirrors unchecking a checkbox that hides it).
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBeforeHide = connectionManager.sendMessage.mock.calls.length
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        scriptRunId: "run_b",
+        fragmentIdsThisRun: ["parent"],
+      })
+      sendForwardMessage(
+        "delta",
+        { type: "addBlock", addBlock: { vertical: {} }, fragmentId: "parent" },
+        { deltaPath: [0, 1] }
+      )
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+      )
+
+      act(() => {
+        vi.advanceTimersByTime(3000)
+      })
+
+      const idsAfterHide = autoRerunFragmentIdsSince(callsBeforeHide)
+      // The standalone timer keeps ticking; the nested one has been cleared.
+      expect(idsAfterHide.length).toBeGreaterThan(0)
+      expect(idsAfterHide).not.toContain("nested")
+      expect(idsAfterHide.every(id => id === "standalone")).toBe(true)
+    })
   })
 
   describe("App.requestFileURLs", () => {

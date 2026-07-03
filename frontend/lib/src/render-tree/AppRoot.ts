@@ -392,14 +392,17 @@ export class AppRoot {
   }
 
   /**
-   * Return all active element IDs and block IDs in the tree.
+   * Return all active element IDs, block IDs, and fragment IDs in the tree.
    * Block IDs are collected from blocks that have a stable identity
    * (e.g. keyed layout containers), and are needed to prevent
-   * elementStates entries from being garbage-collected.
+   * elementStates entries from being garbage-collected. Fragment IDs identify
+   * the fragments that are currently rendered, which is used to detect
+   * fragments that have been removed (e.g. to stop orphaned auto-rerun timers).
    */
   public getActiveIds(): {
     elements: Set<Element>
     blockIds: Set<string>
+    fragmentIds: Set<string>
   } {
     const visitor = new ElementsSetVisitor()
 
@@ -408,7 +411,11 @@ export class AppRoot {
     this.event.accept(visitor)
     this.bottom.accept(visitor)
 
-    return { elements: visitor.elements, blockIds: visitor.blockIds }
+    return {
+      elements: visitor.elements,
+      blockIds: visitor.blockIds,
+      fragmentIds: visitor.fragmentIds,
+    }
   }
 
   private addElement(

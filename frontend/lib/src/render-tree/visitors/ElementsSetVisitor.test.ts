@@ -232,6 +232,41 @@ describe("ElementsSetVisitor", () => {
     })
   })
 
+  describe("fragmentIds collection", () => {
+    it("collects fragment ids from block and element nodes", () => {
+      const fragmentElement = text("child", undefined, undefined, "fragment1")
+      const fragmentBlock = block([fragmentElement], undefined, "fragment2")
+      const visitor = new ElementsSetVisitor()
+
+      visitor.visitBlockNode(fragmentBlock)
+
+      expect(visitor.fragmentIds.size).toBe(2)
+      expect(visitor.fragmentIds.has("fragment1")).toBe(true)
+      expect(visitor.fragmentIds.has("fragment2")).toBe(true)
+    })
+
+    it("does not collect fragment ids from nodes without a fragment id", () => {
+      const noFragmentBlock = block([text("child")])
+      const visitor = new ElementsSetVisitor()
+
+      visitor.visitBlockNode(noFragmentBlock)
+
+      expect(visitor.fragmentIds.size).toBe(0)
+    })
+
+    it("deduplicates repeated fragment ids", () => {
+      const child1 = text("child1", undefined, undefined, "fragment1")
+      const child2 = text("child2", undefined, undefined, "fragment1")
+      const fragmentBlock = block([child1, child2], undefined, "fragment1")
+      const visitor = new ElementsSetVisitor()
+
+      visitor.visitBlockNode(fragmentBlock)
+
+      expect(visitor.fragmentIds.size).toBe(1)
+      expect(visitor.fragmentIds.has("fragment1")).toBe(true)
+    })
+  })
+
   describe("performance and mutability", () => {
     it("uses the same set instance throughout", () => {
       const element1 = text("first")

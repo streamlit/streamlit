@@ -235,7 +235,6 @@ interface State {
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
-  autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
   scriptChangedOnDisk: boolean
   // Whether the framework "install skills" nudge is currently shown. Set once
@@ -309,6 +308,15 @@ export class App extends PureComponent<Props, State> {
   // we have received a NewSession message after the latest rerun request.
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
+
+  // Active `run_every` auto-rerun interval timers, keyed by fragment id. These
+  // are imperative resources (setInterval handles), so they live outside of
+  // React state. Keying by fragment id lets us dedupe timers when a fragment
+  // re-registers and stop a fragment's timer once it is no longer rendered.
+  private readonly autoRerunIntervals: Map<
+    string,
+    ReturnType<typeof setInterval>
+  > = new Map()
 
   // Whether the skills-install nudge has been shown this page load.
   // `handleInitialization` re-runs on websocket reconnect, so this guards
@@ -385,7 +393,6 @@ export class App extends PureComponent<Props, State> {
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
-      autoReruns: [],
       inputsDisabled: false,
       navigationPosition: Navigation.Position.SIDEBAR,
       scriptChangedOnDisk: false,
@@ -922,7 +929,7 @@ export class App extends PureComponent<Props, State> {
         // Script is using fragments (fragments in last run or
         // fragment auto-reruns configured):
         this.state.fragmentIdsThisRun.length > 0 ||
-        this.state.autoReruns.length > 0
+        this.autoRerunIntervals.size > 0
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
@@ -1231,15 +1238,19 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
+    const { fragmentId } = autoRerun
+
+    // A `run_every` fragment re-registers its auto-rerun every time it renders.
+    // Clear any existing timer for this fragment first so that repeated renders
+    // don't accumulate duplicate intervals (which would multiply the rerun rate
+    // and keep firing after the fragment is gone).
+    this.clearAutoRerunInterval(fragmentId)
+
     const intervalId = setInterval(() => {
-      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId, true)
+      this.widgetMgr.sendUpdateWidgetsMessage(fragmentId, true)
     }, autoRerun.interval * 1000)
 
-    this.setState((prevState: State) => {
-      return {
-        autoReruns: [...prevState.autoReruns, intervalId],
-      }
-    })
+    this.autoRerunIntervals.set(fragmentId, intervalId)
   }
 
   /**
@@ -1847,7 +1858,8 @@ export class App extends PureComponent<Props, State> {
    * use useEffect and remove this suppress entirely.
    */
   private removeInactiveWidgetState(): void {
-    const { elements, blockIds } = this.state.elements.getActiveIds()
+    const { elements, blockIds, fragmentIds } =
+      this.state.elements.getActiveIds()
     const activeIds = new Set([
       ...Array.from(elements)
         .map(element => getElementId(element))
@@ -1855,6 +1867,9 @@ export class App extends PureComponent<Props, State> {
       ...blockIds,
     ])
     this.widgetMgr.removeInactive(activeIds)
+    // Stop auto-rerun timers for fragments that were pruned from the tree in
+    // this run (e.g. a nested `run_every` fragment hidden by its parent).
+    this.cleanupStaleAutoReruns(fragmentIds)
   }
 
   /**
@@ -1966,10 +1981,42 @@ export class App extends PureComponent<Props, State> {
    * lead to issues, e.g. when a new full app-rerun session is started or the active page changed.
    */
   cleanupAutoReruns = (): void => {
-    this.state.autoReruns.forEach((value: NodeJS.Timeout) => {
-      clearInterval(value)
+    this.autoRerunIntervals.forEach(intervalId => {
+      clearInterval(intervalId)
     })
-    this.setState({ autoReruns: [] })
+    this.autoRerunIntervals.clear()
+  }
+
+  /**
+   * Clear the auto-rerun interval for a single fragment, if one exists.
+   */
+  private clearAutoRerunInterval(fragmentId: string): void {
+    const intervalId = this.autoRerunIntervals.get(fragmentId)
+    if (intervalId !== undefined) {
+      clearInterval(intervalId)
+      this.autoRerunIntervals.delete(fragmentId)
+    }
+  }
+
+  /**
+   * Stop auto-rerun timers for fragments that are no longer rendered.
+   *
+   * A nested `run_every` fragment keeps its interval running on the frontend
+   * even after an ancestor stops rendering it, because a fragment-only rerun
+   * does not reset every timer (unlike a full rerun). Once such a fragment's
+   * subtree has been pruned from the render tree, its timer would otherwise
+   * keep sending stale auto-rerun requests. We therefore clear any timer whose
+   * fragment id is no longer present in the tree.
+   */
+  private cleanupStaleAutoReruns(activeFragmentIds: Set<string>): void {
+    if (this.autoRerunIntervals.size === 0) {
+      return
+    }
+    this.autoRerunIntervals.forEach((_intervalId, fragmentId) => {
+      if (!activeFragmentIds.has(fragmentId)) {
+        this.clearAutoRerunInterval(fragmentId)
+      }
+    })
   }
 
   /**

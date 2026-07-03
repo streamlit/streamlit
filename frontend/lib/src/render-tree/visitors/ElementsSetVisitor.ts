@@ -23,13 +23,16 @@ import { TransientNode } from "~lib/render-tree/TransientNode"
 import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 
 /**
- * A visitor that collects all Elements and stable block IDs from an AppNode
- * tree.
+ * A visitor that collects all Elements, stable block IDs, and active fragment
+ * IDs from an AppNode tree.
  *
  * - `elements`: all Element protos found in ElementNodes.
  * - `blockIds`: IDs from BlockNodes that have a stable identity (e.g. keyed
  *   layout containers). These are used to prevent `elementStates` entries
  *   from being garbage-collected.
+ * - `fragmentIds`: IDs of every fragment that currently has a node in the tree.
+ *   These are used to detect fragments that are no longer rendered (e.g. to
+ *   stop orphaned `run_every` auto-rerun timers).
  *
  * This visitor uses mutable Sets for performance, accumulating results
  * as it traverses the tree. The visitor methods return the element Set
@@ -42,25 +45,34 @@ import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.in
  * rootNode.accept(visitor)
  * const elements = visitor.elements
  * const blockIds = visitor.blockIds
+ * const fragmentIds = visitor.fragmentIds
  * ```
  */
 export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
   public readonly elements: Set<Element>
   public readonly blockIds: Set<string>
+  public readonly fragmentIds: Set<string>
 
   constructor() {
     this.elements = new Set<Element>()
     this.blockIds = new Set<string>()
+    this.fragmentIds = new Set<string>()
   }
 
   visitElementNode(node: ElementNode): Set<Element> {
     this.elements.add(node.element)
+    if (node.fragmentId) {
+      this.fragmentIds.add(node.fragmentId)
+    }
     return this.elements
   }
 
   visitBlockNode(node: BlockNode): Set<Element> {
     if (node.deltaBlock?.id) {
       this.blockIds.add(node.deltaBlock.id)
+    }
+    if (node.fragmentId) {
+      this.fragmentIds.add(node.fragmentId)
     }
     for (const child of node.children) {
       child.accept(this)
