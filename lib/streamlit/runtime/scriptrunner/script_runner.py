@@ -710,6 +710,10 @@ class ScriptRunner:
                             rerun_data.widget_states
                         )
 
+                    # A rerun queued by a widget callback (e.g. st.rerun(target=...))
+                    # must preempt this run before the body executes.
+                    self._maybe_handle_execution_control_request()
+
                     ctx.on_script_start()
 
                     if fragment_ids_this_run:

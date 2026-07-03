@@ -39,6 +39,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
     ThreadState,
     get_script_run_ctx,
 )
@@ -334,11 +335,10 @@ class WStates(MutableMapping[str, Any]):
         args = metadata.callback_args or ()
         kwargs = metadata.callback_kwargs or {}
 
-        ctx = get_script_run_ctx()
-        if ctx and metadata.fragment_id is not None:
-            with ThreadState.scoped(in_fragment_callback=True):
-                callback(*args, **kwargs)
-        else:
+        with ThreadState.scoped(
+            run_location=RunLocation.CALLBACK,
+            fragment_id=metadata.fragment_id,
+        ):
             callback(*args, **kwargs)
 
 
@@ -722,19 +722,15 @@ class SessionState:
         from streamlit.runtime.scriptrunner import RerunException
 
         ctx = get_script_run_ctx()
-        if ctx and cb_metadata.fragment_id is not None:
-            with ThreadState.scoped(in_fragment_callback=True):
-                try:
-                    callback_fn(*cb_args, **cb_kwargs)
-                except RerunException as e:
-                    if ctx.script_requests:
-                        ctx.script_requests.request_rerun(e.rerun_data)
-        else:
-            try:
+        try:
+            with ThreadState.scoped(
+                run_location=RunLocation.CALLBACK,
+                fragment_id=cb_metadata.fragment_id,
+            ):
                 callback_fn(*cb_args, **cb_kwargs)
-            except RerunException as e:
-                if ctx and ctx.script_requests:
-                    ctx.script_requests.request_rerun(e.rerun_data)
+        except RerunException as e:
+            if ctx and ctx.script_requests:
+                ctx.script_requests.request_rerun(e.rerun_data)
 
     def _dispatch_trigger_callbacks(
         self,

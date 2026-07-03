@@ -52,7 +52,10 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
+    ThreadState,
+)
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -2228,3 +2231,109 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
                 _check_not_parallel_worker("@st.dialog")
 
         assert ThreadState.get().is_parallel_worker is True
+
+
+# --------------------------------------------------------------------------- #
+# RunLocation and multi-call-site tests                                        #
+# --------------------------------------------------------------------------- #
+
+
+def test_run_location_is_fragment_inside_wrapped_fragment() -> None:
+    """run_location is FRAGMENT while executing inside a @st.fragment body."""
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_storage = MemoryFragmentStorage()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.cursors = {}
+
+    captured_location: RunLocation | None = None
+
+    @fragment
+    def my_fragment() -> None:
+        nonlocal captured_location
+        captured_location = ThreadState.get().run_location
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        patch("streamlit.container"),
+    ):
+        ThreadState.initialize()
+        my_fragment()
+
+    assert captured_location is RunLocation.FRAGMENT
+
+
+def test_run_location_is_main_script_outside_fragment() -> None:
+    """run_location is MAIN_SCRIPT when ThreadState is at its default."""
+    ThreadState.initialize()
+    assert ThreadState.get().run_location is RunLocation.MAIN_SCRIPT
+
+
+def test_in_fragment_callback_derived_from_run_location() -> None:
+    """in_fragment_callback is True only when CALLBACK and fragment_id is set."""
+    ThreadState.initialize(run_location=RunLocation.CALLBACK, fragment_id="frag")
+    assert ThreadState.get().in_fragment_callback is True
+
+    # CALLBACK without a fragment_id is not a fragment callback.
+    ThreadState.initialize(run_location=RunLocation.CALLBACK, fragment_id=None)
+    assert ThreadState.get().in_fragment_callback is False
+
+    # FRAGMENT run_location is not a callback.
+    ThreadState.initialize(run_location=RunLocation.FRAGMENT, fragment_id="frag")
+    assert ThreadState.get().in_fragment_callback is False
+
+    # MAIN_SCRIPT run_location is not a callback.
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT, fragment_id="frag")
+    assert ThreadState.get().in_fragment_callback is False
+
+
+def test_fragment_key_multi_call_site_no_duplicate_key_error() -> None:
+    """Calling @st.fragment(key=...) from multiple sites must not raise DuplicateElementKey.
+
+    Removing key= from the auto-created container means that the two call sites
+    emit plain (keyless) containers, so no duplicate-key collision occurs.
+    """
+    storage = MemoryFragmentStorage()
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_storage = storage
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.cursors = {}
+
+    container_call_count = 0
+
+    class FakeContainerCtx:
+        def __enter__(self) -> FakeContainerCtx:  # noqa: PYI034
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            pass
+
+    def fake_container(**kwargs: object) -> FakeContainerCtx:
+        nonlocal container_call_count
+        # The key= argument must NOT be passed (Change 4 fix).
+        assert "key" not in kwargs, (
+            "container() must not receive key= from fragment wrapper"
+        )
+        container_call_count += 1
+        return FakeContainerCtx()
+
+    @fragment(key="shared_fragment")
+    def shared_frag() -> None:
+        pass
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        patch("streamlit.container", side_effect=fake_container),
+    ):
+        ThreadState.initialize()
+        # Simulate two call sites by calling the same keyed fragment twice.
+        # Neither call should raise a DuplicateElementKey exception because
+        # the container is now created without key=.
+        shared_frag()
+        shared_frag()
+
+    # Both calls must have created a container without raising.
+    assert container_call_count == 2

@@ -34,6 +34,7 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
     ThreadState,
 )
 
@@ -67,15 +68,22 @@ def stop() -> NoReturn:  # type: ignore[misc] # ty: ignore[invalid-return-type]
         st.empty()
 
 
+_TARGET_ALLOWED_LOCATIONS: frozenset[RunLocation] = frozenset({RunLocation.CALLBACK})
+
+
 def _new_fragment_id_queue(
     ctx: ScriptRunContext,
     scope: Literal["app", "fragment"],
     target: str | Sequence[str] | None = None,
 ) -> list[str]:
     if target is not None:
-        # Targeted reruns address fragments by name and may be issued from
-        # anywhere (a callback, the main script, or another fragment), so they
-        # do not depend on the current fragment context.
+        ts = ThreadState.get()
+        if ts.run_location not in _TARGET_ALLOWED_LOCATIONS:
+            raise StreamlitAPIException(
+                "``st.rerun(target=...)`` can only be called from a widget callback "
+                "(e.g. ``on_change`` / ``on_click``). Calling it from the main script "
+                "body or a fragment body would abort the current run."
+            )
         return ctx.fragment_storage.resolve_target(target)
 
     if scope == "app":
@@ -174,10 +182,12 @@ def rerun(  # type: ignore[misc]
     target : str, list of str, or None
         The ``key`` of a fragment (or a list of keys) to rerun. Set the key with
         ``@st.fragment(key=...)``. When ``target`` is set, Streamlit reruns only
-        the named fragment(s) — in one ordered pass — instead of the full app,
-        and the call may be made from anywhere (a callback, the main script, or
-        another fragment). If this is ``None`` (default), ``scope`` determines
-        what reruns.
+        the named fragment(s) — in one ordered pass — instead of the full app.
+        This must be called from a widget callback (e.g. ``on_change`` or
+        ``on_click``); calling it from the main script body or a fragment body
+        raises ``StreamlitAPIException``. If ``target`` is an empty list,
+        ``st.rerun`` is a no-op. If this is ``None`` (default), ``scope``
+        determines what reruns.
 
     """
 
@@ -185,6 +195,11 @@ def rerun(  # type: ignore[misc]
         raise StreamlitAPIException(
             f"'{scope}'is not a valid rerun scope. Valid scopes are 'app' and 'fragment'."
         )
+
+    # An explicitly empty target list means "rerun nothing"; do not degrade to
+    # a full-app rerun just because the caller's list happened to be empty.
+    if target is not None and not isinstance(target, str) and not target:
+        return  # type: ignore[misc]  # ty: ignore[invalid-return-type]
 
     ctx = get_script_run_ctx()
 

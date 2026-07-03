@@ -26,7 +26,10 @@ from streamlit.commands.execution_control import (
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.navigation.page import StreamlitPage
 from streamlit.runtime.scriptrunner import RerunData
-from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
+    ThreadState,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -71,14 +74,37 @@ class NewFragmentIdQueueTest(unittest.TestCase):
         ]
 
     def test_target_delegates_to_resolve_target(self):
-        """When target is set, _new_fragment_id_queue delegates to fragment_storage.resolve_target."""
+        """When target is set from a callback, _new_fragment_id_queue delegates to resolve_target."""
         ctx = MagicMock()
         ctx.fragment_storage.resolve_target.return_value = ["frag_id_1", "frag_id_2"]
+        ThreadState.initialize(run_location=RunLocation.CALLBACK)
 
         result = _new_fragment_id_queue(ctx, scope="app", target="my_fragment")
 
         ctx.fragment_storage.resolve_target.assert_called_once_with("my_fragment")
         assert result == ["frag_id_1", "frag_id_2"]
+
+    def test_target_raises_outside_callback(self):
+        """target= raises StreamlitAPIException when called from the main script body."""
+        ctx = MagicMock()
+        ctx.fragment_storage.resolve_target.return_value = ["frag_id_1"]
+        ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+        with pytest.raises(
+            StreamlitAPIException, match="can only be called from a widget callback"
+        ):
+            _new_fragment_id_queue(ctx, scope="app", target="my_fragment")
+
+    def test_target_raises_from_fragment_body(self):
+        """target= raises StreamlitAPIException when called from a fragment body."""
+        ctx = MagicMock()
+        ctx.fragment_storage.resolve_target.return_value = ["frag_id_1"]
+        ThreadState.initialize(run_location=RunLocation.FRAGMENT)
+
+        with pytest.raises(
+            StreamlitAPIException, match="can only be called from a widget callback"
+        ):
+            _new_fragment_id_queue(ctx, scope="app", target="my_fragment")
 
     def test_target_unknown_name_propagates_exception(self):
         """resolve_target raising StreamlitAPIException propagates from _new_fragment_id_queue."""
@@ -86,6 +112,7 @@ class NewFragmentIdQueueTest(unittest.TestCase):
         ctx.fragment_storage.resolve_target.side_effect = StreamlitAPIException(
             "No fragment found for target 'unknown'."
         )
+        ThreadState.initialize(run_location=RunLocation.CALLBACK)
 
         with pytest.raises(StreamlitAPIException, match="No fragment found"):
             _new_fragment_id_queue(ctx, scope="app", target="unknown")
@@ -140,10 +167,11 @@ def test_st_rerun_invalid_scope_throws_error():
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
 def test_st_rerun_target_resolves_fragment_ids(patched_get_script_run_ctx):
-    """rerun(target=...) resolves the target name and marks is_fragment_scoped_rerun=True."""
+    """rerun(target=...) from a callback resolves the name and marks is_fragment_scoped_rerun=True."""
     ctx = MagicMock()
     ctx.fragment_storage.resolve_target.return_value = ["frag_id_1"]
     patched_get_script_run_ctx.return_value = ctx
+    ThreadState.initialize(run_location=RunLocation.CALLBACK)
 
     rerun(target="my_fragment")
 
@@ -160,6 +188,65 @@ def test_st_rerun_target_resolves_fragment_ids(patched_get_script_run_ctx):
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_rerun_target_raises_from_main_body(patched_get_script_run_ctx):
+    """rerun(target=...) from main script body raises StreamlitAPIException."""
+    ctx = MagicMock()
+    patched_get_script_run_ctx.return_value = ctx
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with pytest.raises(
+        StreamlitAPIException, match="can only be called from a widget callback"
+    ):
+        rerun(target="my_fragment")
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_rerun_target_raises_from_fragment_body(patched_get_script_run_ctx):
+    """rerun(target=...) from a fragment body raises StreamlitAPIException."""
+    ctx = MagicMock()
+    patched_get_script_run_ctx.return_value = ctx
+    ThreadState.initialize(run_location=RunLocation.FRAGMENT)
+
+    with pytest.raises(
+        StreamlitAPIException, match="can only be called from a widget callback"
+    ):
+        rerun(target="my_fragment")
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_rerun_target_empty_list_is_noop(patched_get_script_run_ctx):
+    """rerun(target=[]) is a no-op; request_rerun is never called."""
+    ctx = MagicMock()
+    patched_get_script_run_ctx.return_value = ctx
+    ThreadState.initialize(run_location=RunLocation.CALLBACK)
+
+    rerun(target=[])
+
+    ctx.script_requests.request_rerun.assert_not_called()
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_rerun_plain_from_callback_is_full_app_rerun(patched_get_script_run_ctx):
+    """Plain st.rerun() from a callback requests a full-app rerun (no warning)."""
+    ctx = MagicMock()
+    patched_get_script_run_ctx.return_value = ctx
+    ThreadState.initialize(run_location=RunLocation.CALLBACK)
+
+    rerun()
+
+    ctx.script_requests.request_rerun.assert_called_with(
+        RerunData(
+            query_string=ctx.query_string,
+            page_script_hash=ctx.page_script_hash,
+            fragment_id_queue=[],
+            is_fragment_scoped_rerun=False,
+            cached_message_hashes=ctx.cached_message_hashes,
+            context_info=ctx.context_info,
+        )
+    )
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
 def test_st_rerun_target_unknown_raises(patched_get_script_run_ctx):
     """rerun(target=...) propagates StreamlitAPIException for unknown names."""
     ctx = MagicMock()
@@ -167,6 +254,7 @@ def test_st_rerun_target_unknown_raises(patched_get_script_run_ctx):
         "No fragment found for target 'bad'."
     )
     patched_get_script_run_ctx.return_value = ctx
+    ThreadState.initialize(run_location=RunLocation.CALLBACK)
 
     with pytest.raises(StreamlitAPIException, match="No fragment found"):
         rerun(target="bad")

@@ -213,26 +213,38 @@ class ScriptRequests:
                     self._rerun_data.widget_states, new_data.widget_states
                 )
 
-                if new_data.fragment_id:
-                    # This RERUN request corresponds to a new fragment run. We append
-                    # the new fragment ID to the end of the current fragment_id_queue if
-                    # it isn't already contained in it.
-                    fragment_id_queue = [*self._rerun_data.fragment_id_queue]
+                # A full-app rerun has an empty queue and is not fragment-scoped.
+                pending_is_full_app_rerun = (
+                    not self._rerun_data.fragment_id_queue
+                    and not self._rerun_data.is_fragment_scoped_rerun
+                )
+                new_is_full_app_rerun = (
+                    not new_data.fragment_id and not new_data.fragment_id_queue
+                )
 
-                    if new_data.fragment_id not in fragment_id_queue:
-                        fragment_id_queue.append(new_data.fragment_id)
-                elif new_data.fragment_id_queue:
-                    # Merge into the pending queue so multiple targeted reruns issued during a
-                    # single interaction run in one ordered pass.
+                if pending_is_full_app_rerun or new_is_full_app_rerun:
+                    # Rule 1: a full-app rerun anywhere in the interaction trumps every
+                    # targeted or fragment rerun.  Collapse to a single full-app rerun
+                    # regardless of arrival order.
+                    fragment_id_queue: list[str] = []
+                    is_fragment_scoped_rerun = False
+                else:
+                    # Rule 2: no full-app rerun in play — accumulate every fragment /
+                    # targeted rerun into one ordered pass (deduped, order-preserving).
+                    # Preempt iff any part is fragment-scoped.
                     fragment_id_queue = [*self._rerun_data.fragment_id_queue]
-                    for fragment_id in new_data.fragment_id_queue:
+                    new_ids = (
+                        [new_data.fragment_id]
+                        if new_data.fragment_id
+                        else new_data.fragment_id_queue
+                    )
+                    for fragment_id in new_ids:
                         if fragment_id not in fragment_id_queue:
                             fragment_id_queue.append(fragment_id)
-                else:
-                    # Otherwise, this is a request to rerun the full script, so we want
-                    # to clear out any fragments we have queued to run since they'll all
-                    # be run with the full script anyway.
-                    fragment_id_queue = []
+                    is_fragment_scoped_rerun = (
+                        self._rerun_data.is_fragment_scoped_rerun
+                        or new_data.is_fragment_scoped_rerun
+                    )
 
                 self._rerun_data = RerunData(
                     query_string=new_data.query_string,
@@ -241,7 +253,7 @@ class ScriptRequests:
                     page_name=new_data.page_name,
                     fragment_id_queue=fragment_id_queue,
                     cached_message_hashes=new_data.cached_message_hashes,
-                    is_fragment_scoped_rerun=new_data.is_fragment_scoped_rerun,
+                    is_fragment_scoped_rerun=is_fragment_scoped_rerun,
                     is_auto_rerun=new_data.is_auto_rerun,
                     context_info=new_data.context_info,
                 )

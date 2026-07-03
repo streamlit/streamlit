@@ -37,6 +37,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
     ScriptRunContext,
     ThreadState,
     get_script_run_ctx,
@@ -601,13 +602,15 @@ def _fragment(
             # is established below, this will be initialized with the fragment's
             # delta path. Without this, we would inherit the delta path from the
             # parent scope.
-            with ThreadState.scoped(fragment_id=fragment_id, delta_path=None):
+            with ThreadState.scoped(
+                fragment_id=fragment_id,
+                delta_path=None,
+                run_location=RunLocation.FRAGMENT,
+            ):
                 result = None
                 with active_hash_context:
                     container_ctx = (
-                        contextlib.nullcontext()
-                        if skip_container
-                        else st.container(key=key)
+                        contextlib.nullcontext() if skip_container else st.container()
                     )
                     with container_ctx:
                         try:
@@ -785,12 +788,12 @@ def fragment(
             unless you coordinate access explicitly.
 
     key : str or None
-        An optional name for the fragment. When set, ``st.rerun(target=key)``
-        re-runs this fragment from anywhere — a callback, the main script, or
-        another fragment. If the fragment function is called from multiple
-        sites, every call site re-runs together. If this is ``None`` (default),
-        the fragment can only be re-run from within itself via
-        ``st.rerun(scope="fragment")``.
+        An optional name for the fragment. When set,
+        ``st.rerun(target=key)`` re-runs this fragment from a widget
+        callback (``on_change`` / ``on_click``). If the fragment function is
+        called from multiple sites, every call site re-runs together. If this
+        is ``None`` (default), the fragment can only be re-run from within
+        itself via ``st.rerun(scope="fragment")``.
 
     Examples
     --------
