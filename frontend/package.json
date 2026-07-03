@@ -51,7 +51,7 @@
   "packageManager": "yarn@4.13.0",
   "devDependencies": {
     "@bufbuild/buf": "^1.71.0",
-    "@eslint-react/eslint-plugin": "^5.9.5",
+    "@eslint-react/eslint-plugin": "^5.10.0",
     "@eslint/compat": "^2.1.0",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
@@ -64,7 +64,7 @@
     "concurrently": "^10.0.3",
     "eslint": "^10.6.0",
     "eslint-import-resolver-typescript": "^4.4.5",
-    "eslint-plugin-import-x": "^4.17.0",
+    "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-lodash": "^8.0.0",
     "eslint-plugin-no-relative-import-paths": "^1.6.1",
