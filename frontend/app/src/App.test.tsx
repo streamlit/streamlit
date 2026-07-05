@@ -41,7 +41,9 @@ import {
   mockEndpoints,
 } from "@streamlit/connection"
 import {
+  BackendOperationClient,
   CachedTheme,
+  CONNECTION_CLOSED_MESSAGE,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
@@ -61,6 +63,7 @@ import {
   RootStyleProvider,
   ScriptRunState,
   SessionInfo,
+  toastQueue,
   toExportedTheme,
   WidgetStateManager,
   WindowDimensionsProvider,
@@ -6820,5 +6823,373 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       )
       expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalled()
     })
+  })
+})
+
+describe("Skills install nudge", () => {
+  beforeEach(() => {
+    // Fake timers so the shared toast queue's close/exit-animation timers
+    // flush deterministically (matches the native toast tests). Date.now() is
+    // frozen, which also keeps the snooze-window math below stable.
+    vi.useFakeTimers()
+    mockWindowLocation("localhost")
+    // The nudge is gated on a non-embedded, top-level app; pin embed off so
+    // each test is explicit (the embedded case is covered by its own test).
+    vi.mocked(isEmbed).mockReturnValue(false)
+    window.localStorage.clear()
+    window.sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    // Drain any app toasts a test enqueued into the shared (module-level)
+    // queue so they can't leak into the next test, flushing exit-animation
+    // timers. (The nudge itself is no longer a queued toast.)
+    act(() => {
+      toastQueue.visibleToasts.forEach(t => toastQueue.close(t.key))
+    })
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+    vi.clearAllTimers()
+    vi.useRealTimers()
+    // Restore any prototype spies (clearAllMocks does not undo spyOn).
+    vi.restoreAllMocks()
+  })
+
+  /** Flush the install promise chain's microtasks and re-render. */
+  const flushInstall = async (): Promise<void> => {
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+  }
+
+  const sendRecommendingNewSession = (recommend = true): void => {
+    sendForwardMessage("newSession", {
+      ...NEW_SESSION_JSON,
+      initialize: {
+        ...NEW_SESSION_JSON.initialize,
+        recommendSkillsInstall: recommend,
+      },
+    })
+  }
+
+  it("shows the nudge and tracks an impression when recommended on localhost", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    sendRecommendingNewSession()
+
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+    })
+  })
+
+  it("tracks a suppressed (non-loopback) nudge without showing it", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    // Server says the nudge was eligible but suppressed because the browser
+    // isn't on a direct-loopback connection (Docker/VM/tunnel).
+    sendForwardMessage("newSession", {
+      ...NEW_SESSION_JSON,
+      initialize: {
+        ...NEW_SESSION_JSON.initialize,
+        recommendSkillsInstall: false,
+        skillsNudgeSuppressedLocality: "private",
+      },
+    })
+
+    // The nudge is not shown...
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    // ...but the connection class is recorded so we can measure the excluded
+    // (containerized/remote) slice of the agent-harness audience.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeSuppressedNonLocal:private",
+    })
+    // And no (false) impression is logged.
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+    })
+  })
+
+  it("tracks the impression only once across a reconnect", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    // Connect and show the nudge (first impression).
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendRecommendingNewSession()
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+
+    // Drop and re-establish the connection. The reconnect re-runs the
+    // first-session initialization, which must NOT re-log the impression.
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.PINGING_SERVER
+      )
+    })
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendRecommendingNewSession()
+
+    const shownImpressions = (
+      metricsManager.enqueue as ReturnType<typeof vi.fn>
+    ).mock.calls.filter(
+      ([event, payload]) =>
+        event === "menuClick" && payload?.label === "skillsNudgeShown"
+    )
+    expect(shownImpressions).toHaveLength(1)
+  })
+
+  it("does not show the nudge when the server does not recommend it", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    sendRecommendingNewSession(false)
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+    })
+  })
+
+  it("does not show the nudge when not on localhost", () => {
+    mockWindowLocation("myapp.streamlit.app")
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+  })
+
+  it("does not show the nudge in an embedded app", () => {
+    // Embedded (?embed=true) apps are chromeless and live inside someone
+    // else's page; a pinned CTA card there is inappropriate, so skip it even
+    // on localhost when the server otherwise recommends the install.
+    vi.mocked(isEmbed).mockReturnValue(true)
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+    })
+  })
+
+  it("does not show the nudge when localStorage is unavailable", () => {
+    // Fail closed: if we can't remember a snooze / "don't show again", don't
+    // nudge at all. Simulate a locked-down browser (private mode / storage
+    // disabled) by making the probe that localStorageAvailable() uses throw.
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("storage disabled")
+    })
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+  })
+
+  it("does not show the nudge once permanently dismissed", () => {
+    window.localStorage.setItem("stSkillsNudgeDismissed", "true")
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+  })
+
+  it("does not show the nudge while snoozed within the last 24h", () => {
+    window.localStorage.setItem("stSkillsNudgeSnoozedAt", String(Date.now()))
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+  })
+
+  it("shows the nudge again once the snooze window has lapsed", () => {
+    // A snooze timestamp older than the 24h window must no longer suppress it.
+    const thirtySixHoursMs = 36 * 60 * 60 * 1000
+    window.localStorage.setItem(
+      "stSkillsNudgeSnoozedAt",
+      String(Date.now() - thirtySixHoursMs)
+    )
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+  })
+
+  it("tracks install clicks", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstall",
+    })
+  })
+
+  it("tracks a successful install and shows where skills landed", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const installSpy = vi
+      .spyOn(BackendOperationClient.prototype, "requestInstallSkills")
+      .mockResolvedValue({ detail: "Installed to .agents/skills" })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    expect(screen.getByText("Skills installed")).toBeVisible()
+    expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded",
+    })
+    // The failure outcome must not be reported on success.
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+    })
+    expect(installSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("tracks a failed install and surfaces the error", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(new Error("install blew up"))
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    expect(screen.getByText("install blew up")).toBeVisible()
+    // Failure is a distinct retry state; no success confirmation shows.
+    expect(screen.getByRole("button", { name: "Retry" })).toBeVisible()
+    expect(screen.queryByText("Skills installed")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded",
+    })
+  })
+
+  it("counts a dropped-connection install separately from a failure", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(new Error(CONNECTION_CLOSED_MESSAGE))
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    // A dropped connection may mean the install actually completed, so it is
+    // tracked as a distinct outcome — not a failure (which would over-count the
+    // funnel) — and surfaced with a reassuring, retry-friendly message.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallDropped",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+    })
+    expect(screen.getByText(/Lost connection during install/)).toBeVisible()
+    expect(screen.getByRole("button", { name: "Retry" })).toBeVisible()
+  })
+
+  it("snoozes and tracks the dismiss (✕) control", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Close" }))
+    // Flush the toast's exit-animation timer so it leaves the DOM.
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeSnoozed",
+    })
+    expect(window.localStorage.getItem("stSkillsNudgeSnoozedAt")).toBeTruthy()
+  })
+
+  it("permanently dismisses and tracks Don't show again", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // Spy on the server-side marker write so we verify the dual-store dismissal:
+    // a cleared localStorage in another browser must still stay suppressed.
+    const dismissSpy = vi
+      .spyOn(BackendOperationClient.prototype, "requestDismissSkillsNudge")
+      .mockResolvedValue(undefined)
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Don't show again" }))
+    // Flush the toast's exit-animation timer so it leaves the DOM.
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeDontShowAgain",
+    })
+    // Both stores are written: the browser flag AND the server-side marker.
+    expect(window.localStorage.getItem("stSkillsNudgeDismissed")).toBe("true")
+    expect(dismissSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("stays visible while an app toast comes and goes (coexistence)", () => {
+    renderApp(getProps())
+    sendRecommendingNewSession()
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+
+    // The app fires its own st.toast. It must coexist with the nudge, not
+    // replace or suppress it — the nudge outranks transient app toasts.
+    act(() => {
+      toastQueue.add({ body: "app toast message" }, { timeout: 4000 })
+    })
+    expect(screen.getByText("app toast message")).toBeVisible()
+    // The nudge is still there alongside the app toast.
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+
+    // The app toast expires on its own timer; the persistent nudge outlives it
+    // (it never fades on a timer and is only dismissed by an explicit action).
+    act(() => {
+      vi.advanceTimersByTime(8000)
+    })
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+    expect(screen.queryByText("app toast message")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
   })
 })

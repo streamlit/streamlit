@@ -199,4 +199,62 @@ describe("BackendOperationClient", () => {
     )
     expect(client.pendingCount).toBe(0)
   })
+
+  it("sends install skills requests and resolves with the payload", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+    expect(request.installSkills).toBeTruthy()
+    expect(request.deferredFile).toBeFalsy()
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        installSkills: { detail: "" },
+      })
+    )
+
+    await expect(promise).resolves.toEqual({ detail: "" })
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("rejects install skills requests when the server reports an error", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        errorMsg: "No skills found",
+      })
+    )
+
+    await expect(promise).rejects.toThrow("No skills found")
+  })
+
+  it("sends dismiss skills nudge requests and resolves on the ack", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestDismissSkillsNudge()
+
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+    expect(request.dismissSkillsNudge).toBeTruthy()
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        dismissSkillsNudge: {},
+      })
+    )
+
+    await expect(promise).resolves.toBeTruthy()
+    expect(client.pendingCount).toBe(0)
+  })
 })

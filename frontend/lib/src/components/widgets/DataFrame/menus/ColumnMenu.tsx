@@ -30,12 +30,13 @@ import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
-import { convertRemToPx } from "~lib/theme/utils"
+import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 
 import FormattingMenu from "./FormattingMenu"
 import StatisticsMenu from "./StatisticsMenu"
 import { supportsStatistics } from "./statisticsUtils"
 import {
+  COLUMN_MENU_OFFSET,
   StyledColumnHeaderRow,
   StyledColumnMenuPanel,
   StyledColumnNameText,
@@ -116,7 +117,7 @@ function ColumnMenu({
   const { refs, floatingStyles } = useFloatingOverlay({
     open: true,
     placement: "bottom-end",
-    offsetPx: convertRemToPx("0.375rem"),
+    offsetPx: COLUMN_MENU_OFFSET,
   })
 
   // Tracks whether a pointer button is currently pressed. Used by the onBlur
@@ -139,16 +140,15 @@ function ColumnMenu({
     }
   }, [])
 
-  // Local ref for the panel — needed for click-outside detection.
-  // Merged with floating-ui's ref via a callback ref.
-  const panelRef = useRef<HTMLDivElement | null>(null)
-  const setFloatingCallback = useCallback(
-    (node: HTMLDivElement | null) => {
-      panelRef.current = node
-      refs.setFloating(node)
-    },
-    [refs]
-  )
+  const { setFloatingRef } = useOverlayDismissal({
+    isOpen: true,
+    onClose: onCloseMenu,
+    floatingSetFn: refs.setFloating,
+    excludeSelectors: [
+      '[data-testid="stDataFrameColumnFormattingMenu"]',
+      '[data-testid="stDataFrameStatisticsMenu"]',
+    ],
+  })
 
   // Disable page scrolling while the menu is open to keep the menu and
   // column header aligned. The anchor coords are static at open time, so
@@ -166,35 +166,6 @@ function ColumnMenu({
       document.removeEventListener("touchmove", preventScroll)
     }
   }, [])
-
-  // Click-outside and Escape handlers.
-  useEffect(() => {
-    const handlePointerDown = (e: PointerEvent): void => {
-      const target = e.target as Element
-      // Don't close when clicking inside a sub-menu portal.
-      if (
-        target.closest('[data-testid="stDataFrameColumnFormattingMenu"]') ||
-        target.closest('[data-testid="stDataFrameStatisticsMenu"]')
-      ) {
-        return
-      }
-      if (!panelRef.current?.contains(target)) onCloseMenu()
-    }
-
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        e.stopPropagation()
-        onCloseMenu()
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown, true)
-    document.addEventListener("keydown", handleKeyDown, true)
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown, true)
-      document.removeEventListener("keydown", handleKeyDown, true)
-    }
-  }, [onCloseMenu])
 
   const handleCopyNameToClipboard = useCallback((): void => {
     copyToClipboard(column.title)
@@ -222,7 +193,7 @@ function ColumnMenu({
       />
       <FloatingPortal>
         <StyledColumnMenuPanel
-          ref={setFloatingCallback}
+          ref={setFloatingRef}
           data-testid="stDataFrameColumnMenu"
           style={floatingStyles}
           tabIndex={-1}

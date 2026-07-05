@@ -36,6 +36,28 @@ const DEFERRED_FILE_REQUEST_TIMEOUT_MS = 180_000
 /** Timeout for lazy dataframe chunk requests (60 seconds). */
 const DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS = 60_000
 
+/**
+ * Timeout for skills-install requests (3 minutes).
+ *
+ * The default 30s is too short here: a project-mode install is fast (it just
+ * creates symlinks), but `streamlit skills` falls back to downloading the
+ * skills archive from GitHub when symlinks aren't supported (e.g. Windows
+ * without Developer Mode). That download can exceed 30s on a slow network,
+ * which would surface a spurious "install failed" in the toast while the
+ * server keeps installing. We use the same generous budget as deferred files.
+ */
+const INSTALL_SKILLS_REQUEST_TIMEOUT_MS = 180_000
+
+/**
+ * Rejection message used when pending requests are cleaned up on
+ * disconnect/session reset. Exported so callers can match on it (e.g. App's
+ * skills-install retry copy) without duplicating the literal.
+ */
+export const CONNECTION_CLOSED_MESSAGE = "Connection closed"
+
+/** Rejection message used when a request exceeds its timeout. */
+export const REQUEST_TIMED_OUT_MESSAGE = "Request timed out"
+
 /** Information about a pending request. */
 interface PendingRequest<T> {
   resolver: PromiseWithResolvers<T>
@@ -82,7 +104,10 @@ export class BackendOperationClient {
   public request<TResponse>(
     payloadField: keyof Pick<
       IBackendOperationRequest,
-      "deferredFile" | "dataframeChunk"
+      | "deferredFile"
+      | "dataframeChunk"
+      | "installSkills"
+      | "dismissSkillsNudge"
     >,
     payload: IBackendOperationRequest[typeof payloadField],
     timeoutMs?: number
@@ -166,6 +191,30 @@ export class BackendOperationClient {
   }
 
   /**
+   * Request a one-click install of the bundled Streamlit agent skills.
+   *
+   * @returns A promise that resolves with an optional outcome detail, or
+   * rejects with the server-provided error message on failure.
+   */
+  public requestInstallSkills(): Promise<{ detail?: string | null }> {
+    return this.request<{ detail?: string | null }>(
+      "installSkills",
+      {},
+      INSTALL_SKILLS_REQUEST_TIMEOUT_MS
+    )
+  }
+
+  /**
+   * Permanently dismiss the in-app "install skills" nudge. The server writes
+   * a marker so the nudge is not shown again.
+   *
+   * @returns A promise that resolves once the dismissal has been persisted.
+   */
+  public requestDismissSkillsNudge(): Promise<unknown> {
+    return this.request<unknown>("dismissSkillsNudge", {})
+  }
+
+  /**
    * Handle a response from the server. Called by App.tsx when a
    * BackendOperationResponse ForwardMsg is received.
    */
@@ -199,7 +248,7 @@ export class BackendOperationClient {
   public cleanup(): void {
     for (const [requestId, pending] of this.pendingRequests) {
       clearTimeout(pending.timeoutId)
-      pending.resolver.reject(new Error("Connection closed"))
+      pending.resolver.reject(new Error(CONNECTION_CLOSED_MESSAGE))
       LOG.debug(`Cleaned up pending request ${requestId}`)
     }
     this.pendingRequests.clear()
@@ -215,7 +264,7 @@ export class BackendOperationClient {
     if (pending) {
       LOG.warn(`Request ${requestId} (${pending.requestType}) timed out`)
       this.pendingRequests.delete(requestId)
-      pending.resolver.reject(new Error("Request timed out"))
+      pending.resolver.reject(new Error(REQUEST_TIMED_OUT_MESSAGE))
     }
   }
 
@@ -230,10 +279,11 @@ export class BackendOperationClient {
   private extractResponsePayload(
     response: IBackendOperationResponse
   ): unknown {
-    // Return the first non-null payload field
+    // Return the first recognized non-null payload field
     if (response.deferredFile) return response.deferredFile
     if (response.dataframeChunk) return response.dataframeChunk
-    // Future: Add other payload types here
+    if (response.installSkills) return response.installSkills
+    if (response.dismissSkillsNudge) return response.dismissSkillsNudge
 
     LOG.warn("Response contained no recognized payload", response)
     throw new Error("Response contained no recognized payload")

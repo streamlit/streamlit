@@ -42,6 +42,8 @@ from streamlit.runtime import caching
 from streamlit.runtime.backend_operation_handler import (
     BackendOperationDispatcher,
     DeferredFileHandler,
+    DismissSkillsNudgeHandler,
+    InstallSkillsHandler,
 )
 from streamlit.runtime.dataframe_chunk_handler import DataframeChunkHandler
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
@@ -223,6 +225,16 @@ class AppSession:
             "dataframe_chunk",
             DataframeChunkHandler(lambda: runtime.get_instance().dataframe_source_mgr),
         )
+
+        # Bind the app dir via the ScriptData (not ``self``) so the handler's
+        # closure does not capture the AppSession, which would create a
+        # reference cycle the disconnect ref-leak test guards against.
+        script_data = self._script_data
+        dispatcher.register(
+            "install_skills",
+            InstallSkillsHandler(lambda: os.path.dirname(script_data.main_script_path)),
+        )
+        dispatcher.register("dismiss_skills_nudge", DismissSkillsNudgeHandler())
 
         return dispatcher
 
@@ -865,7 +877,65 @@ class AppSession:
         imsg.is_hello = self._script_data.is_hello
         imsg.session_id = self.id
 
+        # Recommend installing the bundled agent skills when running locally
+        # with an AI agent present, no skills installed yet, and the browser on a
+        # direct-loopback connection, so the frontend can surface a one-click
+        # "install skills" nudge. ``suppressed_locality`` records (for telemetry)
+        # when the nudge was otherwise eligible but the loopback gate blocked it.
+        recommend, suppressed_locality = self._compute_skills_nudge_state()
+        imsg.recommend_skills_install = recommend
+        imsg.skills_nudge_suppressed_locality = suppressed_locality
+
         return msg
+
+    def _compute_skills_nudge_state(self) -> tuple[bool, str]:
+        """Compute the in-app skills-nudge state for the NewSession message.
+
+        Returns ``(recommend, suppressed_locality)``:
+
+        - ``recommend`` is ``True`` only when the nudge is eligible
+          (``should_show_skills_nudge``) AND the browser is connected directly
+          over loopback. The loopback requirement is an intentionally
+          conservative eligibility rule: Docker/VM/reverse-proxy/SSH-tunnel
+          setups are legitimate local dev but also where the app may be
+          shared/deployed, so we don't surface an in-app CTA there.
+        - ``suppressed_locality`` is the connection class (``"private"``,
+          ``"other"``, or ``"unknown"`` when the peer IP can't be determined)
+          when the nudge WOULD be eligible but the loopback gate blocked it,
+          else ``""`` — recorded purely so adoption telemetry can measure how
+          much of the agent-harness audience the gate excludes.
+
+        Recomputed on each NewSession rather than memoized: the heavy filesystem
+        detection is cached in ``skills`` (and invalidated when skills are
+        installed in-app), so a stale per-session value would otherwise keep
+        recommending the nudge after a successful install. Guarded so this
+        non-essential nudge can never break session creation.
+        """
+        try:
+            # Never nudge in the bundled ``streamlit hello`` demo: its script
+            # lives inside the Streamlit package, so a one-click install would
+            # write skills into the install tree (e.g. site-packages), and a
+            # call-to-action card is inappropriate on the demo app anyway.
+            if self._script_data.is_hello:
+                return False, ""
+
+            from streamlit.runtime.backend_operation_handler import (
+                connection_locality,
+            )
+            from streamlit.web import skills
+
+            app_dir = os.path.dirname(self._script_data.main_script_path)
+            if not skills.should_show_skills_nudge(app_dir):
+                return False, ""
+            locality = connection_locality(self.id)
+            if locality == "loopback":
+                return True, ""
+            # Eligible, but the browser is not on a direct-loopback connection:
+            # suppress the nudge and record the topology for adoption telemetry.
+            return False, locality
+        except Exception as ex:  # pragma: no cover - defensive
+            _LOGGER.debug("Failed to compute skills nudge state", exc_info=ex)
+            return False, ""
 
     def _create_script_finished_message(
         self, status: ForwardMsg.ScriptFinishedStatus.ValueType
