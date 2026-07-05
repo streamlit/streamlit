@@ -130,3 +130,11 @@ st.subheader("Combined Width and Height")
 
 st.write("width=300, height=150")
 st.graphviz_chart(dot_code, width=300, height=150)
+
+st.subheader("Dangerous link sanitization")
+
+# Node with a dangerous javascript: URL. The frontend must neutralize this to
+# "#" after rendering to prevent XSS when the link is clicked.
+malicious_graph = graphviz.Digraph("malicious")
+malicious_graph.node("ClickMe", URL="javascript:alert('xss')")
+st.graphviz_chart(malicious_graph)
