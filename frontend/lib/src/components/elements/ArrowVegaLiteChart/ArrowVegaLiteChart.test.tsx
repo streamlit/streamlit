@@ -16,7 +16,7 @@
 
 import { useMemo } from "react"
 
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { VegaLiteChart as VegaLiteChartProto } from "@streamlit/protobuf"
@@ -205,16 +205,25 @@ describe("ArrowVegaLiteChart", () => {
       />
     )
 
-    const buttonLabels = screen
-      .getAllByRole("button")
-      .map(button => button.getAttribute("aria-label"))
+    // Selecting by accessible name also asserts each button exists.
+    const showDataButton = screen.getByRole("button", { name: "Show data" })
+    const downloadButton = screen.getByRole("button", {
+      name: "Download as PNG",
+    })
+    const copyButton = screen.getByRole("button", {
+      name: "Copy Vega-Lite spec",
+    })
 
-    expect(buttonLabels.indexOf("Show data")).toBeLessThan(
-      buttonLabels.indexOf("Download as PNG")
-    )
-    expect(buttonLabels.indexOf("Download as PNG")).toBeLessThan(
-      buttonLabels.indexOf("Copy Vega-Lite spec")
-    )
+    // DOCUMENT_POSITION_FOLLOWING (4) means the argument node comes after the
+    // reference node in the DOM, confirming left-to-right toolbar order.
+    expect(
+      showDataButton.compareDocumentPosition(downloadButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    expect(
+      downloadButton.compareDocumentPosition(copyButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
   })
 
   it("downloads the chart as a PNG when the toolbar action is clicked", async () => {
@@ -256,6 +265,13 @@ describe("ArrowVegaLiteChart", () => {
   })
 
   it("copies the rendered Vega-Lite spec to the clipboard", async () => {
+    const user = userEvent.setup()
+    // userEvent.setup() installs its own clipboard stub, so re-establish our
+    // spy afterwards to assert the exact text written to the clipboard.
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: mockWriteText },
+    })
     render(<ArrowVegaLiteChart {...getProps()} />)
 
     const copyButton = screen.getByRole("button", {
@@ -266,8 +282,7 @@ describe("ArrowVegaLiteChart", () => {
 
     expect(copyButton.querySelector(`path[d="${checkIconPath}"]`)).toBeNull()
 
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(copyButton)
+    await user.click(copyButton)
 
     await waitFor(() =>
       expect(mockWriteText).toHaveBeenCalledWith(

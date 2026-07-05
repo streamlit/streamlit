@@ -268,7 +268,13 @@ const ArrowVegaLiteChart: FC<Props> = ({
         return
       }
 
-      const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
+      // Build a `YYYY-MM-DDTHH-MM` timestamp from local time so the filename
+      // reflects the user's wall-clock time rather than UTC.
+      const now = new Date()
+      const pad = (value: number): string => String(value).padStart(2, "0")
+      const timestamp =
+        `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+        `T${pad(now.getHours())}-${pad(now.getMinutes())}`
       const link = document.createElement("a")
       link.setAttribute("href", pngUrl)
       link.setAttribute("download", `${timestamp}_chart.png`)
@@ -282,7 +288,11 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const handleCopySpec = useCallback(() => {
     // `spec` is typed as string but is the parsed spec object at runtime
     // (see useVegaElementPreprocessor), so we serialize it for the clipboard.
-    copyToClipboard(JSON.stringify(spec, null, 2))
+    // Guard against the (typed) string case defensively so we never
+    // double-encode the JSON if the contract ever changes.
+    copyToClipboard(
+      typeof spec === "string" ? spec : JSON.stringify(spec, null, 2)
+    )
   }, [copyToClipboard, spec])
 
   // Track the last dimensions to avoid redundant resize calls
