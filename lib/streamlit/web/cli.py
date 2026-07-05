@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import inspect
 import os
 import sys
 from collections.abc import Callable
@@ -198,7 +199,8 @@ def _resolve_streamlit_command(command_name: str) -> tuple[str, Any] | None:
         return None
 
     obj: Any = st
-    for part in name.split("."):
+    parts = name.split(".")
+    for index, part in enumerate(parts):
         # Only resolve genuine public attributes. The ``part in dir(obj)`` check
         # guards against objects (e.g. ``DeltaGenerator``) whose ``__getattr__``
         # synthesizes placeholder callables for unknown names, which would
@@ -206,9 +208,34 @@ def _resolve_streamlit_command(command_name: str) -> tuple[str, Any] | None:
         if not part or part.startswith("_") or part not in dir(obj):
             return None
         try:
-            obj = getattr(obj, part)
+            # Resolve the attribute statically so computed attributes (e.g. the
+            # ``st.context.headers`` property) are not evaluated.
+            static_obj = inspect.getattr_static(obj, part)
+        except AttributeError:
+            # Some public container members are exposed dynamically through
+            # ``__getattr__``. They are already filtered through ``dir(obj)``.
+            try:
+                obj = getattr(obj, part)
+            except Exception:
+                return None
+            continue
         except Exception:
             return None
+
+        # Computed attributes (properties and getset descriptors, mirroring
+        # ``help._is_computed_property``) can only be the final part, since
+        # traversing into them would require evaluating them. Keep the
+        # descriptor itself so its docstring can be displayed without invoking
+        # it.
+        if isinstance(static_obj, property) or inspect.isgetsetdescriptor(static_obj):
+            if index != len(parts) - 1:
+                return None
+            obj = static_obj
+        else:
+            try:
+                obj = getattr(obj, part)
+            except Exception:
+                return None
 
     return f"st.{name}", obj
 

@@ -12,6 +12,7 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 | Strikethrough | `~text~` | `~Strikethrough~` | ✓ |
 | Inline code | `` `code` `` | `` `variable` `` | ✓ |
 | Code block | ` ```lang...``` ` | ` ```python...``` ` | ✗ |
+| Mermaid diagram | ` ```mermaid...``` ` | ` ```mermaid graph TD; A-->B``` ` | ✗ |
 | Link | `[text](url)` | `[Streamlit](https://streamlit.io)` | ✓ |
 | Image | `![alt](path)` | `![Logo](logo.png)` | ✓ |
 | Heading | `# ` to `###### ` | `## Section` | ✗ |
@@ -71,6 +72,32 @@ code_block = "with syntax highlighting"
 ```
 """)
 ~~~
+
+## Mermaid diagrams
+
+Fenced code blocks tagged `mermaid` render as [Mermaid](https://mermaid.js.org/) diagrams (flowcharts, sequence diagrams, class diagrams, state diagrams, Gantt charts, pie charts, mind maps, and more). This works anywhere full Markdown is rendered, such as `st.markdown()` and `st.write()`.
+
+~~~python
+st.markdown("""
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[OK]
+    B -->|No| D[Cancel]
+```
+""")
+~~~
+
+For a dedicated command that takes the diagram definition directly (no code fence needed), use `st.mermaid_chart()`:
+
+```python
+st.mermaid_chart("""
+    graph LR
+        A[Start] --> B{Decision}
+        B -->|Yes| C[OK]
+        B -->|No| D[Cancel]
+""", width="stretch")  # "stretch" (default), "content", or a pixel value
+```
 
 ## Colored text, backgrounds, and badges
 

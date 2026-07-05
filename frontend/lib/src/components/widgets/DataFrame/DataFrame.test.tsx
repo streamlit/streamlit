@@ -16,11 +16,12 @@
 
 import { forwardRef } from "react"
 
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { EMPTY } from "~lib/mocks/arrow/empty"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -113,6 +114,121 @@ describe("DataFrame widget", () => {
     // Verify expected toolbar buttons: search, column visibility, download, fullscreen
     const toolbarButtons = screen.getAllByTestId("stElementToolbarButton")
     expect(toolbarButtons).toHaveLength(4)
+  })
+
+  it("shows search when Ctrl+F is pressed and search is enabled", () => {
+    render(<DataFrame {...props} />)
+
+    const event = {
+      ctrlKey: true,
+      metaKey: false,
+      key: "f",
+      stopPropagation: vi.fn(),
+      preventDefault: vi.fn(),
+    }
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: false,
+      })
+    )
+
+    act(() => {
+      dataEditorMockFn.mock.lastCall?.[0].onKeyDown(event)
+    })
+
+    expect(event.stopPropagation).toHaveBeenCalled()
+    expect(event.preventDefault).toHaveBeenCalled()
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: true,
+      })
+    )
+  })
+
+  it("shows search when Cmd+F is pressed and search is enabled", () => {
+    render(<DataFrame {...props} />)
+
+    const event = {
+      ctrlKey: false,
+      metaKey: true,
+      key: "f",
+      stopPropagation: vi.fn(),
+      preventDefault: vi.fn(),
+    }
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: false,
+      })
+    )
+
+    act(() => {
+      dataEditorMockFn.mock.lastCall?.[0].onKeyDown(event)
+    })
+
+    expect(event.stopPropagation).toHaveBeenCalled()
+    expect(event.preventDefault).toHaveBeenCalled()
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: true,
+      })
+    )
+  })
+
+  it("does not handle Ctrl+F when search is disabled", () => {
+    render(<DataFrame {...getProps(EMPTY)} />)
+
+    const event = {
+      ctrlKey: true,
+      metaKey: false,
+      key: "f",
+      stopPropagation: vi.fn(),
+      preventDefault: vi.fn(),
+    }
+
+    act(() => {
+      dataEditorMockFn.mock.lastCall?.[0].onKeyDown(event)
+    })
+
+    expect(event.stopPropagation).not.toHaveBeenCalled()
+    expect(event.preventDefault).not.toHaveBeenCalled()
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: false,
+      })
+    )
+  })
+
+  it("hides the search overlay when search becomes disabled while open", () => {
+    const { rerender } = render(<DataFrame {...props} />)
+
+    act(() => {
+      dataEditorMockFn.mock.lastCall?.[0].onKeyDown({
+        ctrlKey: true,
+        metaKey: false,
+        key: "f",
+        stopPropagation: vi.fn(),
+        preventDefault: vi.fn(),
+      })
+    })
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: true,
+      })
+    )
+
+    // The dataframe becomes empty, which disables search. The overlay must
+    // not stay stuck open since both the toolbar button and the keyboard
+    // shortcut are disabled in that case.
+    rerender(<DataFrame {...getProps(EMPTY)} />)
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: false,
+      })
+    )
   })
 
   it("should show column visibility button when all columns are visible", () => {

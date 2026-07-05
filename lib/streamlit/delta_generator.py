@@ -71,11 +71,13 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
+from streamlit.elements.mermaid_chart import MermaidChartMixin
 from streamlit.elements.metric import MetricMixin
 from streamlit.elements.pdf import PdfMixin
 from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.pyplot import PyplotMixin
+from streamlit.elements.skeleton import SkeletonMixin
 from streamlit.elements.snow import SnowMixin
 from streamlit.elements.space import SpaceMixin
 from streamlit.elements.spinner import SpinnerMixin
@@ -109,6 +111,7 @@ from streamlit.proto import Block_pb2
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching
+from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
 from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -123,6 +126,11 @@ if TYPE_CHECKING:
     from streamlit.cursor import Cursor
     from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Element_pb2 import Element as ElementProto
+    from streamlit.runtime.fragment import FragmentStorage
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        FragmentThreadState,
+        ScriptRunContext,
+    )
 
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
@@ -210,6 +218,7 @@ class DeltaGenerator(
     MarkdownMixin,
     MapMixin,
     MediaMixin,
+    MermaidChartMixin,
     MetricMixin,
     MenuButtonMixin,
     MultiSelectMixin,
@@ -223,6 +232,7 @@ class DeltaGenerator(
     RadioMixin,
     SelectboxMixin,
     SelectSliderMixin,
+    SkeletonMixin,
     SliderMixin,
     SnowMixin,
     SpaceMixin,
@@ -313,6 +323,10 @@ class DeltaGenerator(
         self._parent = parent
         self._block_type = block_type
 
+        # Tracks which fragment's scope created this container. Used to clear
+        # cached outside-write wrappers when that fragment reruns.
+        self._creating_fragment_id: str | None = None
+
         # If this an `st.form` block, this will get filled in.
         self._form_data: FormData | None = None
 
@@ -345,7 +359,7 @@ class DeltaGenerator(
 
     @property
     def _active_dg(self) -> DeltaGenerator:
-        """Return the DeltaGenerator that's currently 'active'.
+        """The DeltaGenerator that's currently 'active'.
         If we are the main DeltaGenerator, and are inside a `with` block that
         creates a container, our active_dg is that container. Otherwise,
         our active_dg is self.
@@ -363,7 +377,7 @@ class DeltaGenerator(
 
     @property
     def _main_dg(self) -> DeltaGenerator:
-        """Return this DeltaGenerator's root - that is, the top-level ancestor
+        """The root DeltaGenerator - that is, the top-level ancestor
         DeltaGenerator that we belong to (this generally means the st._main
         DeltaGenerator).
         """
@@ -404,6 +418,7 @@ class DeltaGenerator(
             block_type=self._block_type,
         )
         dg._form_data = deepcopy(self._form_data)
+        dg._creating_fragment_id = self._creating_fragment_id
         return dg
 
     @property
@@ -431,7 +446,7 @@ class DeltaGenerator(
 
     @property
     def _cursor(self) -> Cursor | None:
-        """Return our Cursor. This will be None if we're not running in a
+        """Our Cursor. This will be None if we're not running in a
         ScriptThread - e.g., if we're running a "bare" script outside of
         Streamlit.
         """
@@ -494,13 +509,6 @@ class DeltaGenerator(
         dg = self._active_dg
 
         ctx = get_script_run_ctx()
-        if ctx and ThreadState.get().fragment_id and _writes_directly_to_sidebar(dg):
-            raise StreamlitAPIException(
-                "Calling `st.sidebar` in a function wrapped with `st.fragment` is not "
-                "supported. To write elements to the sidebar with a fragment, call your "
-                "fragment function inside a `with st.sidebar` context manager."
-            )
-
         if ctx:
             ts = ThreadState.get()
             if ts.is_parallel_worker:
@@ -522,6 +530,9 @@ class DeltaGenerator(
                         "(e.g., `if st.button(...):`) so it runs during a "
                         "sequential fragment rerun instead."
                     )
+
+            if ts.fragment_id and _needs_outside_wrapper(dg, ts, ctx.fragment_storage):
+                dg = _get_or_create_outside_wrapper(dg, ts, ctx)
 
         # Warn if an element is being changed but the user isn't running the streamlit server.
         _maybe_print_use_warning()
@@ -607,13 +618,26 @@ class DeltaGenerator(
         if dg._root_container is None or dg._cursor is None:
             return dg
 
-        msg = ForwardMsg()
-        msg.metadata.delta_path[:] = dg._cursor.delta_path
-        msg.delta.add_block.CopyFrom(block_proto)
+        ctx = get_script_run_ctx()
+        ts = ThreadState.get() if ctx else None
+        if (
+            ctx is not None
+            and ts is not None
+            and ts.fragment_id
+            and _needs_outside_wrapper(dg, ts, ctx.fragment_storage)
+        ):
+            dg = _get_or_create_outside_wrapper(dg, ts, ctx)
+
+        # Reassigning dg above drops the type narrowing from the None-guard.
+        parent_cursor = cast("Cursor", dg._cursor)
+        root_container = cast("int", dg._root_container)
+
+        # Snapshot delta_path before open_block() advances the parent cursor.
+        block_delta_path = list(parent_cursor.delta_path)
 
         # Create a child cursor for this new block. open_block() also advances
         # the parent cursor, so we capture delta_path above before this call.
-        block_cursor = dg._cursor.open_block()
+        block_cursor = parent_cursor.open_block()
 
         # `dg_type` param added for st.status container. It allows us to
         # instantiate DeltaGenerator subclasses from the function.
@@ -623,7 +647,7 @@ class DeltaGenerator(
         block_dg = cast(
             "DeltaGenerator",
             dg_type(
-                root_container=dg._root_container,
+                root_container=root_container,
                 cursor=block_cursor,
                 parent=dg,
                 block_type=block_type,
@@ -632,8 +656,10 @@ class DeltaGenerator(
         # Blocks inherit their parent form ids.
         # NOTE: Container form ids aren't set in proto.
         block_dg._form_data = FormData(current_form_id(dg))
+        block_dg._creating_fragment_id = ts.fragment_id if ts else None
 
-        _enqueue_message(msg)
+        # open_block() already advanced the parent cursor, so we only emit here.
+        _enqueue_add_block(block_delta_path, block_proto)
 
         caching.save_block_message(
             block_proto,
@@ -707,12 +733,6 @@ class DeltaGenerator(
         return create_transient_element, clear_transient_element
 
 
-def _writes_directly_to_sidebar(dg: DeltaGenerator) -> bool:
-    in_sidebar = any(a._root_container == RootContainer.SIDEBAR for a in dg._ancestors)
-    has_container = bool(list(dg._ancestor_block_types))
-    return in_sidebar and not has_container
-
-
 def _is_inside_fragment_path(
     cursor_path: tuple[int, ...],
     fragment_path: tuple[int, ...],
@@ -721,3 +741,121 @@ def _is_inside_fragment_path(
     if len(cursor_path) < len(fragment_path):
         return False
     return cursor_path[: len(fragment_path)] == fragment_path
+
+
+def _enqueue_add_block(delta_path: list[int], block_proto: Block_pb2.Block) -> None:
+    """Send an add_block ForwardMsg for `block_proto` at `delta_path`."""
+    msg = ForwardMsg()
+    msg.metadata.delta_path[:] = delta_path
+    msg.delta.add_block.CopyFrom(block_proto)
+    _enqueue_message(msg)
+
+
+def _needs_outside_wrapper(
+    dg: DeltaGenerator,
+    ts: FragmentThreadState,
+    fragment_storage: FragmentStorage,
+) -> bool:
+    """Return whether `dg` is a fragment writing to a container declared outside
+    its scope, and not already inside one of this fragment's wrappers.
+    """
+    if ts.is_parallel_worker or not ts.fragment_id or not ts.delta_path:
+        return False
+
+    # Sidebar and bottom are shared containers — both the main script and
+    # fragments append to them, so a wrapper is needed to isolate the
+    # fragment's content. Main is unreachable here (fragments write into
+    # their own sub-container, not the root). Event containers are
+    # single-owner.
+    if dg._is_top_level:
+        return dg._root_container in {RootContainer.SIDEBAR, RootContainer.BOTTOM}
+
+    cursor_path = tuple(dg._cursor.delta_path) if dg._cursor else ()
+    if _is_inside_fragment_path(cursor_path, ts.delta_path):
+        return False
+
+    # If this DG is a descendant of a wrapper already created for this
+    # fragment, the write is already isolated — no additional wrapper needed.
+    wrapper_dg_ids = {
+        wrapper.delta_generator._id
+        for wrapper in fragment_storage.outside_wrappers_for(ts.fragment_id)
+    }
+    return all(ancestor._id not in wrapper_dg_ids for ancestor in dg._ancestors)
+
+
+def _get_or_create_outside_wrapper(
+    dg: DeltaGenerator,
+    ts: FragmentThreadState,
+    ctx: ScriptRunContext,
+) -> DeltaGenerator:
+    """Return the cached wrapper DG, creating one on first write, or raise on a
+    standalone rerun that has no reserved slot.
+    """
+    fragment_storage = ctx.fragment_storage
+    fragment_id = cast("str", ts.fragment_id)
+    container_id = dg._id
+
+    cached = fragment_storage.get_outside_wrapper(fragment_id, container_id)
+    if cached is not None:
+        return cached.delta_generator
+
+    # fragment_ids_this_run is non-empty only during a standalone fragment
+    # rerun (not a full app rerun). If the container was created by one of
+    # the currently-running fragments, its cursor is valid and we can safely
+    # allocate a new wrapper (e.g. a child fragment writing into a container
+    # owned by its parent fragment during the parent's rerun). Otherwise the
+    # container's creating scope hasn't run, so we can't reserve a slot.
+    if ctx.fragment_ids_this_run and (
+        dg._creating_fragment_id not in ctx.fragment_ids_this_run
+    ):
+        raise StreamlitAPIException(
+            "A fragment tried to write to a container created outside the "
+            "fragment, but that container was not written to during the initial "
+            "run, so Streamlit could not reserve a stable position for it.\n\n"
+            "Write to the container at least once during the full app run (e.g. "
+            "claim the slot with `outside.empty()`), then fill it during fragment "
+            "reruns."
+        )
+
+    parent_cursor = cast("Cursor", dg._cursor)
+    root_container = cast("int", dg._root_container)
+    block_proto = Block_pb2.Block()
+    block_proto.transparent.SetInParent()
+    block_proto.allow_empty = True
+
+    creation_delta_path = list(parent_cursor.delta_path)
+
+    # Match the outside container's cursor type. st.empty() uses a LockedCursor,
+    # so the wrapper must also lock to preserve single-element semantics.
+    parent_path = (*parent_cursor.parent_path, parent_cursor.index)
+    if parent_cursor.is_locked:
+        wrapper_cursor: Cursor = cursor.LockedCursor(
+            root_container=root_container, parent_path=parent_path, index=0
+        )
+    else:
+        wrapper_cursor = cursor.RunningCursor(
+            root_container=root_container, parent_path=parent_path
+        )
+
+    wrapper_dg = DeltaGenerator(
+        root_container=root_container,
+        cursor=wrapper_cursor,
+        parent=dg,
+        block_type="transparent",
+    )
+
+    _enqueue_add_block(creation_delta_path, block_proto)
+    # Advance the outside container's cursor exactly once, at creation time.
+    parent_cursor.lock_element()
+
+    fragment_storage.register_outside_wrapper(
+        fragment_id,
+        container_id,
+        OutsideContainerWrapper(
+            wrapper_dg,
+            creation_delta_path,
+            block_proto,
+            creating_fragment_id=dg._creating_fragment_id,
+        ),
+    )
+    return wrapper_dg

@@ -196,14 +196,16 @@ python-format:
 .PHONY: python-tests
 # Run Python unit tests.
 python-tests:
-	uv run pytest -c lib/pyproject.toml -v -l \
+	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
+	MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v -l \
 		-m "not performance" \
 		lib/tests/
 
 .PHONY: python-performance-tests
 # Run Python performance tests.
 python-performance-tests:
-	uv run pytest -c lib/pyproject.toml -v -l \
+	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
+	MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v -l \
 		-m "performance" \
 		--benchmark-autosave \
 		--benchmark-storage file://.benchmarks/pytest \
@@ -212,7 +214,8 @@ python-performance-tests:
 .PHONY: python-integration-tests
 # Run Python integration tests. Requires `uv sync --group integration` to be run first.
 python-integration-tests:
-	uv run pytest -c lib/pyproject.toml -v -l \
+	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
+	MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v -l \
 		--require-integration \
 		lib/tests/
 
@@ -521,6 +524,8 @@ update-emojis:
 update-notices:
 	cd frontend; \
 		yarn licenses generate-disclaimer --production --recursive > ../NOTICES
+	# Normalize line endings to LF (yarn output may contain CRLF from some packages)
+	perl -i -pe 's/\r$$//' NOTICES
 
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code/Source-Code.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans/Source-Sans.LICENSE
@@ -757,7 +762,7 @@ check:
 	if [ -n "$$PY_TESTS" ] && [ "$$FAST_CHECK" != "true" ]; then \
 		echo "=== Python: tests (pytest) ===" && \
 		echo "Running: $$PY_TESTS" && \
-		uv run pytest -c lib/pyproject.toml -v $$PY_TESTS && \
+		MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v $$PY_TESTS && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
 			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \

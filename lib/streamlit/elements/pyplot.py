@@ -183,7 +183,7 @@ know via [issue on Github](https://github.com/streamlit/streamlit/issues).
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 

@@ -25,6 +25,26 @@ CACHE_MEMORY_FAMILY: Final = "cache_memory_bytes"
 SESSION_EVENTS_FAMILY: Final = "session_events"
 SESSION_DURATION_FAMILY: Final = "session_duration_seconds"
 ACTIVE_SESSIONS_FAMILY: Final = "active_sessions"
+USER_SESSION_EVENTS_FAMILY: Final = "user_session_events"
+
+
+def _escape_label_value(value: str) -> str:
+    """Escape a label value for the OpenMetrics text exposition format.
+
+    Backslashes, double quotes, and newlines must be escaped per the
+    OpenMetrics spec. This matters for labels carrying user-controlled values
+    (e.g. user_session_events identity labels), which could otherwise emit
+    malformed output and break a scraper's parse of the whole payload.
+    """
+    return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+
+
+def _labels_to_str(labels: dict[str, str]) -> str:
+    """Render sorted, escaped ``key="value"`` label pairs for the text format."""
+    return ",".join(
+        f'{name}="{_escape_label_value(value)}"'
+        for name, value in sorted(labels.items())
+    )
 
 
 def safe_sizeof(obj: Any) -> int:
@@ -205,8 +225,7 @@ class CounterStat(NamedTuple):
     def to_metric_str(self) -> str:
         metric_name = f"{self.family_name}_total"
         if self.labels:
-            labels_str = ",".join(f'{k}="{v}"' for k, v in sorted(self.labels.items()))
-            return f"{metric_name}{{{labels_str}}} {self.value}"
+            return f"{metric_name}{{{_labels_to_str(self.labels)}}} {self.value}"
         return f"{metric_name} {self.value}"
 
     def marshall_metric_proto(self, metric: MetricProto) -> None:
@@ -250,8 +269,7 @@ class GaugeStat(NamedTuple):
 
     def to_metric_str(self) -> str:
         if self.labels:
-            labels_str = ",".join(f'{k}="{v}"' for k, v in sorted(self.labels.items()))
-            return f"{self.family_name}{{{labels_str}}} {self.value}"
+            return f"{self.family_name}{{{_labels_to_str(self.labels)}}} {self.value}"
         return f"{self.family_name} {self.value}"
 
     def marshall_metric_proto(self, metric: MetricProto) -> None:

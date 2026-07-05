@@ -556,6 +556,7 @@ class ChatMixin:
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[False] = False,
         disabled: bool = False,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -576,6 +577,7 @@ class ChatMixin:
         accept_audio: Literal[True],
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -596,6 +598,7 @@ class ChatMixin:
         accept_audio: bool = False,
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -616,6 +619,7 @@ class ChatMixin:
         accept_audio: bool = False,
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -731,6 +735,22 @@ class ChatMixin:
         disabled : bool
             Whether the chat input should be disabled. This defaults to
             ``False``.
+
+        submit_mode : "submit", "disable", or "stop"
+            Controls widget behavior after the user submits a message while
+            the script is running. This can be one of the following values:
+
+            - ``"submit"`` (default): The widget remains fully enabled after
+              submission. Users can submit new messages while the script
+              is running.
+            - ``"disable"``: The widget is automatically disabled after
+              the user submits a message and re-enables when the script
+              run completes. This prevents users from interrupting ongoing
+              operations like LLM streaming.
+            - ``"stop"``: The submit button transforms into a stop button
+              after submission. Clicking it stops the script execution,
+              similar to clicking "Stop" in the app's status widget. The
+              text area is disabled while the script runs.
 
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
@@ -922,6 +942,11 @@ class ChatMixin:
                 "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
             )
 
+        if submit_mode not in {"submit", "disable", "stop"}:
+            raise StreamlitAPIException(
+                "The `submit_mode` parameter must be 'submit', 'disable', or 'stop'."
+            )
+
         if max_upload_size is not None and (
             not isinstance(max_upload_size, int) or max_upload_size <= 0
         ):
@@ -957,6 +982,7 @@ class ChatMixin:
             file_type=file_type,
             accept_audio=accept_audio,
             audio_sample_rate=audio_sample_rate,
+            submit_mode=submit_mode,
             width=width,
             height=height,
         )
@@ -1043,6 +1069,14 @@ class ChatMixin:
         )
 
         chat_input_proto.disabled = disabled
+
+        if submit_mode == "stop":
+            chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_STOP
+        elif submit_mode == "disable":
+            chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLE
+        else:
+            chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT
+
         if widget_state.value_changed and widget_state.value is not None:
             # Support for programmatically setting the text in the chat input
             # via session state. Since chat input has a trigger state,
@@ -1083,5 +1117,5 @@ class ChatMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

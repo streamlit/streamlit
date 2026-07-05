@@ -41,6 +41,8 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import { convertRemToPx } from "~lib/theme/utils"
 import {
   filterSelectOptions,
   getSelectFilterMode,
@@ -127,6 +129,25 @@ const Selectbox: FC<Props> = ({
 }) => {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+
+  // Floating UI provides scroll-tracking via autoUpdate. Unlike Popover and
+  // MenuButton, we cannot replace RAC's <Popover> with FloatingPortal because
+  // ComboBox's collection system requires ListBoxItems to be inside RAC's own
+  // Popover to discover them and assign role="option". Instead, Floating UI's
+  // position is applied via the style prop and CSS !important overrides
+  // neutralize RAC's imperative style writes (see Selectbox.styled.ts).
+  //
+  // open is always true because whileElementsMounted already gates autoUpdate
+  // on both refs being mounted — the actual ComboBox open state is irrelevant
+  // here since the floating element only exists in the DOM when RAC's Popover
+  // renders it (i.e. when the dropdown is open).
+  const { refs, floatingStyles } = useFloatingOverlay({
+    open: true,
+    placement: "bottom-start",
+    offsetPx: convertRemToPx(theme.spacing.twoXS),
+    flipOptions: isInSidebar ? false : undefined,
+    matchTriggerWidth: true,
+  })
 
   // Locally committed value (last value sent to Streamlit). Re-synced from
   // propValue when the backend pushes an update (form-clear, session state, etc.).
@@ -330,8 +351,9 @@ const Selectbox: FC<Props> = ({
   // Open on pointer-click. With menuTrigger="manual", opening on pointerDown
   // (before focus) avoids a timing gap where focus arrives first with no open action.
   const handleInputPointerDown = useCallback((): void => {
+    if (selectDisabled) return
     openDropdownRef.current?.()
-  }, [])
+  }, [selectDisabled])
 
   /**
    * Capture-phase keydown — fires before RAC's handler:
@@ -343,6 +365,7 @@ const Selectbox: FC<Props> = ({
    */
   const handleInputKeyDownCapture = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
+      if (selectDisabled) return
       if (
         isFilterNone &&
         (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") &&
@@ -371,7 +394,7 @@ const Selectbox: FC<Props> = ({
         commitSelection(null)
       }
     },
-    [clearable, commitSelection, isFilterNone]
+    [clearable, commitSelection, isFilterNone, selectDisabled]
   )
 
   /**
@@ -447,7 +470,7 @@ const Selectbox: FC<Props> = ({
             openRef={openDropdownRef}
             closeRef={closeDropdownRef}
           />
-          <StyledGroup>
+          <StyledGroup ref={refs.setReference}>
             <StyledInput
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}
@@ -479,12 +502,13 @@ const Selectbox: FC<Props> = ({
             </StyledOpenButton>
           </StyledGroup>
           <StyledPopover
+            ref={refs.setFloating}
             data-testid="stSelectboxVirtualDropdown"
             placement="bottom left"
             isNonModal
-            shouldFlip={!isInSidebar}
             $isInSidebar={isInSidebar}
             offset={0}
+            style={floatingStyles}
           >
             <StyledListBox
               aria-label={label ?? "Selectbox options"}

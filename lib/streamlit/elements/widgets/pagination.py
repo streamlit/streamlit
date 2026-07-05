@@ -30,7 +30,12 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Pagination_pb2 import Pagination as PaginationProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import BindOption, get_session_state, register_widget
+from streamlit.runtime.state import (
+    BindOption,
+    PersistStateOption,
+    get_session_state,
+    register_widget,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -74,6 +79,7 @@ class PaginationMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> int:
         r"""Display a pagination widget for navigating through pages of content.
 
@@ -149,6 +155,21 @@ class PaginationMixin:
             parameter name. This enables shareable URLs that preserve the
             widget's state. If ``bind`` is set, ``key`` is required.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         int
@@ -208,6 +229,7 @@ class PaginationMixin:
             kwargs=kwargs,
             disabled=disabled,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -224,6 +246,7 @@ class PaginationMixin:
         kwargs: WidgetKwargs | None,
         disabled: bool,
         bind: BindOption,
+        persist_state: PersistStateOption,
         ctx: ScriptRunContext | None,
     ) -> int:
 
@@ -301,6 +324,7 @@ class PaginationMixin:
             ctx=ctx,
             value_type="int_value",
             bind=bind,
+            persist_state=persist_state,
             # Pagination always has a valid page (1 to num_pages), never empty
             clearable=False,
         )
@@ -345,5 +369,5 @@ class PaginationMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

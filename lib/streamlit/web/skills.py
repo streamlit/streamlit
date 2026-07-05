@@ -23,6 +23,7 @@ import sys
 import tarfile
 import tempfile
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Final
 from urllib import request
@@ -31,6 +32,9 @@ from urllib.error import URLError
 import click
 
 import streamlit
+from streamlit.logger import get_logger
+
+_LOGGER: Final = get_logger(__name__)
 
 # GitHub URL for downloading global skills (versioned tag)
 _GLOBAL_SKILLS_URL: Final[str] = (
@@ -89,14 +93,28 @@ def _discover_skills(source_dir: Path) -> list[str]:
     ]
 
 
-def _find_project_root() -> Path:
+def _find_project_root(start: Path | None = None) -> Path:
     """Find the project root directory for installation.
 
-    1. If cwd or a non-home ancestor has .agents or .claude, use it
+    1. If the start dir or a non-home ancestor has .agents or .claude, use it
     2. Otherwise, walk up to find nearest .git
-    3. Otherwise, use cwd
+    3. Otherwise, fall back to the current working directory when it is an
+       ancestor of (or equal to) the start dir — the common
+       ``cd repo && streamlit run sub/app.py`` launch, where ``repo`` is the
+       directory the developer thinks of as the project — and to the start dir
+       otherwise (e.g. ``cd /tmp && streamlit run /proj/app.py``, where ``/tmp``
+       must not become the install root). Never fall back to the home directory.
+
+    Parameters
+    ----------
+    start
+        Directory to begin the upward search from. Defaults to the current
+        working directory. The in-app installer passes the running app's
+        directory so the install lands in the same tree the nudge detection
+        scans (``app_dir`` or its git root), rather than wherever the server
+        happened to be launched from.
     """
-    cwd = Path.cwd()
+    start_dir = start or Path.cwd()
     # Resolve home to handle symlinks/bind mounts reaching home via another path
     resolved_home = Path.home().resolve()
 
@@ -107,27 +125,43 @@ def _find_project_root() -> Path:
         except OSError:
             return False
 
-    # Check if cwd or a project ancestor already has agent directories.
+    # Check if start_dir or a project ancestor already has agent directories.
     # Exclude the user's home directory so ~/.claude is not mistaken for
-    # a project-local Claude configuration (including when cwd == home).
+    # a project-local Claude configuration (including when start_dir == home).
     # Use is_dir() to ensure we only match directories, not files that happen
     # to be named .agents or .claude.
-    for parent in [cwd, *cwd.parents]:
+    for parent in [start_dir, *start_dir.parents]:
         if _is_home(parent):
             break
         if (parent / ".agents").is_dir() or (parent / ".claude").is_dir():
             return parent
 
     # Walk up to find git root, also excluding home directory to avoid
-    # treating ~/.git as the project root (including when cwd == home).
-    for parent in [cwd, *cwd.parents]:
+    # treating ~/.git as the project root (including when start_dir == home).
+    for parent in [start_dir, *start_dir.parents]:
         if _is_home(parent):
             break
         git_path = parent / ".git"
         if git_path.exists():
             return parent
 
-    return cwd
+    # No marker found. Prefer the current working directory when it is an
+    # ancestor of (or equal to) the start dir, so ``cd repo && streamlit run
+    # sub/app.py`` installs into ``repo`` rather than the nested app-script dir.
+    # Fall back to the start dir when cwd is unrelated, so a launch from an
+    # arbitrary cwd never installs somewhere surprising. Never use home: a
+    # project-local install belongs in the project, not ``~``.
+    cwd = Path.cwd()
+    try:
+        cwd_resolved = cwd.resolve()
+        start_resolved = start_dir.resolve()
+    except OSError:  # pragma: no cover - defensive
+        return start_dir
+    if not _is_home(cwd) and (
+        cwd_resolved == start_resolved or cwd_resolved in start_resolved.parents
+    ):
+        return cwd
+    return start_dir
 
 
 def _get_project_target_dirs(project_root: Path) -> list[Path]:
@@ -305,12 +339,22 @@ def _install_skill_symlink(
             result.skipped.append(f"{rel_target_path} (existing file or directory)")
             return True
 
-    # Compute relative symlink target
+    # Compute the relative symlink target from the REAL (symlink-resolved) paths
+    # of both ends. os.path.relpath counts ``..`` levels against the logical
+    # path, but the kernel resolves the resulting relative link against the
+    # link's *physical* location — so a logical path with a depth-changing
+    # symlinked ancestor (macOS /var -> /private/var, container bind-mounts, a
+    # symlinked /home) yields a link that dangles. Resolving both sides first
+    # makes the ``..`` count match the physical layout, so the link always
+    # resolves and the nudge's skill detection can follow it.
     try:
-        rel_source = os.path.relpath(source_path, target_path.parent)
-    except ValueError:
-        # Cross-drive on Windows - use absolute path
-        rel_source = str(source_path)
+        rel_source = os.path.relpath(
+            os.path.realpath(source_path), os.path.realpath(target_path.parent)
+        )
+    except (ValueError, OSError):
+        # Cross-drive on Windows (ValueError) or a resolution error - use the
+        # absolute (resolved) source path, which still resolves correctly.
+        rel_source = os.path.realpath(source_path)
 
     # Create symlink
     try:
@@ -555,11 +599,37 @@ def _confirm_global_installation(target_dirs: list[Path]) -> bool:
     return click.confirm("Proceed with installation?", default=True)
 
 
+def _conflict_error(skipped: list[str]) -> click.ClickException:
+    """Build a specific "couldn't install" error that names the conflicting
+    paths, rather than a vague "remove conflicting files".
+
+    ``skipped`` entries are formatted ``"<path> (<reason>)"``. We surface the
+    paths so the user knows exactly what to remove, collapsed to the concise
+    ``<harness>/skills/<skill>`` tail (like the install summary) so the message
+    never leaks an absolute path when the server's cwd isn't the project root.
+    This message is what the in-app nudge shows verbatim on failure, so it must
+    stand on its own (the CLI's detailed ``_print_result`` output never reaches
+    the browser).
+    """
+    paths = []
+    for entry in skipped:
+        raw = entry.split(" (", 1)[0]
+        parts = Path(raw).parts
+        paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
+    joined = ", ".join(paths)
+    plural = len(paths) != 1
+    return click.ClickException(
+        f"{joined} already exist{'' if plural else 's'}. "
+        f"Remove {'them' if plural else 'it'} and try again."
+    )
+
+
 def _install_project_skills(
     *,
     yes: bool = False,
     fallback_to_global: bool = True,
-) -> None:
+    app_dir: str | None = None,
+) -> _InstallResult:
     """Install bundled skills to the current project via symlinks."""
     # Discover bundled skills
     source_skills_dir = _get_source_skills_dir()
@@ -572,8 +642,10 @@ def _install_project_skills(
     if not skills:
         raise click.ClickException("No installable skills found in Streamlit package.")
 
-    # Determine targets
-    project_root = _find_project_root()
+    # Determine targets. The in-app installer passes ``app_dir`` so the project
+    # root resolves from the running app's directory (matching the nudge's skill
+    # detection), instead of the server's working directory.
+    project_root = _find_project_root(Path(app_dir) if app_dir else None)
     target_dirs = _get_project_target_dirs(project_root)
 
     if not _symlinks_supported(project_root, source_skills_dir / skills[0]):
@@ -592,8 +664,7 @@ def _install_project_skills(
                 "Developer Mode to use project installs."
             )
             click.echo()
-            _install_global_skills(yes=yes)
-            return
+            return _install_global_skills(yes=yes)
 
         raise click.ClickException(
             "Symlinks not supported. Use --global for global installation."
@@ -633,7 +704,7 @@ def _install_project_skills(
         click.echo("Falling back to global installation mode...")
         click.echo()
         try:
-            _install_global_skills(yes=yes)
+            return _install_global_skills(yes=yes)
         except click.ClickException:
             # Global install failed - partial project symlinks remain as fallback
             raise
@@ -643,7 +714,6 @@ def _install_project_skills(
                 "Installation incomplete. Project symlinks failed and global install "
                 "was cancelled."
             )
-        return
 
     if symlink_failed:
         raise click.ClickException(
@@ -676,13 +746,12 @@ def _install_project_skills(
         for line in gitignore_snippet.splitlines():
             click.secho(f"  {line}", fg="bright_black")
     elif result.skipped:
-        raise click.ClickException(
-            "No skills were installed due to conflicts. "
-            "Remove conflicting files and try again."
-        )
+        raise _conflict_error(result.skipped)
+
+    return result
 
 
-def _install_global_skills(*, yes: bool = False) -> None:
+def _install_global_skills(*, yes: bool = False) -> _InstallResult:
     """Install skills globally by downloading from GitHub."""
     target_dirs = _get_global_target_dirs()
 
@@ -731,10 +800,9 @@ def _install_global_skills(*, yes: bool = False) -> None:
                     fg="bright_black",
                 )
         elif result.skipped:
-            raise click.ClickException(
-                "No skills were installed due to conflicts. "
-                "Remove conflicting files and try again."
-            )
+            raise _conflict_error(result.skipped)
+
+        return result
     finally:
         # Clean up temp directory
         temp_root = skill_path.parent.parent
@@ -742,7 +810,9 @@ def _install_global_skills(*, yes: bool = False) -> None:
             shutil.rmtree(temp_root, ignore_errors=True)
 
 
-def install_skills(*, global_mode: bool = False, yes: bool = False) -> None:
+def install_skills(
+    *, global_mode: bool = False, yes: bool = False, app_dir: str | None = None
+) -> _InstallResult:
     """Install Streamlit AI-agent skills.
 
     Parameters
@@ -752,6 +822,17 @@ def install_skills(*, global_mode: bool = False, yes: bool = False) -> None:
         If False (default), install to project directories via symlinks.
     yes
         If True, skip all confirmation prompts.
+    app_dir
+        Directory of the running app's main script. When provided (the in-app
+        one-click install), the project-mode install resolves its root from this
+        directory so it lands in the same tree the nudge's skill detection scans.
+        Defaults to ``None`` (CLI use), which resolves from the current working
+        directory.
+
+    Returns
+    -------
+    _InstallResult
+        The skills that were newly installed, already up to date, or skipped.
     """
     # Check if running interactively
     if not yes and not sys.stdin.isatty():
@@ -766,6 +847,271 @@ def install_skills(*, global_mode: bool = False, yes: bool = False) -> None:
             global_mode = True
 
     if global_mode:
-        _install_global_skills(yes=yes)
-    else:
-        _install_project_skills(yes=yes)
+        return _install_global_skills(yes=yes)
+    return _install_project_skills(yes=yes, app_dir=app_dir)
+
+
+def _install_location(path: str) -> str:
+    """Return a concise ``<harness>/skills`` label for an installed skill path.
+
+    Install display paths are relative to the current working directory when
+    possible (e.g. ``.agents/skills/<skill>``), but fall back to an absolute
+    path when the resolved project root is an ancestor of the cwd (e.g. running
+    ``streamlit run sub/app.py`` from a subdirectory). Global installs use a
+    home-relative ``~/.agents/skills/<skill>`` form. The skill target layout is
+    always ``<harness>/skills/<skill>``, so collapse to the final two segments
+    of the parent directory to keep the in-app summary concise — but preserve a
+    leading ``~`` so a global (home) install is not mislabeled as project-local.
+    """
+    parent = Path(path).parent
+    parts = parent.parts
+    if parts and parts[0] == "~":
+        # Home-relative global install: keep the ``~`` so the message reads
+        # e.g. "~/.agents/skills" rather than being collapsed to
+        # ".agents/skills" (which looks project-local).
+        return parent.as_posix()
+    if len(parts) > 2:
+        return Path(*parts[-2:]).as_posix()
+    return parent.as_posix()
+
+
+def summarize_install(result: _InstallResult) -> str:
+    """Return a short, user-facing summary of an install for the in-app nudge.
+
+    Reports where skills were newly installed, or that they were already up to
+    date, and flags any skills skipped due to conflicts so a partial install is
+    not silently presented as a complete success. Used to give the one-click
+    "install skills" toast concrete feedback instead of a generic confirmation.
+    Returns an empty string when there is nothing meaningful to report.
+    """
+    parts: list[str] = []
+    if result.installed:
+        # Collapse the per-skill target paths to their distinct parent dirs
+        # (e.g. ".agents/skills", ".claude/skills") for a concise message.
+        locations = sorted({_install_location(path) for path in result.installed})
+        # Terminate with a period so a following "N skipped" sentence reads as
+        # two sentences ("Installed to .agents/skills. 1 skill skipped…") rather
+        # than running together.
+        parts.append("Installed to " + ", ".join(locations) + ".")
+    elif result.up_to_date:
+        parts.append("Skills are already up to date.")
+    if result.skipped:
+        # Surface skipped skills so a mixed result (some installed/up-to-date,
+        # some skipped due to a conflicting file) is not mistaken for "all done".
+        count = len(result.skipped)
+        noun = "skill" if count == 1 else "skills"
+        parts.append(f"{count} {noun} skipped due to conflicts.")
+    return " ".join(parts)
+
+
+def _nudge_dismissed_marker_path() -> Path:
+    """Return the path to the marker file that suppresses the skills nudge."""
+    from streamlit import file_util
+
+    return Path(file_util.get_streamlit_file_path(".skills_nudge_dismissed"))
+
+
+def write_nudge_dismissed_marker() -> None:
+    """Persist the user's "don't ask again" choice for the skills nudge.
+
+    Creates an empty marker file under the user's Streamlit config directory,
+    creating parent directories as needed. ``should_show_skills_nudge`` checks
+    for this file, so once written the in-app nudge is no longer shown.
+    """
+    marker = _nudge_dismissed_marker_path()
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.touch(exist_ok=True)
+
+
+_STREAMLIT_SKILL_NAMES: Final = (
+    "developing-with-streamlit",
+    "developing-with-streamlit-in-snowflake",
+)
+_SKILL_MARKER_FILENAME: Final = "SKILL.md"
+# (harness, project_skills_dir, home_skills_dir, agent_home_dir) - skill dirs
+# are checked for the SKILL.md marker; agent_home_dir is checked for existence
+# to detect the harness itself independent of Streamlit skills.
+_HARNESSES: Final = (
+    ("agents", ".agents/skills", ".agents/skills", ".agents"),
+    ("claude", ".claude/skills", ".claude/skills", ".claude"),
+    ("codex", ".codex/skills", ".codex/skills", ".codex"),
+    ("copilot", ".github/skills", ".copilot/skills", ".copilot"),
+    ("cortex", ".cortex/skills", ".snowflake/cortex/skills", ".snowflake/cortex"),
+    ("cursor", ".cursor/skills", ".cursor/skills", ".cursor"),
+    ("gemini", ".gemini/skills", ".gemini/skills", ".gemini"),
+    ("opencode", ".opencode/skills", ".config/opencode/skills", ".config/opencode"),
+)
+# Max directory levels to walk when searching for a ``.git`` ancestor. Bounded
+# to avoid scanning the entire filesystem on pathological layouts.
+_MAX_REPO_ROOT_WALK_DEPTH: Final = 20
+
+
+def _find_git_root(start: str) -> str | None:
+    """Return the nearest ancestor of ``start`` containing a ``.git`` entry, or ``None``.
+
+    Uses a bounded stdlib ancestor walk rather than ``git.Repo(...)`` from
+    GitPython. GitPython's cold import adds ~170ms on first call, which shows
+    up on every hosted-app startup via the ``create_page_profile_message``
+    code path — for a signal that almost always resolves to ``None`` in those
+    environments. The stdlib walk is ~1ms cold and returns the same path we
+    need.
+    """
+    current = os.path.abspath(start)
+    for _ in range(_MAX_REPO_ROOT_WALK_DEPTH):
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+    return None
+
+
+def detect_installed_skills(app_dir: str | None) -> list[str]:
+    """Detect Streamlit-shipped agent skills in well-known locations.
+
+    Returns a sorted, deduplicated list of ``"<location>:<harness>:<skill>"``
+    tokens. ``location`` is ``home``, ``app``, ``repo``, or ``project`` (the
+    in-app installer's resolved root, when distinct from ``app``/``repo``);
+    ``harness`` is one of ``agents``, ``claude``, ``codex``, ``copilot``,
+    ``cortex``, ``cursor``, ``gemini``, or ``opencode``; ``skill`` is one of
+    ``_STREAMLIT_SKILL_NAMES``. Never raises: filesystem errors are swallowed
+    and produce an empty list.
+
+    The result is cached per ``app_dir`` for the lifetime of the process.
+    """
+    return list(_detect_installed_skills_cached(app_dir))
+
+
+# maxsize=2 (not 1) so the two callers' keys can coexist: the page-profile
+# telemetry may pass ``None`` (no script-run context) while the skills nudge
+# passes ``dirname(main_script_path)``. A size-1 cache would let those evict
+# each other and re-walk the filesystem on every alternating call.
+@lru_cache(maxsize=2)
+def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
+    try:
+        home = os.path.expanduser("~")
+        app = os.path.abspath(app_dir) if app_dir else os.getcwd()
+        repo = _find_git_root(app)
+
+        roots: dict[str, str] = {"home": home, "app": app}
+        # Skip ``repo`` when it matches ``app`` to avoid double-counting the
+        # common case where the app script lives at the repo root. ``normcase``
+        # handles case-insensitive filesystems (Windows, default macOS).
+        if repo is not None and os.path.normcase(repo) != os.path.normcase(app):
+            roots["repo"] = repo
+
+        # Also scan the in-app installer's resolved project root — the very same
+        # ``_find_project_root`` the one-click install writes to — so a
+        # successful install is always detected, even when it lands in a dir
+        # that is neither ``app`` nor the git root (e.g. a monorepo per-package
+        # ``.agents``/``.claude``, or a project nested far below its git root).
+        # Sharing the resolver (instead of a mirror) keeps install and detection
+        # from ever drifting apart.
+        project = str(_find_project_root(Path(app)))
+        project_nc = os.path.normcase(project)
+        if project_nc != os.path.normcase(app) and (
+            repo is None or project_nc != os.path.normcase(repo)
+        ):
+            roots["project"] = project
+
+        tokens: set[str] = set()
+        for location, root in roots.items():
+            for harness, project_dir, home_skills_dir, agent_home_dir in _HARNESSES:
+                # At home level, skip harnesses that aren't installed at all
+                # (saves 2 isfile calls per absent harness — common on hosted
+                # apps where no skills or harnesses exist).
+                if location == "home" and not os.path.isdir(
+                    os.path.join(root, agent_home_dir)
+                ):
+                    continue
+                harness_dir = home_skills_dir if location == "home" else project_dir
+                for skill in _STREAMLIT_SKILL_NAMES:
+                    marker = os.path.join(
+                        root, harness_dir, skill, _SKILL_MARKER_FILENAME
+                    )
+                    if os.path.isfile(marker):
+                        tokens.add(f"{location}:{harness}:{skill}")
+        return tuple(sorted(tokens))
+    except Exception as ex:  # pragma: no cover - defensive
+        _LOGGER.debug("Failed to detect installed Streamlit skills", exc_info=ex)
+        return ()
+
+
+def detect_installed_agents() -> list[str]:
+    """Detect agent harnesses installed under the user's home directory.
+
+    Returns a sorted, deduplicated list of harness name tokens (``agents``,
+    ``claude``, ``codex``, ``copilot``, ``cortex``, ``cursor``, ``gemini``, ``opencode``)
+    for each harness whose home-level config directory exists. Independent
+    of whether Streamlit-specific skills are installed for that harness.
+
+    The result is cached for the lifetime of the process. Never raises:
+    filesystem errors are swallowed and produce an empty list.
+    """
+    return list(_detect_installed_agents_cached())
+
+
+@lru_cache(maxsize=1)
+def _detect_installed_agents_cached() -> tuple[str, ...]:
+    try:
+        home = os.path.expanduser("~")
+        tokens: set[str] = set()
+        for harness, _project_dir, _home_skills_dir, agent_home_dir in _HARNESSES:
+            if os.path.isdir(os.path.join(home, agent_home_dir)):
+                tokens.add(harness)
+        return tuple(sorted(tokens))
+    except Exception as ex:  # pragma: no cover - defensive
+        _LOGGER.debug("Failed to detect installed agents", exc_info=ex)
+        return ()
+
+
+def clear_installed_skills_cache() -> None:
+    """Invalidate the cached installed-skills detection.
+
+    Call after installing skills so a subsequent ``detect_installed_skills``
+    in the same process re-scans the filesystem instead of returning the
+    stale (pre-install) result.
+    """
+    _detect_installed_skills_cached.cache_clear()
+
+
+def should_show_skills_nudge(app_dir: str | None = None) -> bool:
+    """Return whether the in-app "install skills" nudge should be shown.
+
+    The nudge is recommended only for interactive local development where an
+    AI agent harness is present but the bundled Streamlit skills are not yet
+    installed, and the user has not permanently dismissed it. This mirrors the
+    gating of the CLI recommendation printed on app startup.
+
+    Parameters
+    ----------
+    app_dir
+        Directory of the running app's main script, used to detect
+        project-local skills. Pass the same value the page-profile telemetry
+        uses (``dirname(main_script_path)``) so both share the cached
+        detection result. Falls back to the current working directory when
+        ``None``.
+
+    Best-effort: returns ``False`` on any error so a detection failure never
+    blocks app startup or surfaces a spurious nudge.
+    """
+    from streamlit import config
+
+    try:
+        if config.get_option("server.headless"):
+            # Don't nudge in headless mode (e.g. deployments, CI, SiS).
+            return False
+        if config.get_option("logger.hideWelcomeMessage"):
+            return False
+        if _nudge_dismissed_marker_path().exists():
+            return False
+        # Gate on the same detection the page-profile telemetry uses (both now
+        # defined here): an agent must be present, and our skills must not be
+        # installed yet.
+        if not detect_installed_agents():
+            return False
+        # An agent is present; recommend installing only if our skills aren't.
+        return not detect_installed_skills(app_dir)
+    except Exception:  # pragma: no cover - defensive
+        return False

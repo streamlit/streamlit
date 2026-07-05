@@ -15,7 +15,7 @@ on:
         description: "Model to use for documentation review"
         required: false
         type: string
-        default: "claude-opus-4-7-thinking-xhigh"
+        default: "claude-opus-4-8-thinking-xhigh"
       dry_run:
         description: "Run without creating PR"
         type: boolean
@@ -23,7 +23,7 @@ on:
         default: false
 
 env:
-  MODEL: ${{ inputs.model || 'claude-opus-4-7-thinking-xhigh' }}
+  MODEL: ${{ inputs.model || 'claude-opus-4-8-thinking-xhigh' }}
   PR_NUMBER: ${{ inputs.pr_number || '' }}
 
 jobs:
@@ -92,7 +92,7 @@ jobs:
           fi
 
       - name: Checkout Streamlit code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # Use PR head SHA if pr_number specified, otherwise default branch
           ref: ${{ steps.pr-info.outputs.head_sha || '' }}
@@ -230,7 +230,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # Use the exact SHA from the ai-update-docs job to ensure patch applies cleanly
           ref: ${{ needs.ai-update-docs.outputs.checkout_sha }}

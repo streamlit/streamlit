@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import os
+import re
 import statistics
 import subprocess
 import sys
@@ -87,6 +88,12 @@ ELEMENT_COMMANDS: set[str] = {
     command for command, _ in WIDGET_ELEMENTS + NON_WIDGET_ELEMENTS + CONTAINER_ELEMENTS
 }
 
+# Public commands intentionally omitted from the api-reference.md skill doc
+# (e.g. internal commands not meant for app authors). Add a command here only
+# if it should stay out of the reference; deprecated commands are still
+# documented (with a deprecation note), so they don't belong in this set.
+API_REFERENCE_EXCLUSIONS: set[str] = set()
+
 
 class StreamlitTest(unittest.TestCase):
     """Test Streamlit.__init__.py."""
@@ -155,6 +162,82 @@ class StreamlitTest(unittest.TestCase):
             if not k.startswith("_") and not isinstance(v, type(st))
         }
         assert api == ELEMENT_COMMANDS.union(NON_ELEMENT_COMMANDS)
+
+    def test_api_reference_doc_covers_public_api(self):
+        """Test that the api-reference.md skill doc stays in sync with the API.
+
+        The reference tables are hand-maintained, so this guards against them
+        silently drifting when new public commands or ``st.column_config``
+        helpers are added. Only names are checked, not their descriptions.
+        """
+        dirname = os.path.dirname(__file__)
+        lib_dir = os.path.abspath(os.path.join(dirname, "..", ".."))
+        reference_path = os.path.join(
+            lib_dir,
+            "streamlit",
+            ".agents",
+            "skills",
+            "developing-with-streamlit",
+            "references",
+            "api-reference.md",
+        )
+        with open(reference_path, encoding="utf-8") as f:
+            reference = f.read()
+
+        # Top-level public commands (mirrors test_public_api).
+        top_level_api = {
+            k
+            for k, v in st.__dict__.items()
+            if not k.startswith("_") and not isinstance(v, type(st))
+        }
+        documented = set(
+            re.findall(r"^\| `st\.([A-Za-z0-9_]+)` \|", reference, re.MULTILINE)
+        )
+        missing = top_level_api - documented - API_REFERENCE_EXCLUSIONS
+        assert not missing, (
+            "These public st commands are missing from api-reference.md: "
+            f"{sorted(missing)}. Add them to the reference or, if intentionally "
+            "omitted, to API_REFERENCE_EXCLUSIONS."
+        )
+
+        # Reverse direction: every documented top-level ``st.<name>`` entry must
+        # still exist on ``st`` so renamed, removed, or typo'd rows are caught.
+        phantom = {name for name in documented if not hasattr(st, name)}
+        assert not phantom, (
+            "These commands are documented in api-reference.md but no longer "
+            f"exist on the public st API: {sorted(phantom)}. Remove or fix them."
+        )
+
+        # st.column_config helpers. ``annotations`` is the leaked
+        # ``from __future__ import annotations`` symbol, not a real helper.
+        column_config_api = {
+            k for k in dir(st.column_config) if not k.startswith("_")
+        } - {"annotations"}
+        documented_column_config = set(
+            re.findall(
+                r"^\| `st\.column_config\.([A-Za-z0-9_]+)` \|",
+                reference,
+                re.MULTILINE,
+            )
+        )
+        missing_column_config = column_config_api - documented_column_config
+        assert not missing_column_config, (
+            "These st.column_config helpers are missing from api-reference.md: "
+            f"{sorted(missing_column_config)}."
+        )
+
+        # Reverse direction for ``st.column_config`` so removed or renamed
+        # helpers documented in the reference are caught.
+        phantom_column_config = {
+            name
+            for name in documented_column_config
+            if not hasattr(st.column_config, name)
+        }
+        assert not phantom_column_config, (
+            "These st.column_config helpers are documented in api-reference.md "
+            f"but no longer exist: {sorted(phantom_column_config)}. Remove or fix "
+            "them."
+        )
 
     def test_pydoc(self):
         """Test that we can run pydoc on the streamlit package"""

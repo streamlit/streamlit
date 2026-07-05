@@ -22,6 +22,7 @@ from e2e_playwright.shared.app_utils import (
     click_checkbox,
     expect_markdown,
     get_element_by_key,
+    reset_hovering,
 )
 
 
@@ -172,6 +173,7 @@ def test_menu_button_help_tooltip(app: Page):
     """Test that help tooltip shows on hover."""
     menu_button = get_menu_button(app, "Button with Help")
     # Use first button due to duplicate rendering for mobile/desktop tooltip views
+    reset_hovering(app)
     menu_button.get_by_test_id("stMenuButtonButton").first.hover()
 
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("This is helpful text")

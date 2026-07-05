@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import os
 import os.path
 import sys
 import types
@@ -677,3 +679,220 @@ class BootstrapAsgiTest(IsolatedAsyncioTestCase):
                     flag_options={},
                 )
             assert "uvicorn is required" in str(cm.value)
+
+
+class BootstrapSignalHandlerTest(TestCase):
+    """Tests for _set_up_signal_handler."""
+
+    def test_signal_handler_stops_server(self):
+        """SIGTERM/SIGINT handlers call server.stop()."""
+        mock_server = Mock()
+        captured_handlers: dict[int, object] = {}
+
+        def fake_signal(signum: int, handler: object) -> None:
+            captured_handlers[signum] = handler
+
+        with patch.object(bootstrap.signal, "signal", side_effect=fake_signal):
+            bootstrap._set_up_signal_handler(mock_server)
+
+        # SIGTERM and SIGINT are registered on all platforms.
+        assert bootstrap.signal.SIGTERM in captured_handlers
+        assert bootstrap.signal.SIGINT in captured_handlers
+
+        # Invoking the SIGTERM handler should stop the server.
+        captured_handlers[bootstrap.signal.SIGTERM](bootstrap.signal.SIGTERM, None)  # type: ignore[operator]
+        mock_server.stop.assert_called_once()
+
+    def test_uses_sigbreak_on_windows(self):
+        """SIGBREAK is registered on Windows instead of SIGQUIT."""
+        registered: list[int] = []
+
+        def fake_signal(signum: int, _handler: object) -> None:
+            registered.append(signum)
+
+        # Inject a fake SIGBREAK constant since it doesn't exist on Linux.
+        fake_sigbreak = 21  # arbitrary, distinct from SIGQUIT
+        signal_module = bootstrap.signal
+        with (
+            patch.object(bootstrap.sys, "platform", "win32"),
+            patch.object(signal_module, "signal", side_effect=fake_signal),
+            patch.object(signal_module, "SIGBREAK", fake_sigbreak, create=True),
+        ):
+            bootstrap._set_up_signal_handler(Mock())
+
+        assert fake_sigbreak in registered
+
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="signal.SIGQUIT does not exist on Windows",
+    )
+    def test_uses_sigquit_on_non_windows(self):
+        """SIGQUIT is registered on non-Windows platforms."""
+        registered: list[int] = []
+
+        def fake_signal(signum: int, _handler: object) -> None:
+            registered.append(signum)
+
+        with (
+            patch.object(bootstrap.sys, "platform", "linux"),
+            patch.object(bootstrap.signal, "signal", side_effect=fake_signal),
+        ):
+            bootstrap._set_up_signal_handler(Mock())
+
+        assert bootstrap.signal.SIGQUIT in registered
+
+
+class BootstrapPydeckMapboxTest(TestCase):
+    """Tests for _fix_pydeck_mapbox_api_warning."""
+
+    def test_sets_mapbox_env_var_when_missing(self):
+        """Sets MAPBOX_API_KEY from config when env var is absent."""
+        env_without_key = {k: v for k, v in os.environ.items() if k != "MAPBOX_API_KEY"}
+        with (
+            patch.dict(os.environ, env_without_key, clear=True),
+            patch.object(
+                bootstrap.config, "get_option", return_value="cfg-token"
+            ) as mock_get_option,
+        ):
+            bootstrap._fix_pydeck_mapbox_api_warning()
+            assert os.environ["MAPBOX_API_KEY"] == "cfg-token"
+
+        mock_get_option.assert_called_once_with("mapbox.token")
+
+    def test_does_not_overwrite_existing_mapbox_env_var(self):
+        """Preserves an externally-set MAPBOX_API_KEY value."""
+        with (
+            patch.dict(os.environ, {"MAPBOX_API_KEY": "external"}, clear=False),
+            patch.object(bootstrap.config, "get_option") as mock_get_option,
+        ):
+            bootstrap._fix_pydeck_mapbox_api_warning()
+            assert os.environ["MAPBOX_API_KEY"] == "external"
+
+        mock_get_option.assert_not_called()
+
+
+@patch("streamlit.web.bootstrap.prepare_streamlit_environment", Mock())
+@patch("streamlit.web.bootstrap._print_url", Mock())
+@patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+@patch("streamlit.web.bootstrap.cli_util.open_browser")
+class BootstrapOnServerStartBrowserTest(IsolatedAsyncioTestCase):
+    """Tests for the maybe_open_browser path inside _on_server_start."""
+
+    async def _run_on_server_start(self) -> None:
+        # prepare_streamlit_environment is mocked at the class level to avoid
+        # leaking changes to os.environ (MAPBOX_API_KEY) and the global
+        # mimetypes registry across tests.
+        bootstrap._on_server_start(Mock(is_running_hello=False))
+        # Yield to the event loop so the call_soon callback runs.
+        await asyncio.sleep(0)
+
+    async def test_does_not_open_browser_in_headless_mode(self, mock_open_browser):
+        """The scheduled callback skips opening a browser when headless=True."""
+        with testutil.patch_config_options({"server.headless": True}):
+            await self._run_on_server_start()
+
+        mock_open_browser.assert_not_called()
+
+    async def test_opens_browser_for_manually_set_server_address(
+        self, mock_open_browser
+    ):
+        """Opens a browser using the configured non-socket server.address."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": False,
+                "server.address": "10.0.0.5",
+                "server.port": 8501,
+                "global.developmentMode": False,
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            await self._run_on_server_start()
+
+        mock_open_browser.assert_called_once()
+        url = mock_open_browser.call_args.args[0]
+        assert "10.0.0.5" in url
+
+    async def test_skips_browser_for_unix_socket_server_address(
+        self, mock_open_browser
+    ):
+        """Does not open a browser when the server is bound to a unix socket."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": False,
+                "server.address": "unix:///tmp/streamlit.sock",
+                "global.developmentMode": False,
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            await self._run_on_server_start()
+
+        mock_open_browser.assert_not_called()
+
+    async def test_opens_browser_at_localhost_when_nothing_configured(
+        self, mock_open_browser
+    ):
+        """Opens a browser at localhost when no explicit address is configured."""
+        with testutil.patch_config_options(
+            {
+                "server.headless": False,
+                "server.port": 8501,
+                "global.developmentMode": False,
+            }
+        ):
+            await self._run_on_server_start()
+
+        mock_open_browser.assert_called_once()
+        url = mock_open_browser.call_args.args[0]
+        assert "localhost" in url
+
+
+class BootstrapPrintUrlSpecificAddressTest(IsolatedAsyncioTestCase):
+    """Tests for the manually-set non-wildcard server.address branch in _print_url."""
+
+    def setUp(self):
+        self.orig_stdout = sys.stdout
+        sys.stdout = StringIO()
+
+    def tearDown(self):
+        sys.stdout.close()
+        sys.stdout = self.orig_stdout
+
+    def test_prints_single_url_for_specific_address(self):
+        """A specific non-wildcard server.address should produce a single 'URL: ...' entry."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.address": "10.0.0.5",
+                "server.port": 8501,
+                "global.developmentMode": False,
+                "server.headless": False,
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            bootstrap._print_url(False)
+
+        out = sys.stdout.getvalue()
+        assert "URL: http://10.0.0.5:8501" in out
+        # Should not also show the localhost/network URLs.
+        assert "Local URL" not in out
+        assert "Network URL" not in out

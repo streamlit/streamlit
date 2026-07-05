@@ -165,6 +165,47 @@ describe("AppView element", () => {
     })
   })
 
+  it("renders the skills nudge in its anchor and coexists with toasts", () => {
+    render(
+      <AppView
+        {...getProps({
+          skillsNudge: <div data-testid="stSkillsNudge">nudge</div>,
+        })}
+      />
+    )
+
+    const anchor = screen.getByTestId("stSkillsNudgeAnchor")
+    const nudge = screen.getByTestId("stSkillsNudge")
+    expect(nudge).toBeVisible()
+    // The nudge renders inside its fixed top-right anchor.
+    expect(anchor).toContainElement(nudge)
+
+    // An app toast renders alongside the nudge, not in place of it: the nudge
+    // is persistent (its own fixed card) while the toast region is separate.
+    act(() => {
+      toastQueue.add({ body: "coexisting toast" }, { timeout: undefined })
+    })
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+    expect(screen.getByText("coexisting toast")).toBeVisible()
+    // The toast region is NOT nested in the nudge anchor (it positions itself /
+    // portals to the body); they are independent. The vertical stacking (toast
+    // region pushed below the nudge) depends on layout + ResizeObserver, which
+    // jsdom does not implement, so it is asserted in the e2e instead.
+    expect(anchor).not.toContainElement(screen.getByTestId("stToastContainer"))
+
+    // Clean up
+    act(() => {
+      toastQueue.visibleToasts.forEach((t: { key: string }) =>
+        toastQueue.close(t.key)
+      )
+    })
+  })
+
+  it("does not render the nudge anchor when no nudge is provided", () => {
+    render(<AppView {...getProps()} />)
+    expect(screen.queryByTestId("stSkillsNudgeAnchor")).not.toBeInTheDocument()
+  })
+
   it("does not render a sidebar when there are no elements and only one page", () => {
     render(<AppView {...getProps()} />)
 
@@ -1082,9 +1123,8 @@ describe("AppView element", () => {
       const header = screen.getByTestId("stHeader")
       expect(header).toBeInTheDocument()
       expect(header).not.toHaveStyle({ backgroundColor: "transparent" })
-      // Navigation should be present in the header
-      const allPage2Elements = screen.getAllByText("page2")
-      expect(allPage2Elements.length).toBeGreaterThan(0)
+      // Navigation should be present in the header — top nav section trigger is rendered
+      expect(screen.getByTestId("stTopNavSection")).toBeInTheDocument()
     })
 
     it("header shows logo and sidebar button in embed mode", () => {
@@ -1161,9 +1201,8 @@ describe("AppView element", () => {
       // Header should be visible
       expect(screen.getByTestId("stHeader")).toBeInTheDocument()
 
-      // Navigation should still be shown in embed mode
-      const allPage2Elements = screen.getAllByText("page2")
-      expect(allPage2Elements.length).toBeGreaterThan(0)
+      // Navigation should still be shown in embed mode — top nav section trigger is rendered
+      expect(screen.getByTestId("stTopNavSection")).toBeInTheDocument()
     })
 
     it("header does NOT show toolbar actions in embed mode without show_toolbar", () => {

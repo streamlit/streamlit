@@ -53,6 +53,7 @@ export const StyledDialogOverlay = styled(ModalOverlay)(({ theme }) => ({
  */
 export const StyledDialogPanel = styled(RAModal)<{ $dialogWidth?: string }>(
   ({ theme, $dialogWidth }) => ({
+    outline: "none",
     background: theme.colors.bgColor,
     borderRadius: theme.radii.xxl,
     boxShadow: theme.shadows.popover,
@@ -74,6 +75,7 @@ export const StyledDialogPanel = styled(RAModal)<{ $dialogWidth?: string }>(
  * are not clipped between the body and the panel boundary.
  */
 export const StyledDialogInner = styled(Dialog)({
+  outline: "none",
   display: "flex",
   flexDirection: "column",
   overflow: "visible",
