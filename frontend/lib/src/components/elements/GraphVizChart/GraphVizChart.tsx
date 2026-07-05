@@ -74,7 +74,9 @@ function sanitizeNamespacedXlinkHref(element: Element): void {
  * regardless of environment (e.g. jsdom vs. a real browser SVG DOM).
  */
 export function sanitizeGraphVizLinkUris(container: Element): void {
-  container.querySelectorAll("*").forEach(element => {
+  // Graphviz link targets are exclusively on SVG `<a>` elements, so we only
+  // need to inspect those rather than walking every node in the SVG subtree.
+  container.querySelectorAll("a").forEach(element => {
     sanitizeLinkAttribute(element, "href")
     sanitizeLinkAttribute(element, "xlink:href")
     sanitizeNamespacedXlinkHref(element)
