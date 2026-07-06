@@ -22,6 +22,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from streamlit.runtime import runtime_util
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_websocket import (
     StarletteClientContext,
@@ -502,6 +503,50 @@ class TestWebsocketHandlerUserInfoPrecedence:
         assert user_info["email"] == "header@example.com"
         # Cookie values that aren't overridden should still be present
         assert user_info["is_logged_in"] is True
+
+
+class TestWebsocketHandlerMessageSize:
+    """Tests for inbound WebSocket message size enforcement."""
+
+    @patch_config_options(
+        {
+            "server.enableCORS": False,
+            "server.enableXsrfProtection": False,
+            "server.maxWidgetStateSize": 1,
+        }
+    )
+    def test_closes_connection_for_oversized_client_message(self) -> None:
+        """Test that oversized client messages close the connection with code 1009."""
+        mock_websocket = MagicMock()
+        mock_websocket.headers = MagicMock()
+        mock_websocket.headers.get.return_value = None
+        mock_websocket.headers.getlist.return_value = []
+        mock_websocket.cookies = {}
+        mock_websocket.accept = AsyncMock()
+        mock_websocket.close = AsyncMock()
+        mock_websocket.receive_bytes = AsyncMock(return_value=b"x" * 1_100_000)
+
+        mock_runtime = MagicMock()
+        mock_runtime.connect_session = MagicMock(return_value="test-session-id")
+        mock_runtime.disconnect_session = MagicMock()
+        mock_runtime.handle_backmsg = MagicMock()
+
+        handler = create_websocket_handler(mock_runtime)
+        with (
+            patch.object(runtime_util, "_max_widget_state_size_bytes", None),
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
+            ) as mock_client_class,
+        ):
+            mock_client = MagicMock()
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            asyncio.run(handler(mock_websocket))
+
+        mock_websocket.close.assert_called_once_with(code=1009)
+        mock_runtime.handle_backmsg.assert_not_called()
+        mock_runtime.disconnect_session.assert_called_once_with("test-session-id")
 
 
 class TestGetSignedCookieWithChunks:
