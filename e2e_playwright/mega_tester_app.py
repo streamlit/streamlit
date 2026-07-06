@@ -261,7 +261,6 @@ def _render_data_display(
         start_idx = (page - 1) * page_size
         st.dataframe(
             paginated_df.iloc[start_idx : start_idx + page_size],
-            width="stretch",
         )
         st.caption(f"Showing page {page} of {total_pages}")
 
