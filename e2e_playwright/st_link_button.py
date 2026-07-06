@@ -122,3 +122,17 @@ rerun_link_clicked = st.link_button(
     on_click="rerun",
 )
 st.write("Link Button with rerun value:", rerun_link_clicked)
+
+st.link_button(
+    "Link Button same tab",
+    url="https://streamlit.io",
+    new_tab=False,
+    key="same_tab_link_button",
+)
+
+st.link_button(
+    "Link Button explicit new tab",
+    url="https://streamlit.io",
+    new_tab=True,
+    key="explicit_new_tab_link_button",
+)

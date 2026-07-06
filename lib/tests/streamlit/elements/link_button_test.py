@@ -184,3 +184,41 @@ class LinkButtonTest(DeltaGeneratorTestCase):
             'The value "invalid" is not a valid emoji. '
             "Shortcodes are not allowed, please use a single character instead."
         )
+
+    def test_new_tab_default(self):
+        """Test that new_tab defaults to True on the proto."""
+        st.link_button("the label", url="https://streamlit.io")
+
+        c = self.get_delta_from_queue().new_element.link_button
+        assert c.new_tab is True
+
+    @parameterized.expand([(True,), (False,)])
+    def test_new_tab_forwards_to_proto(self, new_tab: bool) -> None:
+        """Test that the new_tab parameter is forwarded to the proto."""
+        st.link_button("the label", url="https://streamlit.io", new_tab=new_tab)
+
+        c = self.get_delta_from_queue().new_element.link_button
+        assert c.new_tab is new_tab
+
+    def test_new_tab_changes_element_id(self) -> None:
+        """new_tab should be part of the auto-computed element identity."""
+        st.link_button(
+            "the label",
+            url="https://streamlit.io",
+            on_click="rerun",
+            new_tab=True,
+        )
+        first_id = self.get_delta_from_queue().new_element.link_button.id
+
+        # Reset the run so that we don't collide with the previous element id.
+        self.script_run_ctx.reset()
+
+        st.link_button(
+            "the label",
+            url="https://streamlit.io",
+            on_click="rerun",
+            new_tab=False,
+        )
+        second_id = self.get_delta_from_queue().new_element.link_button.id
+
+        assert first_id != second_id

@@ -26,7 +26,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-LINK_BUTTON_ELEMENTS = 19
+LINK_BUTTON_ELEMENTS = 21
 
 
 def _click_link_and_wait_for_rerun(app: Page, link: Locator) -> None:
@@ -162,3 +162,30 @@ def test_link_button_shortcut_triggers(app: Page):
     popup = popup_info.value
     expect(popup).to_have_url(re.compile(r"https://streamlit\.io/?"))
     popup.close()
+
+
+def test_default_link_opens_in_new_tab(app: Page):
+    """Anti-regression: the default link button opens in a new tab."""
+    default_link = (
+        app.get_by_test_id("stLinkButton")
+        .filter(has_text="Default Link")
+        .get_by_role("link")
+    )
+    expect(default_link).to_have_attribute("target", "_blank")
+    expect(default_link).to_have_attribute("rel", "noreferrer")
+
+
+def test_new_tab_false_opens_in_same_tab(app: Page):
+    """Test that `new_tab=False` renders an anchor without `target=_blank`."""
+    same_tab_link = get_element_by_key(app, "same_tab_link_button").get_by_role("link")
+    expect(same_tab_link).not_to_have_attribute("target", re.compile(r".+"))
+    expect(same_tab_link).not_to_have_attribute("rel", re.compile(r".+"))
+
+
+def test_new_tab_true_explicit_opens_in_new_tab(app: Page):
+    """Test that an explicit `new_tab=True` still renders `target=_blank`."""
+    new_tab_link = get_element_by_key(app, "explicit_new_tab_link_button").get_by_role(
+        "link"
+    )
+    expect(new_tab_link).to_have_attribute("target", "_blank")
+    expect(new_tab_link).to_have_attribute("rel", "noreferrer")

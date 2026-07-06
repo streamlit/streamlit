@@ -812,6 +812,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        new_tab: bool = True,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -832,6 +833,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        new_tab: bool = True,
     ) -> bool: ...
 
     @overload
@@ -852,6 +854,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        new_tab: bool = True,
     ) -> bool: ...
 
     @gather_metrics("link_button")
@@ -872,11 +875,13 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        new_tab: bool = True,
     ) -> bool | DeltaGenerator:
         r"""Display a link button element.
 
-        When clicked, a new tab will be opened to the specified URL. This will
-        create a new session for the user if directed within the app.
+        When clicked, the specified URL is opened. By default, the URL opens in
+        a new tab; set ``new_tab=False`` to open it in the same tab instead.
+        Opening the link within the app will create a new session for the user.
 
         Parameters
         ----------
@@ -919,15 +924,17 @@ class ButtonMixin:
             whether or not the button behaves like an input widget. This can
             be one of the following values:
 
-            - ``"ignore"`` (default): Streamlit opens the link in a new tab
-              and doesn't rerun the app. The button won't behave like an
-              input widget.
-            - ``"rerun"``: Streamlit opens the link in a new tab and reruns
-              the app. In this case, ``st.link_button`` returns a Boolean value
-              like ``st.button``.
-            - A ``callable``: Streamlit opens the link in a new tab, reruns
-              the app, and executes the callable at the beginning of the rerun.
-              In this case, ``st.link_button`` returns a Boolean value.
+            - ``"ignore"`` (default): Streamlit opens the link and doesn't
+              rerun the app. The button won't behave like an input widget.
+            - ``"rerun"``: Streamlit opens the link and reruns the app. In
+              this case, ``st.link_button`` returns a Boolean value like
+              ``st.button``.
+            - A ``callable``: Streamlit opens the link, reruns the app, and
+              executes the callable at the beginning of the rerun. In this
+              case, ``st.link_button`` returns a Boolean value.
+
+            Whether the link opens in a new tab or the current tab is
+            controlled by the ``new_tab`` parameter.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback when
@@ -1037,6 +1044,11 @@ class ButtonMixin:
             .. |st.button| replace:: ``st.button``
             .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
+        new_tab : bool
+            Whether to open the link in a new browser tab. If this is ``True``
+            (default), the link opens in a new tab. If this is ``False``, the
+            link opens in the same tab, replacing the current app.
+
         Returns
         -------
         element or bool
@@ -1084,6 +1096,7 @@ class ButtonMixin:
             icon_position=normalized_icon_position,
             width=width,
             shortcut=shortcut,
+            new_tab=new_tab,
             ctx=ctx,
         )
 
@@ -1429,6 +1442,7 @@ class ButtonMixin:
         disabled: bool = False,
         width: Width = "content",
         shortcut: str | None = None,
+        new_tab: bool = True,
         ctx: ScriptRunContext | None = None,
     ) -> bool | DeltaGenerator:
         key = to_key(key)
@@ -1472,6 +1486,7 @@ class ButtonMixin:
                 width=width,
                 icon_position=icon_position,
                 shortcut=normalized_shortcut,
+                new_tab=new_tab,
             )
 
         link_button_proto.label = label
@@ -1479,6 +1494,7 @@ class ButtonMixin:
         link_button_proto.type = type
         link_button_proto.disabled = disabled
         link_button_proto.ignore_rerun = ignore_rerun
+        link_button_proto.new_tab = new_tab
 
         if help is not None:
             link_button_proto.help = dedent(help)

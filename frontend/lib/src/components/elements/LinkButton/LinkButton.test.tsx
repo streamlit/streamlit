@@ -184,6 +184,22 @@ describe("LinkButton widget", () => {
     expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
   })
 
+  it("opens in a new tab by default (newTab=true)", () => {
+    render(<LinkButton {...getProps({ newTab: true })} />)
+
+    const linkButton = screen.getByRole("link")
+    expect(linkButton).toHaveAttribute("target", "_blank")
+    expect(linkButton).toHaveAttribute("rel", "noreferrer")
+  })
+
+  it("opens in the same tab when newTab=false", () => {
+    render(<LinkButton {...getProps({ newTab: false })} />)
+
+    const linkButton = screen.getByRole("link")
+    expect(linkButton).not.toHaveAttribute("target")
+    expect(linkButton).not.toHaveAttribute("rel")
+  })
+
   describe("wrapped BaseLinkButton", () => {
     const LINK_BUTTON_TYPES = ["primary", "secondary", "tertiary"]
 

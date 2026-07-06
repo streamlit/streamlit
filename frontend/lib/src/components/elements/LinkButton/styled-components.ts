@@ -39,12 +39,15 @@ export interface BaseLinkButtonProps {
   children: ReactNode
   autoFocus?: boolean
   href: string
-  target: string
-  rel: string
+  target?: string
+  rel?: string
   onClick: (event: MouseEvent<HTMLAnchorElement>) => void
 }
 
-type RequiredBaseLinkButtonProps = Required<BaseLinkButtonProps>
+type RequiredBaseLinkButtonProps = Required<
+  Omit<BaseLinkButtonProps, "target" | "rel">
+> &
+  Pick<BaseLinkButtonProps, "target" | "rel">
 
 function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   switch (size) {

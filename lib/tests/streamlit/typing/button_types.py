@@ -251,6 +251,14 @@ if TYPE_CHECKING:
         link_button("Link", "https://example.com", shortcut=None), DeltaGenerator
     )
 
+    # Link button with new_tab parameter
+    assert_type(
+        link_button("Link", "https://example.com", new_tab=True), DeltaGenerator
+    )
+    assert_type(
+        link_button("Link", "https://example.com", new_tab=False), DeltaGenerator
+    )
+
     # Link button with on_click parameter - supports "rerun", "ignore", or callable
     assert_type(
         link_button("Link", "https://example.com", on_click="ignore"), DeltaGenerator
@@ -291,6 +299,7 @@ if TYPE_CHECKING:
             disabled=False,
             width="stretch",
             shortcut="Ctrl+Shift+S",
+            new_tab=False,
         ),
         bool,
     )

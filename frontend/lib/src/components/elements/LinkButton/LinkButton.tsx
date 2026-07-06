@@ -95,8 +95,8 @@ function LinkButton(props: Readonly<Props>): ReactElement {
           disabled={element.disabled}
           onClick={handleClick}
           href={element.url}
-          target="_blank"
-          rel="noreferrer"
+          target={element.newTab ? "_blank" : undefined}
+          rel={element.newTab ? "noreferrer" : undefined}
           aria-disabled={element.disabled}
         >
           <DynamicButtonLabel

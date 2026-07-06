@@ -31,4 +31,8 @@ message LinkButton {
   string shortcut = 11;
   streamlit.ButtonLikeIconPosition icon_position = 12;
   bool ignore_rerun = 13;
+
+  // If false, the link opens in the same tab instead of a new tab. Defaults to
+  // true, which preserves the original behavior of opening in a new tab.
+  bool new_tab = 14;
 }
