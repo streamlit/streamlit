@@ -191,8 +191,10 @@ supported chart types.
 - Parse `element.spec` (`JSON.parse`) into an ECharts `EChartsOption`, memoized on the spec string
   rather than `element.id` because display-only charts intentionally do not have an ID.
 - Hold an `echarts` instance in a ref bound to a container `div`. Use
-  `echarts.init(dom, themeObj, { renderer: element.renderer === SVG ? "svg" : "canvas", width, height })`
-  and `chart.setOption(option, { notMerge: true })`.
+  `echarts.init(dom, themeArg, { renderer: element.renderer === SVG ? "svg" : "canvas", width, height })`
+  and `chart.setOption(option, { notMerge: true })`. `themeArg` is the Streamlit-built theme object
+  **only when `element.theme === "streamlit"`**; when `theme=None` it is `undefined` so ECharts uses
+  its built-in default theme and the user's `options` stay untouched (see [Theming](#theming-frontend)).
   - Only initialize once the container has valid positive dimensions (ECharts renders incorrectly
     into zero-sized/hidden containers); otherwise defer init rather than throw.
   - On renderer **or** theme change, dispose and recreate the instance (both are fixed at `init`),
@@ -211,7 +213,10 @@ supported chart types.
   display-only charts to persist browser-only state through `widgetMgr.setElementState`; if the
   element is truly unmounted, ECharts can be recreated from the declarative option. When
   selections are active and `element.id` is populated, restore the persisted widget
-  selection/brush state after chart recreation.
+  selection/brush state after chart recreation **and after any in-place
+  `setOption({ notMerge: true })`** — full replacement clears drawn `brush` areas, so re-dispatch the
+  persisted brush areas (see the Selections "State restore" step) whenever the option is replaced,
+  keeping the visible selection in sync with the persisted widget state.
 - **Remount validation**: add focused manual/e2e coverage for unrelated widget reruns, fullscreen,
   tabs, and expanders. If display-only charts are commonly unmounted/remounted in those paths and
   replay visible entry animations, switch to computing a stable non-widget element ID for all
@@ -306,8 +311,10 @@ Add a `useEChartsSelections` hook (analogous to `useVegaLiteSelections`) that, g
   the ECharts selection (`chart.dispatchAction({ type: "brush", areas: [] })`) and write an empty
   selection — mirroring `PlotlyChart`.
 - **State restore**: when `element.id` is populated, restore selection-related view state on
-  remount/fullscreen (re-dispatch prior `brush` areas). Display-only charts should not depend on
-  `widgetMgr.setElementState`.
+  remount/fullscreen **and after each option-replacing `setOption({ notMerge: true })`** by
+  re-dispatching the persisted `brush` areas (`chart.dispatchAction({ type: "brush", areas })`) —
+  otherwise a full option replacement clears the drawn box/lasso and desyncs the chart from the
+  persisted widget selection. Display-only charts should not depend on `widgetMgr.setElementState`.
 - **Display-only**: when selections are inactive (`on_select="ignore"`, i.e. no `element.id`), do not
   bind selection handlers or emit updates. (v1 does not expose a `disabled` parameter, mirroring
   `st.plotly_chart`; see the product spec's Out of Scope.)
