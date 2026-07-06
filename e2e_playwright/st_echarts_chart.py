@@ -236,8 +236,8 @@ selection_event = st.echarts_chart(
     selection_mode=["points", "box", "lasso"],
     height=_HEIGHT,
 )
-st.write(f"echarts selection points: {len(selection_event.selection.points)}")
-st.write(f"echarts selection indices: {selection_event.selection.point_indices}")
+st.write(f"echarts selection points: {len(selection_event['selection']['points'])}")
+st.write(f"echarts selection indices: {selection_event['selection']['point_indices']}")
 
 # 12) A tooltip XSS payload: the data item name is an HTML/script payload. Under
 #     theme="streamlit" it must render as escaped text and never execute.
@@ -291,4 +291,4 @@ with st.form("echarts_form"):
         height=_HEIGHT,
     )
     st.form_submit_button("Submit selection")
-st.write(f"echarts form points: {len(form_event.selection.points)}")
+st.write(f"echarts form points: {len(form_event['selection']['points'])}")

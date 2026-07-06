@@ -59,6 +59,7 @@ const LOG = getLogger("EChartsChart")
 interface EChartsChartProps {
   element: EChartsChartProto
   widgetMgr: WidgetStateManager
+  /** Reserved for future use; not wired in v1 (mirrors st.plotly_chart). */
   disabled?: boolean
   fragmentId?: string
   disableFullscreenMode?: boolean
