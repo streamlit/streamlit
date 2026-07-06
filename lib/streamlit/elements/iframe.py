@@ -266,12 +266,13 @@ class IframeMixin:
         iframe. It auto-detects the input type and handles it appropriately.
 
         .. warning::
-            HTML strings and local HTML files are embedded as-is in an iframe
-            that allows JavaScript execution and same-origin access to the
-            Streamlit app. Never pass untrusted HTML from users, query
-            parameters, databases, uploaded files, LLM output, or other
-            external sources to ``st.iframe``. Use ``st.html`` for sanitized
-            HTML snippets that don't need full iframe behavior.
+            HTML strings, local HTML files, and same-origin relative URLs are
+            embedded as-is in an iframe that allows JavaScript execution and
+            same-origin access to the Streamlit app. Never pass untrusted HTML
+            or untrusted ``src`` values from users, query parameters, databases,
+            uploaded files, LLM output, or other external sources to
+            ``st.iframe``. Use ``st.html`` for sanitized HTML snippets that
+            don't need full iframe behavior.
 
         Parameters
         ----------
