@@ -165,6 +165,12 @@ updates:
       - "autofix"
       - "never-stale"
 
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action/init"
+          - "github/codeql-action/analyze"
+
   # Keep pre-commit hooks up to date
   - package-ecosystem: "pre-commit"
     directory: "/"
