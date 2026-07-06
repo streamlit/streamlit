@@ -41,6 +41,10 @@ from streamlit.errors import StreamlitAPIException, UnserializableSessionStateEr
 from streamlit.logger import get_logger
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+from streamlit.runtime.runtime_util import (
+    WidgetStateSizeError,
+    get_max_widget_state_size_bytes,
+)
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
     get_script_run_ctx,
@@ -823,6 +827,10 @@ class SessionState:
 
     def set_widgets_from_proto(self, widget_states: WidgetStatesProto) -> None:
         """Set the value of all widgets represented in the given WidgetStatesProto."""
+        widget_states_size = widget_states.ByteSize()
+        if widget_states_size > get_max_widget_state_size_bytes():
+            raise WidgetStateSizeError(widget_states_size)
+
         for state in widget_states.widgets:
             self._new_widget_state.set_widget_from_proto(state)
 
