@@ -231,14 +231,12 @@ def set_fullscreen(image_wrapper: Locator, open: bool):
     expect(toolbar).to_have_css("opacity", "1")
     expect(fullscreen_button).to_be_visible()
     fullscreen_button.click()
-    # Wait for the fullscreen CSS transition to complete by checking position style
-    # The stFullScreenFrame element (grandparent of stImage, parent of image_wrapper)
-    # becomes position:fixed when open
-    fullscreen_frame = image_wrapper.locator("..")
-    if open:
-        expect(fullscreen_frame).to_have_css("position", "fixed")
-    else:
-        expect(fullscreen_frame).to_have_css("position", "static")
+    # Wait for the toolbar button to flip to its opposite label, which confirms
+    # the fullscreen state has finished toggling before we take a snapshot.
+    toggled_button = image_wrapper.get_by_role(
+        "button", name="Close fullscreen" if open else "Fullscreen"
+    )
+    expect(toggled_button).to_be_visible()
 
 
 # SVGs without width or height are not rendered correctly in Firefox

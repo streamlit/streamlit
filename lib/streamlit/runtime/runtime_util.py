@@ -66,6 +66,31 @@ of the client's browser and the Streamlit server._
         ).strip("\n")
 
 
+class WidgetStateSizeError(MarkdownFormattedException):
+    """Exception raised when client-sent widget state is larger than the limit."""
+
+    def __init__(self, failed_msg_size: int) -> None:
+        msg = self._get_message(failed_msg_size)
+        super().__init__(msg)
+
+    def _get_message(self, failed_msg_size: int) -> str:
+        # This needs to have zero indentation otherwise the markdown will render incorrectly.
+        return (
+            f"""
+**Widget state of size {failed_msg_size / 1e6:.1f} MB exceeds the widget state size limit of
+{get_max_widget_state_size_bytes() / 1e6} MB.**
+
+This can happen when a widget or custom component sends a large value to Streamlit.
+Please decrease the amount of data sent from the browser, or increase the limit by
+setting the config option `server.maxWidgetStateSize`.
+[Click here to learn more about config options](https://docs.streamlit.io/develop/api-reference/configuration/config.toml).
+
+_Note that increasing the limit may lead to long loading times and large memory consumption
+of the Streamlit server._
+"""
+        ).strip("\n")
+
+
 class BadDurationStringError(StreamlitAPIException):
     """Raised when a bad duration argument string is passed."""
 
@@ -107,6 +132,7 @@ def serialize_forward_msg(msg: ForwardMsg) -> bytes:
 # This needs to be initialized lazily to avoid calling config.get_option() and
 # thus initializing config options when this file is first imported.
 _max_message_size_bytes: int | None = None
+_max_widget_state_size_bytes: int | None = None
 
 
 def get_max_message_size_bytes() -> int:
@@ -120,3 +146,21 @@ def get_max_message_size_bytes() -> int:
         _max_message_size_bytes = config.get_option("server.maxMessageSize") * int(1e6)
 
     return cast("int", _max_message_size_bytes)
+
+
+def get_max_widget_state_size_bytes() -> int:
+    """Returns the max client-sent message size in bytes.
+
+    This limit is applied both to raw inbound WebSocket frames in the Starlette
+    handler and to the aggregate widget state protobuf in the runtime layer.
+
+    This will lazyload the value from the config and store it in the global symbol table.
+    """
+    global _max_widget_state_size_bytes  # noqa: PLW0603
+
+    if _max_widget_state_size_bytes is None:
+        _max_widget_state_size_bytes = config.get_option(
+            "server.maxWidgetStateSize"
+        ) * int(1e6)
+
+    return cast("int", _max_widget_state_size_bytes)

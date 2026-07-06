@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
@@ -210,7 +211,7 @@ class SliderSerde:
                 # accepted as-is. Consider snapping to the nearest valid step
                 # for consistency with the UI.
                 for v in val:
-                    if v < self.min_value or v > self.max_value:
+                    if not math.isfinite(v) or v < self.min_value or v > self.max_value:
                         val = self.value
                         break
         else:

@@ -4471,16 +4471,26 @@ describe("App", () => {
     function fireWindowPostMessage(
       message: DistributiveOmit<IHostToGuestMessage, "stCommVersion">
     ): void {
-      fireEvent(
-        window,
-        new MessageEvent("message", {
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      // The manager registers `receiveHostMessage` as the window "message"
+      // listener and now only accepts trusted events originating from the
+      // direct parent frame. jsdom marks synthetically dispatched events as
+      // untrusted and does not allow overriding `isTrusted`, so we invoke the
+      // handler directly with an event that mimics a genuine host message
+      // (trusted and sourced from the parent frame).
+      act(() => {
+        hostCommunicationMgr.receiveHostMessage({
+          isTrusted: true,
+          source: window.parent,
+          origin: "https://devel.streamlit.test",
           data: {
             stCommVersion: HOST_COMM_VERSION,
             ...message,
           },
-          origin: "https://devel.streamlit.test",
-        })
-      )
+        } as unknown as MessageEvent)
+      })
     }
 
     it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when the app is first rendered", () => {
