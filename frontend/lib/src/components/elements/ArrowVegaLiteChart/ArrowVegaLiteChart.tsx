@@ -453,6 +453,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         className="stVegaLiteChart"
         useContainerWidth={useStretchWidth}
         useContainerHeight={useStretchHeight}
+        clipOverflow={isFacet || hasNestedComp}
         ref={containerRef}
       />
     </StyledToolbarElementContainer>
