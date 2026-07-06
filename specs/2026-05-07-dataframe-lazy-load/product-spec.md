@@ -14,9 +14,10 @@ want to force or disable lazy delivery.
 
 The initial version should focus on read-only row loading for known-size sources, server-side
 sorting, `lazy=True` delivery for supported/convertible inputs, and automatic lazy delivery for
-compatible large in-memory dataframes. Unknown-size sequential sources, server-side
-search/filtering, editing, selection semantics, and public custom source APIs should be designed
-as follow-up capabilities instead of being bundled into the first API.
+compatible large in-memory dataframes and supported unevaluated objects that exceed today's
+capped-preview threshold. Unknown-size sequential sources, server-side search/filtering, editing,
+selection semantics, and public custom source APIs should be designed as follow-up capabilities
+instead of being bundled into the first API.
 
 ## Problem
 
@@ -43,6 +44,12 @@ df_page = query_orders(offset=start, limit=page_size)
 
 st.dataframe(df_page)
 ```
+
+Related public requests include support for lazy table expressions in `st.dataframe`
+([#6467](https://github.com/streamlit/streamlit/issues/6467)), CSV export behavior for large
+dataframes ([#10863](https://github.com/streamlit/streamlit/issues/10863)), and adjacent
+Snowpark/PySpark unevaluated-data performance work
+([#11701](https://github.com/streamlit/streamlit/issues/11701)).
 
 ## Goals
 
@@ -87,8 +94,10 @@ st.dataframe(data, *, lazy: bool | None = None, ...)
 Semantics:
 
 - `lazy=None` (default): Streamlit chooses. Use lazy delivery for supported unevaluated objects
-  and compatible in-memory dataframes above the large-table threshold. Use the existing eager or
-  capped-preview path otherwise.
+  above the existing capped-preview threshold and compatible in-memory dataframes above the
+  large-table threshold. Use the existing eager or capped-preview path otherwise. This preserves
+  today's fully eager rendering for small unevaluated objects that fit within the current
+  `_MAX_UNEVALUATED_DF_ROWS` limit.
 - `lazy=False`: Never use lazy delivery. Preserve today's eager rendering path for in-memory
   dataframes and today's capped-preview fallback for unevaluated objects.
 - `lazy=True`: Explicitly request lazy delivery. Use a native lazy adapter when available. If no
@@ -97,21 +106,26 @@ Semantics:
   options, raise a clear `StreamlitAPIException`.
 
 `lazy=True` requests lazy delivery, but for small inputs (1,000 rows or fewer) Streamlit keeps
-eager rendering as an optimization. Lazy loading a small dataset only adds downsides — extra
-chunk round-trips and disabled lazy-incompatible features such as search — without reducing the
+eager rendering as an optimization. Lazy loading a small dataset only adds downsides -- extra
+chunk round-trips and disabled lazy-incompatible features such as search -- without reducing the
 already-bounded payload. This small-data optimization is deliberate, documented behavior, not a
 silent fallback: for these inputs `lazy=True` renders a normal, fully featured eager dataframe.
+For native remote adapters, this optimization applies only when the adapter can determine the row
+count and fetch the complete result with a bounded operation of at most 1,000 rows.
 
 The pandas fallback for `lazy=True` reduces the initial frontend payload and browser memory
-usage. It does not reduce server memory usage or the cost of converting the input to pandas. For
-remote unevaluated objects, Streamlit should prefer native lazy adapters and should not silently
-materialize an entire remote dataset just to satisfy `lazy=True`.
+usage. It does not reduce server memory usage or the cost of converting the input to pandas; for
+non-pandas in-memory inputs, it can temporarily increase server memory while both the original
+object and pandas copy exist. For remote unevaluated objects, Streamlit should prefer native lazy
+adapters and should not silently materialize an entire remote dataset just to satisfy `lazy=True`.
 
 ### 2. Auto-lazy Existing Unevaluated Data Objects
 
 When `st.dataframe` receives a supported unevaluated object and Streamlit can determine a row
-count plus fetch row ranges, Streamlit should render it as a lazy dataframe instead of
-materializing a capped preview.
+count plus fetch row ranges, Streamlit should preserve today's eager behavior for objects whose
+row count is at or below the existing capped-preview threshold (`_MAX_UNEVALUATED_DF_ROWS`,
+currently 10,000 rows). Above that threshold, Streamlit should render it as a lazy dataframe
+instead of materializing only a capped preview.
 
 Note: The following examples show the target experience for native lazy adapters. The first
 implementation should include only adapters that can provide known row counts and stable range
@@ -147,6 +161,13 @@ fall back to the current capped-preview behavior with a clear warning when `lazy
 `lazy=False`. If `lazy=True`, raise a clear error explaining that no lazy adapter is available.
 This keeps compatibility for the default path while making explicit lazy requests reliable.
 
+The default path therefore has three cases for supported unevaluated objects:
+
+- Known row count at or below 10,000 rows: keep current eager materialization so search and CSV
+  export remain available.
+- Known row count above 10,000 rows with a native lazy adapter: use lazy delivery.
+- Unknown row count or missing range access: keep the current capped-preview fallback.
+
 ### 3. Auto-lazy Large In-memory Dataframes
 
 Streamlit already treats tables with more than 150,000 rows as large in the frontend and
@@ -159,8 +180,9 @@ df = pd.read_parquet("large_export.parquet")
 st.dataframe(df)  # uses lazy delivery when len(df) > 150_000 and lazy mode is compatible
 ```
 
-This does not reduce server memory usage. It reduces the initial Arrow payload and browser
-memory usage.
+For inputs already held in memory, this does not reduce server memory usage. If a non-pandas
+input uses the pandas fallback, conversion can temporarily increase server memory while both
+copies exist. It reduces the initial Arrow payload and browser memory usage.
 
 Auto-lazy should only apply when lazy mode can preserve or intentionally match existing large
 table behavior:
@@ -168,16 +190,21 @@ table behavior:
 - `st.dataframe` is read-only.
 - `on_select="ignore"`.
 - The input is not a `pandas.Styler`.
-- CSV download remains disabled or is reimplemented as a server-side export.
+- In Phase 1, CSV download remains disabled for lazy sources. Reimplementing it as a server-side
+  export is future work.
 
 **Backwards Compatibility Note:** The existing large-table path (>150k rows) already disables
-sorting and CSV download but still shows search UI. Auto-lazy additionally disables search since
-searching only loaded chunks would be misleading. This is an intentional user-visible behavior
-change for the first version in exchange for bounded initial payload and browser memory usage.
-It only affects very large tables (>150k rows) where the search affordance is already limited,
-so it is a contained, non-breaking change rather than an API break, and users who want to keep
-the old behavior can set `lazy=False`. Server-side search can restore search for auto-lazy
-dataframes in a later phase.
+sorting, select-all, and CSV download but still shows search UI. Auto-lazy changes that behavior
+in two visible ways: search is disabled because searching only loaded chunks would be misleading,
+and sorting can be re-enabled through server-side sorting when the source is sortable. CSV export
+remains disabled for lazy sources in Phase 1. Users who want to keep the old large-table behavior
+can set `lazy=False`. Server-side search and CSV export can restore those affordances for
+auto-lazy dataframes in later phases.
+
+The same compatibility rule applies to unevaluated objects: `lazy=None` must not move
+1,001-to-10,000-row unevaluated objects from today's fully eager dataframe into lazy mode. Those
+objects continue to render eagerly by default, preserving search and CSV export. Users can still
+request lazy delivery explicitly with `lazy=True` when a native adapter supports it.
 
 For smaller in-memory dataframes, Streamlit should keep eager rendering by default. Users can set
 `lazy=True` to force lazy delivery for inputs above the small-data threshold.
@@ -223,6 +250,13 @@ Validation and fallback:
 - `lazy=False` always uses eager rendering or the existing capped-preview fallback.
 - For supported eager inputs, `lazy=True` converts to an in-memory pandas dataframe once, derives
   row count and schema from that dataframe, and serves row ranges from server memory.
+- For supported unevaluated inputs with known row count at or below 10,000 rows, `lazy=None`
+  preserves today's eager materialization. This is intentional compatibility behavior, not a lazy
+  fallback.
+- For any input with known row count at or below 1,000 rows, `lazy=True` may render eagerly as the
+  documented small-data optimization. For remote native adapters, this requires a bounded fetch of
+  the complete result; Streamlit must not collect an unbounded remote dataset to discover whether
+  the optimization applies.
 - For remote unevaluated inputs, `lazy=True` should not silently materialize the full remote
   dataset. It should use a native adapter or raise a clear error.
 
@@ -230,7 +264,7 @@ Internal API:
 
 - Built-in adapters normalize to an internal `DataframeSourceProtocol`.
 - A custom source wrapper can be considered later in an advanced/internal namespace, but
-  `st.DataFrameSource` should not be part of the primary Phase 1 public API.
+  `st.DataframeSource` should not be part of the primary Phase 1 public API.
 
 ## Behavior
 
@@ -279,6 +313,11 @@ per-column public allowlist; adapters whose backend can only sort some columns s
 loaded chunks would be incorrect because unloaded rows would be excluded. Both the search toolbar
 button and the search keyboard shortcut (Ctrl/Cmd+F) are disabled for lazy dataframes.
 Server-side search can be added in a follow-up phase.
+
+**CSV Export:** CSV export is disabled for lazy sources in Phase 1. Existing eager dataframes,
+including unevaluated objects that stay eager under `lazy=None`, keep the current CSV export
+behavior. A later server-side export path can generate CSV from the full source without requiring
+all rows to be loaded in the browser.
 
 **Select-all:** The select-all keyboard shortcut (Ctrl/Cmd+A) is disabled for lazy dataframes to
 prevent triggering load requests for all data. This matches the existing behavior for large tables
@@ -355,6 +394,9 @@ Not supported in lazy mode:
 - The frontend should discard chunks from older generations.
 - Server-side source state should be cleaned up when the session closes or the element
   disappears.
+- Fragment reruns should only prune lazy sources owned by the rerun fragment. Sources owned by
+  untouched fragments or the app body should remain available, following the media-file lifecycle
+  pattern.
 
 ## Phased Implementation
 
@@ -368,15 +410,18 @@ Not supported in lazy mode:
   large-table threshold (`150000` rows) when `lazy=None`.
 - Support native lazy adapters that are implementation-ready; unsupported unevaluated objects keep
   the capped-preview fallback for `lazy=None` and raise for `lazy=True`.
+- Keep supported unevaluated objects with known row count at or below 10,000 rows on the current
+  eager path when `lazy=None`.
 - Server-side sorting via the internal `sortable` source capability.
-- Disable selection, editing, Styler, and search for lazy sources.
+- Disable selection, editing, Styler, search, and CSV export for lazy sources.
 
 ### Phase 2: Existing Lazy Data Adapters
 
 - Expand native lazy rendering for Polars LazyFrame, Snowpark DataFrame/Table, and other
   unevaluated objects not completed in Phase 1.
-- For Snowflake, direct `LIMIT/OFFSET` should be treated as a deterministic fallback, not as
-  efficient deep random access.
+- For Snowflake, direct `LIMIT/OFFSET` is deterministic only when the query has a deterministic
+  `ORDER BY`; otherwise use a session temporary table with row numbers or keep stable range access
+  disabled.
 - Keep capped-preview fallback for objects that cannot provide row count or stable range access.
 
 ### Phase 3: Server-side Search, Filtering, and Advanced Sources
@@ -414,7 +459,7 @@ Known-size sources with random access are the MVP focus.
 Rejected. Pagination is useful, but it does not preserve the dataframe interaction model and
 does not solve native scrolling through a large table.
 
-### Require `st.DataFrameSource(...)` for Every Lazy Object
+### Require `st.DataframeSource(...)` for Every Lazy Object
 
 Rejected. `st.dataframe` already accepts many unevaluated data objects. Requiring a new wrapper
 for the same objects would add boilerplate and make the API feel less Streamlit-like.
@@ -426,7 +471,7 @@ and `filterable` only apply to lazy sources. The public dataframe API should add
 mode-selection parameter `lazy`; richer source capabilities should stay internal until there is
 clear demand for custom sources.
 
-### Add `st.DataFrameSource` in Phase 1
+### Add `st.DataframeSource` in Phase 1
 
 Rejected for the initial design. A public wrapper is still useful for arbitrary databases and
 custom range loaders, but it is not necessary to solve the first product problem. Keeping the
@@ -442,7 +487,7 @@ capability declarations are clearer and make unsupported UI states easier to exp
 
 - What stable row identity API is needed before lazy dataframes can support `on_select`?
 - Which existing unevaluated object types should be included in the first adapter phase beyond
-  Polars LazyFrame, Snowpark, and DuckDB?
+  Polars LazyFrame and Snowpark?
 - For Snowflake, when should Streamlit pay the upfront cost to materialize a session temporary
   table with row numbers instead of using direct `LIMIT/OFFSET`?
 - Should auto-lazy use the hard-coded 150,000-row frontend threshold, or should it become a
@@ -453,7 +498,7 @@ capability declarations are clearer and make unsupported UI states easier to exp
 | Item                         | ✅ or comment                                          |
 |------------------------------|--------------------------------------------------------|
 | Works on SiS, Cloud, etc?    | Yes, chunk loading stays server-side and session-bound |
-| No breaking API changes      | API additive; auto-lazy only changes search UI for >150k-row tables, opt out with lazy=False |
+| No breaking API changes      | API additive; `lazy=None` preserves eager rendering for <=10k-row unevaluated objects; large-table auto-lazy changes search/sorting behavior and can be disabled with `lazy=False` |
 | No new dependencies          | Yes, adapters use optional detection                   |
 | Metrics collected            | Track lazy source type, chunks loaded, errors, bytes   |
 | Any security/legal impact?   | Needs request/source id validation per session         |
