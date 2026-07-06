@@ -68,6 +68,7 @@ import {
 } from "./styled-components"
 import {
   compileTextInputValidationRegex,
+  getInvalidTextInputMessage,
   INVALID_TEXT_INPUT_MESSAGE,
   passesTextInputValidation,
 } from "./validation"
@@ -176,7 +177,10 @@ function TextInput({
   // config. The user-error message is derived from the current
   // `element.validateMessage` so it stays in sync when only the message changes.
   const userError = hasUserError
-    ? element.validateMessage || INVALID_TEXT_INPUT_MESSAGE
+    ? element.validateMessage ||
+      (validateRegex
+        ? getInvalidTextInputMessage(validateRegex)
+        : INVALID_TEXT_INPUT_MESSAGE)
     : null
   const displayedError = hasValidationConfig
     ? (configError ?? userError)

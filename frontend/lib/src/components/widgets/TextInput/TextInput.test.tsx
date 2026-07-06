@@ -633,6 +633,9 @@ describe("TextInput widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
     expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
     expect(textInput).toHaveAttribute("aria-invalid", "true")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Invalid input. Must match pattern: /^[a-z]+$/su"
+    )
   })
 
   it("shows an error and blocks enter commits for invalid values outside a form", async () => {
@@ -719,6 +722,7 @@ describe("TextInput widget", () => {
 
     const tooltip = await screen.findByTestId("stTooltipErrorContent")
     expect(tooltip).toHaveTextContent("Lowercase only")
+    expect(tooltip).not.toHaveTextContent("^[a-z]+$")
   })
 
   it("keeps the shown error message in sync when only validateMessage changes", async () => {

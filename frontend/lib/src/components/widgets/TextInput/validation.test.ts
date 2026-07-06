@@ -16,6 +16,7 @@
 
 import {
   compileTextInputValidationRegex,
+  getInvalidTextInputMessage,
   passesTextInputValidation,
 } from "./validation"
 
@@ -56,6 +57,16 @@ describe("compileTextInputValidationRegex", () => {
 
     expect(typeof result).toBe("string")
     expect(result).toContain("Invalid validate regex: [")
+  })
+})
+
+describe("getInvalidTextInputMessage", () => {
+  it("includes the actual compiled regex in the default message", () => {
+    const regex = new RegExp("^[a-z]+$", "su")
+
+    expect(getInvalidTextInputMessage(regex)).toBe(
+      "Invalid input. Must match pattern: /^[a-z]+$/su"
+    )
   })
 })
 

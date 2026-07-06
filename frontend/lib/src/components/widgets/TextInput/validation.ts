@@ -16,6 +16,10 @@
 
 export const INVALID_TEXT_INPUT_MESSAGE = "Invalid input."
 
+export function getInvalidTextInputMessage(validateRegex: RegExp): string {
+  return `${INVALID_TEXT_INPUT_MESSAGE} Must match pattern: ${validateRegex.toString()}`
+}
+
 /**
  * Compiles the user-provided validation pattern into a RegExp.
  *

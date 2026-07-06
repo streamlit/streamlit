@@ -56,7 +56,7 @@ st.text_input(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `validate` | `str \| tuple[str, str] \| Callable[[str], bool \| str] \| None` | `None` | Validation rule for input. If string, treated as JS-flavored regex for client-side validation with a generic error message. If a tuple, treated as `(regex, error_message)` for client-side validation with a custom error message. If callable, executed server-side when value is submitted. If `None`, no validation is performed. |
+| `validate` | `str \| tuple[str, str] \| Callable[[str], bool \| str] \| None` | `None` | Validation rule for input. If string, treated as JS-flavored regex for client-side validation with a default error message that includes the compiled regex pattern. If a tuple, treated as `(regex, error_message)` for client-side validation with a custom error message. If callable, executed server-side when value is submitted. If `None`, no validation is performed. |
 
 ### Behavior
 
@@ -113,8 +113,8 @@ st.text_input(
 
 **Error messages:**
 
-Client-side regex validation shows a generic error message by default. To provide a custom error
-message, pass `validate=(regex, error_message)`:
+Client-side regex validation shows a default error message with the compiled regex pattern. To
+provide a custom error message, pass `validate=(regex, error_message)`:
 
 ```python
 st.text_input(
