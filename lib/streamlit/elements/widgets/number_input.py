@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import math
 import numbers
 from dataclasses import dataclass
 from textwrap import dedent
@@ -87,7 +88,11 @@ class NumberInputSerde:
             # a no-op for frontend values since the UI enforces bounds.
             # Returning the default triggers _seed_widget_from_url's
             # "deserialized == default" check, which clears the URL param.
-            if val < self.min_value or val > self.max_value:
+            if (
+                (self.data_type == NumberInputProto.FLOAT and not math.isfinite(val))
+                or val < self.min_value
+                or val > self.max_value
+            ):
                 return self.value
 
         return val
