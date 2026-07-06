@@ -58,7 +58,7 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.53",
+  "ty==0.0.56",
   # We fix ruff to a version to be in sync with the pre-commit hook:
   "ruff==0.15.19",
   # We fix mypy to a version to avoid breaking our CI on updates,
@@ -451,15 +451,3 @@ exclude = [
 unresolved-import = "ignore"
 possibly-unresolved-reference = "error"
 unused-type-ignore-comment = "ignore"
-
-# We type-check across multiple environments (e.g. min vs. max dependency
-# versions). In `image_utils.py`, the numpy stubs shipped with our minimum
-# supported versions don't narrow `isinstance(image, np.ndarray)` to
-# `npt.NDArray[Any]`, so two `# ty: ignore[invalid-argument-type]` directives
-# are required under the min env but flagged as unused under the max env.
-# Scope the exemption to just this file instead of disabling the rule globally.
-[[tool.ty.overrides]]
-include = ["lib/streamlit/elements/lib/image_utils.py"]
-
-[tool.ty.overrides.rules]
-unused-ignore-comment = "ignore"
