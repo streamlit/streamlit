@@ -39,10 +39,114 @@ interface VegaLiteParam {
   [key: string]: unknown
 }
 
+interface VegaLiteUsermeta {
+  embedOptions?: {
+    theme?: string | null
+    renderer?: string
+    padding?:
+      | number
+      | { left?: number; right?: number; top?: number; bottom?: number }
+    [key: string]: unknown
+  } | null
+  [key: string]: unknown
+}
+
 /**
  * Fix bug where Vega Lite was vertically-cropping the x-axis in some cases.
  */
 const BOTTOM_PADDING = 20
+
+function getUsermeta(spec: VegaLiteSpec): VegaLiteUsermeta | undefined {
+  if (
+    spec.usermeta === null ||
+    typeof spec.usermeta !== "object" ||
+    Array.isArray(spec.usermeta)
+  ) {
+    return undefined
+  }
+
+  return spec.usermeta as VegaLiteUsermeta
+}
+
+function isNonNegativeFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+}
+
+function sanitizeRenderer(renderer: unknown): string | undefined {
+  return typeof renderer === "string" &&
+    ["svg", "canvas", "hybrid"].includes(renderer)
+    ? renderer
+    : undefined
+}
+
+function sanitizePadding(
+  padding: unknown
+):
+  | number
+  | { left?: number; right?: number; top?: number; bottom?: number }
+  | undefined {
+  if (isNonNegativeFiniteNumber(padding)) {
+    return padding
+  }
+
+  if (
+    padding === null ||
+    typeof padding !== "object" ||
+    Array.isArray(padding)
+  ) {
+    return undefined
+  }
+
+  const sanitizedPadding: {
+    left?: number
+    right?: number
+    top?: number
+    bottom?: number
+  } = {}
+  for (const side of ["left", "right", "top", "bottom"] as const) {
+    const value = (padding as Record<string, unknown>)[side]
+    if (isNonNegativeFiniteNumber(value)) {
+      sanitizedPadding[side] = value
+    }
+  }
+
+  return Object.keys(sanitizedPadding).length > 0
+    ? sanitizedPadding
+    : undefined
+}
+
+function sanitizeUsermetaEmbedOptions(spec: VegaLiteSpec): void {
+  const usermeta = getUsermeta(spec)
+  if (!usermeta || !("embedOptions" in usermeta)) {
+    return
+  }
+
+  const sanitizedEmbedOptions: NonNullable<VegaLiteUsermeta["embedOptions"]> =
+    {}
+  const embedOptions = usermeta.embedOptions
+
+  const theme = embedOptions?.theme
+  if (theme !== "streamlit" && (typeof theme === "string" || theme === null)) {
+    sanitizedEmbedOptions.theme = theme
+  }
+
+  const renderer = sanitizeRenderer(embedOptions?.renderer)
+  if (renderer) {
+    sanitizedEmbedOptions.renderer = renderer
+  }
+
+  const padding = sanitizePadding(embedOptions?.padding)
+  if (padding !== undefined) {
+    sanitizedEmbedOptions.padding = padding
+  }
+
+  if (Object.keys(sanitizedEmbedOptions).length > 0) {
+    usermeta.embedOptions = sanitizedEmbedOptions
+    return
+  }
+
+  delete usermeta.embedOptions
+}
 
 /**
  * Prepares the vega-lite spec for selections by transforming the select parameters
@@ -129,16 +233,19 @@ const generateSpec = (
   if (typeof spec.width === "number" && spec.width <= 0) {
     delete spec.width
   }
-  if (vegaLiteTheme === "streamlit") {
+  const usermetaTheme = getUsermeta(spec)?.embedOptions?.theme
+
+  if (vegaLiteTheme === "streamlit" || usermetaTheme === "streamlit") {
     spec.config = applyStreamlitTheme(spec.config, theme)
-  } else if (spec.usermeta?.embedOptions?.theme === "streamlit") {
-    spec.config = applyStreamlitTheme(spec.config, theme)
-    // Remove the theme from the usermeta so it doesn't get picked up by vega embed.
-    spec.usermeta.embedOptions.theme = undefined
   } else {
     // Apply minor theming improvements to work better with Streamlit
     spec.config = applyThemeDefaults(spec.config, theme)
   }
+  // Keep only safe vega-embed presentation options for compatibility. Streamlit's
+  // theme is applied above and removed so vega-embed doesn't try to resolve it.
+  // Behavior-bearing options stay stripped, including chart actions that open
+  // same-origin pages with serialized spec contents.
+  sanitizeUsermetaEmbedOptions(spec)
 
   if (spec.title) {
     if (typeof spec.title === "string") {

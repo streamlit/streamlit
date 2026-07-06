@@ -1044,11 +1044,107 @@ describe("useVegaElementPreprocessor", () => {
       )
       // The streamlit theme is applied to config...
       expect(spec.config).toBeDefined()
-      // ...and the embed theme is cleared so vega-embed doesn't re-apply it.
+      // ...and the embed options are cleared so vega-embed doesn't re-apply them.
+      expect((spec.usermeta as { embedOptions?: unknown }).embedOptions).toBe(
+        undefined
+      )
+    })
+
+    it("preserves safe vega-embed options while removing risky embedOptions", () => {
+      const spec = renderSpec(
+        {
+          mark: "bar",
+          usermeta: {
+            embedOptions: {
+              theme: "dark",
+              renderer: "canvas",
+              padding: 12,
+              actions: true,
+              sourceHeader: "<script>window.evil = true</script>",
+              sourceFooter: "<img src=x onerror=window.evil = true>",
+              editorUrl: "https://example.com/editor/",
+              loader: { http: { credentials: "include" } },
+            },
+          },
+        },
+        { vegaLiteTheme: "default" }
+      )
+
       expect(
-        (spec.usermeta as { embedOptions: { theme?: string } }).embedOptions
-          .theme
-      ).toBeUndefined()
+        (spec.usermeta as { embedOptions?: unknown }).embedOptions
+      ).toEqual({ theme: "dark", renderer: "canvas", padding: 12 })
+    })
+
+    it("preserves vega-embed padding side objects", () => {
+      const spec = renderSpec(
+        {
+          mark: "bar",
+          usermeta: {
+            embedOptions: {
+              renderer: "svg",
+              padding: {
+                left: 1,
+                right: 2,
+                top: 3,
+                bottom: 4,
+                unknown: 5,
+              },
+            },
+          },
+        },
+        { vegaLiteTheme: "default" }
+      )
+
+      expect(
+        (spec.usermeta as { embedOptions?: unknown }).embedOptions
+      ).toEqual({
+        renderer: "svg",
+        padding: { left: 1, right: 2, top: 3, bottom: 4 },
+      })
+    })
+
+    it("preserves a null vega-embed theme for backwards compatibility", () => {
+      const spec = renderSpec(
+        {
+          mark: "bar",
+          usermeta: {
+            embedOptions: {
+              theme: null,
+              actions: true,
+            },
+          },
+        },
+        { vegaLiteTheme: "default" }
+      )
+
+      expect(
+        (spec.usermeta as { embedOptions?: unknown }).embedOptions
+      ).toEqual({ theme: null })
+    })
+
+    it("removes invalid renderer and padding embedOptions", () => {
+      const spec = renderSpec(
+        {
+          mark: "bar",
+          usermeta: {
+            embedOptions: {
+              renderer: "none",
+              padding: {
+                left: "1",
+                right: -2,
+                top: null,
+                bottom: [],
+              },
+              actions: true,
+            },
+          },
+        },
+        { vegaLiteTheme: "default" }
+      )
+
+      expect((spec.usermeta as { embedOptions?: unknown }).embedOptions).toBe(
+        undefined
+      )
     })
 
     it("skips null children when spreading container width across vconcat", () => {

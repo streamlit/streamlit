@@ -99,7 +99,7 @@ interface StyledVegaLiteChartContainerProps {
 
 export const StyledVegaLiteChartContainer =
   styled.div<StyledVegaLiteChartContainerProps>(
-    ({ theme, useContainerWidth, useContainerHeight }) => ({
+    ({ useContainerWidth, useContainerHeight }) => ({
       width: useContainerWidth ? "100%" : "auto",
       height: useContainerHeight ? "100%" : "auto",
       // These styles come from VegaLite Library
@@ -108,74 +108,6 @@ export const StyledVegaLiteChartContainer =
         display: "inline-block",
         boxSizing: "border-box",
 
-        "details:not([open]) > :not(summary)": {
-          display: "none !important",
-        },
-        "details[open] summary": {
-          opacity: 0.7,
-        },
-        "&:hover summary, .vega-embed:focus summary": {
-          background: "transparent",
-        },
-        "&:hover summary, &:focus-within summary": {
-          opacity: "1 !important",
-          transition: "opacity 0.2s ease",
-        },
-        "&.has-actions": {
-          paddingRight: 0,
-        },
-        ".vega-actions": {
-          position: "absolute",
-          display: "flex",
-          flexDirection: "column",
-          paddingBottom: theme.spacing.sm,
-          paddingTop: theme.spacing.sm,
-          zIndex: theme.zIndices.popup,
-          // Position under the menu button. The size of the menu button
-          // iconSizes.md + padding (2 * spacing.xs)
-          //+ some additional spacing (spacing.xs)
-          top: `calc(${theme.iconSizes.md} + 2 * ${theme.spacing.xs} + ${theme.spacing.xs})`,
-          right: 0,
-          // Customize menu UI to look like the Streamlit menu:
-          backgroundColor: theme.colors.bgColor,
-          boxShadow: theme.shadows.popover,
-          border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
-          animationDuration: "0.15s",
-          animationName: "scale-in",
-          animationTimingFunction: "cubic-bezier(0.2, 0, 0.13, 1.5)",
-          textAlign: "left",
-          borderRadius: theme.radii.default,
-          a: {
-            fontFamily: theme.genericFonts.bodyFont,
-            fontWeight: theme.fontWeights.normal,
-            fontSize: theme.fontSizes.md,
-            margin: 0,
-            padding: `${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
-            color: theme.colors.bodyText,
-            whiteSpace: "nowrap",
-            textDecoration: "none",
-          },
-          "a:hover, a:focus": {
-            backgroundColor: theme.colors.darkenedBgMix15,
-            color: theme.colors.bodyText,
-          },
-          ":before": {
-            content: "none",
-          },
-          ":after": {
-            content: "none",
-          },
-        },
-        "@keyframes scale-in": {
-          from: {
-            opacity: 0,
-            transform: "scale(0.6)",
-          },
-          to: {
-            opacity: 1,
-            transform: "scale(1)",
-          },
-        },
         ".chart-wrapper": {
           "&.fit-x": {
             width: "100%",
@@ -188,41 +120,6 @@ export const StyledVegaLiteChartContainer =
             "path.background, path.foreground": {
               pointerEvents: "auto",
             },
-          },
-        },
-        summary: {
-          position: "absolute",
-          top: 0,
-          right: 0,
-          opacity: 0,
-          listStyle: "none",
-          cursor: "pointer",
-          display: "list-item",
-          padding: theme.spacing.xs,
-          // Fix weird floating button height issue in Vega Lite.
-          height: "auto",
-          // Fix floating button appearing above pop-ups.
-          zIndex: theme.zIndices.menuButton,
-          border: "none",
-          boxShadow: "none",
-          borderRadius: theme.radii.default,
-          color: theme.colors.fadedText10,
-          backgroundColor: "transparent",
-          transition: "opacity 300ms 150ms,transform 300ms 150ms",
-          lineHeight: 0,
-          "&::-webkit-details-marker": {
-            display: "none",
-          },
-          "&:active, &:focus-visible, &:hover": {
-            border: "none",
-            boxShadow: "none",
-            color: theme.colors.bodyText,
-            opacity: "1 !important",
-            background: theme.colors.darkenedBgMix15,
-          },
-          svg: {
-            width: theme.iconSizes.md,
-            height: theme.iconSizes.md,
           },
         },
       },
