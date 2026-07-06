@@ -85,3 +85,15 @@ if TYPE_CHECKING:
 
     # Invalid usages — should NOT type check
     tabs(["A", "B"], on_change=123)  # type: ignore[arg-type]
+
+    # --- Height parameter ---
+
+    # Valid heights — should type check
+    assert_type(tabs(["A", "B"], height=300), Sequence[TabContainer])
+    assert_type(tabs(["A", "B"], height="stretch"), Sequence[TabContainer])
+    assert_type(tabs(["A", "B"], height="content"), Sequence[TabContainer])
+    assert_type(tabs(["A", "B"], height=None), Sequence[TabContainer])
+
+    # Invalid heights — should NOT type check
+    tabs(["A", "B"], height="tall")  # type: ignore[arg-type]
+    tabs(["A", "B"], height=1.5)  # type: ignore[arg-type]

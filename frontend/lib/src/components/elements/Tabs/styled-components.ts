@@ -28,13 +28,21 @@ import { STALE_STYLES } from "~lib/theme/consts"
 interface StyledTabContainerProps {
   isOverflowing: boolean
   width: React.CSSProperties["width"]
+  height?: React.CSSProperties["height"]
   flex: React.CSSProperties["flex"]
 }
 
 export const StyledTabContainer = styled.div<StyledTabContainerProps>(
-  ({ isOverflowing, width, flex }) => ({
+  ({ isOverflowing, width, height, flex }) => ({
     position: isOverflowing ? "relative" : undefined,
     width: width || undefined,
+    height: height || undefined,
+    // When the container has a constrained height, lay out the tab list and
+    // panel as a column so the active panel can grow and scroll internally,
+    // and clip the outer container so only the active panel scrolls.
+    ...(height
+      ? { display: "flex", flexDirection: "column", overflow: "hidden" }
+      : {}),
     flex: flex || undefined,
   })
 )
@@ -85,12 +93,17 @@ export const StyledScrollArrow = styled.button<StyledScrollArrowProps>(
   })
 )
 
-/** Fills StyledTabContainer. Uses column flex per RAC convention for horizontal tabs. */
-export const StyledTabsRoot = styled(RATabs)({
+/** Fills StyledTabContainer. Uses column flex per RAC convention for horizontal tabs.
+ * When `$constrainedHeight` is true, the root fills its parent so the active
+ * tab panel can scroll internally rather than the whole page. */
+export const StyledTabsRoot = styled(RATabs, {
+  shouldForwardProp: prop => prop !== "$constrainedHeight",
+})<{ $constrainedHeight?: boolean }>(({ $constrainedHeight }) => ({
   display: "flex",
   flexDirection: "column",
   width: "100%",
-})
+  ...($constrainedHeight ? { flex: 1, minHeight: 0 } : {}),
+}))
 
 /** Tab list strip with bottom border separator. overflow-y: clip (the official RAC
  * recommendation) prevents a Y-scroll container from being created while still
@@ -183,14 +196,21 @@ export const StyledTab = styled(RATab, {
  * (#15892, #15893).
  *
  * The active panel is focusable (RAC sets tabIndex=0), so we replace the
- * default outline with Streamlit's focus ring. */
+ * default outline with Streamlit's focus ring.
+ *
+ * When `$constrainedHeight` is true, the active panel grows to fill the
+ * remaining height and scrolls internally when its content overflows. */
 export const StyledTabPanel = styled(RATabPanel, {
-  shouldForwardProp: prop => prop !== "$isActive",
-})<{ $isActive: boolean }>(({ theme, $isActive }) => ({
-  display: $isActive ? undefined : "none",
-  paddingTop: theme.spacing.lg,
-  outline: "none",
-  "&[data-focus-visible]": {
-    boxShadow: theme.shadows.focusRing,
-  },
-}))
+  shouldForwardProp: prop =>
+    prop !== "$isActive" && prop !== "$constrainedHeight",
+})<{ $isActive: boolean; $constrainedHeight?: boolean }>(
+  ({ theme, $isActive, $constrainedHeight }) => ({
+    display: $isActive ? undefined : "none",
+    paddingTop: theme.spacing.lg,
+    outline: "none",
+    ...($constrainedHeight ? { flex: 1, minHeight: 0, overflow: "auto" } : {}),
+    "&[data-focus-visible]": {
+      boxShadow: theme.shadows.focusRing,
+    },
+  })
+)
