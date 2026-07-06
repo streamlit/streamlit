@@ -59,8 +59,10 @@ class _Symbol:
 ANY = _Symbol("ANY")
 """Sentinel meaning "receiver is called for every sender"."""
 
-# Senders are keyed by their identity; ANY uses a fixed sentinel id that can
-# never collide with a real object's identity.
+# Senders are keyed by their identity; ANY uses a fixed sentinel id. This relies
+# on senders never being the integer ``0`` (``_make_id`` returns ints unchanged),
+# which holds for Streamlit's usage where senders are objects or strings. This
+# mirrors blinker, which likewise reserves a fixed id for ANY.
 _ANY_ID = 0
 
 

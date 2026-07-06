@@ -106,7 +106,9 @@ def test_extract_github_repo_from_url(url: str, expected: str) -> None:
     [
         ("git version 2.39.3", (2, 39, 3)),
         ("git version 2.39.3 (Apple Git-145)", (2, 39, 3)),
-        ("git version 2.7", (2, 7)),
+        # A missing patch component is normalized to 0 so the version can be
+        # compared directly against _MIN_GIT_VERSION.
+        ("git version 2.7", (2, 7, 0)),
         ("not a version", None),
     ],
 )
@@ -135,6 +137,17 @@ class GitUtilTest(unittest.TestCase):
         with _mock_git_repo(git_version="git version 2.20.3") as repo:
             assert repo.is_valid()
             assert repo.git_version == (2, 20, 3)
+
+    def test_two_part_min_git_version_is_valid(self):
+        """A two-part git version at the minimum (e.g. "2.7") is still valid.
+
+        The patch component is normalized to 0 so it compares as
+        (2, 7, 0) >= _MIN_GIT_VERSION rather than the two-tuple (2, 7), which
+        would incorrectly sort below (2, 7, 0).
+        """
+        with _mock_git_repo(git_version="git version 2.7") as repo:
+            assert repo.is_valid()
+            assert repo.git_version == (2, 7, 0)
 
     def test_git_not_installed(self):
         """When git is not installed, all commands return None and the repo

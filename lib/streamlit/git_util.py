@@ -77,19 +77,26 @@ def _extract_github_repo_from_url(url: str) -> str | None:
     return f"{match.group(1)}/{match.group(2)}"
 
 
-def _parse_git_version(version_output: str) -> tuple[int, ...] | None:
-    """Parse a ``git --version`` string into a version tuple."""
+def _parse_git_version(version_output: str) -> tuple[int, int, int] | None:
+    """Parse a ``git --version`` string into a ``(major, minor, patch)`` tuple.
+
+    A missing patch component (e.g. ``git version 2.7``) is normalized to ``0``
+    so the result can be compared directly against ``_MIN_GIT_VERSION`` (a
+    two-element tuple like ``(2, 7)`` would otherwise compare as less than
+    ``(2, 7, 0)``).
+    """
     match = _GIT_VERSION_PATTERN.search(version_output)
     if match is None:
         return None
-    return tuple(int(part) for part in match.groups() if part is not None)
+    major, minor, patch = match.groups()
+    return (int(major), int(minor), int(patch) if patch is not None else 0)
 
 
 class GitRepo:
     def __init__(self, path: str) -> None:
-        # If we have a valid repo, git_version will be a tuple
-        # of 2+ ints: (major, minor[, patch]).
-        self.git_version: tuple[int, ...] | None = None
+        # If git is installed, git_version will be a 3-tuple of ints:
+        # (major, minor, patch). A missing patch component is normalized to 0.
+        self.git_version: tuple[int, int, int] | None = None
         self.module: str = ""
 
         # `git -C` needs a directory, but `path` may point at a file (e.g. the
