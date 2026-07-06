@@ -223,18 +223,23 @@ class ScriptRequests:
             if self._state == ScriptRequestType.RERUN:
                 # We already have an existing Rerun request, so we can coalesce the new
                 # rerun request into the existing one.
-                #
-                # _rerun_data is the already-stored pending request.  When it was first
-                # accepted (the CONTINUE branch above), any bare fragment_id was moved
-                # into fragment_id_queue and fragment_id was cleared, so fragment_id is
-                # always None here.
-                #
-                # new_data is the raw incoming request from the caller and has not been
-                # through that step yet, so fragment_id may still be set.
 
                 coalesced_states = _coalesce_widget_states(
                     self._rerun_data.widget_states, new_data.widget_states
                 )
+
+                # Normalise new_data the same way the CONTINUE branch does: fold a
+                # bare fragment_id into fragment_id_queue so the rest of the coalescing
+                # logic only has to deal with one field.
+                if new_data.fragment_id:
+                    new_data = replace(
+                        new_data,
+                        fragment_id=None,
+                        fragment_id_queue=[
+                            new_data.fragment_id,
+                            *new_data.fragment_id_queue,
+                        ],
+                    )
 
                 if _is_full_app_rerun(self._rerun_data) or _is_full_app_rerun(new_data):
                     # Rule 1: a full-app rerun anywhere in the interaction trumps every
@@ -247,12 +252,7 @@ class ScriptRequests:
                     # targeted rerun into one ordered pass (deduped, order-preserving).
                     # Preempt iff any part is fragment-scoped.
                     fragment_id_queue = [*self._rerun_data.fragment_id_queue]
-                    new_ids = (
-                        [new_data.fragment_id]
-                        if new_data.fragment_id
-                        else new_data.fragment_id_queue
-                    )
-                    for fragment_id in new_ids:
+                    for fragment_id in new_data.fragment_id_queue:
                         if fragment_id not in fragment_id_queue:
                             fragment_id_queue.append(fragment_id)
                     is_fragment_scoped_rerun = (
