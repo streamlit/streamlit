@@ -114,6 +114,12 @@ updates:
         patterns:
           - "oxlint"
           - "oxfmt"
+      # Catch unmatched frontend patch updates after the more specific groups.
+      frontend-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
 
   # Keep python dependencies up to date (via uv)
   # Root pyproject.toml contains dev/test dependency groups
