@@ -277,10 +277,13 @@ diagram). Therefore:
 #### Reruns & state persistence
 
 ECharts plays entry animations when a browser instance is initialized. During ordinary reruns, the
-frontend must keep the existing ECharts instance mounted and update it in place with `setOption`
-only when the option, theme, renderer, or dimensions changed. This avoids unnecessary
-re-initialization and repeated entry animations for the common "unrelated widget reran the app"
-case.
+frontend must keep the existing ECharts instance mounted and update it in place — `setOption` when
+the option changed, `resize` when only dimensions changed — avoiding unnecessary re-initialization
+and repeated entry animations for the common "unrelated widget reran the app" case. Because ECharts
+fixes the **theme** and **renderer** at `init` time, a change to `theme` or `renderer` (e.g. a
+light/dark toggle) cannot be applied via `setOption`; it instead requires disposing and
+re-initializing the instance (see the tech spec and [Theming](#theming)), which is why those
+specific changes can briefly re-initialize and replay entry animations.
 
 If Streamlit truly unmounts and remounts the element, ECharts can be recreated from the
 declarative option object; in that case, entry animation may replay. Preserving browser-only
