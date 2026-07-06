@@ -228,7 +228,9 @@ describe("ArrowVegaLiteChart", () => {
 
   it("downloads the chart as a PNG when the toolbar action is clicked", async () => {
     vi.useFakeTimers()
-    vi.setSystemTime(new Date("2026-07-02T16:01:00.000Z"))
+    // Construct the pinned time via local-time components (not a UTC ISO string)
+    // so the expected filename below matches regardless of the runner's timezone.
+    vi.setSystemTime(new Date(2026, 6, 2, 16, 1, 0))
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     let downloadFilename: string | null = null
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
@@ -290,13 +292,15 @@ describe("ArrowVegaLiteChart", () => {
       )
     )
 
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole("button", { name: "Copy Vega-Lite spec" })
-          .querySelector(`path[d="${checkIconPath}"]`)
-      ).toBeInTheDocument()
-    )
+    // After a successful copy the accessible name switches to "Copied!" so
+    // assistive tech announces the state change (not just the icon swap).
+    const copiedButton = await screen.findByRole("button", { name: "Copied!" })
+    expect(
+      copiedButton.querySelector(`path[d="${checkIconPath}"]`)
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Copy Vega-Lite spec" })
+    ).toBeNull()
   })
 })
 

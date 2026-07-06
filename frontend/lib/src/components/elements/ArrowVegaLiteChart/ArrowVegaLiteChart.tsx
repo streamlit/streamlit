@@ -506,7 +506,10 @@ const ArrowVegaLiteChart: FC<Props> = ({
         )}
         {showCopySpecAction && (
           <ToolbarAction
-            label="Copy Vega-Lite spec"
+            // Announce the copied state to assistive tech (the icon swap alone
+            // is not exposed as an accessible name change). Keep the default
+            // label as the spec-specific name so e2e/queries stay stable.
+            label={isCopied ? "Copied!" : "Copy Vega-Lite spec"}
             icon={isCopied ? Check : ContentCopy}
             onClick={handleCopySpec}
           />
