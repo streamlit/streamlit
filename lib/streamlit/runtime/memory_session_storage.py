@@ -16,8 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cachetools import TTLCache
-
+from streamlit.runtime.caching.ttl_cache import TTLCache
 from streamlit.runtime.session_manager import SessionInfo, SessionStorage
 
 if TYPE_CHECKING:
@@ -28,8 +27,8 @@ class MemorySessionStorage(SessionStorage):
     """A SessionStorage that stores sessions in memory.
 
     At most maxsize sessions are stored with a TTL of ttl seconds. This class is really
-    just a thin wrapper around cachetools.TTLCache that complies with the SessionStorage
-    protocol.
+    just a thin wrapper around an in-memory ``TTLCache`` that complies with the
+    SessionStorage protocol.
     """
 
     # NOTE: The defaults for maxsize and ttl are chosen arbitrarily for now. These

@@ -295,7 +295,8 @@ class SQLConnection(BaseConnection["Engine"]):
 
         from sqlalchemy import text
         from sqlalchemy.exc import DatabaseError, InternalError, OperationalError
-        from tenacity import (
+
+        from streamlit.connections.retry_util import (
             retry,
             retry_if_exception_type,
             stop_after_attempt,

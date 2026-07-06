@@ -58,13 +58,13 @@ import os
 import threading
 from typing import TYPE_CHECKING, Final, cast
 
-from blinker import ANY, Signal
 from typing_extensions import Self
 from watchdog import events
 from watchdog.observers import Observer
 
 from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.logger import get_logger
+from streamlit.signal_util import ANY, Signal
 from streamlit.util import repr_
 from streamlit.watcher import util
 

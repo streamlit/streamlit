@@ -121,7 +121,12 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         >>> st.dataframe(df)
 
         """
-        from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
+        from streamlit.connections.retry_util import (
+            retry,
+            retry_if_exception,
+            stop_after_attempt,
+            wait_fixed,
+        )
 
         @retry(
             after=lambda _: self.reset(),

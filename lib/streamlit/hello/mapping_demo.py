@@ -15,13 +15,22 @@
 from urllib.error import URLError
 
 import pandas as pd
-import pydeck as pdk
 
 import streamlit as st
 from streamlit.hello.utils import show_code
 
 
 def mapping_demo() -> None:
+    try:
+        import pydeck as pdk
+    except ImportError:
+        st.error(
+            "This demo requires the **pydeck** package, which is an optional "
+            "dependency. Install it with `pip install pydeck` or "
+            "`pip install streamlit[mapping]`."
+        )
+        return
+
     @st.cache_data
     def from_data_file(filename: str) -> pd.DataFrame:
         url = (
