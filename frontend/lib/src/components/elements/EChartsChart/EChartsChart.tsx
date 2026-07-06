@@ -88,6 +88,9 @@ export function EChartsChart({
   // The JSON of the last option applied via setOption, used to skip no-op
   // setOption calls so unrelated reruns don't replay entry animations.
   const appliedOptionRef = useRef<string | null>(null)
+  // The instance the resize effect last observed, used to skip the resize that
+  // coincides with (re)creating the instance (see the resize effect below).
+  const resizedInstanceRef = useRef<echarts.ECharts | null>(null)
   // The live ECharts instance, tracked in state so recreating it (on a
   // renderer/theme change) re-runs the option and selection effects.
   const [chartInstance, setChartInstance] = useState<echarts.ECharts | null>(
@@ -219,9 +222,18 @@ export function EChartsChart({
   // Resize the chart when its container dimensions change. Entering/exiting
   // fullscreen changes the measured width/height, so this covers it too.
   useEffect(() => {
-    if (chartInstance && width > 0 && height > 0) {
-      chartInstance.resize()
+    if (!chartInstance || width <= 0 || height <= 0) {
+      return
     }
+    // Skip the resize triggered on the same pass the instance was (re)created:
+    // echarts already sizes to the container at init, and resizing during its
+    // first render is a no-op that logs a benign "resize during main process"
+    // warning. Subsequent size changes still resize.
+    if (resizedInstanceRef.current !== chartInstance) {
+      resizedInstanceRef.current = chartInstance
+      return
+    }
+    chartInstance.resize()
   }, [chartInstance, width, height])
 
   // Reset the selection when the surrounding form is cleared.

@@ -147,6 +147,9 @@ describe("EChartsChart", () => {
     expect(applyOpts).toEqual({ notMerge: true })
     // Streamlit theming defaults were applied non-destructively.
     expect(appliedOption.aria).toEqual({ enabled: true })
+    // The resize that coincides with init is skipped (echarts sizes at init),
+    // avoiding a benign "resize during main process" warning.
+    expect(mockChart.resize).not.toHaveBeenCalled()
     expect(screen.getByTestId("stEChartsChart")).toBeVisible()
   })
 
