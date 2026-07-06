@@ -1050,13 +1050,15 @@ describe("useVegaElementPreprocessor", () => {
       )
     })
 
-    it("preserves a vega-embed theme while removing risky embedOptions", () => {
+    it("preserves safe vega-embed options while removing risky embedOptions", () => {
       const spec = renderSpec(
         {
           mark: "bar",
           usermeta: {
             embedOptions: {
               theme: "dark",
+              renderer: "canvas",
+              padding: 12,
               actions: true,
               sourceHeader: "<script>window.evil = true</script>",
               sourceFooter: "<img src=x onerror=window.evil = true>",
@@ -1070,7 +1072,35 @@ describe("useVegaElementPreprocessor", () => {
 
       expect(
         (spec.usermeta as { embedOptions?: unknown }).embedOptions
-      ).toEqual({ theme: "dark" })
+      ).toEqual({ theme: "dark", renderer: "canvas", padding: 12 })
+    })
+
+    it("preserves vega-embed padding side objects", () => {
+      const spec = renderSpec(
+        {
+          mark: "bar",
+          usermeta: {
+            embedOptions: {
+              renderer: "svg",
+              padding: {
+                left: 1,
+                right: 2,
+                top: 3,
+                bottom: 4,
+                unknown: 5,
+              },
+            },
+          },
+        },
+        { vegaLiteTheme: "default" }
+      )
+
+      expect(
+        (spec.usermeta as { embedOptions?: unknown }).embedOptions
+      ).toEqual({
+        renderer: "svg",
+        padding: { left: 1, right: 2, top: 3, bottom: 4 },
+      })
     })
 
     it("preserves a null vega-embed theme for backwards compatibility", () => {
@@ -1090,6 +1120,31 @@ describe("useVegaElementPreprocessor", () => {
       expect(
         (spec.usermeta as { embedOptions?: unknown }).embedOptions
       ).toEqual({ theme: null })
+    })
+
+    it("removes invalid renderer and padding embedOptions", () => {
+      const spec = renderSpec(
+        {
+          mark: "bar",
+          usermeta: {
+            embedOptions: {
+              renderer: "none",
+              padding: {
+                left: "1",
+                right: -2,
+                top: null,
+                bottom: [],
+              },
+              actions: true,
+            },
+          },
+        },
+        { vegaLiteTheme: "default" }
+      )
+
+      expect((spec.usermeta as { embedOptions?: unknown }).embedOptions).toBe(
+        undefined
+      )
     })
 
     it("skips null children when spreading container width across vconcat", () => {
