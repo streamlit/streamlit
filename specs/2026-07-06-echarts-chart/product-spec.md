@@ -83,7 +83,7 @@ st.echarts_chart(
 | `width` | `"stretch"`, `"content"`, or `int` | Element width. Same semantics as `st.plotly_chart` (default `"stretch"`). |
 | `height` | `"content"`, `"stretch"`, or `int` | Element height. Because ECharts has no intrinsic height, `"content"` resolves to a default of **400px** (or a `pyecharts` chart's own height, if set). See [Sizing](#sizing). |
 | `theme` | `"streamlit"` or `None` | `"streamlit"` (default) applies the Streamlit theme (colors, fonts, dark/light). `None` uses ECharts' built-in default theme. |
-| `key` | `str`, `int`, or `None` | Stable identity for selection widgets. Required to read selection state from Session State. Also emitted as a `st-key-<key>` CSS class. |
+| `key` | `str`, `int`, or `None` | Optional stable identity for the element. When selections are active and a `key` is provided, the selection state is also readable from `st.session_state[key]`; it is not required for display-only charts or for reading the return value. Also emitted as a `st-key-<key>` CSS class. |
 | `on_select` | `"ignore"`, `"rerun"`, or `callable` | Whether the chart behaves like an input widget. `"ignore"` (default) = display only; `"rerun"` = rerun on selection and return selection state; a callable = rerun and invoke it as a callback. |
 | `selection_mode` | `"points"`, `"box"`, `"lasso"`, or an iterable | Which selection interactions are enabled when `on_select` is active. Defaults to all three. |
 | `renderer` | `"canvas"` or `"svg"` | Renderer passed to `echarts.init`. `"canvas"` (default) is best for large datasets; `"svg"` produces real DOM nodes that are better for printing, sharp scaling, and accessibility. |
@@ -183,7 +183,9 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
   gridlines, axis lines, and tick labels colored from the Streamlit gray scale. Interaction
   components (`tooltip`, `legend`, `dataZoom`, `brush`, `toolbox`) also get themed defaults.
 - **Dark / light mode** — the chart re-themes automatically when the user toggles the theme
-  (via ECharts' `darkMode` plus themed colors), with no rerun required.
+  (via ECharts' `darkMode` plus themed colors), with no Python rerun required. Because an ECharts
+  theme is fixed at `init` time, re-theming re-initializes the instance (see the tech spec), so a
+  brief re-initialization flash (and a possible entry-animation replay) may occur on toggle.
 
 Any color/style the user explicitly sets in `options` is **preserved** and takes precedence
 over the Streamlit theme defaults (the theme fills in gaps; it does not override explicit
@@ -241,7 +243,11 @@ When selections are enabled, a small brush/selection toolbar is added for the bo
   each identifying its series (`series_index`/`series_name`) and `data_index` plus the item's
   `name`/`value`. The per-item `series_index` disambiguates multi-series charts.
 - `point_indices` — flat list of selected `data_index` values, for parity with
-  `PlotlyState` and convenient access in the common single-series case.
+  `PlotlyState` and convenient access in the common single-series case. **Reliable only for
+  single-series charts**: ECharts `data_index` is series-local, so in multi-series charts the
+  same index can refer to different points across series (and may appear more than once). For
+  multi-series charts, use `points[].series_index` + `points[].data_index` (or `series_name`)
+  to disambiguate.
 - `box` / `lasso` — coordinate metadata for the drawn regions (parallel to Plotly's `box`/`lasso`).
 
 Selection state is **read-only** and cannot be set through Session State (same as Plotly/Vega).
@@ -259,7 +265,7 @@ diagram). Therefore:
 
 - `width` behaves like `st.plotly_chart` (`"stretch"` by default). For `width="content"`,
   Streamlit uses a pyecharts chart's own width when available; raw ECharts options otherwise
-  resolve to a sensible fixed default because ECharts options do not have intrinsic width.
+  resolve to a fixed default of **700px** because ECharts options do not have intrinsic width.
 - `height="content"` (default) resolves to **400px** unless a pyecharts chart exposes its own
   height. Raw ECharts options otherwise use the default. `height="stretch"` fills the parent
   container; an `int` sets a fixed pixel height.
@@ -418,8 +424,9 @@ st.echarts_chart(pie)
 ### Accessibility
 
 - ECharts supports ARIA descriptions generated from the option (`options["aria"] = {"enabled": True}`).
-  Streamlit enables this by default (when not already set) so charts expose a description to
-  screen readers.
+  Under `theme="streamlit"` (default), Streamlit enables this by default (when not already set) so
+  charts expose a description to screen readers. Consistent with the theme opt-out semantics,
+  `theme=None` leaves the user's `options` untouched, so ARIA is only enabled if the user sets it.
 - The chart container uses an appropriate `role`/`aria-label`, and the loading state uses
   `aria-busy`, consistent with other Streamlit charts.
 - Toolbar buttons (fullscreen, download) have accessible labels.

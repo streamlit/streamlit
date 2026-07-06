@@ -83,6 +83,10 @@ Registration:
 Note: unlike `VegaLiteChart`, ECharts data lives inline in the option object, so there is **no
 Arrow data field** — the entire spec (including data) is JSON. This is the same as `PlotlyChart`.
 
+Note: the message intentionally has **no `width`/`height` fields**. Element dimensions are handled
+by the standard element-container sizing mechanism (the shared `width`/`height` config carried
+outside this message, as with other chart elements), so they are not duplicated in the proto.
+
 ### Backend: `lib/streamlit/elements/echarts_chart.py`
 
 A new `EChartsMixin` added to `DeltaGenerator` (register in `delta_generator.py` next to
@@ -162,8 +166,8 @@ const EChartsChart = lazy(
 and a render branch for `node.element.echartsChart` wrapped with `withFullScreenWrapper`
 (mirroring the `PlotlyChart` branch).
 
-**Dependencies.** Add `echarts` to `frontend/lib/package.json` (Apache-2.0; latest is the 6.x
-line). Import the **full** bundle (`import * as echarts from "echarts"`), *not* the tree-shakable
+**Dependencies.** Add `echarts` to `frontend/lib/package.json` (Apache-2.0), targeting the
+`^6.0.0` range (the minimum version whose API this design relies on). Import the **full** bundle (`import * as echarts from "echarts"`), *not* the tree-shakable
 `echarts/core` registry. Tree-shaking requires statically selecting the series/components at build
 time, which is impossible for an API that accepts arbitrary user options — a chart type the user
 picks at runtime would silently fail to render. Because the component is lazy-loaded, ECharts lives
@@ -236,7 +240,8 @@ Two layers, because the ECharts init theme doesn't reliably cover everything:
 1. `buildStreamlitEChartsTheme(emotionTheme)` → the object passed to `echarts.init`.
 2. `applyStreamlitOptionDefaults(option, emotionTheme)` → a light, non-destructive pass that fills
    a few option-level gaps themes miss (e.g. `grid.containLabel` default, `visualMap`/`dataZoom`
-   colors) **only when the user hasn't set them**.
+   colors, and `aria.enabled` — see the product spec's Accessibility section) **only when the user
+   hasn't set them**.
 
 Precedence: the user's explicit `options` values must always win. The init theme applies
 *underneath* the option passed to `setOption`, and `applyStreamlitOptionDefaults` only writes keys
