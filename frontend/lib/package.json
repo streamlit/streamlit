@@ -92,7 +92,7 @@
     "numbro": "^2.5.0",
     "plotly.js": "^3.6.0",
     "protobufjs": "^8.6.5",
-    "query-string": "^9.4.0",
+    "query-string": "^9.4.1",
     "re-resizable": "^6.11.2",
     "react-aria-components": "^1.19.0",
     "react-color": "^2.18.1",
