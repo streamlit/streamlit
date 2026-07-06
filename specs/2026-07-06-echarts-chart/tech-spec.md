@@ -175,7 +175,11 @@ and a render branch for `node.element.echartsChart` wrapped with `withFullScreen
 **Dependencies.** Add `echarts` to `frontend/lib/package.json` (Apache-2.0), pinning a minimum of
 `^6.1.0`. This is a **hard requirement, not an implementation-time detail**: the `6.0.x` line is
 still affected by a tooltip XSS advisory (`series.type="lines"`), so `^6.1.0` is the safe minimum
-whose API this design relies on. Import the **full** bundle (`import * as echarts from "echarts"`), *not* the tree-shakable
+whose API this design relies on. At implementation time, **confirm `6.1.0` is actually released and
+contains the fix** — ECharts' release cadence is irregular — and cite the upstream advisory/fix
+notes (link the GitHub Security Advisory in `package.json` and the PR description). If a patched
+`6.1.x` is not yet available, pin the specific patched `6.0.x` release that contains the fix instead
+and record the reasoning. Import the **full** bundle (`import * as echarts from "echarts"`), *not* the tree-shakable
 `echarts/core` registry. Tree-shaking requires statically selecting the series/components at build
 time, which is impossible for an API that accepts arbitrary user options — a chart type the user
 picks at runtime would silently fail to render. Because the component is lazy-loaded, ECharts lives
@@ -304,7 +308,9 @@ Add a `useEChartsSelections` hook (analogous to `useVegaLiteSelections`) that, g
 - **State restore**: when `element.id` is populated, restore selection-related view state on
   remount/fullscreen (re-dispatch prior `brush` areas). Display-only charts should not depend on
   `widgetMgr.setElementState`.
-- **Disabled**: when `disabled`, do not bind selection handlers or emit updates.
+- **Display-only**: when selections are inactive (`on_select="ignore"`, i.e. no `element.id`), do not
+  bind selection handlers or emit updates. (v1 does not expose a `disabled` parameter, mirroring
+  `st.plotly_chart`; see the product spec's Out of Scope.)
 
 The serialized JSON structure is the single source of truth shared with the Python serde (same
 contract as `VegaLiteState`/`PlotlyState`).
@@ -319,11 +325,14 @@ contract as `VegaLiteState`/`PlotlyState`).
   posture is defined here as a hard requirement:
   - Depend on ECharts `^6.1.0`, which resolves the known tooltip XSS advisory (`series.type="lines"`);
     the version floor is enforced in `package.json` (see [Dependencies](#dependencies)).
-  - Under `theme="streamlit"`, `applyStreamlitOptionDefaults` sets a safe tooltip default of
-    `tooltip.renderMode = "html"` with `tooltip.appendToBody`/raw-HTML injection **disabled** — i.e.
-    do not enable ECharts features that inject unescaped HTML — and never turns on raw-HTML rendering
-    on the user's behalf. If the user explicitly opts into an HTML/`formatter` mode, their value wins
-    (same app-author trust model as Plotly/Vega), but Streamlit's defaults never widen the surface.
+  - Under `theme="streamlit"`, `applyStreamlitOptionDefaults` **never injects a tooltip/label
+    `formatter`** (or any other option) that emits raw HTML on the user's behalf, and it does **not**
+    change `tooltip.renderMode`. It relies on ECharts' built-in escaping of tooltip/label *values* in
+    the default formatter, so app-provided strings render as text rather than markup. (Note: ECharts'
+    `tooltip.renderMode = "html"` is the default DOM tooltip mode and is safe by itself — the risk
+    comes only from a `formatter` that returns unescaped HTML, which Streamlit's defaults never add.)
+    If the user explicitly supplies an HTML-emitting `formatter`, their value wins (same app-author
+    trust model as Plotly/Vega), but Streamlit's own defaults never widen the surface.
   - This behavior is covered by a **required regression test** (see [Testing](#testing)): a tooltip/
     label containing an HTML/script payload must render as escaped text under `theme="streamlit"`.
 
@@ -344,7 +353,8 @@ contract as `VegaLiteState`/`PlotlyState`).
   lifecycle; display-only charts work with an empty proto ID; theme/renderer change recreates the
   instance; `click` → point widget state;
   `brushSelected` + `brushEnd` (both orderings) → single box/lasso update; brush clear → empty
-  state; no-op selections skip `setStringValue`; form clear + `disabled` behavior; error rendering.
+  state; no-op selections skip `setStringValue`; form-clear reset behavior; display-only charts bind
+  no selection handlers; error rendering.
   Mock `echarts.init` where a real canvas isn't needed.
 - **Security regression test (required).** A tooltip/label whose content contains an HTML/script
   payload (e.g. `"<img src=x onerror=alert(1)>"`) must render as **escaped text** under

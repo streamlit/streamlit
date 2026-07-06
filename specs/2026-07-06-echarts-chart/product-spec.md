@@ -296,6 +296,11 @@ and through `st.session_state[key]` when a key is provided. This follows the Veg
 pattern more closely than Plotly's always-compute-ID behavior, which is a special case for
 Plotly's mutable browser-side figure state.
 
+Because the widget ID incorporates the normalized option payload when no explicit `key` is provided,
+**any change to the chart's data or options resets the selection state** (the widget is treated as a
+new element). This matches `st.vega_lite_chart`/`st.plotly_chart` behavior. To keep a selection
+stable across data updates, pass a fixed `key` so the widget identity does not depend on the payload.
+
 #### Loading & error handling
 
 - **Loading** — while the ECharts library (lazy-loaded) initializes, a skeleton loader reserves
@@ -468,6 +473,10 @@ st.echarts_chart(pie)
 - **`st.write` auto-detection of `pyecharts` objects** — users call `st.echarts_chart(...)`
   explicitly in v1.
 - **`config`-style passthrough for `echarts.init` options** — deferred until needed.
+- **`disabled` parameter** — `st.echarts_chart` mirrors `st.plotly_chart`, which does not expose a
+  `disabled` parameter, so v1 omits it too. Selection handlers are simply not bound when the chart is
+  display-only (`on_select="ignore"`). Can be revisited if selection-capable charts adopt `disabled`
+  broadly.
 
 ## Alternatives Considered
 
@@ -479,7 +488,20 @@ st.echarts_chart(pie)
   duplicate ECharts bundle, and its interaction model relies on app-authored JavaScript
   (`events` + `JsCode`) rather than a structured Streamlit API. Directly the motivation for #12302.
 
-### Learnings adopted from `streamlit-echarts`
+**Option 2: `st.echarts_chart(options=dict)` mirroring `st.plotly_chart`** ✅ PREFERRED
+- Pros: Consistent with existing chart commands; discoverable; supports theming + selections;
+  familiar return-value/`on_select` contract; accepts `pyecharts` objects for the Python-first crowd.
+- Cons: New frontend dependency (bundle size); JSON-only in v1.
+
+**Option 3: Support ECharts only through `st.pyecharts_chart` (pyecharts objects only)** ❌
+- Pros: Fully Pythonic, no raw JSON dicts.
+- Cons: Forces a dependency/mental model on users who just have an ECharts JSON option;
+  diverges from the `dict`-spec pattern of `st.vega_lite_chart`/`st.plotly_chart`. (Note the
+  existing split: `st.vega_lite_chart` takes a `dict` spec while `st.altair_chart` takes a Python
+  chart object — both render through the same backend/frontend. We follow the same idea by
+  accepting `pyecharts` objects *within* `st.echarts_chart` rather than adding a separate command.)
+
+## Learnings Adopted from `streamlit-echarts`
 
 Reviewing the current [`streamlit-echarts`](https://github.com/andfanilo/streamlit-echarts)
 implementation informed several decisions:
@@ -503,19 +525,6 @@ implementation informed several decisions:
 - **Deliberately *not* adopted**: the `events=` + `JsCode` JavaScript-handler model (non-idiomatic
   and executes arbitrary JS) and CSS-string `height`/`width` (we use Streamlit's `width`/`height`
   conventions). Its `replace_merge` and `map`/`registerMap` features are logged as future work.
-
-**Option 2: `st.echarts_chart(options=dict)` mirroring `st.plotly_chart`** ✅ PREFERRED
-- Pros: Consistent with existing chart commands; discoverable; supports theming + selections;
-  familiar return-value/`on_select` contract; accepts `pyecharts` objects for the Python-first crowd.
-- Cons: New frontend dependency (bundle size); JSON-only in v1.
-
-**Option 3: Support ECharts only through `st.pyecharts_chart` (pyecharts objects only)** ❌
-- Pros: Fully Pythonic, no raw JSON dicts.
-- Cons: Forces a dependency/mental model on users who just have an ECharts JSON option;
-  diverges from the `dict`-spec pattern of `st.vega_lite_chart`/`st.plotly_chart`. (Note the
-  existing split: `st.vega_lite_chart` takes a `dict` spec while `st.altair_chart` takes a Python
-  chart object — both render through the same backend/frontend. We follow the same idea by
-  accepting `pyecharts` objects *within* `st.echarts_chart` rather than adding a separate command.)
 
 ## Checklist
 
