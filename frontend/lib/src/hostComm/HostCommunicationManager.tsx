@@ -211,9 +211,12 @@ export default class HostCommunicationManager {
     const isFromParent = event.source === window.parent
     const isTrustedParentMessage = event.isTrusted && isFromParent
     const isHostMessage = message?.stCommVersion === HOST_COMM_VERSION
-    const isAllowedOrigin = this.allowedOrigins.some(allowed =>
-      isValidOrigin(allowed, event.origin)
-    )
+    // Only parse origins for genuine host messages; this global handler
+    // receives many unrelated postMessages and isValidOrigin allocates
+    // URL/URLPattern objects on every call.
+    const isAllowedOrigin =
+      isHostMessage &&
+      this.allowedOrigins.some(allowed => isValidOrigin(allowed, event.origin))
     // When embedded, the guest posts its own GUEST_READY to this window (see
     // openHostCommunication); that self-post is intentionally ignored here and
     // should not be logged as a dropped host message.
