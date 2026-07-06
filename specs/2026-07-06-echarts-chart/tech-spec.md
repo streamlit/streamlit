@@ -107,6 +107,12 @@ A new `EChartsMixin` added to `DeltaGenerator` (register in `delta_generator.py`
    - If `options` is a `str`, `json.loads` it into a dict.
    - If `options` has a callable `dump_options` attribute (duck-typed `pyecharts` chart), call it
      and `json.loads` the result. Detected without importing `pyecharts` (no hard dependency).
+     Note: `pyecharts`' `dump_options()` emits **raw, unquoted** `function () { … }` values for any
+     `JsCode` options, which makes `json.loads` fail with a cryptic `JSONDecodeError`. Wrap the
+     `json.loads` of any string/`dump_options` input in a `try/except` that re-raises a helpful
+     `StreamlitAPIException` pointing at the JSON-only-in-v1 constraint (and, when a
+     `--x_x--`-style `JsCode` sentinel or a bare `function`/`=>` token is detected, name JS
+     callbacks explicitly as the unsupported cause).
    - Otherwise raise `StreamlitAPIException`.
    - **`dataset.source` dataframes**: recursively inspect `dataset` entries (either
      `{"dataset": {"source": df}}` or a list of datasets) and convert dataframe-like sources
@@ -166,8 +172,10 @@ const EChartsChart = lazy(
 and a render branch for `node.element.echartsChart` wrapped with `withFullScreenWrapper`
 (mirroring the `PlotlyChart` branch).
 
-**Dependencies.** Add `echarts` to `frontend/lib/package.json` (Apache-2.0), targeting the
-`^6.0.0` range (the minimum version whose API this design relies on). Import the **full** bundle (`import * as echarts from "echarts"`), *not* the tree-shakable
+**Dependencies.** Add `echarts` to `frontend/lib/package.json` (Apache-2.0), pinning a minimum of
+`^6.1.0`. This is a **hard requirement, not an implementation-time detail**: the `6.0.x` line is
+still affected by a tooltip XSS advisory (`series.type="lines"`), so `^6.1.0` is the safe minimum
+whose API this design relies on. Import the **full** bundle (`import * as echarts from "echarts"`), *not* the tree-shakable
 `echarts/core` registry. Tree-shaking requires statically selecting the series/components at build
 time, which is impossible for an API that accepts arbitrary user options — a chart type the user
 picks at runtime would silently fail to render. Because the component is lazy-loaded, ECharts lives
@@ -235,7 +243,10 @@ name). The theme object sets:
 - Interaction components that show up frequently: `dataZoom` (track/filler/handle), `brush`,
   `toolbox.iconStyle`, and `darkMode` (from the active theme type).
 
-Two layers, because the ECharts init theme doesn't reliably cover everything:
+Two layers, because the ECharts init theme doesn't reliably cover everything. **Both layers run
+only when `theme="streamlit"`**; when `theme=None` neither is applied, so the user's `options` are
+left untouched (matching the product spec's opt-out semantics, including ARIA only being enabled if
+the user sets it):
 
 1. `buildStreamlitEChartsTheme(emotionTheme)` → the object passed to `echarts.init`.
 2. `applyStreamlitOptionDefaults(option, emotionTheme)` → a light, non-destructive pass that fills
@@ -303,11 +314,18 @@ contract as `VegaLiteState`/`PlotlyState`).
 - Bundle ECharts from npm (no CDN script loading); parse option **strings as JSON**, never as JS
   object literals; and use **no** `eval`/`new Function`/script injection. JSON-only options mean no
   app-provided JavaScript executes (the differentiator from `streamlit-echarts`' `JsCode`/`events`).
-- **Tooltip/label content (review item).** ECharts tooltips and rich labels can render
-  app-provided strings, and ECharts has had tooltip XSS advisories. Implementation must confirm
-  ECharts escapes tooltip/label content by default and/or set safe tooltip defaults under
-  `theme="streamlit"` (e.g. avoid enabling raw-HTML tooltip rendering). Chart data/text is
-  app-author-provided (same trust model as Plotly/Vega), but escaping behavior should be verified.
+- **Tooltip/label content (MVP-safe behavior, not a deferred review item).** ECharts tooltips and
+  rich labels can render app-provided strings, and ECharts has had tooltip XSS advisories. The MVP
+  posture is defined here as a hard requirement:
+  - Depend on ECharts `^6.1.0`, which resolves the known tooltip XSS advisory (`series.type="lines"`);
+    the version floor is enforced in `package.json` (see [Dependencies](#dependencies)).
+  - Under `theme="streamlit"`, `applyStreamlitOptionDefaults` sets a safe tooltip default of
+    `tooltip.renderMode = "html"` with `tooltip.appendToBody`/raw-HTML injection **disabled** — i.e.
+    do not enable ECharts features that inject unescaped HTML — and never turns on raw-HTML rendering
+    on the user's behalf. If the user explicitly opts into an HTML/`formatter` mode, their value wins
+    (same app-author trust model as Plotly/Vega), but Streamlit's defaults never widen the surface.
+  - This behavior is covered by a **required regression test** (see [Testing](#testing)): a tooltip/
+    label containing an HTML/script payload must render as escaped text under `theme="streamlit"`.
 
 ### Testing
 
@@ -328,10 +346,20 @@ contract as `VegaLiteState`/`PlotlyState`).
   `brushSelected` + `brushEnd` (both orderings) → single box/lasso update; brush clear → empty
   state; no-op selections skip `setStringValue`; form clear + `disabled` behavior; error rendering.
   Mock `echarts.init` where a real canvas isn't needed.
+- **Security regression test (required).** A tooltip/label whose content contains an HTML/script
+  payload (e.g. `"<img src=x onerror=alert(1)>"`) must render as **escaped text** under
+  `theme="streamlit"` and must not execute. Cover this in the frontend unit tests and assert it in
+  e2e (see below) so the MVP-safe tooltip posture cannot regress silently.
+- **Remount / state-persistence coverage (required, not just prose).** Explicitly cover unrelated
+  widget reruns, fullscreen, tabs, and expanders to confirm display-only charts do not replay entry
+  animations on remount and that active selections restore correctly; promote these from the
+  narrative in [Reruns & state persistence](./product-spec.md#reruns--state-persistence) into
+  required e2e/manual assertions.
 - **E2E** (`e2e_playwright/st_echarts_chart.py` + `_test.py`): basic + mixed (dataZoom) charts,
   light/dark theme snapshots, custom colors not overwritten, width/height + fullscreen,
   `on_select="rerun"` point/box/lasso selection, SVG renderer, `pyecharts` object, download
-  toolbar. Run via `make run-e2e-test st_echarts_chart_test.py`.
+  toolbar, the tooltip-escaping security regression, and the remount/state-persistence scenarios
+  above. Run via `make run-e2e-test st_echarts_chart_test.py`.
 
 ### Rollout
 

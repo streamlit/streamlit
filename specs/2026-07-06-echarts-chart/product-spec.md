@@ -119,7 +119,10 @@ st.echarts_chart(options)
 [ECharts examples gallery](https://echarts.apache.org/examples/)) and a **`pyecharts` chart
 instance** (the most popular Python API for ECharts). `pyecharts` charts are detected via duck
 typing (presence of a `.dump_options()` method) and converted automatically; `pyecharts` is
-*not* a Streamlit dependency and is only imported if the user passes such an object.
+*not* a Streamlit dependency and is only imported if the user passes such an object. As with dict
+input, v1 supports only **JSON-compatible** `pyecharts` charts: charts that embed
+`JsCode`/JavaScript callbacks are rejected with a helpful error (JS callbacks are
+[out of scope](#out-of-scope-future-work) for v1).
 
 ```python
 from pyecharts.charts import Bar
@@ -413,11 +416,12 @@ st.echarts_chart(pie)
   controls — the same posture as `st.plotly_chart`, `st.vega_lite_chart`, and `st.altair_chart`.
 - **Same-origin rendering.** ECharts renders into a canvas/SVG within the app DOM (no iframe,
   no blob URLs), so there are no additional CSP requirements.
-- **Tooltip/label HTML (review item).** ECharts tooltips and rich labels can render
-  app-provided strings, and ECharts has historically had tooltip XSS advisories. Implementation
-  must confirm ECharts escapes tooltip/label content by default and/or set safe tooltip defaults
-  under `theme="streamlit"`. This is app-author-provided content (same trust model as other
-  charts), but the escaping behavior should be verified during the security review.
+- **Tooltip/label HTML.** ECharts tooltips and rich labels can render app-provided strings, and
+  ECharts has historically had tooltip XSS advisories. The MVP posture is defined up front (see the
+  tech spec's Security section): Streamlit depends on a patched ECharts version, never turns on
+  raw-HTML tooltip rendering on the user's behalf under `theme="streamlit"`, and a regression test
+  asserts that HTML/script payloads in tooltip/label content render as escaped text. This is
+  app-author-provided content (same trust model as other charts).
 - **License.** Apache ECharts is Apache-2.0 licensed — the same license as Streamlit — so there
   is no new licensing concern for bundling it.
 
