@@ -61,7 +61,7 @@ import {
   convertKeyToClassName,
   getBorderBackwardsCompatible,
   getClassnamePrefix,
-  getColumnGapSize,
+  getColumnGapConfig,
   getKeyFromId,
   isComponentStale,
   shouldActivateScrollToBottom,
@@ -125,7 +125,7 @@ export const ContainerContentsWrapper = (
   const defaultStyles: StyledFlexContainerBlockProps = {
     direction: Direction.VERTICAL,
     flex: 1,
-    gap: streamlit.GapSize.SMALL,
+    gap: { gapSize: streamlit.GapSize.SMALL },
     height: props.height,
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     border: false,
@@ -170,8 +170,9 @@ export const FlexBoxContainer = (
     gap:
       // This is backwards compatible with old proto messages since previously
       // the gap size was defaulted to small.
-      props.node.deltaBlock.flexContainer?.gapConfig?.gapSize ??
-      streamlit.GapSize.SMALL,
+      props.node.deltaBlock.flexContainer?.gapConfig ?? {
+        gapSize: streamlit.GapSize.SMALL,
+      },
     direction: direction,
     // This is also backwards compatible since previously wrap was not added
     // to the flex container.
@@ -394,7 +395,7 @@ export const BlockNodeRenderer = (
     return (
       <StyledColumn
         weight={node.deltaBlock.column.weight ?? 0}
-        gap={getColumnGapSize(node.deltaBlock.column)}
+        gap={getColumnGapConfig(node.deltaBlock.column)}
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }

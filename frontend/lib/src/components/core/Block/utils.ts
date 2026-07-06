@@ -24,7 +24,7 @@ import { ScriptRunState } from "~lib/ScriptRunState"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { getDividerColors } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
-import { isValidElementId } from "~lib/util/utils"
+import { isValidElementId, notNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export function getClassnamePrefix(direction: Direction): string {
@@ -184,13 +184,17 @@ export function getKeyFromId(
   return userKey === "None" ? undefined : userKey
 }
 
-export function getColumnGapSize(
+export function getColumnGapConfig(
   columnProto: BlockProto.IColumn
-): streamlit.GapSize {
-  if (columnProto.gapConfig?.gapSize) {
-    return columnProto.gapConfig.gapSize
+): streamlit.IGapConfig {
+  const gapConfig = columnProto.gapConfig
+  if (gapConfig && notNullOrUndefined(gapConfig.pixelGap)) {
+    return { pixelGap: gapConfig.pixelGap }
   }
-  return streamlit.GapSize.SMALL
+  if (gapConfig?.gapSize) {
+    return { gapSize: gapConfig.gapSize }
+  }
+  return { gapSize: streamlit.GapSize.SMALL }
 }
 
 export function checkFlexContainerBackwardsCompatibile(
