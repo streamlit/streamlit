@@ -298,6 +298,8 @@ def test_run_git_builds_safe_command_and_strips_output() -> None:
         assert kwargs["timeout"] == git_util._GIT_TIMEOUT
         assert kwargs["check"] is False
         assert kwargs["capture_output"] is True
+        # Non-UTF-8 git output must be decoded defensively, never raising.
+        assert kwargs["errors"] == "replace"
         # Credential prompts are disabled so git can never block waiting for input.
         assert kwargs["env"]["GIT_TERMINAL_PROMPT"] == "0"
 

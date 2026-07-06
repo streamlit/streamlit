@@ -153,6 +153,10 @@ class GitRepo:
                 ["git", "-C", cwd or self._start_dir, *args],  # noqa: S607
                 capture_output=True,
                 text=True,
+                # Decode defensively: unusual bytes in git output (e.g. exotic
+                # filenames) must never raise UnicodeDecodeError and break the
+                # deploy dialog. This keeps the "degrades gracefully" contract.
+                errors="replace",
                 check=False,
                 timeout=_GIT_TIMEOUT,
                 # Never prompt for credentials; fail fast instead.
