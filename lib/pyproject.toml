@@ -84,7 +84,7 @@ dependencies = [
   # Starlette requires typing-extensions >= 4.10.
   "typing-extensions>=4.10.0,<5",
   # ASGI web-framework:
-  "starlette>=0.40.0",
+  "starlette>=1.3.1",
   # ASGI server:
   "uvicorn>=0.30.0",
   # Faster http parsing for Starlette server:
