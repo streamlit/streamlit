@@ -218,9 +218,17 @@ def test_svg_images(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 def set_fullscreen(image_wrapper: Locator, open: bool):
+    toolbar = image_wrapper.get_by_test_id("stElementToolbar")
     fullscreen_button = image_wrapper.get_by_role(
         "button", name="Fullscreen" if open else "Close fullscreen"
     )
+    # The toolbar (and its fullscreen button) only becomes interactive on hover
+    # and fades in via an opacity transition. In webkit a click dispatched while
+    # the toolbar is still fading in can be swallowed, leaving fullscreen
+    # un-toggled. Hover first and wait for the toolbar to be fully opaque before
+    # clicking (mirrors the pattern in shared/toolbar_utils.py).
+    image_wrapper.hover()
+    expect(toolbar).to_have_css("opacity", "1")
     expect(fullscreen_button).to_be_visible()
     fullscreen_button.click()
     # Wait for the fullscreen CSS transition to complete by checking position style
