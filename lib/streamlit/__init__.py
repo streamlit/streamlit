@@ -206,6 +206,7 @@ date_input = _main.date_input
 datetime_input = _main.datetime_input
 divider = _main.divider
 download_button = _main.download_button
+echarts_chart = _main.echarts_chart
 expander = _main.expander
 feedback = _main.feedback
 pydeck_chart = _main.pydeck_chart

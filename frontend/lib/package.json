@@ -75,6 +75,7 @@
     "decamelize": "^6.0.1",
     "deck.gl": "^9.3.5",
     "dompurify": "^3.4.11",
+    "echarts": "^6.1.0",
     "hoist-non-react-statics": "^3.3.2",
     "immer": "^11.1.9",
     "json5": "^2.2.3",

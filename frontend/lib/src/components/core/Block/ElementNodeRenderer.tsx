@@ -34,6 +34,7 @@ import {
   DateTimeInput as DateTimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
   DownloadButton as DownloadButtonProto,
+  EChartsChart as EChartsChartProto,
   Exception as ExceptionProto,
   Feedback as FeedbackProto,
   FileUploader as FileUploaderProto,
@@ -109,6 +110,9 @@ const Balloons = lazy(
 )
 const DeckGlJsonChart = lazy(
   () => import("~lib/components/elements/DeckGlJsonChart/DeckGlJsonChart")
+)
+const EChartsChart = lazy(
+  () => import("~lib/components/elements/EChartsChart/EChartsChart")
 )
 const GraphVizChart = lazy(
   () => import("~lib/components/elements/GraphVizChart/GraphVizChart")
@@ -1085,6 +1089,26 @@ const RawElementNodeRenderer = (
           <NumberInput
             key={numberInputProto.id}
             element={numberInputProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
+      )
+    }
+
+    case "echartsChart": {
+      const echartsProto = node.element.echartsChart as EChartsChartProto
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <EChartsChart
+            // ECharts charts can be used as a widget (when selections are
+            // activated) or a display-only element. We only set the key when
+            // it's a widget; display-only charts intentionally have no id.
+            key={echartsProto.id || undefined}
+            element={echartsProto}
             {...widgetProps}
           />
         </ElementContainer>

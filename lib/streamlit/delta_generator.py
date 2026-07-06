@@ -50,6 +50,7 @@ from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
+from streamlit.elements.echarts_chart import EChartsMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.exception import ExceptionMixin
 from streamlit.elements.form import FormMixin
@@ -218,6 +219,7 @@ class DeltaGenerator(
     MarkdownMixin,
     MapMixin,
     MediaMixin,
+    EChartsMixin,
     MermaidChartMixin,
     MetricMixin,
     MenuButtonMixin,
