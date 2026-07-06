@@ -154,6 +154,21 @@ def _coalesce_widget_states(
     return coalesced
 
 
+def _is_full_app_rerun(data: RerunData) -> bool:
+    """Return True if data represents a full-app (non-fragment) rerun.
+
+    A full-app rerun carries no fragment identity and is not fragment-scoped.
+    Checking all three fields makes this work uniformly for both raw incoming
+    requests (where fragment_id may still be set) and already-stored requests
+    (where fragment_id has been normalised into fragment_id_queue).
+    """
+    return (
+        not data.fragment_id
+        and not data.fragment_id_queue
+        and not data.is_fragment_scoped_rerun
+    )
+
+
 class ScriptRequests:
     """An interface for communicating with a ScriptRunner. Thread-safe.
 
@@ -208,21 +223,20 @@ class ScriptRequests:
             if self._state == ScriptRequestType.RERUN:
                 # We already have an existing Rerun request, so we can coalesce the new
                 # rerun request into the existing one.
+                #
+                # _rerun_data is the already-stored pending request.  When it was first
+                # accepted (the CONTINUE branch above), any bare fragment_id was moved
+                # into fragment_id_queue and fragment_id was cleared, so fragment_id is
+                # always None here.
+                #
+                # new_data is the raw incoming request from the caller and has not been
+                # through that step yet, so fragment_id may still be set.
 
                 coalesced_states = _coalesce_widget_states(
                     self._rerun_data.widget_states, new_data.widget_states
                 )
 
-                # A full-app rerun has an empty queue and is not fragment-scoped.
-                pending_is_full_app_rerun = (
-                    not self._rerun_data.fragment_id_queue
-                    and not self._rerun_data.is_fragment_scoped_rerun
-                )
-                new_is_full_app_rerun = (
-                    not new_data.fragment_id and not new_data.fragment_id_queue
-                )
-
-                if pending_is_full_app_rerun or new_is_full_app_rerun:
+                if _is_full_app_rerun(self._rerun_data) or _is_full_app_rerun(new_data):
                     # Rule 1: a full-app rerun anywhere in the interaction trumps every
                     # targeted or fragment rerun.  Collapse to a single full-app rerun
                     # regardless of arrival order.
