@@ -97,7 +97,9 @@ test = [
   "pytest-cov",
   "hypothesis>=6.17.4",
   "parameterized",
-  "requests-mock",
+  # requests is only used by tests/e2e (e.g. the CLI live-HTTP helper and some
+  # e2e tests); Streamlit itself uses urllib at runtime.
+  "requests>=2.27",
   "testfixtures",
   # tomli is the backport of tomllib for Python <3.11:
   "tomli>=2.0.0; python_version < '3.11'",

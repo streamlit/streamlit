@@ -68,16 +68,17 @@ Collecting usage statistics. To deactivate, set browser.gatherUsageStats to fals
 
 def _send_email(email: str | None) -> None:
     """Send the user's email for metrics, if submitted."""
-    import requests
+    import urllib.request
 
     if email is None or "@" not in email:
         return
 
     metrics_url = ""
     try:
-        response_json = requests.get(
+        with urllib.request.urlopen(
             "https://data.streamlit.io/metrics.json", timeout=2
-        ).json()
+        ) as response:
+            response_json = json.loads(response.read().decode("utf-8"))
         metrics_url = response_json.get("url", "")
     except Exception:
         _LOGGER.exception("Failed to fetch metrics URL")
@@ -101,14 +102,16 @@ def _send_email(email: str | None) -> None:
         "userId": email,
     }
 
-    response = requests.post(
+    request = urllib.request.Request(  # noqa: S310
         metrics_url,
-        headers=headers,
         data=json.dumps(data).encode(),
-        timeout=10,
+        headers=headers,
+        method="POST",
     )
-
-    response.raise_for_status()
+    # urlopen raises urllib.error.HTTPError for non-2xx responses, mirroring
+    # requests' response.raise_for_status().
+    with urllib.request.urlopen(request, timeout=10):  # noqa: S310
+        pass
 
 
 class Credentials:
@@ -205,8 +208,6 @@ class Credentials:
 
     def save(self) -> None:
         """Save to toml file and send email."""
-        from requests.exceptions import RequestException
-
         if self.activation is None:
             return
 
@@ -223,7 +224,9 @@ class Credentials:
 
         try:
             _send_email(self.activation.email)
-        except RequestException:
+        except (OSError, ValueError):
+            # urllib raises URLError/HTTPError (OSError subclasses) on network or
+            # HTTP failures, and ValueError for a malformed metrics URL.
             _LOGGER.exception("Error saving email:")
 
     def activate(self, show_instructions: bool = True) -> None:

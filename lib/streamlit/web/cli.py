@@ -116,15 +116,15 @@ def configurator_options(func: F) -> F:
 
 def _download_remote(main_script_path: str, url_path: str) -> None:
     """Fetch remote file at url_path to main_script_path."""
-    import requests
-    from requests.exceptions import RequestException
+    import urllib.request
 
     with open(main_script_path, "wb") as fp:
         try:
-            resp = requests.get(url_path, timeout=30)
-            resp.raise_for_status()
-            fp.write(resp.content)
-        except RequestException as e:
+            # urlopen raises urllib.error.HTTPError (an OSError) for non-2xx
+            # responses, mirroring the previous resp.raise_for_status() behavior.
+            with urllib.request.urlopen(url_path, timeout=30) as resp:  # noqa: S310
+                fp.write(resp.read())
+        except (OSError, ValueError) as e:
             raise click.BadParameter(f"Unable to fetch {url_path}.\n{e}")
 
 

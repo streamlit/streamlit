@@ -96,13 +96,12 @@ def get_internal_ip() -> str | None:
 
 
 def _make_blocking_http_get(url: str, timeout: float = 5) -> str | None:
-    import requests
+    import urllib.request
 
     try:
-        text = requests.get(url, timeout=timeout).text
-        if isinstance(text, str):
-            text = text.strip()
-        return text
+        with urllib.request.urlopen(url, timeout=timeout) as response:  # noqa: S310
+            text: str = response.read().decode("utf-8", errors="replace")
+        return text.strip()
     except Exception:
         return None
 

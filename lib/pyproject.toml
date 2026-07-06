@@ -72,7 +72,6 @@ dependencies = [
   # doesn't tend to break the API on major version upgrades, so we don't put an
   # upper bound on it.
   "pyarrow>=7.0",
-  "requests>=2.27,<3",
   # Starting from Python 3.11, Python has built in support for reading TOML files.
   # Let's make sure to remove this "toml" library when we stop supporting Python 3.10.
   "toml>=0.10.1,<2",

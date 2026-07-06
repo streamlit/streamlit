@@ -9,7 +9,6 @@ pillow==7.1.0
 protobuf==3.20
 pyarrow==7.0
 python-multipart==0.0.10
-requests==2.27
 starlette==0.40.0
 toml==0.10.1
 typing-extensions==4.10.0
