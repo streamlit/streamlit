@@ -414,6 +414,16 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                 if origin_header and starlette_app_utils.validate_xsrf_token(
                     xsrf_token, xsrf_cookie
                 ):
+                    # Read expose_tokens lazily on connect (rather than once at
+                    # handler creation) so programmatic secrets from
+                    # ``st.App(secrets=...)``, which are merged during the ASGI
+                    # lifespan after routes are built, are honored. Resolve it
+                    # outside the defensive cookie-parsing block below so an
+                    # invalid ``expose_tokens`` config surfaces as a clear error
+                    # instead of being silently swallowed as a cookie-parsing
+                    # failure.
+                    expose_tokens = get_expose_tokens_config()
+
                     try:
                         raw_auth_cookie = _get_signed_cookie_with_chunks(
                             websocket.cookies, USER_COOKIE_NAME
@@ -430,12 +440,6 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                             )
                             if raw_token_cookie:
                                 all_tokens = json.loads(raw_token_cookie)
-
-                                # Read expose_tokens lazily on connect (rather than
-                                # once at handler creation) so programmatic secrets
-                                # from ``st.App(secrets=...)``, which are merged during
-                                # the ASGI lifespan after routes are built, are honored.
-                                expose_tokens = get_expose_tokens_config()
 
                                 filtered_tokens: dict[str, str] = {}
                                 for token_type in expose_tokens:

@@ -22,6 +22,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from streamlit.errors import StreamlitAuthError
 from streamlit.runtime import runtime_util
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_websocket import (
@@ -508,21 +509,9 @@ class TestWebsocketHandlerUserInfoPrecedence:
 class TestWebsocketHandlerTokenExposure:
     """Tests for exposing auth tokens to ``st.user`` via the websocket handler."""
 
-    @patch_config_options(
-        {
-            "server.enableXsrfProtection": True,
-            "server.cookieSecret": "test-secret",
-            "server.enableCORS": False,
-        }
-    )
-    def test_expose_tokens_read_lazily_on_connect(self) -> None:
-        """Token filtering honors ``expose_tokens`` resolved after handler creation.
-
-        ``st.App(secrets=...)`` merges programmatic secrets during the ASGI
-        lifespan, which runs *after* the websocket route (and its handler) is
-        built. Reading ``expose_tokens`` lazily on connect ensures those late
-        secrets are honored rather than the empty config captured at build time.
-        """
+    @staticmethod
+    def _make_authenticated_websocket() -> MagicMock:
+        """Build a mock websocket carrying valid signed user and token cookies."""
         from starlette.websockets import WebSocketDisconnect
 
         cookie_payload = json.dumps(
@@ -558,10 +547,33 @@ class TestWebsocketHandlerTokenExposure:
         mock_websocket.accept = AsyncMock()
         mock_websocket.close = AsyncMock()
         mock_websocket.receive_bytes = AsyncMock(side_effect=WebSocketDisconnect())
+        return mock_websocket
 
+    @staticmethod
+    def _make_runtime() -> MagicMock:
+        """Build a mock runtime that records ``connect_session`` calls."""
         mock_runtime = MagicMock()
         mock_runtime.connect_session = MagicMock(return_value="test-session-id")
         mock_runtime.disconnect_session = MagicMock()
+        return mock_runtime
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.cookieSecret": "test-secret",
+            "server.enableCORS": False,
+        }
+    )
+    def test_expose_tokens_read_lazily_on_connect(self) -> None:
+        """Token filtering honors ``expose_tokens`` resolved after handler creation.
+
+        ``st.App(secrets=...)`` merges programmatic secrets during the ASGI
+        lifespan, which runs *after* the websocket route (and its handler) is
+        built. Reading ``expose_tokens`` lazily on connect ensures those late
+        secrets are honored rather than the empty config captured at build time.
+        """
+        mock_websocket = self._make_authenticated_websocket()
+        mock_runtime = self._make_runtime()
 
         # Build the handler while expose_tokens is still empty, mirroring the
         # state before programmatic secrets are merged during the lifespan.
@@ -600,6 +612,96 @@ class TestWebsocketHandlerTokenExposure:
         # Only the exposed "access" token should be present; the "id" token was
         # in the cookie but is not in expose_tokens, so it must be excluded.
         assert user_info["tokens"] == {"access": "access-123"}
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.cookieSecret": "test-secret",
+            "server.enableCORS": False,
+        }
+    )
+    def test_no_tokens_exposed_when_expose_tokens_empty(self) -> None:
+        """No tokens leak into ``st.user`` when ``expose_tokens`` is unset/empty.
+
+        The token cookie carries both ``access`` and ``id`` tokens, but an empty
+        ``expose_tokens`` allowlist must yield an empty ``tokens`` dict so that
+        nothing is exposed by default.
+        """
+        mock_websocket = self._make_authenticated_websocket()
+        mock_runtime = self._make_runtime()
+
+        handler = create_websocket_handler(mock_runtime)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.get_expose_tokens_config",
+                return_value=[],
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
+            ) as mock_client_class,
+            patch(
+                "streamlit.web.server.starlette.starlette_app_utils.validate_xsrf_token",
+                return_value=True,
+            ),
+        ):
+            mock_client = MagicMock()
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            asyncio.run(handler(mock_websocket))
+
+        call_kwargs = mock_runtime.connect_session.call_args
+        user_info = call_kwargs.kwargs.get("user_info") or call_kwargs[1].get(
+            "user_info"
+        )
+
+        assert user_info["tokens"] == {}
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.cookieSecret": "test-secret",
+            "server.enableCORS": False,
+        }
+    )
+    def test_invalid_expose_tokens_config_surfaces(self) -> None:
+        """An invalid ``expose_tokens`` config surfaces instead of being swallowed.
+
+        ``get_expose_tokens_config`` raises ``StreamlitAuthError`` for unsupported
+        values (e.g. ``["refresh"]``). Resolving it outside the defensive
+        cookie-parsing block ensures the misconfiguration propagates rather than
+        being silently logged as a cookie-parsing failure that leaves the tokens
+        empty and the connection alive.
+        """
+        mock_websocket = self._make_authenticated_websocket()
+        mock_runtime = self._make_runtime()
+
+        handler = create_websocket_handler(mock_runtime)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.get_expose_tokens_config",
+                side_effect=StreamlitAuthError("Invalid expose_tokens configuration."),
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
+            ) as mock_client_class,
+            patch(
+                "streamlit.web.server.starlette.starlette_app_utils.validate_xsrf_token",
+                return_value=True,
+            ),
+        ):
+            mock_client = MagicMock()
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            with pytest.raises(StreamlitAuthError):
+                asyncio.run(handler(mock_websocket))
+
+        # The misconfiguration must abort the connection rather than silently
+        # proceeding with an empty token set.
+        mock_runtime.connect_session.assert_not_called()
 
 
 class TestWebsocketHandlerMessageSize:
