@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import time
+from datetime import date
 
 import altair as alt
 import numpy as np
@@ -32,7 +33,8 @@ def dialog_with_images() -> None:
 
     # render a dataframe
     st.dataframe(
-        pd.DataFrame(np.zeros((1000, 6)), columns=["A", "B", "C", "D", "E", "F"])
+        pd.DataFrame(np.zeros((1000, 6)), columns=["A", "B", "C", "D", "E", "F"]),
+        width="stretch",
     )
 
     st.subheader("Images", help="Some images are generated")
@@ -60,6 +62,22 @@ def simple_dialog() -> None:
 
 if st.button("Open Dialog without Images"):
     simple_dialog()
+
+
+@st.dialog("Dialog with Date Input")
+def dialog_with_date_input() -> None:
+    c_amount, c_due = st.columns(2)
+    c_amount.number_input("Amount")
+    due_date = c_due.date_input("Due Date", value=date(2024, 1, 1))
+    status = st.selectbox("Status", ["Draft", "Paid", "Cancelled"])
+    tags = st.multiselect("Tags", ["Rent", "Utilities", "Other"])
+    st.write(f"Due Date Value: {due_date}")
+    st.write(f"Status Value: {status}")
+    st.write(f"Tags Value: {tags}")
+
+
+if st.button("Open Dialog with Date Input"):
+    dialog_with_date_input()
 
 
 @st.dialog("Dialog with Icon", icon="🌟")

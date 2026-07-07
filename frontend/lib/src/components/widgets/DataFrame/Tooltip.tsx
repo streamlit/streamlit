@@ -17,15 +17,16 @@
 import { memo, ReactElement, useEffect } from "react"
 
 import styled from "@emotion/styled"
-import { FloatingPortal } from "@floating-ui/react"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { StyledTooltipContentWrapper } from "~lib/components/shared/Tooltip/styled-components"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 
+import { DataFrameOverlayPortal } from "./DataFrameOverlayPortal"
+
 /**
- * Floating container rendered via FloatingPortal. Floating UI's floatingStyles
+ * Floating container rendered via DataFrameOverlayPortal. Floating UI's floatingStyles
  * (position: fixed + transform: translate) position it relative to the anchor.
  * Fixed-position elements naturally shrink-wrap to content, so no explicit
  * width is needed.
@@ -51,8 +52,9 @@ export interface TooltipProps {
  * viewport coordinates from glide-data-grid's onItemHovered event.
  *
  * An invisible fixed-position `<div>` serves as the Floating UI reference
- * element. The tooltip content renders via FloatingPortal into document.body,
- * escaping any stacking context inside the DataFrame container.
+ * element. The tooltip content renders via DataFrameOverlayPortal into the
+ * shared dataframe overlay root, escaping any stacking context inside the
+ * DataFrame container.
  *
  * The component is always open while mounted — the parent (DataFrame.tsx)
  * controls visibility by only rendering this component when tooltip content
@@ -111,7 +113,7 @@ function Tooltip({
           height: 0,
         }}
       />
-      <FloatingPortal>
+      <DataFrameOverlayPortal>
         <StyledDataFrameTooltipContainer
           ref={refs.setFloating}
           style={floatingStyles}
@@ -125,7 +127,7 @@ function Tooltip({
             />
           </StyledTooltipContentWrapper>
         </StyledDataFrameTooltipContainer>
-      </FloatingPortal>
+      </DataFrameOverlayPortal>
     </>
   )
 }

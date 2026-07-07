@@ -16,9 +16,8 @@
 
 import { memo, ReactElement, useMemo } from "react"
 
-import { FloatingPortal } from "@floating-ui/react"
-
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useHoverSubmenu } from "~lib/hooks/useHoverSubmenu"
@@ -292,7 +291,7 @@ function StatisticsMenu({
         {children}
       </StyledSubMenuAnchor>
       {isOpen && (
-        <FloatingPortal>
+        <DataFrameOverlayPortal>
           {/* No tabIndex/autoFocus — intentionally omitted for this read-only panel.
               Allows keyboard users to navigate the parent column menu while
               viewing statistics. */}
@@ -303,7 +302,7 @@ function StatisticsMenu({
           >
             <StatisticsContent statistics={statistics} />
           </StyledSubMenuPanel>
-        </FloatingPortal>
+        </DataFrameOverlayPortal>
       )}
     </>
   )

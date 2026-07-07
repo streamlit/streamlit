@@ -40,7 +40,7 @@ export const StyledDialogOverlay = styled(ModalOverlay)(({ theme }) => ({
   justifyContent: "center",
   paddingTop: theme.spacing.threeXL,
   paddingBottom: theme.spacing.threeXL,
-  zIndex: theme.zIndices.popup,
+  zIndex: theme.zIndices.modal,
   overflowY: "auto",
 }))
 
