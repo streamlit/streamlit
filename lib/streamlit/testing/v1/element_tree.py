@@ -573,9 +573,14 @@ class Dataframe(Element):
 
     @property
     def value(self) -> PandasDataframe:
-        return dataframe_util.convert_arrow_bytes_to_pandas_df(
-            self.proto.arrow_data.data
-        )
+        arrow_data = self.proto.arrow_data.data
+        if (
+            not arrow_data
+            and self.proto.HasField("lazy_data")
+            and self.proto.lazy_data.initial_chunk.data
+        ):
+            arrow_data = self.proto.lazy_data.initial_chunk.data
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(arrow_data)
 
 
 SingleDateValue: TypeAlias = date | datetime

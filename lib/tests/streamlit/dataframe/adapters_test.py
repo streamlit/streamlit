@@ -35,6 +35,13 @@ from streamlit.dataframe.adapters import (
 from streamlit.dataframe.source import AccessMode, SortSpec
 
 
+@pytest.fixture(autouse=True)
+def clear_row_count_cache():
+    adapters._clear_row_count_cache()
+    yield
+    adapters._clear_row_count_cache()
+
+
 class _FakeLimited:
     """Result of ``FakeSnowparkDataFrame.limit`` exposing ``to_pandas``."""
 
@@ -63,12 +70,18 @@ class _FakeSnowparkDataFrame:
         self._unsortable = unsortable_columns or set()
         self.sort_calls: list[tuple[tuple[str, ...], list[bool] | None]] = []
         self.limit_calls: list[tuple[int, int]] = []
+        self.count_calls = 0
+        self.queries = {
+            "queries": ["select a, b from fake_table"],
+            "post_actions": [],
+        }
 
     @property
     def columns(self) -> list[str]:
         return list(self._pdf.columns)
 
     def count(self) -> int:
+        self.count_calls += 1
         return (
             self._explicit_count if self._explicit_count is not None else len(self._pdf)
         )
@@ -99,10 +112,22 @@ def _make_fake(num_rows: int = 10) -> _FakeSnowparkDataFrame:
 
 def test_snowpark_row_count_uses_count() -> None:
     """row_count delegates to the Snowpark ``count()`` aggregation."""
-    source = SnowparkDataframeSource(
-        _FakeSnowparkDataFrame(_make_fake()._pdf, row_count=42)
-    )
+    fake = _FakeSnowparkDataFrame(_make_fake()._pdf, row_count=42)
+    source = SnowparkDataframeSource(fake)
     assert source.row_count == 42
+    assert fake.count_calls == 1
+
+
+def test_snowpark_row_count_reuses_cache_for_same_query() -> None:
+    """Equivalent Snowpark query plans reuse the session-scoped row-count cache."""
+    first = _make_fake(10)
+    second = _make_fake(10)
+
+    assert SnowparkDataframeSource(first).row_count == 10
+    assert SnowparkDataframeSource(second).row_count == 10
+
+    assert first.count_calls == 1
+    assert second.count_calls == 0
 
 
 def test_snowpark_schema_exposes_columns() -> None:

@@ -23,6 +23,7 @@ import pandas as pd
 import pytest
 
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
+from streamlit.dataframe import source as dataframe_source
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import _format_value_for_widget
@@ -287,6 +288,44 @@ def test_dataframe():
     )
 
     repr(at.dataframe[0])
+
+
+def test_dataframe_value_keeps_auto_lazy_candidates_eager_in_app_test(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(dataframe_source, "AUTO_LAZY_ROW_THRESHOLD", 3)
+
+    def script():
+        import pandas as pd
+
+        import streamlit as st
+
+        st.dataframe(pd.DataFrame({"a": [1, 2, 3, 4]}))
+
+    at = AppTest.from_function(script).run()
+    dataframe = at.dataframe[0]
+
+    assert not dataframe.proto.HasField("lazy_data")
+    assert dataframe.value["a"].tolist() == [1, 2, 3, 4]
+
+
+def test_dataframe_value_reads_lazy_initial_chunk(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(dataframe_source, "FORCED_LAZY_MIN_ROWS", 1)
+
+    def script():
+        import pandas as pd
+
+        import streamlit as st
+
+        st.dataframe(pd.DataFrame({"a": [1, 2, 3, 4]}), lazy=True)
+
+    at = AppTest.from_function(script).run()
+    dataframe = at.dataframe[0]
+
+    assert dataframe.proto.HasField("lazy_data")
+    assert dataframe.value["a"].tolist() == [1, 2, 3, 4]
 
 
 def test_date_input():

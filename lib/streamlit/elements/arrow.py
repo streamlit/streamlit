@@ -826,10 +826,13 @@ class ArrowMixin:
             too large to render eagerly. This can be one of the following:
 
             - ``None`` (default): Streamlit chooses automatically. Compatible
-              in-memory ``pandas`` and ``polars`` dataframes with more than
-              150,000 rows are delivered lazily. Everything else uses the
-              regular eager rendering (and the existing capped preview for
-              unevaluated data objects).
+              in-memory ``pandas`` and ``polars`` dataframes and
+              ``pyarrow.Table`` objects with more than 150,000 rows are
+              delivered lazily. Compatible unevaluated objects with more than
+              10,000 rows, such as Polars ``LazyFrame`` and Snowpark dataframes,
+              are also delivered lazily. Everything else uses the regular eager
+              rendering, including the existing capped preview for unsupported
+              unevaluated data objects.
             - ``True``: Force lazy delivery. Streamlit uses a native lazy
               adapter when available (for example, a Polars ``LazyFrame`` or a
               Snowpark dataframe) and otherwise converts a supported input to

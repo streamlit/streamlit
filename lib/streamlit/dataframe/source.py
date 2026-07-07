@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, Protocol, runtime_checkable
 
-from streamlit import dataframe_util
+from streamlit import config, dataframe_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 
@@ -355,6 +355,12 @@ def resolve_lazy_source(
         return None
 
     if lazy is False:
+        return None
+
+    if lazy is None and config.get_option("global.appTest"):
+        # AppTest exposes dataframe values through the element tree, not through
+        # frontend chunk requests. Keep the default path eager so existing tests
+        # that inspect ``at.dataframe[0].value`` keep seeing the rendered data.
         return None
 
     is_styler = dataframe_util.is_pandas_styler(data)

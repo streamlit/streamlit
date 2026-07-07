@@ -72,6 +72,8 @@ interface UseDataFrameCapabilitiesParams {
   isLazy?: boolean
   /** Whether the lazy source supports server-side sorting. */
   lazySortable?: boolean
+  /** Whether the dataframe contains interactive ButtonColumn widgets. */
+  hasButtonColumnInteractions?: boolean
 }
 
 /**
@@ -107,6 +109,7 @@ function useDataFrameCapabilities({
   numDataColumns,
   isLazy = false,
   lazySortable = false,
+  hasButtonColumnInteractions = false,
 }: UseDataFrameCapabilitiesParams): DataFrameCapabilities {
   return useMemo(() => {
     const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
@@ -124,10 +127,13 @@ function useDataFrameCapabilities({
     const isLargeTable = numDataRows > LARGE_TABLE_ROWS_THRESHOLD
 
     // In lazy mode, sorting is handled server-side and gated on the source's
-    // `sortable` capability (not the large-table threshold). Search and CSV
-    // export are disabled because they would only operate on loaded chunks.
+    // `sortable` capability (not the large-table threshold). ButtonColumn click
+    // payloads use original row positions, which server-side sorting cannot
+    // currently remap, so sorting is disabled when interactive buttons exist.
+    // Search and CSV export are disabled because they would only operate on
+    // loaded chunks.
     const canSort = isLazy
-      ? lazySortable && !isEmptyTable
+      ? lazySortable && !hasButtonColumnInteractions && !isEmptyTable
       : !isLargeTable &&
         !isEmptyTable &&
         editingMode !== DYNAMIC &&
@@ -186,6 +192,7 @@ function useDataFrameCapabilities({
     numDataColumns,
     isLazy,
     lazySortable,
+    hasButtonColumnInteractions,
   ])
 }
 

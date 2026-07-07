@@ -152,6 +152,8 @@ function DataFrame({
   // the backend instead of being delivered eagerly in `arrowData`.
   const lazyData = element.lazyData ?? null
   const isLazy = lazyData !== null
+  const hasButtonColumnInteractions =
+    Object.keys(element.buttonClickWidgets).length > 0
 
   const { backendOperationClient } = useContext(BackendOperationContext)
 
@@ -273,6 +275,7 @@ function DataFrame({
     numDataColumns: dataDimensions.numDataColumns,
     isLazy,
     lazySortable: lazyData?.sortable ?? false,
+    hasButtonColumnInteractions,
   })
 
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)

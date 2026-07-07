@@ -434,6 +434,19 @@ describe("useDataFrameCapabilities", () => {
       expect(result.current.canSort).toBe(true)
     })
 
+    it("disables sorting for lazy tables with interactive button columns", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({
+          ...defaultParams,
+          isLazy: true,
+          lazySortable: true,
+          hasButtonColumnInteractions: true,
+        })
+      )
+
+      expect(result.current.canSort).toBe(false)
+    })
+
     it("disables editing in lazy mode", () => {
       const { result } = renderHook(() =>
         useDataFrameCapabilities({
