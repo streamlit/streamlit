@@ -339,8 +339,15 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
 
     try:
         from authlib.integrations import starlette_client
-    except ModuleNotFoundError:  # pragma: no cover - optional dependency
-        raise StreamlitMissingAuthlibError()
+    except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
+        # A missing module within the "authlib" namespace means Authlib itself is
+        # missing or too old to expose the Starlette integration. Any other missing
+        # module (e.g. a nested dependency like httpx) should surface its real error
+        # instead of being masked as a missing Authlib install.
+        module_name = exc.name or ""
+        if module_name == "authlib" or module_name.startswith("authlib."):
+            raise StreamlitMissingAuthlibError() from exc
+        raise
 
     auth_section = get_secrets_auth_section()
     if auth_section:
