@@ -420,7 +420,7 @@ module = [
   "pydeck.*",
   "pyarrow.*",
   "graphviz.*",
-  "authlib.*",
+  "authlib>=1.7.2",
   "uvloop.*",
   "polars.*",
   # yfinance is a template-only dependency (used by dashboard-stock-peers) and has no stubs.
