@@ -158,12 +158,25 @@ export function EChartsChart({
   const hasValidSpec = option !== null
   const hasValidDimensions = width > 0 && height > 0
 
+  // Latch: once the container has been measured with non-zero dimensions, keep
+  // the chart mounted. Dimensions can transiently report 0 during layout
+  // reflows (e.g. a runtime theme switch via the settings menu); gating the
+  // create effect on the raw `hasValidDimensions` would tear the instance down
+  // and leave the chart permanently blank, so we gate on this one-way latch and
+  // let the resize effect handle the actual (possibly changing) pixel sizes.
+  const [hasBeenSized, setHasBeenSized] = useState(false)
+  useEffect(() => {
+    if (hasValidDimensions) {
+      setHasBeenSized(true)
+    }
+  }, [hasValidDimensions])
+
   // Create (and dispose) the ECharts instance. Because both the renderer and the
   // theme are fixed at init time, a change to either disposes and recreates the
   // instance. We never init into a zero-sized container.
   useEffect(() => {
     const dom = containerRef.current
-    if (!dom || !hasValidSpec || !hasValidDimensions) {
+    if (!dom || !hasValidSpec || !hasBeenSized) {
       return
     }
 
@@ -176,15 +189,17 @@ export function EChartsChart({
       chart.dispose()
       setChartInstance(null)
     }
-    // hasValidDimensions is a boolean gate (only flips once); the actual pixel
-    // sizes are handled by the resize effect below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rendererStr, themeArg, hasValidSpec, hasValidDimensions])
+  }, [containerRef, rendererStr, themeArg, hasValidSpec, hasBeenSized])
 
   // Apply the option whenever it (or the underlying instance) changes. Skips
   // no-op setOption calls and re-dispatches persisted brush areas afterwards.
   useEffect(() => {
-    if (!chartInstance || !preparedOption) {
+    // When the instance is recreated (renderer/theme change), an effect keyed on
+    // the previous `chartInstance` can still run once against the just-disposed
+    // instance before the state update lands. Skip it so we don't mark the
+    // option as applied against a dead instance (which would make the fresh one
+    // skip its own render and stay blank).
+    if (!chartInstance || !preparedOption || chartInstance.isDisposed()) {
       return
     }
 
@@ -214,7 +229,7 @@ export function EChartsChart({
   // that, when the instance is (re)created, `restoreBrush` runs before these
   // handlers are bound and its brush dispatch does not re-emit a selection.
   useEffect(() => {
-    if (!chartInstance) {
+    if (!chartInstance || chartInstance.isDisposed()) {
       return
     }
     return bindSelections(chartInstance)
@@ -223,7 +238,12 @@ export function EChartsChart({
   // Resize the chart when its container dimensions change. Entering/exiting
   // fullscreen changes the measured width/height, so this covers it too.
   useEffect(() => {
-    if (!chartInstance || width <= 0 || height <= 0) {
+    if (
+      !chartInstance ||
+      chartInstance.isDisposed() ||
+      width <= 0 ||
+      height <= 0
+    ) {
       return
     }
     // Skip the resize triggered on the same pass the instance was (re)created:

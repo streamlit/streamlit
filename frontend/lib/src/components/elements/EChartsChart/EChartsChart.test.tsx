@@ -33,6 +33,7 @@ const { mockInit, mockChart } = vi.hoisted(() => {
     setOption: vi.fn(),
     resize: vi.fn(),
     dispose: vi.fn(),
+    isDisposed: vi.fn(() => false),
     getDataURL: vi.fn(() => "data:image/png;base64,AAA"),
     on: vi.fn(),
     off: vi.fn(),
@@ -51,6 +52,12 @@ const { mockContainerRef } = vi.hoisted(() => ({
   mockContainerRef: { current: null as HTMLDivElement | null },
 }))
 
+/** Lets a test override the emotion theme to simulate a runtime theme switch. */
+const { themeHolder } = vi.hoisted(() => {
+  const themeHolder: { override: unknown } = { override: null }
+  return { themeHolder }
+})
+
 vi.mock("echarts", () => ({
   init: mockInit,
 }))
@@ -64,7 +71,7 @@ vi.mock("~lib/hooks/useCalculatedDimensions", () => ({
 }))
 
 vi.mock("~lib/hooks/useEmotionTheme", () => ({
-  useEmotionTheme: () => mockTheme.emotion,
+  useEmotionTheme: () => themeHolder.override ?? mockTheme.emotion,
 }))
 
 vi.mock("~lib/components/widgets/Form/FormClearHelper", () => ({
@@ -128,6 +135,10 @@ describe("EChartsChart", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockContainerRef.current = null
+    themeHolder.override = null
+    // Restore the shared-instance default; a test below overrides it locally.
+    mockInit.mockImplementation(() => mockChart)
+    mockChart.isDisposed.mockReturnValue(false)
     widgetMgr = new WidgetStateManager({
       sendRerunBackMsg: vi.fn(),
       formsDataChanged: vi.fn(),
@@ -193,6 +204,51 @@ describe("EChartsChart", () => {
     expect(mockChart.dispose).toHaveBeenCalledTimes(1)
     expect(mockInit).toHaveBeenCalledTimes(2)
     expect(mockInit.mock.calls[1][2]).toEqual({ renderer: "svg" })
+  })
+
+  it("re-applies the option to the fresh instance after a runtime theme switch", () => {
+    // Return a distinct instance per init call, each tracking its own disposed
+    // state, so we can assert the new instance (not the disposed old one) is the
+    // one that receives the option.
+    const charts: Array<ReturnType<typeof createChartInstance>> = []
+    function createChartInstance(): typeof mockChart & { disposed: boolean } {
+      const chart = {
+        ...mockChart,
+        disposed: false,
+        setOption: vi.fn(),
+        on: vi.fn(),
+        off: vi.fn(),
+      }
+      chart.dispose = vi.fn(() => {
+        chart.disposed = true
+      })
+      chart.isDisposed = vi.fn(() => chart.disposed)
+      return chart
+    }
+    mockInit.mockImplementation(() => {
+      const chart = createChartInstance()
+      charts.push(chart)
+      return chart
+    })
+
+    const element = createElement()
+    const { rerender } = render(<Wrapper element={element} />)
+    expect(charts).toHaveLength(1)
+    expect(charts[0].setOption).toHaveBeenCalledTimes(1)
+
+    // Simulate a settings-menu theme switch: the emotion theme object identity
+    // changes (same colors), which recreates the ECharts instance.
+    themeHolder.override = { ...mockTheme.emotion }
+    rerender(<Wrapper element={element} />)
+
+    // The old instance is disposed and a fresh one is created...
+    expect(charts[0].dispose).toHaveBeenCalledTimes(1)
+    expect(charts).toHaveLength(2)
+    // ...and the option is (re)applied to the fresh instance. Regression guard:
+    // previously a stale effect marked the option as applied against the
+    // disposed instance, so the new one skipped its render and stayed blank.
+    expect(charts[1].setOption).toHaveBeenCalledTimes(1)
+    expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
   })
 
   it("skips no-op setOption calls on unrelated reruns", () => {

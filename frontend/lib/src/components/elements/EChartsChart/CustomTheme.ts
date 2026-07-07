@@ -37,7 +37,9 @@ export type EChartsOptionObject = Record<string, unknown>
 
 /**
  * Build the per-axis theming defaults shared by all axis types
- * (``categoryAxis``/``valueAxis``/``logAxis``/``timeAxis``).
+ * (``categoryAxis``/``valueAxis``/``logAxis``/``timeAxis`` as well as the
+ * non-cartesian axes ``angleAxis``/``radiusAxis``/``parallelAxis``/
+ * ``singleAxis``).
  */
 function buildAxisDefaults(
   theme: EmotionTheme,
@@ -87,7 +89,15 @@ export function buildStreamlitEChartsTheme(
   const { colors, genericFonts, fontSizes } = theme
   const bodyFontSize = convertRemToPx(fontSizes.twoSm)
   const labelColor = getGray70(theme)
+  const axisLineColor = getGray30(theme)
   const axisDefaults = buildAxisDefaults(theme, bodyFontSize)
+  // Shared text style for component labels/names that would otherwise fall back
+  // to ECharts' default (un-themed) gray.
+  const bodyTextStyle = {
+    color: labelColor,
+    fontFamily: genericFonts.bodyFont,
+    fontSize: bodyFontSize,
+  }
 
   return {
     // Series palette (shared with Plotly/Vega/Altair, honors config overrides).
@@ -133,6 +143,91 @@ export function buildStreamlitEChartsTheme(
     valueAxis: axisDefaults,
     logAxis: axisDefaults,
     timeAxis: axisDefaults,
+    // Polar coordinate axes.
+    angleAxis: axisDefaults,
+    radiusAxis: axisDefaults,
+    // Parallel coordinate axes.
+    parallelAxis: {
+      ...axisDefaults,
+      nameTextStyle: bodyTextStyle,
+    },
+    // Single axis (e.g. themeRiver, single-axis heatmaps/scatter).
+    singleAxis: axisDefaults,
+    // Radar coordinate. ECharts' defaults render bright, near-opaque split
+    // areas that clash with the (dark) app background, so theme the rings,
+    // spokes, and indicator names explicitly.
+    radar: {
+      axisLine: {
+        lineStyle: {
+          color: axisLineColor,
+        },
+      },
+      axisTick: {
+        lineStyle: {
+          color: axisLineColor,
+        },
+      },
+      splitLine: {
+        lineStyle: {
+          color: axisLineColor,
+        },
+      },
+      splitArea: {
+        areaStyle: {
+          // Very faint, theme-derived alternating rings that stay subtle on
+          // both light and dark backgrounds.
+          color: [
+            transparentize(labelColor, 0.97),
+            transparentize(labelColor, 0.93),
+          ],
+        },
+      },
+      axisName: bodyTextStyle,
+      axisLabel: bodyTextStyle,
+    },
+    // Sankey diagram: nodes are colored by a value-based gradient over the
+    // series ``color`` list (not the global categorical palette). Seed it with
+    // the sequential (single-hue) palette so it reads as a clean gradient
+    // instead of muddy interpolations between categorical hues, and theme the
+    // link ribbons so they stay legible (ECharts' default gray is too faint in
+    // dark mode).
+    sankey: {
+      color: [...colors.chartSequentialColors],
+      lineStyle: {
+        color: labelColor,
+        opacity: hasLightBackgroundColor(theme) ? 0.2 : 0.35,
+      },
+      label: bodyTextStyle,
+    },
+    // Sunburst: inside labels keep ECharts' (dark) default color, but slices
+    // are drawn from the categorical palette and can be dark, so add a light
+    // halo to keep labels readable regardless of the underlying slice color.
+    sunburst: {
+      label: {
+        color: colors.gray100,
+        textBorderColor: colors.white,
+        textBorderWidth: 2,
+      },
+    },
+    // Treemap: theme the breadcrumb trail (its default light-gray surface
+    // clashes with the app background).
+    treemap: {
+      breadcrumb: {
+        itemStyle: {
+          color: colors.secondaryBg,
+          borderColor: colors.borderColor,
+          textStyle: {
+            color: labelColor,
+            fontFamily: genericFonts.bodyFont,
+          },
+        },
+        emphasis: {
+          itemStyle: {
+            color: colors.bgMix,
+          },
+        },
+      },
+    },
     // Continuous color scale for visualMap-driven charts (e.g. heatmaps).
     visualMap: {
       inRange: {

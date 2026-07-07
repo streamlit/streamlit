@@ -15,7 +15,11 @@
  */
 
 import { mockTheme } from "~lib/mocks/mockTheme"
-import { getGray70, hasLightBackgroundColor } from "~lib/theme/getColors"
+import {
+  getGray30,
+  getGray70,
+  hasLightBackgroundColor,
+} from "~lib/theme/getColors"
 
 import {
   applyStreamlitOptionDefaults,
@@ -68,6 +72,72 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(visualMap.inRange.color).toEqual([
       ...theme.colors.chartSequentialColors,
     ])
+  })
+
+  it("themes the non-cartesian axes (polar, parallel, single)", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+
+    // Polar and single axes reuse the shared cartesian axis defaults.
+    expect(echartsTheme.angleAxis).toBe(echartsTheme.categoryAxis)
+    expect(echartsTheme.radiusAxis).toBe(echartsTheme.categoryAxis)
+    expect(echartsTheme.singleAxis).toBe(echartsTheme.categoryAxis)
+
+    // Parallel axes also theme the axis name text.
+    const parallelAxis = echartsTheme.parallelAxis as Record<
+      string,
+      Record<string, unknown>
+    >
+    expect(parallelAxis.axisLabel.color).toBe(getGray70(theme))
+    expect(parallelAxis.nameTextStyle.color).toBe(getGray70(theme))
+  })
+
+  it("themes the radar coordinate (rings, spokes, and names)", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+
+    const radar = echartsTheme.radar as {
+      splitLine: { lineStyle: { color: string } }
+      axisLine: { lineStyle: { color: string } }
+      splitArea: { areaStyle: { color: string[] } }
+      axisName: { color: string }
+    }
+    expect(radar.splitLine.lineStyle.color).toBe(getGray30(theme))
+    expect(radar.axisLine.lineStyle.color).toBe(getGray30(theme))
+    // Split-area rings are a themed pair (subtle in both light and dark).
+    expect(radar.splitArea.areaStyle.color).toHaveLength(2)
+    // Indicator names use the themed body text color.
+    expect(radar.axisName.color).toBe(getGray70(theme))
+  })
+
+  it("themes sankey links and seeds nodes from the sequential palette", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+
+    const sankey = echartsTheme.sankey as Record<string, unknown>
+    expect(sankey.color).toEqual([...theme.colors.chartSequentialColors])
+    const lineStyle = sankey.lineStyle as Record<string, unknown>
+    expect(lineStyle.color).toBe(getGray70(theme))
+    expect(lineStyle.opacity).toBeGreaterThan(0)
+  })
+
+  it("themes the treemap breadcrumb surface and text", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+
+    const treemap = echartsTheme.treemap as Record<
+      string,
+      Record<string, Record<string, Record<string, unknown>>>
+    >
+    expect(treemap.breadcrumb.itemStyle.color).toBe(theme.colors.secondaryBg)
+    expect(treemap.breadcrumb.itemStyle.textStyle.color).toBe(getGray70(theme))
+  })
+
+  it("adds a readable halo to sunburst labels", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+
+    const sunburst = echartsTheme.sunburst as Record<
+      string,
+      Record<string, unknown>
+    >
+    expect(sunburst.label.textBorderColor).toBe(theme.colors.white)
+    expect(sunburst.label.textBorderWidth).toBeGreaterThan(0)
   })
 })
 

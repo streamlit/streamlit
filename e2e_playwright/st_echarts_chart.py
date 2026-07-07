@@ -126,6 +126,43 @@ with st.container(key="c_gauge"):
         height=_HEIGHT,
     )
 
+# 4b) A radar chart (a non-cartesian coordinate system). Guards against the
+#     radar split-area / axis-name theming regressing in dark mode.
+with st.container(key="c_radar"):
+    st.echarts_chart(
+        {
+            "legend": {"data": ["Allocated", "Actual"]},
+            "radar": {
+                "indicator": [
+                    {"name": "Sales", "max": 6500},
+                    {"name": "Admin", "max": 16000},
+                    {"name": "Tech", "max": 30000},
+                    {"name": "Support", "max": 38000},
+                    {"name": "Dev", "max": 52000},
+                    {"name": "Marketing", "max": 25000},
+                ]
+            },
+            "series": [
+                {
+                    "type": "radar",
+                    "data": [
+                        {
+                            "value": [4200, 3000, 20000, 35000, 50000, 18000],
+                            "name": "Allocated",
+                        },
+                        {
+                            "value": [5000, 14000, 28000, 26000, 42000, 21000],
+                            "name": "Actual",
+                        },
+                    ],
+                }
+            ],
+            **_NO_ANIM,
+        },
+        key="radar",
+        height=_HEIGHT,
+    )
+
 # 5) A chart driven by a pandas DataFrame passed as dataset.source.
 dataset_df = pd.DataFrame(
     {

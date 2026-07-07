@@ -28,7 +28,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 14
+_EXPECTED_CHART_COUNT = 15
 
 
 def _get_chart(page: Page, key: str) -> Locator:
@@ -82,6 +82,38 @@ def test_unrelated_rerun_does_not_reset_display_chart(app: Page):
     expect(app.get_by_test_id("stEChartsChart")).to_have_count(_EXPECTED_CHART_COUNT)
     expect(basic_bar.locator("canvas")).to_be_visible()
     # Must NOT happen: an unrelated rerun does not surface a render error.
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+
+def _select_theme(app: Page, label: str) -> None:
+    """Open the main menu, click a theme radio, and close the menu."""
+    app.get_by_test_id("stMainMenu").click()
+    expect(app.get_by_test_id("stMainMenuPopover")).to_be_visible()
+    app.get_by_test_id(f"stMainMenuItem-theme-{label}").click()
+    app.keyboard.press("Escape")
+    expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
+
+
+def test_chart_survives_runtime_theme_switch(app: Page):
+    """Switching theme at runtime re-themes the chart instead of blanking it.
+
+    Regression test: the chart instance is disposed and recreated on a theme
+    change; a stale render pass previously left the fresh instance blank (canvas
+    removed and never redrawn).
+    """
+    basic_bar = _get_chart(app, "c_basic_bar")
+    expect(basic_bar.locator("canvas")).to_be_visible()
+
+    _select_theme(app, "Dark")
+
+    # The chart is re-created and re-rendered (canvas present), not blanked out.
+    expect(basic_bar.locator("canvas")).to_be_visible()
+    # Must NOT happen: the theme switch does not surface a render error.
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+    _select_theme(app, "Light")
+
+    expect(basic_bar.locator("canvas")).to_be_visible()
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
 
 
@@ -206,6 +238,9 @@ def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunctio
         "c_line_multi": "st_echarts_chart-line_multi",
         "c_gauge": "st_echarts_chart-gauge",
         "c_custom_colors": "st_echarts_chart-custom_colors",
+        # Radar exercises non-cartesian theming (split areas, spokes, names),
+        # which must stay subtle/legible in both light and dark mode.
+        "c_radar": "st_echarts_chart-radar",
     }
     for key, name in snapshots.items():
         chart = _get_chart(themed_app, key)
