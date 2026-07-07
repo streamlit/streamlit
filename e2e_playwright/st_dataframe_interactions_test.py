@@ -321,6 +321,30 @@ def test_clicking_on_fullscreen_toolbar_button(
     )
 
 
+def test_dataframe_column_menu_opens_in_fullscreen(app: Page):
+    """Test that dataframe column menus render above the fullscreen wrapper."""
+    dataframe_element = (
+        get_element_by_key(app, "column-menu-test").get_by_test_id("stDataFrame").first
+    )
+    expect(dataframe_element).to_be_visible()
+
+    dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
+    dataframe_element.hover()
+    expect(dataframe_toolbar).to_have_css("opacity", "1")
+
+    dataframe_toolbar.get_by_test_id("stElementToolbarButton").last.click()
+    expect(
+        dataframe_toolbar.get_by_role("button", name="Close fullscreen")
+    ).to_be_visible()
+
+    open_column_menu(dataframe_element, 2, "small")
+    column_menu = app.get_by_test_id("stDataFrameColumnMenu")
+    expect(column_menu).to_be_visible()
+    expect(column_menu).to_be_in_viewport()
+    column_menu.get_by_text("Sort ascending").click()
+    expect(column_menu).not_to_be_visible()
+
+
 def test_data_editor_keeps_state_after_unmounting(
     app: Page, assert_snapshot: ImageCompareFunction
 ):

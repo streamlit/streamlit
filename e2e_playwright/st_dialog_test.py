@@ -30,6 +30,7 @@ from e2e_playwright.shared.app_utils import (
     get_button,
     get_markdown,
     is_child_bounding_box_inside_parent,
+    select_selectbox_option,
 )
 from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
@@ -44,6 +45,10 @@ def open_dialog_with_images(app: Page):
 
 def open_dialog_without_images(app: Page):
     click_button(app, "Open Dialog without Images")
+
+
+def open_dialog_with_date_input(app: Page):
+    click_button(app, "Open Dialog with Date Input")
 
 
 def open_dialog_with_icon(app: Page):
@@ -202,6 +207,33 @@ def test_dialog_reopens_properly_after_close(app: Page):
         wait_for_app_run(app, wait_delay=250)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
+
+
+def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
+    """Test that nested widget overlays render above dialog overlays."""
+    open_dialog_with_date_input(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+
+    dialog.get_by_test_id("stDateInput").locator("input").click()
+    calendar = app.locator('[data-baseweb="calendar"]').first
+    expect(calendar).to_be_visible()
+
+    app.locator(
+        '[data-baseweb="calendar"] [aria-label^="Choose Tuesday, January 2nd 2024."]'
+    ).first.click()
+    wait_for_app_run(app)
+
+    expect_markdown(dialog, "Due Date Value: 2024-01-02")
+
+    select_selectbox_option(dialog, "Status", "Paid")
+    expect_markdown(dialog, "Status Value: Paid")
+
+    dialog.get_by_role("combobox", name="Tags").click()
+    app.get_by_role("option", name="Utilities", exact=True).first.click()
+    wait_for_app_run(app)
+
+    expect_markdown(dialog, "Tags Value: ['Utilities']")
 
 
 def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Page):
@@ -594,6 +626,9 @@ def test_dialog_with_dataframe_shows_column_menu_correctly(app: Page):
     expect(column_menu).to_be_visible()
     expect(column_menu).to_be_in_viewport()
     assert is_child_bounding_box_inside_parent(column_menu, df_element)
+    column_menu.get_by_text("Sort ascending").click()
+    expect(column_menu).not_to_be_visible()
+    expect(dialog).to_be_visible()
 
 
 def test_dialog_with_rerun_closes_even_if_button_is_clicked_multiple_times(app: Page):
