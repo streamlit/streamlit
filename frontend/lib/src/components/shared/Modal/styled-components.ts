@@ -51,23 +51,29 @@ export const StyledDialogOverlay = styled(ModalOverlay)(({ theme }) => ({
  * so the panel grows to fit its content; the overlay handles scrolling for
  * very tall dialogs.
  */
-export const StyledDialogPanel = styled(RAModal)<{ $dialogWidth?: string }>(
-  ({ theme, $dialogWidth }) => ({
+export const StyledDialogPanel = styled(RAModal)<{ $dialogWidth?: string }>(({
+  theme,
+  $dialogWidth,
+}) => {
+  // Keep a minimum viewport gutter (one lg on each side) on narrow screens.
+  const gutterAwareWidth = `calc(100% - ${theme.spacing.lg} - ${theme.spacing.lg})`
+  return {
     outline: "none",
     background: theme.colors.bgColor,
     borderRadius: theme.radii.xxl,
     boxShadow: theme.shadows.popover,
-    // Keep a minimum viewport gutter on narrow screens.
     margin: theme.spacing.lg,
-    minWidth: theme.sizes.minPopupWidth,
-    maxWidth: `calc(100% - ${theme.spacing.lg} - ${theme.spacing.lg})`,
+    // Cap minWidth by the gutter-aware width so the panel can shrink below
+    // minPopupWidth on very narrow screens instead of overflowing the viewport.
+    minWidth: `min(${theme.sizes.minPopupWidth}, ${gutterAwareWidth})`,
+    maxWidth: gutterAwareWidth,
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
     position: "relative",
     ...($dialogWidth !== undefined && { width: $dialogWidth }),
-  })
-)
+  }
+})
 
 /**
  * Flex column wrapper that fills the panel and contains the close button,

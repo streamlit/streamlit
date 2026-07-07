@@ -226,6 +226,9 @@ describe("Modal subcomponents", () => {
     const panel = document.querySelector("[role='dialog']")?.parentElement
     expect(panel).toHaveStyle({
       margin: "1rem",
+      // minWidth is capped by the gutter-aware width so the panel can shrink
+      // below minPopupWidth on very narrow screens instead of overflowing.
+      minWidth: "min(20rem, calc(100% - 1rem - 1rem))",
       maxWidth: "calc(100% - 1rem - 1rem)",
     })
   })

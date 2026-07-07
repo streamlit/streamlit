@@ -397,6 +397,17 @@ def test_medium_width_dialog_keeps_narrow_viewport_gutter(app: Page):
     assert dialog_box["y"] == pytest.approx(48, abs=1)
     assert dialog_box["width"] == pytest.approx(568, abs=1)
 
+    # On a viewport narrower than the dialog's minimum width (20rem) plus both
+    # gutters, the panel must shrink to keep the gutter instead of overflowing.
+    app.set_viewport_size({"width": 320, "height": 600})
+    narrow_box = dialog.bounding_box()
+    assert narrow_box is not None
+    assert narrow_box["x"] == pytest.approx(16, abs=1)
+    assert narrow_box["width"] == pytest.approx(288, abs=1)
+    # The right edge must stay within the viewport (left gutter + width + right
+    # gutter should not exceed the viewport width).
+    assert narrow_box["x"] + narrow_box["width"] == pytest.approx(304, abs=1)
+
 
 # its enough to test this on one browser as showing the error inline is more a backend
 # functionality than a frontend one
