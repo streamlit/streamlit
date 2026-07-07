@@ -234,6 +234,31 @@ describe("ComponentInstance", () => {
     expect(iframe).toHaveAttribute("height", "0")
   })
 
+  it("hides the iframe with visibility:hidden (not display:none) before it is ready", () => {
+    const componentRegistry = getComponentRegistry()
+    renderWithContexts(
+      <ComponentInstance
+        element={createElementProp()}
+        disabled={false}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: vi.fn(),
+            formsDataChanged: vi.fn(),
+          })
+        }
+        componentRegistry={componentRegistry}
+      />
+    )
+
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    // visibility:hidden keeps the iframe's layout box in place, preventing
+    // parent-page scroll resets during reruns (see #14917). display:none would
+    // remove the element from layout flow, causing reflows that reset the
+    // parent stMain scroll position when the iframe toggles back to visible.
+    expect(iframe).toHaveStyle("visibility: hidden")
+    expect(iframe).not.toHaveStyle("display: none")
+  })
+
   it("will not displays a skeleton when height is explicitly set to 0", () => {
     const componentRegistry = getComponentRegistry()
     renderWithContexts(
@@ -324,6 +349,43 @@ describe("ComponentInstance", () => {
       )
       expect(screen.queryByTestId("stSkeleton")).not.toBeInTheDocument()
       expect(iframe).toHaveAttribute("height", "0")
+    })
+
+    it("sets the iframe to visibility:visible after the component is ready", () => {
+      const componentRegistry = getComponentRegistry()
+      renderWithContexts(
+        <ComponentInstance
+          element={createElementProp()}
+          disabled={false}
+          widgetMgr={
+            new WidgetStateManager({
+              sendRerunBackMsg: vi.fn(),
+              formsDataChanged: vi.fn(),
+            })
+          }
+          componentRegistry={componentRegistry}
+        />
+      )
+
+      const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+      expect(iframe).toHaveStyle("visibility: hidden")
+
+      // SET COMPONENT_READY
+      fireEvent(
+        window,
+        new MessageEvent("message", {
+          data: {
+            isStreamlitMessage: true,
+            apiVersion: 1,
+            type: ComponentMessageType.COMPONENT_READY,
+          },
+          // @ts-expect-error
+          source: iframe.contentWindow,
+        })
+      )
+
+      expect(iframe).toHaveStyle("visibility: visible")
+      expect(iframe).not.toHaveStyle("display: none")
     })
 
     it("prevents RENDER message until component is ready", () => {

@@ -26,6 +26,11 @@ export const StyledComponentIframe = styled.iframe<StyledComponentIframeProps>(
     border: "none",
     padding: theme.spacing.none,
     margin: theme.spacing.none,
-    display: componentReady ? "initial" : "none",
+    // Use visibility (not display) to hide the iframe until the component is
+    // ready. display:none removes the iframe from layout flow, and toggling
+    // it back during reruns (e.g. closing an st.dialog opened from a custom
+    // component) triggers a reflow that resets the parent stMain scroll
+    // position. visibility:hidden keeps the layout box in place. See #14917.
+    visibility: componentReady ? "visible" : "hidden",
   })
 )
