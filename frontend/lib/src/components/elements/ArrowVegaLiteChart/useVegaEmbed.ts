@@ -139,6 +139,11 @@ export function useVegaEmbed(
           // usermeta.embedOptions (see useVegaElementPreprocessor), this prevents
           // a chart spec from using these actions to open same-origin pages with
           // serialized spec contents. We expose our own toolbar actions instead.
+          // Note: `actions: false` also changes vega-embed's DOM output: it no
+          // longer wraps the chart in a `.chart-wrapper`/`.vega-actions`
+          // structure and instead applies `role="graphics-document"` and the
+          // `fit-x`/`fit-y` sizing classes directly to this container element
+          // (which our styles and e2e locators rely on).
           actions: false,
         }
 
