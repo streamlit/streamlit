@@ -46,6 +46,12 @@ async function openDropdown(
   await user.click(screen.getByRole("button", { name: "Open" }))
 }
 
+/** Force a non-zero viewport so the virtualizer renders a window of rows. */
+function mockVirtualizerViewport(): void {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(320)
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(300)
+}
+
 describe("Selectbox widget", () => {
   let props: Props
 
@@ -124,6 +130,34 @@ describe("Selectbox widget", () => {
     options.forEach((option, index) => {
       expect(option).toHaveTextContent(props.options[index])
     })
+  })
+
+  it("virtualizes large option lists", async () => {
+    mockVirtualizerViewport()
+    const user = userEvent.setup()
+    const largeOptions = Array.from(
+      { length: 16_000 },
+      (_, index) => `Option ${index}`
+    )
+    props = getProps({
+      options: largeOptions,
+      value: undefined,
+    })
+    render(<Selectbox {...props} />)
+
+    await openDropdown(user)
+
+    // Only a small window of the 16k options is rendered when virtualized:
+    // an upper bound guards against rendering the full list, and asserting a
+    // mid-window option is present guards against under-rendering (e.g. a
+    // single row) that an upper bound alone would not catch.
+    const renderedOptions = await screen.findAllByRole("option")
+    expect(renderedOptions.length).toBeLessThan(100)
+    expect(screen.getByRole("option", { name: "Option 0" })).toBeVisible()
+    expect(screen.getByRole("option", { name: "Option 5" })).toBeVisible()
+    expect(
+      screen.queryByRole("option", { name: "Option 15999" })
+    ).not.toBeInTheDocument()
   })
 
   it("could be disabled", () => {
