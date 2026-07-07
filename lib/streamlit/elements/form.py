@@ -96,7 +96,10 @@ class FormMixin:
 
         Forms have a few constraints:
 
-        - Every form must contain a ``st.form_submit_button``.
+        - Every form must contain at least one ``st.form_submit_button``.
+          Without a submit button, there is no way to submit the form, so the
+          values of the widgets inside it are never sent to your app and the
+          form is non-functional.
         - ``st.button`` and ``st.download_button`` cannot be added to a form.
         - Forms can appear anywhere in your app (sidebar, columns, etc),
           but they cannot be embedded inside other forms.
@@ -262,7 +265,9 @@ class FormMixin:
         When this button is clicked, all widget values inside the form will be
         sent from the user's browser to your Streamlit server in a batch.
 
-        Every form must have at least one ``st.form_submit_button``. An
+        Every form must have at least one ``st.form_submit_button``. It is the
+        only way to submit a form: without it, the widget values inside the
+        form are never sent to your app, so the form is non-functional. An
         ``st.form_submit_button`` cannot exist outside of a form.
 
         For more information about forms, check out our `docs

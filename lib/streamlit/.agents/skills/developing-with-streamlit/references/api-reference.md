@@ -70,8 +70,8 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.expander` | Insert a multi-element container that can be expanded/collapsed. Use it for optional details that should not dominate the main page. |
 | `st.feedback` | Display a feedback widget. It supports compact user reactions such as thumbs, faces, or stars depending on configuration. |
 | `st.file_uploader` | Display a file uploader widget. It returns uploaded file objects and can support multiple files and type filtering. |
-| `st.form` | Create a form that batches elements together with a "Submit" button. Use it when several inputs should update the app together instead of on every widget change. |
-| `st.form_submit_button` | Display a form submit button. It must be used inside `st.form` and triggers the form's batched submission. |
+| `st.form` | Create a form that batches elements together with a "Submit" button. Use it when several inputs should update the app together instead of on every widget change. Every form must contain at least one `st.form_submit_button`, otherwise it's non-functional. |
+| `st.form_submit_button` | Display a form submit button. It must be used inside `st.form` and triggers the form's batched submission. A form needs at least one submit button to be functional. |
 | `st.fragment` | Decorator to turn a function into a fragment which can rerun independently of the full app. Use it to reduce rerun cost for isolated interactive sections or run independent, slow sections in parallel during full app reruns. |
 | `st.get_option` | Return the current value of a given Streamlit configuration option. Use it for runtime-aware behavior that depends on configured settings. |
 | `st.graphviz_chart` | Display a graph using the dagre-d3 library. Use it for directed graphs, diagrams, and node-edge visualizations. |

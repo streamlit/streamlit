@@ -185,6 +185,8 @@ if submitted:
     save_user(name, email, role)
 ```
 
+**Every form must include at least one `st.form_submit_button`.** It's the only way to submit a form—without it, the form's widget values are never sent to your app and the form is non-functional. Note that `st.button` and `st.download_button` can't be placed inside a form.
+
 Use `border=False` for seamless inline forms that don't look like forms:
 
 ```python
