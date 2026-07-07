@@ -73,6 +73,11 @@ def test_keyed_fixed_editor_preserves_edits_across_source_value_changes(
         "value-editor-state",
         '{"added_rows": [], "deleted_rows": [], "edited_rows": {"0": {"a": 5}}}',
     )
+    # Must NOT happen: a value-only source change should not reset the widget
+    # and wipe the pending edit.
+    expect(app.locator("[data-testid='value-editor-state']")).not_to_have_text(
+        EMPTY_STATE
+    )
 
     _click_button(app, "Value: add source row")
 

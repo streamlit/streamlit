@@ -198,9 +198,11 @@ def _compute_data_editor_signature(
     update_part("format", data_format.name)
     update_part("columns", tuple(data_df.columns))
     update_part("index_type", type(data_df.index).__name__)
+    # Encode each index name as a (is_none, name) pair so an unnamed index
+    # (None) can never collide with an index whose name is a sentinel string.
     update_part(
         "index_names",
-        tuple("<unnamed>" if name is None else name for name in data_df.index.names),
+        tuple((name is None, name) for name in data_df.index.names),
     )
 
     if not isinstance(data_df.index, pd.RangeIndex) or (
