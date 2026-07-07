@@ -218,6 +218,39 @@ function areaToSelectionItem(
 }
 
 /**
+ * Reset each series' cursor to the normal arrow for display-only charts.
+ *
+ * ECharts defaults series data items to a ``"pointer"`` cursor (and a hover
+ * emphasis), which implies the chart is clickable. That's misleading when no
+ * click/selection handler is wired, and inconsistent with other non-interactive
+ * Streamlit charts. We only reset the cursor (the hover emphasis is left intact,
+ * as it's useful alongside tooltips) and leave any series where the user set an
+ * explicit ``cursor`` untouched. Legend/dataZoom/toolbox cursors are unaffected.
+ */
+function withDefaultSeriesCursor(
+  option: EChartsOptionObject
+): EChartsOptionObject {
+  const { series } = option
+  const withCursor = (entry: unknown): unknown => {
+    if (!isPlainObject(entry)) {
+      return entry
+    }
+    const seriesObject = entry as Record<string, unknown>
+    if ("cursor" in seriesObject) {
+      return entry
+    }
+    return { ...seriesObject, cursor: "default" }
+  }
+  if (Array.isArray(series)) {
+    return { ...option, series: series.map(withCursor) }
+  }
+  if (isPlainObject(series)) {
+    return { ...option, series: withCursor(series) }
+  }
+  return option
+}
+
+/**
  * Hook that wires ECharts selection events (point clicks and box/lasso brush
  * gestures) into Streamlit's widget-state mechanism. Modeled on
  * ``useVegaLiteSelections``.
@@ -263,7 +296,13 @@ export function useEChartsSelections(
 
   const configureSelectionOption = useCallback(
     (option: EChartsOptionObject): EChartsOptionObject => {
-      if (!isSelectionActivated || (!hasBox && !hasLasso)) {
+      if (!isSelectionActivated) {
+        // Display-only charts aren't clickable, so don't imply it via the
+        // default "pointer" cursor on series items.
+        return withDefaultSeriesCursor(option)
+      }
+      if (!hasBox && !hasLasso) {
+        // Point-only selection is click-driven; keep ECharts' pointer cursor.
         return option
       }
 

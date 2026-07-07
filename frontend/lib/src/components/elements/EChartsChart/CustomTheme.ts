@@ -209,6 +209,38 @@ export function buildStreamlitEChartsTheme(
         textBorderWidth: 2,
       },
     },
+    // Gauge: ECharts' defaults use light-mode colors for the track and dark
+    // colors for the title/detail text, so the value/name become unreadable on
+    // a dark background. Theme the track, ticks, labels, and text explicitly.
+    gauge: {
+      axisLine: {
+        lineStyle: {
+          color: [[1, axisLineColor]],
+        },
+      },
+      splitLine: {
+        lineStyle: {
+          color: labelColor,
+        },
+      },
+      axisTick: {
+        lineStyle: {
+          color: axisLineColor,
+        },
+      },
+      axisLabel: {
+        color: labelColor,
+        fontFamily: genericFonts.bodyFont,
+      },
+      title: {
+        color: labelColor,
+        fontFamily: genericFonts.bodyFont,
+      },
+      detail: {
+        color: colors.bodyText,
+        fontFamily: genericFonts.bodyFont,
+      },
+    },
     // Treemap: theme the breadcrumb trail (its default light-gray surface
     // clashes with the app background).
     treemap: {
@@ -268,8 +300,49 @@ export function buildStreamlitEChartsTheme(
 }
 
 /**
+ * Build the default cartesian ``grid`` layout so charts fill their container.
+ *
+ * ECharts' built-in grid reserves large margins (``left: '15%'``,
+ * ``right: '10%'``, ``top: 65``, ``bottom: 80``), which leaves charts heavily
+ * inset compared to other Streamlit charts. We tighten the side margins (with
+ * ``containLabel`` so axis labels/ticks/names stay inside the grid) to fill the
+ * width, and tighten the top/bottom only on the side that has no title/legend.
+ * On a side that *does* carry a title/legend we leave the margin unset so
+ * ECharts' generous default reserves room for it (guessing a fixed pixel value
+ * risks clipping a title+subtitle or a multi-item legend).
+ */
+function buildDefaultGrid(
+  option: EChartsOptionObject
+): Record<string, unknown> {
+  const hasTitle = option.title !== undefined
+  const legend = option.legend
+  const legendObject = isPlainObject(legend)
+    ? (legend as Record<string, unknown>)
+    : {}
+  const hasLegend = legend !== undefined && legendObject.show !== false
+  // ECharts places the legend at the bottom-center by default; it only sits at
+  // the top when the user gives it a (non-"bottom") `top`.
+  const legendAtTop =
+    legendObject.top !== undefined && legendObject.top !== "bottom"
+  const legendAtBottom = hasLegend && !legendAtTop
+
+  const grid: Record<string, unknown> = {
+    left: 8,
+    right: 24,
+    containLabel: true,
+  }
+  if (!hasTitle && !legendAtTop) {
+    grid.top = 16
+  }
+  if (!legendAtBottom) {
+    grid.bottom = 8
+  }
+  return grid
+}
+
+/**
  * Non-destructively fill a small number of option-level gaps that the init
- * theme cannot cover (``aria.enabled`` and ``grid.containLabel``).
+ * theme cannot cover (``aria.enabled`` and the ``grid`` layout).
  *
  * This only runs under ``theme="streamlit"`` and only writes keys the user has
  * not set, so explicit user values (e.g. ``series[0].itemStyle.color`` or a
@@ -306,17 +379,17 @@ export function applyStreamlitOptionDefaults(
     }
   }
 
-  // For cartesian charts, keep long axis labels inside the grid by default.
+  // For cartesian charts, default the grid so the plot fills its container and
+  // long axis labels stay inside the grid. Any grid key the user set wins; we
+  // only fill the gaps. Arrays (multiple grids) are left untouched.
   const hasCartesianAxis = "xAxis" in result || "yAxis" in result
-  if (hasCartesianAxis) {
-    const grid = result.grid
+  const grid = result.grid
+  if (hasCartesianAxis && !Array.isArray(grid)) {
+    const defaults = buildDefaultGrid(result)
     if (grid === undefined) {
-      result.grid = { containLabel: true }
+      result.grid = defaults
     } else if (isPlainObject(grid)) {
-      const gridObject = grid as Record<string, unknown>
-      if (!("containLabel" in gridObject)) {
-        result.grid = { ...gridObject, containLabel: true }
-      }
+      result.grid = { ...defaults, ...(grid as Record<string, unknown>) }
     }
   }
 

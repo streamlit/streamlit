@@ -508,5 +508,50 @@ describe("useEChartsSelections", () => {
     const configured = result.current.configureSelectionOption(option)
     expect(configured).toBe(option)
     expect(configured.brush).toBeUndefined()
+    // A clickable (selection) chart keeps ECharts' default pointer cursor.
+    const series = configured.series as Array<Record<string, unknown>>
+    expect(series[0].cursor).toBeUndefined()
+  })
+
+  it("resets the series cursor to default for display-only charts", () => {
+    // An empty id makes the chart display-only (no selection).
+    const { result } = renderHook(() =>
+      useEChartsSelections(
+        createElement([EChartsChartProto.SelectionMode.POINTS], ""),
+        widgetMgr
+      )
+    )
+    expect(result.current.isSelectionActivated).toBe(false)
+
+    const configured = result.current.configureSelectionOption({
+      series: [
+        { type: "bar", data: [1] },
+        { type: "line", data: [2] },
+      ],
+    })
+    const series = configured.series as Array<Record<string, unknown>>
+    expect(series[0].cursor).toBe("default")
+    expect(series[1].cursor).toBe("default")
+
+    // A single series object (not an array) is handled too.
+    const single = result.current.configureSelectionOption({
+      series: { type: "pie", data: [] },
+    })
+    expect((single.series as Record<string, unknown>).cursor).toBe("default")
+  })
+
+  it("preserves an explicit series cursor on display-only charts", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(
+        createElement([EChartsChartProto.SelectionMode.POINTS], ""),
+        widgetMgr
+      )
+    )
+
+    const configured = result.current.configureSelectionOption({
+      series: [{ type: "bar", data: [1], cursor: "crosshair" }],
+    })
+    const series = configured.series as Array<Record<string, unknown>>
+    expect(series[0].cursor).toBe("crosshair")
   })
 })

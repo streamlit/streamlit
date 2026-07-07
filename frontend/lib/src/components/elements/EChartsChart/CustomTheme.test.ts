@@ -139,6 +139,20 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(sunburst.label.textBorderColor).toBe(theme.colors.white)
     expect(sunburst.label.textBorderWidth).toBeGreaterThan(0)
   })
+
+  it("themes gauge text and track (readable in dark mode)", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+
+    const gauge = echartsTheme.gauge as Record<string, Record<string, unknown>>
+    // Name and value text use themed (theme-adapting) colors instead of the
+    // fixed dark defaults that vanish on a dark background.
+    expect(gauge.title.color).toBe(getGray70(theme))
+    expect(gauge.detail.color).toBe(theme.colors.bodyText)
+    // The background track is a themed gray, as an array of [stop, color]
+    // segments (so an explicit user color array replaces it wholesale).
+    const axisLine = gauge.axisLine as Record<string, Record<string, unknown>>
+    expect(axisLine.lineStyle.color).toEqual([[1, getGray30(theme)]])
+  })
 })
 
 describe("applyStreamlitOptionDefaults", () => {
@@ -184,13 +198,21 @@ describe("applyStreamlitOptionDefaults", () => {
     expect(series[0].itemStyle).toEqual({ color: "#abcdef" })
   })
 
-  it("defaults grid.containLabel for cartesian charts only", () => {
+  it("defaults a container-filling grid for cartesian charts only", () => {
     const cartesian = applyStreamlitOptionDefaults(
       { xAxis: { type: "category" }, yAxis: { type: "value" }, series: [] },
       theme,
       STREAMLIT_THEME
     )
-    expect(cartesian.grid).toEqual({ containLabel: true })
+    // Tight margins + containLabel so the plot fills the container. With no
+    // title/legend, minimal top/bottom room is reserved.
+    expect(cartesian.grid).toEqual({
+      left: 8,
+      right: 24,
+      top: 16,
+      bottom: 8,
+      containLabel: true,
+    })
 
     // A pie chart has no cartesian axes, so no grid should be injected.
     const nonCartesian = applyStreamlitOptionDefaults(
@@ -201,13 +223,63 @@ describe("applyStreamlitOptionDefaults", () => {
     expect(nonCartesian.grid).toBeUndefined()
   })
 
-  it("does not override an existing grid.containLabel", () => {
-    const result = applyStreamlitOptionDefaults(
-      { xAxis: {}, grid: { containLabel: false, left: 10 }, series: [] },
+  it("defers to ECharts' default margin on the side with a title or legend", () => {
+    // ECharts places the legend at the bottom by default: leave `bottom` unset
+    // (its generous default reserves room) and keep the top tight.
+    const withLegend = applyStreamlitOptionDefaults(
+      { xAxis: {}, yAxis: {}, legend: { data: ["a"] }, series: [] },
       theme,
       STREAMLIT_THEME
     )
-    expect(result.grid).toEqual({ containLabel: false, left: 10 })
+    const legendGrid = withLegend.grid as Record<string, unknown>
+    expect(legendGrid.bottom).toBeUndefined()
+    expect(legendGrid.top).toBe(16)
+
+    // A title sits at the top: leave `top` unset, keep the bottom tight.
+    const withTitle = applyStreamlitOptionDefaults(
+      { xAxis: {}, yAxis: {}, title: { text: "Sales" }, series: [] },
+      theme,
+      STREAMLIT_THEME
+    )
+    const titleGrid = withTitle.grid as Record<string, unknown>
+    expect(titleGrid.top).toBeUndefined()
+    expect(titleGrid.bottom).toBe(8)
+
+    // A legend explicitly positioned at the top leaves `top` unset.
+    const topLegend = applyStreamlitOptionDefaults(
+      { xAxis: {}, yAxis: {}, legend: { top: 0 }, series: [] },
+      theme,
+      STREAMLIT_THEME
+    )
+    const topLegendGrid = topLegend.grid as Record<string, unknown>
+    expect(topLegendGrid.top).toBeUndefined()
+    expect(topLegendGrid.bottom).toBe(8)
+  })
+
+  it("fills only the grid gaps the user left unset (user values win)", () => {
+    const result = applyStreamlitOptionDefaults(
+      { xAxis: {}, grid: { containLabel: false, left: 40 }, series: [] },
+      theme,
+      STREAMLIT_THEME
+    )
+    // User keys win; the rest are filled from the container-filling defaults.
+    expect(result.grid).toEqual({
+      left: 40,
+      right: 24,
+      top: 16,
+      bottom: 8,
+      containLabel: false,
+    })
+  })
+
+  it("leaves an array of grids untouched", () => {
+    const grids = [{ left: 1 }, { left: 2 }]
+    const result = applyStreamlitOptionDefaults(
+      { xAxis: [{}, {}], grid: grids, series: [] },
+      theme,
+      STREAMLIT_THEME
+    )
+    expect(result.grid).toBe(grids)
   })
 
   it("never injects a tooltip formatter or changes renderMode (XSS-safe)", () => {
