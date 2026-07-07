@@ -25,6 +25,7 @@ from streamlit.dataframe import source as dataframe_source
 from streamlit.dataframe.source import (
     AUTO_LAZY_ROW_THRESHOLD,
     FORCED_LAZY_MIN_ROWS,
+    UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD,
     AccessMode,
     InMemoryDataframeSource,
     SortSpec,
@@ -40,6 +41,31 @@ from streamlit.errors import StreamlitAPIException
 def _make_table(num_rows: int) -> pa.Table:
     """Build a simple two-column Arrow table with ``num_rows`` rows."""
     return pa.table({"a": list(range(num_rows)), "b": [x * 2 for x in range(num_rows)]})
+
+
+class _UnknownRowCountSource:
+    """Minimal native-like source that reserves row_count=None for future phases."""
+
+    @property
+    def row_count(self) -> int | None:
+        return None
+
+    @property
+    def schema(self) -> pa.Schema:
+        return pa.schema([("a", pa.int64())])
+
+    @property
+    def sortable(self) -> bool:
+        return False
+
+    @property
+    def access_mode(self) -> AccessMode:
+        return AccessMode.SEQUENTIAL
+
+    def load_rows(
+        self, offset: int, limit: int, *, sort: SortSpec | None = None
+    ) -> pa.Table:
+        return pa.table({"a": []}, schema=self.schema)
 
 
 def test_in_memory_source_exposes_metadata() -> None:
@@ -235,6 +261,75 @@ def test_resolve_selection_lazy_none_eager() -> None:
     """``lazy=None`` falls back to eager when selections are activated."""
     df = pd.DataFrame({"a": np.arange(AUTO_LAZY_ROW_THRESHOLD + 1)})
     assert resolve_lazy_source(df, None, is_selection_activated=True) is None
+
+
+def test_resolve_auto_lazy_native_source_above_unevaluated_threshold(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Supported unevaluated objects auto-lazy above the capped-preview threshold."""
+    native_source = InMemoryDataframeSource(
+        _make_table(UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD + 1)
+    )
+    monkeypatch.setattr(
+        dataframe_source, "_try_create_native_source", lambda _data: native_source
+    )
+
+    source = resolve_lazy_source(object(), None, is_selection_activated=False)
+
+    assert source is native_source
+
+
+def test_resolve_auto_lazy_native_source_at_unevaluated_threshold_stays_eager(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Supported unevaluated objects preserve eager/default preview at <=10k rows."""
+    native_source = InMemoryDataframeSource(
+        _make_table(UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD)
+    )
+    monkeypatch.setattr(
+        dataframe_source, "_try_create_native_source", lambda _data: native_source
+    )
+
+    assert resolve_lazy_source(object(), None, is_selection_activated=False) is None
+
+
+def test_resolve_forced_lazy_native_source_small_short_circuits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``lazy=True`` keeps bounded native sources eager at <=1,000 rows."""
+    native_source = InMemoryDataframeSource(_make_table(FORCED_LAZY_MIN_ROWS))
+    monkeypatch.setattr(
+        dataframe_source, "_try_create_native_source", lambda _data: native_source
+    )
+
+    assert resolve_lazy_source(object(), True, is_selection_activated=False) is None
+
+
+def test_resolve_auto_lazy_unknown_row_count_native_source_falls_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``lazy=None`` falls back when a native source has no known row count."""
+    monkeypatch.setattr(
+        dataframe_source,
+        "_try_create_native_source",
+        lambda _data: _UnknownRowCountSource(),
+    )
+
+    assert resolve_lazy_source(object(), None, is_selection_activated=False) is None
+
+
+def test_resolve_forced_lazy_unknown_row_count_native_source_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``lazy=True`` rejects unknown-size native sources in Phase 1."""
+    monkeypatch.setattr(
+        dataframe_source,
+        "_try_create_native_source",
+        lambda _data: _UnknownRowCountSource(),
+    )
+
+    with pytest.raises(StreamlitAPIException, match="known row count"):
+        resolve_lazy_source(object(), True, is_selection_activated=False)
 
 
 @pytest.mark.require_integration

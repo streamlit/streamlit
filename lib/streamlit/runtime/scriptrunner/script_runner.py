@@ -557,9 +557,15 @@ class ScriptRunner:
                 runtime.get_instance().media_file_mgr.clear_session_refs()
                 # Same reasoning for lazy dataframe sources: on a fragment rerun
                 # we keep references so sources outside the fragment stay valid.
-                # Sources re-registered by the fragment overwrite their previous
-                # generation, and orphaned sources are pruned after the run.
                 runtime.get_instance().dataframe_source_mgr.clear_session_refs()
+            else:
+                # Fragment reruns redraw only the queued fragments. Drop refs
+                # owned by those fragments before they run so removed lazy
+                # dataframes are pruned, while sources in untouched fragments
+                # and the app body remain available.
+                runtime.get_instance().dataframe_source_mgr.clear_session_refs(
+                    fragment_ids=rerun_data.fragment_id_queue
+                )
 
             self._pages_manager.set_script_intent(
                 rerun_data.page_script_hash, rerun_data.page_name

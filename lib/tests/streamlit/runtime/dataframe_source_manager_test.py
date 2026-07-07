@@ -75,12 +75,19 @@ def _register(
     *,
     session_id: str = "s1",
     coordinates: str = "1.0.0",
+    fragment_id: str | None = None,
     num_rows: int = 1000,
 ):
     """Register a source under a given session id (patches the active session)."""
-    with patch(
-        "streamlit.runtime.dataframe_source_manager._get_session_id",
-        return_value=session_id,
+    with (
+        patch(
+            "streamlit.runtime.dataframe_source_manager._get_session_id",
+            return_value=session_id,
+        ),
+        patch(
+            "streamlit.runtime.dataframe_source_manager._get_fragment_id",
+            return_value=fragment_id,
+        ),
     ):
         return mgr.register_source(_make_source(num_rows), coordinates)
 
@@ -256,6 +263,36 @@ def test_clear_session_refs_only_affects_target_session() -> None:
         )
     # s2's source is still available.
     mgr.load_chunk(reg_s2.session_id, reg_s2.source_id, reg_s2.generation, 0, 5, None)
+
+
+def test_clear_session_refs_only_affects_target_fragments() -> None:
+    """Fragment reruns prune only refs owned by rerun fragments."""
+    mgr = DataframeSourceManager()
+    body = _register(mgr, coordinates="body", fragment_id=None)
+    frag_a = _register(mgr, coordinates="frag-a", fragment_id="a")
+    frag_b = _register(mgr, coordinates="frag-b", fragment_id="b")
+
+    mgr.clear_session_refs("s1", fragment_ids=["a"])
+    mgr.remove_orphaned_sources()
+
+    with pytest.raises(DataframeSourceError):
+        mgr.load_chunk(
+            frag_a.session_id, frag_a.source_id, frag_a.generation, 0, 5, None
+        )
+
+    mgr.load_chunk(body.session_id, body.source_id, body.generation, 0, 5, None)
+    mgr.load_chunk(frag_b.session_id, frag_b.source_id, frag_b.generation, 0, 5, None)
+
+
+def test_clear_session_refs_fragment_empty_list_is_noop() -> None:
+    """An empty fragment-id list leaves existing refs untouched."""
+    mgr = DataframeSourceManager()
+    reg = _register(mgr, coordinates="frag-a", fragment_id="a")
+
+    mgr.clear_session_refs("s1", fragment_ids=[])
+    mgr.remove_orphaned_sources()
+
+    mgr.load_chunk(reg.session_id, reg.source_id, reg.generation, 0, 5, None)
 
 
 def test_clear_all_for_session() -> None:

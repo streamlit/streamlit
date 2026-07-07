@@ -71,6 +71,16 @@ def _get_session_id() -> str:
     return ctx.session_id
 
 
+def _get_fragment_id() -> str | None:
+    """Return the active fragment id, if source registration happens in one."""
+    from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+
+    try:
+        return ThreadState.get().fragment_id
+    except RuntimeError:
+        return None
+
+
 @dataclass(frozen=True)
 class RegisteredDataframeSource:
     """Metadata returned when a lazy dataframe source is registered."""
@@ -81,6 +91,7 @@ class RegisteredDataframeSource:
     page_size: int
     session_id: str
     coordinates: str
+    fragment_id: str | None
 
 
 class DataframeSourceManager:
@@ -110,6 +121,7 @@ class DataframeSourceManager:
         ``generation``.
         """
         session_id = _get_session_id()
+        fragment_id = _get_fragment_id()
         source_id = uuid.uuid4().hex
         generation = uuid.uuid4().hex
         entry = RegisteredDataframeSource(
@@ -119,6 +131,7 @@ class DataframeSourceManager:
             page_size=page_size,
             session_id=session_id,
             coordinates=coordinates,
+            fragment_id=fragment_id,
         )
 
         with self._lock:
@@ -190,17 +203,43 @@ class DataframeSourceManager:
         )
         return arrow_bytes, offset
 
-    def clear_session_refs(self, session_id: str | None = None) -> None:
-        """Drop a session's coordinate references (does not delete sources).
+    def clear_session_refs(
+        self,
+        session_id: str | None = None,
+        *,
+        fragment_ids: set[str] | list[str] | tuple[str, ...] | None = None,
+    ) -> None:
+        """Drop coordinate references for a session (does not delete sources).
 
-        Call at the start of a full rerun and on session shutdown. Sources are
-        actually removed by ``remove_orphaned_sources``.
+        Call without ``fragment_ids`` at the start of a full rerun and on
+        session shutdown. For fragment reruns, pass the fragment ids that are
+        about to run so refs owned by those fragments are dropped while refs in
+        the app body and untouched fragments stay active. Sources are actually
+        removed by ``remove_orphaned_sources``.
         """
         if session_id is None:
             session_id = _get_session_id()
 
         with self._lock:
-            self._sources_by_session_and_coord.pop(session_id, None)
+            if fragment_ids is None:
+                self._sources_by_session_and_coord.pop(session_id, None)
+                return
+
+            fragment_id_set = set(fragment_ids)
+            if not fragment_id_set:
+                return
+
+            coord_map = self._sources_by_session_and_coord.get(session_id)
+            if coord_map is None:
+                return
+
+            for coordinates, source_id in list(coord_map.items()):
+                entry = self._sources.get(source_id)
+                if entry is not None and entry.fragment_id in fragment_id_set:
+                    del coord_map[coordinates]
+
+            if not coord_map:
+                self._sources_by_session_and_coord.pop(session_id, None)
 
     def remove_orphaned_sources(self) -> None:
         """Delete sources no longer referenced by any session."""
