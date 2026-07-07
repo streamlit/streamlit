@@ -18,6 +18,7 @@ import { memo, ReactElement, useCallback, useEffect } from "react"
 
 import { FloatingPortal } from "@floating-ui/react"
 
+import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import {
   DynamicIcon,
   extractLeadingMaterialIcon,
@@ -134,7 +135,7 @@ function ButtonActionMenu({
           pointerEvents: "none",
         }}
       />
-      <FloatingPortal>
+      <FloatingPortal id={DATAFRAME_PORTAL_ID}>
         <StyledButtonActionMenuPanel
           ref={setFloatingRef}
           style={floatingStyles}

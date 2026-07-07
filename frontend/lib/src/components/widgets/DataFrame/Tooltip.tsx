@@ -19,6 +19,7 @@ import { memo, ReactElement, useEffect } from "react"
 import styled from "@emotion/styled"
 import { FloatingPortal } from "@floating-ui/react"
 
+import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { StyledTooltipContentWrapper } from "~lib/components/shared/Tooltip/styled-components"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -111,7 +112,7 @@ function Tooltip({
           height: 0,
         }}
       />
-      <FloatingPortal>
+      <FloatingPortal id={DATAFRAME_PORTAL_ID}>
         <StyledDataFrameTooltipContainer
           ref={refs.setFloating}
           style={floatingStyles}

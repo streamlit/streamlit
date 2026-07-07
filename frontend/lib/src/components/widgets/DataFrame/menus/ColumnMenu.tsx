@@ -25,6 +25,7 @@ import {
 
 import { FloatingPortal } from "@floating-ui/react"
 
+import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { Quiver } from "~lib/dataframes/Quiver"
@@ -191,7 +192,7 @@ function ColumnMenu({
           pointerEvents: "none",
         }}
       />
-      <FloatingPortal>
+      <FloatingPortal id={DATAFRAME_PORTAL_ID}>
         <StyledColumnMenuPanel
           ref={setFloatingRef}
           data-testid="stDataFrameColumnMenu"

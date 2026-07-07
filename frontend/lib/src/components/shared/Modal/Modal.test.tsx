@@ -19,6 +19,7 @@ import userEvent from "@testing-library/user-event"
 import { vi } from "vitest"
 
 import { BaseButtonKind } from "~lib/components/shared/BaseButton/BaseButton"
+import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 
 import Modal, {
@@ -36,6 +37,17 @@ describe("Modal component", () => {
     const modalElement = screen.getByTestId("stDialog")
     expect(modalElement).toBeVisible()
     expect(modalElement).toHaveClass("stDialog")
+  })
+
+  it("renders below popup overlays", () => {
+    render(<Modal isOpen />)
+
+    expect(getComputedStyle(screen.getByTestId("stDialog")).zIndex).toBe(
+      String(mockTheme.emotion.zIndices.modal)
+    )
+    expect(mockTheme.emotion.zIndices.modal).toBeLessThan(
+      mockTheme.emotion.zIndices.popup
+    )
   })
 
   it("renders the dialog with correct ARIA role", () => {
@@ -94,6 +106,29 @@ describe("Modal component", () => {
     await user.click(screen.getByTestId("stDialog"))
 
     expect(handleClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not call onClose when clicking a Streamlit overlay root", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+    const layerHost = document.createElement("div")
+    const layerButton = document.createElement("button")
+
+    // Only tag the host with data-st-overlay-root (and deliberately NOT
+    // data-react-aria-top-layer) so this test exercises Streamlit's own
+    // shouldCloseOnInteractOutside logic rather than React Aria's built-in
+    // top-layer short-circuit.
+    layerHost.setAttribute("data-st-overlay-root", "true")
+    layerButton.textContent = "BaseWeb layer option"
+    layerHost.appendChild(layerButton)
+    document.body.appendChild(layerHost)
+
+    render(<Modal isOpen onClose={handleClose} />)
+
+    await user.click(layerButton)
+
+    expect(handleClose).not.toHaveBeenCalled()
+    layerHost.remove()
   })
 
   it("does not call onClose on Escape when closeable is false", async () => {

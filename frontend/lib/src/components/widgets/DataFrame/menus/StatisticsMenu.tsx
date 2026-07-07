@@ -18,6 +18,7 @@ import { memo, ReactElement, useMemo } from "react"
 
 import { FloatingPortal } from "@floating-ui/react"
 
+import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
@@ -292,7 +293,7 @@ function StatisticsMenu({
         {children}
       </StyledSubMenuAnchor>
       {isOpen && (
-        <FloatingPortal>
+        <FloatingPortal id={DATAFRAME_PORTAL_ID}>
           {/* No tabIndex/autoFocus — intentionally omitted for this read-only panel.
               Allows keyboard users to navigate the parent column menu while
               viewing statistics. */}
