@@ -15,12 +15,17 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import pandas as pd
 
 import streamlit as st
 
-EMPTY_EDITOR_STATE = {"edited_rows": {}, "added_rows": [], "deleted_rows": []}
+EMPTY_EDITOR_STATE: dict[str, Any] = {
+    "edited_rows": {},
+    "added_rows": [],
+    "deleted_rows": [],
+}
 COLUMN_CONFIG = {
     "a": st.column_config.NumberColumn(width="small"),
     "b": st.column_config.NumberColumn(width="small"),
