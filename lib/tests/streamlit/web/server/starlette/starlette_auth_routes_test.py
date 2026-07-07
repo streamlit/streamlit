@@ -135,12 +135,21 @@ def _mock_missing_starlette_client_import(missing_module: str) -> Any:
     return mock_import
 
 
+@pytest.mark.parametrize(
+    "missing_module",
+    [
+        # Authlib itself is not installed.
+        "authlib",
+        # Authlib is installed but too old to expose the Starlette integration.
+        "authlib.integrations.starlette_client",
+    ],
+)
 def test_create_oauth_client_reports_missing_authlib(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, missing_module: str
 ) -> None:
-    """Report the auth extra install hint when Authlib itself is unavailable."""
+    """Report the auth extra install hint when Authlib is missing or too old."""
     monkeypatch.setattr(
-        builtins, "__import__", _mock_missing_starlette_client_import("authlib")
+        builtins, "__import__", _mock_missing_starlette_client_import(missing_module)
     )
 
     with pytest.raises(StreamlitMissingAuthlibError):
