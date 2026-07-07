@@ -917,10 +917,10 @@ class DataEditorMixin:
             the first index column.
 
         key : str, int, or None
-            An optional string to use as the unique key for this widget.
-            If this is ``None`` (default), a key will be generated for
-            the widget based on the values of the other parameters. No
-            two widgets may have the same key.
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key.
 
             A key lets you access the widget's value via
             ``st.session_state[key]`` (read-only). For more details, see
@@ -931,13 +931,14 @@ class DataEditorMixin:
             CSS class name prefixed with ``st-key-``.
 
             .. note::
-                When ``key`` is set and ``num_rows="fixed"``, edits are kept
-                when the data's *values* change between reruns and only reset
-                when its structure changes (columns, column types, row count, or
-                index labels). Edits are matched by row position, so use a
-                meaningful index if edits should follow specific rows when the
-                data is reordered. Omit ``key`` to reset all edits whenever the
-                data changes.
+                Assigning a key stabilizes the widget's identity and preserves
+                edits across reruns when the data's *values* change. This
+                applies only with ``num_rows="fixed"`` and only while the data's
+                structure stays the same; edits reset when the columns, column
+                types, row count, or index labels change. Edits are matched by
+                row position, so use a meaningful index if edits should follow
+                specific rows when the data is reordered. Omit ``key`` to reset
+                all edits whenever the data changes.
 
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
