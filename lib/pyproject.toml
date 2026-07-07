@@ -111,7 +111,7 @@ snowflake = [
 # Optional dependency required for PDF rendering:
 pdf = ["streamlit-pdf>=1.0.0"]
 # Optional dependency required for auth:
-auth = ["Authlib>=1.3.2"]
+auth = ["Authlib>=1.3.2", "httpx>=0.24.0"]
 # Optional charting dependencies:
 charts = [
   "matplotlib>=3.0.0",
