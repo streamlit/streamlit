@@ -23,11 +23,9 @@ import {
   useState,
 } from "react"
 
-import { FloatingPortal } from "@floating-ui/react"
-
-import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
@@ -192,7 +190,7 @@ function ColumnMenu({
           pointerEvents: "none",
         }}
       />
-      <FloatingPortal id={DATAFRAME_PORTAL_ID}>
+      <DataFrameOverlayPortal>
         <StyledColumnMenuPanel
           ref={setFloatingRef}
           data-testid="stDataFrameColumnMenu"
@@ -403,7 +401,7 @@ function ColumnMenu({
             )}
           </StyledMenuList>
         </StyledColumnMenuPanel>
-      </FloatingPortal>
+      </DataFrameOverlayPortal>
     </>
   )
 }

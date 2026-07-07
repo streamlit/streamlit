@@ -16,10 +16,8 @@
 
 import { memo, ReactElement } from "react"
 
-import { FloatingPortal } from "@floating-ui/react"
-
-import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { useHoverSubmenu } from "~lib/hooks/useHoverSubmenu"
 
 import {
@@ -204,7 +202,7 @@ function FormattingMenu({
         {children}
       </StyledSubMenuAnchor>
       {isOpen && (
-        <FloatingPortal id={DATAFRAME_PORTAL_ID}>
+        <DataFrameOverlayPortal>
           <StyledSubMenuPanel
             ref={setFloatingRef}
             style={floatingStyles}
@@ -228,7 +226,7 @@ function FormattingMenu({
               ))}
             </StyledMenuList>
           </StyledSubMenuPanel>
-        </FloatingPortal>
+        </DataFrameOverlayPortal>
       )}
     </>
   )
