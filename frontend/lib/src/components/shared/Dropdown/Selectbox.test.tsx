@@ -147,10 +147,14 @@ describe("Selectbox widget", () => {
 
     await openDropdown(user)
 
-    // Only a small window of the 16k options is rendered when virtualized.
+    // Only a small window of the 16k options is rendered when virtualized:
+    // an upper bound guards against rendering the full list, and asserting a
+    // mid-window option is present guards against under-rendering (e.g. a
+    // single row) that an upper bound alone would not catch.
     const renderedOptions = await screen.findAllByRole("option")
     expect(renderedOptions.length).toBeLessThan(100)
     expect(screen.getByRole("option", { name: "Option 0" })).toBeVisible()
+    expect(screen.getByRole("option", { name: "Option 5" })).toBeVisible()
     expect(
       screen.queryByRole("option", { name: "Option 15999" })
     ).not.toBeInTheDocument()
