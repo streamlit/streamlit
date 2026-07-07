@@ -96,7 +96,8 @@ export function calculateModalSize(
   if (size === "medium" && width && padding) {
     // Same width as the AppView container (contentMaxWidth) plus the extra dialog padding.
     // The dialog has 0.5rem more left/right padding than AppView, adding 1rem total.
-    // Note: max-width:100% keeps this responsive on mobile regardless of the calculated value.
+    // Note: the panel's maxWidth (calc(100% - lg - lg)) keeps this responsive on
+    // narrow screens regardless of the calculated value.
     return `calc(${width} + ${padding})`
   }
   if (size === "auto") {
