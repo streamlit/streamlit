@@ -18,7 +18,12 @@ from typing import TYPE_CHECKING
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import rerun_app, wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.conftest import (
+    rerun_app,
+    wait_for_app_loaded,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -570,7 +575,9 @@ def test_selectbox_virtualizes_large_option_list(app: Page):
 
     # Virtualization: only a small window of the 1000 options is in the DOM, so a
     # far-down option is NOT rendered even though it exists in the collection.
-    assert options.count() < 100
+    # Use wait_until (auto-retrying) rather than a bare assert on a snapshot
+    # count to avoid flakiness while the virtualizer settles its window.
+    wait_until(app, lambda: options.count() < 100)
     expect(
         selection_dropdown.get_by_role("option", name="Option 999", exact=True)
     ).to_have_count(0)
