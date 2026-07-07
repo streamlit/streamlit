@@ -223,7 +223,14 @@ export function valuesEqual(
   }
 
   if (column.valuesEqual) {
-    return column.valuesEqual(a, b)
+    try {
+      return column.valuesEqual(a, b)
+    } catch {
+      // Column comparators may coerce or serialize values (e.g. Number(),
+      // JSON.stringify()), which can throw on unexpected inputs. Fall back to
+      // an identity check so equality checks never break the data editor.
+      return Object.is(a, b)
+    }
   }
 
   return Object.is(a, b)

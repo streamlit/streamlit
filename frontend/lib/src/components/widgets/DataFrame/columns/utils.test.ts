@@ -146,6 +146,19 @@ describe("valuesEqual", () => {
     expect(valuesEqual("5", 5, column)).toBe(true)
     expect(valuesEqual("5", 6, column)).toBe(false)
   })
+
+  it("falls back to identity comparison when a comparator throws", () => {
+    // JSON columns serialize via JSON.stringify, which throws on circular
+    // structures. The central valuesEqual should catch that and fall back to
+    // an identity check instead of propagating the error.
+    const column = JsonColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    const circular: Record<string, unknown> = { foo: "bar" }
+    circular.self = circular
+
+    expect(valuesEqual(circular, circular, column)).toBe(true)
+    expect(valuesEqual(circular, { foo: "bar" }, column)).toBe(false)
+  })
 })
 
 describe("getEmptyCell", () => {

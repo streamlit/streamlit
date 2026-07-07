@@ -38,6 +38,38 @@ interface UseEditReconciliationReturn {
   getSourceCellValue: (column: BaseColumn, originalRow: number) => unknown
 }
 
+/**
+ * Reconciles pending edits against the current source data.
+ *
+ * The data editor preserves a user's pending edits across reruns even when the
+ * underlying data value changes (see the schema-identity based widget reset).
+ * This means an edit can become redundant if the new source data already
+ * matches what the user typed. When that happens, keeping the edit would make
+ * the cell look "edited" (e.g. it stays in `edited_rows`) even though its value
+ * is identical to the source.
+ *
+ * Whenever the `data` changes (or editing is re-enabled after a refresh), this
+ * hook walks every edited cell and compares its value against the corresponding
+ * source cell using the column's `valuesEqual` comparator. Cells whose edit now
+ * equals the source value are cleared, so only genuine, still-diverging edits
+ * remain in the editing state.
+ *
+ * The reconciliation runs during render (via `useExecuteWhenChanged`) so edits
+ * are cleared before the grid repaints; the data change that triggered the
+ * reconciliation already provides a fresh `getCellContent`, so no explicit
+ * repaint is required. `syncEditState` is only called when at least one cell was
+ * cleared, to push the reconciled editing state to the widget value.
+ *
+ * @param data - The current source data (Quiver).
+ * @param allColumns - All columns, used to map edited cells back to their column.
+ * @param editingState - Ref to the mutable editing state holding pending edits.
+ * @param isEditingEnabled - Whether editing is currently enabled; reconciliation
+ *   is skipped while disabled and re-runs once it is re-enabled.
+ * @param syncEditState - Callback to propagate the editing state to the widget
+ *   value after edits are cleared.
+ * @returns `getSourceCellValue`, which reads the raw source value for a given
+ *   column and original (unsorted) row index.
+ */
 function useEditReconciliation({
   data,
   allColumns,

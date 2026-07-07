@@ -85,13 +85,12 @@ function JsonColumn(props: BaseColumnProps): BaseColumn {
       // an object. This is sufficient for edit reconciliation because
       // getCellValue returns consistent types, but mixed-type comparisons may
       // be surprising if this comparator is reused in other contexts.
-      try {
-        const normalizedA = typeof a === "string" ? a : JSON.stringify(a)
-        const normalizedB = typeof b === "string" ? b : JSON.stringify(b)
-        return normalizedA === normalizedB
-      } catch {
-        return Object.is(a, b)
-      }
+      // JSON.stringify can throw (e.g. circular references, BigInt); the caller
+      // (valuesEqual in utils) wraps this in a try/catch that falls back to an
+      // identity check.
+      const normalizedA = typeof a === "string" ? a : JSON.stringify(a)
+      const normalizedB = typeof b === "string" ? b : JSON.stringify(b)
+      return normalizedA === normalizedB
     },
   }
 }

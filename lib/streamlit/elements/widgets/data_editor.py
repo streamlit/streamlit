@@ -931,18 +931,13 @@ class DataEditorMixin:
             CSS class name prefixed with ``st-key-``.
 
             .. note::
-                When ``key`` is provided with ``num_rows="fixed"``, edits are
-                preserved when the source data's *values* change between reruns,
-                and the edit state is only reset when the data's structure
-                changes (its columns, column types, row count, or index labels).
-                Because edits are tracked by row *position*, a row reorder only
-                resets the edit state if the data has a meaningful (non-default)
-                index. With a default ``RangeIndex``, reordering rows is
-                indistinguishable from changing their values, so edits stay at
-                their original positions; use a meaningful index if edits should
-                follow specific rows. To retain the previous behavior of
-                resetting all edits whenever the data changes, omit the ``key``
-                parameter.
+                When ``key`` is set and ``num_rows="fixed"``, edits are kept
+                when the data's *values* change between reruns and only reset
+                when its structure changes (columns, column types, row count, or
+                index labels). Edits are matched by row position, so use a
+                meaningful index if edits should follow specific rows when the
+                data is reordered. Omit ``key`` to reset all edits whenever the
+                data changes.
 
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
