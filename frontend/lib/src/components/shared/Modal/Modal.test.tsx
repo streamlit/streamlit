@@ -215,4 +215,18 @@ describe("Modal subcomponents", () => {
     const panel = document.querySelector("[role='dialog']")?.parentElement
     expect(panel).toHaveStyle({ width: "80vw" })
   })
+
+  it("keeps a viewport gutter around the dialog panel", () => {
+    render(
+      <Modal isOpen size="medium">
+        <ModalBody>content</ModalBody>
+      </Modal>
+    )
+
+    const panel = document.querySelector("[role='dialog']")?.parentElement
+    expect(panel).toHaveStyle({
+      margin: "1rem",
+      maxWidth: "calc(100% - 1rem - 1rem)",
+    })
+  })
 })

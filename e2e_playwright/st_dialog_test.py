@@ -383,6 +383,21 @@ def test_medium_width_dialog_displays_correctly(
     assert_snapshot(dialog, name="st_dialog-with_medium_width")
 
 
+@pytest.mark.only_browser("chromium")
+def test_medium_width_dialog_keeps_narrow_viewport_gutter(app: Page):
+    """Test that a medium dialog preserves the viewport gutter on narrow screens."""
+    app.set_viewport_size({"width": 600, "height": 600})
+    open_medium_width_dialog(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+
+    dialog_box = dialog.bounding_box()
+    assert dialog_box is not None
+    assert dialog_box["x"] == pytest.approx(16, abs=1)
+    assert dialog_box["y"] == pytest.approx(48, abs=1)
+    assert dialog_box["width"] == pytest.approx(568, abs=1)
+
+
 # its enough to test this on one browser as showing the error inline is more a backend
 # functionality than a frontend one
 @pytest.mark.only_browser("chromium")

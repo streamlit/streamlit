@@ -49,7 +49,7 @@ export const StyledDialogOverlay = styled(ModalOverlay)(({ theme }) => ({
  *
  * overflow: hidden clips content to the rounded corners. No maxHeight is set
  * so the panel grows to fit its content; the overlay handles scrolling for
- * very tall dialogs (matching original BaseUI behavior).
+ * very tall dialogs.
  */
 export const StyledDialogPanel = styled(RAModal)<{ $dialogWidth?: string }>(
   ({ theme, $dialogWidth }) => ({
@@ -57,8 +57,10 @@ export const StyledDialogPanel = styled(RAModal)<{ $dialogWidth?: string }>(
     background: theme.colors.bgColor,
     borderRadius: theme.radii.xxl,
     boxShadow: theme.shadows.popover,
+    // Keep a minimum viewport gutter on narrow screens.
+    margin: theme.spacing.lg,
     minWidth: theme.sizes.minPopupWidth,
-    maxWidth: "100%",
+    maxWidth: `calc(100% - ${theme.spacing.lg} - ${theme.spacing.lg})`,
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
