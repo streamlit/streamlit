@@ -1113,6 +1113,45 @@ describe("WebsocketConnection", () => {
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
   })
 
+  it("pins to the connected URI so reconnects skip path discovery", () => {
+    const baseUriPartsList = [
+      {
+        protocol: "http:",
+        hostname: "a.example.com",
+        port: "1234",
+        pathname: "/",
+      } as URL,
+      {
+        protocol: "http:",
+        hostname: "b.example.com",
+        port: "1234",
+        pathname: "/",
+      } as URL,
+    ]
+    const ws = new WebsocketConnection(createMockArgs({ baseUriPartsList }))
+
+    // Before connecting, all candidate URIs are probed (path discovery).
+    // @ts-expect-error - accessing private method for testing
+    expect(ws.getBaseUrisToProbe()).toEqual(baseUriPartsList)
+
+    // Simulate a successful WebSocket connection on the second URI.
+    // @ts-expect-error - accessing private property for testing
+    ws.uriIndex = 1
+    // @ts-expect-error - accessing private property for testing
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - accessing private method for testing
+    ws.stepFsm("CONNECTION_SUCCEEDED")
+
+    // Entering CONNECTED records the working URI...
+    // @ts-expect-error - accessing private property for testing
+    expect(ws.connectedUriIndex).toBe(1)
+    // ...so reconnects probe only that URI.
+    // @ts-expect-error - accessing private method for testing
+    expect(ws.getBaseUrisToProbe()).toEqual([baseUriPartsList[1]])
+
+    ws.disconnect()
+  })
+
   it("increments message cache run count", () => {
     const incrementRunCountSpy = vi.spyOn(
       // @ts-expect-error
