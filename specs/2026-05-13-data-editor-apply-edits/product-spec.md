@@ -8,9 +8,14 @@ created: 2026-05-13
 ## Summary
 
 Add an `apply_edits` callback parameter to `st.data_editor` that gives users explicit control
-over when and how edits are committed. The callback receives the edited dataframe and raw edit
-state, handles persistence (e.g., database writes), and returns the new source dataframe. This
-enables clean patterns for database-backed editing, validation, and programmatic reset/revert.
+over when and how edits are committed. The callback receives the source dataframe, edited
+dataframe, and raw edit state, handles persistence (e.g., database writes), and returns the new
+source dataframe. This enables clean patterns for database-backed editing, validation, and
+programmatic reset/revert.
+
+The detailed implementation design lives in
+[`../2026-05-13-data-editor-dynamic-data/tech-spec.md`](../2026-05-13-data-editor-dynamic-data/tech-spec.md),
+which covers the Phase 2 backend/frontend changes required for this API.
 
 ## Problem
 
@@ -75,7 +80,7 @@ def data_editor(
         [pd.DataFrame, pd.DataFrame, DataEditorEditState],
         pd.DataFrame,
     ] | None = None,
-) -> pd.DataFrame:
+) -> DataTypes:
 ```
 
 **Note on DataFrame type**: The callback signature uses `pd.DataFrame` for simplicity. `st.data_editor`
@@ -99,6 +104,12 @@ minimal.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `apply_edits` | `Callable[[pd.DataFrame, pd.DataFrame, DataEditorEditState], pd.DataFrame] \| None` | Callback invoked when edits are present. Receives source dataframe first, edited dataframe second, and raw edit state third. Returns new source dataframe. |
+
+**Validation exception:**
+
+Add `DataEditorValidationError` as an explicit public exception for validation failures that are
+safe to display to end users. The implementation should expose it from `streamlit.errors` and may
+also re-export it from `streamlit` for ergonomic examples.
 
 **Callback signature:**
 
@@ -176,7 +187,8 @@ checkers will see `dict[int, dict[str, Any]]` for `edited_rows`, matching the ru
 | **No edits** | Callback not invoked; widget renders source data as-is |
 | **With forms** | Not supported in the initial release; see "Forms enforcement" below |
 | **Return value of `st.data_editor`** | Callback's result on success; `edited_df` on exception |
-| **`st.session_state[key]`** | Cleared on success; preserved on exception |
+| **Widget edit state (`st.session_state[key]`)** | Cleared on success; preserved on exception |
+| **Element identity** | With `key` and `apply_edits`, identity is based on an editing-compatible signature for all `num_rows` modes, not full Arrow data bytes |
 
 #### How to Persist the Baseline
 
@@ -240,10 +252,12 @@ st.data_editor(
 **Example 2: Database sync with validation**
 
 ```python
+from streamlit.errors import DataEditorValidationError
+
 def sync_to_database(source_df, edited_df, edits):
     # Validate
     if edited_df["amount"].sum() > 10000:
-        raise ValueError("Total amount cannot exceed $10,000")
+        raise DataEditorValidationError("Total amount cannot exceed $10,000")
 
     # Map deleted row positions to primary keys using source_df
     for row_idx in edits["deleted_rows"]:
@@ -338,7 +352,7 @@ commit" workflows.
 
 | Feature | Interaction |
 |---------|-------------|
-| `on_change` | `on_change` runs in WS handler *before* script rerun; `apply_edits` runs *during* rerun inside `st.data_editor`. `on_change` cannot observe post-`apply_edits` state. |
+| `on_change` | `on_change` runs in the ScriptRunner thread via `on_script_will_rerun()` before the script body reaches `st.data_editor`; `apply_edits` runs during that rerun inside `st.data_editor`. `on_change` cannot observe post-`apply_edits` state. |
 | `key` | **Required** for `apply_edits` to work correctly. See enforcement below. |
 | `num_rows` | Works with all modes; most useful for `"add"`, `"delete"`, `"dynamic"` |
 | `disabled` | If all editing disabled, no edits occur, callback not invoked |
@@ -349,7 +363,10 @@ commit" workflows.
 **`key` requirement enforcement:**
 
 Without `key`, the element ID is derived from full Arrow bytes, so every successful `apply_edits`
-invocation changes the widget ID on the next render — discarding the callback's returned data.
+invocation can change the widget ID on the next render and drop the first subsequent edit. With a
+key, the tech design must use signature-based identity for `apply_edits` in **all** `num_rows`
+modes (`"fixed"`, `"add"`, `"delete"`, and `"dynamic"`), excluding row count from the
+`apply_edits` identity signature so committed row operations do not remount the widget.
 
 If `apply_edits` is provided without `key`, raise `StreamlitAPIException` with an actionable message
 (per API principle #23 "Fail Fast, Fail Helpfully"):
@@ -374,7 +391,7 @@ separate design for ordering relative to `st.form_submit_button(on_click=...)` a
 
 When the callback raises an exception, behavior depends on the exception type:
 
-**Validation exceptions** (`ValueError`, `TypeError`):
+**Validation exceptions** (`DataEditorValidationError`):
 1. Exception is caught by the widget
 2. Edit state is **preserved** (user's work is not lost)
 3. `st.error(str(exception))` is displayed at the widget location
@@ -385,20 +402,23 @@ When the callback raises an exception, behavior depends on the exception type:
 **Control flow exceptions** (`st.rerun()`, `st.stop()`):
 - Re-raised to allow normal control flow inside callbacks
 
-**Other exceptions** (database errors, network failures, etc.):
+**Other exceptions** (`ValueError`, `TypeError`, database errors, network failures, etc.):
 - Propagated to Streamlit's normal exception handling
 - This prevents accidentally leaking backend details (connection strings, SQL errors, stack traces)
   via `st.error(str(exception))`
 
-**Security note**: Only validation exceptions (`ValueError`, `TypeError`) display their message
-via `st.error()`. For other exceptions, the message may contain sensitive backend details — they
-propagate to the standard exception UI instead. If you need to display custom error messages for
-infrastructure failures, catch them explicitly and raise a `ValueError` with a safe message.
+**Security note**: Only `DataEditorValidationError` displays its message via `st.error()`. Broadly
+catching `ValueError` or `TypeError` is unsafe because third-party validators may include input
+data or backend details in exception messages. If you need to display custom error messages for
+infrastructure failures, catch them explicitly in your callback and raise
+`DataEditorValidationError` with a safe message.
 
 ```python
+from streamlit.errors import DataEditorValidationError
+
 def validate_and_save(source_df, edited_df, edits):
     if edited_df["email"].str.contains("@").sum() != len(edited_df):
-        raise ValueError("All rows must have valid email addresses")
+        raise DataEditorValidationError("All rows must have valid email addresses")
     return edited_df
 
 # If validation fails:
@@ -427,7 +447,7 @@ result = st.data_editor(df, key="editor", apply_edits=validate_and_save)
 | Works on SiS, Cloud, etc? | Yes — standard callback execution |
 | No breaking API changes | Yes — new optional parameter only |
 | No new dependencies | Yes |
-| New proto fields | Yes — `editing_state` field to signal frontend state clear |
+| New proto fields | Yes — `editing_state` plus a per-signal nonce/counter to clear frontend state exactly once |
 | Metrics collected | Track `apply_edits` usage vs. without |
 | Any security/legal impact? | None — callback runs user code like `on_change` |
 | Any docs changes needed? | Yes — document `apply_edits` parameter and patterns |
