@@ -79,6 +79,15 @@ function JsonColumn(props: BaseColumnProps): BaseColumn {
     getCellValue(cell: JsonCell): string | object | null {
       return cell.data?.value ?? null
     },
+    valuesEqual(a: unknown, b: unknown): boolean {
+      try {
+        const normalizedA = typeof a === "string" ? a : JSON.stringify(a)
+        const normalizedB = typeof b === "string" ? b : JSON.stringify(b)
+        return normalizedA === normalizedB
+      } catch {
+        return Object.is(a, b)
+      }
+    },
   }
 }
 

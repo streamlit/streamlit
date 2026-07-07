@@ -48,6 +48,7 @@ from streamlit.elements.widgets.data_editor import (
     _apply_row_deletions,
     _check_column_names,
     _check_type_compatibilities,
+    _compute_data_editor_signature,
     _parse_value,
 )
 from streamlit.errors import StreamlitAPIException
@@ -66,6 +67,25 @@ if TYPE_CHECKING:
 def _get_arrow_schema(df: pd.DataFrame) -> pa.Schema:
     """Get the Arrow schema for a DataFrame."""
     return pa.Table.from_pandas(df).schema
+
+
+def _get_data_editor_signature(
+    df: pd.DataFrame,
+    *,
+    data_format: DataFormat = DataFormat.PANDAS_DATAFRAME,
+    disabled: bool | list[str | int] = False,
+    include_row_count: bool = True,
+) -> str:
+    """Get the data editor schema signature for tests."""
+    arrow_schema = _get_arrow_schema(df)
+    return _compute_data_editor_signature(
+        data_df=df,
+        data_format=data_format,
+        arrow_schema=arrow_schema,
+        dataframe_schema=determine_dataframe_schema(df, arrow_schema),
+        disabled=disabled,
+        include_row_count=include_row_count,
+    )
 
 
 class DataEditorUtilTest(unittest.TestCase):
@@ -650,6 +670,158 @@ class DataEditorUtilTest(unittest.TestCase):
         expected_col2_values = [f"value_{i}" for i in range(8)]
         assert df["col1"].tolist() == expected_col1_values
         assert df["col2"].tolist() == expected_col2_values
+
+
+class DataEditorSignatureTest(unittest.TestCase):
+    def test_signature_stable_when_only_values_change(self):
+        df1 = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
+        df2 = pd.DataFrame({"a": [10, 20], "b": ["foo", "bar"]})
+
+        assert _get_data_editor_signature(df1) == _get_data_editor_signature(df2)
+
+    @parameterized.expand(
+        [
+            ("column_name", pd.DataFrame({"renamed": [1, 2]})),
+            ("arrow_type", pd.DataFrame({"a": [1.0, 2.5]})),
+            ("index_type", pd.DataFrame({"a": [1, 2]}, index=["x", "y"])),
+            ("row_count", pd.DataFrame({"a": [1, 2, 3]})),
+        ]
+    )
+    def test_signature_changes_for_schema_changes(
+        self, _name: str, changed_df: pd.DataFrame
+    ):
+        df = pd.DataFrame({"a": [1, 2]})
+
+        assert _get_data_editor_signature(df) != _get_data_editor_signature(changed_df)
+
+    @parameterized.expand(
+        [
+            (False, True),
+            (False, ["a"]),
+            (["a"], ["b"]),
+        ]
+    )
+    def test_signature_changes_for_disabled_config(
+        self, disabled1: bool | list[str], disabled2: bool | list[str]
+    ):
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        assert _get_data_editor_signature(
+            df, disabled=disabled1
+        ) != _get_data_editor_signature(df, disabled=disabled2)
+
+    def test_signature_can_exclude_row_count(self):
+        df1 = pd.DataFrame({"a": [1, 2]})
+        df2 = pd.DataFrame({"a": [1, 2, 3]})
+
+        assert _get_data_editor_signature(
+            df1, include_row_count=False
+        ) == _get_data_editor_signature(df2, include_row_count=False)
+
+    def test_signature_hashes_meaningful_index_values(self):
+        df = pd.DataFrame({"a": [1, 2, 3]}, index=["x", "y", "z"])
+        reordered_df = df.iloc[::-1]
+
+        assert _get_data_editor_signature(df) != _get_data_editor_signature(
+            reordered_df
+        )
+
+    def test_signature_ignores_default_range_index_values(self):
+        df1 = pd.DataFrame({"a": [1, 2]})
+        df2 = pd.DataFrame({"a": [10, 20]})
+
+        assert _get_data_editor_signature(df1) == _get_data_editor_signature(df2)
+
+    def test_signature_uses_delimited_components(self):
+        df = pd.DataFrame({"disabled:all": [1, 2]})
+
+        assert _get_data_editor_signature(df, disabled=False) != (
+            _get_data_editor_signature(df, disabled=True)
+        )
+
+
+class DataEditorStableIdTest(DeltaGeneratorTestCase):
+    def _get_id(self, df: pd.DataFrame, **kwargs: Any) -> str:
+        # Patch element ID registration so the same key can be reused across
+        # multiple calls within a single test without raising a duplicate error.
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.data_editor(df, **kwargs)
+        return self.get_delta_from_queue().new_element.dataframe.id
+
+    def test_keyed_fixed_editor_id_stable_when_only_values_change(self):
+        id1 = self._get_id(pd.DataFrame({"a": [1, 2], "b": ["x", "y"]}), key="editor")
+        id2 = self._get_id(
+            pd.DataFrame({"a": [10, 20], "b": ["foo", "bar"]}), key="editor"
+        )
+
+        assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("columns", pd.DataFrame({"renamed": [1, 2]})),
+            ("dtypes", pd.DataFrame({"a": [1.0, 2.0]})),
+            ("row_count", pd.DataFrame({"a": [1, 2, 3]})),
+        ]
+    )
+    def test_keyed_fixed_editor_id_changes_for_schema_changes(
+        self, _name: str, changed_df: pd.DataFrame
+    ):
+        id1 = self._get_id(pd.DataFrame({"a": [1, 2]}), key="editor")
+        id2 = self._get_id(changed_df, key="editor")
+
+        assert id1 != id2
+
+    def test_keyed_fixed_editor_id_ignores_cosmetic_params(self):
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        id1 = self._get_id(
+            df,
+            key="editor",
+            width=300,
+            height=200,
+            column_order=["a", "b"],
+            column_config={"a": "A"},
+            row_height=25,
+            placeholder="Empty",
+        )
+        id2 = self._get_id(
+            df,
+            key="editor",
+            width=500,
+            height=400,
+            column_order=["b", "a"],
+            column_config={"a": "Renamed A"},
+            row_height=35,
+            placeholder="Nothing here",
+        )
+
+        assert id1 == id2
+
+    def test_unkeyed_editor_id_changes_when_values_change(self):
+        id1 = self._get_id(pd.DataFrame({"a": [1, 2]}))
+        id2 = self._get_id(pd.DataFrame({"a": [10, 20]}))
+
+        assert id1 != id2
+
+    @parameterized.expand(["dynamic", "add", "delete"])
+    def test_keyed_non_fixed_editor_id_changes_when_values_change(self, num_rows: str):
+        id1 = self._get_id(pd.DataFrame({"a": [1, 2]}), key="editor", num_rows=num_rows)
+        id2 = self._get_id(
+            pd.DataFrame({"a": [10, 20]}), key="editor", num_rows=num_rows
+        )
+
+        assert id1 != id2
+
+    def test_keyed_editor_id_changes_when_num_rows_mode_changes(self):
+        df = pd.DataFrame({"a": [1, 2]})
+
+        id1 = self._get_id(df, key="editor", num_rows="fixed")
+        id2 = self._get_id(df, key="editor", num_rows="dynamic")
+
+        assert id1 != id2
 
 
 class DataEditorTest(DeltaGeneratorTestCase):

@@ -209,6 +209,8 @@ edited_df = st.data_editor(
 
 Access edit details via `st.session_state["my_editor"]["edited_rows"]`.
 
+**Preserving edits on data refresh** — With a `key` and `num_rows="fixed"`, edits are tracked by row position and kept when the underlying data changes, instead of resetting. An edit is dropped automatically once its value matches the new source value; edits reset only if the columns, dtypes, row count, or index labels change. Because edits are position-based, reordering rows that share a default `RangeIndex` keeps edits at their original positions (use a meaningful index if edits should follow specific rows). Omit `key` to reset all edits whenever the data changes.
+
 **Double-input anti-pattern** — assigning the result back to the same session state used as input causes every other edit to disappear:
 
 ```python

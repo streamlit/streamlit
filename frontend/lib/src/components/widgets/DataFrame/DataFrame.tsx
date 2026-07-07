@@ -81,6 +81,7 @@ import useDataEditor from "./hooks/useDataEditor"
 import useDataExporter from "./hooks/useDataExporter"
 import useDataFrameCapabilities from "./hooks/useDataFrameCapabilities"
 import useDataLoader from "./hooks/useDataLoader"
+import useEditReconciliation from "./hooks/useEditReconciliation"
 import useRowHover from "./hooks/useRowHover"
 import useSelectionHandler from "./hooks/useSelectionHandler"
 import useTableSizer from "./hooks/useTableSizer"
@@ -507,6 +508,14 @@ function DataFrame({
     enforceDownloadInNewTab
   )
 
+  const { getSourceCellValue } = useEditReconciliation({
+    data,
+    allColumns,
+    editingState,
+    isEditingEnabled: canEdit,
+    syncEditState,
+  })
+
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
     useDataEditor({
       columns,
@@ -515,6 +524,7 @@ function DataFrame({
       canDeleteRows,
       editingState,
       getCellContent,
+      getSourceCellValue,
       getOriginalIndex,
       refreshCells,
       updateNumRows,

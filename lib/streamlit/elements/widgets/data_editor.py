@@ -75,7 +75,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import is_list_like, is_type
-from streamlit.util import calc_hash
+from streamlit.util import calc_hash, create_fast_hasher
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -175,6 +175,74 @@ class DataEditorSerde:
 
     def serialize(self, editing_state: EditingState) -> str:
         return json.dumps(editing_state, default=str)
+
+
+def _compute_data_editor_signature(
+    data_df: pd.DataFrame,
+    data_format: dataframe_util.DataFormat,
+    arrow_schema: pa.Schema,
+    dataframe_schema: DataframeSchema,
+    disabled: bool | Iterable[str | int],
+    include_row_count: bool,
+) -> str:
+    """Compute a stable signature for data-editor edit compatibility."""
+    import pandas as pd
+
+    h = create_fast_hasher()
+
+    def update_part(name: str, value: object) -> None:
+        h.update(f"{name}:".encode())
+        h.update(repr(value).encode("utf-8"))
+        h.update(b"\0")
+
+    update_part("format", data_format.name)
+    update_part("columns", tuple(data_df.columns))
+    update_part("index_type", type(data_df.index).__name__)
+    update_part(
+        "index_names",
+        tuple("<unnamed>" if name is None else name for name in data_df.index.names),
+    )
+
+    if not isinstance(data_df.index, pd.RangeIndex) or (
+        data_df.index.start != 0
+        or data_df.index.stop != len(data_df.index)
+        or data_df.index.step != 1
+    ):
+        h.update(b"index_values:")
+        try:
+            h.update(
+                pd.util.hash_pandas_object(data_df.index, index=False)
+                .to_numpy()
+                .tobytes()
+            )
+        except TypeError:
+            h.update(str(data_df.index.tolist()).encode("utf-8"))
+        h.update(b"\0")
+
+    for field in arrow_schema:
+        update_part(
+            "field",
+            (
+                field.name,
+                str(field.type),
+                field.nullable,
+            ),
+        )
+
+    for column_name, data_kind in sorted(dataframe_schema.items()):
+        update_part("kind", (column_name, data_kind.value))
+
+    if include_row_count:
+        update_part("rows", len(data_df))
+
+    if disabled is True:
+        update_part("disabled", "all")
+    elif disabled is False:
+        update_part("disabled", "none")
+    else:
+        update_part("disabled", tuple(sorted(disabled, key=repr)))
+
+    return h.hexdigest()
 
 
 def _parse_value(
@@ -853,6 +921,18 @@ class DataEditorMixin:
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
 
+            **Note**: When ``key`` is provided with ``num_rows="fixed"``,
+            edits are preserved when the source data's *values* change between
+            reruns, and the edit state is only reset when the data's structure
+            changes (its columns, column types, row count, or index labels).
+            Because edits are tracked by row *position*, a row reorder only
+            resets the edit state if the data has a meaningful (non-default)
+            index. With a default ``RangeIndex``, reordering rows is
+            indistinguishable from changing their values, so edits stay at
+            their original positions; use a meaningful index if edits should
+            follow specific rows. To retain the previous behavior of resetting
+            all edits whenever the data changes, omit the ``key`` parameter.
+
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
 
@@ -1089,6 +1169,7 @@ class DataEditorMixin:
         # If disabled not a boolean, we assume it is a list of columns to disable.
         # This gets translated into the columns configuration:
         if not isinstance(disabled, bool):
+            disabled = list(disabled)
             for column in disabled:
                 update_column_config(column_config_mapping, column, {"disabled": True})
 
@@ -1112,10 +1193,27 @@ class DataEditorMixin:
         # format that will hash consistently, so we do it late here to have it
         # as close as possible to how it used to be.
         ctx = get_script_run_ctx()
+        # For keyed editors with a fixed number of rows, we base the widget
+        # identity on the data schema (via a stable signature) instead of the
+        # full data. This keeps edits alive across pure value changes.
+        use_signature_identity = key is not None and num_rows == "fixed"
+        signature_kwargs: dict[str, str] = {}
+        key_as_main_identity: bool | set[str] = False
+        if use_signature_identity:
+            key_as_main_identity = {"data_signature", "num_rows"}
+            signature_kwargs["data_signature"] = _compute_data_editor_signature(
+                data_df=data_df,
+                data_format=data_format,
+                arrow_schema=arrow_table.schema,
+                dataframe_schema=dataframe_schema,
+                disabled=disabled,
+                include_row_count=True,
+            )
+
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
-            key_as_main_identity=False,
+            key_as_main_identity=key_as_main_identity,
             dg=self.dg,
             data=arrow_bytes,
             width=width,
@@ -1126,6 +1224,7 @@ class DataEditorMixin:
             num_rows=num_rows,
             row_height=row_height,
             placeholder=placeholder,
+            **signature_kwargs,
         )
 
         proto = DataframeProto()

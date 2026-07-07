@@ -107,6 +107,8 @@ export interface BaseColumn extends BaseColumnProps {
   getCell(data?: unknown, validate?: boolean): GridCell
   // Get the raw value of the given cell:
   getCellValue(cell: GridCell): unknown
+  // Compare two raw cell values for equality:
+  valuesEqual?(a: unknown, b: unknown): boolean
 }
 
 /**
@@ -191,6 +193,40 @@ export function isMissingValueCell(
     Object.hasOwn(cell, "isMissingValue") &&
     (cell as MissingValueCell).isMissingValue
   )
+}
+
+/**
+ * Returns `true` if both values are arrays with strictly equal items in the same order.
+ */
+export function arrayValuesEqual(a: unknown, b: unknown): boolean {
+  if (!Array.isArray(a) || !Array.isArray(b)) {
+    return false
+  }
+
+  return a.length === b.length && a.every((value, index) => value === b[index])
+}
+
+/**
+ * Returns `true` if two raw values should be treated as equal for the column.
+ */
+export function valuesEqual(
+  a: unknown,
+  b: unknown,
+  column: BaseColumn
+): boolean {
+  if (isNullOrUndefined(a) && isNullOrUndefined(b)) {
+    return true
+  }
+
+  if (isNullOrUndefined(a) || isNullOrUndefined(b)) {
+    return false
+  }
+
+  if (column.valuesEqual) {
+    return column.valuesEqual(a, b)
+  }
+
+  return Object.is(a, b)
 }
 
 /**

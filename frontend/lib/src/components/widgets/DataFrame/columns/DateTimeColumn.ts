@@ -289,6 +289,16 @@ function BaseDateTimeColumn(
         ? null
         : toISOString(cell.data.date)
     },
+    valuesEqual(a: unknown, b: unknown): boolean {
+      const timeA = Date.parse(String(a))
+      const timeB = Date.parse(String(b))
+
+      if (!Number.isNaN(timeA) && !Number.isNaN(timeB)) {
+        return timeA === timeB
+      }
+
+      return Object.is(a, b)
+    },
   }
 }
 
