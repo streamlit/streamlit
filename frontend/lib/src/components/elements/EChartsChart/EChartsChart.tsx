@@ -284,8 +284,16 @@ export function EChartsChart({
         pixelRatio: 2,
         backgroundColor: theme.colors.bgColor,
       })
+      // Build a `YYYY-MM-DDTHH-MM` timestamp from local time so the filename
+      // reflects the user's wall-clock time rather than UTC. Matches the
+      // download naming used by st.vega_lite_chart / st.altair_chart.
+      const now = new Date()
+      const pad = (value: number): string => String(value).padStart(2, "0")
+      const timestamp =
+        `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+        `T${pad(now.getHours())}-${pad(now.getMinutes())}`
       const link = document.createElement("a")
-      link.download = "echarts-chart.png"
+      link.download = `${timestamp}_chart.png`
       link.href = dataUrl
       link.click()
     } catch (error) {

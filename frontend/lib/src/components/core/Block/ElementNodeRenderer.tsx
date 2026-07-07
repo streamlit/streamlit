@@ -1100,7 +1100,10 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.LARGE_ELEMENT}
+          // Use overflow-visible (like other charts) so the hover toolbar, which
+          // floats above the chart, and tooltips aren't clipped by the
+          // overflow:auto that a pixel `height` otherwise applies.
+          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
           isStale={isStale}
         >
           <EChartsChart

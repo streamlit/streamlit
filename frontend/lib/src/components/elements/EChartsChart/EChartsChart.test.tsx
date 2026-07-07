@@ -304,11 +304,14 @@ describe("EChartsChart", () => {
     expect(appliedOption.tooltip).toEqual({ trigger: "axis" })
   })
 
-  it("exports the chart as a PNG via the download toolbar action", async () => {
+  it("exports the chart as a PNG with a timestamped filename", async () => {
     const user = userEvent.setup()
+    let downloadFilename: string | null = null
     const clickSpy = vi
       .spyOn(HTMLAnchorElement.prototype, "click")
-      .mockImplementation(() => {})
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        downloadFilename = this.download
+      })
 
     render(<Wrapper element={createElement()} />)
 
@@ -318,7 +321,11 @@ describe("EChartsChart", () => {
       pixelRatio: 2,
       backgroundColor: mockTheme.emotion.colors.bgColor,
     })
-    expect(clickSpy).toHaveBeenCalled()
+    // Matches the st.vega_lite_chart / st.altair_chart download naming:
+    // a local `YYYY-MM-DDTHH-MM` timestamp followed by `_chart.png`.
+    expect(downloadFilename).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}_chart\.png$/
+    )
     clickSpy.mockRestore()
   })
 })

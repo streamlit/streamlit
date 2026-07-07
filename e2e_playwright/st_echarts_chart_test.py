@@ -61,6 +61,34 @@ def test_echarts_charts_render_without_errors(app: Page):
     expect(svg_chart.locator("canvas")).to_have_count(0)
 
 
+def test_hover_toolbar_is_not_clipped_by_container_overflow(app: Page):
+    """The chart's element container must not clip the floating hover toolbar.
+
+    Regression test: a pixel `height` gives the element container
+    ``overflow: auto``, which clipped the toolbar (it's positioned above the
+    chart at a negative top). The chart uses ``overflow: visible`` like other
+    charts so the toolbar (and tooltips) can extend beyond the plot.
+    """
+    chart_container = get_element_by_key(app, "c_line_multi")
+    chart = chart_container.get_by_test_id("stEChartsChart")
+    expect(chart.locator("canvas")).to_be_visible()
+
+    # The element container wrapping the chart must not clip overflow.
+    overflow_y = chart.evaluate(
+        "(el) => { const c = el.closest('[data-testid=\"stElementContainer\"]');"
+        " return c ? getComputedStyle(c).overflowY : null; }"
+    )
+    assert overflow_y == "visible", (
+        f"element container clips the toolbar (overflow-y={overflow_y})"
+    )
+
+    # The toolbar is revealed on hover.
+    chart.hover()
+    expect(
+        chart_container.get_by_role("button", name="Download as PNG")
+    ).to_be_visible()
+
+
 def test_check_top_level_class(app: Page):
     """The top level class is correctly set."""
     check_top_level_class(app, "stEChartsChart")
