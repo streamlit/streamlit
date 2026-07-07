@@ -113,7 +113,10 @@ st.selectbox(
 ```
 
 `target` accepts a **single fragment key or a list of keys**; passing a list reruns all of them in one
-ordered pass.
+ordered pass. Every key must match a fragment that has rendered at least once — an unknown key (in a
+single `target` or anywhere in a list) raises a `StreamlitAPIException`, so a typo or stale key fails
+loudly rather than silently skipping part of the update. This is fail-fast: if any key in a list is
+unknown, the whole request raises and no fragment reruns.
 
 Crucially this stays on the right side of Streamlit's model: `st.rerun(target=...)` triggers a
 **re-evaluation** of the targeted fragment (it re-runs `charts()`), it does **not** hand the developer
