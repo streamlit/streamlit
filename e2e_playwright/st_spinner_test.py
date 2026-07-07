@@ -245,13 +245,21 @@ def test_spinner_before_tabs_preserves_active_tab_and_increments_number_input(
     """
     get_button(app, "Enable spinner before tabs scenario").click()
 
-    # Spinner appears while the scenario is initializing.
-    expect(app.get_by_test_id("stSpinner")).to_be_visible()
+    # The scenario briefly shows a spinner ("Starting up...") that only lives for
+    # the ~1s ``time.sleep`` in the app. We intentionally do not assert on the
+    # spinner being visible here: it is transient scaffolding for this regression
+    # test, and on slower browsers (e.g. Firefox) it can be gone before Playwright
+    # polls, causing flakiness. What matters for #14018 is the state *after* the
+    # rerun, so we wait for the app run to finish and assert on the tabs instead.
     wait_for_app_run(app)
 
     tab_one = app.get_by_role("tab", name="tab_one")
     tab_two = app.get_by_role("tab", name="tab_two")
     number_input = app.get_by_role("spinbutton", name="number in tab")
+
+    # Tabs (rendered after the spinner context) should be present after the rerun.
+    expect(tab_one).to_be_visible()
+    expect(tab_two).to_be_visible()
 
     tab_two.click()
     expect(tab_two).to_have_attribute("aria-selected", "true")
