@@ -69,6 +69,8 @@ export function RootStyleProvider(
 
   const baseProviderOverrides = useMemo(
     () => ({
+      // Cleanup: this body-level layer host can be removed once BaseWeb has
+      // been fully removed from Streamlit's frontend.
       LayersContainer: {
         component: BasewebLayerHost,
         props: {
