@@ -51,6 +51,7 @@ import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
@@ -1311,7 +1312,7 @@ function DataFrame({
           // by the transform property of the parent element).
           // The portal element is expected to always exist (-> PortalProvider).
           // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
-          document.querySelector("#portal") as HTMLElement
+          document.querySelector(`#${DATAFRAME_PORTAL_ID}`) as HTMLElement
         )}
       {buttonActionMenu &&
         createPortal(
@@ -1324,7 +1325,7 @@ function DataFrame({
             onCloseMenu={clearButtonActionMenu}
           />,
           // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
-          document.querySelector("#portal") as HTMLElement
+          document.querySelector(`#${DATAFRAME_PORTAL_ID}`) as HTMLElement
         )}
     </StyledResizableContainer>
   )
