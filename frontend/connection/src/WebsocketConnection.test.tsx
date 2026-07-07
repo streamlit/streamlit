@@ -25,7 +25,6 @@ vi.mock("@streamlit/utils", async () => {
   }
 })
 
-import { zip } from "lodash-es"
 import { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
@@ -36,6 +35,7 @@ import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   MAX_RETRIES_BEFORE_CLIENT_ERROR,
   PING_MINIMUM_RETRY_PERIOD_MS,
+  PING_RETRY_JITTER,
 } from "./constants"
 import { doInitPings, PingCancelledError } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
@@ -158,6 +158,16 @@ function createMockArgs(overrides?: Partial<Args>): Args {
     onHostConfigResp: vi.fn(),
     ...overrides,
   }
+}
+
+/**
+ * Assert that a retry timeout falls within the jittered band for a given capped
+ * base backoff. With +/- PING_RETRY_JITTER jitter, the timeout lies in the
+ * half-open interval [base * (1 - jitter), base * (1 + jitter)).
+ */
+function expectTimeoutForBase(timeout: number, baseMs: number): void {
+  expect(timeout).toBeGreaterThanOrEqual(baseMs * (1 - PING_RETRY_JITTER))
+  expect(timeout).toBeLessThan(baseMs * (1 + PING_RETRY_JITTER))
 }
 
 /** Create a robust fetch mock that handles any number of HTTP requests */
@@ -723,15 +733,13 @@ If you are trying to access a Streamlit app running on another server, this coul
     await promise
 
     expect(timeouts.length).toEqual(5)
-    expect(timeouts[0]).toEqual(10)
-    expect(timeouts[4]).toEqual(100)
-    // timeouts should be monotonically increasing until they hit the cap
-    expect(
-      zip(timeouts.slice(0, -1), timeouts.slice(1)).every(
-        // @ts-expect-error
-        timePair => timePair[0] < timePair[1] || timePair[0] === 100
-      )
-    ).toEqual(true)
+    // Backoff doubles each attempt (10, 20, 40, 80) then caps at 100. Jitter is
+    // applied AFTER the cap, so even the capped attempt varies within its band
+    // (this is what prevents a fleet from converging on exactly the cap).
+    const expectedBases = [10, 20, 40, 80, 100]
+    timeouts.forEach((timeout, i) => {
+      expectTimeoutForBase(timeout, expectedBases[i])
+    })
   })
 
   it("backs off independently for each target url", async () => {
@@ -781,10 +789,13 @@ If you are trying to access a Streamlit app running on another server, this coul
     await promise
 
     expect(timeouts.length).toEqual(5)
-    expect(timeouts[0]).toEqual(10)
-    expect(timeouts[1]).toEqual(10)
-    expect(timeouts[2]).toBeGreaterThan(timeouts[0])
-    expect(timeouts[3]).toBeGreaterThan(timeouts[1])
+    // totalTries (and therefore the backoff level) only advances after a full
+    // round-robin over both URIs, so consecutive URIs share the same base:
+    // (10, 10) then (20, 20) then 40, each jittered.
+    const expectedBases = [10, 10, 20, 20, 40]
+    timeouts.forEach((timeout, i) => {
+      expectTimeoutForBase(timeout, expectedBases[i])
+    })
   })
 
   it("resets timeout each ping call", async () => {
@@ -871,9 +882,13 @@ If you are trying to access a Streamlit app running on another server, this coul
     await vi.runAllTimersAsync()
     await promise2
 
-    expect(timeouts[0]).toEqual(10)
-    expect(timeouts[1]).toBeGreaterThan(timeouts[0])
-    expect(timeouts2[0]).toEqual(10)
+    // First ping call backs off from the base and doubles (10 -> 20), jittered.
+    expect(timeouts.length).toEqual(2)
+    expectTimeoutForBase(timeouts[0], 10)
+    expectTimeoutForBase(timeouts[1], 20)
+    // A fresh ping call resets the backoff, starting again from the base.
+    expect(timeouts2.length).toEqual(2)
+    expectTimeoutForBase(timeouts2[0], 10)
   })
 
   describe("calls sendClientError when we've reached connection error threshold", () => {
@@ -1053,6 +1068,55 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     expect(MOCK_PING_DATA.setAllowedOrigins).not.toHaveBeenCalled()
     expect(MOCK_PING_DATA.retryCallback).not.toHaveBeenCalled()
+  })
+
+  it("delays the first ping attempt by initialDelayMs (reconnect jitter)", async () => {
+    const fetchMock = createFetchMock()
+    globalThis.fetch = fetchMock
+
+    const { promise } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.sendClientError,
+      MOCK_PING_DATA.setAllowedOrigins,
+      1000
+    )
+
+    // The first attempt is delayed: nothing fires immediately.
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    // Still nothing just before the delay elapses.
+    await vi.advanceTimersByTimeAsync(999)
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    // The first ping fires once the delay elapses.
+    await vi.advanceTimersByTimeAsync(1)
+    expect(fetchMock).toHaveBeenCalled()
+
+    await promise
+  })
+
+  it("fires the first ping immediately when no initialDelayMs is given", async () => {
+    const fetchMock = createFetchMock()
+    globalThis.fetch = fetchMock
+
+    const { promise } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.sendClientError,
+      MOCK_PING_DATA.setAllowedOrigins
+    )
+
+    // With no delay, the first ping fires without any timer advance.
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fetchMock).toHaveBeenCalled()
+
+    await promise
   })
 })
 

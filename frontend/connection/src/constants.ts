@@ -38,9 +38,29 @@ export const HOST_CONFIG_PATH = "_stcore/host-config"
 
 /**
  * Min and max wait time between pings in millis.
+ *
+ * The maximum caps the exponential backoff during a sustained outage. It is
+ * deliberately larger than the minimum by several doublings so that clients
+ * that can't reach the server quickly back off to an infrequent, low-load
+ * poll rather than hammering the server every couple of seconds indefinitely.
  */
 export const PING_MINIMUM_RETRY_PERIOD_MS = 100
-export const PING_MAXIMUM_RETRY_PERIOD_MS = 2000
+export const PING_MAXIMUM_RETRY_PERIOD_MS = 8000
+
+/**
+ * Fractional +/- jitter applied to the (capped) retry backoff to de-synchronize
+ * reconnect attempts across clients and avoid a "thundering herd" where many
+ * clients retry in lockstep (e.g. 0.5 == +/-50%).
+ */
+export const PING_RETRY_JITTER = 0.5
+
+/**
+ * On reconnect (after having previously connected), the first health ping is
+ * delayed by a uniform random amount in [0, this) to de-synchronize a fleet of
+ * clients that dropped together. This is NOT applied on the initial page-load
+ * connection, so first paint stays fast.
+ */
+export const PING_RECONNECT_INITIAL_DELAY_MAX_MS = 3000
 
 /**
  * Max number of times we retry pinging the server before we show an error.

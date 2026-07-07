@@ -27,6 +27,7 @@ import { ConnectionState } from "./ConnectionState"
 import {
   PING_MAXIMUM_RETRY_PERIOD_MS,
   PING_MINIMUM_RETRY_PERIOD_MS,
+  PING_RECONNECT_INITIAL_DELAY_MAX_MS,
   WEBSOCKET_STREAM_PATH,
   WEBSOCKET_TIMEOUT_MS,
 } from "./constants"
@@ -437,13 +438,22 @@ export class WebsocketConnection {
   }
 
   private async pingServer(): Promise<void> {
+    // On reconnect (we've connected before), delay the first ping by a random
+    // amount so a fleet of clients that dropped together doesn't hit the server
+    // in lockstep. The initial page-load connection is not delayed.
+    const initialDelayMs =
+      this.connectedUriIndex !== undefined
+        ? Math.random() * PING_RECONNECT_INITIAL_DELAY_MAX_MS
+        : 0
+
     const currentRequest = doInitPings(
       this.getBaseUrisToProbe(),
       PING_MINIMUM_RETRY_PERIOD_MS,
       PING_MAXIMUM_RETRY_PERIOD_MS,
       this.args.onRetry,
       this.args.sendClientError,
-      this.args.onHostConfigResp
+      this.args.onHostConfigResp,
+      initialDelayMs
     )
     this.pingRequest = currentRequest
 

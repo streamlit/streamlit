@@ -33,6 +33,7 @@ import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   HOST_CONFIG_PATH,
   MAX_RETRIES_BEFORE_CLIENT_ERROR,
+  PING_RETRY_JITTER,
   PING_TIMEOUT_MS,
   SERVER_PING_PATH,
 } from "./constants"
@@ -67,7 +68,10 @@ export function doInitPings(
     message: string,
     source: string
   ) => void,
-  onHostConfigResp: (resp: IHostConfigProperties) => void
+  onHostConfigResp: (resp: IHostConfigProperties) => void,
+  // Delay (ms) before the first ping attempt. Used on reconnect to spread a
+  // fleet of clients that dropped together; defaults to 0 (fire immediately).
+  initialDelayMs = 0
 ): AsyncPingRequest {
   const { promise, resolve, reject } = Promise.withResolvers<number>()
   let totalTries = 0
@@ -104,15 +108,23 @@ export function doInitPings(
     if (cancelled) {
       return
     }
-    // Adjust retry time by +- 20% to spread out load
-    const jitter = Math.random() * 0.4 - 0.2
-    // Exponential backoff to reduce load from health pings when experiencing
-    // persistent failure. Starts at minimumTimeoutMs.
-    const timeoutMs =
-      totalTries === 1
-        ? minimumTimeoutMs
-        : minimumTimeoutMs * 2 ** (totalTries - 1) * (1 + jitter)
-    const retryTimeout = Math.min(maximumTimeoutMs, timeoutMs)
+    // Exponential backoff to reduce load from health pings during persistent
+    // failure. We cap the backoff FIRST and apply jitter AFTER: applying jitter
+    // before the cap (the previous behavior) meant that once the exponential
+    // term exceeded the cap, the Math.min() clamp discarded the jitter and every
+    // client converged on exactly the maximum, re-synchronizing the fleet during
+    // a sustained outage precisely when spreading load matters most.
+    const cappedBackoffMs = Math.min(
+      maximumTimeoutMs,
+      minimumTimeoutMs * 2 ** (totalTries - 1)
+    )
+    // Spread retries across clients so a fleet that dropped together doesn't
+    // reconnect in lockstep. PING_RETRY_JITTER is a fraction (e.g. 0.5 ==
+    // +/-50%): pick a uniform offset fraction in [-PING_RETRY_JITTER,
+    // +PING_RETRY_JITTER) and scale the capped backoff by (1 + that), yielding a
+    // timeout in [base * (1 - PING_RETRY_JITTER), base * (1 + PING_RETRY_JITTER)).
+    const jitterFraction = (Math.random() * 2 - 1) * PING_RETRY_JITTER
+    const retryTimeout = cappedBackoffMs * (1 + jitterFraction)
 
     retryCallback(totalTries, errorDetails, retryTimeout)
 
@@ -314,7 +326,14 @@ If you are trying to access a Streamlit app running on another server, this coul
       })
   }
 
-  connect()
+  if (initialDelayMs > 0 && typeof window !== "undefined") {
+    // Delay the first attempt (reconnect only). Reuses the `timeout` handle so
+    // cancel() tears it down if we reconnect/disconnect before it fires.
+    // eslint-disable-next-line no-restricted-properties -- Ping scheduler requires a raw timer outside React.
+    timeout = globalThis.setTimeout(connect, initialDelayMs)
+  } else {
+    connect()
+  }
 
   const cancel = (): void => {
     cancelled = true
