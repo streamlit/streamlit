@@ -75,6 +75,7 @@ message ForwardMsg {
     PageNotFound page_not_found = 15;
     FileURLsResponse file_urls_response = 19;
     AutoRerun auto_rerun = 21;
+    StopAutoRerun stop_auto_rerun = 28;
 
     // App logo message
     Logo logo = 22;
