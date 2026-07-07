@@ -184,6 +184,7 @@ def _compute_data_editor_signature(
     dataframe_schema: DataframeSchema,
     disabled: bool | Iterable[str | int],
     include_row_count: bool,
+    disabled_columns: Iterable[str | int] = (),
 ) -> str:
     """Compute a stable signature for data-editor edit compatibility."""
     import pandas as pd
@@ -243,6 +244,12 @@ def _compute_data_editor_signature(
         update_part("disabled", "none")
     else:
         update_part("disabled", tuple(sorted(disabled, key=repr)))
+
+    # Per-column disabled state (from column_config or auto-disabled incompatible
+    # columns) is edit-semantic: disabling a column must reset pending edits so
+    # the backend does not keep applying an edit that the frontend no longer
+    # paints for the now read-only column.
+    update_part("disabled_columns", tuple(sorted(disabled_columns, key=repr)))
 
     return h.hexdigest()
 
@@ -923,17 +930,19 @@ class DataEditorMixin:
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
 
-            **Note**: When ``key`` is provided with ``num_rows="fixed"``,
-            edits are preserved when the source data's *values* change between
-            reruns, and the edit state is only reset when the data's structure
-            changes (its columns, column types, row count, or index labels).
-            Because edits are tracked by row *position*, a row reorder only
-            resets the edit state if the data has a meaningful (non-default)
-            index. With a default ``RangeIndex``, reordering rows is
-            indistinguishable from changing their values, so edits stay at
-            their original positions; use a meaningful index if edits should
-            follow specific rows. To retain the previous behavior of resetting
-            all edits whenever the data changes, omit the ``key`` parameter.
+            .. note::
+                When ``key`` is provided with ``num_rows="fixed"``, edits are
+                preserved when the source data's *values* change between reruns,
+                and the edit state is only reset when the data's structure
+                changes (its columns, column types, row count, or index labels).
+                Because edits are tracked by row *position*, a row reorder only
+                resets the edit state if the data has a meaningful (non-default)
+                index. With a default ``RangeIndex``, reordering rows is
+                indistinguishable from changing their values, so edits stay at
+                their original positions; use a meaningful index if edits should
+                follow specific rows. To retain the previous behavior of
+                resetting all edits whenever the data changes, omit the ``key``
+                parameter.
 
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
@@ -1203,12 +1212,22 @@ class DataEditorMixin:
         key_as_main_identity: bool | set[str] = False
         if use_signature_identity:
             key_as_main_identity = {"data_signature", "num_rows"}
+            # Columns disabled via `column_config` (or auto-disabled for
+            # arrow-incompatible types) are not part of the top-level `disabled`
+            # argument, so we derive them from the resolved column config to
+            # keep them part of the widget identity.
+            disabled_columns = [
+                column
+                for column, config in column_config_mapping.items()
+                if config.get("disabled") is True
+            ]
             signature_kwargs["data_signature"] = _compute_data_editor_signature(
                 data_df=data_df,
                 data_format=data_format,
                 arrow_schema=arrow_table.schema,
                 dataframe_schema=dataframe_schema,
                 disabled=disabled,
+                disabled_columns=disabled_columns,
                 include_row_count=True,
             )
 

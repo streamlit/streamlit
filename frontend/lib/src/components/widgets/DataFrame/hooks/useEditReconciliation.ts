@@ -103,7 +103,10 @@ function useEditReconciliation({
     if (hasClearedCells) {
       syncEditState()
     }
-  }, [data])
+    // `isEditingEnabled` is watched so that reconciliation also runs when
+    // editing is re-enabled after having been disabled during a data refresh
+    // (which would otherwise skip reconciliation and leave stale edits).
+  }, [data, isEditingEnabled])
 
   return {
     getSourceCellValue,

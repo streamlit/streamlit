@@ -174,4 +174,45 @@ describe("useEditReconciliation hook", () => {
     expect(editingState.current.getCell(0, 0)).toEqual(editedCell)
     expect(syncEditState).not.toHaveBeenCalled()
   })
+
+  it("reconciles when editing is re-enabled after a data refresh", () => {
+    const editingState = {
+      current: new EditingState(1),
+    }
+    editingState.current.setCell(0, 0, MOCK_COLUMN.getCell("bar"))
+    const syncEditState = vi.fn()
+
+    // Reuse the same data reference across the last two renders so that only
+    // `isEditingEnabled` changes between them.
+    const refreshedData = createMockData("bar")
+
+    const { rerender } = renderHook(
+      ({ data, isEditingEnabled }) =>
+        useEditReconciliation({
+          data,
+          allColumns: MOCK_COLUMNS,
+          editingState,
+          isEditingEnabled,
+          syncEditState,
+        }),
+      {
+        initialProps: {
+          data: createMockData("foo"),
+          isEditingEnabled: false,
+        },
+      }
+    )
+
+    // Data refreshes while editing is disabled: reconciliation is skipped, so
+    // the stale edit that now matches the source is preserved.
+    rerender({ data: refreshedData, isEditingEnabled: false })
+    expect(editingState.current.getCell(0, 0)).toBeDefined()
+    expect(syncEditState).not.toHaveBeenCalled()
+
+    // Re-enabling editing without another data change must trigger
+    // reconciliation and clear the now-matching edit.
+    rerender({ data: refreshedData, isEditingEnabled: true })
+    expect(editingState.current.getCell(0, 0)).toBeUndefined()
+    expect(syncEditState).toHaveBeenCalled()
+  })
 })

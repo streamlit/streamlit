@@ -75,6 +75,7 @@ def _get_data_editor_signature(
     data_format: DataFormat = DataFormat.PANDAS_DATAFRAME,
     disabled: bool | list[str | int] = False,
     include_row_count: bool = True,
+    disabled_columns: tuple[str | int, ...] = (),
 ) -> str:
     """Get the data editor schema signature for tests."""
     arrow_schema = _get_arrow_schema(df)
@@ -85,6 +86,7 @@ def _get_data_editor_signature(
         dataframe_schema=determine_dataframe_schema(df, arrow_schema),
         disabled=disabled,
         include_row_count=include_row_count,
+        disabled_columns=disabled_columns,
     )
 
 
@@ -710,6 +712,24 @@ class DataEditorSignatureTest(unittest.TestCase):
             df, disabled=disabled1
         ) != _get_data_editor_signature(df, disabled=disabled2)
 
+    def test_signature_changes_when_column_disabled_via_config(self):
+        """A column disabled via column_config must change the signature even
+        when the top-level ``disabled`` argument is unchanged."""
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        assert _get_data_editor_signature(df) != _get_data_editor_signature(
+            df, disabled_columns=("a",)
+        )
+
+    def test_signature_changes_when_disabled_column_set_changes(self):
+        """Changing which columns are disabled via config must change the
+        signature."""
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        assert _get_data_editor_signature(
+            df, disabled_columns=("a",)
+        ) != _get_data_editor_signature(df, disabled_columns=("b",))
+
     def test_signature_can_exclude_row_count(self):
         df1 = pd.DataFrame({"a": [1, 2]})
         df2 = pd.DataFrame({"a": [1, 2, 3]})
@@ -771,6 +791,20 @@ class DataEditorStableIdTest(DeltaGeneratorTestCase):
     ):
         id1 = self._get_id(pd.DataFrame({"a": [1, 2]}), key="editor")
         id2 = self._get_id(changed_df, key="editor")
+
+        assert id1 != id2
+
+    def test_keyed_fixed_editor_id_changes_when_column_config_disables_column(self):
+        """Disabling a column via column_config must reset the widget identity
+        so pending edits to the now read-only column do not survive."""
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        id1 = self._get_id(df, key="editor")
+        id2 = self._get_id(
+            df,
+            key="editor",
+            column_config={"a": st.column_config.Column(disabled=True)},
+        )
 
         assert id1 != id2
 
