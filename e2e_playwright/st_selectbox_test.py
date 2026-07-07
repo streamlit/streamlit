@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 27
+NUM_SELECTBOXES = 28
 
 
 def get_selectbox_input(
@@ -547,6 +547,38 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
 
     options.nth(1).click()
     expect_markdown(app, "value 23: No")
+
+
+def test_selectbox_virtualizes_large_option_list(app: Page):
+    """Test that a selectbox with many options only renders a small window of
+    option rows (virtualization) while keeping far-down options selectable.
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 25 (large virtualized list)")
+    selectbox_input.click()
+    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
+    selectbox_input.press("ArrowDown")
+
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(selection_dropdown).to_be_visible()
+
+    options = selection_dropdown.get_by_role("option")
+    # The top of the list is rendered when the dropdown opens.
+    expect(options.first).to_be_visible()
+    expect(
+        selection_dropdown.get_by_role("option", name="Option 0", exact=True)
+    ).to_be_visible()
+
+    # Virtualization: only a small window of the 1000 options is in the DOM, so a
+    # far-down option is NOT rendered even though it exists in the collection.
+    assert options.count() < 100
+    expect(
+        selection_dropdown.get_by_role("option", name="Option 999", exact=True)
+    ).to_have_count(0)
+
+    # A far-down option can still be selected by typing to filter for it.
+    selectbox_input.fill("Option 987")
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 25: Option 987")
 
 
 # --- Query param binding tests ---
