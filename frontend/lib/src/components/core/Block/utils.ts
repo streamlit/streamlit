@@ -24,7 +24,7 @@ import { ScriptRunState } from "~lib/ScriptRunState"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { getDividerColors } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
-import { isValidElementId, notNullOrUndefined } from "~lib/util/utils"
+import { isValidElementId } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export function getClassnamePrefix(direction: Direction): string {
@@ -188,7 +188,7 @@ export function getColumnGapConfig(
   columnProto: BlockProto.IColumn
 ): streamlit.IGapConfig {
   const gapConfig = columnProto.gapConfig
-  if (gapConfig && notNullOrUndefined(gapConfig.pixelGap)) {
+  if (typeof gapConfig?.pixelGap === "number") {
     return { pixelGap: gapConfig.pixelGap }
   }
   if (gapConfig?.gapSize) {

@@ -109,6 +109,7 @@ for pixel_gap in PIXEL_GAPS:
             )
 
 # Columns with pixel gap
-cols = st.columns(3, gap=20)
-for i, col in enumerate(cols):
-    col.html(f'<div style="background:lightblue">Col {i}</div>')
+with st.container(key="columns-pixel-gap"):
+    cols = st.columns(3, gap=20)
+    for i, col in enumerate(cols):
+        col.html(f'<div style="background:lightblue">Col {i}</div>')
