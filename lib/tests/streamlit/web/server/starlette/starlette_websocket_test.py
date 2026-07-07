@@ -505,6 +505,103 @@ class TestWebsocketHandlerUserInfoPrecedence:
         assert user_info["is_logged_in"] is True
 
 
+class TestWebsocketHandlerTokenExposure:
+    """Tests for exposing auth tokens to ``st.user`` via the websocket handler."""
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.cookieSecret": "test-secret",
+            "server.enableCORS": False,
+        }
+    )
+    def test_expose_tokens_read_lazily_on_connect(self) -> None:
+        """Token filtering honors ``expose_tokens`` resolved after handler creation.
+
+        ``st.App(secrets=...)`` merges programmatic secrets during the ASGI
+        lifespan, which runs *after* the websocket route (and its handler) is
+        built. Reading ``expose_tokens`` lazily on connect ensures those late
+        secrets are honored rather than the empty config captured at build time.
+        """
+        from starlette.websockets import WebSocketDisconnect
+
+        cookie_payload = json.dumps(
+            {
+                "origin": "http://localhost",
+                "is_logged_in": True,
+                "email": "user@example.com",
+            }
+        )
+        signed_user_cookie = starlette_app_utils.create_signed_value(
+            "test-secret", "_streamlit_user", cookie_payload
+        )
+        signed_tokens_cookie = starlette_app_utils.create_signed_value(
+            "test-secret",
+            "_streamlit_user_tokens",
+            json.dumps({"access_token": "access-123", "id_token": "id-456"}),
+        )
+        xsrf_token = starlette_app_utils.generate_xsrf_token_string()
+
+        mock_websocket = MagicMock()
+        mock_websocket.headers = MagicMock()
+        mock_websocket.headers.get.side_effect = lambda key: {
+            "Origin": "http://localhost",
+            "Host": "localhost:8501",
+            "sec-websocket-protocol": f"streamlit, {xsrf_token}",
+        }.get(key)
+        mock_websocket.headers.getlist.return_value = []
+        mock_websocket.cookies = {
+            "_streamlit_user": signed_user_cookie.decode("utf-8"),
+            "_streamlit_user_tokens": signed_tokens_cookie.decode("utf-8"),
+            "_streamlit_xsrf": xsrf_token,
+        }
+        mock_websocket.accept = AsyncMock()
+        mock_websocket.close = AsyncMock()
+        mock_websocket.receive_bytes = AsyncMock(side_effect=WebSocketDisconnect())
+
+        mock_runtime = MagicMock()
+        mock_runtime.connect_session = MagicMock(return_value="test-session-id")
+        mock_runtime.disconnect_session = MagicMock()
+
+        # Build the handler while expose_tokens is still empty, mirroring the
+        # state before programmatic secrets are merged during the lifespan.
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket.get_expose_tokens_config",
+            return_value=[],
+        ):
+            handler = create_websocket_handler(mock_runtime)
+
+        # Now simulate the merged secrets exposing only the access token and
+        # connect. The handler must pick up the freshly resolved config.
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.get_expose_tokens_config",
+                return_value=["access"],
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
+            ) as mock_client_class,
+            patch(
+                "streamlit.web.server.starlette.starlette_app_utils.validate_xsrf_token",
+                return_value=True,
+            ),
+        ):
+            mock_client = MagicMock()
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            asyncio.run(handler(mock_websocket))
+
+        call_kwargs = mock_runtime.connect_session.call_args
+        user_info = call_kwargs.kwargs.get("user_info") or call_kwargs[1].get(
+            "user_info"
+        )
+
+        # Only the exposed "access" token should be present; the "id" token was
+        # in the cookie but is not in expose_tokens, so it must be excluded.
+        assert user_info["tokens"] == {"access": "access-123"}
+
+
 class TestWebsocketHandlerMessageSize:
     """Tests for inbound WebSocket message size enforcement."""
 

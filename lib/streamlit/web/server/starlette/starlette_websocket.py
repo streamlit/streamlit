@@ -384,8 +384,6 @@ def create_websocket_handler(runtime: Runtime) -> Any:
     """
     from starlette.websockets import WebSocketDisconnect
 
-    expose_tokens = get_expose_tokens_config()
-
     async def _websocket_endpoint(websocket: WebSocket) -> None:
         # Validate origin before accepting the connection to prevent
         # cross-site WebSocket hijacking.
@@ -432,6 +430,12 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                             )
                             if raw_token_cookie:
                                 all_tokens = json.loads(raw_token_cookie)
+
+                                # Read expose_tokens lazily on connect (rather than
+                                # once at handler creation) so programmatic secrets
+                                # from ``st.App(secrets=...)``, which are merged during
+                                # the ASGI lifespan after routes are built, are honored.
+                                expose_tokens = get_expose_tokens_config()
 
                                 filtered_tokens: dict[str, str] = {}
                                 for token_type in expose_tokens:
