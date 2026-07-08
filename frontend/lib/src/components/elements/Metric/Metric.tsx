@@ -51,6 +51,32 @@ import {
 const LARGE_DATASET_POINT_THRESHOLD = 1000
 
 /**
+ * Returns the baseline value (`y2`) to anchor an area chart's shaded region.
+ *
+ * The baseline is `0` when the data crosses zero (so the fill diverges around
+ * the zero line), otherwise the data minimum (so the fill is anchored to the
+ * bottom of the visible range). The returned value is always within
+ * `[dataMin, dataMax]`, which keeps it from expanding the `zero: false` y-scale.
+ *
+ * Uses a single pass instead of `Math.min(...chartData)` to avoid a potential
+ * argument-spread `RangeError` on very large datasets.
+ */
+function getAreaChartBaseline(chartData: number[]): number {
+  let dataMin = chartData[0]
+  let dataMax = chartData[0]
+  for (const value of chartData) {
+    if (value < dataMin) {
+      dataMin = value
+    }
+    if (value > dataMax) {
+      dataMax = value
+    }
+  }
+
+  return dataMin <= 0 && dataMax >= 0 ? 0 : dataMin
+}
+
+/**
  * Safely format a numeric string, returning the original value if formatting fails.
  */
 function safeFormatNumber(value: string, format: string): string {
@@ -88,6 +114,7 @@ export function getMetricChartSpec(
   // charts need at least two points:
   const data =
     chartData.length === 1 ? [chartData[0], chartData[0]] : chartData
+  const isAreaChart = chartType === MetricProto.ChartType.AREA
 
   const spec: TopLevelSpec = {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
@@ -144,6 +171,11 @@ export function getMetricChartSpec(
               nice: false,
             },
           },
+          ...(isAreaChart && {
+            y2: {
+              datum: getAreaChartBaseline(data),
+            },
+          }),
         },
       },
       {
