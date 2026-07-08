@@ -24,6 +24,7 @@ from streamlit.runtime.state.query_params import (
     _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
     _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
     QueryParams,
+    _coerce_value_for_query_url,
     _set_item_in_dict,
     _try_parse_iso_to_micros,
     is_empty_url_value,
@@ -742,6 +743,9 @@ class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
             ("invalid_date", "2024-13-45"),
             ("invalid_time", "25:61"),
             ("empty_string", ""),
+            # A "T"-separated string that fails datetime parsing must also
+            # return None (rather than raising) - exercises the datetime branch.
+            ("invalid_datetime_with_t", "2024-06-15T99:99"),
         ]
     )
     def test_parse_invalid_returns_none(self, _name: str, value: str) -> None:
@@ -1675,3 +1679,30 @@ def test_sanitize_query_string_keeps_safe_input(query_string: str) -> None:
 def test_sanitize_query_string_rejects_unsafe_input(query_string: str) -> None:
     """Test query strings exceeding the safe limits are dropped."""
     assert sanitize_query_string(query_string) == ""
+
+
+@pytest.mark.parametrize(
+    ("value", "value_type", "expected"),
+    [
+        pytest.param("foo", "string_array_value", "foo", id="scalar_string_array"),
+        pytest.param(5, "int_array_value", "5", id="scalar_int_array"),
+        pytest.param(1.5, "double_array_value", "1.5", id="scalar_double_array"),
+    ],
+)
+def test_coerce_value_for_query_url_wraps_scalars_for_array_types(
+    value: object, value_type: str, expected: str
+) -> None:
+    """A scalar value for an array type is coerced to a single string, not a list."""
+    assert _coerce_value_for_query_url(value, value_type) == expected
+
+
+def test_coerce_value_for_query_url_keeps_sequences_for_array_types() -> None:
+    """A list value for an array type is coerced element-wise to a list of strings."""
+    assert _coerce_value_for_query_url([1, 2], "int_array_value") == ["1", "2"]
+
+
+def test_getitem_returns_empty_string_for_empty_list() -> None:
+    """A key mapped to an empty list resolves to an empty string, not an error."""
+    query_params = QueryParams()
+    query_params._query_params = {"empty": []}
+    assert query_params["empty"] == ""
