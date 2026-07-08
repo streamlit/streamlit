@@ -745,7 +745,9 @@ class TestWebsocketHandlerMessageSize:
 
         mock_websocket.close.assert_called_once_with(code=1009)
         mock_runtime.handle_backmsg.assert_not_called()
-        mock_runtime.disconnect_session.assert_called_once_with("test-session-id")
+        mock_runtime.disconnect_session.assert_called_once_with(
+            "test-session-id", client=mock_client
+        )
 
 
 class TestGetSignedCookieWithChunks:

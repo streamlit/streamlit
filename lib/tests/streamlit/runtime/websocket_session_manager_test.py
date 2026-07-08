@@ -65,9 +65,11 @@ class WebsocketSessionManagerTests(unittest.TestCase):
             message_enqueued_callback=MagicMock(),
         )
 
-    def connect_session(self, existing_session_id=None, session_id_override=None):
+    def connect_session(
+        self, existing_session_id=None, session_id_override=None, client=None
+    ):
         return self.session_mgr.connect_session(
-            client=MagicMock(),
+            client=client or MagicMock(),
             script_data=ScriptData("/fake/script_path.py", is_hello=False),
             user_info={},
             existing_session_id=existing_session_id,
@@ -105,16 +107,48 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         assert session_info.session.id == session_id
         assert session_info.session.id != "not a valid session"
 
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
     @patch("streamlit.runtime.websocket_session_manager._LOGGER.warning")
-    def test_connect_session_connects_new_session_if_already_connected(
-        self, patched_warning
-    ):
-        session_id = self.connect_session()
-        new_session_id = self.connect_session(existing_session_id=session_id)
-        assert session_id != new_session_id
+    def test_connect_session_reconnects_if_already_connected(self, patched_warning):
+        original_client = MagicMock()
+        session_id = self.connect_session(client=original_client)
+        active_session_info = self.session_mgr._active_session_info_by_id[session_id]
+        original_session = active_session_info.session
+        # Simulate some runs so we can verify state is preserved across the handoff.
+        active_session_info.script_run_count = 5
+
+        new_client = MagicMock()
+        reconnected_session_id = self.connect_session(
+            existing_session_id=session_id, client=new_client
+        )
+        reconnected_session_info = self.session_mgr.get_session_info(
+            reconnected_session_id
+        )
+
+        assert reconnected_session_id == session_id
+        assert reconnected_session_info.session == original_session
+        assert reconnected_session_info.client == new_client
+        # The still-active session is reused, so its state (e.g. run count) is
+        # preserved rather than discarded for a brand-new session.
+        assert reconnected_session_info.script_run_count == 5
+        # The stale connection's script is stopped during the handoff.
+        original_session.request_script_stop.assert_called_once()
+        # The session is moved back out of storage into the active pool.
+        assert session_id not in self.session_mgr._session_storage._cache
 
         patched_warning.assert_called_with(
-            "Session with id %s is already connected! Connecting to a new session.",
+            "Session with id %s is already connected! Reconnecting to existing session.",
             session_id,
         )
 

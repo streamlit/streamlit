@@ -218,14 +218,19 @@ class _DummyRuntime:
         self.last_existing_session_id = existing_session_id
         return session_id
 
-    def disconnect_session(self, session_id: str) -> None:
+    def disconnect_session(self, session_id: str, client: object | None = None) -> None:
         self._active_sessions.discard(session_id)
 
-    def handle_backmsg(self, session_id: str, msg: object) -> None:
+    def handle_backmsg(
+        self, session_id: str, msg: object, client: object | None = None
+    ) -> None:
         self.last_backmsg = (session_id, msg)
 
     def handle_backmsg_deserialization_exception(
-        self, session_id: str, exc: BaseException
+        self,
+        session_id: str,
+        exc: BaseException,
+        client: object | None = None,
     ) -> None:
         self.last_backmsg = (session_id, exc)
 

@@ -267,6 +267,39 @@ class RuntimeTest(RuntimeTestCase):
             patched_disconnect_session.assert_called_once_with(session_id)
             patched_on_session_disconnected.assert_called_once()
 
+    async def test_disconnect_session_with_matching_client_disconnects(self):
+        """Passing the session's current client should still disconnect it."""
+        await self.runtime.start()
+
+        client = MockSessionClient()
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
+
+        with patch.object(
+            self.runtime._session_mgr, "disconnect_session", new=MagicMock()
+        ) as patched_disconnect_session:
+            self.runtime.disconnect_session(session_id, client=client)
+            patched_disconnect_session.assert_called_once_with(session_id)
+
+    async def test_disconnect_session_with_stale_client_is_noop(self):
+        """A stale websocket should not disconnect a session after reconnect."""
+        await self.runtime.start()
+
+        old_client = MockSessionClient()
+        session_id = self.runtime.connect_session(
+            client=old_client, user_info=MagicMock()
+        )
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session_info.client = MockSessionClient()
+
+        with patch.object(
+            self.runtime._session_mgr, "disconnect_session", new=MagicMock()
+        ) as patched_disconnect_session:
+            self.runtime.disconnect_session(session_id, client=old_client)
+            patched_disconnect_session.assert_not_called()
+
+        assert self.runtime.is_active_session(session_id)
+
     async def test_close_session_closes_appsession(self):
         await self.runtime.start()
 
@@ -392,6 +425,39 @@ class RuntimeTest(RuntimeTestCase):
         app_session = session_info.session
         app_session.handle_backmsg.assert_called_once_with(back_msg)
 
+    @patch("streamlit.runtime.app_session.AppSession.handle_backmsg", new=MagicMock())
+    async def test_handle_backmsg_with_matching_client_is_delivered(self):
+        """A BackMsg from the session's current client should still be delivered."""
+        await self.runtime.start()
+
+        client = MockSessionClient()
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
+
+        back_msg = MagicMock()
+        self.runtime.handle_backmsg(session_id, back_msg, client=client)
+
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session_info.session.handle_backmsg.assert_called_once_with(back_msg)
+
+    async def test_handle_backmsg_with_stale_client_is_noop(self):
+        """A stale websocket should not deliver BackMsgs after reconnect."""
+        await self.runtime.start()
+
+        old_client = MockSessionClient()
+        session_id = self.runtime.connect_session(
+            client=old_client, user_info=MagicMock()
+        )
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session_info.client = MockSessionClient()
+
+        with patch(
+            "streamlit.runtime.app_session.AppSession.handle_backmsg"
+        ) as patched_handle_backmsg:
+            self.runtime.handle_backmsg(session_id, MagicMock(), client=old_client)
+            patched_handle_backmsg.assert_not_called()
+
     async def test_handle_backmsg_invalid_session(self):
         """A BackMsg for an invalid session should get dropped without an error."""
         await self.runtime.start()
@@ -417,6 +483,26 @@ class RuntimeTest(RuntimeTestCase):
         assert session_info is not None
         app_session = session_info.session
         app_session.handle_backmsg_exception.assert_called_once_with(exception)
+
+    async def test_handle_backmsg_exception_with_stale_client_is_noop(self):
+        """A stale websocket should not deliver BackMsg exceptions after reconnect."""
+        await self.runtime.start()
+
+        old_client = MockSessionClient()
+        session_id = self.runtime.connect_session(
+            client=old_client, user_info=MagicMock()
+        )
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session_info.client = MockSessionClient()
+
+        with patch(
+            "streamlit.runtime.app_session.AppSession.handle_backmsg_exception"
+        ) as patched_handle_backmsg_exception:
+            self.runtime.handle_backmsg_deserialization_exception(
+                session_id, MagicMock(), client=old_client
+            )
+            patched_handle_backmsg_exception.assert_not_called()
 
     async def test_handle_backmsg_exception_invalid_session(self):
         """A BackMsg exception for an invalid session should get dropped without an
