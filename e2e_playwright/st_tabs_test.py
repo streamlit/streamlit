@@ -373,9 +373,10 @@ def _count_laid_out(locator: Locator | Page, test_id: str) -> int:
     """Count elements with the given test id that are actually laid out; hidden
     elements (``display: none``) have a null offsetParent.
     """
-    return locator.get_by_test_id(test_id).evaluate_all(
+    count = locator.get_by_test_id(test_id).evaluate_all(
         "(elements) => elements.filter(el => el.offsetParent !== null).length"
     )
+    return int(count)
 
 
 def _expect_single_visible_chart(app: Page, rerun_tabs: Locator) -> None:
@@ -385,10 +386,17 @@ def _expect_single_visible_chart(app: Page, rerun_tabs: Locator) -> None:
     wait_until(app, lambda: _count_laid_out(rerun_tabs, "stVegaLiteChart") == 1)
 
 
-def _change_active_tab_selectbox(app: Page, rerun_tabs: Locator, option: str) -> None:
-    """Change the selectbox in the active tab to trigger a widget rerun. Scoped to
-    the active tabpanel because every tab renders a selectbox with the same label.
+def _change_active_tab_selectbox(rerun_tabs: Locator, option: str) -> None:
+    """Change the selectbox in the active tab to trigger a widget rerun.
+
+    Every force-mounted tab renders a selectbox with the same label, so we scope to
+    the active tab panel. Opening the dropdown makes React Aria mark the background
+    content ``aria-hidden``, which drops any locator scoped through the panel
+    mid-interaction (inconsistently across browsers). To avoid re-resolving the
+    now-hidden input, we click it once to open the dropdown, then drive selection via
+    the page keyboard and the portaled (not-hidden) option list.
     """
+    page = rerun_tabs.page
     selectbox_input = (
         rerun_tabs.get_by_role("tabpanel")
         .get_by_test_id("stSelectbox")
@@ -396,11 +404,11 @@ def _change_active_tab_selectbox(app: Page, rerun_tabs: Locator, option: str) ->
         .locator("input")
     )
     selectbox_input.click()
-    selectbox_input.press("ArrowDown")
-    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_role(
-        "option", name=option, exact=True
-    ).click()
-    wait_for_app_run(app)
+    page.keyboard.press("ArrowDown")
+    dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(dropdown).to_be_visible()
+    dropdown.get_by_role("option", name=option, exact=True).click()
+    wait_for_app_run(page)
 
 
 def _count_visible_tab_panels(locator: Locator | Page) -> int:
@@ -440,7 +448,7 @@ def test_widget_rerun_keeps_inactive_tab_panels_hidden(app: Page):
     # Capture the number of visible panels across the whole page before the rerun.
     visible_panels_before = _count_visible_tab_panels(app)
 
-    _change_active_tab_selectbox(app, rerun_tabs, "B")
+    _change_active_tab_selectbox(rerun_tabs, "B")
 
     expect(rerun_tabs.get_by_role("tablist")).to_be_visible()
     expect(rerun_tabs.get_by_role("tab", name="Rerun All")).to_have_attribute(
