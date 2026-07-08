@@ -108,7 +108,12 @@ if st.button("Enable spinner before tabs scenario"):
 
 if st.session_state.get("show_spinner_before_tabs"):
     with st.spinner("Starting up..."):
-        time.sleep(1)
+        # st.spinner only emits its transient node if the block runs longer than
+        # its internal DELAY_SECS (0.5s). The transient node is exactly what this
+        # #14018 regression exercises (tabs replacing a spinner's TransientNode),
+        # so this sleep must stay above 0.5s. Keep a small margin; don't shorten
+        # below ~0.5s or the regression coverage is silently lost.
+        time.sleep(0.75)
 
     tab_one, tab_two = st.tabs(["tab_one", "tab_two"])
     with tab_one:
