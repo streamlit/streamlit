@@ -598,6 +598,10 @@ describe("Metric element", () => {
       { chartData: [0, 0, 0], expectedBaseline: 0 },
       { chartData: [42], expectedBaseline: 42 },
       { chartData: [], expectedBaseline: 0 },
+      // Series that only touch zero do not cross it: they still anchor to
+      // the data minimum rather than diverging around the zero line.
+      { chartData: [-2, -1, 0], expectedBaseline: -2 },
+      { chartData: [0, 5, 10], expectedBaseline: 0 },
     ])(
       "sets area chart baseline to $expectedBaseline for $chartData",
       ({ chartData, expectedBaseline }) => {

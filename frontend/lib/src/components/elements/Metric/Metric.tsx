@@ -53,10 +53,13 @@ const LARGE_DATASET_POINT_THRESHOLD = 1000
 /**
  * Returns the baseline value (`y2`) to anchor an area chart's shaded region.
  *
- * The baseline is `0` when the data crosses zero (so the fill diverges around
- * the zero line), otherwise the data minimum (so the fill is anchored to the
- * bottom of the visible range). The returned value is always within
- * `[dataMin, dataMax]`, which keeps it from expanding the `zero: false` y-scale.
+ * The baseline is `0` only when the data strictly crosses zero (i.e. it has
+ * both a value below and a value above zero, so the fill diverges around the
+ * zero line), otherwise the data minimum (so the fill is anchored to the
+ * bottom of the visible range). A series that merely touches zero (e.g.
+ * `[-2, -1, 0]`) does not cross it and still anchors to the data minimum. The
+ * returned value is always within `[dataMin, dataMax]`, which keeps it from
+ * expanding the `zero: false` y-scale.
  *
  * Uses a single pass instead of `Math.min(...chartData)` to avoid a potential
  * argument-spread `RangeError` on very large datasets.
@@ -79,7 +82,7 @@ function getAreaChartBaseline(chartData: number[]): number {
     }
   }
 
-  return dataMin <= 0 && dataMax >= 0 ? 0 : dataMin
+  return dataMin < 0 && dataMax > 0 ? 0 : dataMin
 }
 
 /**
