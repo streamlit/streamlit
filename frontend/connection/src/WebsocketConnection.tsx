@@ -194,6 +194,14 @@ export class WebsocketConnection {
   private connectedUriIndex?: number
 
   /**
+   * Index into baseUriPartsList used to build the currently-open WebSocket.
+   * Captured when the socket is created so that, once connected, we pin to the
+   * URI the socket actually used rather than this.uriIndex, which a background
+   * ping (bypass mode) may have overwritten before the socket's open event.
+   */
+  private socketUriIndex?: number
+
+  /**
    * To guarantee packet transmission order, this is the index of the last
    * dispatched incoming message.
    */
@@ -299,8 +307,13 @@ export class WebsocketConnection {
         break
 
       case ConnectionState.CONNECTED:
-        // Remember the URI that worked so reconnects skip path discovery.
-        this.connectedUriIndex = this.uriIndex
+        // Pin to the URI the live socket actually used (captured at socket
+        // creation), not this.uriIndex: in bypass mode a background ping can
+        // overwrite this.uriIndex before the socket's open event fires, which
+        // would otherwise pin a URI the socket never used. Also realign
+        // this.uriIndex so getBaseUriParts() and reconnects stay consistent.
+        this.connectedUriIndex = this.socketUriIndex ?? this.uriIndex
+        this.uriIndex = this.connectedUriIndex
         break
 
       default:
@@ -649,8 +662,11 @@ export class WebsocketConnection {
   }
 
   private async connectToWebSocket(): Promise<void> {
+    // Capture the index this socket is built from so that, once connected, we
+    // pin to it even if a background ping overwrites this.uriIndex in between.
+    this.socketUriIndex = this.uriIndex
     const uri = buildWsUri(
-      this.args.baseUriPartsList[this.uriIndex],
+      this.args.baseUriPartsList[this.socketUriIndex],
       WEBSOCKET_STREAM_PATH
     )
 
