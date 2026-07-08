@@ -1207,9 +1207,12 @@ describe("WebsocketConnection", () => {
         pathname: "/",
       } as URL,
     ]
-    // Pending fetch so the initial ping from the constructor never resolves.
+    // Pending fetch so the constructor's ping can't resolve; cancel it so it
+    // can't retry-loop during teardown.
     globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
     const ws = new WebsocketConnection(createMockArgs({ baseUriPartsList }))
+    // @ts-expect-error - cancelling the constructor's auto-started ping loop
+    ws.pingRequest?.cancel()
 
     // Simulate a prior successful connection pinned to index 1.
     // @ts-expect-error - accessing private property for testing
@@ -1224,7 +1227,9 @@ describe("WebsocketConnection", () => {
     ws.state = ConnectionState.PINGING_SERVER
     // @ts-expect-error - accessing private method for testing
     const pingPromise = ws.pingServer()
-    await vi.advanceTimersByTimeAsync(0)
+    // Advance well past any scheduled initial reconnect delay before the first
+    // ping fires (reconnect pings may be delayed up to a few seconds).
+    await vi.advanceTimersByTimeAsync(4000)
     await pingPromise
 
     // @ts-expect-error - accessing private property for testing
@@ -1248,9 +1253,12 @@ describe("WebsocketConnection", () => {
         pathname: "/",
       } as URL,
     ]
-    // Pending fetch so the initial ping from the constructor never resolves.
+    // Pending fetch so the constructor's ping can't resolve; cancel it so it
+    // can't retry-loop during teardown.
     globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
     const ws = new WebsocketConnection(createMockArgs({ baseUriPartsList }))
+    // @ts-expect-error - cancelling the constructor's auto-started ping loop
+    ws.pingRequest?.cancel()
 
     // Simulate an already-connected, pinned-to-index-1 state.
     // @ts-expect-error - accessing private property for testing
@@ -1258,12 +1266,12 @@ describe("WebsocketConnection", () => {
     // @ts-expect-error - accessing private property for testing
     ws.uriIndex = 1
 
-    // The background ping resolves (index 0 for the pinned single-URI list) but
-    // the guard must keep the pinned index rather than clobbering it.
+    // The background ping resolves (index 0) but the guard must keep the pinned
+    // index rather than clobbering it.
     globalThis.fetch = createFetchMock()
     // @ts-expect-error - accessing private method for testing
     const bgPromise = ws.pingServerInBackground()
-    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(4000)
     await bgPromise
 
     // @ts-expect-error - accessing private property for testing
