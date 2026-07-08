@@ -94,12 +94,12 @@ export function doInitPings(
         ? minimumTimeoutMs
         : minimumTimeoutMs * 2 ** (totalTries - 1)
     const cappedTimeoutMs = Math.min(maximumTimeoutMs, exponentialTimeoutMs)
-    // Keep the first retry fast, then jitter between 80-100% of the capped
+    // Keep the first retry fast, then jitter between 70-100% of the capped
     // backoff so clients don't synchronize on the maximum retry period.
     const retryTimeout =
       totalTries === 1
         ? cappedTimeoutMs
-        : Math.floor(cappedTimeoutMs * (0.8 + Math.random() * 0.2))
+        : Math.floor(cappedTimeoutMs * (0.7 + Math.random() * 0.3))
 
     retryCallback(totalTries, errorDetails, retryTimeout)
 

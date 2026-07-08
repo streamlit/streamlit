@@ -731,7 +731,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     expect(timeouts.length).toEqual(5)
     expect(timeouts[0]).toEqual(10)
-    expect(timeouts[4]).toBeGreaterThanOrEqual(80)
+    expect(timeouts[4]).toBeGreaterThanOrEqual(70)
     expect(timeouts[4]).toBeLessThanOrEqual(100)
     // timeouts should be monotonically increasing until they hit the cap
     expect(
