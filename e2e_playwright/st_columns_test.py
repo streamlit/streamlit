@@ -16,13 +16,21 @@ import re
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import (
     click_button,
     expect_markdown,
     expect_no_exception,
+    get_element_by_key,
     get_expander,
 )
+
+
+def _get_width(locator: Locator) -> float:
+    """Return the rendered pixel width of a locator."""
+    bounding_box = locator.bounding_box()
+    assert bounding_box is not None
+    return bounding_box["width"]
 
 
 def _get_basic_column_container(app: Page, index: int = 0) -> Locator:
@@ -238,3 +246,107 @@ def test_width_is_correctly_applied(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(
         column_stretch_width_container, name="st_columns-width_configuration_stretch"
     )
+
+
+def test_resizable_columns_render_handles(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Resizable columns render a resize handle between adjacent column pairs."""
+    container = get_element_by_key(app, "resizable_columns")
+    expect(container.get_by_test_id("stColumn")).to_have_count(3)
+
+    # 3 columns -> 2 handles (none rendered after the last column).
+    handles = container.get_by_test_id("stColumnResizeHandle")
+    expect(handles).to_have_count(2)
+
+    # Non-resizable (default) columns must NOT render any resize handles.
+    default_columns = _get_basic_column_container(app, 0)
+    expect(default_columns.get_by_test_id("stColumnResizeHandle")).to_have_count(0)
+
+    # A single resizable column has nothing to resize against, so no handle.
+    single_column_container = get_element_by_key(app, "single_resizable_column")
+    expect(single_column_container.get_by_test_id("stColumn")).to_have_count(1)
+    expect(
+        single_column_container.get_by_test_id("stColumnResizeHandle")
+    ).to_have_count(0)
+
+    # The handle is hidden by default and only becomes visible on hover.
+    first_handle = handles.nth(0)
+    expect(first_handle).to_have_css("opacity", "0")
+    first_handle.hover()
+    expect(first_handle).to_have_css("opacity", "1")
+    expect(first_handle).to_have_css("cursor", "col-resize")
+
+    assert_snapshot(container, name="st_columns-resizable")
+
+
+def test_resizable_columns_drag_resize_and_reset(app: Page):
+    """Dragging a handle resizes the adjacent columns and preserves total width."""
+    container = get_element_by_key(app, "resizable_columns")
+    columns = container.get_by_test_id("stColumn")
+    expect(columns).to_have_count(3)
+
+    first_column = columns.nth(0)
+    second_column = columns.nth(1)
+    third_column = columns.nth(2)
+
+    initial_first_width = _get_width(first_column)
+    initial_second_width = _get_width(second_column)
+    initial_third_width = _get_width(third_column)
+    initial_pair_width = initial_first_width + initial_second_width
+
+    # The resizable columns sit near the bottom of a long page, so scroll the
+    # handle into view first to ensure the mouse coordinates are on-screen.
+    first_handle = container.get_by_test_id("stColumnResizeHandle").nth(0)
+    first_handle.scroll_into_view_if_needed()
+    first_handle.hover()
+    handle_box = first_handle.bounding_box()
+    assert handle_box is not None
+    start_x = handle_box["x"] + handle_box["width"] / 2
+    center_y = handle_box["y"] + handle_box["height"] / 2
+
+    # Drag the first handle 80px to the right to grow the first column.
+    app.mouse.move(start_x, center_y)
+    app.mouse.down()
+    # The drag mousemove/mouseup listeners are attached on the re-render that
+    # follows mousedown, so wait briefly before moving to avoid missing events.
+    app.wait_for_timeout(100)
+    app.mouse.move(start_x + 80, center_y, steps=10)
+    app.mouse.up()
+
+    # The first column grew, the second column shrank.
+    wait_until(app, lambda: _get_width(first_column) > initial_first_width + 40)
+    resized_first_width = _get_width(first_column)
+    resized_second_width = _get_width(second_column)
+    assert resized_first_width > initial_first_width
+    assert resized_second_width < initial_second_width
+
+    # Total width of the adjacent pair is preserved.
+    assert abs((resized_first_width + resized_second_width) - initial_pair_width) < 2
+    # The non-adjacent third column must NOT be affected by the drag.
+    assert abs(_get_width(third_column) - initial_third_width) < 2
+
+    # Double-clicking the handle resets the columns to their spec proportions.
+    first_handle.dblclick()
+    wait_until(app, lambda: abs(_get_width(first_column) - initial_first_width) < 2)
+    assert abs(_get_width(second_column) - initial_second_width) < 2
+
+    # Keyboard: focusing the handle and pressing ArrowRight grows the first column.
+    width_before_keyboard = _get_width(first_column)
+    for _ in range(5):
+        first_handle.press("ArrowRight")
+    wait_until(app, lambda: _get_width(first_column) > width_before_keyboard + 20)
+    assert _get_width(second_column) < initial_second_width
+
+
+def test_resizable_columns_hidden_on_narrow_viewport(app: Page):
+    """On narrow viewports, columns stack and resize handles are hidden."""
+    app.set_viewport_size({"width": 400, "height": 800})
+
+    container = get_element_by_key(app, "resizable_columns")
+    columns = container.get_by_test_id("stColumn")
+    expect(columns).to_have_count(3)
+    expect(columns.first).to_be_visible()
+
+    # Resizing is not applicable when columns are stacked -> no handles rendered.
+    expect(container.get_by_test_id("stColumnResizeHandle")).to_have_count(0)

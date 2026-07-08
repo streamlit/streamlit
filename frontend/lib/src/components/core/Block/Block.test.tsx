@@ -16,7 +16,7 @@
 
 import { ReactElement } from "react"
 
-import { screen, within } from "@testing-library/react"
+import { act, fireEvent, screen, within } from "@testing-library/react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
@@ -38,12 +38,43 @@ function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
   )
 }
 
+function makeResizableColumn(
+  weight: number,
+  children: BlockNode[] = []
+): BlockNode {
+  return new BlockNode(
+    FAKE_SCRIPT_HASH,
+    children,
+    new BlockProto({ allowEmpty: true, column: { weight, resizable: true } })
+  )
+}
+
 function makeHorizontalBlockWithColumns(numColumns: number): BlockNode {
   const weight = 1 / numColumns
 
   return new BlockNode(
     FAKE_SCRIPT_HASH,
     Array.from({ length: numColumns }, () => makeColumn(weight)),
+    new BlockProto({
+      allowEmpty: true,
+      flexContainer: {
+        gapConfig: {
+          gapSize: streamlit.GapSize.SMALL,
+        },
+        direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+      },
+    })
+  )
+}
+
+function makeHorizontalBlockWithResizableColumns(
+  numColumns: number
+): BlockNode {
+  const weight = 1 / numColumns
+
+  return new BlockNode(
+    FAKE_SCRIPT_HASH,
+    Array.from({ length: numColumns }, () => makeResizableColumn(weight)),
     new BlockProto({
       allowEmpty: true,
       flexContainer: {
@@ -97,6 +128,119 @@ describe("FlexBoxContainer Block Component", () => {
     expect(screen.getAllByTestId("stVerticalBlock")[0]).not.toHaveStyle(
       "overflow: auto"
     )
+  })
+
+  it("should render resizable columns with resize handles", () => {
+    const getBoundingClientRectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(() => ({
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: 100,
+        right: 300,
+        width: 300,
+        height: 100,
+        toJSON: () => ({}),
+      }))
+
+    try {
+      const block: BlockNode = makeVerticalBlock([
+        makeHorizontalBlockWithResizableColumns(3),
+      ])
+      renderWithContexts(makeVerticalBlockComponent(block))
+
+      const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+      expect(horizontalBlock).toBeVisible()
+
+      // Resizable columns should still have the stColumn class and testid
+      expect(screen.getAllByTestId("stColumn")).toHaveLength(3)
+      expect(screen.getAllByTestId("stColumnResizeHandle")).toHaveLength(2)
+
+      // Check initial widths - columns should have measured widths
+      const columns = screen.getAllByTestId("stColumn")
+      expect(columns[0]).toHaveStyle("width: 300px")
+      expect(columns[1]).toHaveStyle("width: 300px")
+
+      const handle = screen.getAllByTestId("stColumnResizeHandle")[0]
+
+      // Start drag - use act to flush state updates and effects
+      act(() => {
+        // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
+        fireEvent.mouseDown(handle, { clientX: 300 })
+      })
+      // Move - should resize columns
+      act(() => {
+        // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
+        fireEvent.mouseMove(window, { clientX: 360 })
+      })
+      // End drag
+      act(() => {
+        // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
+        fireEvent.mouseUp(window)
+      })
+
+      // After drag, first column should be wider and second column narrower
+      expect(columns[0]).toHaveStyle("width: 360px")
+      expect(columns[1]).toHaveStyle("width: 240px")
+    } finally {
+      getBoundingClientRectSpy.mockRestore()
+    }
+  })
+
+  it("should reset resizable column widths on double-click", () => {
+    const getBoundingClientRectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(() => ({
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: 100,
+        right: 300,
+        width: 300,
+        height: 100,
+        toJSON: () => ({}),
+      }))
+
+    try {
+      const block: BlockNode = makeVerticalBlock([
+        makeHorizontalBlockWithResizableColumns(3),
+      ])
+      renderWithContexts(makeVerticalBlockComponent(block))
+
+      const columns = screen.getAllByTestId("stColumn")
+      const handle = screen.getAllByTestId("stColumnResizeHandle")[0]
+
+      // Drag to change the column widths away from their spec proportions.
+      act(() => {
+        // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
+        fireEvent.mouseDown(handle, { clientX: 300 })
+      })
+      act(() => {
+        // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
+        fireEvent.mouseMove(window, { clientX: 360 })
+      })
+      act(() => {
+        // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
+        fireEvent.mouseUp(window)
+      })
+
+      expect(columns[0]).toHaveStyle("width: 360px")
+      expect(columns[1]).toHaveStyle("width: 240px")
+
+      // Double-clicking the handle should reset the columns back to their
+      // measured (spec) proportions, i.e. 300px each.
+      act(() => {
+        fireEvent.doubleClick(handle)
+      })
+
+      expect(columns[0]).toHaveStyle("width: 300px")
+      expect(columns[1]).toHaveStyle("width: 300px")
+    } finally {
+      getBoundingClientRectSpy.mockRestore()
+    }
   })
 
   it("should add the user-specified key as class", () => {

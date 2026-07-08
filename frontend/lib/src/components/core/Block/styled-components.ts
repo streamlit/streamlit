@@ -146,25 +146,79 @@ interface StyledColumnProps {
   gap: streamlit.GapSize | undefined
   showBorder: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
+  widthOverride?: number
+  isResizable?: boolean
 }
 
+interface StyledResizableColumnHandleProps {
+  gap: streamlit.GapSize | undefined
+}
+
+export const StyledResizableColumnHandle =
+  styled.div<StyledResizableColumnHandleProps>(({ theme, gap }) => {
+    const handleWidth = theme.spacing.sm
+    const gapWidth = translateGapWidth(gap, theme)
+
+    return {
+      position: "absolute",
+      top: 0,
+      right: `calc((${gapWidth} + ${handleWidth}) / -2)`,
+      width: handleWidth,
+      height: "100%",
+      cursor: "col-resize",
+      zIndex: theme.zIndices.priority,
+      opacity: 0,
+      transition: "opacity 150ms ease",
+
+      "&:hover, &:active, &:focus-visible": {
+        opacity: 1,
+      },
+
+      "&::after": {
+        content: '""',
+        position: "absolute",
+        top: 0,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: theme.sizes.borderWidth,
+        height: "100%",
+        backgroundColor: theme.colors.fadedText40,
+      },
+    }
+  })
+
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ theme, weight, gap, showBorder, verticalAlignment }) => {
+  ({
+    theme,
+    weight,
+    gap,
+    showBorder,
+    verticalAlignment,
+    widthOverride,
+    isResizable,
+  }) => {
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
-    const width =
+    const calculatedWidth =
       gapWidth === theme.spacing.none
         ? `${percentage}%`
         : `calc(${percentage}% - ${gapWidth})`
+    const width =
+      widthOverride !== undefined ? `${widthOverride}px` : calculatedWidth
+    const flex =
+      widthOverride !== undefined ? `0 0 ${width}` : `1 1 ${calculatedWidth}`
 
     return {
+      position: isResizable ? "relative" : undefined,
       // Calculate width based on percentage, but fill all available space,
       // e.g. if it overflows to next row.
       width,
-      flex: `1 1 ${width}`,
+      flex,
 
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
+        width: "100%",
+        flex: "1 1 100%",
         minWidth: `calc(100% - ${theme.spacing.twoXL})`,
       },
       ...(verticalAlignment === VerticalAlignment.BOTTOM && {

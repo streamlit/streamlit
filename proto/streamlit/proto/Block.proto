@@ -96,6 +96,7 @@ message Block {
     bool show_border = 4;
 
     optional streamlit.GapConfig gap_config = 5;
+    bool resizable = 6;
 
     reserved 2;
   }

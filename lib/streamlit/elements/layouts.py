@@ -404,6 +404,7 @@ class LayoutsMixin:
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
         width: WidthWithoutContent = "stretch",
+        resizable: bool = False,
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -465,6 +466,14 @@ class LayoutsMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the column group matches the
               width of the parent container.
+
+        resizable : bool
+            Whether the columns are resizable by dragging. If this is
+            ``False`` (default), the columns have fixed widths based on the
+            ``spec`` parameter. If this is ``True``, users can resize the
+            columns by dragging the border between them on wide viewports
+            where columns are displayed side by side. On narrow viewports,
+            where columns stack vertically, resizing is disabled.
 
         Returns
         -------
@@ -607,6 +616,7 @@ class LayoutsMixin:
                 vertical_alignment
             ]
             col_proto.column.show_border = border
+            col_proto.column.resizable = resizable
             col_proto.allow_empty = True
             return col_proto
 

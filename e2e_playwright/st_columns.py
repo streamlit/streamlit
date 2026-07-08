@@ -154,3 +154,17 @@ with st.expander("Columns with width configuration", expanded=True):
     col4.write("column four")
     col5.write("column five")
     col6.write("column six")
+
+# Resizable columns: three equal-width columns with borders. The resize handles
+# between adjacent columns let users drag to resize (client-side, no rerun).
+with st.container(key="resizable_columns"):
+    rcol1, rcol2, rcol3 = st.columns(3, resizable=True, border=True)
+    rcol1.write("Resizable column 1")
+    rcol2.write("Resizable column 2")
+    rcol3.write("Resizable column 3")
+
+# Single resizable column edge case: there is nothing to resize against, so no
+# resize handle should be rendered.
+with st.container(key="single_resizable_column"):
+    (single_col,) = st.columns(1, resizable=True, border=True)
+    single_col.write("Single resizable column")

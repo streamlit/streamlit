@@ -295,6 +295,23 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert columns_blocks[1].add_block.column.show_border
         assert columns_blocks[2].add_block.column.show_border
 
+    @parameterized.expand(
+        [
+            (True, True),
+            (False, False),
+        ]
+    )
+    def test_columns_resizable(self, resizable: bool, expected: bool):
+        """Test that resizable parameter propagates to all columns."""
+        st.columns(3, resizable=resizable)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        columns_blocks = all_deltas[1:4]
+
+        assert len(all_deltas) == 4
+        for col_block in columns_blocks:
+            assert col_block.add_block.column.resizable == expected
+
     def test_width_config_pixel_width(self):
         """Test that width configuration works correctly"""
         st.columns(3, width=200)
