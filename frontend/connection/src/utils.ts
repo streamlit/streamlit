@@ -159,12 +159,20 @@ export class FetchError extends Error {
 
   isNetworkError: boolean
 
+  /**
+   * True when the request was aborted via a caller-supplied external signal
+   * (e.g. a cancelled ping loop) rather than the internal timeout. Lets callers
+   * distinguish an intentional cancellation from a genuine timeout.
+   */
+  isAborted: boolean
+
   constructor(
     message: string,
     url: string,
     options: {
       isTimeout?: boolean
       isNetworkError?: boolean
+      isAborted?: boolean
       response?: { status: number; statusText: string; data: unknown }
     } = {}
   ) {
@@ -173,6 +181,7 @@ export class FetchError extends Error {
     this.url = url
     this.isTimeout = options.isTimeout ?? false
     this.isNetworkError = options.isNetworkError ?? false
+    this.isAborted = options.isAborted ?? false
     this.response = options.response
   }
 }
@@ -254,8 +263,14 @@ export async function fetchWithTimeout(
       throw error
     }
 
-    // Handle AbortController timeout
+    // Handle AbortController abort. This fires for both the internal timeout and
+    // a caller-supplied external signal, which produce the same AbortError. We
+    // check the external signal first so a caller-initiated cancellation is
+    // reported as an abort rather than being misclassified as a timeout.
     if (error instanceof DOMException && error.name === "AbortError") {
+      if (externalSignal?.aborted) {
+        throw new FetchError("Request aborted", url, { isAborted: true })
+      }
       throw new FetchError("Connection timed out", url, { isTimeout: true })
     }
 
