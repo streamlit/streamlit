@@ -173,18 +173,24 @@ export const StyledTab = styled(RATab, {
   ...($isStale ? STALE_STYLES : {}),
 }))
 
-/** Tab panel content area. Inactive force-mounted panels receive `inert="true"` from
- * RAC (not `hidden`), which prevents interaction but does NOT hide them visually.
- * We explicitly hide [inert] panels so only the active panel is visible.
- * The active panel is focusable (RAC sets tabIndex=0 on role="tabpanel"), so we
- * suppress the default outline and show Streamlit's focus ring for keyboard users. */
-export const StyledTabPanel = styled(RATabPanel)(({ theme }) => ({
+/** Tab panel content area.
+ *
+ * All panels stay mounted (`shouldForceMount`) so their state and scroll
+ * position survive tab switches (see #5069).
+ *
+ * We control visibility via `$isActive` (`display: none` when inactive) rather
+ * than RAC's `inert`, because RAC drops `inert` from inactive panels on rerun
+ * (#15892, #15893).
+ *
+ * The active panel is focusable (RAC sets tabIndex=0), so we replace the
+ * default outline with Streamlit's focus ring. */
+export const StyledTabPanel = styled(RATabPanel, {
+  shouldForwardProp: prop => prop !== "$isActive",
+})<{ $isActive: boolean }>(({ theme, $isActive }) => ({
+  display: $isActive ? undefined : "none",
   paddingTop: theme.spacing.lg,
   outline: "none",
   "&[data-focus-visible]": {
     boxShadow: theme.shadows.focusRing,
-  },
-  "&[inert]": {
-    display: "none",
   },
 }))
