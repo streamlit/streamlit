@@ -245,12 +245,10 @@ def test_spinner_before_tabs_preserves_active_tab_and_increments_number_input(
     """
     get_button(app, "Enable spinner before tabs scenario").click()
 
-    # The scenario briefly shows a spinner ("Starting up...") that only lives for
-    # the ~1s ``time.sleep`` in the app. We intentionally do not assert on the
-    # spinner being visible here: it is transient scaffolding for this regression
-    # test, and on slower browsers (e.g. Firefox) it can be gone before Playwright
-    # polls, causing flakiness. What matters for #14018 is the state *after* the
-    # rerun, so we wait for the app run to finish and assert on the tabs instead.
+    # A spinner ("Starting up...") shows briefly before the tabs, but it is too
+    # short-lived to assert on reliably: it can disappear before Playwright polls,
+    # causing flakiness (especially on Firefox). We wait for the run to finish and
+    # assert on the resulting tabs instead.
     wait_for_app_run(app)
 
     tab_one = app.get_by_role("tab", name="tab_one")
