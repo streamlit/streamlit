@@ -1152,6 +1152,126 @@ describe("WebsocketConnection", () => {
     ws.disconnect()
   })
 
+  it("pins the connected index to the socket's URI even if uriIndex changed (bypass)", () => {
+    const baseUriPartsList = [
+      {
+        protocol: "http:",
+        hostname: "a.example.com",
+        port: "1234",
+        pathname: "/",
+      } as URL,
+      {
+        protocol: "http:",
+        hostname: "b.example.com",
+        port: "1234",
+        pathname: "/",
+      } as URL,
+    ]
+    // Pending fetch so the initial ping can't resolve and interfere.
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
+    const ws = new WebsocketConnection(createMockArgs({ baseUriPartsList }))
+
+    // Simulate bypass mode: the socket was created from index 0, but a
+    // background ping has since overwritten uriIndex to a different candidate.
+    // @ts-expect-error - accessing private property for testing
+    ws.socketUriIndex = 0
+    // @ts-expect-error - accessing private property for testing
+    ws.uriIndex = 1
+    // @ts-expect-error - accessing private property for testing
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - accessing private method for testing
+    ws.stepFsm("CONNECTION_SUCCEEDED")
+
+    // The pin must follow the URI the socket actually used (0), not the
+    // clobbered uriIndex, and uriIndex is realigned to match.
+    // @ts-expect-error - accessing private property for testing
+    expect(ws.connectedUriIndex).toBe(0)
+    // @ts-expect-error - accessing private property for testing
+    expect(ws.uriIndex).toBe(0)
+
+    ws.disconnect()
+  })
+
+  it("remaps the resolved ping index back to the pinned URI on reconnect", async () => {
+    const baseUriPartsList = [
+      {
+        protocol: "http:",
+        hostname: "other.example.com",
+        port: "9999",
+        pathname: "/",
+      } as URL,
+      {
+        protocol: "http:",
+        hostname: "localhost",
+        port: "1234",
+        pathname: "/",
+      } as URL,
+    ]
+    // Pending fetch so the initial ping from the constructor never resolves.
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
+    const ws = new WebsocketConnection(createMockArgs({ baseUriPartsList }))
+
+    // Simulate a prior successful connection pinned to index 1.
+    // @ts-expect-error - accessing private property for testing
+    ws.connectedUriIndex = 1
+    // @ts-expect-error - accessing private property for testing
+    ws.uriIndex = 1
+
+    // A reconnect ping probes only the pinned single-URI list, so doInitPings
+    // resolves index 0, which must be remapped back to the real index (1).
+    globalThis.fetch = createFetchMock()
+    // @ts-expect-error - accessing private property for testing
+    ws.state = ConnectionState.PINGING_SERVER
+    // @ts-expect-error - accessing private method for testing
+    const pingPromise = ws.pingServer()
+    await vi.advanceTimersByTimeAsync(0)
+    await pingPromise
+
+    // @ts-expect-error - accessing private property for testing
+    expect(ws.uriIndex).toBe(1)
+
+    ws.disconnect()
+  })
+
+  it("does not overwrite the pinned URI index when a background ping resolves", async () => {
+    const baseUriPartsList = [
+      {
+        protocol: "http:",
+        hostname: "localhost",
+        port: "1234",
+        pathname: "/",
+      } as URL,
+      {
+        protocol: "http:",
+        hostname: "other.example.com",
+        port: "9999",
+        pathname: "/",
+      } as URL,
+    ]
+    // Pending fetch so the initial ping from the constructor never resolves.
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
+    const ws = new WebsocketConnection(createMockArgs({ baseUriPartsList }))
+
+    // Simulate an already-connected, pinned-to-index-1 state.
+    // @ts-expect-error - accessing private property for testing
+    ws.connectedUriIndex = 1
+    // @ts-expect-error - accessing private property for testing
+    ws.uriIndex = 1
+
+    // The background ping resolves (index 0 for the pinned single-URI list) but
+    // the guard must keep the pinned index rather than clobbering it.
+    globalThis.fetch = createFetchMock()
+    // @ts-expect-error - accessing private method for testing
+    const bgPromise = ws.pingServerInBackground()
+    await vi.advanceTimersByTimeAsync(0)
+    await bgPromise
+
+    // @ts-expect-error - accessing private property for testing
+    expect(ws.uriIndex).toBe(1)
+
+    ws.disconnect()
+  })
+
   it("increments message cache run count", () => {
     const incrementRunCountSpy = vi.spyOn(
       // @ts-expect-error
