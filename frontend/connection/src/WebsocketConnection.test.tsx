@@ -37,7 +37,7 @@ import {
   MAX_RETRIES_BEFORE_CLIENT_ERROR,
   PING_MINIMUM_RETRY_PERIOD_MS,
 } from "./constants"
-import { doInitPings } from "./DoInitPings"
+import { doInitPings, PingCancelledError } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
 import { ErrorDetails, OnRetry } from "./types"
 import { Args, WebsocketConnection } from "./WebsocketConnection"
@@ -972,6 +972,87 @@ If you are trying to access a Streamlit app running on another server, this coul
         expect.any(String)
       )
     })
+  })
+
+  it("stops the loop on cancel and does not resurrect when an in-flight request settles", async () => {
+    // Simulate a hanging request that we can settle manually AFTER cancel(),
+    // reproducing the scenario where cancellation lands mid-request.
+    let rejectInFlight: ((reason?: unknown) => void) | undefined
+    const fetchMock = vi.fn().mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectInFlight = reject
+        })
+    )
+    globalThis.fetch = fetchMock
+
+    const { promise, cancel } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.sendClientError,
+      MOCK_PING_DATA.setAllowedOrigins
+    )
+
+    // Let connect() fire the first health + host-config requests.
+    await vi.advanceTimersByTimeAsync(0)
+    const callsWhileInFlight = fetchMock.mock.calls.length
+    expect(callsWhileInFlight).toBeGreaterThan(0)
+
+    // Cancel while the requests are still in-flight.
+    cancel()
+    await expect(promise).rejects.toBeInstanceOf(PingCancelledError)
+
+    // Settle the in-flight request as a failure. Previously this would re-arm
+    // the retry loop, resurrecting a cancelled (and now untracked) ping loop.
+    rejectInFlight?.(new TypeError("Network error"))
+    await vi.advanceTimersByTimeAsync(MOCK_PING_DATA.maxTimeoutMs + 100)
+
+    // No new requests fired, no retry scheduled, and no config applied after
+    // cancellation.
+    expect(fetchMock.mock.calls.length).toBe(callsWhileInFlight)
+    expect(MOCK_PING_DATA.retryCallback).not.toHaveBeenCalled()
+    expect(MOCK_PING_DATA.setAllowedOrigins).not.toHaveBeenCalled()
+  })
+
+  it("does not apply config or resolve when an in-flight request settles successfully after cancel", async () => {
+    // Companion to the failure-path test above: exercises the success guard in
+    // the Promise.all .then, ensuring a cancelled loop can't apply host config
+    // or resolve when the in-flight requests settle successfully post-cancel.
+    const resolveInFlight: Array<(value: unknown) => void> = []
+    const fetchMock = vi.fn().mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveInFlight.push(resolve)
+        })
+    )
+    globalThis.fetch = fetchMock
+
+    const { promise, cancel } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.sendClientError,
+      MOCK_PING_DATA.setAllowedOrigins
+    )
+
+    // Let connect() fire the health + host-config requests in parallel.
+    await vi.advanceTimersByTimeAsync(0)
+    expect(resolveInFlight.length).toBe(2)
+
+    // Cancel while both requests are still in-flight.
+    cancel()
+    await expect(promise).rejects.toBeInstanceOf(PingCancelledError)
+
+    // Settle BOTH requests successfully. The .then guard must prevent
+    // onHostConfigResp from firing and the promise from resolving.
+    resolveInFlight.forEach(resolve => resolve(createSuccessResponse({})))
+    await vi.advanceTimersByTimeAsync(MOCK_PING_DATA.maxTimeoutMs + 100)
+
+    expect(MOCK_PING_DATA.setAllowedOrigins).not.toHaveBeenCalled()
+    expect(MOCK_PING_DATA.retryCallback).not.toHaveBeenCalled()
   })
 })
 

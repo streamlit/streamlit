@@ -73,11 +73,25 @@ export function doInitPings(
   let totalTries = 0
   let uriNumber = 0
   let timeout: ReturnType<typeof setTimeout> | undefined
+  // Once cancelled, the loop must not schedule new attempts, fire new requests,
+  // or invoke any callbacks. This guards against a cancelled loop "resurrecting"
+  // itself: cancel() can be called while a request is in-flight, and without
+  // this flag the settling request would re-arm the retry timer, leaving an
+  // untracked loop running (and potentially two loops running concurrently in
+  // the bypass path).
+  let cancelled = false
+  // Used to abort in-flight health/host-config requests when the loop is
+  // cancelled (e.g. when the WebSocket reconnects), so we don't leave orphaned
+  // requests running against the server.
+  const abortController = new AbortController()
 
   // Hoist the connect() declaration.
   let connect = (): void => {}
 
   const retryImmediately = (): void => {
+    if (cancelled) {
+      return
+    }
     uriNumber++
     if (uriNumber >= uriPartsList.length) {
       uriNumber = 0
@@ -87,6 +101,9 @@ export function doInitPings(
   }
 
   const retry = (errorDetails: ErrorDetails): void => {
+    if (cancelled) {
+      return
+    }
     // Adjust retry time by +- 20% to spread out load
     const jitter = Math.random() * 0.4 - 0.2
     // Exponential backoff to reduce load from health pings when experiencing
@@ -153,6 +170,9 @@ If you are trying to access a Streamlit app running on another server, this coul
   }
 
   connect = () => {
+    if (cancelled) {
+      return
+    }
     const uriParts = uriPartsList[uriNumber]
     const healthzUri = buildHttpUri(uriParts, SERVER_PING_PATH)
 
@@ -181,14 +201,20 @@ If you are trying to access a Streamlit app running on another server, this coul
     // not to do so as it's semantically cleaner to not give the healthcheck
     // endpoint additional responsibilities.
     Promise.all([
-      fetchWithTimeout(healthzUri, PING_TIMEOUT_MS),
-      fetchWithTimeout(hostConfigUri, PING_TIMEOUT_MS),
+      fetchWithTimeout(healthzUri, PING_TIMEOUT_MS, abortController.signal),
+      fetchWithTimeout(hostConfigUri, PING_TIMEOUT_MS, abortController.signal),
     ])
       .then(([_, hostConfigResp]) => {
+        if (cancelled) {
+          return
+        }
         onHostConfigResp(hostConfigResp.data as IHostConfigProperties)
         resolve(uriNumber)
       })
       .catch((error: FetchError) => {
+        if (cancelled) {
+          return
+        }
         // If its our 6th try (retry count at which we show connection error dialog), send a client error
         // to inform the host of connection error
         const tooManyRetries = totalTries >= MAX_RETRIES_BEFORE_CLIENT_ERROR
@@ -291,10 +317,14 @@ If you are trying to access a Streamlit app running on another server, this coul
   connect()
 
   const cancel = (): void => {
+    cancelled = true
     if (notNullOrUndefined(timeout)) {
       // Use globalThis to clear timers safely without relying on window
       globalThis.clearTimeout(timeout)
     }
+    // Abort any in-flight health/host-config requests so they stop running
+    // against the server and can't re-arm the retry loop after cancellation.
+    abortController.abort()
     reject(new PingCancelledError())
   }
 
