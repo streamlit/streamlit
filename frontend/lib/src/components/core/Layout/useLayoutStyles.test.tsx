@@ -21,7 +21,11 @@ import { describe, expect, it } from "vitest"
 import { Element, IAlert, streamlit } from "@streamlit/protobuf"
 
 import { FlexContextProvider } from "./FlexContext"
-import { useLayoutStyles, UseLayoutStylesShape } from "./useLayoutStyles"
+import {
+  extractLayoutSubElement,
+  useLayoutStyles,
+  UseLayoutStylesShape,
+} from "./useLayoutStyles"
 import { Direction, MinFlexElementWidth } from "./utils"
 
 function withFlexContextProvider(
@@ -1148,6 +1152,134 @@ describe("#useLayoutStyles", () => {
           textAlign: "right", // Override value
         })
       })
+    })
+
+    describe("without an element", () => {
+      it("returns default auto styles when element is nullish", () => {
+        const { result } = renderHook(() =>
+          useLayoutStyles({ element: undefined as unknown as Element })
+        )
+        expect(result.current).toEqual(getDefaultStyles({}))
+      })
+    })
+
+    describe("min-width protection in content-width containers", () => {
+      function withContentWidthContainer(parentWidth?: number) {
+        return function Wrapper({ children }: { children: ReactNode }) {
+          return (
+            <FlexContextProvider
+              direction={Direction.HORIZONTAL}
+              hasContentWidth={true}
+              parentWidth={parentWidth}
+            >
+              {children}
+            </FlexContextProvider>
+          )
+        }
+      }
+
+      const stretchElement = (): MockElement =>
+        new MockElement({
+          widthConfig: new streamlit.WidthConfig({ useStretch: true }),
+        })
+
+      it("uses the raw minStretchBehavior when there is no parent width", () => {
+        const { result } = renderHook(
+          () =>
+            useLayoutStyles({
+              element: stretchElement(),
+              minStretchBehavior: "14rem",
+            }),
+          { wrapper: withContentWidthContainer(undefined) }
+        )
+        expect(result.current.minWidth).toBe("14rem")
+      })
+
+      it("uses fit-content minStretchBehavior unchanged", () => {
+        const { result } = renderHook(
+          () =>
+            useLayoutStyles({
+              element: stretchElement(),
+              minStretchBehavior: "fit-content",
+            }),
+          { wrapper: withContentWidthContainer(500) }
+        )
+        expect(result.current.minWidth).toBe("fit-content")
+      })
+
+      it("clamps min-width to parent width minus buffer when the parent is too narrow", () => {
+        const { result } = renderHook(
+          () =>
+            useLayoutStyles({
+              element: stretchElement(),
+              minStretchBehavior: "14rem",
+            }),
+          { wrapper: withContentWidthContainer(100) }
+        )
+        // 14rem resolves to 224px (> parentWidth of 100), and 100 exceeds the
+        // 32px buffer, so the min-width clamps to parentWidth - 32 = 68px.
+        expect(result.current.minWidth).toBe("68px")
+      })
+
+      it("keeps the raw minStretchBehavior when the parent is wide enough", () => {
+        const { result } = renderHook(
+          () =>
+            useLayoutStyles({
+              element: stretchElement(),
+              minStretchBehavior: "14rem",
+            }),
+          { wrapper: withContentWidthContainer(5000) }
+        )
+        expect(result.current.minWidth).toBe("14rem")
+      })
+
+      it("does not set a min-width outside of content-width containers", () => {
+        const { result } = renderHook(
+          () =>
+            useLayoutStyles({
+              element: stretchElement(),
+              minStretchBehavior: "14rem",
+            }),
+          { wrapper: withFlexContextProvider(Direction.HORIZONTAL) }
+        )
+        expect(result.current.minWidth).toBeUndefined()
+      })
+    })
+  })
+
+  describe("extractLayoutSubElement", () => {
+    it("extracts layout props from the nested type field", () => {
+      const element = {
+        type: "dataframe",
+        dataframe: { useContainerWidth: true, height: 100, width: 50 },
+      } as unknown as Element
+      expect(extractLayoutSubElement(element)).toEqual({
+        useContainerWidth: true,
+        height: 100,
+        width: 50,
+        widthConfig: undefined,
+      })
+    })
+
+    it("returns undefined when the nested type field is not an object", () => {
+      const element = {
+        type: "dataframe",
+        dataframe: undefined,
+      } as unknown as Element
+      expect(extractLayoutSubElement(element)).toBeUndefined()
+    })
+
+    it("returns undefined when the element has no type", () => {
+      const element = {} as unknown as Element
+      expect(extractLayoutSubElement(element)).toBeUndefined()
+    })
+
+    it("returns undefined when the nested object has no layout props", () => {
+      const element = {
+        type: "dataframe",
+        dataframe: { foo: "bar" },
+      } as unknown as Element
+      expect(extractLayoutSubElement(element)).toBeUndefined()
     })
   })
 })

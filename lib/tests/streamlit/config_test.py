@@ -799,6 +799,7 @@ class ConfigTest(unittest.TestCase):
                 "server.headless",
                 "server.maxMessageSize",
                 "server.maxUploadSize",
+                "server.maxWidgetStateSize",
                 "server.port",
                 "server.runOnSave",
                 "server.scriptHealthCheckEnabled",
@@ -1678,6 +1679,9 @@ class ConfigLoadingTest(unittest.TestCase):
 
     def test_max_message_size_default_values(self):
         assert config.get_option("server.maxMessageSize") == 200
+
+    def test_max_widget_state_size_default_values(self):
+        assert config.get_option("server.maxWidgetStateSize") == 25
 
     def test_config_options_removed_on_reparse(self):
         """Test that config options that are removed in a file are also removed

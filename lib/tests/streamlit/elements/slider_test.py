@@ -35,6 +35,7 @@ from streamlit.errors import (
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from streamlit.runtime.state.widgets import register_widget_from_metadata
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -591,6 +592,22 @@ class SliderBindQueryParamsTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
             st.slider("the label", key="my_key", bind="invalid-value")
 
+    def test_persist_state_passed_to_metadata(self) -> None:
+        """Test that persist_state is threaded onto the widget's WidgetMetadata."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched:
+            st.slider("the label", key="my_key", persist_state="session")
+
+        metadata = patched.call_args[0][0]
+        assert metadata.persist_state == "session"
+
+    def test_persist_state_without_key_raises(self) -> None:
+        """Test that persist_state without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.slider("the label", persist_state="session")
+
     def test_bind_with_int_slider(self):
         """Test that bind works with integer slider."""
         st.slider(
@@ -655,6 +672,24 @@ def _make_int_serde(
     )
 
 
+def _make_float_serde(
+    value: list[float],
+    *,
+    single_value: bool = True,
+    min_value: float = 0.0,
+    max_value: float = 1.0,
+) -> SliderSerde:
+    """Construct a ``SliderSerde`` for FLOAT data with the provided defaults."""
+    return SliderSerde(
+        value=value,
+        data_type=SliderProto.FLOAT,
+        single_value=single_value,
+        orig_tz=None,
+        min_value=min_value,
+        max_value=max_value,
+    )
+
+
 def test_slider_serde_deserialize_returns_default_when_ui_value_none() -> None:
     """A None ui_value falls back to the default."""
     assert _make_int_serde(value=[42]).deserialize(None) == 42
@@ -690,6 +725,32 @@ def test_slider_serde_deserialize_resets_out_of_range(
     """Out-of-range ui_values revert to the default."""
     serde = _make_int_serde(value=[20], min_value=10, max_value=100)
     assert serde.deserialize(ui_value) == 20
+
+
+@pytest.mark.parametrize(
+    "ui_value",
+    [[float("nan")], [float("inf")], [-float("inf")]],
+    ids=["nan", "positive_inf", "negative_inf"],
+)
+def test_slider_serde_deserialize_resets_non_finite_value(
+    ui_value: list[float],
+) -> None:
+    """Non-finite float ui_values revert to the default."""
+    serde = _make_float_serde(value=[0.5])
+    assert serde.deserialize(ui_value) == 0.5
+
+
+@pytest.mark.parametrize(
+    "ui_value",
+    [[float("nan"), 0.8], [0.2, float("inf")], [-float("inf"), float("nan")]],
+    ids=["nan_first", "inf_second", "both_non_finite"],
+)
+def test_slider_serde_deserialize_resets_non_finite_value_range(
+    ui_value: list[float],
+) -> None:
+    """Non-finite float values in a range slider revert to the default."""
+    serde = _make_float_serde(value=[0.2, 0.8], single_value=False)
+    assert serde.deserialize(ui_value) == (0.2, 0.8)
 
 
 def test_slider_serde_deserialize_passes_through_in_range_value() -> None:

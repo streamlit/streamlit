@@ -19,6 +19,7 @@ import {
   ReactElement,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -31,7 +32,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import themeColors from "~lib/theme/emotionBaseTheme/themeColors"
 import { CAMERA_PERMISSION_URL } from "~lib/urls"
 import { isMobile } from "~lib/util/isMobile"
-import { debounce } from "~lib/util/utils"
+import { debounce, isNullOrUndefined } from "~lib/util/utils"
 
 import CameraInputButton from "./CameraInputButton"
 import {
@@ -50,6 +51,7 @@ export interface Props {
   setClearPhotoInProgress: (clearPhotoInProgress: boolean) => void
   facingMode: FacingMode
   setFacingMode: () => void
+  resolutionHeight?: number
   // Allow for unit testing
   testOverride?: WebcamPermission
 }
@@ -92,6 +94,7 @@ const WebcamComponent = ({
   setClearPhotoInProgress,
   facingMode,
   setFacingMode,
+  resolutionHeight,
   testOverride,
 }: Props): ReactElement => {
   const [webcamPermission, setWebcamPermissionState] = useState(
@@ -121,6 +124,24 @@ const WebcamComponent = ({
 
   const theme = useEmotionTheme()
 
+  // When a resolution is requested we constrain only height so the camera's
+  // native aspect ratio determines width; otherwise we hint the display width.
+  // Each branch is memoized separately so the selected reference only changes
+  // with the inputs it actually uses. This keeps react-webcam (which treats
+  // videoConstraints as a useEffect dependency) from renegotiating the stream
+  // on resize while a resolution preset is active, where debouncedWidth is unused.
+  const heightConstraints: MediaTrackConstraints = useMemo(
+    () => ({ height: { ideal: resolutionHeight }, facingMode }),
+    [resolutionHeight, facingMode]
+  )
+  const widthConstraints: MediaTrackConstraints = useMemo(
+    () => ({ width: { ideal: debouncedWidth }, facingMode }),
+    [debouncedWidth, facingMode]
+  )
+  const videoConstraints = isNullOrUndefined(resolutionHeight)
+    ? widthConstraints
+    : heightConstraints
+
   return (
     <StyledCameraInput data-testid="stCameraInputWebcamComponent">
       {webcamPermission !== WebcamPermission.SUCCESS &&
@@ -147,6 +168,8 @@ const WebcamComponent = ({
             ref={videoRef}
             screenshotFormat="image/jpeg"
             screenshotQuality={1}
+            // width/height size the on-screen preview only; the captured image size is
+            // governed by videoConstraints + forceScreenshotSourceSize.
             width={debouncedWidth}
             // We keep Aspect ratio of container always equal 16 / 9.
             // The aspect ration of video stream may be different depending on a camera.
@@ -161,10 +184,8 @@ const WebcamComponent = ({
               setWebcamPermissionState(WebcamPermission.SUCCESS)
               setClearPhotoInProgress(false)
             }}
-            videoConstraints={{
-              width: { ideal: debouncedWidth },
-              facingMode,
-            }}
+            videoConstraints={videoConstraints}
+            forceScreenshotSourceSize={!isNullOrUndefined(resolutionHeight)}
           />
         )}
       </StyledBox>

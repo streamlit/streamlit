@@ -21,12 +21,15 @@ from parameterized import parameterized
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.query_params import (
+    _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+    _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
     QueryParams,
     _set_item_in_dict,
     _try_parse_iso_to_micros,
     is_empty_url_value,
     parse_url_param,
     process_query_params,
+    sanitize_query_string,
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -1406,6 +1409,48 @@ class PopulateFromQueryStringTest(DeltaGeneratorTestCase):
         self.query_params.populate_from_query_string("foo=")
         assert self.query_params._query_params["foo"] == ""
 
+    @parameterized.expand(
+        [
+            (
+                "too_many_fields",
+                "&".join(
+                    f"key_{idx}=value"
+                    for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+                ),
+            ),
+            ("too_long", "foo=" + ("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
+        ]
+    )
+    def test_populate_ignores_unsafe_query_string(
+        self, _name: str, query_string: str
+    ) -> None:
+        """Test query strings that exceed safe limits are ignored instead of parsed."""
+        self.query_params._query_params = {"old_key": "old_value"}
+
+        self.query_params.populate_from_query_string(query_string)
+
+        assert self.query_params._query_params == {}
+
+    @parameterized.expand(
+        [
+            (
+                "too_many_fields",
+                "&".join(
+                    f"key_{idx}=value"
+                    for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+                ),
+            ),
+            ("too_long", "foo=" + ("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
+        ]
+    )
+    def test_set_initial_query_params_ignores_unsafe_query_string(
+        self, _name: str, query_string: str
+    ) -> None:
+        """Test initial query params enforce the same safe limits."""
+        self.query_params.set_initial_query_params(query_string)
+
+        assert self.query_params._initial_query_params == {}
+
     def test_populate_without_filter_keeps_all_params(self) -> None:
         """Test that without valid_script_hashes, all params are kept."""
         # Bind a widget to a param
@@ -1594,3 +1639,39 @@ class RemoveStaleBindingsTest(DeltaGeneratorTestCase):
 
         # Active widget should be preserved
         assert self.query_params.is_bound("active_key")
+
+
+@pytest.mark.parametrize(
+    "query_string",
+    [
+        pytest.param("", id="empty"),
+        pytest.param("foo=bar&baz=qux", id="normal"),
+        pytest.param("x" * _CLIENT_STATE_QUERY_STRING_MAX_LENGTH, id="length_at_limit"),
+        pytest.param(
+            "&".join(
+                f"k{idx}=v" for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS)
+            ),
+            id="fields_at_limit",
+        ),
+    ],
+)
+def test_sanitize_query_string_keeps_safe_input(query_string: str) -> None:
+    """Test query strings within the safe limits are returned unchanged."""
+    assert sanitize_query_string(query_string) == query_string
+
+
+@pytest.mark.parametrize(
+    "query_string",
+    [
+        pytest.param("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1), id="too_long"),
+        pytest.param(
+            "&".join(
+                f"k{idx}=v" for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+            ),
+            id="too_many_fields",
+        ),
+    ],
+)
+def test_sanitize_query_string_rejects_unsafe_input(query_string: str) -> None:
+    """Test query strings exceeding the safe limits are dropped."""
+    assert sanitize_query_string(query_string) == ""
