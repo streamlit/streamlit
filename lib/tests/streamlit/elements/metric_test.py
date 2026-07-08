@@ -204,6 +204,9 @@ class MetricTest(DeltaGeneratorTestCase):
             (0.0, "0.0"),
             (Decimal("0.00"), "0.00"),
             ("0", "0"),
+            # Leading whitespace is dedented before rendering, so " 0" must be
+            # treated the same as "0" (neutral) instead of a positive delta.
+            (" 0", "0"),
         ]
     )
     def test_zero_delta_color_and_direction(self, delta, expected_delta):

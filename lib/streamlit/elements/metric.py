@@ -533,7 +533,9 @@ def _is_negative_delta(delta: Delta) -> bool:
 
 def _is_zero_delta(delta: Delta) -> bool:
     # Only the literal string "0" counts as a zero delta; other numeric-looking
-    # strings (e.g. "0.0", "0%") are treated as regular positive deltas.
+    # strings (e.g. "0.0", "0%") are treated as regular positive deltas. String
+    # deltas are dedented first so the check matches the value that is actually
+    # rendered (see _parse_delta), e.g. " 0" is treated the same as "0".
     if isinstance(delta, str):
-        return delta == "0"
+        return dedent(delta) == "0"
     return bool(delta == 0)
