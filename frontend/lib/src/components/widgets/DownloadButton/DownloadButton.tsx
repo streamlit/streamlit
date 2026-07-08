@@ -26,7 +26,7 @@ import {
 
 import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
-import { DownloadContext } from "~lib/components/core/DownloadContext"
+import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import BaseButton, {
   BaseButtonKind,
@@ -60,7 +60,7 @@ function DownloadButton(props: Props): ReactElement {
 
   // Default to false, if no libConfig, e.g. for tests
   const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
-  const { requestDeferredFile } = useContext(DownloadContext)
+  const { backendOperationClient } = useContext(BackendOperationContext)
 
   let kind = BaseButtonKind.SECONDARY
   if (type === "primary") {
@@ -84,7 +84,7 @@ function DownloadButton(props: Props): ReactElement {
   }, [downloadUrl, endpoints, deferredFileId])
 
   const handleDeferredDownload = useCallback(async (): Promise<void> => {
-    if (!requestDeferredFile || !deferredFileId) {
+    if (!backendOperationClient || !deferredFileId) {
       setError("Deferred download not properly configured")
       return
     }
@@ -93,13 +93,8 @@ function DownloadButton(props: Props): ReactElement {
     setError(null)
 
     try {
-      const response = await requestDeferredFile(deferredFileId)
-
-      if (response.errorMsg) {
-        setError(response.errorMsg)
-        setIsLoading(false)
-        return
-      }
+      const response =
+        await backendOperationClient.requestDeferredFile(deferredFileId)
 
       const resolvedDownloadUrl = endpoints.buildDownloadUrl(response.url)
 
@@ -123,7 +118,12 @@ function DownloadButton(props: Props): ReactElement {
     } finally {
       setIsLoading(false)
     }
-  }, [requestDeferredFile, deferredFileId, endpoints, enforceDownloadInNewTab])
+  }, [
+    backendOperationClient,
+    deferredFileId,
+    endpoints,
+    enforceDownloadInNewTab,
+  ])
 
   const handleDownloadClick = useCallback((): void => {
     if (disabled) {

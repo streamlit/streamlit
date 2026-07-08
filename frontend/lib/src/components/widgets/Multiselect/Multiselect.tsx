@@ -66,6 +66,14 @@ export interface Props {
   fragmentId?: string
 }
 
+/**
+ * Threshold at or above which "Select all" / "Select X matches" is disabled.
+ * Selecting all items at once with very large option lists (>= 1000) causes
+ * severe performance issues (browser freezes, large serialization payloads).
+ * See: https://github.com/streamlit/streamlit/issues/15299
+ */
+const SELECT_ALL_THRESHOLD = 1000
+
 type MultiselectValue = string[]
 
 const getStateFromWidgetMgr = (
@@ -254,7 +262,11 @@ const Multiselect: FC<Props> = props => {
       const filteredOptions = createFilterOptions(value)(options, filterValue)
 
       // Add "Select all" or "Select X matches" option when multiple selectable options
-      if (filteredOptions.length > 1) {
+      // Disable for large option lists to prevent browser freezes
+      if (
+        filteredOptions.length > 1 &&
+        element.options.length < SELECT_ALL_THRESHOLD
+      ) {
         if (filterValue.trim()) {
           // With search: store filtered values in dedicated ref
           // Using separate ref from "Select all" avoids race conditions
@@ -280,7 +292,7 @@ const Multiselect: FC<Props> = props => {
 
       return filteredOptions
     },
-    [createFilterOptions, overMaxSelections, value]
+    [createFilterOptions, element.options.length, overMaxSelections, value]
   )
 
   const disabled = props.disabled || shouldDisable
@@ -366,6 +378,7 @@ const Multiselect: FC<Props> = props => {
           noResultsMsg={getNoResultsMsg}
           filterOptions={filterOptions}
           closeOnSelect={false}
+          escapeClearsValue={element.default.length > 0 ? false : !disabled}
           ignoreCase={false}
           overrides={{
             DropdownContainer: {
@@ -400,8 +413,8 @@ const Multiselect: FC<Props> = props => {
                 overrides: {
                   Svg: {
                     style: () => ({
-                      width: theme.iconSizes.xl,
-                      height: theme.iconSizes.xl,
+                      width: theme.iconSizes.lg,
+                      height: theme.iconSizes.lg,
                     }),
                   },
                 },
@@ -495,7 +508,7 @@ const Multiselect: FC<Props> = props => {
                       borderTopRightRadius: theme.radii.md2,
                       borderBottomRightRadius: theme.radii.md2,
                       borderBottomLeftRadius: theme.radii.md2,
-                      fontSize: theme.fontSizes.md,
+                      fontSize: theme.fontSizes.sm,
                       paddingLeft: theme.spacing.sm,
                       // Top and left margins are deferred to ValueContainer padding
                       marginTop: theme.spacing.none,

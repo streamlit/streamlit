@@ -321,6 +321,30 @@ def test_clicking_on_fullscreen_toolbar_button(
     )
 
 
+def test_dataframe_column_menu_opens_in_fullscreen(app: Page):
+    """Test that dataframe column menus render above the fullscreen wrapper."""
+    dataframe_element = (
+        get_element_by_key(app, "column-menu-test").get_by_test_id("stDataFrame").first
+    )
+    expect(dataframe_element).to_be_visible()
+
+    dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
+    dataframe_element.hover()
+    expect(dataframe_toolbar).to_have_css("opacity", "1")
+
+    dataframe_toolbar.get_by_test_id("stElementToolbarButton").last.click()
+    expect(
+        dataframe_toolbar.get_by_role("button", name="Close fullscreen")
+    ).to_be_visible()
+
+    open_column_menu(dataframe_element, 2, "small")
+    column_menu = app.get_by_test_id("stDataFrameColumnMenu")
+    expect(column_menu).to_be_visible()
+    expect(column_menu).to_be_in_viewport()
+    column_menu.get_by_text("Sort ascending").click()
+    expect(column_menu).not_to_be_visible()
+
+
 def test_data_editor_keeps_state_after_unmounting(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -870,3 +894,133 @@ def test_column_pinning_via_ui(app: Page, assert_snapshot: ImageCompareFunction)
 # TODO(lukasmasuch): Add additional interactive tests:
 # - Copy data to clipboard
 # - Paste in data
+
+
+def test_statistics_menu_for_numeric_column(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the statistics submenu shows numeric statistics for a numeric column."""
+    df = (
+        get_element_by_key(themed_app, "column-menu-test")
+        .get_by_test_id("stDataFrame")
+        .first
+    )
+    expect_canvas_to_be_visible(df)
+
+    # Open the column menu for Column A (numeric column)
+    open_column_menu(df, 1, "small")
+    column_menu = themed_app.get_by_test_id("stDataFrameColumnMenu")
+    expect(column_menu).to_be_visible()
+
+    # Verify statistics submenu is NOT visible before hovering (lazy-open behavior)
+    statistics_menu = themed_app.get_by_test_id("stDataFrameStatisticsMenu")
+    expect(statistics_menu).not_to_be_visible()
+
+    # Hover over the Statistics menu item to open the submenu
+    statistics_item = column_menu.get_by_text("Statistics")
+    expect(statistics_item).to_be_visible()
+    statistics_item.hover()
+
+    # Wait for the statistics submenu to appear
+    expect(statistics_menu).to_be_visible()
+
+    # Wait for statistics to be computed (content should appear)
+    statistics_content = themed_app.get_by_test_id("stDataFrameStatisticsContent")
+    expect(statistics_content).to_be_visible()
+
+    # Verify numeric statistics metrics are shown
+    expect(statistics_content.get_by_text("Values", exact=True)).to_be_visible()
+    expect(statistics_content.get_by_text("Average", exact=True)).to_be_visible()
+    expect(
+        statistics_content.get_by_text("Standard deviation", exact=True)
+    ).to_be_visible()
+    expect(statistics_content.get_by_text("Minimum", exact=True)).to_be_visible()
+    expect(statistics_content.get_by_text("Maximum", exact=True)).to_be_visible()
+
+    # Verify boolean-specific labels are NOT present (this is a numeric column)
+    expect(statistics_content.get_by_text("True", exact=True)).not_to_be_visible()
+    expect(statistics_content.get_by_text("False", exact=True)).not_to_be_visible()
+
+    # Wait for the statistics chart SVG to finish rendering (Vega renders asynchronously)
+    # Use get_by_role with "img" since the chart wrapper has role="img"
+    statistics_chart = themed_app.get_by_test_id("stDataFrameStatisticsChart")
+    expect(statistics_chart).to_be_visible()
+    expect(statistics_chart.get_by_role("img")).to_be_visible()
+
+    # Take a snapshot of the statistics panel
+    assert_snapshot(statistics_menu, name="st_dataframe-statistics_numeric_column")
+
+
+def test_statistics_menu_for_categorical_columns(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the statistics submenu shows categorical statistics for text and
+    boolean columns (both rendered as labeled bar charts).
+    """
+    df = (
+        get_element_by_key(themed_app, "categorical-statistics-test")
+        .get_by_test_id("stDataFrame")
+        .first
+    )
+    expect_canvas_to_be_visible(df)
+
+    column_menu = themed_app.get_by_test_id("stDataFrameColumnMenu")
+    statistics_menu = themed_app.get_by_test_id("stDataFrameStatisticsMenu")
+    statistics_content = themed_app.get_by_test_id("stDataFrameStatisticsContent")
+
+    # --- Text column (position 1, after the index column) ---
+    open_column_menu(df, 1, "small")
+    expect(column_menu).to_be_visible()
+
+    # Hover over the Statistics menu item to open the submenu
+    column_menu.get_by_text("Statistics").hover()
+    expect(statistics_menu).to_be_visible()
+    expect(statistics_content).to_be_visible()
+
+    # Verify text-specific statistics metrics are shown
+    expect(statistics_content.get_by_text("Values", exact=True)).to_be_visible()
+    expect(statistics_content.get_by_text("Distinct", exact=True)).to_be_visible()
+    expect(statistics_content.get_by_text("Average length", exact=True)).to_be_visible()
+
+    # Verify numeric-only labels are NOT present (this is a text column)
+    expect(
+        statistics_content.get_by_text("Standard deviation", exact=True)
+    ).not_to_be_visible()
+
+    # Wait for the top-values frequency chart to render (labeled bar chart with
+    # one bar per top value)
+    statistics_chart = themed_app.get_by_test_id("stDataFrameStatisticsChart")
+    expect(statistics_chart).to_be_visible()
+    expect(statistics_chart.get_by_text("Apple", exact=True)).to_be_visible()
+
+    assert_snapshot(statistics_menu, name="st_dataframe-statistics_text_column")
+
+    # Move the mouse off the "Statistics" item to close the submenu. While the
+    # submenu is open the column menu ignores outside clicks, so it must be
+    # collapsed before the menu can be dismissed.
+    column_menu.get_by_text("Sort ascending").hover()
+    expect(statistics_menu).not_to_be_visible()
+    unfocus_dataframe(themed_app)
+    expect(column_menu).not_to_be_visible()
+
+    # --- Boolean column (position 2) ---
+    open_column_menu(df, 2, "small")
+    expect(column_menu).to_be_visible()
+
+    column_menu.get_by_text("Statistics").hover()
+    expect(statistics_menu).to_be_visible()
+    expect(statistics_content).to_be_visible()
+
+    # Verify the true/false distribution chart rendered with both labels
+    statistics_chart = themed_app.get_by_test_id("stDataFrameStatisticsChart")
+    expect(statistics_chart).to_be_visible()
+    expect(statistics_chart.get_by_text("True", exact=True)).to_be_visible()
+    expect(statistics_chart.get_by_text("False", exact=True)).to_be_visible()
+    expect(statistics_content.get_by_text("Values", exact=True)).to_be_visible()
+
+    # Verify text/numeric-only labels are NOT present (this is a boolean column)
+    expect(
+        statistics_content.get_by_text("Average length", exact=True)
+    ).not_to_be_visible()
+
+    assert_snapshot(statistics_menu, name="st_dataframe-statistics_boolean_column")

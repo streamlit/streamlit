@@ -19,12 +19,16 @@ SHELL=/bin/bash
 INSTALL_DEV_REQS ?= true
 INSTALL_TEST_REQS ?= true
 INSTALL_PLAYWRIGHT ?= true
+INSTALL_PLAYWRIGHT_DEPS ?= auto
 # Flags:
 #  - INSTALL_DEV_REQS: install dev requirements (default: true)
 #  - INSTALL_TEST_REQS: install test requirements (default: true)
 #  - INSTALL_PLAYWRIGHT: install Playwright browsers during python-init (default: true)
 #    CI uses a dedicated action to install browsers and typically sets this to false.
 #    Local dev can opt out when not needed: `INSTALL_PLAYWRIGHT=false make init`
+#  - INSTALL_PLAYWRIGHT_DEPS: install Playwright OS-level system deps (default: auto)
+#    `auto` runs --with-deps on Debian, Ubuntu, and macOS only. Use `true` to force
+#    it everywhere, or `false` to skip it (browsers still install in either case).
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 MIN_PROTOC_VERSION = 3.20
 
@@ -121,6 +125,10 @@ protobuf:
 		proto/streamlit/proto/*.proto
 
 	@# JS/TS protobuf generation
+	@if [ ! -d "frontend/node_modules" ]; then \
+		echo "frontend/node_modules not found. Running 'make frontend-init' first..."; \
+		$(MAKE) frontend-init; \
+	fi
 	cd frontend/ ; yarn workspace @streamlit/protobuf run generate-protobuf
 
 .PHONY: protobuf-lint
@@ -158,7 +166,15 @@ python-init:
 	fi
 	@# Install playwright if requested
 	@if [ "${INSTALL_TEST_REQS}" = "true" ] && [ "${INSTALL_PLAYWRIGHT}" = "true" ]; then \
-		uv run python -m playwright install --with-deps; \
+		if [ "${INSTALL_PLAYWRIGHT_DEPS}" = "false" ]; then \
+			uv run python -m playwright install; \
+		elif [ "${INSTALL_PLAYWRIGHT_DEPS}" = "true" ] || [ -f /etc/debian_version ] || [ "$$(uname)" = "Darwin" ]; then \
+			uv run python -m playwright install --with-deps; \
+		else \
+			echo "Skipping 'playwright install --with-deps': not officially supported on this OS."; \
+			echo "Browsers will be downloaded. Install browser system libraries through your distro's package manager (see CONTRIBUTING.md)."; \
+			uv run python -m playwright install; \
+		fi; \
 	fi
 
 .PHONY: python-lint
@@ -180,14 +196,16 @@ python-format:
 .PHONY: python-tests
 # Run Python unit tests.
 python-tests:
-	uv run pytest -c lib/pyproject.toml -v -l \
+	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
+	MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v -l \
 		-m "not performance" \
 		lib/tests/
 
 .PHONY: python-performance-tests
 # Run Python performance tests.
 python-performance-tests:
-	uv run pytest -c lib/pyproject.toml -v -l \
+	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
+	MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v -l \
 		-m "performance" \
 		--benchmark-autosave \
 		--benchmark-storage file://.benchmarks/pytest \
@@ -196,7 +214,8 @@ python-performance-tests:
 .PHONY: python-integration-tests
 # Run Python integration tests. Requires `uv sync --group integration` to be run first.
 python-integration-tests:
-	uv run pytest -c lib/pyproject.toml -v -l \
+	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
+	MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v -l \
 		--require-integration \
 		lib/tests/
 
@@ -505,6 +524,8 @@ update-emojis:
 update-notices:
 	cd frontend; \
 		yarn licenses generate-disclaimer --production --recursive > ../NOTICES
+	# Normalize line endings to LF (yarn output may contain CRLF from some packages)
+	perl -i -pe 's/\r$$//' NOTICES
 
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code/Source-Code.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans/Source-Sans.LICENSE
@@ -741,7 +762,7 @@ check:
 	if [ -n "$$PY_TESTS" ] && [ "$$FAST_CHECK" != "true" ]; then \
 		echo "=== Python: tests (pytest) ===" && \
 		echo "Running: $$PY_TESTS" && \
-		uv run pytest -c lib/pyproject.toml -v $$PY_TESTS && \
+		MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v $$PY_TESTS && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
 			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \

@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-import { act, screen, within } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
-import { mockConvertRemToPx } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"
-import * as Utils from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Selectbox, { Props } from "./Selectbox"
@@ -46,16 +44,17 @@ const getProps = (
 })
 
 const pickOption = async (
-  selectbox: HTMLElement,
+  _selectbox: HTMLElement,
   value: string
 ): Promise<void> => {
   const user = userEvent.setup()
-  // Click on the selectbox to open the dropdown
-  await user.click(selectbox)
-  // Find the desired option and click on it to select
-  const valueElement = screen.getByText(value)
+  // Click the open button to open the dropdown
+  const openButton = screen.getByRole("button", { name: "Open" })
+  await user.click(openButton)
+  // Find the desired option by role and click it
+  const valueElement = screen.getByRole("option", { name: value })
   await user.click(valueElement)
-  // Select outside the widget to close the dropdown
+  // Click outside the widget to close the dropdown
   await user.click(document.body)
 }
 
@@ -92,8 +91,7 @@ describe("Selectbox widget", () => {
     })
     render(<Selectbox {...props} />)
 
-    const selectbox = screen.getByTestId("stSelectbox")
-    expect(within(selectbox).getByText("c")).toBeVisible()
+    expect(screen.getByDisplayValue("c")).toBeVisible()
   })
 
   it("can pass fragmentId to setStringValue", () => {
@@ -112,7 +110,6 @@ describe("Selectbox widget", () => {
   it("handles the onChange event", async () => {
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setStringValue")
-    vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
 
     render(<Selectbox {...props} />)
 
@@ -126,8 +123,7 @@ describe("Selectbox widget", () => {
       { fromUi: true },
       undefined
     )
-    expect(screen.queryByText("a")).not.toBeInTheDocument()
-    expect(screen.getByText("b")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("b")).toBeVisible()
   })
 
   it("resets its value when form is cleared", async () => {
@@ -136,7 +132,6 @@ describe("Selectbox widget", () => {
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     vi.spyOn(props.widgetMgr, "setStringValue")
-    vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
 
     render(<Selectbox {...props} />)
 
@@ -156,8 +151,10 @@ describe("Selectbox widget", () => {
     })
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(screen.getByText("a")).toBeInTheDocument()
-    expect(screen.queryByText("b")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("a")).toBeVisible()
+    })
+    expect(screen.queryByDisplayValue("b")).not.toBeInTheDocument()
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.options[props.element.default ?? 0],
@@ -175,7 +172,9 @@ describe("Selectbox widget", () => {
     })
     render(<Selectbox {...props} />)
 
-    expect(screen.getByText("Please select an option...")).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText("Please select an option...")
+    ).toBeInTheDocument()
   })
 })
 

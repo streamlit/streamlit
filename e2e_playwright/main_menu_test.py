@@ -153,7 +153,7 @@ def test_keyboard_activates_menu_item(app: Page):
 
 # WebKit (Safari) does not allow programmatic .focus() on buttons outside a
 # user-activation context. Our focus-return fires from react-focus-lock's
-# returnFocus callback (after BaseWeb's close animation timer), which
+# returnFocus callback (during FocusLock's unmount cleanup), which
 # Chromium/Firefox accept but WebKit silently ignores.
 @pytest.mark.skip_browser("webkit")
 def test_focus_returns_to_menu_button_after_close(app: Page):
@@ -378,3 +378,21 @@ def test_main_menu_version_footer_copies_version(app: Page):
     copied_text = app.evaluate("navigator.clipboard.readText()")
     assert copied_text
     assert re.match(r"^\d+(?:\.\d+){2}.*$", copied_text)
+
+
+def test_clear_cache_dialog_dismisses(app: Page):
+    """Test that the clear cache dialog can be dismissed via Escape key and close button."""
+    # Dismiss via Escape key
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Clear cache").click()
+    dialog = app.get_by_test_id("stDialog")
+    expect(dialog).to_be_visible()
+    app.keyboard.press("Escape")
+    expect(dialog).not_to_be_visible()
+
+    # Re-open and dismiss via close button
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Clear cache").click()
+    expect(dialog).to_be_visible()
+    dialog.get_by_role("dialog").get_by_label("Close").click()
+    expect(dialog).not_to_be_visible()

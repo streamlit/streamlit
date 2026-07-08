@@ -39,10 +39,114 @@ interface VegaLiteParam {
   [key: string]: unknown
 }
 
+interface VegaLiteUsermeta {
+  embedOptions?: {
+    theme?: string | null
+    renderer?: string
+    padding?:
+      | number
+      | { left?: number; right?: number; top?: number; bottom?: number }
+    [key: string]: unknown
+  } | null
+  [key: string]: unknown
+}
+
 /**
  * Fix bug where Vega Lite was vertically-cropping the x-axis in some cases.
  */
 const BOTTOM_PADDING = 20
+
+function getUsermeta(spec: VegaLiteSpec): VegaLiteUsermeta | undefined {
+  if (
+    spec.usermeta === null ||
+    typeof spec.usermeta !== "object" ||
+    Array.isArray(spec.usermeta)
+  ) {
+    return undefined
+  }
+
+  return spec.usermeta as VegaLiteUsermeta
+}
+
+function isNonNegativeFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+}
+
+function sanitizeRenderer(renderer: unknown): string | undefined {
+  return typeof renderer === "string" &&
+    ["svg", "canvas", "hybrid"].includes(renderer)
+    ? renderer
+    : undefined
+}
+
+function sanitizePadding(
+  padding: unknown
+):
+  | number
+  | { left?: number; right?: number; top?: number; bottom?: number }
+  | undefined {
+  if (isNonNegativeFiniteNumber(padding)) {
+    return padding
+  }
+
+  if (
+    padding === null ||
+    typeof padding !== "object" ||
+    Array.isArray(padding)
+  ) {
+    return undefined
+  }
+
+  const sanitizedPadding: {
+    left?: number
+    right?: number
+    top?: number
+    bottom?: number
+  } = {}
+  for (const side of ["left", "right", "top", "bottom"] as const) {
+    const value = (padding as Record<string, unknown>)[side]
+    if (isNonNegativeFiniteNumber(value)) {
+      sanitizedPadding[side] = value
+    }
+  }
+
+  return Object.keys(sanitizedPadding).length > 0
+    ? sanitizedPadding
+    : undefined
+}
+
+function sanitizeUsermetaEmbedOptions(spec: VegaLiteSpec): void {
+  const usermeta = getUsermeta(spec)
+  if (!usermeta || !("embedOptions" in usermeta)) {
+    return
+  }
+
+  const sanitizedEmbedOptions: NonNullable<VegaLiteUsermeta["embedOptions"]> =
+    {}
+  const embedOptions = usermeta.embedOptions
+
+  const theme = embedOptions?.theme
+  if (theme !== "streamlit" && (typeof theme === "string" || theme === null)) {
+    sanitizedEmbedOptions.theme = theme
+  }
+
+  const renderer = sanitizeRenderer(embedOptions?.renderer)
+  if (renderer) {
+    sanitizedEmbedOptions.renderer = renderer
+  }
+
+  const padding = sanitizePadding(embedOptions?.padding)
+  if (padding !== undefined) {
+    sanitizedEmbedOptions.padding = padding
+  }
+
+  if (Object.keys(sanitizedEmbedOptions).length > 0) {
+    usermeta.embedOptions = sanitizedEmbedOptions
+    return
+  }
+
+  delete usermeta.embedOptions
+}
 
 /**
  * Prepares the vega-lite spec for selections by transforming the select parameters
@@ -129,16 +233,19 @@ const generateSpec = (
   if (typeof spec.width === "number" && spec.width <= 0) {
     delete spec.width
   }
-  if (vegaLiteTheme === "streamlit") {
+  const usermetaTheme = getUsermeta(spec)?.embedOptions?.theme
+
+  if (vegaLiteTheme === "streamlit" || usermetaTheme === "streamlit") {
     spec.config = applyStreamlitTheme(spec.config, theme)
-  } else if (spec.usermeta?.embedOptions?.theme === "streamlit") {
-    spec.config = applyStreamlitTheme(spec.config, theme)
-    // Remove the theme from the usermeta so it doesn't get picked up by vega embed.
-    spec.usermeta.embedOptions.theme = undefined
   } else {
     // Apply minor theming improvements to work better with Streamlit
     spec.config = applyThemeDefaults(spec.config, theme)
   }
+  // Keep only safe vega-embed presentation options for compatibility. Streamlit's
+  // theme is applied above and removed so vega-embed doesn't try to resolve it.
+  // Behavior-bearing options stay stripped, including chart actions that open
+  // same-origin pages with serialized spec contents.
+  sanitizeUsermetaEmbedOptions(spec)
 
   if (spec.title) {
     if (typeof spec.title === "string") {
@@ -221,6 +328,9 @@ const generateSpec = (
  * Preprocesses the element to generate the VegaLite spec.
  * It stabilizes some of the references (e.g. selectionMode and spec)
  * and avoids further processing if unnecessary.
+ *
+ * Returns the processed element along with a `baseSpecKey` that is stable
+ * across container dimension changes (for use with native Vega resize API).
  */
 export const useVegaElementPreprocessor = (
   element: VegaLiteChartElement,
@@ -228,7 +338,7 @@ export const useVegaElementPreprocessor = (
   containerHeight: number,
   useContainerWidth: boolean,
   useContainerHeight: boolean
-): VegaLiteChartElement => {
+): VegaLiteChartElement & { baseSpecKey: string } => {
   const theme = useEmotionTheme()
 
   const {
@@ -249,6 +359,82 @@ export const useVegaElementPreprocessor = (
     return inputSelectionMode
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep comparison via serialized key
   }, [selectionModeKey])
+
+  // The structural spec generated with neutral (0) container dimensions. This is
+  // only recomputed when non-dimension inputs change, keeping it stable across
+  // container resizes.
+  const baseSpec = useMemo(
+    () =>
+      generateSpec(
+        inputSpec,
+        useContainerWidth,
+        useContainerHeight,
+        vegaLiteTheme,
+        selectionMode,
+        theme,
+        0, // Use 0 for container dimensions
+        0
+      ),
+    [
+      inputSpec,
+      useContainerWidth,
+      useContainerHeight,
+      vegaLiteTheme,
+      selectionMode,
+      theme,
+    ]
+  )
+
+  // Stable key that changes only when non-dimension parts of the spec change,
+  // OR when fixed (non-container-driven) dimensions change.
+  // Container-driven dimensions are excluded because they change frequently during
+  // resize and we handle those via Vega's native resize API for better performance.
+  // Fixed dimensions (from the spec itself) are included because they represent
+  // intentional user-specified sizes that should trigger a view recreation.
+  // We also include useContainerWidth/useContainerHeight booleans in the key because
+  // transitioning to/from container-driven sizing (e.g., entering fullscreen) requires
+  // a full view recreation to properly apply the new dimensions.
+  // Concat compositions (vconcat/hconcat/concat) bake per-child dimensions at
+  // view-creation time, which Vega's native resize API cannot update. For these
+  // charts we include the container dimensions in the key so a container-driven
+  // dimension change triggers a full view recreation (preserving correct
+  // resizing), instead of the native-resize fast path used for single-view charts.
+  const isConcatComposition =
+    "vconcat" in baseSpec || "hconcat" in baseSpec || "concat" in baseSpec
+  // Only concat compositions need container dimensions baked into the key. For
+  // single-view charts these stay `undefined`, so the memo below does not
+  // recompute on every resize (the native resize fast-path handles those).
+  const concatWidth =
+    isConcatComposition && useContainerWidth ? containerWidth : undefined
+  const concatHeight =
+    isConcatComposition && useContainerHeight ? containerHeight : undefined
+
+  const baseSpecKey = useMemo(() => {
+    // Only strip dimensions that are container-driven.
+    // Fixed dimensions from the spec should be included in the key.
+    const specForKey = { ...baseSpec }
+    if (useContainerWidth) {
+      delete specForKey.width
+    }
+    if (useContainerHeight) {
+      delete specForKey.height
+    }
+    // Include the sizing mode flags so that transitioning to/from
+    // container-driven sizing triggers a view recreation.
+    return JSON.stringify({
+      spec: specForKey,
+      useContainerWidth,
+      useContainerHeight,
+      concatWidth,
+      concatHeight,
+    })
+  }, [
+    baseSpec,
+    useContainerWidth,
+    useContainerHeight,
+    concatWidth,
+    concatHeight,
+  ])
 
   const spec = useMemo(
     () =>
@@ -286,5 +472,6 @@ export const useVegaElementPreprocessor = (
     data,
     datasets,
     useContainerWidth,
+    baseSpecKey,
   }
 }

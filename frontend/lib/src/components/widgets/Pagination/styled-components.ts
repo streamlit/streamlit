@@ -47,23 +47,23 @@ export const StyledPaginationButton =
       minWidth: theme.spacing.threeXL,
       height: theme.spacing.threeXL,
       padding: `0 ${theme.spacing.sm}`,
-      border: isSelected
-        ? `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`
-        : `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
+      border: "none",
       borderRadius: theme.radii.default,
-      backgroundColor: theme.colors.transparent,
+      backgroundColor: isSelected
+        ? theme.colors.darkenedBgMix25
+        : theme.colors.transparent,
       color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
       cursor: disabled ? "not-allowed" : "pointer",
       fontSize: theme.fontSizes.sm,
       fontFamily: theme.fonts.sansSerif,
-      fontWeight: isSelected
-        ? theme.fontWeights.bold
-        : theme.fontWeights.normal,
-      transition: "border-color 0.15s ease, background-color 0.15s ease",
+      fontWeight: theme.fontWeights.normal,
+      transition: "background-color 0.15s ease",
       lineHeight: theme.lineHeights.none,
 
       "&:hover:not(:disabled)": {
-        backgroundColor: theme.colors.darkenedBgMix25,
+        backgroundColor: isSelected
+          ? theme.colors.darkenedBgMix40
+          : theme.colors.darkenedBgMix25,
       },
 
       "&:focus-visible": {
@@ -79,8 +79,9 @@ export const StyledPaginationButton =
   )
 
 /**
- * Non-interactive ellipsis indicator styled like a page button but using
- * a span element since it's not a button.
+ * Non-interactive ellipsis indicator that shares the page button's sizing and
+ * typography, but omits the button background, border radius, and interactive
+ * states since it's a plain span rather than a button.
  */
 export const StyledEllipsis = styled.span(({ theme }) => ({
   display: "flex",
@@ -89,8 +90,6 @@ export const StyledEllipsis = styled.span(({ theme }) => ({
   minWidth: theme.spacing.threeXL,
   height: theme.spacing.threeXL,
   padding: `0 ${theme.spacing.sm}`,
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
-  borderRadius: theme.radii.default,
   backgroundColor: theme.colors.transparent,
   color: theme.colors.fadedText40,
   fontSize: theme.fontSizes.sm,

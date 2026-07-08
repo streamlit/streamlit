@@ -25,9 +25,9 @@ import {
 import { Config, PageConfig } from "@streamlit/protobuf"
 
 import {
-  DownloadContext,
-  DownloadContextProps,
-} from "./components/core/DownloadContext"
+  BackendOperationContext,
+  BackendOperationContextProps,
+} from "./components/core/BackendOperationContext"
 import {
   FormsContext,
   FormsContextProps,
@@ -85,6 +85,7 @@ const defaultSidebarConfigContextValue = {
   sidebarChevronDownshift: 0,
   expandSidebarNav: false,
   hideSidebarNav: false,
+  isSidebarLocked: false,
 }
 
 const defaultThemeContextValue = {
@@ -107,9 +108,16 @@ const defaultViewStateContextValue = {
 }
 
 const defaultScriptRunContextValue = {
+  stopScript: () => {},
   scriptRunState: ScriptRunState.NOT_RUNNING,
   scriptRunId: "script run 123",
   fragmentIdsThisRun: [],
+  scriptRunFinishedSequence: 0,
+  scriptRunFinishedFragmentIds: [],
+}
+
+const defaultBackendOperationContextValue = {
+  backendOperationClient: undefined,
 }
 
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
@@ -131,7 +139,11 @@ export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
                     <ScriptRunContext.Provider
                       value={defaultScriptRunContextValue}
                     >
-                      {children}
+                      <BackendOperationContext.Provider
+                        value={defaultBackendOperationContextValue}
+                      >
+                        {children}
+                      </BackendOperationContext.Provider>
                     </ScriptRunContext.Provider>
                   </NavigationContext.Provider>
                 </ViewStateContext.Provider>
@@ -164,10 +176,14 @@ export function mockWindowLocation(hostname: string): void {
   // @ts-expect-error
   delete window.location
 
+  const hasScheme = /^https?:\/\//.test(hostname)
+  const origin = hasScheme ? new URL(hostname).origin : `https://${hostname}`
+
   // @ts-expect-error
   window.location = {
     assign: vi.fn(),
-    hostname: hostname,
+    hostname: hasScheme ? new URL(hostname).hostname : hostname,
+    origin,
   }
 }
 
@@ -184,7 +200,7 @@ export interface RenderWithContextsOptions {
    * provides the ref through context (mirroring App.tsx behavior).
    */
   sidebarConfigContext?: Partial<
-    Omit<SidebarConfigContextProps, "appRootRef">
+    Omit<SidebarConfigContextProps, "appRootRef" | "isSidebarLocked">
   > & {
     appRootRef?: boolean
   }
@@ -192,7 +208,7 @@ export interface RenderWithContextsOptions {
   navigationContext?: Partial<NavigationContextProps>
   formsContext?: Partial<FormsContextProps>
   scriptRunContext?: Partial<ScriptRunContextProps>
-  downloadContext?: Partial<DownloadContextProps>
+  backendOperationContext?: Partial<BackendOperationContextProps>
 }
 
 /**
@@ -264,6 +280,11 @@ export const renderWithContexts = (
           )
         )
       : {}),
+    // Derive isSidebarLocked from initialSidebarState so tests can't provide
+    // an inconsistent context value.
+    isSidebarLocked:
+      (options.sidebarConfigContext?.initialSidebarState ??
+        PageConfig.SidebarState.AUTO) === PageConfig.SidebarState.LOCKED,
   }
 
   // Track whether we should create an app root wrapper
@@ -295,6 +316,9 @@ export const renderWithContexts = (
     scriptRunState: ScriptRunState.NOT_RUNNING,
     scriptRunId: "script run 123",
     fragmentIdsThisRun: [],
+    scriptRunFinishedSequence: 0,
+    scriptRunFinishedFragmentIds: [],
+    stopScript: vi.fn(),
     ...options.scriptRunContext,
   }
 
@@ -303,9 +327,9 @@ export const renderWithContexts = (
     ...options.formsContext,
   }
 
-  let currentDownloadContextProps: DownloadContextProps = {
-    requestDeferredFile: undefined,
-    ...options.downloadContext,
+  let currentBackendOperationContextProps: BackendOperationContextProps = {
+    backendOperationClient: undefined,
+    ...options.backendOperationContext,
   }
 
   const Wrapper: FC<PropsWithChildren> = ({ children }) => {
@@ -345,15 +369,15 @@ export const renderWithContexts = (
                       <ScriptRunContext.Provider
                         value={currentScriptRunContextProps}
                       >
-                        <DownloadContext.Provider
-                          value={currentDownloadContextProps}
+                        <BackendOperationContext.Provider
+                          value={currentBackendOperationContextProps}
                         >
                           <FormsContext.Provider
                             value={currentFormsContextProps}
                           >
                             {content}
                           </FormsContext.Provider>
-                        </DownloadContext.Provider>
+                        </BackendOperationContext.Provider>
                       </ScriptRunContext.Provider>
                     </ViewStateContext.Provider>
                   </NavigationContext.Provider>
@@ -396,9 +420,15 @@ export const renderWithContexts = (
             ([key]) => key !== "appRootRef"
           )
         )
+        const newInitialSidebarState =
+          newOptions.sidebarConfigContext.initialSidebarState ??
+          currentSidebarConfigContextProps.initialSidebarState
         currentSidebarConfigContextProps = {
           ...currentSidebarConfigContextProps,
           ...filteredSidebarConfig,
+          // Re-derive so it stays consistent with initialSidebarState.
+          isSidebarLocked:
+            newInitialSidebarState === PageConfig.SidebarState.LOCKED,
         }
       }
       if (newOptions?.themeContext) {
@@ -419,10 +449,10 @@ export const renderWithContexts = (
           ...newOptions.formsContext,
         }
       }
-      if (newOptions?.downloadContext) {
-        currentDownloadContextProps = {
-          ...currentDownloadContextProps,
-          ...newOptions.downloadContext,
+      if (newOptions?.backendOperationContext) {
+        currentBackendOperationContextProps = {
+          ...currentBackendOperationContextProps,
+          ...newOptions.backendOperationContext,
         }
       }
       if (newOptions?.scriptRunContext) {

@@ -48,6 +48,9 @@ interface UseVegaEmbedOutput {
     datasets: WrappedNamedDataset[]
   ) => Promise<VegaView | null>
   finalizeView: () => void
+  resizeView: (width: number, height: number) => Promise<boolean>
+  exportToPng: () => Promise<string | null>
+  isViewReady: boolean
 }
 
 /**
@@ -131,7 +134,22 @@ export function useVegaEmbed(
           // avoid inlining styles.
           tooltip: { disableDefaultStyle: true },
           defaultStyle: false,
-          forceActionsMenu: true,
+          // Disable all built-in vega-embed action links ("View Source", "Open
+          // in Vega Editor", "Save as PNG/SVG"). Combined with sanitizing
+          // usermeta.embedOptions (see useVegaElementPreprocessor), this prevents
+          // a chart spec from using these actions to open same-origin pages with
+          // serialized spec contents. We expose our own toolbar actions instead.
+          // We pass an object of disabled actions rather than `actions: false` so
+          // vega-embed still renders the chart inside a `.chart-wrapper` element,
+          // preserving the DOM structure, sizing, and ARIA that our styles and
+          // e2e tests rely on. Because `defaultStyle` is false and
+          // `forceActionsMenu` is unset, no actions menu button is rendered.
+          actions: {
+            export: false,
+            source: false,
+            compiled: false,
+            editor: false,
+          },
         }
 
         const { vgSpec, view, finalize } = await embed(
@@ -270,5 +288,54 @@ export function useVegaEmbed(
     [updateData, isCreatingView]
   )
 
-  return { createView, updateView, finalizeView }
+  const resizeView = useCallback(
+    async (width: number, height: number): Promise<boolean> => {
+      if (vegaViewRef.current === null || isCreatingView) {
+        return false
+      }
+      try {
+        if (width > 0) {
+          vegaViewRef.current.width(width)
+        }
+        if (height > 0) {
+          vegaViewRef.current.height(height)
+        }
+        await vegaViewRef.current.resize().runAsync()
+        return true
+      } catch (error) {
+        LOG.warn("Failed to resize Vega view:", error)
+        return false
+      }
+    },
+    [isCreatingView]
+  )
+
+  const exportToPng = useCallback(async (): Promise<string | null> => {
+    if (vegaViewRef.current === null || isCreatingView) {
+      return null
+    }
+
+    try {
+      return await vegaViewRef.current.toImageURL("png")
+    } catch (error) {
+      LOG.warn("Failed to export Vega view as PNG:", error)
+      return null
+    }
+  }, [isCreatingView])
+
+  // Whether the view exists and is not mid-creation, so it's safe to resize.
+  // This is derived from a ref (`vegaViewRef`) rather than state, so it only
+  // reflects the latest value on re-render. That's sufficient here because
+  // `setIsCreatingView` toggles around view creation and forces the re-render
+  // that recomputes this flag once the view becomes ready.
+  const isViewReady = vegaViewRef.current !== null && !isCreatingView
+
+  return {
+    createView,
+    updateView,
+    finalizeView,
+    resizeView,
+    exportToPng,
+    isViewReady,
+  }
 }

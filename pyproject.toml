@@ -58,12 +58,15 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.34",
+  "ty==0.0.56",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.15.12",
-  # We are pinning the upper version to not break our CI on updates,
+  "ruff==0.15.20",
+  # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
-  "mypy>=1.16.1,<1.21",
+  "mypy==2.1.0",
+  # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
+  # Streamlit still type-checks as Python 3.10.
+  "numpy<2.5",
   "mypy-protobuf>=3.2",
   "semver>=3",
   "setuptools>=65.5.1",
@@ -90,7 +93,8 @@ dev = [
 test = [
   "streamlit",
   # Testing infrastructure dependencies:
-  "pytest>=8.3.5",
+  # pytest >= 9.1.0 is causing issues and is not yet supported.
+  "pytest>=9.0.3,<9.1.0",
   "pytest-cov",
   "hypothesis>=6.17.4",
   "parameterized",
@@ -113,10 +117,13 @@ test = [
   # Used by vega-lite / altair e2e tests:
   "vega_datasets",
   # Only for unit tests:
+  # httpx2 is used by starlette's TestClient (>=1.2); httpx is still required
+  # by authlib's httpx_client integration used in the auth route tests.
   "httpx>=0.24.1",
+  "httpx2>=2.0.0",
   # Playwright and E2E test dependencies:
   # We pin playwright to a minor version to avoid new browser versions breaking our CI.
-  "playwright==1.59.*",
+  "playwright==1.61.*",
   "pytest-playwright>=0.3.3",
   "pixelmatch>=0.3.0",
   "pytest-xdist>=3.6.1",
@@ -246,6 +253,7 @@ ignore = [
   "PLR2004", # Checks for numerical values that could be put into a constant.
   "PLR6301", # Checks for methods that do not use self.
   "PLW0108", # Checks for lambdas that can be replaced by existing functions.
+  "PLW0717", # Checks for try clauses with too many statements (new in ruff 0.15.14).
   "PLW3201", # Checks for bad dunder method names.
   "PT012",   # Checks for pytest.raises context managers with multiple statements.
   "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
@@ -255,6 +263,8 @@ ignore = [
   "RSE102",  # Checks for unnecessary parentheses on raised exceptions.
   "RUF052",  # Checks for dummy variables that are used.
   "RUF067",  # Checks for non empty __init__ modules.
+  "RUF075",  # Checks for context managers that don't catch exceptions (new preview rule in ruff 0.15.14).
+  "RUF076",  # Checks for autouse=True in pytest.fixture decorators (new rule in ruff 0.15.17; autouse is intentional in our fixtures).
   "SIM105",  # Enforces use of contextlib.suppress.
   "SIM108",  # Enforces ternary operators instead of if-else.
   "SIM115",  # Enforces context manager for opening files.

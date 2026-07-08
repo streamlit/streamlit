@@ -14,9 +14,9 @@
 
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
 
 def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFunction):
     st_tabs = themed_app.get_by_test_id("stTabs")
-    expect(st_tabs).to_have_count(14)
+    expect(st_tabs).to_have_count(17)
 
     assert_snapshot(st_tabs.nth(0), name="st_tabs-sidebar")
     assert_snapshot(st_tabs.nth(1), name="st_tabs-text_input")
@@ -200,6 +200,34 @@ def test_dynamic_tabs_programmatic_control(app: Page):
     expect(prog_tabs.get_by_text("Beta tab content")).not_to_be_visible()
 
 
+def test_programmatic_nav_preserves_lazy_loading(app: Page):
+    """Regression test for #15458: tab.open must stay True after programmatic
+    nav followed by a widget interaction in the new tab.
+    """
+    prog_tabs = (
+        app.get_by_test_id("stTabs")
+        .filter(has=app.get_by_role("tab", name="Alpha"))
+        .first
+    )
+    counts_text = app.get_by_text("Prog tab counts -", exact=False)
+
+    # Step 1: interact with a widget while in Alpha (sets widgetMgr to "Alpha")
+    click_button(app, "Increment Alpha")
+    expect(counts_text).to_contain_text("Alpha: 1")
+
+    # Step 2: programmatic nav to Beta via session_state
+    click_button(app, "Go to Beta")
+    expect(prog_tabs.get_by_text("Beta tab content")).to_be_visible()
+    expect(prog_tabs.get_by_text("Alpha tab content")).not_to_be_visible()
+
+    # Step 3: interact with widget inside Beta — before the fix this silently
+    # failed because the stale widgetMgr value caused tab.open=False for Beta
+    click_button(app, "Increment Beta")
+    expect(counts_text).to_contain_text("Beta: 1")
+    # Alpha must not have re-executed
+    expect(counts_text).to_contain_text("Alpha: 1")
+
+
 def test_tabs_key_only_does_not_trigger_rerun(app: Page):
     """Test that tabs with key but no on_change does not trigger reruns."""
     rerun_text = app.get_by_text("Tabs key-only rerun count:")
@@ -339,3 +367,132 @@ def test_keyed_tabs_persist_active_tab_across_remount(app: Page):
     expect(keyed_tabs.get_by_role("tab", name="Details")).to_have_attribute(
         "aria-selected", "true"
     )
+
+
+def _count_laid_out(locator: Locator | Page, test_id: str) -> int:
+    """Count elements with the given test id that are actually laid out; hidden
+    elements (``display: none``) have a null offsetParent.
+    """
+    count = locator.get_by_test_id(test_id).evaluate_all(
+        "(elements) => elements.filter(el => el.offsetParent !== null).length"
+    )
+    return int(count)
+
+
+def _expect_single_visible_chart(app: Page, rerun_tabs: Locator) -> None:
+    """Only the active tab's chart should be laid out. Wrapped in wait_until
+    because Vega charts render asynchronously.
+    """
+    wait_until(app, lambda: _count_laid_out(rerun_tabs, "stVegaLiteChart") == 1)
+
+
+def _change_active_tab_selectbox(rerun_tabs: Locator, option: str) -> None:
+    """Change the selectbox in the active tab to trigger a widget rerun.
+
+    Every force-mounted tab renders a selectbox with the same label, so we scope to
+    the active tab panel. Opening the dropdown makes React Aria mark the background
+    content ``aria-hidden``, which drops any locator scoped through the panel
+    mid-interaction (inconsistently across browsers). To avoid re-resolving the
+    now-hidden input, we click it once to open the dropdown, then drive selection via
+    the page keyboard and the portaled (not-hidden) option list.
+    """
+    page = rerun_tabs.page
+    selectbox_input = (
+        rerun_tabs.get_by_role("tabpanel")
+        .get_by_test_id("stSelectbox")
+        .filter(has_text="Rerun tab select")
+        .locator("input")
+    )
+    selectbox_input.click()
+    page.keyboard.press("ArrowDown")
+    dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(dropdown).to_be_visible()
+    dropdown.get_by_role("option", name=option, exact=True).click()
+    wait_for_app_run(page)
+
+
+def _count_visible_tab_panels(locator: Locator | Page) -> int:
+    """Count tab panels that are actually laid out. Used to assert the fix keeps
+    only active panels visible.
+    """
+    return _count_laid_out(locator, "stTabPanel")
+
+
+def test_widget_rerun_keeps_inactive_tab_panels_hidden(app: Page):
+    """Regression test for #15892 and #15893.
+
+    Ordinary tabs force-mount inactive panels. A widget rerun inside the active
+    tab must not make the other panels (in these tabs, the sidebar tabs, or
+    anywhere else on the page) become visible.
+    """
+    rerun_tabs = (
+        app.get_by_test_id("stTabs")
+        .filter(has=app.get_by_role("tab", name="Rerun Fort Wayne"))
+        .first
+    )
+    sidebar = app.get_by_test_id("stSidebar")
+
+    expect(rerun_tabs.get_by_role("tab", name="Rerun All")).to_have_attribute(
+        "aria-selected", "true"
+    )
+    expect(rerun_tabs.get_by_text("Rerun All tab marker")).to_be_visible()
+    expect(rerun_tabs.get_by_text("Rerun Indy tab marker")).not_to_be_visible()
+    _expect_single_visible_chart(app, rerun_tabs)
+
+    # Sidebar tabs use the same force-mount mechanism; only the active panel shows.
+    expect(sidebar.get_by_text("I am in the sidebar", exact=True)).to_be_visible()
+    expect(
+        sidebar.get_by_text("I'm also in the sidebar", exact=True)
+    ).not_to_be_visible()
+
+    # Capture the number of visible panels across the whole page before the rerun.
+    visible_panels_before = _count_visible_tab_panels(app)
+
+    _change_active_tab_selectbox(rerun_tabs, "B")
+
+    expect(rerun_tabs.get_by_role("tablist")).to_be_visible()
+    expect(rerun_tabs.get_by_role("tab", name="Rerun All")).to_have_attribute(
+        "aria-selected", "true"
+    )
+    expect(rerun_tabs.get_by_text("Rerun All tab marker")).to_be_visible()
+    expect(rerun_tabs.get_by_text("Rerun Indy tab marker")).not_to_be_visible()
+    expect(rerun_tabs.get_by_text("Rerun Clarksville tab marker")).not_to_be_visible()
+    expect(rerun_tabs.get_by_text("Rerun Fort Wayne tab marker")).not_to_be_visible()
+    _expect_single_visible_chart(app, rerun_tabs)
+
+    # Sidebar tabs must stay collapsed after the rerun.
+    expect(sidebar.get_by_text("I am in the sidebar", exact=True)).to_be_visible()
+    expect(
+        sidebar.get_by_text("I'm also in the sidebar", exact=True)
+    ).not_to_be_visible()
+
+    # The rerun must not add visible panels anywhere (the reported bug stacked all
+    # panels down the page). wait_until guards against async re-layout.
+    wait_until(app, lambda: _count_visible_tab_panels(app) == visible_panels_before)
+
+
+def test_nested_tabs_stay_collapsed_after_rerun(app: Page):
+    """Regression guard for #15892/#15893 with nested tabs: a rerun triggered from
+    a doubly-nested widget must keep exactly the active outer + active inner panel
+    visible (2 panels), not stack every nested panel.
+    """
+    nested_tabs = (
+        app.get_by_test_id("stTabs")
+        .filter(has=app.get_by_role("tab", name="Outer A"))
+        .first
+    )
+
+    expect(nested_tabs.get_by_text("Outer A marker")).to_be_visible()
+    expect(nested_tabs.get_by_text("Inner 1 marker")).to_be_visible()
+    expect(nested_tabs.get_by_text("Inner 2 marker")).not_to_be_visible()
+    expect(nested_tabs.get_by_text("Outer B marker")).not_to_be_visible()
+    # Active outer panel + active inner panel = 2 visible panels in this group.
+    wait_until(app, lambda: _count_visible_tab_panels(nested_tabs) == 2)
+
+    click_button(app, "Nested rerun button")
+
+    expect(nested_tabs.get_by_text("Outer A marker")).to_be_visible()
+    expect(nested_tabs.get_by_text("Inner 1 marker")).to_be_visible()
+    expect(nested_tabs.get_by_text("Inner 2 marker")).not_to_be_visible()
+    expect(nested_tabs.get_by_text("Outer B marker")).not_to_be_visible()
+    wait_until(app, lambda: _count_visible_tab_panels(nested_tabs) == 2)

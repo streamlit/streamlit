@@ -227,7 +227,8 @@ describe("ComponentInstance", () => {
     )
     const skeleton = screen.getByTestId("stSkeleton")
     expect(skeleton).toBeInTheDocument()
-    expect(skeleton).toHaveStyle("height: 2.75rem")
+    // Defaults to the standard widget height (theme.sizes.minElementHeight).
+    expect(skeleton).toHaveStyle("height: 2.5rem")
 
     const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
     expect(iframe).toHaveAttribute("height", "0")

@@ -32,12 +32,14 @@ import streamlit as st
 import streamlit.components.v1 as components
 from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
-from streamlit.connections import SnowparkConnection, SQLConnection
+from streamlit.connections import SQLConnection
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.testing.v1.util import patch_config_options
+from streamlit.web import skills
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_pep649_function
 
@@ -56,8 +58,7 @@ def _mock_script_run_ctx() -> MagicMock:
     ctx = MagicMock()
     ctx.gather_usage_stats = True
     ctx.command_tracking_deactivated = False
-    ctx.tracked_commands = []
-    ctx.tracked_commands_counter = Counter()
+    ctx.shared = SharedRunState()
     ctx.fragment_ids_this_run = []
     return ctx
 
@@ -197,7 +198,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # Also support classes as input
             (datetime.date, "datetime.date"),
             (pd.DataFrame, "DataFrame"),
-            (SnowparkConnection, "SnowparkConnection"),
             (SQLConnection, "SQLConnection"),
         ]
     )
@@ -313,24 +313,24 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
         test_function(param1=10, param2="foobar")
 
-        assert len(ctx.tracked_commands) == 1
-        assert ctx.tracked_commands[0].name.endswith("test_function")
-        assert ctx.tracked_commands[0].name.startswith("external:")
+        assert len(ctx.shared.tracked_commands) == 1
+        assert ctx.shared.tracked_commands[0].name.endswith("test_function")
+        assert ctx.shared.tracked_commands[0].name.startswith("external:")
 
         st.markdown("This function should be tracked")
 
-        assert len(ctx.tracked_commands) == 2
-        assert ctx.tracked_commands[0].name.endswith("test_function")
-        assert ctx.tracked_commands[0].name.startswith("external:")
-        assert ctx.tracked_commands[1].name == "markdown"
+        assert len(ctx.shared.tracked_commands) == 2
+        assert ctx.shared.tracked_commands[0].name.endswith("test_function")
+        assert ctx.shared.tracked_commands[0].name.startswith("external:")
+        assert ctx.shared.tracked_commands[1].name == "markdown"
 
         ctx.reset()
         # Deactivate usage stats gathering
         ctx.gather_usage_stats = False
 
-        assert len(ctx.tracked_commands) == 0
+        assert len(ctx.shared.tracked_commands) == 0
         test_function(param1=10, param2="foobar")
-        assert len(ctx.tracked_commands) == 0
+        assert len(ctx.shared.tracked_commands) == 0
 
     @parameterized.expand(
         [
@@ -364,12 +364,14 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         with contextlib.suppress(Exception):
             command()
 
-        assert len(ctx.tracked_commands) > 0, f"No command tracked for {expected_name}"
+        assert len(ctx.shared.tracked_commands) > 0, (
+            f"No command tracked for {expected_name}"
+        )
 
         # Sometimes multiple commands are executed
         # so we check the full list of tracked commands
         assert expected_name in [
-            tracked_commands.name for tracked_commands in ctx.tracked_commands
+            tracked_commands.name for tracked_commands in ctx.shared.tracked_commands
         ], f"Command {expected_name} was not tracked."
 
     def test_public_api_commands(self):
@@ -421,7 +423,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # Assert that the API name is in the list of tracked commands.
             # (It's possible for multiple tracked commands to be issued as
             # the result of a single API call.)
-            assert api_name in [cmd.name for cmd in ctx.tracked_commands], (
+            assert api_name in [cmd.name for cmd in ctx.shared.tracked_commands], (
                 (
                     f"When executing `st.{api_name}()`, we expect the string "
                     f'"{api_name}" to be in the list of tracked commands.'
@@ -460,7 +462,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # (It's possible for multiple tracked commands to be issued as
             # the result of a single API call.)
             assert f"column_config.{api_name}" in [
-                cmd.name for cmd in ctx.tracked_commands
+                cmd.name for cmd in ctx.shared.tracked_commands
             ], (
                 (
                     f"When executing `st.{api_name}()`, we expect the string "
@@ -497,11 +499,11 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             for func in funcs:
                 func()
 
-        assert len(ctx.tracked_commands) <= metrics_util._MAX_TRACKED_COMMANDS
+        assert len(ctx.shared.tracked_commands) <= metrics_util._MAX_TRACKED_COMMANDS
 
         # Test that no individual command is tracked more than _MAX_TRACKED_PER_COMMAND
         command_counts = Counter(
-            [command.name for command in ctx.tracked_commands]
+            [command.name for command in ctx.shared.tracked_commands]
         ).most_common()
         assert command_counts[0][1] <= metrics_util._MAX_TRACKED_PER_COMMAND
 
@@ -710,8 +712,8 @@ def test_gather_metrics_empty_name_logs_warning_and_tracks_as_undefined() -> Non
         assert tracked() == "x"
 
     mock_warning.assert_called_once_with("gather_metrics: name is empty")
-    assert len(ctx.tracked_commands) == 1
-    assert ctx.tracked_commands[0].name == "undefined"
+    assert len(ctx.shared.tracked_commands) == 1
+    assert ctx.shared.tracked_commands[0].name == "undefined"
 
 
 def test_gather_metrics_swallows_command_telemetry_errors() -> None:
@@ -736,7 +738,7 @@ def test_gather_metrics_swallows_command_telemetry_errors() -> None:
 
     mock_debug.assert_called_once()
     assert mock_debug.call_args[0][0] == "Failed to collect command telemetry"
-    assert ctx.tracked_commands == []
+    assert ctx.shared.tracked_commands == ()
 
 
 def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
@@ -758,8 +760,8 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         with pytest.raises(RerunException):
             raises_rerun()
 
-    assert len(ctx.tracked_commands) == 1
-    assert ctx.tracked_commands[0].time == metrics_util.to_microseconds(0.25)
+    assert len(ctx.shared.tracked_commands) == 1
+    assert ctx.shared.tracked_commands[0].time == metrics_util.to_microseconds(0.25)
 
 
 @pytest.mark.parametrize("server_mode", ["tornado", "starlette-app"])
@@ -791,11 +793,11 @@ def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
 @pytest.fixture(autouse=True)
 def _clear_skills_cache() -> Iterator[None]:
     """Reset the skill-detection cache around each test in this module section."""
-    metrics_util._detect_installed_skills_cached.cache_clear()
-    metrics_util._detect_installed_agents_cached.cache_clear()
+    skills._detect_installed_skills_cached.cache_clear()
+    skills._detect_installed_agents_cached.cache_clear()
     yield
-    metrics_util._detect_installed_skills_cached.cache_clear()
-    metrics_util._detect_installed_agents_cached.cache_clear()
+    skills._detect_installed_skills_cached.cache_clear()
+    skills._detect_installed_agents_cached.cache_clear()
 
 
 @pytest.mark.parametrize("location", ["home", "app", "repo"])
@@ -805,6 +807,7 @@ def _clear_skills_cache() -> Iterator[None]:
         ("agents", ".agents/skills", ".agents/skills"),
         ("claude", ".claude/skills", ".claude/skills"),
         ("codex", ".codex/skills", ".codex/skills"),
+        ("copilot", ".github/skills", ".copilot/skills"),
         ("cortex", ".cortex/skills", ".snowflake/cortex/skills"),
         ("cursor", ".cursor/skills", ".cursor/skills"),
         ("gemini", ".gemini/skills", ".gemini/skills"),
@@ -837,9 +840,11 @@ def test_detect_installed_skills_emits_expected_token(
     _make_skill_dir(roots[location], harness_dir, skill)
 
     monkeypatch.setenv("HOME", str(home))
-    tokens = metrics_util._detect_installed_skills(str(app))
+    tokens = skills.detect_installed_skills(str(app))
 
-    assert f"{location}:{harness}:{skill}" in tokens
+    # Exactly one marker is planted, so assert the full list (``==`` not ``in``)
+    # to also catch a spurious extra token bleeding in from another root.
+    assert tokens == [f"{location}:{harness}:{skill}"]
 
 
 def test_detect_installed_skills_empty_when_absent(
@@ -852,7 +857,7 @@ def test_detect_installed_skills_empty_when_absent(
     app.mkdir()
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_skills(str(app)) == []
+    assert skills.detect_installed_skills(str(app)) == []
 
 
 def test_detect_installed_skills_ignores_unrelated_skill_names(
@@ -864,7 +869,7 @@ def test_detect_installed_skills_ignores_unrelated_skill_names(
     _make_skill_dir(home, ".claude/skills", "some-other-skill")
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_skills(str(tmp_path / "app-missing")) == []
+    assert skills.detect_installed_skills(str(tmp_path / "app-missing")) == []
 
 
 def test_detect_installed_skills_skips_repo_when_same_as_app(
@@ -879,7 +884,7 @@ def test_detect_installed_skills_skips_repo_when_same_as_app(
     _make_skill_dir(app_and_repo, ".claude/skills", "developing-with-streamlit")
 
     monkeypatch.setenv("HOME", str(home))
-    tokens = metrics_util._detect_installed_skills(str(app_and_repo))
+    tokens = skills.detect_installed_skills(str(app_and_repo))
 
     assert tokens == ["app:claude:developing-with-streamlit"]
 
@@ -897,7 +902,7 @@ def test_detect_installed_skills_walks_up_to_repo_root(
     _make_skill_dir(repo, ".agents/skills", "developing-with-streamlit-in-snowflake")
 
     monkeypatch.setenv("HOME", str(home))
-    tokens = metrics_util._detect_installed_skills(str(app))
+    tokens = skills.detect_installed_skills(str(app))
 
     assert tokens == ["repo:agents:developing-with-streamlit-in-snowflake"]
 
@@ -917,7 +922,7 @@ def test_detect_installed_skills_returns_sorted_deduped_tokens(
     _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit")
 
     monkeypatch.setenv("HOME", str(home))
-    tokens = metrics_util._detect_installed_skills(str(app))
+    tokens = skills.detect_installed_skills(str(app))
 
     assert tokens == [
         "app:agents:developing-with-streamlit-in-snowflake",
@@ -946,7 +951,7 @@ def test_detect_installed_skills_finds_project_skills_when_home_harness_absent(
     _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit-in-snowflake")
 
     monkeypatch.setenv("HOME", str(home))
-    tokens = metrics_util._detect_installed_skills(str(app))
+    tokens = skills.detect_installed_skills(str(app))
 
     assert tokens == [
         "app:claude:developing-with-streamlit",
@@ -979,7 +984,7 @@ def test_detect_installed_skills_detects_symlinked_skill_dir(
         pytest.skip("Symlinks not supported in this environment")
 
     monkeypatch.setenv("HOME", str(home))
-    tokens = metrics_util._detect_installed_skills(str(app))
+    tokens = skills.detect_installed_skills(str(app))
 
     assert tokens == ["app:claude:developing-with-streamlit"]
 
@@ -993,7 +998,7 @@ def test_create_page_profile_message_sets_installed_skills(
 ) -> None:
     """``installed_skills`` is populated from the detection helper."""
     with patch(
-        "streamlit.runtime.metrics_util._detect_installed_skills",
+        "streamlit.web.skills.detect_installed_skills",
         return_value=detected,
     ):
         msg = metrics_util.create_page_profile_message([], 0, 0)
@@ -1006,6 +1011,7 @@ def test_create_page_profile_message_sets_installed_skills(
         ("agents", ".agents"),
         ("claude", ".claude"),
         ("codex", ".codex"),
+        ("copilot", ".copilot"),
         ("cortex", ".snowflake/cortex"),
         ("cursor", ".cursor"),
         ("gemini", ".gemini"),
@@ -1023,7 +1029,7 @@ def test_detect_installed_agents_finds_each_harness(
     (home / marker_dir).mkdir(parents=True)
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_agents() == [harness]
+    assert skills.detect_installed_agents() == [harness]
 
 
 def test_detect_installed_agents_empty_when_no_harnesses(
@@ -1034,7 +1040,7 @@ def test_detect_installed_agents_empty_when_no_harnesses(
     home.mkdir()
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_agents() == []
+    assert skills.detect_installed_agents() == []
 
 
 def test_detect_installed_agents_ignores_plain_snowflake(
@@ -1045,7 +1051,7 @@ def test_detect_installed_agents_ignores_plain_snowflake(
     (home / ".snowflake").mkdir(parents=True)
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_agents() == []
+    assert skills.detect_installed_agents() == []
 
 
 def test_detect_installed_agents_returns_sorted_deduped_tokens(
@@ -1058,7 +1064,7 @@ def test_detect_installed_agents_returns_sorted_deduped_tokens(
     (home / ".config/opencode").mkdir(parents=True)
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_agents() == ["claude", "cursor", "opencode"]
+    assert skills.detect_installed_agents() == ["claude", "cursor", "opencode"]
 
 
 def test_detect_installed_agents_detects_symlinked_harness_dir(
@@ -1079,7 +1085,7 @@ def test_detect_installed_agents_detects_symlinked_harness_dir(
         pytest.skip("Symlinks not supported in this environment")
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_agents() == ["claude"]
+    assert skills.detect_installed_agents() == ["claude"]
 
 
 @pytest.mark.parametrize(
@@ -1091,7 +1097,7 @@ def test_create_page_profile_message_sets_installed_agents(
 ) -> None:
     """``installed_agents`` is populated from the detection helper."""
     with patch(
-        "streamlit.runtime.metrics_util._detect_installed_agents",
+        "streamlit.web.skills.detect_installed_agents",
         return_value=detected,
     ):
         msg = metrics_util.create_page_profile_message([], 0, 0)

@@ -69,6 +69,8 @@ export interface UseDetailsAnimationOptions {
   label: string
   /** Callback when user toggles (for widget mode) */
   onToggle?: (newOpen: boolean) => void
+  /** Whether the expander is in compact mode (no border) */
+  isCompact?: boolean
 }
 
 interface UseDetailsAnimationResult {
@@ -98,8 +100,11 @@ export function useDetailsAnimation({
   backendExpanded,
   label,
   onToggle,
+  isCompact = false,
 }: UseDetailsAnimationOptions): UseDetailsAnimationResult {
   const [isOpen, setIsOpen] = useState(backendExpanded ?? false)
+  // Border size to add to height calculations (0 for compact mode which has no border)
+  const borderOffset = isCompact ? 0 : 2 * BORDER_SIZE
 
   const detailsRef = useRef<HTMLDetailsElement>(null)
   const summaryRef = useRef<HTMLElement>(null)
@@ -169,7 +174,7 @@ export function useDetailsAnimation({
 
         // Animate to full height (summary + content + borders)
         if (contentHeight > 0) {
-          const targetHeight = summaryHeight + contentHeight + 2 * BORDER_SIZE
+          const targetHeight = summaryHeight + contentHeight + borderOffset
           animationRef.current = animateHeight(
             details,
             currentHeight,
@@ -185,7 +190,7 @@ export function useDetailsAnimation({
         // settles.
       } else {
         // Closing: animate to collapsed height, then set open=false
-        const targetHeight = summaryHeight + 2 * BORDER_SIZE
+        const targetHeight = summaryHeight + borderOffset
         animationRef.current = animateHeight(
           details,
           currentHeight,
@@ -200,7 +205,7 @@ export function useDetailsAnimation({
         )
       }
     },
-    [cancelAnimation]
+    [cancelAnimation, borderOffset]
   )
 
   /**
@@ -252,7 +257,7 @@ export function useDetailsAnimation({
         const currentHeight = details.getBoundingClientRect().height
         /* eslint-enable streamlit-custom/no-force-reflow-access */
 
-        const targetHeight = summaryHeight + contentHeight + 2 * BORDER_SIZE
+        const targetHeight = summaryHeight + contentHeight + borderOffset
 
         // === WRITE PHASE ===
         // Animate if significant difference (threshold avoids micro-animations)

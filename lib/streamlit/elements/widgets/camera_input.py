@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, TypeAlias, cast
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast
 
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
 from streamlit.elements.lib.form_utils import current_form_id
@@ -33,6 +33,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.file_uploader import _get_upload_files
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
@@ -51,6 +52,14 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
 SomeUploadedSnapshotFile: TypeAlias = UploadedFile | DeletedFile | None
+
+CameraInputResolution: TypeAlias = Literal["480p", "720p", "1080p"]
+
+_RESOLUTION_TO_HEIGHT: Final[dict[str, int]] = {
+    "480p": 480,
+    "720p": 720,
+    "1080p": 1080,
+}
 
 
 @dataclass
@@ -95,6 +104,7 @@ class CameraInputMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        resolution: CameraInputResolution | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | None:
         r"""Display a widget that returns pictures from the user's webcam.
@@ -168,6 +178,23 @@ class CameraInputMixin:
             label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
+        resolution : "480p", "720p", "1080p", or None
+            The capture resolution to request from the user's camera. Resolution
+            presets set the target image height in pixels; the width is determined
+            by the camera's native aspect ratio. This can be one of the following:
+
+            - ``None`` (default): Streamlit captures at a resolution determined by
+              the widget's display size.
+            - ``"480p"``: Target a height of 480 pixels.
+            - ``"720p"``: Target a height of 720 pixels.
+            - ``"1080p"``: Target a height of 1080 pixels.
+
+            The value is a request, not a guarantee. Cameras support a fixed set of
+            resolutions, so the browser selects the closest supported resolution and
+            the returned image may differ from the requested height. If you need
+            exact dimensions, resize the captured image after capture (for example,
+            with ``PIL.Image.resize``).
+
         width : "stretch" or int
             The width of the camera input widget. This can be one of the
             following:
@@ -188,6 +215,8 @@ class CameraInputMixin:
 
         Examples
         --------
+        *Example 1:* Capture a photo and display it.
+
         >>> import streamlit as st
         >>>
         >>> enable = st.checkbox("Enable camera")
@@ -200,7 +229,22 @@ class CameraInputMixin:
            https://doc-camera-input.streamlit.app/
            height: 600px
 
+        *Example 2:* Capture a photo at 720p resolution.
+
+        >>> import streamlit as st
+        >>>
+        >>> picture = st.camera_input("Scan QR code", resolution="720p")
+        >>>
+        >>> if picture:
+        ...     st.image(picture)
+
         """
+        if resolution is not None and resolution not in _RESOLUTION_TO_HEIGHT:
+            raise StreamlitAPIException(
+                f"Invalid resolution: {resolution!r}. "
+                f"Must be one of {list(_RESOLUTION_TO_HEIGHT)}, or None."
+            )
+
         ctx = get_script_run_ctx()
         return self._camera_input(
             label=label,
@@ -211,6 +255,7 @@ class CameraInputMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            resolution=resolution,
             width=width,
             ctx=ctx,
         )
@@ -226,6 +271,7 @@ class CameraInputMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        resolution: CameraInputResolution | None = None,
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
     ) -> UploadedFile | None:
@@ -248,6 +294,7 @@ class CameraInputMixin:
             label=label,
             help=help,
             width=width,
+            resolution=resolution,
         )
 
         camera_input_proto = CameraInputProto()
@@ -258,6 +305,9 @@ class CameraInputMixin:
         camera_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
+
+        if resolution is not None:
+            camera_input_proto.resolution_height = _RESOLUTION_TO_HEIGHT[resolution]
 
         if help is not None:
             camera_input_proto.help = dedent(help)
@@ -287,5 +337,5 @@ class CameraInputMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

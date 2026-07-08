@@ -770,6 +770,7 @@ class ConfigTest(unittest.TestCase):
                 "logger.messageFormat",
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
+                "runner.parallelMaxWorkers",
                 "runner.postScriptGC",
                 "runner.fastReruns",
                 "runner.enumCoercion",
@@ -786,16 +787,19 @@ class ConfigTest(unittest.TestCase):
                 "server.disconnectedSessionTTL",
                 "server.enableArrowTruncation",
                 "server.enableCORS",
+                "server.enableExpensiveMemoryStats",
                 "server.enableStaticServing",
                 "server.enableWebsocketCompression",
                 "server.websocketPingInterval",
                 "server.enableXsrfProtection",
+                "server.xsrfCookieSameSite",
                 "server.fileWatcherType",
                 "server.folderWatchBlacklist",
                 "server.folderWatchList",
                 "server.headless",
                 "server.maxMessageSize",
                 "server.maxUploadSize",
+                "server.maxWidgetStateSize",
                 "server.port",
                 "server.runOnSave",
                 "server.scriptHealthCheckEnabled",
@@ -803,6 +807,7 @@ class ConfigTest(unittest.TestCase):
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "server.trustedUserHeaders",
+                "server.unsafeMetricsUserAttributes",
                 "ui.hideTopBar",
             ]
         )
@@ -825,6 +830,81 @@ class ConfigTest(unittest.TestCase):
         mock_logger = get_logger()
         config._check_conflicts()
         mock_logger.warning.assert_called_once()
+
+    @parameterized.expand(["lax", "strict", "none", "Lax", "STRICT", "None"])
+    def test_check_conflicts_xsrf_cookie_same_site_valid(self, value):
+        """Valid (case-insensitive) xsrfCookieSameSite values must not raise."""
+        config._set_option("server.xsrfCookieSameSite", value, "test")
+        config._check_conflicts()
+
+    def test_check_conflicts_xsrf_cookie_same_site_invalid(self):
+        """An invalid xsrfCookieSameSite value must raise a clear error."""
+        config._set_option("server.xsrfCookieSameSite", "invalid", "test")
+        with pytest.raises(
+            RuntimeError,
+            match=r"Invalid value for config option server.xsrfCookieSameSite",
+        ):
+            config._check_conflicts()
+
+    def test_check_conflicts_xsrf_cookie_same_site_rejects_python_none(self):
+        """A None xsrfCookieSameSite value must be rejected, not coerced to "none"."""
+        config._set_option("server.xsrfCookieSameSite", None, "test")
+        with pytest.raises(
+            RuntimeError,
+            match=r"Invalid value for config option server.xsrfCookieSameSite",
+        ):
+            config._check_conflicts()
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_xsrf_cookie_same_site_none_warns_without_ssl(
+        self, get_logger
+    ):
+        """SameSite="none" without SSL must warn about the HTTPS requirement."""
+        config._set_option("server.xsrfCookieSameSite", "none", "test")
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", True, "test")
+        config._set_option("global.developmentMode", False, "test")
+        config._set_option("server.sslCertFile", None, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        warnings = " ".join(str(call) for call in mock_logger.warning.call_args_list)
+        assert "xsrfCookieSameSite" in warnings
+        assert "HTTPS" in warnings
+
+    @patch("streamlit.web.server.server_util.is_xsrf_enabled", return_value=False)
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_xsrf_cookie_same_site_none_warns_when_xsrf_disabled(
+        self, get_logger, _mock_is_xsrf_enabled
+    ):
+        """SameSite="none" with XSRF protection disabled must warn it has no effect."""
+        config._set_option("server.xsrfCookieSameSite", "none", "test")
+        config._set_option("server.enableXsrfProtection", False, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        warnings = " ".join(str(call) for call in mock_logger.warning.call_args_list)
+        assert "xsrfCookieSameSite" in warnings
+        assert "no effect" in warnings
+
+    @patch("streamlit.web.server.server_util.is_xsrf_enabled", return_value=True)
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_xsrf_cookie_same_site_none_skips_no_effect_warning_when_auth_enables_xsrf(
+        self, get_logger, _mock_is_xsrf_enabled
+    ):
+        """SameSite="none" must not warn "no effect" when XSRF is enabled via auth.
+
+        is_xsrf_enabled() can be True (e.g. via an [auth] secrets section) even
+        when server.enableXsrfProtection is false; the XSRF cookie is then still
+        set, so SameSite="none" does take effect.
+        """
+        config._set_option("server.xsrfCookieSameSite", "none", "test")
+        config._set_option("server.enableXsrfProtection", False, "test")
+        config._set_option("server.sslCertFile", None, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        warnings = " ".join(str(call) for call in mock_logger.warning.call_args_list)
+        assert "no effect" not in warnings
+        # It should still warn about the HTTPS/Secure requirement.
+        assert "HTTPS" in warnings
 
     def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")
@@ -892,6 +972,69 @@ class ConfigTest(unittest.TestCase):
             match=r"had multiple mappings.*duplicate",
         ):
             config._parse_trusted_user_headers()
+
+    def test_unsafe_metrics_user_attributes_option_attrs(self):
+        # The option should be a hidden, multiple-value list defaulting to [].
+        option = config._config_options["server.unsafeMetricsUserAttributes"]
+        assert option.multiple
+        assert option.default_val == []
+        assert option.visibility == "hidden"
+        assert config.get_option("server.unsafeMetricsUserAttributes") == []
+
+    def test_unsafe_metrics_user_attributes_parses_from_toml(self):
+        toml_content = """
+        [server]
+        unsafeMetricsUserAttributes = ["email", "user_name"]
+        """
+        config._update_config_with_toml(toml_content, "test")
+        assert config.get_option("server.unsafeMetricsUserAttributes") == [
+            "email",
+            "user_name",
+        ]
+
+    def test_check_metrics_user_attributes_rejects_reserved_name(self):
+        config._set_option(
+            "server.unsafeMetricsUserAttributes", ["email", "type"], "test"
+        )
+        with pytest.raises(
+            RuntimeError,
+            match=r"reserved label name.*type",
+        ):
+            config._check_metrics_user_attributes()
+
+    def test_check_metrics_user_attributes_allows_non_reserved_names(self):
+        config._set_option(
+            "server.unsafeMetricsUserAttributes", ["email", "user_name"], "test"
+        )
+        # Should not raise.
+        config._check_metrics_user_attributes()
+
+    def test_check_metrics_user_attributes_rejects_invalid_label_name(self):
+        # A name that is not a valid OpenMetrics label (contains a hyphen) is
+        # rejected so the endpoint cannot emit malformed metrics.
+        config._set_option(
+            "server.unsafeMetricsUserAttributes", ["email", "user-name"], "test"
+        )
+        with pytest.raises(
+            RuntimeError,
+            match=r"invalid label name.*user-name",
+        ):
+            config._check_metrics_user_attributes()
+
+    def test_check_metrics_user_attributes_rejects_non_string_entries(self):
+        # Non-string entries produce a deterministic RuntimeError instead of a
+        # generic type error later when used as metric label names.
+        config._set_option("server.unsafeMetricsUserAttributes", ["email", 123], "test")
+        with pytest.raises(
+            RuntimeError,
+            match=r"must contain only strings.*123",
+        ):
+            config._check_metrics_user_attributes()
+
+    def test_check_metrics_user_attributes_noop_when_empty(self):
+        # The default empty list disables the feature and must not raise.
+        config._set_option("server.unsafeMetricsUserAttributes", [], "test")
+        config._check_metrics_user_attributes()
 
     def test_maybe_convert_to_number(self):
         assert config._maybe_convert_to_number("1234") == 1234
@@ -1536,6 +1679,9 @@ class ConfigLoadingTest(unittest.TestCase):
 
     def test_max_message_size_default_values(self):
         assert config.get_option("server.maxMessageSize") == 200
+
+    def test_max_widget_state_size_default_values(self):
+        assert config.get_option("server.maxWidgetStateSize") == 25
 
     def test_config_options_removed_on_reparse(self):
         """Test that config options that are removed in a file are also removed

@@ -268,9 +268,11 @@ describe("BidiComponent/utils/theme", () => {
   // Goal: Newly added theming options are acknowledged and handled
   // deliberately.
   describe("#extractComponentsV2Theme", () => {
+    type ThemeProtoField = Exclude<keyof ICustomThemeConfig, "$unknowns">
+
     // These are fields from the CustomThemeConfig proto message that we don't
     // expect to be present in the extracted theme object.
-    const protoFieldsToIgnore: Array<keyof ICustomThemeConfig> = [
+    const protoFieldsToIgnore: ThemeProtoField[] = [
       "base",
       "bodyFont",
       "fontFaces",
@@ -286,7 +288,7 @@ describe("BidiComponent/utils/theme", () => {
     // keys from the ICustomThemeConfig interface. If a new field is added to
     // the protobuf, this object will fail to compile until the new key is
     // added.
-    const allProtoFieldsGuard: Record<keyof ICustomThemeConfig, null> = {
+    const allProtoFieldsGuard: Record<ThemeProtoField, null> = {
       primaryColor: null,
       backgroundColor: null,
       secondaryBackgroundColor: null,
@@ -353,7 +355,7 @@ describe("BidiComponent/utils/theme", () => {
     }
     const allProtoFields = Object.keys(
       allProtoFieldsGuard
-    ) as (keyof ICustomThemeConfig)[]
+    ) as ThemeProtoField[]
 
     it("contains a mapping for all themeable properties from protobuf", () => {
       const extractedTheme = extractComponentsV2Theme(mockTheme.emotion)

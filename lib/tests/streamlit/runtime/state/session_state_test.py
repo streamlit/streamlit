@@ -35,21 +35,42 @@ from streamlit.errors import (
     StreamlitAPIException,
     UnserializableSessionStateError,
 )
-from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
+from streamlit.proto.Common_pb2 import (
+    ChatInputValue as ChatInputValueProto,
+)
+from streamlit.proto.Common_pb2 import (
+    FileUploaderState as FileUploaderStateProto,
+)
+from streamlit.proto.Common_pb2 import (
+    FileURLs as FileURLsProto,
+)
+from streamlit.proto.Common_pb2 import (
+    StringTriggerValue as StringTriggerValueProto,
+)
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
+from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+from streamlit.runtime import runtime_util
+from streamlit.runtime.runtime_util import WidgetStateSizeError
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.runtime.state import SessionState, get_session_state
-from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX, WidgetMetadata
+from streamlit.runtime.state.common import (
+    GENERATED_ELEMENT_ID_PREFIX,
+    BindOption,
+    PersistStateOption,
+    WidgetMetadata,
+)
 from streamlit.runtime.state.session_state import (
     KeyIdMapper,
     Serialized,
+    SessionStateStatProvider,
     Value,
     WStates,
     _is_stale_widget,
     _sanitize_url_array,
 )
-from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -86,6 +107,25 @@ def _create_test_widget_metadata(
         formatted_options=formatted_options,
         clearable=clearable,
         max_array_length=max_array_length,
+    )
+
+
+def _create_persist_state_metadata(
+    widget_id: str,
+    persist_state: PersistStateOption,
+    value_type: str = "string_value",
+    bind: BindOption = None,
+    fragment_id: str | None = None,
+) -> WidgetMetadata:
+    """Helper to create widget metadata for persist_state tests."""
+    return WidgetMetadata(
+        id=widget_id,
+        deserializer=lambda x: x if x is not None else "default",
+        serializer=lambda x: x,
+        value_type=value_type,
+        bind=bind,
+        persist_state=persist_state,
+        fragment_id=fragment_id,
     )
 
 
@@ -273,6 +313,78 @@ class WStateTests(unittest.TestCase):
         self.wstates.call_callback("widget_id_1")
 
         metadata.callback.assert_called_once_with(1, y=2)
+
+    def test_call_callback_with_no_callback_returns_none(self):
+        """``call_callback`` returns None for widgets without a registered callback."""
+        # widget_id_1 has metadata but no callback
+        assert self.wstates.call_callback("widget_id_1") is None
+
+    def test_call_callback_unknown_widget_raises(self):
+        """``call_callback`` raises ``RuntimeError`` for an unknown widget ID."""
+        with pytest.raises(RuntimeError, match=r"Widget unknown not found\."):
+            self.wstates.call_callback("unknown")
+
+    def test_get_serialized_file_uploader_state_value(self):
+        """``get_serialized`` returns a widget proto for ``file_uploader_state_value``."""
+        uploaded_state = FileUploaderStateProto()
+        self.wstates.set_from_value("file_widget_id", uploaded_state)
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="file_widget_id",
+                deserializer=lambda x: x,
+                serializer=identity,
+                value_type="file_uploader_state_value",
+            )
+        )
+
+        serialized = self.wstates.get_serialized("file_widget_id")
+        assert serialized is not None
+        assert serialized.id == "file_widget_id"
+        assert serialized.WhichOneof("value") == "file_uploader_state_value"
+
+    def test_get_serialized_string_trigger_value(self):
+        """``get_serialized`` returns a widget proto for ``string_trigger_value``."""
+        trigger_state = StringTriggerValueProto()
+        trigger_state.data = "submit"
+        self.wstates.set_from_value("trigger_widget_id", trigger_state)
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="trigger_widget_id",
+                deserializer=lambda x: x,
+                serializer=identity,
+                value_type="string_trigger_value",
+            )
+        )
+
+        serialized = self.wstates.get_serialized("trigger_widget_id")
+        assert serialized is not None
+        assert serialized.string_trigger_value.data == "submit"
+
+    def test_get_serialized_chat_input_value(self):
+        """``get_serialized`` returns a widget proto for ``chat_input_value``."""
+        chat_value = ChatInputValueProto()
+        chat_value.data = "hello"
+        self.wstates.set_from_value("chat_widget_id", chat_value)
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="chat_widget_id",
+                deserializer=lambda x: x,
+                serializer=identity,
+                value_type="chat_input_value",
+            )
+        )
+
+        serialized = self.wstates.get_serialized("chat_widget_id")
+        assert serialized is not None
+        assert serialized.chat_input_value.data == "hello"
+
+    def test_wstates_repr_includes_class_and_field_names(self):
+        """``repr(WStates)`` includes the class name and field names so it is
+        useful for debugging.
+        """
+        result = repr(self.wstates)
+        assert "WStates" in result
+        assert "states" in result
 
     def test_fragment_callback_warning(self):
         """Test that a warning is logged when modifying elements during a fragment callback."""
@@ -468,7 +580,9 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
     ss._new_widget_state.set_from_value(wid, 2)  # ensure _widget_changed is True
 
     mock_ctx = MagicMock()
-    mock_ctx.in_fragment_callback = False
+    # Self-contained: initialize ThreadState so this test doesn't depend on
+    # test ordering or another fixture having seeded the ContextVar.
+    ThreadState.initialize(in_fragment_callback=False)
 
     with patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -477,7 +591,7 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
         # Callbacks internally catch RerunException and log a warning.
         ss._call_callbacks()
 
-    assert mock_ctx.in_fragment_callback is False
+    assert ThreadState.get().in_fragment_callback is False
 
 
 def test_updates():
@@ -762,6 +876,57 @@ class SessionStateMethodTests(unittest.TestCase):
         with pytest.raises(KeyError):
             wstates["baz"]
 
+    def test_set_widgets_from_proto_rejects_oversized_widget_state(self):
+        widget_state = WidgetStateProto()
+        widget_state.id = "large_widget"
+        widget_state.json_value = "x" * 1_100_000
+        widget_states = WidgetStatesProto(widgets=[widget_state])
+
+        with (
+            patch_config_options({"server.maxWidgetStateSize": 1}),
+            patch.object(runtime_util, "_max_widget_state_size_bytes", None),
+            pytest.raises(WidgetStateSizeError, match="widget state size limit"),
+        ):
+            self.session_state.set_widgets_from_proto(widget_states)
+
+        assert "large_widget" not in self.session_state._new_widget_state.states
+
+    def test_set_widgets_from_proto_rejects_oversized_aggregate_widget_state(self):
+        widget_states = WidgetStatesProto()
+        for idx in range(2):
+            widget_state = widget_states.widgets.add()
+            widget_state.id = f"large_widget_{idx}"
+            widget_state.string_value = "x" * 600_000
+
+        with (
+            patch_config_options({"server.maxWidgetStateSize": 1}),
+            patch.object(runtime_util, "_max_widget_state_size_bytes", None),
+            pytest.raises(WidgetStateSizeError, match="widget state size limit"),
+        ):
+            self.session_state.set_widgets_from_proto(widget_states)
+
+        assert self.session_state._new_widget_state.states == {
+            "baz": Value("qux2"),
+            f"{GENERATED_ELEMENT_ID_PREFIX}-foo-None": Value("bar"),
+        }
+
+    def test_set_widgets_from_proto_accepts_widget_state_at_limit(self):
+        """Widget state exactly at the size limit is accepted (boundary condition)."""
+        widget_state = WidgetStateProto()
+        widget_state.id = "boundary_widget"
+        widget_state.string_value = "x" * 1000
+        widget_states = WidgetStatesProto(widgets=[widget_state])
+
+        # Set the limit to exactly the serialized size so the boundary (==) passes.
+        with patch.object(
+            runtime_util,
+            "_max_widget_state_size_bytes",
+            widget_states.ByteSize(),
+        ):
+            self.session_state.set_widgets_from_proto(widget_states)
+
+        assert "boundary_widget" in self.session_state._new_widget_state.states
+
     def test_clear_state(self):
         # Sanity test
         keys = {"foo", "baz", "corge", f"{GENERATED_ELEMENT_ID_PREFIX}-foo-None"}
@@ -814,8 +979,8 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_setitem_disallows_setting_created_widget(self):
         mock_ctx = MagicMock()
-        mock_ctx.widget_ids_this_run = ThreadSafeSet()
-        mock_ctx.widget_ids_this_run.check_and_add("widget_id")
+        mock_ctx.shared = SharedRunState()
+        mock_ctx.shared.widget_ids_this_run.check_and_add("widget_id")
 
         with patch(
             "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -830,8 +995,8 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_setitem_disallows_setting_created_form(self):
         mock_ctx = MagicMock()
-        mock_ctx.form_ids_this_run = ThreadSafeSet()
-        mock_ctx.form_ids_this_run.check_and_add("form_id")
+        mock_ctx.shared = SharedRunState()
+        mock_ctx.shared.form_ids_this_run.check_and_add("form_id")
 
         with patch(
             "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -856,8 +1021,8 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_reset_state_value_allows_setting_created_widget(self):
         mock_ctx = MagicMock()
-        mock_ctx.widget_ids_this_run = ThreadSafeSet()
-        mock_ctx.widget_ids_this_run.check_and_add("widget_id")
+        mock_ctx.shared = SharedRunState()
+        mock_ctx.shared.widget_ids_this_run.check_and_add("widget_id")
 
         with patch(
             "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -1079,38 +1244,97 @@ class IsStaleWidgetTests(unittest.TestCase):
 
 
 class SessionStateStatProviderTests(DeltaGeneratorTestCase):
+    def test_session_state_stats_use_fast_proxy_by_default(self):
+        state = _raw_session_state()
+
+        with patch(
+            "streamlit.runtime.stats.safe_sizeof",
+            side_effect=AssertionError("safe_sizeof should not be called"),
+        ):
+            stat = state.get_stats()[CACHE_MEMORY_FAMILY][0]
+            assert stat.category_name == "st_session_state"
+            assert stat.byte_length == 0
+
+            state["foo"] = 2
+            assert state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length == 1
+
+            st.checkbox("checkbox", key="checkbox")
+            assert state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length == 2
+
     def test_session_state_stats(self):
         # TODO: document the values used here. They're somewhat arbitrary -
         #  we don't care about actual byte values, but rather that our
         #  SessionState isn't getting unexpectedly massive.
-        state = _raw_session_state()
-        stat = state.get_stats()[CACHE_MEMORY_FAMILY][0]
-        assert stat.category_name == "st_session_state"
+        with patch_config_options({"server.enableExpensiveMemoryStats": True}):
+            state = _raw_session_state()
+            stat = state.get_stats()[CACHE_MEMORY_FAMILY][0]
+            assert stat.category_name == "st_session_state"
 
-        # The expected size of the session state in bytes.
-        # It composes of the session_state's fields.
-        expected_session_state_size_bytes = 3000
+            # The expected size of the session state in bytes.
+            # It composes of the session_state's fields.
+            expected_session_state_size_bytes = 3000
 
-        init_size = stat.byte_length
-        assert init_size < expected_session_state_size_bytes
+            init_size = stat.byte_length
+            assert init_size < expected_session_state_size_bytes
 
-        state["foo"] = 2
-        new_size = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
-        assert new_size > init_size
-        assert new_size < expected_session_state_size_bytes
+            state["foo"] = 2
+            new_size = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
+            assert new_size > init_size
+            assert new_size < expected_session_state_size_bytes
 
-        state["foo"] = 1
-        new_size_2 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
-        assert new_size_2 == new_size
+            state["foo"] = 1
+            new_size_2 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
+            assert new_size_2 == new_size
 
-        st.checkbox("checkbox", key="checkbox")
-        new_size_3 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
-        assert new_size_3 > new_size_2
-        assert new_size_3 - new_size_2 < expected_session_state_size_bytes
+            st.checkbox("checkbox", key="checkbox")
+            new_size_3 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
+            assert new_size_3 > new_size_2
+            assert new_size_3 - new_size_2 < expected_session_state_size_bytes
 
-        state._compact_state()
-        new_size_4 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
-        assert new_size_4 <= new_size_3
+            state._compact_state()
+            new_size_4 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
+            assert new_size_4 <= new_size_3
+
+
+def test_session_state_repr_includes_class_and_field_names() -> None:
+    """``repr(SessionState())`` includes the class name and at least one
+    field name so it is useful for debugging.
+    """
+    result = repr(SessionState())
+    # Class name and a known dataclass field should appear.
+    assert "SessionState" in result
+    assert "_new_widget_state" in result
+
+
+def test_session_state_stat_provider_returns_empty_for_no_sessions() -> None:
+    """``SessionStateStatProvider.get_stats`` returns an empty mapping with no sessions."""
+    session_mgr = MagicMock()
+    session_mgr.list_active_sessions.return_value = []
+
+    provider = SessionStateStatProvider(_session_mgr=session_mgr)
+
+    assert provider.get_stats() == {}
+    assert provider.stats_families == (CACHE_MEMORY_FAMILY,)
+
+
+def test_session_state_stat_provider_aggregates_session_stats() -> None:
+    """``SessionStateStatProvider.get_stats`` aggregates stats across sessions."""
+    session_info_1 = MagicMock()
+    session_info_1.session.session_state.get_stats.return_value = {
+        CACHE_MEMORY_FAMILY: [CacheStat("st_session_state", "k1", 100)],
+    }
+    session_info_2 = MagicMock()
+    session_info_2.session.session_state.get_stats.return_value = {
+        CACHE_MEMORY_FAMILY: [CacheStat("st_session_state", "k2", 200)],
+    }
+    session_mgr = MagicMock()
+    session_mgr.list_active_sessions.return_value = [session_info_1, session_info_2]
+
+    provider = SessionStateStatProvider(_session_mgr=session_mgr)
+
+    result = provider.get_stats()
+    assert CACHE_MEMORY_FAMILY in result
+    assert sum(stat.byte_length for stat in result[CACHE_MEMORY_FAMILY]) == 300
 
 
 class KeyIdMapperTest(unittest.TestCase):
@@ -1466,8 +1690,8 @@ def test_session_state_iteration_excludes_trigger_widgets() -> None:
 class MockScriptRunCtx:
     """Mock script run context for testing."""
 
-    active_script_hash: str = "main_hash"
     fragment_ids_this_run: list[str] | None = None
+    page_script_hash: str = "page_1_hash"
 
 
 class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
@@ -1477,6 +1701,7 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         super().setUp()
         self.session_state = SessionState()
         self.query_params = self.session_state.query_params
+        ThreadState.update(active_script_hash="main_hash")
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -1900,7 +2125,7 @@ class RemoveStaleWidgetsPreservationTest(DeltaGeneratorTestCase):
         assert self.query_params.get_binding_for_widget(widget_id) is None
 
         # Cleanup should still preserve value under user key.
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
         assert widget_id not in self.session_state._old_state
         assert self.session_state._old_state["my_widget"] == "custom_value"
 
@@ -1922,7 +2147,7 @@ class RemoveStaleWidgetsPreservationTest(DeltaGeneratorTestCase):
         self.session_state.register_widget(metadata, user_key="my_widget")
         self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
         self.session_state._compact_state()
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert widget_id not in self.session_state._old_state
         assert "my_widget" not in self.session_state._old_state
@@ -1954,7 +2179,7 @@ class RemoveStaleWidgetsPreservationTest(DeltaGeneratorTestCase):
         # Stale cleanup (MPA page change) — _old_state has "default" but
         # _new_widget_state has "user_value". Preservation should capture
         # "user_value".
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert widget_id not in self.session_state._old_state
         assert self.session_state._old_state["my_widget"] == "user_value"
@@ -1972,9 +2197,496 @@ class RemoveStaleWidgetsPreservationTest(DeltaGeneratorTestCase):
             {kept_widget_id, stale_widget_id}
         )
 
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert self.session_state._query_param_bound_widget_ids == {kept_widget_id}
+
+
+class PersistStatePreservationTest(DeltaGeneratorTestCase):
+    """Tests for persist_state value preservation during stale-widget cleanup."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_persist_state_session_preserves_stale_keyed_value(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A persist_state="session" widget keeps its value when not rendered."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "session")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(frozenset())
+
+        assert widget_id not in self.session_state._old_state
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_persist_state_page_preserves_value_on_same_page(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A persist_state="page" widget keeps its value while on the same page."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "page")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        assert self.session_state._persist_tracker.page_of(widget_id) == "page_1_hash"
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(frozenset())
+
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+
+    def test_persist_state_page_drops_value_on_page_switch(self) -> None:
+        """A persist_state="page" widget loses its value on a different page."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "page")
+
+        # Page 1: register and set the value (recording page_1 as its home).
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+
+        # Page 2: cleanup now runs under a different page, so the value belonging
+        # to page 1 must be dropped.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_2_hash"),
+        ):
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert widget_id not in self.session_state._old_state
+        assert "my_widget" not in self.session_state._old_state
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_persist_state_none_does_not_preserve(self, mock_ctx: MagicMock) -> None:
+        """A widget without persist_state loses its value when not rendered."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, None)
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(frozenset())
+
+        assert "my_widget" not in self.session_state._old_state
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_register_widget_tracks_persisted_ids(self, mock_ctx: MagicMock) -> None:
+        """Registration records persisted ids and clears them when persistence stops."""
+        widget_id = "$$ID-hash-my_widget"
+        page_metadata = _create_persist_state_metadata(widget_id, "page")
+
+        self.session_state.register_widget(page_metadata, user_key="my_widget")
+        assert self.session_state._persist_tracker.scope_of(widget_id) == "page"
+        assert self.session_state._persist_tracker.page_of(widget_id) is not None
+
+        none_metadata = _create_persist_state_metadata(widget_id, None)
+        self.session_state.register_widget(none_metadata, user_key="my_widget")
+        assert self.session_state._persist_tracker.scope_of(widget_id) is None
+        assert self.session_state._persist_tracker.page_of(widget_id) is None
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_prunes_unmapped_persisted_widget_ids(self, mock_ctx: MagicMock) -> None:
+        """Persisted ids without a key mapping are pruned during cleanup."""
+        kept_widget_id = "$$ID-hash-kept"
+        stale_widget_id = "$$ID-hash-stale"
+        self.session_state._set_key_widget_mapping(kept_widget_id, "kept")
+        self.session_state._persist_tracker._scopes.update(
+            {kept_widget_id: "session", stale_widget_id: "session"}
+        )
+        self.session_state._persist_tracker._widget_pages[stale_widget_id] = (
+            "page_1_hash"
+        )
+
+        self.session_state._remove_stale_widgets(frozenset())
+
+        assert self.session_state._persist_tracker._scopes == {
+            kept_widget_id: "session"
+        }
+        assert self.session_state._persist_tracker.page_of(stale_widget_id) is None
+
+    def test_persist_state_page_drops_carried_value_on_remount_other_page(
+        self,
+    ) -> None:
+        """A "page" value preserved on one page is dropped when the widget
+        remounts on a different page, and the frontend is told to reset."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "page")
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert self.session_state._persist_tracker.value_page_of("my_widget") == (
+            "page_1_hash"
+        )
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_2_hash"),
+        ):
+            result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+
+    def test_persist_state_page_drops_value_when_other_page_skips_widget(
+        self,
+    ) -> None:
+        """A "page" value is dropped after navigating to a page that does not
+        render the widget, and stays dropped when the widget remounts back on
+        its origin page even if the frontend resends the stale value."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "page")
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+
+        # Navigate to a page that does not render the widget.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_2_hash"),
+        ):
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert self.session_state._persist_tracker.has_pending_reset(widget_id)
+        assert "my_widget" not in self.session_state._old_state
+
+        # Return to the origin page; the frontend resends the cached value for
+        # the reused widget id, which must be discarded.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+        assert not self.session_state._persist_tracker.has_pending_reset(widget_id)
+
+    def test_persist_state_page_dropped_after_hide_then_page_switch(self) -> None:
+        """A "page" value preserved by hiding the widget on its origin page is
+        dropped on a subsequent page switch.
+
+        Without an eager drop the value would linger under the user key in
+        _old_state and stay readable via st.session_state on the new page (the
+        widget may never re-register there to trigger the registration-time
+        reset), contradicting the "page"-scope guarantee.
+        """
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "page")
+
+        # Page 1: render, set value, then hide (value preserved under user key).
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(frozenset())
+
+        # The same-page hide preserves the value.
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+
+        # Page 2: navigate to a page that does not render the widget.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_2_hash"),
+        ):
+            self.session_state._remove_stale_widgets(frozenset())
+
+        # The value is dropped on the page switch — not just at re-registration.
+        assert "my_widget" not in self.session_state._old_state
+        assert self.session_state._persist_tracker.has_pending_reset(widget_id)
+
+        # Returning to the origin page still resolves to the default, even if the
+        # frontend resends the stale value for the reused widget id.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+
+    def test_persist_state_page_same_page_hide_not_marked_for_reset(self) -> None:
+        """Hiding a "page" widget on its own page preserves the value and does
+        not flag it for a frontend reset."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "page")
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert not self.session_state._persist_tracker.has_pending_reset(widget_id)
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+
+    def test_persist_state_page_keeps_carried_value_on_remount_same_page(
+        self,
+    ) -> None:
+        """A "page" value preserved on a page is kept when the widget remounts
+        on the same page."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "page")
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(frozenset())
+            result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    def test_persist_state_session_preserved_during_fragment_rerun(self) -> None:
+        """A persist_state="session" widget inside a fragment keeps its value
+        when it stops rendering during a fragment-scoped rerun.
+
+        Cleanup runs with fragment_ids_this_run set, so the widget is only a
+        stale candidate because it belongs to the running fragment. persist_state
+        must preserve it just as it would on a full rerun.
+        """
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(
+            widget_id, "session", fragment_id="frag_1"
+        )
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(fragment_ids_this_run=["frag_1"]),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            # Widget no longer rendered during this fragment-only rerun.
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+
+    def test_persist_state_none_dropped_during_fragment_rerun(self) -> None:
+        """A non-persisted widget inside the running fragment is still dropped on
+        a fragment-scoped rerun when it stops rendering (control for the
+        persisted case)."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, None, fragment_id="frag_1")
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(fragment_ids_this_run=["frag_1"]),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert "my_widget" not in self.session_state._old_state
+
+    def test_persist_state_page_kept_during_fragment_rerun_same_page(self) -> None:
+        """A persist_state="page" widget keeps its value across a fragment rerun:
+        a fragment rerun stays on the same page, so the page-scope drop must not
+        fire."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(
+            widget_id, "page", fragment_id="frag_1"
+        )
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(
+                fragment_ids_this_run=["frag_1"], page_script_hash="page_1_hash"
+            ),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+        assert not self.session_state._persist_tracker.has_pending_reset(widget_id)
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_persist_state_and_bind_combined_preserves(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A widget that is both bound and persisted is preserved, since either
+        feature alone would keep its value."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(
+            widget_id, "session", bind="query-params"
+        )
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(frozenset())
+
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+
+    def test_bind_takes_precedence_over_persist_state_page_on_page_switch(
+        self,
+    ) -> None:
+        """bind="query-params" wins over persist_state="page" on a page switch.
+
+        The two options are contradictory on page switch (binding stores the
+        value in the URL, which is global; "page" scope wants it dropped). By
+        design binding wins, so the URL value is restored on the new page
+        instead of being dropped.
+        """
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(
+            widget_id, "page", bind="query-params"
+        )
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(frozenset())
+
+        # Binding keeps the value in the URL across the page switch, so it is
+        # present in the initial query params seen on the destination page.
+        self.session_state.query_params.set_initial_query_params(
+            "my_widget=custom_value"
+        )
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_2_hash"),
+        ):
+            result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+
+    def test_bind_value_survives_page_switch_without_url_seed(self) -> None:
+        """bind="query-params" + persist_state="page" keeps its value across a
+        page switch even when navigation dropped the URL param.
+
+        ``st.navigation`` links go to the bare page URL, so a bound widget's
+        query param is removed on a page switch and there is nothing to re-seed
+        on return. The value is held under the user key by the binding
+        preservation path, and binding takes precedence over "page" scope, so
+        the page-scope drop/reset must not clobber it. (Plain ``bind`` keeps the
+        value here; the combination must behave the same.)
+        """
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(
+            widget_id, "page", bind="query-params"
+        )
+
+        # Page 1 (origin): render, set value, then hide on the same page.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            self.session_state._new_widget_state.set_from_value(
+                widget_id, "custom_value"
+            )
+            self.session_state._compact_state()
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+
+        # Page 2: navigate to a page that does not render the widget. No query
+        # params are seeded, mirroring navigation dropping the URL param.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_2_hash"),
+        ):
+            self.session_state._remove_stale_widgets(frozenset())
+
+        # Binding wins: the value is preserved and the widget is not flagged for
+        # a reset (unlike a non-bound "page" widget, which would be dropped).
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+        assert not self.session_state._persist_tracker.has_pending_reset(widget_id)
+
+        # Return to the origin page with no URL value to seed: the widget still
+        # resolves to the preserved bound value rather than the default.
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(page_script_hash="page_1_hash"),
+        ):
+            result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
 
 
 class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
@@ -2138,6 +2850,84 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
         assert result.value == "custom_value"
         assert result.value_changed is False
 
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_true_when_persisted_value_restored(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A remounted persist_state widget tells the frontend to adopt the
+        preserved value instead of the element default."""
+        widget_id = "$$ID-hash-my_widget"
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
+        metadata = _create_persist_state_metadata(widget_id, "session")
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_false_for_non_persisted_remount(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A plain (persist_state=None) widget does not signal value_changed
+        on remount, so the restore behavior is specific to persisted widgets."""
+        widget_id = "$$ID-hash-my_widget"
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
+        metadata = _create_persist_state_metadata(widget_id, None)
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value_changed is False
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_true_after_full_preserve_cycle(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """After a persist_state widget is preserved while unmounted, remounting
+        it returns value_changed=True so the frontend adopts the kept value."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, "session")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(frozenset())
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_true_for_programmatic_set_in_old_state(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A programmatic value compacted into old state under the user key is
+        pushed to a persisted widget on its first mount this run."""
+        widget_id = "$$ID-hash-my_widget"
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
+        metadata = _create_persist_state_metadata(widget_id, "page")
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
 
 class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
     """Tests conditional remount behavior for bound vs unbound widgets."""
@@ -2164,7 +2954,7 @@ class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
         self.query_params.set_with_no_forward_msg("my_widget", "custom_value")
 
         self.session_state._compact_state()
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert "my_widget" in self.session_state._old_state
         assert "my_widget" not in self.query_params._query_params
@@ -2194,7 +2984,7 @@ class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
         self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
 
         self.session_state._compact_state()
-        self.session_state._remove_stale_widgets(set())
+        self.session_state._remove_stale_widgets(frozenset())
 
         assert "my_widget" not in self.session_state._old_state
 

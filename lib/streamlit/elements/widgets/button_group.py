@@ -56,7 +56,12 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import BindOption, register_widget
+from streamlit.runtime.state import (
+    BindOption,
+    PersistStateOption,
+    get_session_state,
+    register_widget,
+)
 from streamlit.string_util import extract_leading_icon
 
 if TYPE_CHECKING:
@@ -91,6 +96,8 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_option_index: int | None
     format_func: Callable[[Any], str]
+    session_state_fallback: T | None
+    used_session_state_fallback: bool
 
     def __init__(
         self,
@@ -100,12 +107,15 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
+        session_state_fallback: T | None = None,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
         self.format_func = format_func
+        self.session_state_fallback = session_state_fallback
+        self.used_session_state_fallback = False
 
     def serialize(self, v: T | str | None) -> list[str]:
         """Serialize single-select value to a list of strings for wire format."""
@@ -127,7 +137,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
 
         return [formatted_value]
 
-    def deserialize(self, ui_value: list[str] | None) -> T | str | None:
+    def deserialize(self, ui_value: list[str] | None) -> T | None:
         """Deserialize from a list of strings to a single value."""
         if len(self.options) == 0:
             return None
@@ -149,8 +159,20 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         if option_index is not None:
             return self.options[option_index]
 
-        # Value not found in options - return as-is
-        return string_value
+        # Value not found in the current options mapping. This happens when options
+        # or format_func changes dynamically (e.g. a language switch): the frontend
+        # sends a stale wire value from the previous mapping that can't be resolved.
+        # Prefer the last known session-state value (the user's live selection) over
+        # the configured default so _widget_changed does not detect a spurious
+        # difference and fire an on_change callback. The session-state value is
+        # always more accurate than the default because it reflects what the user
+        # actually had selected (e.g. user clicked "B" while default was "A").
+        if self.session_state_fallback is not None:
+            self.used_session_state_fallback = True
+            return self.session_state_fallback
+        if self.default_option_index is not None:
+            return self.options[self.default_option_index]
+        return None
 
 
 class _MultiSelectButtonGroupSerde(Generic[T]):
@@ -165,6 +187,8 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_option_indices: list[int]
     format_func: Callable[[Any], str]
+    session_state_fallback: list[T] | None
+    used_session_state_fallback: bool
 
     def __init__(
         self,
@@ -174,12 +198,15 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_indices: list[int] | None = None,
         format_func: Callable[[Any], str] = str,
+        session_state_fallback: list[T] | None = None,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_indices = default_option_indices or []
         self.format_func = format_func
+        self.session_state_fallback = session_state_fallback
+        self.used_session_state_fallback = False
 
     def serialize(self, value: list[T | str] | list[T] | None) -> list[str]:
         """Serialize multi-select values to list of strings for wire format."""
@@ -219,9 +246,25 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
             option_index = self.formatted_option_to_option_index.get(v)
             if option_index is not None:
                 values.append(self.options[option_index])
-            else:
-                # Value not found in options - append as-is
-                values.append(v)
+            # Silently drop values not found in the current options mapping.
+            # These are stale wire values from a previous format_func mapping
+            # (e.g. a language switch). validate_and_sync_multiselect_value_with_options
+            # applies the same filter for invalid canonical values.
+
+        # If ui_value was non-empty but every entry was stale (all dropped),
+        # fall back to the last known session-state value (the user's live
+        # selection) or, if none, to the configured default so that
+        # _widget_changed sees no difference and suppresses the spurious
+        # on_change callback. Session-state takes priority over the default
+        # because it reflects what the user actually had selected (e.g. user
+        # had ["A","B"] while default was only ["A"]). This mirrors the
+        # single-select behaviour in _SingleSelectButtonGroupSerde.deserialize.
+        if not values and ui_value:
+            if self.session_state_fallback is not None:
+                self.used_session_state_fallback = True
+                return self.session_state_fallback
+            if self.default_option_indices:
+                return [self.options[i] for i in self.default_option_indices]
         return values
 
 
@@ -293,6 +336,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V: ...
     # 2. required=True without default -> V | None
     @overload
@@ -314,6 +358,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 3. Single-select (default, required=False) -> V | None
     @overload
@@ -335,6 +380,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select -> list[V]
     @overload
@@ -356,6 +402,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V]: ...
     @gather_metrics("pills")
     def pills(
@@ -376,6 +423,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
         r"""Display a pills widget.
 
@@ -524,6 +572,21 @@ class ButtonGroupMixin:
             repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
             are deduplicated.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         list of V, V, or None
@@ -594,6 +657,7 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            persist_state=persist_state,
         )
 
     # segmented_control overloads:
@@ -617,6 +681,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V: ...
     # 2. required=True without default -> V | None
     @overload
@@ -638,6 +703,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 3. Single-select (default, required=False) -> V | None
     @overload
@@ -659,6 +725,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select -> list[V]
     @overload
@@ -680,6 +747,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V]: ...
 
     @gather_metrics("segmented_control")
@@ -701,6 +769,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
         r"""Display a segmented control widget.
 
@@ -849,6 +918,21 @@ class ButtonGroupMixin:
             repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
             are deduplicated.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         list of V, V, or None
@@ -922,6 +1006,7 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            persist_state=persist_state,
         )
 
     @gather_metrics("_internal_button_group")
@@ -944,6 +1029,7 @@ class ButtonGroupMixin:
         help: str | None = None,
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -996,7 +1082,36 @@ class ButtonGroupMixin:
             # behavior to mirror radio/selectbox/multiselect.
             formatted_option_to_option_index[formatted] = index
 
-        # Create appropriate serde based on selection mode
+        # Look up the currently-stored session-state value to use as a stale-wire
+        # fallback in the serde. When format_func changes dynamically and no default
+        # is configured, deserialize would otherwise return None/[] for stale wire
+        # values, causing _widget_changed to fire a spurious on_change callback.
+        # Using the last known valid value as a fallback keeps the comparison equal.
+        _ss_fallback_single: V | None = None
+        _ss_fallback_multi: list[V] | None = None
+        if key is not None:
+            try:
+                # KeyError is raised if the key hasn't been set yet (first run).
+                # Any other exception is caught defensively to avoid breaking rendering.
+                _ss_val = get_session_state()[str(key)]
+                if selection_mode == "single":
+                    if _ss_val is not None and _ss_val in indexable_options:
+                        _ss_fallback_single = cast("V", _ss_val)
+                elif isinstance(_ss_val, list):
+                    _valid = cast(
+                        "list[V]",
+                        [v for v in _ss_val if v in indexable_options],
+                    )
+                    if _valid:
+                        _ss_fallback_multi = _valid
+            except Exception:  # noqa: S110
+                pass  # KeyError (key not yet set) or other SS error; safe to ignore
+
+        # Create appropriate serde based on selection mode. A shared mutable
+        # container tracks whether the stale-wire fallback fired during
+        # deserialization so _button_group can force proto.set_value=True and
+        # send the fresh serialization to the frontend (see _button_group).
+        _stale_fallback_container: list[bool] = [False]
         serializer: WidgetSerializer[Any]
         deserializer: WidgetDeserializer[Any]
         if selection_mode == "multi":
@@ -1006,9 +1121,19 @@ class ButtonGroupMixin:
                 formatted_option_to_option_index=formatted_option_to_option_index,
                 default_option_indices=default_values,
                 format_func=actual_format_func,
+                session_state_fallback=_ss_fallback_multi,
             )
+            _multi_base = multi_serde.deserialize
+
+            def _multi_deserialize(
+                ui_value: list[str] | None,
+            ) -> list[V] | list[V | str]:
+                result_ = _multi_base(ui_value)
+                _stale_fallback_container[0] = multi_serde.used_session_state_fallback
+                return result_
+
             serializer = multi_serde.serialize
-            deserializer = multi_serde.deserialize
+            deserializer = cast("WidgetDeserializer[Any]", _multi_deserialize)
         else:
             single_serde = _SingleSelectButtonGroupSerde[V](
                 indexable_options,
@@ -1016,9 +1141,19 @@ class ButtonGroupMixin:
                 formatted_option_to_option_index=formatted_option_to_option_index,
                 default_option_index=default_values[0] if default_values else None,
                 format_func=actual_format_func,
+                session_state_fallback=_ss_fallback_single,
             )
+            _single_base = single_serde.deserialize
+
+            def _single_deserialize(
+                ui_value: list[str] | None,
+            ) -> V | None:
+                result_ = _single_base(ui_value)
+                _stale_fallback_container[0] = single_serde.used_session_state_fallback
+                return result_
+
             serializer = single_serde.serialize
-            deserializer = single_serde.deserialize
+            deserializer = cast("WidgetDeserializer[Any]", _single_deserialize)
 
         # Single call to _button_group with the appropriate serde
         result: RegisterWidgetResult[Any] = self._button_group(
@@ -1041,7 +1176,9 @@ class ButtonGroupMixin:
             width=width,
             options_format_func=actual_format_func,
             bind=bind,
+            persist_state=persist_state,
             string_formatted_options=formatted_options,
+            stale_fallback_container=_stale_fallback_container,
         )
 
         # Handle return type based on selection mode
@@ -1078,7 +1215,9 @@ class ButtonGroupMixin:
         width: Width = "content",
         options_format_func: Callable[[Any], str] | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         string_formatted_options: list[str] | None = None,
+        stale_fallback_container: list[bool] | None = None,
     ) -> RegisterWidgetResult[T]:
         _maybe_raise_selection_mode_warning(selection_mode)
 
@@ -1170,6 +1309,7 @@ class ButtonGroupMixin:
             ctx=ctx,
             value_type="string_array_value",
             bind=bind,
+            persist_state=persist_state,
             clearable=True,
             formatted_options=string_formatted_options,
             max_array_length=1 if selection_mode == "single" else None,
@@ -1200,10 +1340,24 @@ class ButtonGroupMixin:
                     )
                 )
 
-        if value_needs_reset or widget_state.value_changed:
+        # The stale-wire fallback fires when the frontend sends a formatted string
+        # from a previous format_func mapping (e.g. "orange" after switching to ES
+        # mode where the mapping no longer contains "orange"). The serde resolves the
+        # canonical value via session_state_fallback but neither value_needs_reset nor
+        # value_changed is True because the canonical value ("B") is unchanged.
+        # We must still send set_value=True with the NEW serialization ("naranja") so
+        # the frontend can update its displayed value; otherwise the stored stale wire
+        # value stays in widgetMgr and on the next rerun the backend would receive a
+        # fresh (non-stale) but wrong formatted string and fire a spurious on_change.
+        stale_fallback_used = (
+            stale_fallback_container is not None and stale_fallback_container[0]
+        )
+        if value_needs_reset or widget_state.value_changed or stale_fallback_used:
             # Always use string-based raw_values field
             value_for_serialization = (
-                current_value if value_needs_reset else widget_state.value
+                current_value
+                if (value_needs_reset or stale_fallback_used)
+                else widget_state.value
             )
             proto.raw_values[:] = serializer(cast("T", value_for_serialization))
             proto.set_value = True
@@ -1216,7 +1370,9 @@ class ButtonGroupMixin:
             "button_group",
             proto,
             layout_config=layout_config,
-            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            has_one_shot_effect=value_needs_reset
+            or widget_state.value_changed
+            or stale_fallback_used,
         )
 
         # Return widget_state with possibly updated value
@@ -1232,5 +1388,5 @@ class ButtonGroupMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

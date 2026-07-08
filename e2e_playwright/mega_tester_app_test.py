@@ -85,6 +85,36 @@ def is_expected_error(
     )
 
 
+@pytest.fixture(scope="module")
+def app_server_extra_args() -> list[str]:
+    # Only used for local e2e server startup. In external SiS/host mode, the
+    # local server is not started and the platform host-config must provide the
+    # real allowed host origin.
+    return ["--client.allowedOrigins", "http://localhost"]
+
+
+def _send_host_message(
+    app_target: AppTarget, external_iframe_selector: str, message: dict[str, object]
+) -> None:
+    # stCommVersion must match the frontend HOST_COMM_VERSION constant
+    # (frontend/lib/src/hostComm/HostCommunicationManager.tsx); bump this if
+    # that version ever changes.
+    payload = {"stCommVersion": 1, **message}
+
+    if app_target.mode == "external_host":
+        iframe = app_target.page.locator(external_iframe_selector).first
+        iframe.evaluate(
+            "(iframe, payload) => iframe.contentWindow.postMessage(payload, '*')",
+            payload,
+        )
+        return
+
+    app_target.page.evaluate(
+        "payload => window.postMessage(payload, window.location.origin)",
+        payload,
+    )
+
+
 @pytest.mark.external_test(upload_test_assets=True)
 def test_no_console_errors(app_target: AppTarget, browser_name: str) -> None:
     """Test that the app does not log any console errors."""
@@ -342,6 +372,34 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
         )
 
 
+@pytest.mark.external_test(upload_test_assets=True)
+def test_host_communication_can_disable_and_enable_inputs(
+    app_target: AppTarget, external_iframe_selector: str
+) -> None:
+    if app_target.mode == "external_direct":
+        pytest.skip(
+            "Host communication requires a host page or same-window local mode."
+        )
+
+    button = app_target.locator(".st-key-button").get_by_role("button").first
+    button.scroll_into_view_if_needed()
+    expect(button).to_be_enabled()
+
+    _send_host_message(
+        app_target,
+        external_iframe_selector,
+        {"type": "SET_INPUTS_DISABLED", "disabled": True},
+    )
+    expect(button).to_be_disabled()
+
+    _send_host_message(
+        app_target,
+        external_iframe_selector,
+        {"type": "SET_INPUTS_DISABLED", "disabled": False},
+    )
+    expect(button).to_be_enabled()
+
+
 def test_mega_tester_app_interactions_validate_behavior(app: Page) -> None:
     textbox = get_text_input(app, "Textbox")
     textbox.locator("input").first.fill("Ada")
@@ -366,13 +424,16 @@ def test_mega_tester_app_interactions_validate_behavior(app: Page) -> None:
     click_toggle(app, "Accept new options")
     wait_for_app_run(app)
     select_selectbox_option(app, "Selectbox", "dog")
+    # The selected value lives in the input element's value attribute (not text
+    # content) because we use a ComboBox <input> instead of a display div.
     expect(
-        app.get_by_test_id("stSelectbox").filter(has_text="Selectbox")
-    ).to_contain_text("dog")
+        app.get_by_test_id("stSelectbox").filter(has_text="Selectbox").locator("input")
+    ).to_have_value("dog")
 
     form_text = get_text_input(app, "Form text")
     form_text.locator("input").first.fill("hello")
     app.get_by_role("button", name="Submit form").first.click()
+    wait_for_app_run(app)
     expect(app.get_by_text("Form submitted", exact=True)).to_be_visible()
 
     click_button(app, "Write stream")

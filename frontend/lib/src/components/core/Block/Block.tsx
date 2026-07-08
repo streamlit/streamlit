@@ -25,8 +25,10 @@ import {
   FlexContext,
   FlexContextProvider,
 } from "~lib/components/core/Layout/FlexContext"
-import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
-import type { UseLayoutStylesArgs } from "~lib/components/core/Layout/useLayoutStyles"
+import {
+  extractLayoutSubElement,
+  useLayoutStyles,
+} from "~lib/components/core/Layout/useLayoutStyles"
 import {
   Direction,
   getDirectionOfBlock,
@@ -59,7 +61,7 @@ import {
   convertKeyToClassName,
   getBorderBackwardsCompatible,
   getClassnamePrefix,
-  getColumnGapSize,
+  getColumnGapConfig,
   getKeyFromId,
   isComponentStale,
   shouldActivateScrollToBottom,
@@ -109,46 +111,6 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   return <>{elements}</>
 }
 
-/**
- * Extract only layout-relevant fields from a block submessage to satisfy
- * `useLayoutStyles`'s `subElement` shape while being robust to unrelated block
- * types like TabContainer.
- */
-const getLayoutSubElement = (
-  block: BlockProto
-): UseLayoutStylesArgs["subElement"] => {
-  const typeKey = block.type as keyof typeof block | undefined
-  const raw = typeKey
-    ? (block as unknown as Record<string, unknown>)[typeKey]
-    : undefined
-  if (!raw || typeof raw !== "object") return undefined
-
-  const candidate = raw as Record<string, unknown>
-  const subElement = {
-    useContainerWidth: candidate.useContainerWidth as
-      | boolean
-      | null
-      | undefined,
-    height: candidate.height as number | undefined,
-    width: candidate.width as number | undefined,
-    widthConfig: candidate.widthConfig as
-      | streamlit.IWidthConfig
-      | null
-      | undefined,
-  }
-
-  if (
-    subElement.useContainerWidth === undefined &&
-    subElement.height === undefined &&
-    subElement.width === undefined &&
-    subElement.widthConfig === undefined
-  ) {
-    return undefined
-  }
-
-  return subElement
-}
-
 interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
@@ -163,7 +125,7 @@ export const ContainerContentsWrapper = (
   const defaultStyles: StyledFlexContainerBlockProps = {
     direction: Direction.VERTICAL,
     flex: 1,
-    gap: streamlit.GapSize.SMALL,
+    gap: { gapSize: streamlit.GapSize.SMALL },
     height: props.height,
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     border: false,
@@ -201,15 +163,16 @@ export const FlexBoxContainer = (
 
   const layout_styles = useLayoutStyles({
     element: props.node.deltaBlock,
-    subElement: getLayoutSubElement(props.node.deltaBlock),
+    subElement: extractLayoutSubElement(props.node.deltaBlock),
   })
 
   const styles = {
     gap:
       // This is backwards compatible with old proto messages since previously
       // the gap size was defaulted to small.
-      props.node.deltaBlock.flexContainer?.gapConfig?.gapSize ??
-      streamlit.GapSize.SMALL,
+      props.node.deltaBlock.flexContainer?.gapConfig ?? {
+        gapSize: streamlit.GapSize.SMALL,
+      },
     direction: direction,
     // This is also backwards compatible since previously wrap was not added
     // to the flex container.
@@ -298,7 +261,7 @@ export const BlockNodeRenderer = (
 
   const styles = useLayoutStyles({
     element: node.deltaBlock,
-    subElement: getLayoutSubElement(node.deltaBlock),
+    subElement: extractLayoutSubElement(node.deltaBlock),
     minStretchBehavior,
   })
 
@@ -324,6 +287,17 @@ export const BlockNodeRenderer = (
     props.disableFullscreenMode ||
     notNullOrUndefined(node.deltaBlock.dialog) ||
     notNullOrUndefined(node.deltaBlock.popover)
+
+  // Transparent blocks group elements in the backend tree without adding DOM.
+  // Children render directly in the parent's flex context.
+  if (node.deltaBlock.transparent) {
+    return (
+      <ChildRenderer
+        {...childProps}
+        disableFullscreenMode={disableFullscreenMode}
+      />
+    )
+  }
 
   let containerElement: ReactElement | undefined
   // Whether the CSS key class (st-key-*) is applied on StyledLayoutWrapper.
@@ -421,7 +395,7 @@ export const BlockNodeRenderer = (
     return (
       <StyledColumn
         weight={node.deltaBlock.column.weight ?? 0}
-        gap={getColumnGapSize(node.deltaBlock.column)}
+        gap={getColumnGapConfig(node.deltaBlock.column)}
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }

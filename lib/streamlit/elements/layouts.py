@@ -27,7 +27,7 @@ from streamlit.elements.lib.layout_utils import (
     Width,
     WidthWithoutContent,
     get_align,
-    get_gap_size,
+    get_gap_config,
     get_height_config,
     get_justify,
     get_width_config,
@@ -45,7 +45,6 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.proto.GapSize_pb2 import GapConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import register_widget
@@ -215,7 +214,7 @@ class LayoutsMixin:
               When ``horizontal`` is ``True``, ``"distribute"`` aligns the
               elements the same as ``"top"``.
 
-        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", or None
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
             The minimum gap size between the elements inside the container.
             This can be one of the following:
 
@@ -226,6 +225,8 @@ class LayoutsMixin:
             - ``"large"``: 4rem gap between the elements.
             - ``"xlarge"``: 6rem gap between the elements.
             - ``"xxlarge"``: 8rem gap between the elements.
+            - A non-negative integer specifying the gap in pixels. For
+              example, ``gap=20`` sets a 20-pixel gap.
             - ``None``: No gap between the elements.
 
             The rem unit is relative to the ``theme.baseFontSize``
@@ -343,8 +344,8 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.flex_container.border = border or False
-        block_proto.flex_container.gap_config.gap_size = get_gap_size(
-            gap, "st.container"
+        block_proto.flex_container.gap_config.CopyFrom(
+            get_gap_config(gap, "st.container")
         )
 
         validate_horizontal_alignment(horizontal_alignment)
@@ -431,7 +432,7 @@ class LayoutsMixin:
               Or ``[1, 2, 3]`` creates three columns where the second one is two times
               the width of the first one, and the third one is three times that width.
 
-        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", or None
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
             The size of the gap between the columns. This can be one of the
             following:
 
@@ -442,6 +443,8 @@ class LayoutsMixin:
             - ``"large"``: 4rem gap between the columns.
             - ``"xlarge"``: 6rem gap between the columns.
             - ``"xxlarge"``: 8rem gap between the columns.
+            - A non-negative integer specifying the gap in pixels. For
+              example, ``gap=20`` sets a 20-pixel gap.
             - ``None``: No gap between the columns.
 
             The rem unit is relative to the ``theme.baseFontSize``
@@ -595,9 +598,7 @@ class LayoutsMixin:
                 element_type="st.columns",
             )
 
-        gap_size = get_gap_size(gap, "st.columns")
-        gap_config = GapConfig()
-        gap_config.gap_size = gap_size
+        gap_config = get_gap_config(gap, "st.columns")
 
         def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()
@@ -992,6 +993,7 @@ class LayoutsMixin:
         *,
         key: Key | None = None,
         icon: str | None = None,
+        type: Literal["default", "compact"] = "default",
         width: WidthWithoutContent = "stretch",
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
@@ -1074,6 +1076,13 @@ class LayoutsMixin:
               font library.
 
             - ``"spinner"``: Displays a spinner as an icon.
+
+        type : "default" or "compact"
+            The visual style of the expander. If ``"default"`` (default), the
+            expander is displayed with a border and background. If ``"compact"``,
+            the expander is rendered as a minimal inline toggle, ideal for
+            displaying AI reasoning, thoughts, or collapsible metadata without
+            visual clutter.
 
         width : "stretch" or int
             The width of the expander container. This can be one of the following:
@@ -1213,6 +1222,9 @@ class LayoutsMixin:
                 "on_change", ["'rerun'", "'ignore'", "a callable"]
             )
 
+        if type not in {"default", "compact"}:
+            raise StreamlitValueError("type", ["'default'", "'compact'"])
+
         key = to_key(key)
         is_stateful = on_change != "ignore"
 
@@ -1242,6 +1254,7 @@ class LayoutsMixin:
                 expanded=expanded,
                 icon=icon,
                 width=width,
+                type=type,
             )
             block_id = element_id
 
@@ -1265,10 +1278,16 @@ class LayoutsMixin:
                 user_key=key,
                 key_as_main_identity=False,
                 dg=self.dg,
+                type=type,
             )
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
         expandable_proto.label = label
+        expandable_proto.type = (
+            BlockProto.Expandable.Type.COMPACT
+            if type == "compact"
+            else BlockProto.Expandable.Type.DEFAULT
+        )
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
 
@@ -1680,6 +1699,7 @@ class LayoutsMixin:
         *,
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
+        type: Literal["default", "compact"] = "default",
         width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.
@@ -1735,6 +1755,13 @@ class LayoutsMixin:
             - ``running`` (default): A spinner icon is shown.
             - ``complete``: A checkmark icon is shown.
             - ``error``: An error icon is shown.
+
+        type : "default" or "compact"
+            The visual style of the status container. If ``"default"`` (default),
+            the container is displayed with a border and background. If
+            ``"compact"``, the container is rendered as a minimal inline
+            toggle, ideal for displaying AI reasoning or task progress without
+            visual clutter.
 
         width : "stretch" or int
             The width of the status container. This can be one of the following:
@@ -1798,7 +1825,7 @@ class LayoutsMixin:
 
         """
         return get_dg_singleton_instance().status_container_cls._create(
-            self.dg, label, expanded=expanded, state=state, width=width
+            self.dg, label, expanded=expanded, state=state, type=type, width=width
         )
 
     def _dialog(
@@ -1826,5 +1853,5 @@ class LayoutsMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

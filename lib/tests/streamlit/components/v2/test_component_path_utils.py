@@ -15,15 +15,13 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from streamlit.components.v2.component_path_utils import ComponentPathUtils
 from streamlit.errors import StreamlitComponentRegistryError
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _touch(path: Path) -> None:
@@ -210,3 +208,43 @@ def test_resolve_glob_pattern_accepts_dot_prefixed_relative(tmp_path: Path) -> N
 def test_looks_like_inline_content_heuristic(value: str, expected_inline: bool) -> None:
     """Inline content heuristic should classify strings correctly across cases."""
     assert ComponentPathUtils.looks_like_inline_content(value) == expected_inline
+
+
+def _patch_path_resolve_to_fail_for(target: Path) -> object:
+    """Patch Path.resolve so it raises OSError only for ``target``."""
+    original_resolve = Path.resolve
+
+    def patched_resolve(self: Path, *args: object, **kwargs: object) -> Path:
+        if self == target:
+            raise OSError("Simulated resolution failure")
+        return original_resolve(self, *args, **kwargs)
+
+    return patch.object(Path, "resolve", patched_resolve)
+
+
+def test_resolve_glob_pattern_skips_files_whose_resolution_raises(
+    tmp_path: Path,
+) -> None:
+    """resolve_glob_pattern logs a warning and skips files whose resolve() raises."""
+    package_root = tmp_path / "pkg"
+    asset = package_root / "assets" / "main.js"
+    _touch(asset)
+
+    with _patch_path_resolve_to_fail_for(asset):
+        with pytest.raises(StreamlitComponentRegistryError, match="No files found"):
+            ComponentPathUtils.resolve_glob_pattern(
+                pattern="assets/main.js", package_root=package_root
+            )
+
+
+def test_ensure_within_root_wraps_resolution_errors(tmp_path: Path) -> None:
+    """ensure_within_root raises a StreamlitComponentRegistryError when resolve fails."""
+    bad_path = tmp_path / "missing-file.js"
+
+    with _patch_path_resolve_to_fail_for(bad_path):
+        with pytest.raises(
+            StreamlitComponentRegistryError, match="Failed to resolve js path"
+        ):
+            ComponentPathUtils.ensure_within_root(
+                abs_path=bad_path, root=tmp_path, kind="js"
+            )

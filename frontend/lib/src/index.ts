@@ -32,8 +32,8 @@ export {
 export type { BlockPropsWithoutWidth } from "./components/core/Block/Block"
 export { default as ElementNodeRenderer } from "./components/core/Block/ElementNodeRenderer"
 export type { ElementNodeRendererProps } from "./components/core/Block/ElementNodeRenderer"
-export { DownloadContext } from "./components/core/DownloadContext"
-export type { DownloadContextProps } from "./components/core/DownloadContext"
+export { BackendOperationContext } from "./components/core/BackendOperationContext"
+export type { BackendOperationContextProps } from "./components/core/BackendOperationContext"
 export { FormsContext } from "./components/core/FormsContext"
 export type { FormsContextProps } from "./components/core/FormsContext"
 export { default as IsDialogContext } from "./components/core/IsDialogContext"
@@ -43,7 +43,10 @@ export type { LibConfigContextProps } from "./components/core/LibConfigContext"
 export { NavigationContext } from "./components/core/NavigationContext"
 export type { NavigationContextProps } from "./components/core/NavigationContext"
 export { PortalProvider } from "./components/core/Portal/PortalProvider"
-export { ScriptRunContext } from "./components/core/ScriptRunContext"
+export {
+  INITIAL_SCRIPT_RUN_ID,
+  ScriptRunContext,
+} from "./components/core/ScriptRunContext"
 export type { ScriptRunContextProps } from "./components/core/ScriptRunContext"
 export { SidebarConfigContext } from "./components/core/SidebarConfigContext"
 export type { SidebarConfigContextProps } from "./components/core/SidebarConfigContext"
@@ -56,10 +59,23 @@ export { default as AlertElement } from "./components/elements/AlertElement/Aler
 export { default as StreamlitErrorCodeBlock } from "./components/elements/CodeBlock/StreamlitErrorCodeBlock"
 export { handleFavicon } from "./components/elements/Favicon/Favicon"
 export { default as TextElement } from "./components/elements/TextElement/TextElement"
-export { getPopoverContainerStyle } from "./components/shared/Base/styled-components"
+export { toastQueue } from "./components/elements/Toast/toastQueue"
+export type { StreamlitToastContent } from "./components/elements/Toast/toastQueue"
+export { StreamlitToastItem } from "./components/elements/Toast/StreamlitToastItem"
+export {
+  getToastCardStyle,
+  StyledMessageWrapper,
+  StyledToastRegion,
+  StyledToastWrapper,
+} from "./components/elements/Toast/styled-components"
+export {
+  getOverlayZIndex,
+  getPopoverContainerStyle,
+} from "./components/shared/Base/styled-components"
 export {
   default as BaseButton,
   BaseButtonKind,
+  BaseButtonSize,
 } from "./components/shared/BaseButton/BaseButton"
 export { default as BaseColorPicker } from "./components/shared/BaseColorPicker/BaseColorPicker"
 export { default as UISelectbox } from "./components/shared/Dropdown/Selectbox"
@@ -90,10 +106,19 @@ export { useWindowDimensionsContext } from "./components/shared/WindowDimensions
 export { ComponentRegistry } from "./components/widgets/CustomComponent/ComponentRegistry"
 export { Quiver } from "./dataframes/Quiver"
 export { FileUploadClient } from "./FileUploadClient"
+export {
+  BackendOperationClient,
+  CONNECTION_CLOSED_MESSAGE,
+  REQUEST_TIMED_OUT_MESSAGE,
+} from "./BackendOperationClient"
+export type { BackendOperationClientProps } from "./BackendOperationClient"
 export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
 export { useCrossOriginAttribute } from "./hooks/useCrossOriginAttribute"
 export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
+export { useFloatingOverlay } from "./hooks/useFloatingOverlay"
+export { useHoverSubmenu } from "./hooks/useHoverSubmenu"
+export { useOverlayDismissal } from "./hooks/useOverlayDismissal"
 export {
   ensureHotkeysFilterConfigured,
   isKeyboardEventFromEditableTarget,

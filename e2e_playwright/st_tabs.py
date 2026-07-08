@@ -135,17 +135,32 @@ with col3:
 
 prog_tabs = st.tabs(["Alpha", "Beta", "Gamma"], key="prog_tabs", on_change="rerun")
 
+if "prog_tab_counts" not in st.session_state:
+    st.session_state.prog_tab_counts = {"Alpha": 0, "Beta": 0, "Gamma": 0}
+
 if prog_tabs[0].open:
     with prog_tabs[0]:
         st.write("Alpha tab content")
+        if st.button("Increment Alpha", key="inc_alpha"):
+            st.session_state.prog_tab_counts["Alpha"] += 1
 
 if prog_tabs[1].open:
     with prog_tabs[1]:
         st.write("Beta tab content")
+        if st.button("Increment Beta", key="inc_beta"):
+            st.session_state.prog_tab_counts["Beta"] += 1
 
 if prog_tabs[2].open:
     with prog_tabs[2]:
         st.write("Gamma tab content")
+        if st.button("Increment Gamma", key="inc_gamma"):
+            st.session_state.prog_tab_counts["Gamma"] += 1
+
+st.write(
+    f"Prog tab counts - Alpha: {st.session_state.prog_tab_counts['Alpha']}, "
+    f"Beta: {st.session_state.prog_tab_counts['Beta']}, "
+    f"Gamma: {st.session_state.prog_tab_counts['Gamma']}"
+)
 # Key-only (no on_change) — should NOT trigger reruns on tab switch
 # ============================================================================
 
@@ -264,3 +279,36 @@ st.write(
     f"Tabs callback args result: "
     f"{st.session_state.get('tabs_cb_args_result', 'Not called')}"
 )
+
+# ============================================================================
+# Ordinary tabs with widget-triggered rerun
+# ============================================================================
+
+rerun_tab_names = ["Rerun All", "Rerun Indy", "Rerun Clarksville", "Rerun Fort Wayne"]
+rerun_tabs = st.tabs(rerun_tab_names)
+
+for rerun_tab, rerun_tab_name in zip(rerun_tabs, rerun_tab_names, strict=True):
+    with rerun_tab:
+        st.write(f"{rerun_tab_name} tab marker")
+        st.line_chart([1, 2, 3])
+        st.selectbox(
+            "Rerun tab select",
+            ["A", "B", "C"],
+            key=f"{rerun_tab_name}_select",
+        )
+
+# ============================================================================
+# Nested tabs with a rerun triggered from a doubly-nested widget
+# ============================================================================
+
+outer_tabs = st.tabs(["Outer A", "Outer B"])
+with outer_tabs[0]:
+    st.write("Outer A marker")
+    inner_tabs = st.tabs(["Inner 1", "Inner 2"])
+    with inner_tabs[0]:
+        st.write("Inner 1 marker")
+        st.button("Nested rerun button", key="nested_rerun_button")
+    with inner_tabs[1]:
+        st.write("Inner 2 marker")
+with outer_tabs[1]:
+    st.write("Outer B marker")

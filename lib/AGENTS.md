@@ -4,7 +4,7 @@
 - Docstrings: Numpy style
 - Linter: Ruff 0.x (config in root `pyproject.toml`)
 - Formatter: Ruff 0.x (config in root `pyproject.toml`)
-- Type Checker: mypy 1.x + ty 0.x (config in root `pyproject.toml`)
+- Type Checker: mypy 2.x + ty 0.x (config in root `pyproject.toml`)
 - Testing: pytest 9.x (config in root `pyproject.toml`)
 
 ## Key Principles
@@ -36,6 +36,7 @@
 - `streamlit/web`: Web server and CLI implementation
 - `streamlit/commands`: `st` commands that don't add UI elements.
 - `streamlit/components`: Backend-implementation of custom components.
+- `streamlit/connections`: `st.connection` backends (SQL, Snowflake, and callers-rights variants).
 - `streamlit/hello`: `streamlit hello` app implementation.
 - `streamlit/navigation`: Multi-page app implementation.
 - `streamlit/proto`: Generated protobuf definitions for client-server communication.

@@ -51,6 +51,7 @@ import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
@@ -66,6 +67,7 @@ import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
+import useButtonColumnInteractions from "./hooks/useButtonColumnInteractions"
 import useColumnFormatting from "./hooks/useColumnFormatting"
 import useColumnLoader from "./hooks/useColumnLoader"
 import useColumnPinning from "./hooks/useColumnPinning"
@@ -85,6 +87,7 @@ import useSelectionHandler from "./hooks/useSelectionHandler"
 import useTableSizer from "./hooks/useTableSizer"
 import useTooltips from "./hooks/useTooltips"
 import useWidgetState, { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
+import ButtonActionMenu from "./menus/ButtonActionMenu"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
 import { StyledResizableContainer } from "./styled-components"
@@ -228,6 +231,7 @@ function DataFrame({
     canSort,
     canSearch,
     canExportCsv,
+    canShowColumnStatistics,
     canEdit,
     canAddRows,
     canDeleteRows,
@@ -287,6 +291,22 @@ function DataFrame({
 
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
+
+  const {
+    buttonActionMenu,
+    clearButtonActionMenu,
+    handleMenuSelectAction,
+    onCellClicked,
+  } = useButtonColumnInteractions({
+    element,
+    widgetMgr,
+    fragmentId,
+    columns,
+    getCellContent,
+    getOriginalIndex,
+    theme: gridTheme.glideTheme,
+    disabled,
+  })
 
   // Ref to access the latest getOriginalIndex in deferred callbacks.
   const getOriginalIndexRef = useRef(getOriginalIndex)
@@ -701,6 +721,13 @@ function DataFrame({
       ? true
       : false
 
+  // The search overlay may only be open while search is actually enabled.
+  // Deriving it from `canSearch` ensures the overlay is hidden (instead of
+  // getting stuck open) if the table becomes empty while search is active,
+  // since both the toolbar search button and the Ctrl/Cmd+F shortcut are
+  // disabled in that case.
+  const isSearchOpen = canSearch && showSearch
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
@@ -917,6 +944,7 @@ function DataFrame({
           rowHeight={rowHeight}
           headerHeight={gridTheme.defaultHeaderHeight}
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
+          onCellClicked={isEmptyTable ? undefined : onCellClicked}
           onColumnResize={canResizeColumns ? onColumnResize : undefined}
           // Configure resize indicator to only show on the header:
           resizeIndicator={"header"}
@@ -958,14 +986,18 @@ function DataFrame({
           // Search needs to be activated manually, to support search
           // via the toolbar:
           onKeyDown={event => {
-            if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+            if (
+              canSearch &&
+              (event.ctrlKey || event.metaKey) &&
+              event.key === "f"
+            ) {
               setShowSearch(cv => !cv)
               event.stopPropagation()
               event.preventDefault()
             }
           }}
-          showSearch={showSearch}
-          searchResults={!showSearch ? [] : undefined}
+          showSearch={isSearchOpen}
+          searchResults={!isSearchOpen ? [] : undefined}
           onSearchClose={() => {
             setShowSearch(false)
             clearTooltip()
@@ -1035,6 +1067,7 @@ function DataFrame({
               // Close menus:
               setShowMenu(undefined)
               setShowColumnVisibilityMenu(false)
+              clearButtonActionMenu()
             }
           }}
           theme={gridTheme.glideTheme}
@@ -1186,6 +1219,8 @@ function DataFrame({
             top={showMenu.headerBounds.y + showMenu.headerBounds.height}
             left={showMenu.headerBounds.x + showMenu.headerBounds.width}
             column={originalColumns[showMenu.columnIdx]}
+            data={data}
+            canShowColumnStatistics={canShowColumnStatistics}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
               canSort
@@ -1267,7 +1302,20 @@ function DataFrame({
           // by the transform property of the parent element).
           // The portal element is expected to always exist (-> PortalProvider).
           // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
-          document.querySelector("#portal") as HTMLElement
+          document.querySelector(`#${DATAFRAME_PORTAL_ID}`) as HTMLElement
+        )}
+      {buttonActionMenu &&
+        createPortal(
+          // A dropdown menu for multi-action button cells.
+          <ButtonActionMenu
+            top={buttonActionMenu.screenTop}
+            left={buttonActionMenu.screenLeft}
+            actions={buttonActionMenu.actions}
+            onSelectAction={handleMenuSelectAction}
+            onCloseMenu={clearButtonActionMenu}
+          />,
+          // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
+          document.querySelector(`#${DATAFRAME_PORTAL_ID}`) as HTMLElement
         )}
     </StyledResizableContainer>
   )
