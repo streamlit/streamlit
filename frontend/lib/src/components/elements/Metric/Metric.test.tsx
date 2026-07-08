@@ -597,6 +597,7 @@ describe("Metric element", () => {
       { chartData: [-10, 0, 10], expectedBaseline: 0 },
       { chartData: [0, 0, 0], expectedBaseline: 0 },
       { chartData: [42], expectedBaseline: 42 },
+      { chartData: [], expectedBaseline: 0 },
     ])(
       "sets area chart baseline to $expectedBaseline for $chartData",
       ({ chartData, expectedBaseline }) => {

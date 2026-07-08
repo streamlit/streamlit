@@ -62,6 +62,12 @@ const LARGE_DATASET_POINT_THRESHOLD = 1000
  * argument-spread `RangeError` on very large datasets.
  */
 function getAreaChartBaseline(chartData: number[]): number {
+  if (chartData.length === 0) {
+    // Defensive fallback: an empty dataset has no meaningful baseline, so
+    // return `0` to keep the `y2` datum a valid finite number.
+    return 0
+  }
+
   let dataMin = chartData[0]
   let dataMax = chartData[0]
   for (const value of chartData) {
