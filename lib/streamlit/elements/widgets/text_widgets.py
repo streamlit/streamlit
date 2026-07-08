@@ -221,10 +221,8 @@ class TextWidgetsMixin:
             state across reruns even when other parameters change.
 
             .. note::
-               Changing ``max_chars`` resets the widget even when a key
-               is provided.
-               Changing the validation regex also resets the widget even
-               when a key is provided.
+               Changing ``max_chars`` or the validation regex resets the
+               widget even when a key is provided.
 
             A key lets you read or update the widget's value via
             ``st.session_state[key]``. For more details, see `Widget
