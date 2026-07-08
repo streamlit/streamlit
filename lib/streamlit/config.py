@@ -2961,11 +2961,9 @@ def _check_conflicts() -> None:
         not get_option("server.enableCORS") or get_option("global.developmentMode")
     ):
         logger.warning(
-            """
-Warning: the config option 'server.enableCORS=false' is not compatible with
+            """Warning: the config option 'server.enableCORS=false' is not compatible with
 'server.enableXsrfProtection=true'.
-As a result, 'server.enableCORS' is being overridden to 'true'.
-
+Streamlit automatically sets 'server.enableCORS=true' to preserve XSRF protection.
 More information:
 In order to protect against CSRF attacks, we send a cookie with each request.
 To do so, we must specify allowable origins, which places a restriction on
