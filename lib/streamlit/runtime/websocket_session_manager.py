@@ -145,6 +145,10 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
                 "Session with id %s is already connected! Reconnecting to existing session.",
                 existing_session_id,
             )
+            # Disconnecting the still-active session moves it into storage, which
+            # makes it available to the storage-based reconnect path below. The new
+            # client then reconnects to the same session (preserving its state)
+            # instead of a brand-new one being created.
             self.disconnect_session(existing_session_id)
 
         session_info = (
