@@ -425,6 +425,19 @@ export class WebsocketConnection {
     )
   }
 
+  /**
+   * Compute the delay before the next health re-probe using exponential
+   * backoff with equal jitter, spreading reconnect attempts to avoid a
+   * synchronized reconnect storm (e.g. after a server restart).
+   *
+   * Note: This is NOT a pure getter. It increments `this.reconnectAttempt`
+   * as a side effect and therefore advances the backoff window on every
+   * call. It must only be called when a delay is actually going to be
+   * scheduled (i.e. its result is fed into `setFsmState(PINGING_SERVER, ...)`).
+   * The counter is reset to 0 on a successful `CONNECTED` transition.
+   *
+   * @returns The delay in milliseconds before the next health probe.
+   */
   private nextReconnectDelayMs(): number {
     this.reconnectAttempt += 1
 
@@ -442,6 +455,17 @@ export class WebsocketConnection {
     )
   }
 
+  /**
+   * Schedule the health probe (`pingServer`) to run after `delayMs`.
+   *
+   * Any previously scheduled reconnect delay is cleared first, so at most one
+   * pending probe exists at a time. A non-positive delay pings immediately
+   * (used for the initial `INITIAL -> PINGING_SERVER` probe). The scheduled
+   * probe is skipped if the FSM has left `PINGING_SERVER` by the time it fires.
+   *
+   * @param delayMs The delay in milliseconds before probing; `<= 0` probes
+   * immediately.
+   */
   private schedulePingServer(delayMs: number): void {
     this.clearReconnectDelayTimeout()
 
@@ -462,6 +486,13 @@ export class WebsocketConnection {
     }, delayMs)
   }
 
+  /**
+   * Cancel any pending reconnect-delay timer.
+   *
+   * Called when entering `CONNECTED` (successful reconnect), when scheduling a
+   * new probe, and on permanent disconnect, so a stale timer can never fire a
+   * health probe after the FSM has moved on.
+   */
   private clearReconnectDelayTimeout(): void {
     if (notNullOrUndefined(this.reconnectDelayTimeout)) {
       globalThis.clearTimeout(this.reconnectDelayTimeout)
