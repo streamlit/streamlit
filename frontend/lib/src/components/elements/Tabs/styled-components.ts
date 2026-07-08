@@ -173,18 +173,24 @@ export const StyledTab = styled(RATab, {
   ...($isStale ? STALE_STYLES : {}),
 }))
 
-/** Tab panel content area. Inactive force-mounted panels receive `inert="true"` from
- * RAC (not `hidden`), which prevents interaction but does NOT hide them visually.
- * We explicitly hide [inert] panels so only the active panel is visible.
+/** Tab panel content area. All panels stay force-mounted (`shouldForceMount`) to
+ * preserve their state and scroll position across tab switches — matching the
+ * previous BaseWeb `renderAll` behavior: https://github.com/streamlit/streamlit/issues/5069
+ *
+ * Visibility is driven by Streamlit's own active-tab state (`$isActive`), not by
+ * React Aria's `inert` attribute. RAC drops `inert` from inactive panels when
+ * their content re-renders on a rerun, which previously left every panel visible
+ * and stacked down the page (#15892, #15893).
+ *
  * The active panel is focusable (RAC sets tabIndex=0 on role="tabpanel"), so we
  * suppress the default outline and show Streamlit's focus ring for keyboard users. */
-export const StyledTabPanel = styled(RATabPanel)(({ theme }) => ({
+export const StyledTabPanel = styled(RATabPanel, {
+  shouldForwardProp: prop => prop !== "$isActive",
+})<{ $isActive: boolean }>(({ theme, $isActive }) => ({
+  display: $isActive ? undefined : "none",
   paddingTop: theme.spacing.lg,
   outline: "none",
   "&[data-focus-visible]": {
     boxShadow: theme.shadows.focusRing,
-  },
-  "&[inert]": {
-    display: "none",
   },
 }))
