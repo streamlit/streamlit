@@ -145,6 +145,7 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         # The stale connection's script is stopped during the handoff.
         original_session.request_script_stop.assert_called_once()
         # The session is moved back out of storage into the active pool.
+        assert session_id in self.session_mgr._active_session_info_by_id
         assert session_id not in self.session_mgr._session_storage._cache
 
         patched_warning.assert_called_with(
@@ -440,6 +441,35 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         stats = self.session_mgr.get_stats()
 
         assert self._get_stat_value(stats, "session_events", "connect") == 1
+        assert self._get_stat_value(stats, "session_events", "reconnect") == 1
+        assert self._get_stat_value(stats, "active_sessions") == 1
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
+    def test_still_active_reconnect_emits_disconnect_and_reconnect(self) -> None:
+        """Reconnecting to a still-active session emits a disconnect + reconnect pair.
+
+        When a new connection reuses an ``existing_session_id`` that is still active
+        (the previous connection's cleanup has not run yet), the handoff disconnects
+        the stale connection and reconnects the new client, so both a disconnect and
+        a reconnect event are recorded while the session stays active.
+        """
+        session_id = self.connect_session()
+        self.connect_session(existing_session_id=session_id)
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events", "connect") == 1
+        assert self._get_stat_value(stats, "session_events", "disconnect") == 1
         assert self._get_stat_value(stats, "session_events", "reconnect") == 1
         assert self._get_stat_value(stats, "active_sessions") == 1
 
