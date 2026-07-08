@@ -72,9 +72,9 @@ def test_hides_csv_export_for_dataframes_and_chart_table_view(app: Page):
     _expect_csv_export_hidden(chart_table_view)
 
 
-@pytest.mark.skip_browser("firefox")
-@pytest.mark.skip_browser("webkit")
+@pytest.mark.only_browser("chromium")
 def test_keeps_data_editor_clipboard_copy_enabled(app: Page):
+    """Verify clipboard copy remains available where Playwright supports it."""
     app.context.grant_permissions(["clipboard-read", "clipboard-write"])
 
     data_editor = _get_data_editor(app)
@@ -87,9 +87,9 @@ def test_keeps_data_editor_clipboard_copy_enabled(app: Page):
     assert "Alice" in app.evaluate("navigator.clipboard.readText()")
 
 
-@pytest.mark.skip_browser("firefox")
-@pytest.mark.skip_browser("webkit")
+@pytest.mark.only_browser("chromium")
 def test_disables_dataframe_clipboard_copy(app: Page):
+    """Verify read-only dataframe copy is blocked where clipboard reads work."""
     app.context.grant_permissions(["clipboard-read", "clipboard-write"])
 
     read_only_dataframe = _get_read_only_dataframe(app)
