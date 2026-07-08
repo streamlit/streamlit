@@ -159,6 +159,7 @@ def set_user_option(key: str, value: Any) -> None:
     script itself:
 
         - ``client.showErrorDetails``
+        - ``client.disableDataExport``
         - ``client.showSidebarNavigation``
         - ``client.toolbarMode``
 
@@ -627,6 +628,18 @@ _create_option(
     """,
     default_val="auto",
     type_=str,
+    scriptable=True,
+)
+
+_create_option(
+    "client.disableDataExport",
+    description="""
+        Controls whether data export functionality is disabled in components
+        that support it. When true, CSV download controls are hidden and
+        clipboard copy is disabled for st.dataframe.
+    """,
+    default_val=False,
+    type_=bool,
     scriptable=True,
 )
 

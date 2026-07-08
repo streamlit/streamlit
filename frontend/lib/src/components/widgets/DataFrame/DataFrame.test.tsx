@@ -23,7 +23,7 @@ import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { EMPTY } from "~lib/mocks/arrow/empty"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 // Track DataEditor calls for assertions - separate from the component so we can use forwardRef
@@ -114,6 +114,76 @@ describe("DataFrame widget", () => {
     // Verify expected toolbar buttons: search, column visibility, download, fullscreen
     const toolbarButtons = screen.getAllByTestId("stElementToolbarButton")
     expect(toolbarButtons).toHaveLength(4)
+  })
+
+  it("hides CSV export when data export is disabled", () => {
+    renderWithContexts(<DataFrame {...props} />, {
+      libConfigContext: { disableDataExport: true },
+    })
+
+    expect(screen.queryByLabelText("Download as CSV")).not.toBeInTheDocument()
+    expect(screen.getByLabelText("Search")).toBeInTheDocument()
+    expect(screen.getByLabelText("Show/hide columns")).toBeInTheDocument()
+  })
+
+  it("disables clipboard copy for read-only dataframes when data export is disabled", () => {
+    renderWithContexts(<DataFrame {...props} />, {
+      libConfigContext: { disableDataExport: true },
+    })
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        getCellsForSelection: undefined,
+      })
+    )
+
+    const event = {
+      ctrlKey: true,
+      metaKey: false,
+      key: "c",
+      stopPropagation: vi.fn(),
+      preventDefault: vi.fn(),
+    }
+
+    act(() => {
+      dataEditorMockFn.mock.lastCall?.[0].onKeyDown(event)
+    })
+
+    expect(event.stopPropagation).toHaveBeenCalled()
+    expect(event.preventDefault).toHaveBeenCalled()
+  })
+
+  it("keeps clipboard editing enabled for data editors when data export is disabled", () => {
+    renderWithContexts(
+      <DataFrame
+        {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.DYNAMIC)}
+      />,
+      {
+        libConfigContext: { disableDataExport: true },
+      }
+    )
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        getCellsForSelection: true,
+        onPaste: expect.any(Function),
+      })
+    )
+
+    const event = {
+      ctrlKey: true,
+      metaKey: false,
+      key: "c",
+      stopPropagation: vi.fn(),
+      preventDefault: vi.fn(),
+    }
+
+    act(() => {
+      dataEditorMockFn.mock.lastCall?.[0].onKeyDown(event)
+    })
+
+    expect(event.stopPropagation).not.toHaveBeenCalled()
+    expect(event.preventDefault).not.toHaveBeenCalled()
   })
 
   it("shows search when Ctrl+F is pressed and search is enabled", () => {

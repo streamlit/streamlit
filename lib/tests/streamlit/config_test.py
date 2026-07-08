@@ -170,6 +170,16 @@ class ConfigTest(unittest.TestCase):
                 "client.showErrorDetails", ShowErrorDetailsConfigOptions.FULL
             )
 
+    def test_set_user_option_disable_data_export_scriptable(self):
+        """Test that client.disableDataExport can be set from API."""
+        assert config.get_option("client.disableDataExport") is False
+
+        try:
+            config.set_user_option("client.disableDataExport", True)
+            assert config.get_option("client.disableDataExport") is True
+        finally:
+            config.set_user_option("client.disableDataExport", False)
+
     def test_set_user_option_unscriptable(self):
         """Test that unscriptable options cannot be set with st.set_option."""
         # This is set in lib/tests/conftest.py to off
@@ -739,6 +749,7 @@ class ConfigTest(unittest.TestCase):
                 "browser.serverAddress",
                 "browser.serverPort",
                 "client.allowedOrigins",
+                "client.disableDataExport",
                 "client.showErrorDetails",
                 "client.showErrorLinks",
                 "client.showSidebarNavigation",

@@ -51,6 +51,7 @@ describe("ReadOnlyGrid", () => {
 
     // Props should be passed through with expected defaults
     expect(receivedProps?.disabled).toBe(true)
+    expect(receivedProps?.disableClipboardCopy).toBe(false)
     expect(receivedProps?.disableFullscreenMode).toBe(true)
     expect(receivedProps?.data).toBe(fakeQuiver)
     expect(receivedProps?.customToolbarActions).toBeUndefined()

@@ -120,6 +120,7 @@ export interface DataFrameProps {
   customToolbarActions?: React.ReactNode[]
   widthConfig?: streamlit.IWidthConfig | null
   heightConfig?: streamlit.IHeightConfig | null
+  disableClipboardCopy?: boolean
 }
 
 /**
@@ -141,6 +142,7 @@ function DataFrame({
   customToolbarActions,
   widthConfig,
   heightConfig,
+  disableClipboardCopy,
 }: Readonly<DataFrameProps>): ReactElement {
   // Use provided Quiver data or construct from proto's arrowData. The
   // elementHash serves as the primary memoization key to avoid unnecessary
@@ -189,7 +191,8 @@ function DataFrame({
     useRowHover(gridTheme)
 
   // Default to false, if no libConfig, e.g. for tests
-  const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
+  const { enforceDownloadInNewTab = false, disableDataExport = false } =
+    useContext(LibConfigContext)
 
   const [isFocused, setIsFocused] = useState<boolean>(true)
   const [showSearch, setShowSearch] = useState(false)
@@ -221,6 +224,9 @@ function DataFrame({
   // editingMode field defined.
   const editingMode =
     element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
+  const isReadOnly = editingMode === DataframeProto.EditingMode.READ_ONLY
+  const isClipboardCopyDisabled =
+    disableClipboardCopy ?? (disableDataExport && isReadOnly)
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
@@ -246,6 +252,7 @@ function DataFrame({
     disabled,
     numDataRows: originalNumRows,
     numDataColumns: dataDimensions.numDataColumns,
+    disableDataExport,
   })
 
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)
@@ -955,7 +962,7 @@ function DataFrame({
           // Show borders between cells:
           verticalBorder={true}
           // Activate copy to clipboard functionality:
-          getCellsForSelection={true}
+          getCellsForSelection={isClipboardCopyDisabled ? undefined : true}
           // Deactivate row markers and numbers:
           rowMarkers={"none"}
           // Deactivate selections:
@@ -986,6 +993,16 @@ function DataFrame({
           // Search needs to be activated manually, to support search
           // via the toolbar:
           onKeyDown={event => {
+            if (
+              isClipboardCopyDisabled &&
+              (event.ctrlKey || event.metaKey) &&
+              event.key.toLowerCase() === "c"
+            ) {
+              event.stopPropagation()
+              event.preventDefault()
+              return
+            }
+
             if (
               canSearch &&
               (event.ctrlKey || event.metaKey) &&
