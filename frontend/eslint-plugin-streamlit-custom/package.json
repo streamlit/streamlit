@@ -14,7 +14,7 @@
     "lint": "eslint --cache --max-warnings 0 src",
     "test": "vitest run",
     "testWatch": "vitest",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node \"$PROJECT_CWD/node_modules/typescript-v7/bin/tsc\" --noEmit",
     "typesync:ci": "typesync --dry=fail",
     "typesync": "typesync"
   },
