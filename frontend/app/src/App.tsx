@@ -1240,6 +1240,15 @@ export class App extends PureComponent<Props, State> {
   handleAutoRerun = (autoRerun: AutoRerun): void => {
     const { fragmentId } = autoRerun
 
+    // Auto-reruns are always scoped to a fragment, so we expect a non-empty
+    // fragment id. Guard against an empty id (which protobuf produces when the
+    // field is unset): using it as a map key would collide, so a second empty-id
+    // registration would silently cancel the first. Skip it instead.
+    if (!fragmentId) {
+      LOG.warn("Ignoring auto-rerun message without a fragment id.")
+      return
+    }
+
     // A `run_every` fragment re-registers its auto-rerun every time an ancestor
     // re-renders it (a fragment-only rerun doesn't reset timers). Clear any
     // existing timer for this fragment first so repeated renders replace rather

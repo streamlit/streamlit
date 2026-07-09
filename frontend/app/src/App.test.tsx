@@ -3946,6 +3946,35 @@ describe("App", () => {
         connectionManager.sendMessage.mock.calls.length - callsBefore
       ).toBe(1)
     })
+
+    it("ignores an auto-rerun message without a fragment id", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        // Auto-reruns are always fragment-scoped; a message with no fragment id
+        // must not register a timer (and two of them must not collide under an
+        // empty-string key).
+        sendForwardMessage("autoRerun", { interval: 1.0 })
+        sendForwardMessage("autoRerun", { interval: 1.0 })
+        vi.advanceTimersByTime(2000)
+      })
+
+      // No timer was registered, so no auto-rerun messages are sent.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(0)
+    })
   })
 
   describe("App.requestFileURLs", () => {
