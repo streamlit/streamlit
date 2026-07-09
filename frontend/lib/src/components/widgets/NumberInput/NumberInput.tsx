@@ -25,6 +25,7 @@ import {
   useState,
 } from "react"
 
+import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { Minus, Plus } from "@emotion-icons/open-iconic"
 import { TextField } from "react-aria-components"
@@ -37,6 +38,8 @@ import {
 } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
@@ -53,12 +56,14 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledClearButton,
+  StyledEndEnhancer,
   StyledInputContainer,
   StyledInputControl,
   StyledInputControls,
   StyledInputElement,
   StyledInstructionsContainer,
   StyledStartEnhancer,
+  StyledVisuallyHidden,
 } from "./styled-components"
 import {
   canDecrement,
@@ -95,6 +100,8 @@ const NumberInput: React.FC<Props> = ({
     icon,
     min,
     max,
+    hasMin,
+    hasMax,
   } = element
 
   const { width, elementRef } = useCalculatedDimensions()
@@ -131,6 +138,7 @@ const NumberInput: React.FC<Props> = ({
       step,
     })
   })
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   const queryParamBinding = element.queryParamKey
     ? {
@@ -158,6 +166,7 @@ const NumberInput: React.FC<Props> = ({
       const newValue = elementDefault ?? null
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
+      setValidationError(null)
     }, [elementDefault, formatCurrentValue]),
     queryParamBinding,
   })
@@ -166,6 +175,7 @@ const NumberInput: React.FC<Props> = ({
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const id = useId()
+  const validationErrorId = `${id}-validation-error`
 
   const inForm = isInForm({ formId: elementFormId })
   // Allows form submission on Enter & displays Enter instructions, or if not in form and state is dirty
@@ -189,6 +199,32 @@ const NumberInput: React.FC<Props> = ({
     }
   }, [value, dirty, formatCurrentValue])
 
+  const getRangeValidationMessage = useCallback(
+    (valueArg: number): string | null => {
+      const isBelowMin = valueArg < min
+      const isAboveMax = valueArg > max
+      if (!isBelowMin && !isAboveMax) {
+        return null
+      }
+
+      const minText = formatCurrentValue(min) ?? String(min)
+      const maxText = formatCurrentValue(max) ?? String(max)
+
+      if (hasMin && hasMax) {
+        return `Number is outside the allowed range. Please enter a value between ${minText} and ${maxText}.`
+      }
+      if (isBelowMin) {
+        return hasMin
+          ? `Number is below the allowed range. Please enter a value greater than or equal to ${minText}.`
+          : "Number is below the allowed range."
+      }
+      return hasMax
+        ? `Number is above the allowed range. Please enter a value less than or equal to ${maxText}.`
+        : "Number is above the allowed range."
+    },
+    [formatCurrentValue, hasMax, hasMin, max, min]
+  )
+
   // Commit a value: validate, update widget manager, and sync to URL
   const commitValue = useCallback(
     ({
@@ -197,21 +233,31 @@ const NumberInput: React.FC<Props> = ({
     }: {
       value: number | null
       fromUi: boolean
-    }) => {
-      // Validate range and show browser validation message if out of range
-      if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
-        inputRef.current?.reportValidity()
-        return
+    }): boolean => {
+      // Validate range and show Streamlit-styled error message if out of range.
+      if (notNullOrUndefined(valueArg)) {
+        const rangeValidationError = getRangeValidationMessage(valueArg)
+        if (rangeValidationError) {
+          setValidationError(rangeValidationError)
+          return false
+        }
       }
 
       const newValue = valueArg ?? elementDefault ?? null
 
+      setValidationError(null)
       setValueWithSource({ value: newValue, fromUi })
 
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
+      return true
     },
-    [min, max, elementDefault, formatCurrentValue, setValueWithSource]
+    [
+      elementDefault,
+      formatCurrentValue,
+      getRangeValidationMessage,
+      setValueWithSource,
+    ]
   )
 
   // When the widget has no default, the user can clear the value to null.
@@ -248,6 +294,8 @@ const NumberInput: React.FC<Props> = ({
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>): void => {
       const { value: targetValue } = e.target
+
+      setValidationError(null)
 
       if (targetValue === "") {
         setDirty(true)
@@ -332,16 +380,24 @@ const NumberInput: React.FC<Props> = ({
             handleClear()
           }
           break
-        case "Enter":
+        case "Enter": {
+          let shouldSubmitForm = true
           if (dirty) {
             // When committing, if currentNumericValue is null (empty input),
             // commitValue will fall back to elementDefault
-            commitValue({ value: currentNumericValue, fromUi: true })
+            shouldSubmitForm = commitValue({
+              value: currentNumericValue,
+              fromUi: true,
+            })
           }
-          if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
+          if (
+            shouldSubmitForm &&
+            widgetMgr.allowFormEnterToSubmit(elementFormId)
+          ) {
             widgetMgr.submitForm(elementFormId, fragmentId)
           }
           break
+        }
         default:
       }
     },
@@ -401,6 +457,7 @@ const NumberInput: React.FC<Props> = ({
       <TextField isDisabled={disabled} aria-label={element.label}>
         <StyledInputContainer
           $isFocused={isFocused}
+          $hasError={!!validationError}
           data-testid="stNumberInputContainer"
         >
           {element.icon && (
@@ -427,11 +484,29 @@ const NumberInput: React.FC<Props> = ({
             max={max}
             value={formattedValue ?? ""}
             placeholder={element.placeholder}
+            aria-invalid={validationError ? true : undefined}
+            aria-describedby={validationError ? validationErrorId : undefined}
             onFocus={handleFocus}
             onBlur={handleBlur}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
           />
+          {validationError && (
+            <StyledEndEnhancer>
+              <Tooltip
+                content={
+                  <StreamlitMarkdown
+                    source={`**Error**: ${validationError}`}
+                    allowHTML={false}
+                  />
+                }
+                placement={Placement.TOP_RIGHT}
+                error
+              >
+                <Icon content={ErrorOutline} size="base" />
+              </Tooltip>
+            </StyledEndEnhancer>
+          )}
           {clearable && notNullOrUndefined(formattedValue) && (
             <StyledClearButton
               type="button"
@@ -483,10 +558,18 @@ const NumberInput: React.FC<Props> = ({
               </StyledInputControl>
             </StyledInputControls>
           )}
+          {validationError && (
+            <StyledVisuallyHidden id={validationErrorId} role="alert">
+              {`Error: ${validationError}`}
+            </StyledVisuallyHidden>
+          )}
         </StyledInputContainer>
       </TextField>
       {shouldShowInstructions && (
-        <StyledInstructionsContainer clearable={clearable}>
+        <StyledInstructionsContainer
+          clearable={clearable}
+          hasError={!!validationError}
+        >
           <InputInstructions
             dirty={dirty}
             value={formattedValue ?? ""}
