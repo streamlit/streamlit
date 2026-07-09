@@ -567,8 +567,8 @@ const NumberInput: React.FC<Props> = ({
       </TextField>
       {shouldShowInstructions && (
         <StyledInstructionsContainer
-          clearable={clearable}
-          hasError={!!validationError}
+          $clearable={clearable}
+          $hasError={!!validationError}
         >
           <InputInstructions
             dirty={dirty}

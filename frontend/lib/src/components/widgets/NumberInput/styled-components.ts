@@ -167,22 +167,22 @@ export const StyledEndEnhancer = styled.div(({ theme }) => ({
 interface StyledInstructionsContainerProps {
   // If widget is clearable, the instruction needs to be moved a couple
   // pixels to the left to avoid overlapping with the clear button.
-  clearable: boolean
+  $clearable: boolean
   // If the validation error icon is visible, instructions need the same offset.
-  hasError: boolean
+  $hasError: boolean
 }
 
 export const StyledInstructionsContainer =
   styled.div<StyledInstructionsContainerProps>(
-    ({ theme, clearable, hasError }) => ({
+    ({ theme, $clearable, $hasError }) => ({
       position: "absolute",
       marginRight: theme.spacing.twoXS,
       left: 0,
       // The instructions should be placed after the two controls,
       // clear button, and validation error icon if present.
       right: `calc(${theme.sizes.numberInputControlsWidth} * 2 + ${
-        clearable ? "1em" : "0em"
-      } + ${hasError ? "1em" : "0em"})`,
+        $clearable ? "1em" : "0em"
+      } + ${$hasError ? "1em" : "0em"})`,
     })
   )
 
