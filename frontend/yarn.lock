@@ -2067,9 +2067,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@microlink/react-json-view@npm:^1.31.21":
-  version: 1.31.21
-  resolution: "@microlink/react-json-view@npm:1.31.21"
+"@microlink/react-json-view@npm:^1.31.22":
+  version: 1.31.22
+  resolution: "@microlink/react-json-view@npm:1.31.22"
   dependencies:
     react-base16-styling: "npm:~0.10.0"
     react-lifecycles-compat: "npm:~3.0.4"
@@ -2077,7 +2077,7 @@ __metadata:
   peerDependencies:
     react: ">= 15"
     react-dom: ">= 15"
-  checksum: 10c0/caa502c7f53a0fcb8228130703013d557fb07a476a1a9dde7dcaaa054028dcab2a5aabb53678f75a4f411fb0bcad604826b294d611e48ef82ef5e057461ba1b1
+  checksum: 10c0/2ca6764cd4ef106b262eb08be20b36215fe431c22e7ff1e8e08545ccea76d6f3873f5afd7fb8d83f27cc5955b3897f73ea10620b213fc90ad8dd5e07e23773b9
   languageName: node
   linkType: hard
 
@@ -3689,7 +3689,7 @@ __metadata:
     "@loaders.gl/core": "npm:^4.4.3"
     "@loaders.gl/csv": "npm:^4.4.3"
     "@loaders.gl/gltf": "npm:^4.4.3"
-    "@microlink/react-json-view": "npm:^1.31.21"
+    "@microlink/react-json-view": "npm:^1.31.22"
     "@sindresorhus/slugify": "npm:^3.0.0"
     "@streamlit/component-v2-lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
