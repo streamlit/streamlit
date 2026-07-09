@@ -36,11 +36,18 @@ import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   MAX_RETRIES_BEFORE_CLIENT_ERROR,
   PING_MINIMUM_RETRY_PERIOD_MS,
+  RECONNECT_BASE_RETRY_PERIOD_MS,
+  RECONNECT_MAXIMUM_RETRY_PERIOD_MS,
+  RECONNECT_MINIMUM_RETRY_PERIOD_MS,
 } from "./constants"
 import { doInitPings, PingCancelledError } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
 import { ErrorDetails, OnRetry } from "./types"
 import { Args, WebsocketConnection } from "./WebsocketConnection"
+
+const expectedFirstReconnectDelayMs =
+  RECONNECT_MINIMUM_RETRY_PERIOD_MS +
+  (RECONNECT_BASE_RETRY_PERIOD_MS - RECONNECT_MINIMUM_RETRY_PERIOD_MS) * 0.5
 
 const MOCK_ALLOWED_ORIGINS_CONFIG = {
   allowedOrigins: ["list", "of", "allowed", "origins"],
@@ -724,7 +731,8 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     expect(timeouts.length).toEqual(5)
     expect(timeouts[0]).toEqual(10)
-    expect(timeouts[4]).toEqual(100)
+    expect(timeouts[4]).toBeGreaterThanOrEqual(70)
+    expect(timeouts[4]).toBeLessThanOrEqual(100)
     // timeouts should be monotonically increasing until they hit the cap
     expect(
       zip(timeouts.slice(0, -1), timeouts.slice(1)).every(
@@ -1103,6 +1111,153 @@ describe("WebsocketConnection", () => {
     client.reconnect()
     // @ts-expect-error
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+  })
+
+  it("delays health pings when reconnecting after a websocket disconnect", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+
+    await vi.runAllTimersAsync()
+    await server.connected
+    vi.mocked(globalThis.fetch).mockClear()
+
+    client.reconnect()
+
+    // @ts-expect-error - accessing private property for testing
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(expectedFirstReconnectDelayMs - 1)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+
+    randomSpy.mockRestore()
+  })
+
+  it("grows the reconnect backoff window on consecutive disconnects", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+
+    await vi.runAllTimersAsync()
+    await server.connected
+    vi.mocked(globalThis.fetch).mockClear()
+
+    // First disconnect: window is 250-500ms, so 0.5 jitter -> 375ms.
+    client.reconnect()
+    await vi.advanceTimersByTimeAsync(expectedFirstReconnectDelayMs - 1)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    // Force a second consecutive disconnect without a successful connect in
+    // between (assigning the state directly avoids resetting the attempt
+    // counter). This also cancels the still-pending first-attempt ping.
+    // @ts-expect-error - accessing private property for testing
+    client.state = ConnectionState.CONNECTED
+    client.reconnect()
+
+    // The window now doubles to 500-1000ms, so 0.5 jitter -> 750ms. The
+    // previously scheduled ping was cancelled, so nothing fires before then.
+    await vi.advanceTimersByTimeAsync(RECONNECT_BASE_RETRY_PERIOD_MS * 1.5 - 1)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+
+    randomSpy.mockRestore()
+  })
+
+  it("cancels the pending reconnect ping when disconnected during the delay", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+
+    await vi.runAllTimersAsync()
+    await server.connected
+    vi.mocked(globalThis.fetch).mockClear()
+
+    client.reconnect()
+    // @ts-expect-error - accessing private property for testing
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+
+    client.disconnect()
+
+    // @ts-expect-error - accessing private property for testing
+    expect(client.state).toBe(ConnectionState.DISCONNECTED_FOREVER)
+
+    // The scheduled ping should never fire after a permanent disconnect.
+    await vi.runAllTimersAsync()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    randomSpy.mockRestore()
+  })
+
+  it("resets the reconnect backoff window after a successful reconnect", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+
+    await vi.runAllTimersAsync()
+    await server.connected
+
+    // First disconnect bumps the attempt counter and schedules a delayed ping.
+    client.reconnect()
+    // @ts-expect-error - accessing private property for testing
+    expect(client.reconnectAttempt).toBe(1)
+
+    // Completing the reconnect cycle returns the client to CONNECTED, which
+    // resets the attempt counter back to zero.
+    await vi.runAllTimersAsync()
+    await server.connected
+    // @ts-expect-error - accessing private property for testing
+    expect(client.state).toBe(ConnectionState.CONNECTED)
+    // @ts-expect-error - accessing private property for testing
+    expect(client.reconnectAttempt).toBe(0)
+
+    vi.mocked(globalThis.fetch).mockClear()
+
+    // The next disconnect must start from the base window again (375ms with
+    // 0.5 jitter), proving the window was not left inflated.
+    client.reconnect()
+    await vi.advanceTimersByTimeAsync(expectedFirstReconnectDelayMs - 1)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+
+    randomSpy.mockRestore()
+  })
+
+  it("caps the reconnect backoff window at the configured maximum", () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+
+    // Simulate a long streak of consecutive failed reconnects so the
+    // exponential window would far exceed the cap if left unbounded.
+    // @ts-expect-error - accessing private property for testing
+    client.reconnectAttempt = 20
+
+    // @ts-expect-error - accessing private method for testing
+    const delayMs = client.nextReconnectDelayMs()
+
+    // With a maxed-out window the equal-jitter delay is window/2 + 0.5*window/2
+    // = 0.75 * window, and the window itself is clamped to the maximum.
+    expect(delayMs).toBe(RECONNECT_MAXIMUM_RETRY_PERIOD_MS * 0.75)
+    // @ts-expect-error - accessing private method for testing
+    expect(client.nextReconnectDelayMs()).toBeLessThanOrEqual(
+      RECONNECT_MAXIMUM_RETRY_PERIOD_MS
+    )
+
+    randomSpy.mockRestore()
+  })
+
+  it("probes the health endpoint immediately on the initial connection", async () => {
+    // The beforeEach constructs `client`, which transitions INITIAL ->
+    // PINGING_SERVER on INITIALIZED. This initial path must not apply any
+    // reconnect backoff: the attempt counter stays at zero, no reconnect delay
+    // timer is scheduled, and the health probe is dispatched immediately.
+    // @ts-expect-error - accessing private property for testing
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+    // @ts-expect-error - accessing private property for testing
+    expect(client.reconnectAttempt).toBe(0)
+    // @ts-expect-error - accessing private property for testing
+    expect(client.reconnectDelayTimeout).toBeUndefined()
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(globalThis.fetch).toHaveBeenCalled()
   })
 
   it("reconnect does nothing if not connected", () => {
