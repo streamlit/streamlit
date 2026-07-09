@@ -32,6 +32,7 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_element_by_key,
 )
+from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 
 @dataclass
@@ -72,99 +73,51 @@ def _click(app: Page, chart: Locator, click_position: _MousePosition) -> None:
 
 
 def _get_selection_point_scatter_chart(app: Page) -> Locator:
-    return (
-        app.get_by_test_id("stVegaLiteChart")
-        .locator("[role='graphics-document']")
-        .nth(0)
-    )
+    return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(0))
 
 
 def _get_selection_interval_scatter_chart(app: Page) -> Locator:
-    return (
-        app.get_by_test_id("stVegaLiteChart")
-        .locator("[role='graphics-document']")
-        .nth(1)
-    )
+    return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(1))
 
 
 def _get_selection_interval_scatter_chart_tooltip(app: Page) -> Locator:
-    return (
-        app.get_by_test_id("stVegaLiteChart")
-        .locator("[role='graphics-document']")
-        .nth(2)
-    )
+    return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(2))
 
 
 def _get_selection_point_bar_chart(app: Page) -> Locator:
-    return (
-        app.get_by_test_id("stVegaLiteChart")
-        .locator("[role='graphics-document']")
-        .nth(3)
-    )
+    return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(3))
 
 
 def _get_selection_interval_bar_chart(app: Page) -> Locator:
-    return (
-        app.get_by_test_id("stVegaLiteChart")
-        .locator("[role='graphics-document']")
-        .nth(4)
-    )
+    return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(4))
 
 
 def _get_selection_point_area_chart(app: Page) -> Locator:
-    return (
-        app.get_by_test_id("stVegaLiteChart")
-        .locator("[role='graphics-document']")
-        .nth(5)
-    )
+    return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(5))
 
 
 def _get_selection_interval_area_chart(app: Page) -> Locator:
-    return (
-        app.get_by_test_id("stVegaLiteChart")
-        .locator("[role='graphics-document']")
-        .nth(6)
-    )
+    return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(6))
 
 
 def _get_selection_point_histogram(app: Page) -> Locator:
-    return (
-        app.get_by_test_id("stVegaLiteChart")
-        .locator("[role='graphics-document']")
-        .nth(7)
-    )
+    return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(7))
 
 
 def _get_selection_interval_histogram(app: Page) -> Locator:
-    return (
-        app.get_by_test_id("stVegaLiteChart")
-        .locator("[role='graphics-document']")
-        .nth(8)
-    )
+    return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(8))
 
 
 def _get_in_form_chart(app: Page) -> Locator:
-    return (
-        app.get_by_test_id("stVegaLiteChart")
-        .locator("[role='graphics-document']")
-        .nth(9)
-    )
+    return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(9))
 
 
 def _get_callback_chart(app: Page) -> Locator:
-    return (
-        app.get_by_test_id("stVegaLiteChart")
-        .locator("[role='graphics-document']")
-        .nth(10)
-    )
+    return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(10))
 
 
 def _get_in_fragment_chart(app: Page) -> Locator:
-    return (
-        app.get_by_test_id("stVegaLiteChart")
-        .locator("[role='graphics-document']")
-        .nth(11)
-    )
+    return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(11))
 
 
 def test_point_bar_chart_displays_selection_text(app: Page):
@@ -474,8 +427,8 @@ def test_custom_css_class_via_key(app: Page):
 
 
 def _get_persistent_selection_chart(app: Page) -> Locator:
-    return get_element_by_key(app, "persistent_selection_chart").locator(
-        "[role='graphics-document']"
+    return get_vega_graphics_document(
+        get_element_by_key(app, "persistent_selection_chart")
     )
 
 

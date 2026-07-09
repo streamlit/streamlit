@@ -19,14 +19,35 @@ if TYPE_CHECKING:
     from playwright.sync_api._generated import Locator
 
 
+def get_vega_graphics_document(chart: Locator) -> Locator:
+    """Return the Vega "graphics-document" element(s) for a chart.
+
+    Vega-embed sets ``role="graphics-document"`` on the chart container
+    (``stVegaLiteChart``) itself once the chart has rendered. This resolves that
+    element whether ``chart`` is the container itself or an ancestor of it, and
+    matches every chart when ``chart`` resolves to multiple containers.
+
+    Parameters
+    ----------
+    chart : Locator
+        A locator resolving to one or more chart containers, or an ancestor of
+        them (e.g. the element returned by ``get_element_by_key``).
+
+    Returns
+    -------
+    Locator
+        The matching ``graphics-document`` element(s).
+    """
+    return chart.locator("xpath=descendant-or-self::*[@role='graphics-document']")
+
+
 def assert_vega_chart_height(
     vega_chart: Locator,
     expected_height: int,
     description: str | None = None,
     tolerance: int = 0,
 ):
-    vega_graphics_doc = vega_chart.locator("[role='graphics-document']")
-    bbox = vega_graphics_doc.bounding_box()
+    bbox = get_vega_graphics_document(vega_chart).bounding_box()
 
     chart_info = f" ({description})" if description else ""
     assert bbox is not None, f"Vega chart{chart_info} has no bounding box"
@@ -46,8 +67,7 @@ def assert_vega_chart_width(
     description: str | None = None,
     tolerance: int = 0,
 ):
-    vega_graphics_doc = vega_chart.locator("[role='graphics-document']")
-    bbox = vega_graphics_doc.bounding_box()
+    bbox = get_vega_graphics_document(vega_chart).bounding_box()
 
     chart_info = f" ({description})" if description else ""
     assert bbox is not None, f"Vega chart{chart_info} has no bounding box"
