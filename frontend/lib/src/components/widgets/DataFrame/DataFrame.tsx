@@ -120,7 +120,6 @@ export interface DataFrameProps {
   customToolbarActions?: React.ReactNode[]
   widthConfig?: streamlit.IWidthConfig | null
   heightConfig?: streamlit.IHeightConfig | null
-  disableClipboardCopy?: boolean
 }
 
 /**
@@ -142,7 +141,6 @@ function DataFrame({
   customToolbarActions,
   widthConfig,
   heightConfig,
-  disableClipboardCopy,
 }: Readonly<DataFrameProps>): ReactElement {
   // Use provided Quiver data or construct from proto's arrowData. The
   // elementHash serves as the primary memoization key to avoid unnecessary
@@ -225,8 +223,7 @@ function DataFrame({
   const editingMode =
     element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
   const isReadOnly = editingMode === DataframeProto.EditingMode.READ_ONLY
-  const isClipboardCopyDisabled =
-    disableClipboardCopy ?? (disableDataExport && isReadOnly)
+  const isClipboardCopyDisabled = disableDataExport && isReadOnly
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
@@ -961,7 +958,7 @@ function DataFrame({
           smoothScrollY={true}
           // Show borders between cells:
           verticalBorder={true}
-          // Keep cell data available for selection-related grid features.
+          // Activate copy to clipboard functionality:
           getCellsForSelection={true}
           // Deactivate row markers and numbers:
           rowMarkers={"none"}

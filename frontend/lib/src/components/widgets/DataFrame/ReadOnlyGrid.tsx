@@ -69,8 +69,6 @@ export const ReadOnlyGrid = ({
       data={data}
       widgetMgr={undefined}
       disabled={true}
-      // Chart table views still allow clipboard copy; only CSV export is disabled.
-      disableClipboardCopy={false}
       fragmentId={undefined}
       disableFullscreenMode={true}
       customToolbarActions={customToolbarActions}

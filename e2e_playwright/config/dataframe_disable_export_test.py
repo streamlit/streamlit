@@ -50,6 +50,21 @@ def _get_chart_container(app: Page) -> Locator:
     return get_element_by_key(app, "chart-table-view")
 
 
+def _show_chart_table_view(app: Page) -> Locator:
+    chart_container = _get_chart_container(app)
+    chart = chart_container.get_by_test_id("stVegaLiteChart").first
+    expect(chart).to_be_visible()
+
+    chart.hover(force=True)
+    chart.locator("..").get_by_test_id("stElementToolbar").get_by_label(
+        "Show Data"
+    ).click()
+
+    chart_table_view = chart_container.get_by_test_id("stDataFrame")
+    expect(chart_table_view).to_be_visible()
+    return chart_table_view
+
+
 def test_hides_csv_export_for_dataframes_and_chart_table_view(app: Page):
     read_only_dataframe = _get_read_only_dataframe(app)
     data_editor = _get_data_editor(app)
@@ -65,10 +80,7 @@ def test_hides_csv_export_for_dataframes_and_chart_table_view(app: Page):
     chart.hover(force=True)
     expect(toolbar.get_by_label("Download as PNG")).to_be_visible()
 
-    toolbar.get_by_label("Show Data").click()
-
-    chart_table_view = chart_container.get_by_test_id("stDataFrame")
-    expect(chart_table_view).to_be_visible()
+    chart_table_view = _show_chart_table_view(app)
     expect(chart_table_view.get_by_label("Show chart")).to_be_visible()
     _expect_csv_export_hidden(chart_table_view)
 
@@ -96,6 +108,24 @@ def test_disables_dataframe_clipboard_copy(app: Page):
 
     read_only_dataframe = _get_read_only_dataframe(app)
     click_on_cell(read_only_dataframe, 1, 0, column_width="small")
+
+    app.evaluate("navigator.clipboard.writeText('sentinel')")
+    app.keyboard.press(f"{COMMAND_KEY}+c")
+    # Copy is expected to be blocked, so there is no observable clipboard change
+    # to poll for. Give any (unwanted) async copy a chance to run before we
+    # assert the clipboard is untouched.
+    app.wait_for_timeout(200)
+
+    assert app.evaluate("navigator.clipboard.readText()") == "sentinel"
+
+
+@pytest.mark.only_browser("chromium")
+def test_disables_chart_table_view_clipboard_copy(app: Page):
+    """Verify chart table view copy is blocked where clipboard reads work."""
+    app.context.grant_permissions(["clipboard-read", "clipboard-write"])
+
+    chart_table_view = _show_chart_table_view(app)
+    click_on_cell(chart_table_view, 1, 0, column_width="small")
 
     app.evaluate("navigator.clipboard.writeText('sentinel')")
     app.keyboard.press(f"{COMMAND_KEY}+c")
