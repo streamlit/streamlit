@@ -222,21 +222,33 @@ def set_fullscreen(image_wrapper: Locator, open: bool):
     fullscreen_button = image_wrapper.get_by_role(
         "button", name="Fullscreen" if open else "Close fullscreen"
     )
-    # The toolbar (and its fullscreen button) only becomes interactive on hover
-    # and fades in via an opacity transition. In webkit a click dispatched while
-    # the toolbar is still fading in can be swallowed, leaving fullscreen
-    # un-toggled. Hover first and wait for the toolbar to be fully opaque before
-    # clicking (mirrors the pattern in shared/toolbar_utils.py).
-    image_wrapper.hover()
-    expect(toolbar).to_have_css("opacity", "1")
-    expect(fullscreen_button).to_be_visible()
-    fullscreen_button.click()
-    # Wait for the toolbar button to flip to its opposite label, which confirms
-    # the fullscreen state has finished toggling before we take a snapshot.
+    # After toggling, the toolbar button flips to its opposite label. We use
+    # this as the signal that the fullscreen state has finished changing.
     toggled_button = image_wrapper.get_by_role(
         "button", name="Close fullscreen" if open else "Fullscreen"
     )
-    expect(toggled_button).to_be_visible()
+    # The toolbar (and its fullscreen button) only becomes interactive on hover
+    # and fades/slides in via a CSS transition; when the hover is lost it snaps
+    # straight back to opacity 0 (transition: none). On webkit a click dispatched
+    # while the toolbar is still animating in can be silently swallowed, leaving
+    # fullscreen un-toggled (observed intermittently in CI under parallel load).
+    # Hover to reveal the toolbar, wait for it to be fully opaque, click, and
+    # confirm the label flipped. If the click did not register, retry the
+    # hover+click rather than failing on a lost webkit event.
+    max_attempts = 4
+    for attempt in range(max_attempts):
+        image_wrapper.hover()
+        expect(toolbar).to_have_css("opacity", "1")
+        expect(fullscreen_button).to_be_visible()
+        fullscreen_button.click()
+        try:
+            expect(toggled_button).to_be_visible(
+                timeout=2000 if attempt < max_attempts - 1 else 5000
+            )
+            return
+        except AssertionError:
+            if attempt == max_attempts - 1:
+                raise
 
 
 # SVGs without width or height are not rendered correctly in Firefox
