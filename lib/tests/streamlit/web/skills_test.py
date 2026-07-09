@@ -1737,6 +1737,15 @@ class TestConflictError:
         assert ".agents/skills/developing-with-streamlit already exists." in message
         assert "Remove it and try again." in message
 
+    def test_conflict_error_carries_conflict_reason(self) -> None:
+        """The conflict error is an ``_InstallError`` tagged ``reason="conflict"`` so
+        the handler forwards it to install-failure telemetry."""
+        err = skills._conflict_error(
+            [".agents/skills/developing-with-streamlit (existing file or directory)"]
+        )
+        assert isinstance(err, skills._InstallError)
+        assert err.reason == "conflict"
+
 
 class TestInstallSkillsReturnsResult:
     """install_skills returns the structured result for callers (e.g. the nudge)."""

@@ -36,6 +36,23 @@ _LOGGER: Final = get_logger(__name__)
 _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
 
 
+class _InstallError(click.ClickException):
+    """A skills-install failure carrying a stable machine-readable ``reason`` code.
+
+    Behaves like a normal ``click.ClickException`` — its ``format_message`` still
+    supplies the user-facing text shown in the CLI and the in-app nudge — but also
+    carries a bounded ``reason`` (e.g. ``"conflict"``, ``"source_missing"``,
+    ``"symlinks_unsupported"``) that the backend-operation handler forwards to the
+    client so the nudge's install-failure telemetry can be split by cause. The
+    reason is a fixed vocabulary set at each raise site, never user input, so it is
+    safe to emit as a telemetry label suffix.
+    """
+
+    def __init__(self, message: str, *, reason: str) -> None:
+        super().__init__(message)
+        self.reason = reason
+
+
 def _generate_gitignore_snippet(
     skills: list[str], target_dirs: list[Path], project_root: Path
 ) -> str:
@@ -550,7 +567,7 @@ def _confirm_global_installation(target_dirs: list[Path]) -> bool:
     return click.confirm("Proceed with installation?", default=True)
 
 
-def _conflict_error(skipped: list[str]) -> click.ClickException:
+def _conflict_error(skipped: list[str]) -> _InstallError:
     """Build a specific "couldn't install" error that names the conflicting
     paths, rather than a vague "remove conflicting files".
 
@@ -569,9 +586,10 @@ def _conflict_error(skipped: list[str]) -> click.ClickException:
         paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
     joined = ", ".join(paths)
     plural = len(paths) != 1
-    return click.ClickException(
+    return _InstallError(
         f"{joined} already exist{'' if plural else 's'}. "
-        f"Remove {'them' if plural else 'it'} and try again."
+        f"Remove {'them' if plural else 'it'} and try again.",
+        reason="conflict",
     )
 
 
@@ -588,14 +606,17 @@ def _install_project_skills(
         # Keep the absolute path in the server log only - this message is shown
         # verbatim in the in-app nudge, so it must not leak a server path.
         _LOGGER.warning("Bundled skills directory not found at %s", source_skills_dir)
-        raise click.ClickException(
+        raise _InstallError(
             "Bundled skills were not found in your Streamlit installation. "
-            "Reinstall Streamlit and try again."
+            "Reinstall Streamlit and try again.",
+            reason="source_missing",
         )
 
     skills = _discover_skills(source_skills_dir)
     if not skills:
-        raise click.ClickException("No installable skills found in Streamlit package.")
+        raise _InstallError(
+            "No installable skills found in Streamlit package.", reason="no_skills"
+        )
 
     # Determine targets. The in-app installer passes ``app_dir`` so the project
     # root resolves from the running app's directory (matching the nudge's skill
@@ -621,8 +642,9 @@ def _install_project_skills(
             click.echo()
             return _install_global_skills(yes=yes)
 
-        raise click.ClickException(
-            "Symlinks not supported. Use --global for global installation."
+        raise _InstallError(
+            "Symlinks not supported. Use --global for global installation.",
+            reason="symlinks_unsupported",
         )
 
     # Confirm installation
@@ -665,14 +687,16 @@ def _install_project_skills(
             raise
         except click.exceptions.Abort:
             # User cancelled global install - report that nothing was fully installed
-            raise click.ClickException(
+            raise _InstallError(
                 "Installation incomplete. Project symlinks failed and global install "
-                "was cancelled."
+                "was cancelled.",
+                reason="incomplete",
             )
 
     if symlink_failed:
-        raise click.ClickException(
-            "Symlinks not supported. Use --global for global installation."
+        raise _InstallError(
+            "Symlinks not supported. Use --global for global installation.",
+            reason="symlinks_unsupported",
         )
 
     # Report results
@@ -744,9 +768,10 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
             _GLOBAL_SKILL_NAME,
             meta_skill_dir,
         )
-        raise click.ClickException(
+        raise _InstallError(
             f"The bundled '{_GLOBAL_SKILL_NAME}' meta-skill was not found in your "
-            "Streamlit installation. Reinstall Streamlit and try again."
+            "Streamlit installation. Reinstall Streamlit and try again.",
+            reason="source_missing",
         )
 
     # Install to each target directory
@@ -815,8 +840,9 @@ def install_skills(
     """
     # Check if running interactively
     if not yes and not sys.stdin.isatty():
-        raise click.ClickException(
-            "Non-interactive terminal detected. Use --yes to skip prompts."
+        raise _InstallError(
+            "Non-interactive terminal detected. Use --yes to skip prompts.",
+            reason="non_interactive",
         )
 
     # Interactive mode selection (when not using flags)
