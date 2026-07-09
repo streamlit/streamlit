@@ -239,6 +239,8 @@ describe("ArrowVegaLiteChart", () => {
       }
     )
 
+    // The toolbar is only shown (opacity > 0) on hover, so assert presence in
+    // the DOM rather than visibility here.
     expect(
       screen.getByRole("button", { name: "Download as PNG" })
     ).toBeInTheDocument()
@@ -250,7 +252,7 @@ describe("ArrowVegaLiteChart", () => {
     ).toBeInTheDocument()
     expect(
       screen.queryByRole("button", { name: "Download as CSV" })
-    ).toBeNull()
+    ).not.toBeInTheDocument()
   })
 
   it("downloads the chart as a PNG when the toolbar action is clicked", async () => {

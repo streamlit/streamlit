@@ -637,6 +637,11 @@ _create_option(
         Controls whether data export functionality is disabled in components
         that support it. When true, CSV download controls are hidden and
         clipboard copy is disabled for st.dataframe.
+
+        This only hides the built-in export/copy UI affordances. It does not
+        prevent users from otherwise accessing the underlying data (e.g. via
+        screenshots, browser developer tools, or network inspection), so it
+        should not be relied upon as a security or data-protection control.
     """,
     default_val=False,
     type_=bool,

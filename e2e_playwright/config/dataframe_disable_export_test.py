@@ -19,6 +19,7 @@ import sys
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
+from e2e_playwright.conftest import wait_until
 from e2e_playwright.shared.app_utils import get_element_by_key
 from e2e_playwright.shared.dataframe_utils import click_on_cell
 
@@ -60,7 +61,7 @@ def test_hides_csv_export_for_dataframes_and_chart_table_view(app: Page):
     chart = chart_container.get_by_test_id("stVegaLiteChart").first
     expect(chart).to_be_visible()
 
-    toolbar = chart_container.get_by_test_id("stElementToolbar")
+    toolbar = chart.locator("..").get_by_test_id("stElementToolbar")
     chart.hover(force=True)
     expect(toolbar.get_by_label("Download as PNG")).to_be_visible()
 
@@ -82,9 +83,10 @@ def test_keeps_data_editor_clipboard_copy_enabled(app: Page):
 
     app.evaluate("navigator.clipboard.writeText('sentinel')")
     app.keyboard.press(f"{COMMAND_KEY}+c")
-    app.wait_for_timeout(200)
 
-    assert "Alice" in app.evaluate("navigator.clipboard.readText()")
+    # Poll until the copied cell value lands on the clipboard to avoid a fixed
+    # sleep, since a successful copy has an observable clipboard change.
+    wait_until(app, lambda: "Alice" in app.evaluate("navigator.clipboard.readText()"))
 
 
 @pytest.mark.only_browser("chromium")
@@ -97,6 +99,9 @@ def test_disables_dataframe_clipboard_copy(app: Page):
 
     app.evaluate("navigator.clipboard.writeText('sentinel')")
     app.keyboard.press(f"{COMMAND_KEY}+c")
+    # Copy is expected to be blocked, so there is no observable clipboard change
+    # to poll for. Give any (unwanted) async copy a chance to run before we
+    # assert the clipboard is untouched.
     app.wait_for_timeout(200)
 
     assert app.evaluate("navigator.clipboard.readText()") == "sentinel"
