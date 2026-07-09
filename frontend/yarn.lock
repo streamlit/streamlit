@@ -5686,9 +5686,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/eslint-plugin@npm:^1.6.21":
-  version: 1.6.21
-  resolution: "@vitest/eslint-plugin@npm:1.6.21"
+"@vitest/eslint-plugin@npm:^1.6.22":
+  version: 1.6.22
+  resolution: "@vitest/eslint-plugin@npm:1.6.22"
   dependencies:
     "@typescript-eslint/scope-manager": "npm:^8.58.0"
     "@typescript-eslint/utils": "npm:^8.58.0"
@@ -5704,7 +5704,7 @@ __metadata:
       optional: true
     vitest:
       optional: true
-  checksum: 10c0/b89b7e8ee72a974760a2f0b34a85f772216bc9973c955985777314c5e1aa036bb3377bfadd0253b13e018c0384db90bce13e2634b89e4c2bb3837e5ee89e86b6
+  checksum: 10c0/894b87936c98ea9eeeb26ce08fa297fa52f1c48c27d97d2ec437acad28644d639fb21c7fe8fe58ce47e483f7596d80100b45a14bf95d9b6d3454bd274bfa28f0
   languageName: node
   linkType: hard
 
@@ -17018,7 +17018,7 @@ __metadata:
     "@types/eslint-plugin-jsx-a11y": "npm:~6.10.1"
     "@types/node": "npm:>=24 <25"
     "@vitest/coverage-v8": "npm:^4.1.9"
-    "@vitest/eslint-plugin": "npm:^1.6.21"
+    "@vitest/eslint-plugin": "npm:^1.6.22"
     concurrently: "npm:^10.0.3"
     eslint: "npm:^10.6.0"
     eslint-import-resolver-typescript: "npm:^4.4.5"
