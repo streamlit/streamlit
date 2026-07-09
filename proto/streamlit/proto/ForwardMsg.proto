@@ -121,6 +121,12 @@ message BackendOperationResponse {
   oneof payload {
     // Response for deferred file requests
     DeferredFileResponsePayload deferred_file = 3;
+
+    // Response for one-click skills install requests
+    InstallSkillsResponsePayload install_skills = 4;
+
+    // Acknowledgement for permanently dismissing the skills nudge
+    DismissSkillsNudgeResponsePayload dismiss_skills_nudge = 5;
   }
 }
 
@@ -128,6 +134,18 @@ message BackendOperationResponse {
 message DeferredFileResponsePayload {
   string url = 1;
 }
+
+// Response payload for one-click skills install. A successful, empty detail
+// indicates a clean install; failures are reported via the response's
+// error_msg field instead.
+message InstallSkillsResponsePayload {
+  // Optional human-readable detail about the install outcome.
+  string detail = 1;
+}
+
+// Acknowledgement payload for dismissing the skills nudge. Carries no data;
+// its presence signals the marker was written successfully.
+message DismissSkillsNudgeResponsePayload {}
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)
 // in our ForwardMsgCache. (That is, when we cache a ForwardMsg, we clear its

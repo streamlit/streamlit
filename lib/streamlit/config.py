@@ -1072,6 +1072,17 @@ _create_option(
 )
 
 _create_option(
+    "server.maxWidgetStateSize",
+    description="""
+        Max size, in megabytes, of client-sent WebSocket messages and aggregate
+        widget state accepted for a single script rerun.
+    """,
+    visibility="hidden",
+    default_val=25,
+    type_=int,
+)
+
+_create_option(
     "server.enableArrowTruncation",
     description="""
         Enable automatically truncating all data structures that get serialized

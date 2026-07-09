@@ -16,7 +16,10 @@
 
 Demonstrates:
 - Multiple metric cards in a grid layout
-- ``@st.fragment`` for independent widget updates
+- ``@st.fragment(parallel=True)`` so cards load concurrently on full reruns and
+  rerun in isolation on widget interactions
+- ``st.skeleton`` placeholders while each card's data loads
+- ``@st.cache_data(ttl=...)`` loaders that keep data fresh and bounded
 - Popover filters for each metric card
 - Chart/table view toggle
 - Time range filtering (1M, 6M, 1Y, QTD, YTD, All)
@@ -28,6 +31,7 @@ actual data source (e.g., Snowflake queries, cloud APIs, etc.).
 """
 
 import hashlib
+from collections.abc import Callable
 from datetime import date, timedelta
 
 import altair as alt
@@ -104,7 +108,7 @@ def generate_time_series(
     return df
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl="1h", show_spinner=False)
 def load_account_type_data() -> pd.DataFrame:
     """Load credits by account type."""
     end_date = date.today() - timedelta(days=1)
@@ -118,7 +122,7 @@ def load_account_type_data() -> pd.DataFrame:
     )
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl="1h", show_spinner=False)
 def load_instance_type_data() -> pd.DataFrame:
     """Load credits by instance type."""
     end_date = date.today() - timedelta(days=1)
@@ -137,7 +141,7 @@ def load_instance_type_data() -> pd.DataFrame:
     )
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl="1h", show_spinner=False)
 def load_region_data() -> pd.DataFrame:
     """Load credits by region."""
     end_date = date.today() - timedelta(days=1)
@@ -275,11 +279,11 @@ def render_page_header(title: str) -> None:
 # =============================================================================
 
 
-@st.fragment
+@st.fragment(parallel=True)
 def dimension_metric(
     *,
     title: str,
-    data: pd.DataFrame,
+    loader: Callable[[], pd.DataFrame],
     dim_col: str,
     options: list[str],
     options_label: str,
@@ -289,16 +293,19 @@ def dimension_metric(
 ) -> None:
     """Metric card broken down by a single dimension, with independent state.
 
-    Each fragment instance filters and renders independently — clicking a
-    popover filter only reruns this card, not the whole page.
+    The card is a parallel fragment: on a full app rerun each card loads its
+    own data concurrently in a thread pool, and clicking a popover filter only
+    reruns this card, not the whole page. Data is loaded inside ``st.skeleton``
+    so the controls stay stable while the chart fills in.
 
     Parameters
     ----------
     title : str
         Card header text.
-    data : pd.DataFrame
-        Source frame; must contain ``ds``, ``daily_credits``, ``credits_7d_ma``,
-        and ``dim_col``.
+    loader : Callable[[], pd.DataFrame]
+        Cached loader returning a frame with ``ds``, ``daily_credits``,
+        ``credits_7d_ma``, and ``dim_col``. Called inside the fragment so the
+        load runs concurrently with the other cards.
     dim_col : str
         Column name to split series on (e.g. ``"account_type"``).
     options : list[str]
@@ -368,25 +375,30 @@ def dimension_metric(
                     key=f"{key_prefix}_time",
                 )
 
-        selected = selected or default_selection
-        line_options = line_options or ["7-day MA"]
-        filtered = data[data[dim_col].isin(selected)]
-        filtered = filter_by_time_range(filtered, "ds", time_range or "All")
+        # Load this card's data and render inside a skeleton placeholder so each
+        # card fills in as soon as its own (cached) data is ready.
+        with st.skeleton(height=CHART_HEIGHT):
+            data = loader()
 
-        y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
+            selected = selected or default_selection
+            line_options = line_options or ["7-day MA"]
+            filtered = data[data[dim_col].isin(selected)]
+            filtered = filter_by_time_range(filtered, "ds", time_range or "All")
 
-        if "table" in (view_mode or ""):
-            st.dataframe(filtered, height=CHART_HEIGHT, hide_index=True)
-        elif "Bar" in (chart_type or ""):
-            st.altair_chart(
-                create_bar_chart(
-                    filtered, "ds", y_col, dim_col, CHART_HEIGHT, show_percent
-                ),
-            )
-        else:
-            st.altair_chart(
-                create_line_chart(filtered, "ds", y_col, dim_col, CHART_HEIGHT),
-            )
+            y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
+
+            if "table" in (view_mode or ""):
+                st.dataframe(filtered, height=CHART_HEIGHT, hide_index=True)
+            elif "Bar" in (chart_type or ""):
+                st.altair_chart(
+                    create_bar_chart(
+                        filtered, "ds", y_col, dim_col, CHART_HEIGHT, show_percent
+                    ),
+                )
+            else:
+                st.altair_chart(
+                    create_line_chart(filtered, "ds", y_col, dim_col, CHART_HEIGHT),
+                )
 
 
 # =============================================================================
@@ -401,7 +413,7 @@ col1, col2 = st.columns(2)
 with col1:
     dimension_metric(
         title="Credits by account type",
-        data=load_account_type_data(),
+        loader=load_account_type_data,
         dim_col="account_type",
         options=ACCOUNT_TYPES,
         options_label="Account types",
@@ -413,7 +425,7 @@ with col1:
 with col2:
     dimension_metric(
         title="Credits by instance type",
-        data=load_instance_type_data(),
+        loader=load_instance_type_data,
         dim_col="instance_type",
         options=INSTANCE_TYPES,
         options_label="Instance types",
@@ -425,7 +437,7 @@ with col2:
 # Row 2: One metric (full width for region breakdown)
 dimension_metric(
     title="Credits by region",
-    data=load_region_data(),
+    loader=load_region_data,
     dim_col="region",
     options=REGIONS,
     options_label="Regions",

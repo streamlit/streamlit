@@ -411,7 +411,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
             }
             return (
               <StyledTabPanel
+                data-testid="stTabPanel"
                 id={String(index)}
+                $isActive={activeTabKey === index}
                 // TODO: Update to match React best practices
                 // eslint-disable-next-line @eslint-react/no-array-index-key
                 key={index}

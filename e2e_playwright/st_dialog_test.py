@@ -30,6 +30,7 @@ from e2e_playwright.shared.app_utils import (
     get_button,
     get_markdown,
     is_child_bounding_box_inside_parent,
+    select_selectbox_option,
 )
 from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
@@ -44,6 +45,10 @@ def open_dialog_with_images(app: Page):
 
 def open_dialog_without_images(app: Page):
     click_button(app, "Open Dialog without Images")
+
+
+def open_dialog_with_date_input(app: Page):
+    click_button(app, "Open Dialog with Date Input")
 
 
 def open_dialog_with_icon(app: Page):
@@ -202,6 +207,33 @@ def test_dialog_reopens_properly_after_close(app: Page):
         wait_for_app_run(app, wait_delay=250)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
+
+
+def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
+    """Test that nested widget overlays render above dialog overlays."""
+    open_dialog_with_date_input(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+
+    dialog.get_by_test_id("stDateInput").locator("input").click()
+    calendar = app.locator('[data-baseweb="calendar"]').first
+    expect(calendar).to_be_visible()
+
+    app.locator(
+        '[data-baseweb="calendar"] [aria-label^="Choose Tuesday, January 2nd 2024."]'
+    ).first.click()
+    wait_for_app_run(app)
+
+    expect_markdown(dialog, "Due Date Value: 2024-01-02")
+
+    select_selectbox_option(dialog, "Status", "Paid")
+    expect_markdown(dialog, "Status Value: Paid")
+
+    dialog.get_by_role("combobox", name="Tags").click()
+    app.get_by_role("option", name="Utilities", exact=True).first.click()
+    wait_for_app_run(app)
+
+    expect_markdown(dialog, "Tags Value: ['Utilities']")
 
 
 def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Page):
@@ -381,6 +413,32 @@ def test_medium_width_dialog_displays_correctly(
     submit_button = get_button(dialog, "Submit")
     submit_button.hover()
     assert_snapshot(dialog, name="st_dialog-with_medium_width")
+
+
+@pytest.mark.only_browser("chromium")
+def test_medium_width_dialog_keeps_narrow_viewport_gutter(app: Page):
+    """Test that a medium dialog preserves the viewport gutter on narrow screens."""
+    app.set_viewport_size({"width": 600, "height": 600})
+    open_medium_width_dialog(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+
+    dialog_box = dialog.bounding_box()
+    assert dialog_box is not None
+    assert dialog_box["x"] == pytest.approx(16, abs=1)
+    assert dialog_box["y"] == pytest.approx(48, abs=1)
+    assert dialog_box["width"] == pytest.approx(568, abs=1)
+
+    # On a viewport narrower than the dialog's minimum width (20rem) plus both
+    # gutters, the panel must shrink to keep the gutter instead of overflowing.
+    app.set_viewport_size({"width": 320, "height": 600})
+    narrow_box = dialog.bounding_box()
+    assert narrow_box is not None
+    assert narrow_box["x"] == pytest.approx(16, abs=1)
+    assert narrow_box["width"] == pytest.approx(288, abs=1)
+    # The right edge must stay within the viewport (left gutter + width + right
+    # gutter should not exceed the viewport width).
+    assert narrow_box["x"] + narrow_box["width"] == pytest.approx(304, abs=1)
 
 
 # its enough to test this on one browser as showing the error inline is more a backend
@@ -568,6 +626,9 @@ def test_dialog_with_dataframe_shows_column_menu_correctly(app: Page):
     expect(column_menu).to_be_visible()
     expect(column_menu).to_be_in_viewport()
     assert is_child_bounding_box_inside_parent(column_menu, df_element)
+    column_menu.get_by_text("Sort ascending").click()
+    expect(column_menu).not_to_be_visible()
+    expect(dialog).to_be_visible()
 
 
 def test_dialog_with_rerun_closes_even_if_button_is_clicked_multiple_times(app: Page):

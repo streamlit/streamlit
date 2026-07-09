@@ -17,6 +17,7 @@
 import {
   FC,
   memo,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -32,6 +33,8 @@ import {
   ComboBoxStateContext,
   I18nProvider,
   type Key,
+  ListLayout,
+  Virtualizer,
 } from "react-aria-components"
 
 import { streamlit } from "@streamlit/protobuf"
@@ -113,6 +116,26 @@ const DropdownController = memo<{
   return null
 })
 DropdownController.displayName = "DropdownController"
+
+/**
+ * Render a single option row for the virtualized ListBox collection.
+ *
+ * The item is received untyped because emotion's `styled(ListBox)` erases
+ * React Aria's generic item type, so we assert it back to `ComboOption`.
+ * Defined at module scope for a stable identity across renders.
+ */
+const renderOption = (item: unknown): ReactElement => {
+  const option = item as ComboOption
+  return (
+    <StyledListBoxItem
+      id={option.id}
+      textValue={option.label}
+      $isCreatable={option.isCreatable}
+    >
+      <StyledItemHighlight data-item-hl="">{option.label}</StyledItemHighlight>
+    </StyledListBoxItem>
+  )
+}
 
 const Selectbox: FC<Props> = ({
   disabled,
@@ -233,6 +256,13 @@ const Selectbox: FC<Props> = ({
     () =>
       creatableItem ? [...filteredOptions, creatableItem] : filteredOptions,
     [filteredOptions, creatableItem]
+  )
+
+  const virtualizerLayoutOptions = useMemo(
+    () => ({
+      rowSize: convertRemToPx(theme.sizes.dropdownItemHeight),
+    }),
+    [theme.sizes.dropdownItemHeight]
   )
 
   // Controlled selectedKey so RAC always knows the committed item and doesn't
@@ -510,23 +540,18 @@ const Selectbox: FC<Props> = ({
             offset={0}
             style={floatingStyles}
           >
-            <StyledListBox
-              aria-label={label ?? "Selectbox options"}
-              renderEmptyState={() => <span>No results</span>}
+            <Virtualizer
+              layout={ListLayout}
+              layoutOptions={virtualizerLayoutOptions}
             >
-              {displayOptions.map(opt => (
-                <StyledListBoxItem
-                  key={opt.id}
-                  id={opt.id}
-                  textValue={opt.label}
-                  $isCreatable={opt.isCreatable}
-                >
-                  <StyledItemHighlight data-item-hl="">
-                    {opt.label}
-                  </StyledItemHighlight>
-                </StyledListBoxItem>
-              ))}
-            </StyledListBox>
+              <StyledListBox
+                aria-label={label ?? "Selectbox options"}
+                items={displayOptions}
+                renderEmptyState={() => <span>No results</span>}
+              >
+                {renderOption}
+              </StyledListBox>
+            </Virtualizer>
           </StyledPopover>
         </ComboBox>
       </I18nProvider>

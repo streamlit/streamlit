@@ -51,6 +51,7 @@ import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
@@ -230,6 +231,7 @@ function DataFrame({
     canSort,
     canSearch,
     canExportCsv,
+    canShowColumnStatistics,
     canEdit,
     canAddRows,
     canDeleteRows,
@@ -719,6 +721,13 @@ function DataFrame({
       ? true
       : false
 
+  // The search overlay may only be open while search is actually enabled.
+  // Deriving it from `canSearch` ensures the overlay is hidden (instead of
+  // getting stuck open) if the table becomes empty while search is active,
+  // since both the toolbar search button and the Ctrl/Cmd+F shortcut are
+  // disabled in that case.
+  const isSearchOpen = canSearch && showSearch
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
@@ -977,14 +986,18 @@ function DataFrame({
           // Search needs to be activated manually, to support search
           // via the toolbar:
           onKeyDown={event => {
-            if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+            if (
+              canSearch &&
+              (event.ctrlKey || event.metaKey) &&
+              event.key === "f"
+            ) {
               setShowSearch(cv => !cv)
               event.stopPropagation()
               event.preventDefault()
             }
           }}
-          showSearch={showSearch}
-          searchResults={!showSearch ? [] : undefined}
+          showSearch={isSearchOpen}
+          searchResults={!isSearchOpen ? [] : undefined}
           onSearchClose={() => {
             setShowSearch(false)
             clearTooltip()
@@ -1207,7 +1220,7 @@ function DataFrame({
             left={showMenu.headerBounds.x + showMenu.headerBounds.width}
             column={originalColumns[showMenu.columnIdx]}
             data={data}
-            isEditable={editingMode !== DataframeProto.EditingMode.READ_ONLY}
+            canShowColumnStatistics={canShowColumnStatistics}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
               canSort
@@ -1289,7 +1302,7 @@ function DataFrame({
           // by the transform property of the parent element).
           // The portal element is expected to always exist (-> PortalProvider).
           // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
-          document.querySelector("#portal") as HTMLElement
+          document.querySelector(`#${DATAFRAME_PORTAL_ID}`) as HTMLElement
         )}
       {buttonActionMenu &&
         createPortal(
@@ -1302,7 +1315,7 @@ function DataFrame({
             onCloseMenu={clearButtonActionMenu}
           />,
           // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
-          document.querySelector("#portal") as HTMLElement
+          document.querySelector(`#${DATAFRAME_PORTAL_ID}`) as HTMLElement
         )}
     </StyledResizableContainer>
   )

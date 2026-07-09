@@ -203,7 +203,7 @@ right_cell = cols[1].container(
 )
 
 
-@st.cache_data(show_spinner=False, ttl="6h")
+@st.cache_data(ttl="6h", show_spinner="Loading stock price data...")
 def load_data(tickers: Iterable[str], period: str) -> pd.DataFrame:
     tickers_obj = yf.Tickers(list(tickers))
     data = tickers_obj.history(period=period)
