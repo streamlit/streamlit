@@ -3748,7 +3748,7 @@ __metadata:
     numbro: "npm:^2.5.0"
     plotly.js: "npm:^3.7.0"
     postinstall-postinstall: "npm:^2.1.0"
-    protobufjs: "npm:^8.6.5"
+    protobufjs: "npm:^8.6.6"
     query-string: "npm:^9.4.1"
     re-resizable: "npm:^6.11.2"
     react-aria-components: "npm:^1.19.0"
@@ -3802,8 +3802,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@streamlit/protobuf@workspace:protobuf"
   dependencies:
-    protobufjs: "npm:^8.6.5"
-    protobufjs-cli: "npm:^2.5.6"
+    protobufjs: "npm:^8.6.6"
+    protobufjs-cli: "npm:^2.5.7"
     typesync: "npm:^0.14.3"
   languageName: unknown
   linkType: soft
@@ -15166,9 +15166,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"protobufjs-cli@npm:^2.5.6":
-  version: 2.5.6
-  resolution: "protobufjs-cli@npm:2.5.6"
+"protobufjs-cli@npm:^2.5.7":
+  version: 2.5.7
+  resolution: "protobufjs-cli@npm:2.5.7"
   dependencies:
     chalk: "npm:^4.0.0"
     escodegen: "npm:^1.13.0"
@@ -15179,21 +15179,21 @@ __metadata:
     minimist: "npm:^1.2.8"
     tmp: "npm:^0.2.7"
   peerDependencies:
-    protobufjs: ^8.6.5
+    protobufjs: ^8.6.6
   bin:
     pbjs: bin/pbjs
     pbts: bin/pbts
     protoc-gen-pbjs: bin/protoc-gen-pbjs
-  checksum: 10c0/8ba2e628b6a3e6d0c9250341a7609c2472b708282d03a8b20868d73604864b7985e44490d630dbd399a2764bf135bbdab7bfc21a8fc155e0dc277f7e1e72651e
+  checksum: 10c0/ca34a5e504b752670d1a5e49e6c4f5d1fcb14d4ff2d4d323f6c72b7b6581aecedd8b071160b66d614cd8a2670abd861a16daf1f5abe40ed8c9824caac4c20e8d
   languageName: node
   linkType: hard
 
-"protobufjs@npm:^8.6.5":
-  version: 8.6.5
-  resolution: "protobufjs@npm:8.6.5"
+"protobufjs@npm:^8.6.6":
+  version: 8.6.6
+  resolution: "protobufjs@npm:8.6.6"
   dependencies:
     long: "npm:^5.3.2"
-  checksum: 10c0/ccf3d07c567c1b1be9114165093bba658dac252bd9c99c5705d4a0e2e207c772f9996bb3826c27a6cc1c67943767ecdfbf5525bb4f83fecfd186d6dbd300147e
+  checksum: 10c0/9bc4515089383ba0ce89bfa10cbe63fac02a1466a0a602fb853e5d8b1a17729547cd77e42b21e75b7a3b3ec052a8929c9c98bc0d4f1bd06440869f46ca3c3b2b
   languageName: node
   linkType: hard
 
