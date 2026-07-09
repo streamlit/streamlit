@@ -9558,6 +9558,7 @@ __metadata:
     "@vitest/coverage-v8": "npm:^4.1.9"
     eslint: "npm:^10.6.0"
     typescript: "npm:^6.0.3"
+    typescript-v7: "npm:typescript@7.0.2"
     typesync: "npm:^0.14.3"
     vitest: "npm:^4.1.9"
   peerDependencies:
