@@ -222,14 +222,20 @@ class InstallSkillsHandler(BackendOperationHandler):
         # after a dropped connection whose first attempt already completed
         # server-side — surfacing a success as an unrecoverable error and
         # logging it as a failed install. Idempotent retry is the correct path.
-        if (
-            config.get_option("server.headless")
-            or not skills.detect_installed_agents()
-            or connection_locality(session_id) != "loopback"
-        ):
+        gate_reason = (
+            "headless"
+            if config.get_option("server.headless")
+            else "no_agent"
+            if not skills.detect_installed_agents()
+            else "non_loopback"
+            if connection_locality(session_id) != "loopback"
+            else None
+        )
+        if gate_reason is not None:
             return BackendOperationResponse(
                 request_id=request.request_id,
                 error_msg="Skills install is not available in this environment.",
+                error_reason=gate_reason,
             )
 
         try:
@@ -244,9 +250,15 @@ class InstallSkillsHandler(BackendOperationHandler):
             # click.ClickException carries a clean, user-facing message.
             format_message = getattr(ex, "format_message", None)
             detail = format_message() if callable(format_message) else str(ex)
+            # ``skills._InstallError`` carries a bounded, machine-readable ``reason``
+            # (e.g. "conflict", "download_failed", "symlinks_unsupported") that the
+            # client forwards to telemetry so the nudge's install-failure rate can
+            # be split by cause. Any other exception is classified "unknown".
+            reason = getattr(ex, "reason", "unknown")
             return BackendOperationResponse(
                 request_id=request.request_id,
                 error_msg=detail or "Failed to install skills.",
+                error_reason=reason if isinstance(reason, str) else "unknown",
             )
 
         # Invalidate the cached "skills installed" detection so a later session

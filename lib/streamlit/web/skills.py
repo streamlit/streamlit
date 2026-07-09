@@ -45,6 +45,23 @@ _GLOBAL_SKILLS_URL: Final[str] = (
 _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
 
 
+class _InstallError(click.ClickException):
+    """A skills-install failure carrying a stable machine-readable ``reason`` code.
+
+    Behaves like a normal ``click.ClickException`` — its ``format_message`` still
+    supplies the user-facing text shown in the CLI and the in-app nudge — but also
+    carries a bounded ``reason`` (e.g. ``"conflict"``, ``"download_failed"``,
+    ``"symlinks_unsupported"``) that the backend-operation handler forwards to the
+    client so the nudge's install-failure telemetry can be split by cause. The
+    reason is a fixed vocabulary set at each raise site, never user input, so it is
+    safe to emit as a telemetry label suffix.
+    """
+
+    def __init__(self, message: str, *, reason: str) -> None:
+        super().__init__(message)
+        self.reason = reason
+
+
 def _generate_gitignore_snippet(
     skills: list[str], target_dirs: list[Path], project_root: Path
 ) -> str:
@@ -436,9 +453,10 @@ def _download_global_skill(url: str, skill_name: str) -> Path:
         with request.urlopen(url, timeout=30) as response:  # noqa: S310
             data = response.read()
     except URLError as e:
-        raise click.ClickException(
+        raise _InstallError(
             f"Failed to download skills from GitHub: {e}\n"
-            "Check your network connection and try again."
+            "Check your network connection and try again.",
+            reason="download_failed",
         ) from e
 
     # Extract tarball to temp directory
@@ -463,14 +481,16 @@ def _download_global_skill(url: str, skill_name: str) -> Path:
                 tar.extractall(temp_dir, members=safe_members)  # noqa: S202
     except tarfile.TarError as e:
         shutil.rmtree(temp_dir, ignore_errors=True)
-        raise click.ClickException(f"Failed to extract skills archive: {e}") from e
+        raise _InstallError(
+            f"Failed to extract skills archive: {e}", reason="extract_failed"
+        ) from e
 
     # Find skill directory - search all top-level directories in case archive has
     # multiple entries (typically GitHub archives have one: repo-name-tag/)
     extracted_dirs = [d for d in temp_dir.iterdir() if d.is_dir()]
     if not extracted_dirs:
         shutil.rmtree(temp_dir, ignore_errors=True)
-        raise click.ClickException("Downloaded archive is empty")
+        raise _InstallError("Downloaded archive is empty", reason="download_empty")
 
     for archive_root in extracted_dirs:
         skill_path = archive_root / skill_name
@@ -478,7 +498,10 @@ def _download_global_skill(url: str, skill_name: str) -> Path:
             return skill_path
 
     shutil.rmtree(temp_dir, ignore_errors=True)
-    raise click.ClickException(f"Skill '{skill_name}' not found in downloaded archive")
+    raise _InstallError(
+        f"Skill '{skill_name}' not found in downloaded archive",
+        reason="archive_missing_skill",
+    )
 
 
 def _print_result(result: _InstallResult) -> None:
@@ -599,7 +622,7 @@ def _confirm_global_installation(target_dirs: list[Path]) -> bool:
     return click.confirm("Proceed with installation?", default=True)
 
 
-def _conflict_error(skipped: list[str]) -> click.ClickException:
+def _conflict_error(skipped: list[str]) -> _InstallError:
     """Build a specific "couldn't install" error that names the conflicting
     paths, rather than a vague "remove conflicting files".
 
@@ -618,9 +641,10 @@ def _conflict_error(skipped: list[str]) -> click.ClickException:
         paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
     joined = ", ".join(paths)
     plural = len(paths) != 1
-    return click.ClickException(
+    return _InstallError(
         f"{joined} already exist{'' if plural else 's'}. "
-        f"Remove {'them' if plural else 'it'} and try again."
+        f"Remove {'them' if plural else 'it'} and try again.",
+        reason="conflict",
     )
 
 
@@ -634,13 +658,16 @@ def _install_project_skills(
     # Discover bundled skills
     source_skills_dir = _get_source_skills_dir()
     if not source_skills_dir.is_dir():
-        raise click.ClickException(
-            f"Bundled skills directory not found: {source_skills_dir}"
+        raise _InstallError(
+            f"Bundled skills directory not found: {source_skills_dir}",
+            reason="source_missing",
         )
 
     skills = _discover_skills(source_skills_dir)
     if not skills:
-        raise click.ClickException("No installable skills found in Streamlit package.")
+        raise _InstallError(
+            "No installable skills found in Streamlit package.", reason="no_skills"
+        )
 
     # Determine targets. The in-app installer passes ``app_dir`` so the project
     # root resolves from the running app's directory (matching the nudge's skill
@@ -666,8 +693,9 @@ def _install_project_skills(
             click.echo()
             return _install_global_skills(yes=yes)
 
-        raise click.ClickException(
-            "Symlinks not supported. Use --global for global installation."
+        raise _InstallError(
+            "Symlinks not supported. Use --global for global installation.",
+            reason="symlinks_unsupported",
         )
 
     # Confirm installation
@@ -710,14 +738,16 @@ def _install_project_skills(
             raise
         except click.exceptions.Abort:
             # User cancelled global install - report that nothing was fully installed
-            raise click.ClickException(
+            raise _InstallError(
                 "Installation incomplete. Project symlinks failed and global install "
-                "was cancelled."
+                "was cancelled.",
+                reason="incomplete",
             )
 
     if symlink_failed:
-        raise click.ClickException(
-            "Symlinks not supported. Use --global for global installation."
+        raise _InstallError(
+            "Symlinks not supported. Use --global for global installation.",
+            reason="symlinks_unsupported",
         )
 
     # Report results
@@ -836,8 +866,9 @@ def install_skills(
     """
     # Check if running interactively
     if not yes and not sys.stdin.isatty():
-        raise click.ClickException(
-            "Non-interactive terminal detected. Use --yes to skip prompts."
+        raise _InstallError(
+            "Non-interactive terminal detected. Use --yes to skip prompts.",
+            reason="non_interactive",
         )
 
     # Interactive mode selection (when not using flags)

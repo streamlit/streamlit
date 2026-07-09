@@ -198,6 +198,48 @@ describe("BackendOperationClient", () => {
     await expect(promise).rejects.toThrow("No skills found")
   })
 
+  it("attaches the server's error_reason to the rejected install error", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        errorMsg: "developing-with-streamlit already exists.",
+        errorReason: "conflict",
+      })
+    )
+
+    // The rejection carries both the human message and the machine-readable
+    // reason (so App can route it to install-failure telemetry by cause).
+    await expect(promise).rejects.toMatchObject({
+      message: "developing-with-streamlit already exists.",
+      reason: "conflict",
+    })
+  })
+
+  it("leaves reason undefined when the server omits error_reason", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        errorMsg: "Failed to install skills.",
+      })
+    )
+
+    await expect(promise).rejects.toSatisfy(
+      (error: unknown) => (error as { reason?: string }).reason === undefined
+    )
+  })
+
   it("sends dismiss skills nudge requests and resolves on the ack", async () => {
     const sendRequest = vi.fn()
     const client = createClient(sendRequest)

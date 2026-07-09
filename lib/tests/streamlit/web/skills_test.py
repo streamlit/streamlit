@@ -1216,10 +1216,11 @@ class TestDownloadGlobalSkill:
     def test_raises_on_network_error(self) -> None:
         """Raises ClickException on network failure."""
         with patch.object(skills.request, "urlopen", side_effect=URLError("Network")):
-            with pytest.raises(click.ClickException, match="Failed to download"):
+            with pytest.raises(click.ClickException, match="Failed to download") as exc:
                 skills._download_global_skill(
                     "https://example.com/test.tar.gz", "skill"
                 )
+        assert exc.value.reason == "download_failed"
 
     def test_raises_on_empty_archive(self, tmp_path: Path) -> None:
         """Raises ClickException when archive is empty."""
@@ -1235,10 +1236,11 @@ class TestDownloadGlobalSkill:
         mock_response.__exit__ = MagicMock(return_value=False)
 
         with patch.object(skills.request, "urlopen", return_value=mock_response):
-            with pytest.raises(click.ClickException, match="archive is empty"):
+            with pytest.raises(click.ClickException, match="archive is empty") as exc:
                 skills._download_global_skill(
                     "https://example.com/test.tar.gz", "skill"
                 )
+        assert exc.value.reason == "download_empty"
 
     def test_raises_on_missing_skill(self, tmp_path: Path) -> None:
         """Raises ClickException when skill not found in archive."""
@@ -1263,10 +1265,13 @@ class TestDownloadGlobalSkill:
         mock_response.__exit__ = MagicMock(return_value=False)
 
         with patch.object(skills.request, "urlopen", return_value=mock_response):
-            with pytest.raises(click.ClickException, match="not found in downloaded"):
+            with pytest.raises(
+                click.ClickException, match="not found in downloaded"
+            ) as exc:
                 skills._download_global_skill(
                     "https://example.com/test.tar.gz", "missing-skill"
                 )
+        assert exc.value.reason == "archive_missing_skill"
 
     def test_extracts_skill_successfully(self, tmp_path: Path) -> None:
         """Successfully extracts skill from valid archive."""
@@ -1850,6 +1855,15 @@ class TestConflictError:
         message = err.format_message()
         assert ".agents/skills/developing-with-streamlit already exists." in message
         assert "Remove it and try again." in message
+
+    def test_conflict_error_carries_conflict_reason(self) -> None:
+        """The conflict error is an ``_InstallError`` tagged ``reason="conflict"`` so
+        the handler forwards it to install-failure telemetry."""
+        err = skills._conflict_error(
+            [".agents/skills/developing-with-streamlit (existing file or directory)"]
+        )
+        assert isinstance(err, skills._InstallError)
+        assert err.reason == "conflict"
 
 
 class TestInstallSkillsReturnsResult:

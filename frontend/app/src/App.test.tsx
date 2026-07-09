@@ -7242,6 +7242,35 @@ describe("Skills install nudge", () => {
     })
   })
 
+  it("appends the server failure reason to the install-failed label", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // The server classifies the failure (e.g. the Windows symlink → GitHub
+    // download fallback) and the rejected error carries a machine-readable reason.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(
+      Object.assign(new Error("Failed to download skills from GitHub"), {
+        reason: "download_failed",
+      })
+    )
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    // The reason is a label suffix (mirroring skillsNudgeSuppressedNonLocal:<locality>)
+    // so the funnel can break install failures down by cause.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed:download_failed",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+    })
+  })
+
   it("counts a dropped-connection install separately from a failure", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     vi.spyOn(

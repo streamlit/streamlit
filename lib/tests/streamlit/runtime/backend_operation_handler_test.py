@@ -241,6 +241,32 @@ def test_install_skills_handler_reports_failure() -> None:
         )
 
     assert response.error_msg == "No skills found"
+    assert response.error_reason == "unknown"
+    assert not response.HasField("install_skills")
+
+
+def test_install_skills_handler_forwards_failure_reason() -> None:
+    """A ``skills._InstallError`` propagates its machine-readable ``reason`` into
+    the response's ``error_reason`` so the client can split install-failure
+    telemetry by cause (e.g. the Windows symlink → GitHub-download fallback)."""
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch(
+            "streamlit.web.skills.install_skills",
+            side_effect=skills._InstallError(
+                "Failed to download skills from GitHub", reason="download_failed"
+            ),
+        ),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_msg == "Failed to download skills from GitHub"
+    assert response.error_reason == "download_failed"
     assert not response.HasField("install_skills")
 
 
@@ -262,6 +288,7 @@ def test_install_skills_handler_refuses_without_agent_harness() -> None:
 
     mock_install.assert_not_called()
     assert response.error_msg == "Skills install is not available in this environment."
+    assert response.error_reason == "no_agent"
     assert not response.HasField("install_skills")
 
 
@@ -286,6 +313,7 @@ def test_install_skills_handler_refuses_non_loopback_connection() -> None:
 
     mock_install.assert_not_called()
     assert response.error_msg == "Skills install is not available in this environment."
+    assert response.error_reason == "non_loopback"
     assert not response.HasField("install_skills")
 
 
@@ -326,6 +354,7 @@ def test_install_skills_handler_allows_idempotent_retry_when_already_installed()
         global_mode=False, yes=True, app_dir="/app/dir"
     )
     assert response.error_msg == ""
+    assert response.error_reason == ""
     assert response.HasField("install_skills")
     assert response.install_skills.detail == "Skills are already up to date."
 
@@ -346,6 +375,7 @@ def test_install_skills_handler_refuses_in_headless_mode() -> None:
 
     mock_install.assert_not_called()
     assert response.error_msg == "Skills install is not available in this environment."
+    assert response.error_reason == "headless"
     assert not response.HasField("install_skills")
 
 

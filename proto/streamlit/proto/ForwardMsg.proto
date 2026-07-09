@@ -118,6 +118,13 @@ message BackendOperationResponse {
   // Error message if request failed (empty on success)
   string error_msg = 2;
 
+  // Machine-readable, bounded failure classification (empty on success).
+  // Parallels the human-readable error_msg. For the one-click skills install
+  // this is the cause of the failure (e.g. "conflict", "download_failed",
+  // "symlinks_unsupported"), forwarded to telemetry so the nudge's
+  // install-failure rate can be broken down by cause.
+  string error_reason = 6;
+
   oneof payload {
     // Response for deferred file requests
     DeferredFileResponsePayload deferred_file = 3;

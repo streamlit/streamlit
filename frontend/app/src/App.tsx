@@ -1600,7 +1600,17 @@ export class App extends PureComponent<Props, State> {
           this.trackSkillsNudge("skillsNudgeInstallDropped")
           throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
         }
-        this.trackSkillsNudge("skillsNudgeInstallFailed")
+        // Append the server's machine-readable failure reason (e.g. "conflict",
+        // "download_failed", "symlinks_unsupported") as a label suffix — mirroring
+        // `skillsNudgeSuppressedNonLocal:<locality>` — so the install-failure rate
+        // can be broken down by cause. The reason is a fixed server-side vocabulary
+        // (never user input), safe to emit as a label.
+        const reason = (error as { reason?: string } | null)?.reason
+        this.trackSkillsNudge(
+          reason
+            ? `skillsNudgeInstallFailed:${reason}`
+            : "skillsNudgeInstallFailed"
+        )
         // Re-throw so the toast renders its error state.
         throw error
       })
