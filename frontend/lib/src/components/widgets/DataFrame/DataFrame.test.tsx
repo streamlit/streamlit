@@ -133,24 +133,12 @@ describe("DataFrame widget", () => {
 
     expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
       expect.objectContaining({
-        getCellsForSelection: undefined,
+        getCellsForSelection: true,
+        keybindings: expect.objectContaining({
+          copy: false,
+        }),
       })
     )
-
-    const event = {
-      ctrlKey: true,
-      metaKey: false,
-      key: "c",
-      stopPropagation: vi.fn(),
-      preventDefault: vi.fn(),
-    }
-
-    act(() => {
-      dataEditorMockFn.mock.lastCall?.[0].onKeyDown(event)
-    })
-
-    expect(event.stopPropagation).toHaveBeenCalled()
-    expect(event.preventDefault).toHaveBeenCalled()
   })
 
   it("keeps clipboard editing enabled for data editors when data export is disabled", () => {
@@ -166,24 +154,12 @@ describe("DataFrame widget", () => {
     expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
       expect.objectContaining({
         getCellsForSelection: true,
+        keybindings: expect.objectContaining({
+          copy: true,
+        }),
         onPaste: expect.any(Function),
       })
     )
-
-    const event = {
-      ctrlKey: true,
-      metaKey: false,
-      key: "c",
-      stopPropagation: vi.fn(),
-      preventDefault: vi.fn(),
-    }
-
-    act(() => {
-      dataEditorMockFn.mock.lastCall?.[0].onKeyDown(event)
-    })
-
-    expect(event.stopPropagation).not.toHaveBeenCalled()
-    expect(event.preventDefault).not.toHaveBeenCalled()
   })
 
   it("shows search when Ctrl+F is pressed and search is enabled", () => {

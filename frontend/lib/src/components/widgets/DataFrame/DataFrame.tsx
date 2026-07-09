@@ -961,8 +961,8 @@ function DataFrame({
           smoothScrollY={true}
           // Show borders between cells:
           verticalBorder={true}
-          // Activate copy to clipboard functionality:
-          getCellsForSelection={isClipboardCopyDisabled ? undefined : true}
+          // Keep cell data available for selection-related grid features.
+          getCellsForSelection={true}
           // Deactivate row markers and numbers:
           rowMarkers={"none"}
           // Deactivate selections:
@@ -982,6 +982,7 @@ function DataFrame({
           // Activate keybindings:
           keybindings={{
             downFill: true,
+            copy: !isClipboardCopyDisabled,
             ...(isCellSelectionActivated || isLargeTable
               ? {
                   // Deactivate select all to prevent potential performance issues
@@ -993,16 +994,6 @@ function DataFrame({
           // Search needs to be activated manually, to support search
           // via the toolbar:
           onKeyDown={event => {
-            if (
-              isClipboardCopyDisabled &&
-              (event.ctrlKey || event.metaKey) &&
-              event.key.toLowerCase() === "c"
-            ) {
-              event.stopPropagation()
-              event.preventDefault()
-              return
-            }
-
             if (
               canSearch &&
               (event.ctrlKey || event.metaKey) &&
