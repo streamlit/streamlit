@@ -3975,6 +3975,78 @@ describe("App", () => {
         connectionManager.sendMessage.mock.calls.length - callsBefore
       ).toBe(0)
     })
+
+    it("does not reset the countdown when a fragment re-registers with the same interval", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(600)
+        // An ancestor re-render re-sends the same auto-rerun before the interval
+        // elapses. This must not restart the timer.
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(500)
+      })
+
+      // The original countdown was preserved, so it fired ~1000ms after the
+      // first registration. If re-registration had reset it, only 500ms would
+      // have elapsed since the reset and nothing would have fired.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(1)
+    })
+
+    it("restarts a fragment's timer when its interval changes", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        // Start with a long interval, then re-register with a short one.
+        sendForwardMessage("autoRerun", {
+          interval: 10.0,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(500)
+        sendForwardMessage("autoRerun", {
+          interval: 0.1,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(250)
+      })
+
+      // The 10s timer was replaced by a 0.1s timer, which then fired. Had the
+      // interval change been ignored, the 10s timer would not have fired yet.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBeGreaterThanOrEqual(1)
+    })
   })
 
   describe("App.requestFileURLs", () => {

@@ -309,13 +309,16 @@ export class App extends PureComponent<Props, State> {
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
 
-  // Active `run_every` auto-rerun interval timers, keyed by fragment id. These
-  // are imperative resources (setInterval handles), so they live outside of
-  // React state. Keying by fragment id lets us replace a fragment's timer when
-  // it re-registers, instead of stacking duplicate intervals.
+  // Active `run_every` auto-rerun timers, keyed by fragment id. These are
+  // imperative resources (setInterval handles), so they live outside of React
+  // state. Keying by fragment id lets us keep a single timer per fragment: we
+  // reuse the running timer when a fragment re-registers with the same interval
+  // (so frequent ancestor reruns don't reset its countdown), and only restart
+  // it when the interval changes. The stored `interval` (in seconds) is what we
+  // compare against on re-registration.
   private readonly autoRerunIntervals: Map<
     string,
-    ReturnType<typeof setInterval>
+    { timer: ReturnType<typeof setInterval>; interval: number }
   > = new Map()
 
   // Whether the skills-install nudge has been shown this page load.
@@ -1249,17 +1252,26 @@ export class App extends PureComponent<Props, State> {
       return
     }
 
+    const { interval } = autoRerun
+
     // A `run_every` fragment re-registers its auto-rerun every time an ancestor
-    // re-renders it (a fragment-only rerun doesn't reset timers). Clear any
-    // existing timer for this fragment first so repeated renders replace rather
-    // than stack intervals, which would otherwise multiply its rerun rate.
+    // re-renders it (a fragment-only rerun doesn't reset timers). If a timer for
+    // this fragment is already running with the same interval, leave it alone:
+    // restarting it would reset the countdown, so ancestor reruns firing more
+    // often than `run_every` could delay or starve the fragment's auto-rerun.
+    // We only (re)start the timer when there isn't one yet or the interval
+    // changed, which also avoids stacking duplicate intervals.
+    if (this.autoRerunIntervals.get(fragmentId)?.interval === interval) {
+      return
+    }
+
     this.clearAutoRerunInterval(fragmentId)
 
-    const intervalId = setInterval(() => {
+    const timer = setInterval(() => {
       this.widgetMgr.sendUpdateWidgetsMessage(fragmentId, true)
-    }, autoRerun.interval * 1000)
+    }, interval * 1000)
 
-    this.autoRerunIntervals.set(fragmentId, intervalId)
+    this.autoRerunIntervals.set(fragmentId, { timer, interval })
   }
 
   /**
@@ -1986,8 +1998,8 @@ export class App extends PureComponent<Props, State> {
    * lead to issues, e.g. when a new full app-rerun session is started or the active page changed.
    */
   cleanupAutoReruns = (): void => {
-    this.autoRerunIntervals.forEach(intervalId => {
-      clearInterval(intervalId)
+    this.autoRerunIntervals.forEach(({ timer }) => {
+      clearInterval(timer)
     })
     this.autoRerunIntervals.clear()
   }
@@ -1996,9 +2008,9 @@ export class App extends PureComponent<Props, State> {
    * Clear the auto-rerun interval for a single fragment, if one exists.
    */
   private clearAutoRerunInterval(fragmentId: string): void {
-    const intervalId = this.autoRerunIntervals.get(fragmentId)
-    if (intervalId !== undefined) {
-      clearInterval(intervalId)
+    const existing = this.autoRerunIntervals.get(fragmentId)
+    if (existing !== undefined) {
+      clearInterval(existing.timer)
       this.autoRerunIntervals.delete(fragmentId)
     }
   }
