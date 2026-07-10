@@ -3589,7 +3589,7 @@ __metadata:
     buffer: "npm:^6.0.3"
     chrome-launcher: "npm:^1.2.1"
     classnames: "npm:^2.3.2"
-    color2k: "npm:^2.0.2"
+    color2k: "npm:^2.0.4"
     hoist-non-react-statics: "npm:^3.3.2"
     humanize-string: "npm:^3.1.0"
     iframe-resizer: "npm:4.3.11"
@@ -3723,7 +3723,7 @@ __metadata:
     axios-mock-adapter: "npm:^2.1.0"
     baseui: "npm:12.2.0"
     classnames: "npm:^2.3.2"
-    color2k: "npm:^2.0.2"
+    color2k: "npm:^2.0.4"
     d3: "npm:^7.9.0"
     d3-graphviz: "npm:^5.6.0"
     date-fns: "npm:^4.4.0"
@@ -7031,17 +7031,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"color2k@npm:2.0.3":
-  version: 2.0.3
-  resolution: "color2k@npm:2.0.3"
-  checksum: 10c0/e7c13d212c9d1abb1690e378bbc0a6fb1751e4b02e9a73ba3b2ade9d54da673834597d342791d577d1ce400ec486c7f92c5098f9fa85cd113bcfde57420a2bb9
-  languageName: node
-  linkType: hard
-
-"color2k@patch:color2k@npm%3A2.0.3#~/.yarn/patches/color2k-npm-2.0.3-41f760285e.patch":
-  version: 2.0.3
-  resolution: "color2k@patch:color2k@npm%3A2.0.3#~/.yarn/patches/color2k-npm-2.0.3-41f760285e.patch::version=2.0.3&hash=0e4d2b"
-  checksum: 10c0/99113a128764c7ab0937efce2402668ece04edfb4640ea9879dd479de0bd18a3d6ede251c24611b4dce8cef775c6de037e2cd2f9a7fde9223f5f1dd4f0917b50
+"color2k@npm:^2.0.4":
+  version: 2.0.4
+  resolution: "color2k@npm:2.0.4"
+  checksum: 10c0/cb2bf3661a16e96e44ad07ad6b9b68037118405a154950597fe8d6cdde24cc277945d73e7ef29049b8511f14559b5c3e02c2e5c29e75568e31efc5b5c0f4d3e5
   languageName: node
   linkType: hard
 
