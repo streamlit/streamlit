@@ -24,12 +24,11 @@ from typing import (
     NoReturn,
 )
 
-from blinker import Signal
-
 import streamlit.watcher.path_watcher
 from streamlit import config, runtime
 from streamlit.errors import StreamlitMaxRetriesError, StreamlitSecretNotFoundError
 from streamlit.logger import get_logger
+from streamlit.signal_util import Signal
 
 _LOGGER: Final = get_logger(__name__)
 

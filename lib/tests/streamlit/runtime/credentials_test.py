@@ -16,15 +16,17 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import textwrap
 import unittest
+import urllib.error
+import urllib.request
 from pathlib import Path
 from unittest.mock import MagicMock, call, mock_open, patch
 
 import pytest
-import requests_mock
 from testfixtures import tempdir
 
 from streamlit import file_util
@@ -34,6 +36,59 @@ from streamlit.runtime.credentials import (
     _verify_email,
     email_prompt,
 )
+
+
+def _mock_response(body: bytes) -> MagicMock:
+    """Build a urlopen return value usable as a context manager."""
+    response = MagicMock()
+    response.read.return_value = body
+    response.__enter__.return_value = response
+    response.__exit__.return_value = False
+    return response
+
+
+class _FakeMetricsUrlopen:
+    """A urllib.request.urlopen replacement for the metrics email flow.
+
+    Records each call and returns the metrics JSON for the GET, then either a
+    successful response or an HTTPError for the POST, based on the configured
+    status codes.
+    """
+
+    def __init__(
+        self,
+        *,
+        metrics_status: int = 200,
+        metrics_json: dict | None = None,
+        post_status: int = 200,
+    ) -> None:
+        self.metrics_status = metrics_status
+        self.metrics_json = metrics_json if metrics_json is not None else {}
+        self.post_status = post_status
+        self.calls: list[tuple[str, str, bytes | None]] = []
+
+    def __call__(self, url_or_request, timeout=None):
+        if isinstance(url_or_request, urllib.request.Request):
+            method = url_or_request.get_method()
+            url = url_or_request.full_url
+            data = url_or_request.data
+        else:
+            method = "GET"
+            url = url_or_request
+            data = None
+        self.calls.append((method, url, data))
+
+        if method == "GET":
+            if self.metrics_status != 200:
+                raise urllib.error.HTTPError(
+                    url, self.metrics_status, "Not Found", {}, None
+                )
+            return _mock_response(json.dumps(self.metrics_json).encode("utf-8"))
+
+        if self.post_status != 200:
+            raise urllib.error.HTTPError(url, self.post_status, "Forbidden", {}, None)
+        return _mock_response(b"")
+
 
 PROMPT = "click.prompt"
 MOCK_PATH = "/mock/home/folder/.streamlit/credentials.toml"
@@ -313,33 +368,29 @@ class CredentialsClassTest(unittest.TestCase):
     def test_email_send(self, temp_dir):
         """Test that saving a new Credential sends an email"""
 
-        with requests_mock.mock() as m:
-            m.get(
-                "https://data.streamlit.io/metrics.json",
-                status_code=200,
-                json={"url": "https://www.example.com"},
-            )
-            m.post("https://www.example.com", status_code=200)
+        fake = _FakeMetricsUrlopen(metrics_json={"url": "https://www.example.com"})
+        with patch("urllib.request.urlopen", fake):
             creds: Credentials = Credentials.get_current()  # type: ignore
             creds._conf_file = str(Path(temp_dir.path) / "config.toml")
             creds.activation = _verify_email("email@example.com")
             creds.save()
-            # Check that metrics url fetched
-            first_request = m.request_history[0]
-            assert first_request.method == "GET"
-            assert first_request.url == "https://data.streamlit.io/metrics.json"
-            # Check that email sent to the url fetched
-            last_request = m.request_history[-1]
-            assert last_request.method == "POST"
-            assert last_request.url == "https://www.example.com/"
-            assert '"userId": "email@example.com"' in last_request.text
+
+        # Check that the metrics url was fetched first.
+        assert fake.calls[0][0] == "GET"
+        assert fake.calls[0][1] == "https://data.streamlit.io/metrics.json"
+        # Check that the email was posted to the fetched url.
+        last_method, last_url, last_body = fake.calls[-1]
+        assert last_method == "POST"
+        assert last_url == "https://www.example.com"
+        assert last_body is not None
+        assert b'"userId": "email@example.com"' in last_body
 
     @tempdir()
     def test_email_failed_metrics_fetch(self, temp_dir):
         """Test that saving a new Credential does not send an email if metrics fetch fails"""
 
-        with requests_mock.mock() as m:
-            m.get("https://data.streamlit.io/metrics.json", status_code=404)
+        fake = _FakeMetricsUrlopen(metrics_status=404)
+        with patch("urllib.request.urlopen", fake):
             creds: Credentials = Credentials.get_current()
             creds._conf_file = str(Path(temp_dir.path) / "config.toml")
             creds.activation = _verify_email("email@example.com")
@@ -347,7 +398,8 @@ class CredentialsClassTest(unittest.TestCase):
                 "streamlit.runtime.credentials", level="ERROR"
             ) as mock_logger:
                 creds.save()
-                assert len(m.request_history) == 1
+                # Only the metrics fetch was attempted (no POST).
+                assert len(fake.calls) == 1
                 assert len(mock_logger.output) == 1
                 assert "Failed to fetch metrics URL" in mock_logger.output[0]
 
@@ -357,18 +409,13 @@ class CredentialsClassTest(unittest.TestCase):
         Test that saving a new Credential does not send an email if the email is invalid
         """
 
-        with requests_mock.mock() as m:
-            m.get(
-                "https://data.streamlit.io/metrics.json",
-                status_code=200,
-                json={"url": "https://www.example.com"},
-            )
-            m.post("https://www.example.com", status_code=200)
+        fake = _FakeMetricsUrlopen(metrics_json={"url": "https://www.example.com"})
+        with patch("urllib.request.urlopen", fake):
             creds: Credentials = Credentials.get_current()  # type: ignore
             creds._conf_file = str(Path(temp_dir.path) / "config.toml")
             creds.activation = _verify_email("some_email")
             creds.save()
-            assert len(m.request_history) == 0
+            assert len(fake.calls) == 0
 
     @tempdir()
     def test_email_send_exception_handling(self, temp_dir):
@@ -376,13 +423,10 @@ class CredentialsClassTest(unittest.TestCase):
         Test that saving a new Credential catches and logs failures from the segment
         endpoint
         """
-        with requests_mock.mock() as m:
-            m.get(
-                "https://data.streamlit.io/metrics.json",
-                status_code=200,
-                json={"url": "https://www.example.com"},
-            )
-            m.post("https://www.example.com", status_code=403)
+        fake = _FakeMetricsUrlopen(
+            metrics_json={"url": "https://www.example.com"}, post_status=403
+        )
+        with patch("urllib.request.urlopen", fake):
             creds: Credentials = Credentials.get_current()  # type: ignore
             creds._conf_file = str(Path(temp_dir.path) / "config.toml")
             creds.activation = _verify_email("email@example.com")

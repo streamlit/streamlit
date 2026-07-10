@@ -14,15 +14,20 @@
 
 from __future__ import annotations
 
+import subprocess
 import unittest
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-from git.exc import InvalidGitRepositoryError
 
-from streamlit.git_util import GitRepo, _extract_github_repo_from_url
+from streamlit import git_util
+from streamlit.git_util import (
+    GitRepo,
+    _extract_github_repo_from_url,
+    _parse_git_version,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -32,71 +37,43 @@ if TYPE_CHECKING:
 def _mock_git_repo(
     *,
     module_path: str = "/repo",
+    git_version: str | None = "git version 2.20.3",
+    show_toplevel: str | None = "/repo",
     head_detached: bool = False,
-    tracking_branch_name: str | None = "origin/main",
+    upstream: str | None = "origin/main",
     remote_urls: Sequence[str] | None = ("https://github.com/owner/repo.git",),
-    remote_exception: Exception | None = None,
-    iter_commits: Sequence[object] | None = None,
-    iter_commits_exc: Exception | None = None,
-    untracked_files: Sequence[str] | None = None,
-    diff_paths: Sequence[str] | None = None,
+    untracked_files: Sequence[str] = (),
+    diff_paths: Sequence[str] = (),
+    rev_list: Sequence[str] | None = (),
 ) -> Iterator[GitRepo]:
-    """Context manager that yields a GitRepo with a mocked underlying git.Repo.
+    """Yield a GitRepo whose git CLI calls are mocked via canned responses.
 
-    Parameters mirror common setup needs across tests to reduce duplication.
+    Each key mirrors the exact arguments GitRepo passes to ``git`` so we can
+    exercise the subprocess-based implementation without a real repository.
     """
-    with patch("git.Repo") as repo_ctor:
-        mock_repo = repo_ctor.return_value
-        mock_repo.git.version_info = (2, 20, 3)
-        mock_repo.git.rev_parse.return_value = "/repo"
+    responses: dict[tuple[str, ...], str | None] = {
+        ("--version",): git_version,
+        ("rev-parse", "--show-toplevel"): show_toplevel,
+        ("symbolic-ref", "-q", "HEAD"): None if head_detached else "refs/heads/main",
+        ("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"): upstream,  # noqa: RUF027
+        ("ls-files", "--others", "--exclude-standard"): "\n".join(untracked_files),
+        ("diff", "--name-only"): "\n".join(diff_paths),
+    }
 
-        mock_repo.head = unittest.mock.Mock()
-        mock_repo.head.is_detached = head_detached
-
-        mock_repo.active_branch = unittest.mock.Mock()
-        if tracking_branch_name is not None and not head_detached:
-            tracking = unittest.mock.Mock()
-            tracking.name = tracking_branch_name
-            mock_repo.active_branch.tracking_branch.return_value = tracking
-        else:
-            mock_repo.active_branch.tracking_branch.return_value = None
-
-        remote = unittest.mock.Mock()
-        if remote_urls is not None:
-            remote.urls = list(remote_urls)
-        else:
-            remote.urls = []
-        # Name is used by ahead_commits
-        remote_name = (
-            tracking_branch_name.split("/")[0] if tracking_branch_name else "origin"
+    if upstream:
+        remote_name, *branch = upstream.split("/")
+        branch_name = "/".join(branch)
+        responses["remote", "get-url", "--all", remote_name] = (
+            "\n".join(remote_urls) if remote_urls else None
         )
-        remote.name = remote_name
+        responses["rev-list", f"{remote_name}/{branch_name}..{branch_name}"] = (
+            None if rev_list is None else "\n".join(rev_list)
+        )
 
-        if remote_exception is not None:
-            mock_repo.remote.side_effect = remote_exception
-        else:
-            mock_repo.remote.return_value = remote
+    def fake_run_git(self: GitRepo, *args: str, cwd: str | None = None) -> str | None:
+        return responses.get(tuple(args))
 
-        if iter_commits_exc is not None:
-            mock_repo.iter_commits.side_effect = iter_commits_exc
-        elif iter_commits is not None:
-            mock_repo.iter_commits.return_value = list(iter_commits)
-        else:
-            mock_repo.iter_commits.return_value = []
-
-        if untracked_files is not None:
-            mock_repo.untracked_files = list(untracked_files)
-
-        if diff_paths is not None:
-
-            class _DiffObj:  # noqa: B903
-                def __init__(self, path: str) -> None:
-                    self.a_path = path
-
-            mock_repo.index.diff.return_value = [_DiffObj(p) for p in diff_paths]
-        else:
-            mock_repo.index.diff.return_value = []
-
+    with patch.object(GitRepo, "_run_git", fake_run_git):
         yield GitRepo(module_path)
 
 
@@ -124,11 +101,26 @@ def test_extract_github_repo_from_url(url: str, expected: str) -> None:
     assert _extract_github_repo_from_url(url) == expected
 
 
+@pytest.mark.parametrize(
+    ("output", "expected"),
+    [
+        ("git version 2.39.3", (2, 39, 3)),
+        ("git version 2.39.3 (Apple Git-145)", (2, 39, 3)),
+        # A missing patch component is normalized to 0 so the version can be
+        # compared directly against _MIN_GIT_VERSION.
+        ("git version 2.7", (2, 7, 0)),
+        ("not a version", None),
+    ],
+)
+def test_parse_git_version(output: str, expected: tuple[int, ...] | None) -> None:
+    """Ensure git version strings are parsed into version tuples."""
+    assert _parse_git_version(output) == expected
+
+
 class GitUtilTest(unittest.TestCase):
     def test_git_repo_invalid(self):
-        with patch("git.Repo") as mock:
-            mock.side_effect = InvalidGitRepositoryError("Not a git repo")
-            repo = GitRepo(".")
+        """A directory that is not a git repo is not valid."""
+        with _mock_git_repo(show_toplevel=None) as repo:
             assert not repo.is_valid()
 
     def test_old_git_version(self):
@@ -136,28 +128,32 @@ class GitUtilTest(unittest.TestCase):
         prompt the user for credentials. We don't want to do this, so
         repo.is_valid() returns False for old gits.
         """
-        with (
-            patch("git.repo.base.Repo.GitCommandWrapperType") as git_mock,
-            patch("streamlit.git_util.os"),
-        ):
-            git_mock.return_value.version_info = (1, 6, 4)  # An old git version
-            repo = GitRepo(".")
+        with _mock_git_repo(git_version="git version 1.6.4") as repo:
             assert not repo.is_valid()
             assert repo.git_version == (1, 6, 4)
 
     def test_git_repo_valid(self):
-        with (
-            patch("git.repo.base.Repo.GitCommandWrapperType") as git_mock,
-            patch("streamlit.git_util.os"),
-        ):
-            git_mock.return_value.version_info = (2, 20, 3)  # A recent git version
-            repo = GitRepo(".")
+        """A directory with a recent git version and a repo root is valid."""
+        with _mock_git_repo(git_version="git version 2.20.3") as repo:
             assert repo.is_valid()
             assert repo.git_version == (2, 20, 3)
 
-    def test_gitpython_not_installed(self):
-        with patch.dict("sys.modules", {"git": None}):
-            repo = GitRepo(".")
+    def test_two_part_min_git_version_is_valid(self):
+        """A two-part git version at the minimum (e.g. "2.7") is still valid.
+
+        The patch component is normalized to 0 so it compares as
+        (2, 7, 0) >= _MIN_GIT_VERSION rather than the two-tuple (2, 7), which
+        would incorrectly sort below (2, 7, 0).
+        """
+        with _mock_git_repo(git_version="git version 2.7") as repo:
+            assert repo.is_valid()
+            assert repo.git_version == (2, 7, 0)
+
+    def test_git_not_installed(self):
+        """When git is not installed, all commands return None and the repo
+        is not valid.
+        """
+        with _mock_git_repo(git_version=None, show_toplevel=None) as repo:
             assert not repo.is_valid()
 
     def test_get_repo_info_https_userinfo(self) -> None:
@@ -178,9 +174,7 @@ class GitUtilTest(unittest.TestCase):
 
     def test_get_repo_info_no_tracking_branch(self) -> None:
         """Return None when there is no tracking branch configured."""
-        with _mock_git_repo(
-            module_path="/repo/sub/module", tracking_branch_name=None
-        ) as gr:
+        with _mock_git_repo(module_path="/repo/sub/module", upstream=None) as gr:
             assert gr.get_repo_info() is None
 
     def test_get_repo_info_no_matching_remote_url(self) -> None:
@@ -198,7 +192,7 @@ class GitUtilTest(unittest.TestCase):
 
     def test_get_tracking_branch_remote_branch_with_slashes(self) -> None:
         """Branch names with slashes are preserved after the remote name segment."""
-        with _mock_git_repo(tracking_branch_name="origin/feature/foo/bar") as gr:
+        with _mock_git_repo(upstream="origin/feature/foo/bar") as gr:
             result = gr.get_tracking_branch_remote()
             assert result is not None
             _, branch = result
@@ -206,84 +200,60 @@ class GitUtilTest(unittest.TestCase):
 
     def test_get_tracking_branch_remote_missing_remote(self) -> None:
         """If the named remote cannot be resolved, return None."""
-        with _mock_git_repo(
-            tracking_branch_name="missing/main",
-            remote_exception=RuntimeError("remote not found"),
-        ) as gr:
+        with _mock_git_repo(upstream="missing/main", remote_urls=None) as gr:
             assert gr.get_tracking_branch_remote() is None
 
     def test_ahead_commits_success(self) -> None:
         """ahead_commits returns commits compared to the remote branch."""
-        commit1 = object()
-        commit2 = object()
-        with _mock_git_repo(iter_commits=(commit1, commit2)) as gr:
-            assert gr.ahead_commits == [commit1, commit2]
+        with _mock_git_repo(rev_list=("commit1", "commit2")) as gr:
+            assert gr.ahead_commits == ["commit1", "commit2"]
 
     def test_ahead_commits_no_tracking(self) -> None:
         """ahead_commits returns None when there's no tracking branch."""
-        with _mock_git_repo(tracking_branch_name=None) as gr:
+        with _mock_git_repo(upstream=None) as gr:
             assert gr.ahead_commits is None
 
-    def test_ahead_commits_iter_exception_returns_empty(self) -> None:
-        """On errors iterating commits, ahead_commits returns an empty list."""
-        with _mock_git_repo(iter_commits_exc=RuntimeError("boom")) as gr:
+    def test_ahead_commits_rev_list_failure_returns_empty(self) -> None:
+        """When rev-list fails (returns None), ahead_commits returns an empty list."""
+        with _mock_git_repo(rev_list=None) as gr:
             assert gr.ahead_commits == []
 
     def test_untracked_files_property(self) -> None:
         """untracked_files returns repo list when valid, else None."""
-        # valid repo
         with _mock_git_repo(untracked_files=("a.txt", "b.txt")) as gr:
             assert gr.untracked_files == ["a.txt", "b.txt"]
 
-        # invalid repo
-        with patch("git.Repo") as repo_ctor:
-            repo_ctor.side_effect = Exception("no repo")
-            gr = GitRepo("/repo")
+        with _mock_git_repo(show_toplevel=None) as gr:
             assert gr.untracked_files is None
 
     def test_uncommitted_files_property(self) -> None:
-        """uncommitted_files returns index.diff(None) a_path entries; None if invalid."""
-        # valid repo
+        """uncommitted_files returns diff --name-only entries; None if invalid."""
         with _mock_git_repo(diff_paths=("x.py", "y.py")) as gr:
             assert gr.uncommitted_files == ["x.py", "y.py"]
 
-        # invalid repo
-        with patch("git.Repo") as repo_ctor:
-            repo_ctor.side_effect = Exception("no repo")
-            gr = GitRepo("/repo")
+        with _mock_git_repo(show_toplevel=None) as gr:
             assert gr.uncommitted_files is None
 
     def test_is_head_detached_property(self) -> None:
-        """is_head_detached reflects repo.head.is_detached when valid; False if invalid."""
-        # valid repo - attached
+        """is_head_detached reflects HEAD state when valid; False if invalid."""
         with _mock_git_repo(head_detached=False) as gr:
             assert gr.is_head_detached is False
 
-        # valid repo - detached
         with _mock_git_repo(head_detached=True) as gr:
             assert gr.is_head_detached is True
 
-        # invalid repo
-        with patch("git.Repo") as repo_ctor:
-            repo_ctor.side_effect = Exception("no repo")
-            gr = GitRepo("/repo")
+        with _mock_git_repo(show_toplevel=None) as gr:
             assert gr.is_head_detached is False
 
     def test_tracking_branch_property(self) -> None:
         """tracking_branch returns None for invalid or detached HEAD; else value."""
-        # valid repo, attached head
         with _mock_git_repo() as gr:
-            # When not detached and tracking is configured, property should be truthy
             assert gr.tracking_branch is not None
 
-        # valid repo, detached head
         with _mock_git_repo(head_detached=True) as gr:
             assert gr.tracking_branch is None
 
-        # invalid repo
-        with patch("git.Repo") as repo_ctor:
-            repo_ctor.side_effect = Exception("no repo")
-            gr = GitRepo("/repo")
+        with _mock_git_repo(show_toplevel=None) as gr:
             assert gr.tracking_branch is None
 
     def test_repr_returns_string(self) -> None:
@@ -295,21 +265,79 @@ class GitUtilTest(unittest.TestCase):
 
     def test_get_repo_info_invalid_repo(self) -> None:
         """Verify get_repo_info returns None when repo is invalid."""
-        with patch("git.Repo") as repo_ctor:
-            repo_ctor.side_effect = InvalidGitRepositoryError("Not a git repo")
-            gr = GitRepo("/repo")
+        with _mock_git_repo(show_toplevel=None) as gr:
             assert gr.get_repo_info() is None
 
     def test_ahead_commits_invalid_repo(self) -> None:
         """Verify ahead_commits returns None when repo is invalid."""
-        with patch("git.Repo") as repo_ctor:
-            repo_ctor.side_effect = InvalidGitRepositoryError("Not a git repo")
-            gr = GitRepo("/repo")
+        with _mock_git_repo(show_toplevel=None) as gr:
             assert gr.ahead_commits is None
 
     def test_get_tracking_branch_remote_invalid_repo(self) -> None:
         """Verify get_tracking_branch_remote returns None when repo is invalid."""
-        with patch("git.Repo") as repo_ctor:
-            repo_ctor.side_effect = InvalidGitRepositoryError("Not a git repo")
-            gr = GitRepo("/repo")
+        with _mock_git_repo(show_toplevel=None) as gr:
             assert gr.get_tracking_branch_remote() is None
+
+
+# These tests exercise the actual subprocess boundary of `_run_git`, which the
+# `_mock_git_repo` helper above stubs out.
+
+
+def test_run_git_builds_safe_command_and_strips_output() -> None:
+    """_run_git runs a list-form git command with a timeout and no credential prompt."""
+    with patch("streamlit.git_util.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0, stdout="  output \n")
+        repo = GitRepo("/some/dir")
+
+        mock_run.reset_mock()
+        result = repo._run_git("status", "--short")
+
+        assert result == "output"
+        (command,), kwargs = mock_run.call_args
+        assert command == ["git", "-C", repo._start_dir, "status", "--short"]
+        assert kwargs["timeout"] == git_util._GIT_TIMEOUT
+        assert kwargs["check"] is False
+        assert kwargs["capture_output"] is True
+        # Non-UTF-8 git output must be decoded defensively, never raising.
+        assert kwargs["errors"] == "replace"
+        # Credential prompts are disabled so git can never block waiting for input.
+        assert kwargs["env"]["GIT_TERMINAL_PROMPT"] == "0"
+
+
+def test_run_git_uses_provided_cwd() -> None:
+    """_run_git runs in the explicit cwd when one is given (whole-repo listings)."""
+    with patch("streamlit.git_util.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0, stdout="")
+        repo = GitRepo("/some/dir")
+
+        mock_run.reset_mock()
+        repo._run_git("ls-files", cwd="/repo/root")
+
+        (command,), _kwargs = mock_run.call_args
+        assert command == ["git", "-C", "/repo/root", "ls-files"]
+
+
+def test_run_git_returns_none_on_nonzero_exit() -> None:
+    """A non-zero git exit code yields None."""
+    with patch("streamlit.git_util.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=1, stdout="whatever")
+        repo = GitRepo("/some/dir")
+        assert repo._run_git("status") is None
+
+
+def test_run_git_returns_none_when_git_missing() -> None:
+    """When the git binary is missing, _run_git returns None and the repo is invalid."""
+    with patch("streamlit.git_util.subprocess.run", side_effect=FileNotFoundError()):
+        repo = GitRepo("/some/dir")
+        assert not repo.is_valid()
+        assert repo._run_git("status") is None
+
+
+def test_run_git_returns_none_on_timeout() -> None:
+    """A git command that times out yields None rather than raising."""
+    with patch(
+        "streamlit.git_util.subprocess.run",
+        side_effect=subprocess.TimeoutExpired(cmd="git", timeout=git_util._GIT_TIMEOUT),
+    ):
+        repo = GitRepo("/some/dir")
+        assert repo._run_git("status") is None

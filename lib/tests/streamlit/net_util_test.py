@@ -15,12 +15,19 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import MagicMock
-
-import requests
-import requests_mock
+import urllib.error
+from unittest.mock import MagicMock, patch
 
 from streamlit import net_util
+
+
+def _mock_response(body: str) -> MagicMock:
+    """Build a urlopen return value usable as a context manager."""
+    response = MagicMock()
+    response.read.return_value = body.encode("utf-8")
+    response.__enter__.return_value = response
+    response.__exit__.return_value = False
+    return response
 
 
 class UtilTest(unittest.TestCase):
@@ -29,30 +36,34 @@ class UtilTest(unittest.TestCase):
 
     def test_get_external_ip(self):
         # Test success
-        with requests_mock.mock() as m:
-            m.get(net_util._AWS_CHECK_IP, text="1.2.3.4")
+        with patch("urllib.request.urlopen", return_value=_mock_response("1.2.3.4")):
             assert net_util.get_external_ip() == "1.2.3.4"
 
         net_util._external_ip = None
 
         # Test failure
-        with requests_mock.mock() as m:
-            m.get(net_util._AWS_CHECK_IP, exc=requests.exceptions.ConnectTimeout)
-            assert None is net_util.get_external_ip()
+        with patch(
+            "urllib.request.urlopen", side_effect=urllib.error.URLError("timeout")
+        ):
+            assert net_util.get_external_ip() is None
 
     def test_get_external_ip_use_http_by_default(self):
-        with requests_mock.mock() as m:
-            m.get(net_util._AWS_CHECK_IP, text="1.2.3.4")
-            m.get(net_util._AWS_CHECK_IP_HTTPS, text="5.6.7.8")
+        mock_urlopen = MagicMock(return_value=_mock_response("1.2.3.4"))
+        with patch("urllib.request.urlopen", mock_urlopen):
             assert net_util.get_external_ip() == "1.2.3.4"
-            assert m.call_count == 1
+            # HTTPS fallback is not attempted when HTTP succeeds.
+            assert mock_urlopen.call_count == 1
 
     def test_get_external_ip_https_if_http_fails(self):
-        with requests_mock.mock() as m:
-            m.get(net_util._AWS_CHECK_IP, exc=requests.exceptions.ConnectTimeout)
-            m.get(net_util._AWS_CHECK_IP_HTTPS, text="5.6.7.8")
+        def side_effect(url: str, timeout: float | None = None) -> MagicMock:
+            if url == net_util._AWS_CHECK_IP:
+                raise urllib.error.URLError("timeout")
+            return _mock_response("5.6.7.8")
+
+        mock_urlopen = MagicMock(side_effect=side_effect)
+        with patch("urllib.request.urlopen", mock_urlopen):
             assert net_util.get_external_ip() == "5.6.7.8"
-            assert m.call_count == 2
+            assert mock_urlopen.call_count == 2
 
     def test_get_external_ip_html(self):
         # This tests the case where the external URL returns a web page.
@@ -64,67 +75,49 @@ class UtilTest(unittest.TestCase):
         </html>
         """
 
-        with requests_mock.mock() as m:
-            m.get(net_util._AWS_CHECK_IP, text=response_text)
-            assert None is net_util.get_external_ip()
+        with patch(
+            "urllib.request.urlopen", return_value=_mock_response(response_text)
+        ):
+            assert net_util.get_external_ip() is None
 
         net_util._external_ip = None
 
 
 def test_get_external_ip_uses_short_timeout(monkeypatch) -> None:
-    """Verify get_external_ip uses 1s timeout for both HTTP and HTTPS calls."""
-    # Reset cache to force new request
+    """Verify get_external_ip uses a 1s timeout for the HTTP call."""
+    # Reset cache to force a new request.
     monkeypatch.setattr(net_util, "_external_ip", None)
 
-    mock_get = MagicMock()
-    mock_response = MagicMock()
-    mock_response.text = "1.2.3.4"
-    mock_get.return_value = mock_response
-
-    monkeypatch.setattr("requests.get", mock_get)
+    mock_urlopen = MagicMock(return_value=_mock_response("1.2.3.4"))
+    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen)
 
     net_util.get_external_ip()
 
-    # Verify timeout=1 was passed on the HTTP call
-    mock_get.assert_called_once()
-    _, kwargs = mock_get.call_args
+    mock_urlopen.assert_called_once()
+    _, kwargs = mock_urlopen.call_args
     assert kwargs.get("timeout") == 1, (
         f"Expected timeout=1, got {kwargs.get('timeout')}"
     )
 
 
 def test_get_external_ip_https_fallback_uses_short_timeout(monkeypatch) -> None:
-    """Verify HTTPS fallback in get_external_ip also uses 1s timeout."""
-    # Reset cache to force new request
+    """Verify the HTTPS fallback in get_external_ip also uses a 1s timeout."""
+    # Reset cache to force a new request.
     monkeypatch.setattr(net_util, "_external_ip", None)
 
-    mock_get = MagicMock()
-
-    def side_effect(url: str, timeout: float = 5) -> MagicMock:
+    def side_effect(url: str, timeout: float | None = None) -> MagicMock:
         """Simulate HTTP failure, HTTPS success."""
         if url == net_util._AWS_CHECK_IP:
-            raise requests.exceptions.ConnectTimeout()
-        mock_response = MagicMock()
-        mock_response.text = "1.2.3.4"
-        return mock_response
+            raise urllib.error.URLError("timeout")
+        return _mock_response("1.2.3.4")
 
-    mock_get.side_effect = side_effect
-    monkeypatch.setattr("requests.get", mock_get)
+    mock_urlopen = MagicMock(side_effect=side_effect)
+    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen)
 
     result = net_util.get_external_ip()
 
-    # Verify both calls were made with timeout=1
     assert result == "1.2.3.4"
-    assert mock_get.call_count == 2
-
-    # Check first call (HTTP)
-    first_call_kwargs = mock_get.call_args_list[0].kwargs
-    assert first_call_kwargs.get("timeout") == 1, (
-        f"HTTP call: Expected timeout=1, got {first_call_kwargs.get('timeout')}"
-    )
-
-    # Check second call (HTTPS fallback)
-    second_call_kwargs = mock_get.call_args_list[1].kwargs
-    assert second_call_kwargs.get("timeout") == 1, (
-        f"HTTPS fallback: Expected timeout=1, got {second_call_kwargs.get('timeout')}"
-    )
+    assert mock_urlopen.call_count == 2
+    # Both the HTTP call and the HTTPS fallback use timeout=1.
+    for mock_call in mock_urlopen.call_args_list:
+        assert mock_call.kwargs.get("timeout") == 1

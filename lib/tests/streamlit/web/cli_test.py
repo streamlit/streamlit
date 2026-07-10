@@ -22,13 +22,13 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-import requests_mock
 from click.testing import CliRunner
 from parameterized import parameterized
 from requests.adapters import HTTPAdapter, Retry
@@ -41,6 +41,15 @@ from streamlit.runtime.credentials import Credentials
 from streamlit.web import cli
 from streamlit.web.cli import _convert_config_option_to_click_option
 from tests import testutil
+
+
+def _mock_urlopen_response(body: bytes) -> MagicMock:
+    """Build a urlopen return value usable as a context manager."""
+    response = MagicMock()
+    response.read.return_value = body
+    response.__enter__.return_value = response
+    response.__exit__.return_value = False
+    return response
 
 
 class CliTest(unittest.TestCase):
@@ -147,13 +156,15 @@ class CliTest(unittest.TestCase):
     def test_run_valid_url(self, temp_dir):
         """streamlit run succeeds if an existing url is passed."""
 
+        file_content = b"content"
         with (
             patch("streamlit.url_util.is_url", return_value=True),
             patch("streamlit.web.cli._main_run"),
-            requests_mock.mock() as m,
+            patch(
+                "urllib.request.urlopen",
+                return_value=_mock_urlopen_response(file_content),
+            ),
         ):
-            file_content = b"content"
-            m.get("http://url/app.py", content=file_content)
             with patch("streamlit.temporary_directory.TemporaryDirectory") as mock_tmp:
                 mock_tmp.return_value.__enter__.return_value = temp_dir.path
                 result = self.runner.invoke(cli, ["run", "http://url/app.py"])
@@ -171,9 +182,11 @@ class CliTest(unittest.TestCase):
         with (
             patch("streamlit.url_util.is_url", return_value=True),
             patch("streamlit.web.cli._main_run"),
-            requests_mock.mock() as m,
+            patch(
+                "urllib.request.urlopen",
+                side_effect=urllib.error.URLError("connection failed"),
+            ),
         ):
-            m.get("http://url/app.py", exc=requests.exceptions.RequestException)
             with patch("streamlit.temporary_directory.TemporaryDirectory") as mock_tmp:
                 mock_tmp.return_value.__enter__.return_value = temp_dir.path
                 result = self.runner.invoke(cli, ["run", "http://url/app.py"])

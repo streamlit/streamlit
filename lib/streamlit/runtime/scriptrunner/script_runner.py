@@ -23,8 +23,6 @@ from enum import Enum
 from timeit import default_timer as timer
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
-from blinker import Signal
-
 from streamlit import config, runtime, util
 from streamlit.errors import FragmentStorageKeyError
 from streamlit.logger import get_logger
@@ -59,6 +57,7 @@ from streamlit.runtime.state import (
     SafeSessionState,
     SessionState,
 )
+from streamlit.signal_util import Signal
 from streamlit.source_util import page_sort_key
 
 if TYPE_CHECKING:

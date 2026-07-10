@@ -57,10 +57,7 @@ dependencies = [
   # that cause st.line_chart and other built-in charts to fail rendering.
   # See: https://github.com/streamlit/streamlit/issues/12064
   "altair>=4.0,<7,!=5.4.0,!=5.4.1",
-  "blinker>=1.5.0,<2",
-  "cachetools>=5.5,<8",
   "click>=7.0,<9",
-  "gitpython>=3.0.7,<4,!=3.1.19",
   "numpy>=1.23,<3",
   # The "packaging" package isn't version-capped because they use calendar-based
   # versioning, i.e. "major" version increase != breaking changes
@@ -69,15 +66,12 @@ dependencies = [
   # the index dtype. Pandas 3.x requires Python >= 3.11.
   "pandas>=1.4.0,<4",
   "pillow>=7.1.0,<13",
-  "pydeck>=0.8.0b4,<1",
   # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
   "protobuf>=3.20,<8",
   # pyarrow is not semantically versioned, gets new major versions frequently, and
   # doesn't tend to break the API on major version upgrades, so we don't put an
   # upper bound on it.
   "pyarrow>=7.0",
-  "requests>=2.27,<3",
-  "tenacity>=8.1.0,<10",
   # Starting from Python 3.11, Python has built in support for reading TOML files.
   # Let's make sure to remove this "toml" library when we stop supporting Python 3.10.
   "toml>=0.10.1,<2",
@@ -87,8 +81,6 @@ dependencies = [
   "starlette>=0.40.0",
   # ASGI server:
   "uvicorn>=0.30.0",
-  # Faster http parsing for Starlette server:
-  "httptools>=0.6.3",
   # Required by starlette:
   "anyio>=4.0.0",
   # Required for file-upload support:
@@ -124,6 +116,8 @@ charts = [
   # orjson speeds up large plotly figure processing by 5-10x:
   "orjson>=3.5.0",
 ]
+# Optional dependency required for st.pydeck_chart and the mapping demo:
+mapping = ["pydeck>=0.8.0b4,<1"]
 # Optional SQL connection dependency:
 sql = ["SQLAlchemy>=2.0.0"]
 # Optional dependency for better performance:
@@ -132,10 +126,12 @@ performance = [
   "orjson>=3.5.0",
   # uvloop speeds up the event loop:
   "uvloop>=0.15.2; sys_platform != 'win32' and sys_platform != 'cygwin' and platform_python_implementation != 'PyPy'",
+  # Faster HTTP parsing for the Starlette/uvicorn server (falls back to h11 when absent):
+  "httptools>=0.6.3",
 ]
 # Install all optional dependencies:
 all = [
-  "streamlit[auth,charts,snowflake,sql,pdf,performance]",
+  "streamlit[auth,charts,mapping,snowflake,sql,pdf,performance]",
   # Improved exception traceback formatting:
   "rich>=11.0.0",
 ]
