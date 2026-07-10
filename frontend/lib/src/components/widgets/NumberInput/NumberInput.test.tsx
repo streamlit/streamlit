@@ -1175,6 +1175,61 @@ describe("NumberInput widget", () => {
         expect(screen.getByRole("alert")).toBeInTheDocument()
       })
 
+      it("does not submit form via Enter while a validation error is shown but the widget is not dirty", async () => {
+        const user = userEvent.setup()
+        // The backend value (5) is below the min (10). Stepping up keeps it
+        // out of range and sets a validation error while dirty stays false
+        // (commitValue is not called from the Enter handler in this state).
+        const props = getIntProps({
+          default: 5,
+          min: 10,
+          max: 100,
+          step: 1,
+          formId: "form",
+        })
+        vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+          true
+        )
+        vi.spyOn(props.widgetMgr, "submitForm")
+
+        render(<NumberInput {...props} />)
+
+        await user.click(screen.getByTestId("stNumberInputStepUp"))
+        expect(screen.getByRole("alert")).toBeInTheDocument()
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.click(input)
+        await user.keyboard("{enter}")
+
+        // The visible validation error must block form submission even though
+        // the widget is not dirty.
+        expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+        expect(screen.getByRole("alert")).toBeInTheDocument()
+      })
+
+      it("shows the validation error and blocks commit when blurring an invalid value", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({ default: 10, min: 0, max: 50 })
+        const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+        render(<NumberInput {...props} />)
+        setIntValueSpy.mockClear()
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "100") // Above max
+        // Blur (tab away) rather than pressing Enter.
+        await user.tab()
+
+        expect(input).toHaveDisplayValue("100")
+        expect(setIntValueSpy).not.toHaveBeenCalled()
+        const alert = screen.getByRole("alert")
+        expect(alert).toHaveTextContent(
+          "Error: Number is outside the allowed range. Please enter a value between 0 and 50."
+        )
+        expect(input).toHaveAttribute("aria-invalid", "true")
+      })
+
       it("shows a below-range message when only min_value is set", async () => {
         const user = userEvent.setup()
         // Only min is user-provided; max is the safe-integer sentinel.

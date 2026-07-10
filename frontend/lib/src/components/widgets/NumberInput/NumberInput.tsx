@@ -395,8 +395,13 @@ const NumberInput: React.FC<Props> = ({
               fromUi: true,
             })
           }
+          // Also gate on `!validationError`: a step on an out-of-range value
+          // can set a validation error while `dirty` stays false, and in that
+          // case `commitValue` above is not called — so block submission while
+          // an error is visible to keep the UI consistent.
           if (
             shouldSubmitForm &&
+            !validationError &&
             widgetMgr.allowFormEnterToSubmit(elementFormId)
           ) {
             widgetMgr.submitForm(elementFormId, fragmentId)
@@ -414,6 +419,7 @@ const NumberInput: React.FC<Props> = ({
       dirty,
       currentNumericValue,
       commitValue,
+      validationError,
       widgetMgr,
       elementFormId,
       fragmentId,
