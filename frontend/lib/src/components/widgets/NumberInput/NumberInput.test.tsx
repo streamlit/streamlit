@@ -1112,6 +1112,45 @@ describe("NumberInput widget", () => {
         ).not.toBeInTheDocument()
       })
 
+      it("clears a stale validation error when a new value arrives from the backend", async () => {
+        const user = userEvent.setup()
+        // The backend value (5) is below the min (10) — such an out-of-range
+        // value can arrive via session_state. Stepping up keeps it out of
+        // range and sets a validation error while the widget is NOT dirty
+        // (the user never typed).
+        const props = getIntProps({ default: 5, min: 10, max: 100, step: 1 })
+        const { rerender } = render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.click(screen.getByTestId("stNumberInputStepUp"))
+
+        // The out-of-range step surfaces the validation error even though the
+        // widget is not dirty.
+        expect(screen.getByRole("alert")).toBeInTheDocument()
+        expect(input).toHaveAttribute("aria-invalid", "true")
+
+        // A rerun delivers a valid value from the backend (session_state update).
+        const updatedProps = getIntProps({
+          default: 5,
+          min: 10,
+          max: 100,
+          step: 1,
+          value: 50,
+          setValue: true,
+        })
+        updatedProps.widgetMgr = props.widgetMgr
+        rerender(<NumberInput {...updatedProps} />)
+
+        // The displayed value syncs to the backend value and the stale error
+        // must be cleared (no lingering red styling / alert / aria-invalid).
+        expect(input).toHaveDisplayValue("50")
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+        expect(input).not.toHaveAttribute("aria-invalid")
+        expect(
+          screen.queryByTestId("stTooltipErrorHoverTarget")
+        ).not.toBeInTheDocument()
+      })
+
       it("does not submit form via Enter when range validation fails", async () => {
         const user = userEvent.setup()
         const props = getIntProps({

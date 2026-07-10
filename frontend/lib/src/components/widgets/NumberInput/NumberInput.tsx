@@ -196,6 +196,11 @@ const NumberInput: React.FC<Props> = ({
   useEffect(() => {
     if (!dirty) {
       setFormattedValue(formatCurrentValue(value))
+      // Clear any stale validation error: when the widget is not dirty the
+      // displayed value is (re)synced from the backend (e.g. a session_state
+      // update or a step on an out-of-range value), so an error tied to the
+      // previous value no longer applies to what the user now sees.
+      setValidationError(null)
     }
   }, [value, dirty, formatCurrentValue])
 
