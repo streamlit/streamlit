@@ -26,7 +26,7 @@ from streamlit.errors import (
     StreamlitInvalidWidthError,
 )
 from streamlit.proto.Block_pb2 import Block
-from streamlit.proto.GapSize_pb2 import GapSize
+from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
 from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.proto.TextAlignmentConfig_pb2 import TextAlignmentConfig
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -41,9 +41,9 @@ SpaceSize: TypeAlias = (
         "stretch", "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
     ]
 )
-Gap: TypeAlias = Literal[
-    "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
-]
+Gap: TypeAlias = (
+    int | Literal["xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"]
+)
 HorizontalAlignment: TypeAlias = Literal["left", "center", "right", "distribute"]
 VerticalAlignment: TypeAlias = Literal["top", "center", "bottom", "distribute"]
 TextAlignment: TypeAlias = Literal["left", "center", "right", "justify"]
@@ -283,26 +283,51 @@ def get_height_config(height: Height | SpaceSize) -> HeightConfig:
     return height_config
 
 
-def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
-    """Convert a gap string or None to a GapSize proto value."""
-    gap_mapping = {
-        "xxsmall": GapSize.XXSMALL,
-        "xsmall": GapSize.XSMALL,
-        "small": GapSize.SMALL,
-        "medium": GapSize.MEDIUM,
-        "large": GapSize.LARGE,
-        "xlarge": GapSize.XLARGE,
-        "xxlarge": GapSize.XXLARGE,
-    }
+_GAP_STRING_MAPPING: dict[str, GapSize.ValueType] = {
+    "xxsmall": GapSize.XXSMALL,
+    "xsmall": GapSize.XSMALL,
+    "small": GapSize.SMALL,
+    "medium": GapSize.MEDIUM,
+    "large": GapSize.LARGE,
+    "xlarge": GapSize.XLARGE,
+    "xxlarge": GapSize.XXLARGE,
+}
 
-    if isinstance(gap, str):
-        gap_size = gap.lower()
-        valid_sizes = gap_mapping.keys()
 
-        if gap_size in valid_sizes:
-            return gap_mapping[gap_size]
-    elif gap is None:
-        return GapSize.NONE
+def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
+    """Convert a gap value to a ``GapConfig`` proto.
+
+    ``gap`` may be one of the string enum values (``"xxsmall"``, ``"xsmall"``,
+    ``"small"``, ``"medium"``, ``"large"``, ``"xlarge"``, ``"xxlarge"``), a
+    non-negative integer specifying the gap in pixels, or ``None`` (no gap).
+
+    Parameters
+    ----------
+    gap : Gap or None
+        The gap value to convert.
+    element_type : str
+        The element type used in error messages.
+
+    Raises
+    ------
+    StreamlitInvalidColumnGapError
+        If ``gap`` is not a valid gap value.
+    """
+    gap_config = GapConfig()
+
+    # ``bool`` is a subclass of ``int`` in Python, but should not be accepted
+    # as a pixel value.
+    if isinstance(gap, int) and not isinstance(gap, bool) and gap >= 0:
+        gap_config.pixel_gap = gap
+        return gap_config
+
+    if gap is None:
+        gap_config.gap_size = GapSize.NONE
+        return gap_config
+
+    if isinstance(gap, str) and gap.lower() in _GAP_STRING_MAPPING:
+        gap_config.gap_size = _GAP_STRING_MAPPING[gap.lower()]
+        return gap_config
 
     raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
 

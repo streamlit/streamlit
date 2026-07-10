@@ -269,11 +269,12 @@ class StreamlitInvalidVerticalAlignmentError(LocalizableStreamlitException):
 class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
     """Exception raised when an invalid value is specified for gap."""
 
-    def __init__(self, gap: str, element_type: str) -> None:
+    def __init__(self, gap: object, element_type: str) -> None:
         super().__init__(
             'The `gap` argument to `{element_type}` must be `"xxsmall"`, '
             '`"xsmall"`, `"small"`, `"medium"`, `"large"`, `"xlarge"`, '
-            '`"xxlarge"`, or `"none"`. \n'
+            '`"xxlarge"`, `None`, or a non-negative integer specifying '
+            "the gap in pixels. \n"
             "The argument passed was {gap}.",
             gap=gap,
             element_type=element_type,

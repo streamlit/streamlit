@@ -44,6 +44,14 @@ describe("FileDropzone widget", () => {
     expect(screen.getByTestId("stFileUploaderDropzone")).toBeInTheDocument()
   })
 
+  it("removes the dropzone section from the keyboard tab order", () => {
+    const props = getProps()
+    render(<FileDropzone {...props} />)
+
+    const dropzone = screen.getByTestId("stFileUploaderDropzone")
+    expect(dropzone).toHaveAttribute("tabindex", "-1")
+  })
+
   it("renders dropzone without extensions", () => {
     const props = getProps({
       acceptedTypes: [],

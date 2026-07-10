@@ -162,6 +162,27 @@ def load_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
 ```
 
+Render stable layout before slow calls. Streamlit emits UI updates top to bottom during each rerun, so slow code before downstream elements leaves faded stale content from the previous run on screen while it runs. Render fast UI first, reserve the slow result's position with `st.container()`, then fill that slot once the work completes — wrap the slow work in `with container.skeleton():` to show a loading placeholder, and write results explicitly to the container (e.g. `container.dataframe(...)`), since the block doesn't redirect bare `st.*` calls into it. Avoid standalone `st.empty()`/`st.skeleton()` placeholders that you fill after slow work: the delay unmounts the old element and resets stateful widgets (e.g. a dataframe's scroll, sort, and selection), whereas a reserved container keeps it mounted at a stable position. Give stateful elements a stable `key`.
+
+```python
+# BAD: The whole page is stuck behind a slow load and greys out
+orders = load_orders()  # ~5s
+st.title("Orders")
+region = st.selectbox("Region", regions)
+st.dataframe(orders)
+
+# GOOD: Title and filter paint immediately; a container reserves the table's slot and
+# shows a skeleton while it loads, so the table keeps its state at a stable position.
+st.title("Orders")
+region = st.selectbox("Region", regions)
+table_slot = st.container()  # Reserve the table's position up front
+with table_slot.skeleton():
+    orders = load_orders()
+    table_slot.dataframe(orders, key="orders")  # Write into the reserved slot
+```
+
+See `performance.md` for the rendering-order details and a fuller placeholder example.
+
 Use fragments for independent sections that can rerun separately from the page.
 
 ```python
