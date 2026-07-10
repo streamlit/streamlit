@@ -26,6 +26,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
+    StreamlitMixedNumericTypesError,
     StreamlitValueAboveMaxError,
 )
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
@@ -137,6 +138,26 @@ class NumberInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.number_input
         assert c.label == "the label"
         assert c.default == 1
+
+    def test_mixed_numeric_types_raises(self):
+        """Mixing an int bound with a float bound raises a mixed-types error."""
+        with pytest.raises(StreamlitMixedNumericTypesError):
+            st.number_input("the label", min_value=1, max_value=2.0)
+
+    def test_default_value_is_int_zero_with_only_int_step(self):
+        """With only an int ``step`` (no value/min), the default value is int 0."""
+        st.number_input("the label", step=1)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.default == 0
+        assert c.format == "%d"
+
+    def test_default_value_is_float_zero_with_only_float_step(self):
+        """With only a float ``step`` (no value/min), the default value is float 0.0."""
+        st.number_input("the label", step=1.0)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.default == 0.0
 
     def test_value_between_range(self):
         st.number_input("the label", 0, 11, 10)

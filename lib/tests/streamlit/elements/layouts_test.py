@@ -356,6 +356,12 @@ class ExpanderTest(DeltaGeneratorTestCase):
         with pytest.raises(TypeError):
             st.expander()
 
+    def test_label_none_raises(self):
+        """Test that an explicit label=None raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.expander(None)
+        assert "A label is required for an expander" in str(e.value)
+
     def test_just_label(self):
         """Test that it can be called with no params"""
         expander = st.expander("label")
@@ -933,6 +939,18 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         """Test that label is required"""
         with pytest.raises(TypeError):
             st.popover()
+
+    def test_label_none_raises(self):
+        """Test that an explicit label=None raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.popover(None)
+        assert "A label is required for a popover" in str(e.value)
+
+    def test_invalid_type_raises(self):
+        """Test that an unsupported button type raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.popover("label", type="invalid")
+        assert "must be" in str(e.value)
 
     def test_just_label(self):
         """Test that it correctly applies label param."""
