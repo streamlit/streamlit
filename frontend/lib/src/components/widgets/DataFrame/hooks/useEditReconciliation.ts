@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type MutableRefObject, useCallback, useMemo, useRef } from "react"
+import { type MutableRefObject, useCallback, useMemo } from "react"
 
 import { getCellFromArrow } from "~lib/components/widgets/DataFrame/arrowUtils"
 import {
@@ -98,7 +98,7 @@ function useEditReconciliation({
     [data]
   )
 
-  const reconcileEdits = (): void => {
+  useExecuteWhenChanged(() => {
     if (!isEditingEnabled) {
       return
     }
@@ -127,23 +127,18 @@ function useEditReconciliation({
       }
     )
 
-    // No explicit repaint is needed for the cleared cells: reconciliation runs
-    // during render, so the edits are cleared before the grid repaints.
+    // No explicit repaint is needed for the cleared cells: this callback runs
+    // during render (via useExecuteWhenChanged), so the edits are cleared
+    // before the grid repaints, and the data change that triggered the
+    // reconciliation gives the grid a fresh `getCellContent` that reflects the
+    // reconciled source values.
     if (hasClearedCells) {
       syncEditState()
     }
     // `isEditingEnabled` is watched so that reconciliation also runs when
     // editing is re-enabled after having been disabled during a data refresh
     // (which would otherwise skip reconciliation and leave stale edits).
-  }
-
-  const hasReconciledInitialDataRef = useRef(false)
-  useExecuteWhenChanged(reconcileEdits, [data, isEditingEnabled])
-
-  if (!hasReconciledInitialDataRef.current) {
-    hasReconciledInitialDataRef.current = true
-    reconcileEdits()
-  }
+  }, [data, isEditingEnabled])
 
   return {
     getSourceCellValue,

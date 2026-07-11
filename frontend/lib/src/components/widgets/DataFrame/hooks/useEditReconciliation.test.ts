@@ -127,11 +127,12 @@ describe("useEditReconciliation hook", () => {
     expect(syncEditState).not.toHaveBeenCalled()
   })
 
-  it("clears matching edits on the first render", () => {
+  it("does not reconcile on the first render", () => {
     const editingState = {
       current: new EditingState(1),
     }
-    editingState.current.setCell(0, 0, MOCK_COLUMN.getCell("foo"))
+    const editedCell = MOCK_COLUMN.getCell("foo")
+    editingState.current.setCell(0, 0, editedCell)
     const syncEditState = vi.fn()
 
     renderHook(() =>
@@ -144,8 +145,8 @@ describe("useEditReconciliation hook", () => {
       })
     )
 
-    expect(editingState.current.getCell(0, 0)).toBeUndefined()
-    expect(syncEditState).toHaveBeenCalled()
+    expect(editingState.current.getCell(0, 0)).toEqual(editedCell)
+    expect(syncEditState).not.toHaveBeenCalled()
   })
 
   it("skips reconciliation when editing is disabled", () => {
