@@ -15,11 +15,17 @@
 from __future__ import annotations
 
 import json
+import random
+import time
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 import streamlit as st
+
+np.random.seed(0)
+random.seed(0)
 
 EMPTY_EDITOR_STATE: dict[str, Any] = {
     "edited_rows": {},
@@ -101,3 +107,56 @@ st.markdown(
     unsafe_allow_html=True,
 )
 _render_state_marker("catchup-editor-state", "catchup_editor")
+
+st.header("Row editing")
+
+random_df = pd.DataFrame(
+    np.random.randn(5, 5),
+    columns=["Column A", "Column B", "Column C", "Column D", "Column E"],
+)
+
+# Used by the state-persistence test: clicking this button appends elements
+# (with a short delay) which forces the data editor above it to unmount and
+# remount, so we can verify the edited row state survives.
+if st.button("Create some elements to unmount component"):
+    for _ in range(3):
+        # The sleep here is needed, because it won't unmount the
+        # component if this is too fast.
+        time.sleep(1)
+        st.write("Another element")
+
+st.data_editor(random_df, num_rows="dynamic", key="data_editor", width="content")
+
+st.header("Cell editing")
+
+cell_overlay_test_df = pd.DataFrame(
+    {
+        "big_numbers": [1231231.41, 12012],
+        "text": ["hello\nworld", "foo"],
+        "list": [["hello", "world"], ["c", "d", "e"]],
+    }
+)
+
+cell_overlay_test_column_config = {
+    # The e2e interaction testing logic requires all cells to be medium width to
+    # calculate the cell positions correctly.
+    "big_numbers": st.column_config.NumberColumn(
+        width="medium",
+    ),
+    "text": st.column_config.TextColumn(
+        width="medium",
+    ),
+    "list": st.column_config.ListColumn(
+        width="medium",
+    ),
+}
+
+cell_editing_result = st.data_editor(
+    cell_overlay_test_df,
+    hide_index=True,
+    column_config=cell_overlay_test_column_config,
+    width="content",
+    key="cell_editor",
+)
+
+st.write("Edited DF:", str(cell_editing_result))
