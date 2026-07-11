@@ -24,7 +24,9 @@ import {
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"
 import ButtonColumn from "~lib/components/widgets/DataFrame/columns/ButtonColumn"
+import ProgressColumn from "~lib/components/widgets/DataFrame/columns/ProgressColumn"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { mockTheme } from "~lib/mocks/mockTheme"
 
 import useDataExporter, { toCsvRow } from "./useDataExporter"
 
@@ -355,6 +357,74 @@ describe("useDataExporter hook", () => {
     expect(mockWrite).toBeCalledWith(textEncoder.encode("123,foo\n"))
     // The button column index (1) must never be read for export:
     expect(getCellContentWithButtonMock).not.toHaveBeenCalledWith([1, 0])
+  })
+
+  it("exports the original value of progress cells with a clipped display", async () => {
+    const progressColumn = ProgressColumn(
+      {
+        id: "progress",
+        name: "progress",
+        title: "progress",
+        indexNumber: 1,
+        arrowType: {
+          type: DataFrameCellType.DATA,
+          arrowField: new Field("progress", new Int64(), true),
+          pandasType: {
+            field_name: "progress",
+            name: "progress",
+            pandas_type: "int64",
+            numpy_type: "int64",
+            metadata: null,
+          },
+        },
+        isEditable: false,
+        isHidden: false,
+        isIndex: false,
+        isPinned: false,
+        isStretched: false,
+        columnTypeOptions: { min_value: 0, max_value: 10, format: "%d" },
+      },
+      mockTheme.emotion
+    )
+
+    const columnsWithProgress: BaseColumn[] = [
+      MOCK_COLUMNS[0], // number column at index 0
+      progressColumn, // progress column at index 1
+    ]
+
+    const getCellContentWithProgressMock = vi
+      .fn()
+      .mockImplementation(([col]: readonly [number]) => {
+        const column = columnsWithProgress[col]
+        if (column.kind === "progress") {
+          // The value is larger than max_value (10), so the progress bar
+          // visualization is clipped:
+          return column.getCell(11)
+        }
+        return column.getCell(123)
+      })
+
+    const { result } = renderHook(() => {
+      return useDataExporter(
+        getCellContentWithProgressMock,
+        columnsWithProgress,
+        1,
+        false
+      )
+    })
+
+    result.current.exportToCsv()
+
+    const textEncoder = new TextEncoder()
+
+    await waitFor(() => {
+      expect(getCellContentWithProgressMock).toHaveBeenCalled()
+    })
+
+    // The original value (11) must be exported, not the clipped
+    // visualization value (10):
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("123,11\n"))
+    expect(mockWrite).not.toBeCalledWith(textEncoder.encode("123,10\n"))
   })
 
   it("handles null cell values", async () => {
