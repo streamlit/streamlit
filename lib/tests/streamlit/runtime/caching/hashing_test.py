@@ -50,6 +50,9 @@ from streamlit.runtime.caching.hashing import (
     _CacheFuncHasher,
     _HashStack,
     _HashStacks,
+    _numpy_sample_seed,
+    _pandas_sample_seed,
+    _polars_sample_seed,
     update_hash,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
@@ -1014,3 +1017,119 @@ def test_PIL_pmode_palette_collision_prevention() -> None:
 
     # But the hashes should differ because we now include the palette
     assert get_hash(im1) != get_hash(im2)
+
+
+def test_numpy_sample_seed_is_data_dependent() -> None:
+    """The numpy sampling seed changes when the leading prefix changes.
+
+    Regression test for GitHub issue #14622: a globally fixed sampling seed lets
+    the sampled indices be predicted in advance, enabling crafted collisions.
+    """
+    arr_a = np.arange(100, dtype=np.float64)
+    arr_b = arr_a.copy()
+    arr_b[0] = -1.0
+
+    assert _numpy_sample_seed(arr_a) != _numpy_sample_seed(arr_b)
+
+
+def test_numpy_sample_seed_is_stable() -> None:
+    """Identical numpy arrays derive the same sampling seed."""
+    arr = np.arange(100, dtype=np.float64)
+
+    assert _numpy_sample_seed(arr) == _numpy_sample_seed(arr.copy())
+
+
+def test_numpy_sample_seed_falls_back_to_zero_on_error() -> None:
+    """An unserializable prefix degrades to the legacy seed of 0, never raising."""
+    arr = np.arange(100, dtype=np.float64)
+    with mock.patch("numpy.ascontiguousarray", side_effect=BufferError("forced")):
+        assert _numpy_sample_seed(arr) == 0
+
+
+def test_pandas_sample_seed_is_data_dependent() -> None:
+    """The pandas sampling seed changes when the first row changes.
+
+    Regression test for GitHub issue #14622.
+    """
+    df_a = pd.DataFrame({"val": np.arange(100, dtype=np.float64)})
+    df_b = df_a.copy()
+    df_b.iloc[0, 0] = -1.0
+
+    assert _pandas_sample_seed(df_a) != _pandas_sample_seed(df_b)
+
+
+def test_pandas_sample_seed_is_stable() -> None:
+    """Identical pandas objects derive the same sampling seed."""
+    df = pd.DataFrame({"val": np.arange(100, dtype=np.float64)})
+
+    assert _pandas_sample_seed(df) == _pandas_sample_seed(df.copy())
+
+
+def test_pandas_sample_seed_falls_back_to_zero_when_unhashable() -> None:
+    """An unhashable first row degrades to the legacy seed of 0, never raising."""
+    series = pd.Series([[1, 2], [3, 4]])
+
+    assert _pandas_sample_seed(series) == 0
+
+
+def test_numpy_large_array_diverges_when_seed_prefix_differs() -> None:
+    """Large numpy arrays differing in the seed prefix hash differently.
+
+    Regression test for GitHub issue #14622. The prefix is mutated directly so
+    the derived seed provably changes (rather than relying on the sample not
+    covering the prefix), guaranteeing different sampled indices and hashes.
+    """
+    n = _NP_SIZE_LARGE + 10_000
+    arr_a = np.arange(n, dtype=np.float64)
+    arr_b = arr_a.copy()
+    arr_b[0] = -1.0
+
+    assert get_hash(arr_a) != get_hash(arr_b)
+
+
+def test_pandas_large_dataframe_diverges_when_seed_prefix_differs() -> None:
+    """Large pandas DataFrames differing in the seed row hash differently.
+
+    Regression test for GitHub issue #14622 (see the numpy analog for the
+    prefix-mutation rationale).
+    """
+    n = _PANDAS_ROWS_LARGE + 5_000
+    df_a = pd.DataFrame({"val": np.arange(n, dtype=np.float64)})
+    df_b = df_a.copy()
+    df_b.iloc[0, 0] = -1.0
+
+    assert get_hash(df_a) != get_hash(df_b)
+
+
+@pytest.mark.require_integration
+def test_polars_sample_seed_is_data_dependent() -> None:
+    """The polars sampling seed changes when the head of the object changes."""
+    import polars as pl
+
+    series_a = pl.Series([1, 2, 3, 4])
+    series_b = pl.Series([9, 2, 3, 4])
+    assert _polars_sample_seed(series_a) != _polars_sample_seed(series_b)
+    assert _polars_sample_seed(series_a) == _polars_sample_seed(pl.Series([1, 2, 3, 4]))
+
+    df_a = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
+    df_b = pl.DataFrame({"a": [9, 2], "b": [3, 4]})
+    assert _polars_sample_seed(df_a) != _polars_sample_seed(df_b)
+
+
+@pytest.mark.require_integration
+def test_polars_large_dataframe_diverges_when_seed_prefix_differs() -> None:
+    """Large polars DataFrames differing in the seed row hash differently.
+
+    Regression test for GitHub issue #14622.
+    """
+    import polars as pl
+
+    n = _PANDAS_ROWS_LARGE + 5_000
+    vals_a = np.arange(n, dtype=np.float64)
+    vals_b = vals_a.copy()
+    vals_b[0] = -1.0
+
+    df_a = pl.DataFrame({"val": vals_a})
+    df_b = pl.DataFrame({"val": vals_b})
+
+    assert get_hash(df_a) != get_hash(df_b)

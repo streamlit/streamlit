@@ -21,6 +21,7 @@ import collections.abc
 import dataclasses
 import datetime
 import functools
+import hashlib
 import inspect
 import io
 import os
@@ -57,6 +58,11 @@ _PANDAS_SAMPLE_SIZE: Final = 10_000
 _NP_SIZE_LARGE: Final = 500_000
 _NP_SAMPLE_SIZE: Final = 100_000
 
+# Number of leading elements/rows used to derive the data-dependent sampling
+# seed for large objects (see _numpy_sample_seed, _pandas_sample_seed, and
+# _polars_sample_seed).
+_SEED_PREFIX_SIZE: Final = 64
+
 HashFuncsDict: TypeAlias = dict[str | type[Any], Callable[[Any], Any]]
 
 # Arbitrary item to denote where we found a cycle in a hashed object.
@@ -64,6 +70,69 @@ HashFuncsDict: TypeAlias = dict[str | type[Any], Callable[[Any], Any]]
 _CYCLE_PLACEHOLDER: Final = (
     b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
 )
+
+
+def _bytes_to_seed(data: bytes) -> int:
+    """Reduce arbitrary bytes to a 32-bit deterministic sampling seed.
+
+    The result lies in ``[0, 2**32)``, which is a valid seed for numpy's
+    ``RandomState``, pandas' ``DataFrame.sample(random_state=...)``, and polars'
+    ``sample(seed=...)``.
+    """
+    return int.from_bytes(hashlib.md5(data, usedforsecurity=False).digest()[:4], "big")
+
+
+def _pandas_sample_seed(obj: pd.Series[Any] | pd.DataFrame) -> int:
+    """Derive a deterministic, data-dependent sampling seed from the first row.
+
+    A globally fixed seed lets a caller predict which rows the large-object
+    sampling path selects and craft two different inputs that collide by only
+    altering non-sampled rows. Seeding from the object's own leading row makes
+    the sampled indices content-dependent. Falls back to ``0`` (the legacy seed)
+    if the prefix cannot be hashed, preserving the pickle fallback path used by
+    the main hashing branch.
+    """
+    from pandas.util import hash_pandas_object
+
+    try:
+        prefix = hash_pandas_object(obj.iloc[:1]).to_numpy().tobytes()
+    except (TypeError, ValueError):
+        return 0
+    return _bytes_to_seed(prefix)
+
+
+def _numpy_sample_seed(np_obj: npt.NDArray[Any]) -> int:
+    """Derive a deterministic, data-dependent sampling seed from a prefix.
+
+    See :func:`_pandas_sample_seed` for the rationale. Falls back to ``0`` if the
+    prefix cannot be serialized to bytes.
+    """
+    import numpy as np
+
+    try:
+        prefix = np.ascontiguousarray(np_obj.flat[:_SEED_PREFIX_SIZE]).tobytes()
+    except (TypeError, ValueError, BufferError):
+        return 0
+    return _bytes_to_seed(prefix)
+
+
+def _polars_sample_seed(obj: Any) -> int:
+    """Derive a deterministic, data-dependent sampling seed via polars hashing.
+
+    Uses polars' native row hashing (rather than a numpy round-trip) so the seed
+    stays deterministic for non-numeric dtypes. See :func:`_pandas_sample_seed`
+    for the rationale. Falls back to ``0`` if the head cannot be hashed.
+    """
+    try:
+        head = obj.head(1)
+        # DataFrame exposes hash_rows(); Series exposes hash().
+        hashed = (
+            head.hash_rows(seed=0) if hasattr(head, "hash_rows") else head.hash(seed=0)
+        )
+        prefix = hashed.to_numpy().tobytes()
+    except (TypeError, ValueError, BufferError):
+        return 0
+    return _bytes_to_seed(prefix)
 
 
 class UserHashError(StreamlitAPIException):
@@ -427,7 +496,9 @@ class _CacheFuncHasher:
             self.update(h, series_obj.dtype.name)
 
             if len(series_obj) >= _PANDAS_ROWS_LARGE:
-                series_obj = series_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+                series_obj = series_obj.sample(
+                    n=_PANDAS_SAMPLE_SIZE, random_state=_pandas_sample_seed(series_obj)
+                )
 
             try:
                 self.update(h, hash_pandas_object(series_obj).to_numpy().tobytes())
@@ -449,7 +520,9 @@ class _CacheFuncHasher:
             self.update(h, df_obj.shape)
 
             if len(df_obj) >= _PANDAS_ROWS_LARGE:
-                df_obj = df_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+                df_obj = df_obj.sample(
+                    n=_PANDAS_SAMPLE_SIZE, random_state=_pandas_sample_seed(df_obj)
+                )
 
             try:
                 column_hash_bytes = self.to_bytes(hash_pandas_object(df_obj.dtypes))
@@ -476,7 +549,7 @@ class _CacheFuncHasher:
             self.update(h, obj.shape)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=0)
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=_polars_sample_seed(obj))
 
             try:
                 self.update(h, obj.hash(seed=0).to_arrow().to_string().encode())
@@ -499,7 +572,7 @@ class _CacheFuncHasher:
             self.update(h, obj.shape)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=0)
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=_polars_sample_seed(obj))
             try:
                 for c, t in obj.schema.items():
                     self.update(h, c.encode())
@@ -530,7 +603,7 @@ class _CacheFuncHasher:
             if np_obj.size >= _NP_SIZE_LARGE:
                 import numpy as np
 
-                state = np.random.RandomState(0)
+                state = np.random.RandomState(_numpy_sample_seed(np_obj))
                 np_obj = state.choice(np_obj.flat, size=_NP_SAMPLE_SIZE)
 
             self.update(h, np_obj.tobytes())
