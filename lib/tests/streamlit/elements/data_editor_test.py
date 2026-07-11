@@ -752,12 +752,14 @@ class DataEditorSignatureTest(unittest.TestCase):
 
         assert _get_data_editor_signature(df1) == _get_data_editor_signature(df2)
 
-    def test_signature_uses_delimited_components(self):
-        df = pd.DataFrame({"disabled:all": [1, 2]})
+    def test_signature_distinguishes_column_name_boundaries(self):
+        """Column names that concatenate to the same characters but are split
+        differently must yield different signatures, so adjacent names cannot be
+        silently merged across their boundary."""
+        df1 = pd.DataFrame([[1, 2]], columns=["a", "bc"])
+        df2 = pd.DataFrame([[1, 2]], columns=["ab", "c"])
 
-        assert _get_data_editor_signature(df, disabled=False) != (
-            _get_data_editor_signature(df, disabled=True)
-        )
+        assert _get_data_editor_signature(df1) != _get_data_editor_signature(df2)
 
 
 class DataEditorStableIdTest(DeltaGeneratorTestCase):

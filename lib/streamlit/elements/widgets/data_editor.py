@@ -186,22 +186,26 @@ def _compute_data_editor_signature(
     include_row_count: bool,
     disabled_columns: Iterable[str | int] = (),
 ) -> str:
-    """Compute a stable signature for data-editor edit compatibility."""
+    """Compute a stable signature over the data's structure (schema), used as a
+    keyed fixed-rows editor's identity so value-only changes don't reset edits.
+    """
     import pandas as pd
 
     h = create_fast_hasher()
 
-    def update_part(name: str, value: object) -> None:
-        h.update(f"{name}:".encode())
+    def add_component(label: str, value: object) -> None:
+        # Prefix with the label and terminate with a NUL byte so distinct
+        # (label, value) pairs can never hash to the same bytes.
+        h.update(f"{label}:".encode())
         h.update(repr(value).encode("utf-8"))
         h.update(b"\0")
 
-    update_part("format", data_format.name)
-    update_part("columns", tuple(data_df.columns))
-    update_part("index_type", type(data_df.index).__name__)
+    add_component("format", data_format.name)
+    add_component("columns", tuple(data_df.columns))
+    add_component("index_type", type(data_df.index).__name__)
     # Encode each index name as a (is_none, name) pair so an unnamed index
     # (None) can never collide with an index whose name is a sentinel string.
-    update_part(
+    add_component(
         "index_names",
         tuple((name is None, name) for name in data_df.index.names),
     )
@@ -223,7 +227,7 @@ def _compute_data_editor_signature(
         h.update(b"\0")
 
     for field in arrow_schema:
-        update_part(
+        add_component(
             "field",
             (
                 field.name,
@@ -233,23 +237,23 @@ def _compute_data_editor_signature(
         )
 
     for column_name, data_kind in sorted(dataframe_schema.items()):
-        update_part("kind", (column_name, data_kind.value))
+        add_component("kind", (column_name, data_kind.value))
 
     if include_row_count:
-        update_part("rows", len(data_df))
+        add_component("rows", len(data_df))
 
     if disabled is True:
-        update_part("disabled", "all")
+        add_component("disabled", "all")
     elif disabled is False:
-        update_part("disabled", "none")
+        add_component("disabled", "none")
     else:
-        update_part("disabled", tuple(sorted(disabled, key=repr)))
+        add_component("disabled", tuple(sorted(disabled, key=repr)))
 
     # Per-column disabled state (from column_config or auto-disabled incompatible
-    # columns) is edit-semantic: disabling a column must reset pending edits so
-    # the backend does not keep applying an edit that the frontend no longer
-    # paints for the now read-only column.
-    update_part("disabled_columns", tuple(sorted(disabled_columns, key=repr)))
+    # columns) affects which edits are valid: disabling a column must reset
+    # pending edits so the backend does not keep applying an edit for a now
+    # read-only column that the frontend no longer paints.
+    add_component("disabled_columns", tuple(sorted(disabled_columns, key=repr)))
 
     return h.hexdigest()
 

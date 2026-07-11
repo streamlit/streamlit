@@ -236,6 +236,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       return cell.data === undefined ? null : cell.data
     },
     valuesEqual(a: unknown, b: unknown): boolean {
+      // Compare numerically so a string like "5" and the number 5 match.
       const numberA = typeof a === "number" ? a : Number(a)
       const numberB = typeof b === "number" ? b : Number(b)
 

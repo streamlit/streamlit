@@ -80,14 +80,11 @@ function JsonColumn(props: BaseColumnProps): BaseColumn {
       return cell.data?.value ?? null
     },
     valuesEqual(a: unknown, b: unknown): boolean {
-      // Compares by normalized JSON string. Strings are treated as already
-      // serialized, so a raw string is compared against the JSON.stringify of
-      // an object. This is sufficient for edit reconciliation because
-      // getCellValue returns consistent types, but mixed-type comparisons may
-      // be surprising if this comparator is reused in other contexts.
-      // JSON.stringify can throw (e.g. circular references, BigInt); the caller
-      // (valuesEqual in utils) wraps this in a try/catch that falls back to an
-      // identity check.
+      // Treat two JSON values as equal when their serialized form matches.
+      // A raw string is assumed to be already-serialized JSON and compared
+      // against JSON.stringify(other). JSON.stringify can throw (circular
+      // refs, BigInt); the central valuesEqual() wraps this and falls back
+      // to an identity check.
       const normalizedA = typeof a === "string" ? a : JSON.stringify(a)
       const normalizedB = typeof b === "string" ? b : JSON.stringify(b)
       return normalizedA === normalizedB

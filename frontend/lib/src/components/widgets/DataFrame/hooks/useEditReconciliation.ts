@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type MutableRefObject, useCallback, useMemo } from "react"
+import { type MutableRefObject, useCallback, useMemo, useRef } from "react"
 
 import { getCellFromArrow } from "~lib/components/widgets/DataFrame/arrowUtils"
 import {
@@ -42,11 +42,11 @@ interface UseEditReconciliationReturn {
  * Reconciles pending edits against the current source data.
  *
  * The data editor preserves a user's pending edits across reruns even when the
- * underlying data value changes (see the schema-identity based widget reset).
- * This means an edit can become redundant if the new source data already
- * matches what the user typed. When that happens, keeping the edit would make
- * the cell look "edited" (e.g. it stays in `edited_rows`) even though its value
- * is identical to the source.
+ * underlying data value changes (see `_compute_data_editor_signature` in
+ * `data_editor.py`). This means an edit can become redundant if the new source
+ * data already matches what the user typed. When that happens, keeping the edit
+ * would make the cell look "edited" (e.g. it stays in `edited_rows`) even though
+ * its value is identical to the source.
  *
  * Whenever the `data` changes (or editing is re-enabled after a refresh), this
  * hook walks every edited cell and compares its value against the corresponding
@@ -98,7 +98,7 @@ function useEditReconciliation({
     [data]
   )
 
-  useExecuteWhenChanged(() => {
+  const reconcileEdits = (): void => {
     if (!isEditingEnabled) {
       return
     }
@@ -127,18 +127,23 @@ function useEditReconciliation({
       }
     )
 
-    // No explicit repaint is needed for the cleared cells: this callback runs
-    // during render (via useExecuteWhenChanged), so the edits are cleared
-    // before the grid repaints, and the data change that triggered the
-    // reconciliation gives the grid a fresh `getCellContent` that reflects the
-    // reconciled source values.
+    // No explicit repaint is needed for the cleared cells: reconciliation runs
+    // during render, so the edits are cleared before the grid repaints.
     if (hasClearedCells) {
       syncEditState()
     }
     // `isEditingEnabled` is watched so that reconciliation also runs when
     // editing is re-enabled after having been disabled during a data refresh
     // (which would otherwise skip reconciliation and leave stale edits).
-  }, [data, isEditingEnabled])
+  }
+
+  const hasReconciledInitialDataRef = useRef(false)
+  useExecuteWhenChanged(reconcileEdits, [data, isEditingEnabled])
+
+  if (!hasReconciledInitialDataRef.current) {
+    hasReconciledInitialDataRef.current = true
+    reconcileEdits()
+  }
 
   return {
     getSourceCellValue,

@@ -290,6 +290,8 @@ function BaseDateTimeColumn(
         : toISOString(cell.data.date)
     },
     valuesEqual(a: unknown, b: unknown): boolean {
+      // Equal if both parse to the same instant, so differing ISO
+      // representations of the same time are treated as equal.
       const timeA = Date.parse(String(a))
       const timeB = Date.parse(String(b))
 
