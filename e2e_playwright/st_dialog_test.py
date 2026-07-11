@@ -35,6 +35,7 @@ from e2e_playwright.shared.app_utils import (
 from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
 )
+from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 modal_test_id = "stDialog"
 
@@ -553,9 +554,7 @@ def test_dialog_with_chart(app: Page):
     expect(main_dialog).to_be_visible()
 
     # Check for the chart & tooltip
-    chart = main_dialog.get_by_test_id("stVegaLiteChart").locator(
-        "[role='graphics-document']"
-    )
+    chart = get_vega_graphics_document(main_dialog.get_by_test_id("stVegaLiteChart"))
     expect(chart).to_be_visible()
     # Wait for the app to fully render (helps webkit where bounding_box can be None initially)
     wait_for_app_run(app)
@@ -578,9 +577,7 @@ def test_dialog_with_layered_chart_shows_tooltips(app: Page):
     expect(main_dialog).to_have_count(1)
     expect(main_dialog).to_be_visible()
 
-    chart = main_dialog.get_by_test_id("stVegaLiteChart").locator(
-        "[role='graphics-document']"
-    )
+    chart = get_vega_graphics_document(main_dialog.get_by_test_id("stVegaLiteChart"))
     expect(chart).to_be_visible()
     wait_for_app_run(app)
     chart.scroll_into_view_if_needed()

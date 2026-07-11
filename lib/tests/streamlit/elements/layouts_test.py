@@ -266,12 +266,40 @@ class ColumnsTest(DeltaGeneratorTestCase):
             )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.NONE
 
+    @parameterized.expand([(0,), (5,), (20,), (100,)])
+    def test_columns_with_pixel_gap(self, gap: int):
+        """Test that non-negative integer gaps set pixel_gap on the flex container and columns."""
+
+        st.columns(3, gap=gap)
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        horizontal_container = all_deltas[0]
+        columns_blocks = all_deltas[1:4]
+
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.WhichOneof(
+                "gap_spec"
+            )
+            == "pixel_gap"
+        )
+        assert horizontal_container.add_block.flex_container.gap_config.pixel_gap == gap
+
+        for col_block in columns_blocks:
+            assert (
+                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
+                == "pixel_gap"
+            )
+            assert col_block.add_block.column.gap_config.pixel_gap == gap
+
     @parameterized.expand(
         [
             "invalid",
-            5,
             "5rem",
             "10px",
+            -1,
+            -100,
+            True,
         ]
     )
     def test_columns_with_invalid_gap(self, invalid_gap):
@@ -327,6 +355,12 @@ class ExpanderTest(DeltaGeneratorTestCase):
         """Test that label is required"""
         with pytest.raises(TypeError):
             st.expander()
+
+    def test_label_none_raises(self):
+        """Test that an explicit label=None raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.expander(None)
+        assert "A label is required for an expander" in str(e.value)
 
     def test_just_label(self):
         """Test that it can be called with no params"""
@@ -829,6 +863,23 @@ class ContainerTest(DeltaGeneratorTestCase):
             container_block.add_block.flex_container.gap_config.gap_size == expected_gap
         )
 
+    @parameterized.expand([(0,), (5,), (20,), (100,)])
+    def test_container_pixel_gap(self, gap: int) -> None:
+        """Test that st.container sets pixel_gap for integer gap values."""
+        st.container(gap=gap)
+        container_block = self.get_delta_from_queue()
+        assert (
+            container_block.add_block.flex_container.gap_config.WhichOneof("gap_spec")
+            == "pixel_gap"
+        )
+        assert container_block.add_block.flex_container.gap_config.pixel_gap == gap
+
+    @parameterized.expand([("invalid",), (-1,), (True,)])
+    def test_container_invalid_gap(self, invalid_gap) -> None:
+        """Test that st.container raises on invalid gap values."""
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            st.container(gap=invalid_gap)
+
     @parameterized.expand(
         [
             "invalid",
@@ -888,6 +939,18 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         """Test that label is required"""
         with pytest.raises(TypeError):
             st.popover()
+
+    def test_label_none_raises(self):
+        """Test that an explicit label=None raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.popover(None)
+        assert "A label is required for a popover" in str(e.value)
+
+    def test_invalid_type_raises(self):
+        """Test that an unsupported button type raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.popover("label", type="invalid")
+        assert "must be" in str(e.value)
 
     def test_just_label(self):
         """Test that it correctly applies label param."""

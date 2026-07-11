@@ -173,12 +173,7 @@ describe("useVegaEmbed hook", () => {
         expr: expressionInterpreter,
         tooltip: { disableDefaultStyle: true },
         defaultStyle: false,
-        actions: {
-          export: false,
-          source: false,
-          compiled: false,
-          editor: false,
-        },
+        actions: false,
       }
     )
 

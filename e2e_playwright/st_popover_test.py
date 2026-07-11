@@ -431,6 +431,15 @@ def test_programmatic_close_does_not_reopen_other_popover(app: Page):
     open_popover(app, "Multi pop A")
     expect(app.get_by_text("Close A")).to_be_visible()
 
+    # Wait for the open rerun to finish before clicking "Close A". open_popover
+    # only waits for the (optimistically rendered) body to appear, not for the
+    # backend rerun that commits open=True. If we click "Close A" while that
+    # rerun is still in flight, the close rerun interrupts it before popover A's
+    # open=True delta is sent. The close rerun then renders open=False, which
+    # matches the cached initial False, so no delta is sent and the frontend's
+    # optimistic open state is never corrected — leaving the body stuck open.
+    wait_for_app_run(app)
+
     # Programmatically close it via the button inside
     click_button(app, "Close A")
 
@@ -442,6 +451,12 @@ def test_programmatic_close_does_not_reopen_other_popover(app: Page):
 
     # Popover B should be open
     expect(app.get_by_text("Close B")).to_be_visible()
+
+    # Wait for popover B's open rerun to finish so that, if the #14943 bug were
+    # present, popover A would have had the chance to reopen by now. Without this
+    # wait the assertion below could pass simply because B's rerun hasn't
+    # completed yet, weakening the regression guard.
+    wait_for_app_run(app)
 
     # Popover A must NOT have reopened (the bug from #14943).
     # If it did, "Close A" would be visible in a second popover body.

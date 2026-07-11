@@ -217,6 +217,11 @@ class StringUtilTest(unittest.TestCase):
         with pytest.raises(TypeError):
             string_util.from_number(None)
 
+    def test_from_number_zero_dim_array_uses_item(self):
+        """A 0-d numpy array isn't a Number, so its item() value is formatted."""
+        assert string_util.from_number(np.array(5)) == "5"
+        assert string_util.from_number(np.array(2.5)) == "2.5"
+
     @parameterized.expand(
         [
             (None, ""),

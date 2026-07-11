@@ -14,24 +14,11 @@
  * limitations under the License.
  */
 
-import {
-  memo,
-  ReactElement,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react"
+import { memo, ReactElement, ReactNode, useEffect } from "react"
 
-import { FormsContext } from "~lib/components/core/FormsContext"
-import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
-import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
-import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { ScriptRunState } from "~lib/ScriptRunState"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { StyledErrorContainer, StyledForm } from "./styled-components"
+import { StyledForm } from "./styled-components"
 
 export interface Props {
   formId: string
@@ -46,14 +33,6 @@ export interface Props {
   overflow?: React.CSSProperties["overflow"]
 }
 
-const MISSING_SUBMIT_BUTTON_WARNING =
-  "**Missing Submit Button**" +
-  "\n\nThis form has no submit button, which means that user interactions will " +
-  "never be sent to your Streamlit app." +
-  "\n\nTo create a submit button, use the `st.form_submit_button()` function." +
-  "\n\nFor more information, refer to the " +
-  "[documentation for forms](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form)."
-
 function Form(props: Props): ReactElement {
   const {
     formId,
@@ -65,46 +44,10 @@ function Form(props: Props): ReactElement {
     overflow,
   } = props
 
-  // Consume FormsContext to get submit button state
-  // This ensures only Form components re-render when form data changes,
-  // not all Block components in the tree.
-  const { formsData } = useRequiredContext(FormsContext)
-  const submitButtons = formsData.submitButtons.get(formId)
-  const hasSubmitButton =
-    submitButtons !== undefined && submitButtons.length > 0
-
-  // Consume ScriptRunContext to get script run state
-  const { scriptRunState } = useContext(ScriptRunContext)
-  const scriptNotRunning = scriptRunState === ScriptRunState.NOT_RUNNING
-
   // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`
   useEffect(() => {
     widgetMgr.setFormSubmitBehaviors(formId, clearOnSubmit, enterToSubmit)
   }, [widgetMgr, formId, clearOnSubmit, enterToSubmit])
-
-  // Determine if we need to show the "missing submit button" warning.
-  // If we have a submit button, we don't show the warning, of course.
-  // If we *don't* have a submit button, then we only mutate the showWarning
-  // flag after render when the script is not running. This gives child
-  // FormSubmitButton components a chance to register themselves first.
-  const [showWarning, setShowWarning] = useState(false)
-
-  useEffect(() => {
-    if (hasSubmitButton) {
-      setShowWarning(false)
-    } else if (scriptNotRunning) {
-      setShowWarning(true)
-    }
-  }, [hasSubmitButton, scriptNotRunning])
-
-  let submitWarning: ReactElement | undefined
-  if (showWarning && !hasSubmitButton) {
-    submitWarning = (
-      <StyledErrorContainer>
-        <AlertElement body={MISSING_SUBMIT_BUTTON_WARNING} kind={Kind.ERROR} />
-      </StyledErrorContainer>
-    )
-  }
 
   return (
     <StyledForm
@@ -114,7 +57,6 @@ function Form(props: Props): ReactElement {
       overflow={overflow}
     >
       {children}
-      {submitWarning}
     </StyledForm>
   )
 }

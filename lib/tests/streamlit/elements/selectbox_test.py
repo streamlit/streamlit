@@ -738,6 +738,27 @@ class TestSelectboxSerde:
         res = serde.serialize(None)
         assert res is None
 
+    def test_serialize_falls_back_to_str_when_format_func_raises(self):
+        """When format_func raises, serialize falls back to str(value)."""
+        options = [{"id": "a"}, {"id": "b"}]
+
+        def format_func(x):
+            return x["id"]
+
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            options, format_func
+        )
+        serde = SelectboxSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
+        )
+
+        # A bare string value makes format_func raise a TypeError, triggering the
+        # str(value) fallback path.
+        assert serde.serialize("free text") == "free text"
+
     def test_serialize_empty_options(self):
         """Test serializing with empty options.
 
