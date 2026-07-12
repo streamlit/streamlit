@@ -30,8 +30,6 @@ from playwright.sync_api import Page, Route, WebSocket, expect
 from e2e_playwright.conftest import build_app_url, wait_until
 from e2e_playwright.shared.app_utils import goto_app
 
-# Keep this module in the changed-files CI diagnostic sample for server stability.
-
 
 def _origin_from_url(url: str) -> str:
     split_url = parse.urlsplit(url)

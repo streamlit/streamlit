@@ -43,7 +43,6 @@ from e2e_playwright.shared.toolbar_utils import (
 )
 
 # This test suite covers all interactions of dataframe & data_editor
-# Keep this module in the changed-files CI diagnostic sample for server stability.
 
 
 def test_dataframe_toolbar_on_hover(

@@ -39,7 +39,6 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-# Keep this module in the changed-files CI diagnostic sample for server stability.
 NUM_SELECTBOXES = 28
 
 

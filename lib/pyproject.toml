@@ -72,9 +72,8 @@ dependencies = [
   "pydeck>=0.8.0b4,<1",
   # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
   "protobuf>=3.20,<8",
-  # pyarrow is not semantically versioned, gets new major versions frequently.
-  # Keep CI and built-wheel E2E environments on the last known-good major while
-  # investigating app-server connection failures with pyarrow 25.
+  # PyArrow 25.0.0 can segfault when first imported from a short-lived worker thread.
+  # See https://github.com/apache/arrow/issues/50471.
   "pyarrow>=7.0,<25",
   "requests>=2.27,<3",
   "tenacity>=8.1.0,<10",

@@ -35,7 +35,6 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-# Keep this module in the changed-files CI diagnostic sample for server stability.
 NUM_SELECT_SLIDERS = 20
 
 
