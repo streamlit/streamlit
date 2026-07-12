@@ -70,7 +70,9 @@ dev = [
   "mypy-protobuf>=3.2",
   "semver>=3",
   "setuptools>=65.5.1",
-  "build",
+  # Pin to the last known-good CI version while investigating Playwright E2E
+  # server connection failures after the 1.5.1 release.
+  "build==1.5.0",
   "twine",
   "wheel",
   "pytz",
@@ -106,7 +108,9 @@ test = [
   "Authlib>=1.3.2",
   "graphviz>=0.17",
   "matplotlib>=3.3.4",
-  "plotly>=5.3.1",
+  # Pin to the last known-good CI version while investigating Playwright E2E
+  # server connection failures after the 6.9.0 release.
+  "plotly==6.8.0",
   "seaborn>=0.11.2",
   "watchdog>=2.1.5",
   "streamlit-pdf>=1.0.0",
