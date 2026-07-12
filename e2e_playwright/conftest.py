@@ -36,7 +36,6 @@ from tempfile import TemporaryFile
 from typing import TYPE_CHECKING, Any, Final, Literal, Protocol
 from urllib import parse
 
-import psutil
 import pytest
 import requests
 from PIL import Image
@@ -151,20 +150,6 @@ def reorder_early_fixtures(metafunc: pytest.Metafunc) -> None:
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     reorder_early_fixtures(metafunc)
-
-
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(
-    item: pytest.Item, call: pytest.CallInfo[Any]
-) -> Generator[None, Any, None]:
-    """Report app-server state once when a test using it first fails."""
-    del call
-    outcome = yield
-    report = outcome.get_result()
-    if report.failed:
-        app_process = getattr(item, "funcargs", {}).get("app_server")
-        if isinstance(app_process, AsyncSubprocess):
-            app_process.report_diagnostics(f"{item.nodeid} ({report.when})")
 
 
 def pytest_collection_modifyitems(
@@ -301,8 +286,6 @@ class AsyncSubprocess:
     env: dict[str, str]
     _proc: subprocess.Popen[str] | None
     _stdout_file: TextIOWrapper | None
-    _diagnostics_reported: bool
-    health_port: int | None
 
     def __init__(self, args: list[str], cwd: str, env: dict[str, str] | None = None):
         self.args = args
@@ -310,74 +293,6 @@ class AsyncSubprocess:
         self.env = env or {}
         self._proc = None
         self._stdout_file = None
-        self._diagnostics_reported = False
-        self.health_port = None
-
-    def report_diagnostics(self, reason: str) -> None:
-        """Print process and runner state for the first failure using this process."""
-        if self._diagnostics_reported:
-            return
-        self._diagnostics_reported = True
-
-        proc = self._proc
-        returncode = proc.poll() if proc is not None else None
-        print("\n=== APP SERVER DIAGNOSTICS ===", flush=True)
-        print(f"reason={reason}", flush=True)
-        print(
-            f"command={shlex.join(self.args)} pid={proc.pid if proc else None} "
-            f"returncode={returncode}",
-            flush=True,
-        )
-        if returncode is not None and returncode < 0:
-            print(f"terminated_by_signal={-returncode}", flush=True)
-
-        if proc is not None and returncode is None:
-            try:
-                process = psutil.Process(proc.pid)
-                with process.oneshot():
-                    memory = process.memory_info()
-                    children = process.children(recursive=True)
-                    print(
-                        f"status={process.status()} rss={memory.rss} vms={memory.vms} "
-                        f"threads={process.num_threads()} open_fds={process.num_fds()} "
-                        f"children={len(children)}",
-                        flush=True,
-                    )
-                child_rss = sum(
-                    child.memory_info().rss for child in children if child.is_running()
-                )
-                print(f"child_rss={child_rss}", flush=True)
-            except psutil.Error as exc:
-                print(f"process_inspection_error={exc!r}", flush=True)
-
-        if self.health_port is not None:
-            print(
-                f"health_port={self.health_port} "
-                f"health_ok={is_app_server_running(self.health_port)}",
-                flush=True,
-            )
-
-        for path in (
-            "/sys/fs/cgroup/memory.current",
-            "/sys/fs/cgroup/memory.peak",
-            "/sys/fs/cgroup/memory.max",
-            "/sys/fs/cgroup/memory.events",
-            "/sys/fs/cgroup/pids.current",
-            "/sys/fs/cgroup/pids.max",
-            "/sys/fs/cgroup/pids.events",
-        ):
-            try:
-                value = Path(path).read_text(encoding="utf-8").strip()
-            except OSError:
-                continue
-            print(f"{path}={value}", flush=True)
-
-        if returncode is not None and self._stdout_file is not None:
-            self._stdout_file.seek(0)
-            output_lines = self._stdout_file.read().splitlines()
-            print("--- app server output tail ---", flush=True)
-            print("\n".join(output_lines[-200:]), flush=True)
-        print("=== END APP SERVER DIAGNOSTICS ===\n", flush=True)
 
     def _stop_process(self) -> None:
         """Stop the subprocess with timeout handling.
@@ -388,8 +303,7 @@ class AsyncSubprocess:
         if self._proc is None:
             return
 
-        if self._proc.poll() is None:
-            self._proc.terminate()
+        self._proc.terminate()
         try:
             # Wait up to 20 seconds for graceful termination
             self._proc.wait(timeout=20)
@@ -439,7 +353,6 @@ class AsyncSubprocess:
             text=True,
             env={**os.environ.copy(), **self.env},
         )
-        print(f"Started subprocess pid={self._proc.pid}", flush=True)
 
     def __exit__(
         self,
@@ -1897,7 +1810,6 @@ def start_app_server(
 
     for i in range(app_server_start_retries):
         proc = AsyncSubprocess(args, cwd=".", env=env)
-        proc.health_port = app_port
         proc.start()
 
         if wait_for_app_server_to_start(app_port):
