@@ -206,7 +206,7 @@ jobs:
           cd e2e_playwright
           rm -rf ./test-results
           echo "Running changed test files: $CHANGED_TEST_FILES"
-          uv run pytest $CHANGED_TEST_FILES --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-report=html --cov-config=.coveragerc -m "not performance" || exit_code=$?
+          uv run pytest $CHANGED_TEST_FILES --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n 32 --reruns 0 --cov=streamlit --cov-report=html --cov-config=.coveragerc -m "not performance" || exit_code=$?
           # Exit code 5 means no tests were collected (e.g., all tests are performance tests)
           # which is acceptable for this workflow
           if [ "${exit_code:-0}" -eq 5 ]; then
