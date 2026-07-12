@@ -24,6 +24,7 @@ from e2e_playwright.shared.app_utils import get_element_by_key, select_radio_opt
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+# Keep this module in the changed-files CI diagnostic sample for server stability.
 # List of markdown features that are not allowed in (widget) labels:
 
 DISALLOWED_FEATURES_IN_LABEL: list[str] = [
