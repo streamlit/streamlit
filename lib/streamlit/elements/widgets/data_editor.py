@@ -193,19 +193,19 @@ def _compute_data_editor_signature(
 
     h = create_fast_hasher()
 
-    def add_component(label: str, value: object) -> None:
+    def add_to_signature(label: str, value: object) -> None:
         # Prefix with the label and terminate with a NUL byte so distinct
         # (label, value) pairs can never hash to the same bytes.
         h.update(f"{label}:".encode())
         h.update(repr(value).encode("utf-8"))
         h.update(b"\0")
 
-    add_component("format", data_format.name)
-    add_component("columns", tuple(data_df.columns))
-    add_component("index_type", type(data_df.index).__name__)
+    add_to_signature("format", data_format.name)
+    add_to_signature("columns", tuple(data_df.columns))
+    add_to_signature("index_type", type(data_df.index).__name__)
     # Encode each index name as a (is_none, name) pair so an unnamed index
     # (None) can never collide with an index whose name is a sentinel string.
-    add_component(
+    add_to_signature(
         "index_names",
         tuple((name is None, name) for name in data_df.index.names),
     )
@@ -227,7 +227,7 @@ def _compute_data_editor_signature(
         h.update(b"\0")
 
     for field in arrow_schema:
-        add_component(
+        add_to_signature(
             "field",
             (
                 field.name,
@@ -237,23 +237,27 @@ def _compute_data_editor_signature(
         )
 
     for column_name, data_kind in sorted(dataframe_schema.items()):
-        add_component("kind", (column_name, data_kind.value))
+        add_to_signature("kind", (column_name, data_kind.value))
 
     if include_row_count:
-        add_component("rows", len(data_df))
+        add_to_signature("rows", len(data_df))
 
     if disabled is True:
-        add_component("disabled", "all")
+        add_to_signature("disabled", "all")
     elif disabled is False:
-        add_component("disabled", "none")
+        add_to_signature("disabled", "none")
     else:
-        add_component("disabled", tuple(sorted(disabled, key=repr)))
+        # An empty iterable means "nothing is disabled", which is semantically
+        # the same as disabled=False, so normalize it to the same signature to
+        # avoid needless widget resets when toggling between the two.
+        disabled_names = tuple(sorted(disabled, key=repr))
+        add_to_signature("disabled", disabled_names or "none")
 
     # Per-column disabled state (from column_config or auto-disabled incompatible
     # columns) affects which edits are valid: disabling a column must reset
     # pending edits so the backend does not keep applying an edit for a now
     # read-only column that the frontend no longer paints.
-    add_component("disabled_columns", tuple(sorted(disabled_columns, key=repr)))
+    add_to_signature("disabled_columns", tuple(sorted(disabled_columns, key=repr)))
 
     return h.hexdigest()
 

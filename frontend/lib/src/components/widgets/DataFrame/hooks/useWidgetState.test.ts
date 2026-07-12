@@ -1008,6 +1008,9 @@ describe("useWidgetState hook", () => {
 
       // Should have loaded the added row from widget state
       expect(result.current.numRows).toBe(6)
+      // Hydration counter is bumped so edit reconciliation can run against
+      // the restored edits.
+      expect(result.current.editStateHydrationCount).toBe(1)
     })
 
     it("does not load editing state for read-only mode", () => {
@@ -1040,6 +1043,8 @@ describe("useWidgetState hook", () => {
 
       // Should not have loaded the added row
       expect(result.current.numRows).toBe(5)
+      // No hydration happened for read-only mode, so the counter stays at 0.
+      expect(result.current.editStateHydrationCount).toBe(0)
     })
   })
 

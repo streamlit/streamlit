@@ -90,6 +90,7 @@ describe("useEditReconciliation hook", () => {
           allColumns: MOCK_COLUMNS,
           editingState,
           isEditingEnabled: true,
+          editStateHydrationCount: 0,
           syncEditState,
         }),
       { initialProps: { data: createMockData("foo") } }
@@ -116,6 +117,7 @@ describe("useEditReconciliation hook", () => {
           allColumns: MOCK_COLUMNS,
           editingState,
           isEditingEnabled: true,
+          editStateHydrationCount: 0,
           syncEditState,
         }),
       { initialProps: { data: createMockData("foo") } }
@@ -141,6 +143,7 @@ describe("useEditReconciliation hook", () => {
         allColumns: MOCK_COLUMNS,
         editingState,
         isEditingEnabled: true,
+        editStateHydrationCount: 0,
         syncEditState,
       })
     )
@@ -164,6 +167,7 @@ describe("useEditReconciliation hook", () => {
           allColumns: MOCK_COLUMNS,
           editingState,
           isEditingEnabled: false,
+          editStateHydrationCount: 0,
           syncEditState,
         }),
       { initialProps: { data: createMockData("foo") } }
@@ -193,6 +197,7 @@ describe("useEditReconciliation hook", () => {
           allColumns: MOCK_COLUMNS,
           editingState,
           isEditingEnabled,
+          editStateHydrationCount: 0,
           syncEditState,
         }),
       {
@@ -212,6 +217,41 @@ describe("useEditReconciliation hook", () => {
     // Re-enabling editing without another data change must trigger
     // reconciliation and clear the now-matching edit.
     rerender({ data: refreshedData, isEditingEnabled: true })
+    expect(editingState.current.getCell(0, 0)).toBeUndefined()
+    expect(syncEditState).toHaveBeenCalled()
+  })
+
+  it("reconciles restored edits when they are hydrated from the widget manager", () => {
+    const editingState = {
+      current: new EditingState(1),
+    }
+    const syncEditState = vi.fn()
+
+    // Reuse the same data reference across renders so only the hydration
+    // counter changes between them (mirroring an unmount/remount where the
+    // source data already matches the edit that gets restored).
+    const sourceData = createMockData("bar")
+
+    const { rerender } = renderHook(
+      ({ editStateHydrationCount }) =>
+        useEditReconciliation({
+          data: sourceData,
+          allColumns: MOCK_COLUMNS,
+          editingState,
+          isEditingEnabled: true,
+          editStateHydrationCount,
+          syncEditState,
+        }),
+      { initialProps: { editStateHydrationCount: 0 } }
+    )
+
+    // Edits are restored from the widget manager after the first paint. The
+    // restored edit already matches the current source value.
+    editingState.current.setCell(0, 0, MOCK_COLUMN.getCell("bar"))
+
+    // Bumping the hydration counter (without changing `data`) must trigger
+    // reconciliation and clear the now-redundant restored edit.
+    rerender({ editStateHydrationCount: 1 })
     expect(editingState.current.getCell(0, 0)).toBeUndefined()
     expect(syncEditState).toHaveBeenCalled()
   })

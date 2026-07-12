@@ -712,6 +712,16 @@ class DataEditorSignatureTest(unittest.TestCase):
             df, disabled=disabled1
         ) != _get_data_editor_signature(df, disabled=disabled2)
 
+    def test_signature_stable_for_disabled_false_and_empty_list(self):
+        """An empty ``disabled`` list means the same as ``disabled=False``
+        (nothing disabled), so both must produce the same signature to avoid
+        needless widget resets when toggling between them."""
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        assert _get_data_editor_signature(
+            df, disabled=False
+        ) == _get_data_editor_signature(df, disabled=[])
+
     def test_signature_changes_when_column_disabled_via_config(self):
         """A column disabled via column_config must change the signature even
         when the top-level ``disabled`` argument is unchanged."""

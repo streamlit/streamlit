@@ -269,6 +269,7 @@ function DataFrame({
   const {
     editingState,
     numRows,
+    editStateHydrationCount,
     updateNumRows,
     syncEditState,
     createSyncSelectionState,
@@ -514,6 +515,7 @@ function DataFrame({
     allColumns,
     editingState,
     isEditingEnabled: canEdit,
+    editStateHydrationCount,
     syncEditState,
   })
 

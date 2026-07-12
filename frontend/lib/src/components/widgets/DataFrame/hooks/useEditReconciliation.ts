@@ -31,6 +31,7 @@ interface UseEditReconciliationParams {
   allColumns: BaseColumn[]
   editingState: MutableRefObject<EditingState>
   isEditingEnabled: boolean
+  editStateHydrationCount: number
   syncEditState: () => void
 }
 
@@ -48,11 +49,12 @@ interface UseEditReconciliationReturn {
  * would make the cell look "edited" (e.g. it stays in `edited_rows`) even though
  * its value is identical to the source.
  *
- * Whenever the `data` changes (or editing is re-enabled after a refresh), this
- * hook walks every edited cell and compares its value against the corresponding
- * source cell using the column's `valuesEqual` comparator. Cells whose edit now
- * equals the source value are cleared, so only genuine, still-diverging edits
- * remain in the editing state.
+ * Whenever the `data` changes (or editing is re-enabled after a refresh, or
+ * edits are restored from the widget manager on remount), this hook walks every
+ * edited cell and compares its value against the corresponding source cell
+ * using the column's `valuesEqual` comparator. Cells whose edit now equals the
+ * source value are cleared, so only genuine, still-diverging edits remain in the
+ * editing state.
  *
  * The reconciliation runs during render (via `useExecuteWhenChanged`) so edits
  * are cleared before the grid repaints; the data change that triggered the
@@ -65,6 +67,9 @@ interface UseEditReconciliationReturn {
  * @param editingState - Ref to the mutable editing state holding pending edits.
  * @param isEditingEnabled - Whether editing is currently enabled; reconciliation
  *   is skipped while disabled and re-runs once it is re-enabled.
+ * @param editStateHydrationCount - Counter bumped when edits are restored from
+ *   the widget manager on remount; watched so restored edits are reconciled
+ *   against the current source data even when `data` has not changed.
  * @param syncEditState - Callback to propagate the editing state to the widget
  *   value after edits are cleared.
  * @returns `getSourceCellValue`, which reads the raw source value for a given
@@ -75,6 +80,7 @@ function useEditReconciliation({
   allColumns,
   editingState,
   isEditingEnabled,
+  editStateHydrationCount,
   syncEditState,
 }: UseEditReconciliationParams): UseEditReconciliationReturn {
   const columnsByIndex = useMemo(() => {
@@ -138,7 +144,10 @@ function useEditReconciliation({
     // `isEditingEnabled` is watched so that reconciliation also runs when
     // editing is re-enabled after having been disabled during a data refresh
     // (which would otherwise skip reconciliation and leave stale edits).
-  }, [data, isEditingEnabled])
+    // `editStateHydrationCount` is watched so reconciliation runs after edits
+    // are restored from the widget manager on remount, since the source data
+    // may already match a restored edit even though `data` did not change.
+  }, [data, isEditingEnabled, editStateHydrationCount])
 
   return {
     getSourceCellValue,
