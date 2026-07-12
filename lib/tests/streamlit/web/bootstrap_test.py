@@ -703,6 +703,28 @@ class BootstrapSignalHandlerTest(TestCase):
         captured_handlers[bootstrap.signal.SIGTERM](bootstrap.signal.SIGTERM, None)  # type: ignore[operator]
         mock_server.stop.assert_called_once()
 
+    def test_signal_handler_defers_stop_to_running_event_loop(self):
+        """The handler schedules server.stop() on the running loop instead of
+        calling it inline, which would risk reentrant console writes."""
+        mock_server = Mock()
+        captured_handlers: dict[int, object] = {}
+
+        def fake_signal(signum: int, handler: object) -> None:
+            captured_handlers[signum] = handler
+
+        with patch.object(bootstrap.signal, "signal", side_effect=fake_signal):
+            bootstrap._set_up_signal_handler(mock_server)
+
+        async def invoke_handler() -> None:
+            captured_handlers[bootstrap.signal.SIGINT](bootstrap.signal.SIGINT, None)  # type: ignore[operator]
+            # The stop call must not run inline inside the handler; it runs
+            # as a callback on the next loop iteration.
+            mock_server.stop.assert_not_called()
+            await asyncio.sleep(0)
+
+        asyncio.run(invoke_handler())
+        mock_server.stop.assert_called_once()
+
     def test_uses_sigbreak_on_windows(self):
         """SIGBREAK is registered on Windows instead of SIGQUIT."""
         registered: list[int] = []
