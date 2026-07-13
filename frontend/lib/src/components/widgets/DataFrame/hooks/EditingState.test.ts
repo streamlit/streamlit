@@ -60,6 +60,59 @@ describe("EditingState class", () => {
     expect(editingState.getCell(0, 0)).toEqual(MOCK_TEXT_CELL_2)
   })
 
+  it("allows to clear edited cells", () => {
+    const NUM_OF_ROWS = 3
+    const editingState = new EditingState(NUM_OF_ROWS)
+    editingState.setCell(0, 0, MOCK_TEXT_CELL_1)
+
+    editingState.clearCell(0, 0)
+
+    expect(editingState.getCell(0, 0)).toBeUndefined()
+
+    const visitedCells: Array<[number, number, GridCell]> = []
+    editingState.forEachEditedCell((col, row, cell) => {
+      visitedCells.push([col, row, cell])
+    })
+    expect(visitedCells).toEqual([])
+  })
+
+  it("does not clear cells in added rows", () => {
+    const NUM_OF_ROWS = 3
+    const editingState = new EditingState(NUM_OF_ROWS)
+    const rowCells: Map<number, GridCell> = new Map()
+    rowCells.set(0, MOCK_TEXT_CELL_1)
+    editingState.addRow(rowCells)
+
+    editingState.clearCell(0, NUM_OF_ROWS)
+
+    expect(editingState.getCell(0, NUM_OF_ROWS)).toEqual(MOCK_TEXT_CELL_1)
+  })
+
+  it("iterates over edited cells and allows clearing during iteration", () => {
+    const NUM_OF_ROWS = 3
+    const editingState = new EditingState(NUM_OF_ROWS)
+    editingState.setCell(0, 0, MOCK_TEXT_CELL_1)
+    editingState.setCell(1, 2, MOCK_TEXT_CELL_2)
+
+    const rowCells: Map<number, GridCell> = new Map()
+    rowCells.set(0, MOCK_TEXT_CELL_1)
+    editingState.addRow(rowCells)
+
+    const visitedCells: Array<[number, number, GridCell]> = []
+    editingState.forEachEditedCell((col, row, cell) => {
+      visitedCells.push([col, row, cell])
+      editingState.clearCell(col, row)
+    })
+
+    expect(visitedCells).toEqual([
+      [0, 0, MOCK_TEXT_CELL_1],
+      [1, 2, MOCK_TEXT_CELL_2],
+    ])
+    expect(editingState.getCell(0, 0)).toBeUndefined()
+    expect(editingState.getCell(1, 2)).toBeUndefined()
+    expect(editingState.getCell(0, NUM_OF_ROWS)).toEqual(MOCK_TEXT_CELL_1)
+  })
+
   it("allows to add rows", () => {
     const NUM_OF_ROWS = 3
     const editingState = new EditingState(NUM_OF_ROWS)
