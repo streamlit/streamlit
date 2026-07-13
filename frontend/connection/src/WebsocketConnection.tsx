@@ -304,9 +304,6 @@ export class WebsocketConnection {
       case ConnectionState.CONNECTED:
         this.reconnectAttempt = 0
         this.clearReconnectDelayTimeout()
-        break
-
-      case ConnectionState.CONNECTED:
         // Pin to the URI the live socket actually used (captured at socket
         // creation), not this.uriIndex: in bypass mode a background ping can
         // overwrite this.uriIndex before the socket's open event fires, which
