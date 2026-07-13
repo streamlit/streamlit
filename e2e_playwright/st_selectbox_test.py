@@ -554,9 +554,13 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     expect_markdown(app, "value 23: No")
 
 
-def test_selectbox_virtualizes_large_option_list(app: Page):
+def test_selectbox_virtualizes_large_option_list(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test that a selectbox with many options only renders a small window of
-    option rows (virtualization) while keeping far-down options selectable.
+    option rows (virtualization) while keeping far-down options selectable, and
+    that filtering to an unmatched value shows the styled "No results" empty
+    state.
     """
     selectbox_input = get_selectbox_input(app, "selectbox 25 (large virtualized list)")
     selectbox_input.click()
@@ -581,6 +585,16 @@ def test_selectbox_virtualizes_large_option_list(app: Page):
     expect(
         selection_dropdown.get_by_role("option", name="Option 999", exact=True)
     ).to_have_count(0)
+
+    # Filtering to an unmatched value shows the styled empty-state popover.
+    selectbox_input.fill("No matching option")
+    expect(
+        selection_dropdown.get_by_role("option", name="No results", exact=True)
+    ).to_be_visible()
+    expect(
+        selection_dropdown.get_by_role("option", name="Option 0", exact=True)
+    ).to_have_count(0)
+    assert_snapshot(selection_dropdown, name="st_selectbox-no_results_popover")
 
     # A far-down option can still be selected by typing to filter for it.
     selectbox_input.fill("Option 987")

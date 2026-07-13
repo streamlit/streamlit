@@ -59,6 +59,7 @@ import {
 
 import {
   StyledClearButton,
+  StyledEmptyState,
   StyledGroup,
   StyledInput,
   StyledItemHighlight,
@@ -547,7 +548,9 @@ const Selectbox: FC<Props> = ({
               <StyledListBox
                 aria-label={label ?? "Selectbox options"}
                 items={displayOptions}
-                renderEmptyState={() => <span>No results</span>}
+                renderEmptyState={() => (
+                  <StyledEmptyState>No results</StyledEmptyState>
+                )}
               >
                 {renderOption}
               </StyledListBox>
