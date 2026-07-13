@@ -533,21 +533,22 @@ def test_selectbox_contains_filter_mode_matches_substrings(app: Page):
 
 
 def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Page):
-    """Test that filter_mode=None blocks typing while leaving the dropdown usable.
-
-    With filter_mode=None, the input is not marked readOnly (to allow the
-    ComboBox to open on click/focus), but character input is blocked via
-    onKeyDown so options always show the full unfiltered list.
+    """Test that filter_mode=None keeps the input readonly, blocks typing, and
+    keeps the dropdown selectable.
     """
     selectbox_input = get_selectbox_input(app, "selectbox 23 (filter_mode=None)")
+    expect(selectbox_input).to_have_attribute("readonly", "")
 
-    # The input should NOT block dropdown opening — click + ArrowDown opens reliably.
-    # (ArrowDown navigates but does NOT commit for non-readonly inputs.)
     selectbox_input.click()
-    selectbox_input.press("ArrowDown")
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     expect(selection_dropdown).to_be_visible()
     options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(3)
+
+    # Typing must NOT filter the list: the input is readonly and character
+    # input is blocked, so all options stay visible.
+    selectbox_input.press("n")
+    selectbox_input.press("o")
     expect(options).to_have_count(3)
 
     options.nth(1).click()

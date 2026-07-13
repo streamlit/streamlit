@@ -338,17 +338,25 @@ describe("Selectbox widget", () => {
     render(<Selectbox {...currProps} />)
     const selectboxInput = screen.getByRole("combobox")
 
-    // With filter_mode=None the input is NOT marked readOnly — readOnly prevents
-    // React Aria from opening the dropdown on click/focus (menuTrigger="focus").
-    // Instead, character input is blocked via onKeyDown so options always show
-    // the full unfiltered list.
-    expect(selectboxInput).not.toHaveAttribute("readonly")
+    // Native readonly prevents mobile browsers from opening the software
+    // keyboard while the manual pointer handler keeps the dropdown usable.
+    expect(selectboxInput).toHaveAttribute("readonly")
 
-    await openDropdown(user)
-    expect(screen.queryAllByRole("option")).toHaveLength(3)
+    await user.click(selectboxInput)
+    await waitFor(() => {
+      expect(screen.queryAllByRole("option")).toHaveLength(3)
+    })
 
     await user.type(selectboxInput, "no")
     expect(screen.queryAllByRole("option")).toHaveLength(3)
+
+    // Navigating to a non-first option proves React Aria's keyboard navigation
+    // still works with the native readonly attribute — a match on "no" (the
+    // second option) rules out the auto-select-first fallback masking a
+    // regression.
+    act(() => selectboxInput.focus())
+    await user.keyboard("{ArrowDown}{ArrowDown}{Enter}")
+    expect(currProps.onChange).toHaveBeenCalledWith("no")
   })
 
   it("updates value if new value provided from parent", () => {

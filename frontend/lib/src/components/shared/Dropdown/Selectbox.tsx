@@ -45,6 +45,7 @@ import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLa
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import useTimeout from "~lib/hooks/useTimeout"
 import { convertRemToPx } from "~lib/theme/utils"
 import {
   filterSelectOptions,
@@ -187,6 +188,11 @@ const Selectbox: FC<Props> = ({
   // prevents auto-open on Tab-focus (which caused spurious reopens after reruns).
   const openDropdownRef = useRef<(() => void) | null>(null)
   const closeDropdownRef = useRef<(() => void) | null>(null)
+  const { restart: scheduleReadonlyInputOpen } = useTimeout(
+    () => openDropdownRef.current?.(),
+    0,
+    { autoStart: false }
+  )
 
   // Always-current mirrors of state values, for use inside stale RAC closures
   // that capture their dependencies at registration time.
@@ -282,11 +288,11 @@ const Selectbox: FC<Props> = ({
 
   const isFilterNone =
     filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
-  // Don't use `readOnly` for FILTER_MODE_NONE: it disables RAC's internal
-  // keyboard navigation (Arrow keys, Enter). Block character input via
-  // onKeyDown/onPaste instead.
+  // FILTER_MODE_NONE must use the native readonly attribute so mobile browsers
+  // do not open the software keyboard. The manual pointer and keyboard handlers
+  // below keep the dropdown and option navigation available.
   const inputReadOnly =
-    isMobile() && options.length <= 10 && !acceptNewOptions && !isFilterNone
+    isFilterNone || (isMobile() && options.length <= 10 && !acceptNewOptions)
 
   /**
    * Commit a selection: update local state and notify the parent.
@@ -380,17 +386,29 @@ const Selectbox: FC<Props> = ({
 
   // Open on pointer-click. With menuTrigger="manual", opening on pointerDown
   // (before focus) avoids a timing gap where focus arrives first with no open action.
-  const handleInputPointerDown = useCallback((): void => {
-    if (selectDisabled) return
-    openDropdownRef.current?.()
-  }, [selectDisabled])
+  // Preventing pointer focus on readonly inputs also avoids Chromium immediately
+  // closing the dropdown after it opens. Keyboard focus remains available via Tab.
+  const handleInputPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLInputElement>): void => {
+      if (selectDisabled) return
+      if (inputReadOnly) {
+        e.preventDefault()
+        // React Aria may close a readonly ComboBox during the rest of the
+        // pointer event. Reopen after that event lifecycle has completed.
+        scheduleReadonlyInputOpen()
+        return
+      }
+      openDropdownRef.current?.()
+    },
+    [inputReadOnly, scheduleReadonlyInputOpen, selectDisabled]
+  )
 
   /**
    * Capture-phase keydown — fires before RAC's handler:
    * - Records wasOpenBeforeEnterRef so the bubble-phase handler can check
    *   whether the dropdown was open before RAC may have closed it.
    * - Opens the dropdown on ArrowUp/Down when closed.
-   * - Blocks character input for FILTER_MODE_NONE (can't use readOnly — see above).
+   * - Defensively blocks character input for FILTER_MODE_NONE.
    * - Clears the value on Escape when clearable.
    */
   const handleInputKeyDownCapture = useCallback(
