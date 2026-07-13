@@ -533,25 +533,46 @@ def test_selectbox_contains_filter_mode_matches_substrings(app: Page):
 
 
 def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Page):
-    """Test that filter_mode=None keeps the input readonly, blocks typing, and
-    keeps the dropdown selectable.
+    """Test that filter_mode=None blocks typing while keeping the dropdown and
+    keyboard navigation usable.
+
+    The input uses inputmode="none" (not readonly) so the mobile software
+    keyboard stays hidden while the input remains focusable: clicking opens the
+    dropdown and Arrow/Enter navigation keeps working right afterwards.
     """
     selectbox_input = get_selectbox_input(app, "selectbox 23 (filter_mode=None)")
-    expect(selectbox_input).to_have_attribute("readonly", "")
+    # inputmode="none" suppresses the mobile software keyboard. readonly is NOT
+    # used because it breaks focus-on-click and React Aria keyboard navigation.
+    expect(selectbox_input).to_have_attribute("inputmode", "none")
+    expect(selectbox_input).not_to_have_attribute("readonly", "")
+    # The text caret is hidden so the input looks non-editable (like a plain
+    # select) even though it stays focusable for keyboard navigation.
+    expect(selectbox_input).to_have_css("caret-color", "rgba(0, 0, 0, 0)")
 
+    # Clicking must focus the input: a readonly + preventDefault approach used to
+    # drop focus, which broke the click-then-keyboard flow. Asserting focus here
+    # guards that regression deterministically.
     selectbox_input.click()
+    expect(selectbox_input).to_be_focused()
+
+    # ArrowDown reliably opens the dropdown (backup for pointer-triggered open,
+    # matching select_selectbox_option) and highlights the first option.
+    selectbox_input.press("ArrowDown")
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     expect(selection_dropdown).to_be_visible()
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(3)
 
-    # Typing must NOT filter the list: the input is readonly and character
-    # input is blocked, so all options stay visible.
+    # Typing must NOT filter the list: character input is blocked, so all
+    # options stay visible.
     selectbox_input.press("n")
     selectbox_input.press("o")
     expect(options).to_have_count(3)
 
-    options.nth(1).click()
+    # Keyboard navigation still selects: a second ArrowDown reaches "No" and
+    # Enter commits it, proving Arrow/Enter work after focusing via click.
+    selectbox_input.press("ArrowDown")
+    selectbox_input.press("Enter")
     expect_markdown(app, "value 23: No")
 
 

@@ -328,7 +328,7 @@ describe("Selectbox widget", () => {
     })
   })
 
-  it("keeps all options visible and the input readonly when filterMode is none", async () => {
+  it("keeps all options visible and blocks typing when filterMode is none", async () => {
     const user = userEvent.setup()
     const currProps = getProps({
       options: ["yes", "no", "maybe"],
@@ -338,23 +338,27 @@ describe("Selectbox widget", () => {
     render(<Selectbox {...currProps} />)
     const selectboxInput = screen.getByRole("combobox")
 
-    // Native readonly prevents mobile browsers from opening the software
-    // keyboard while the manual pointer handler keeps the dropdown usable.
-    expect(selectboxInput).toHaveAttribute("readonly")
+    // filter_mode=None uses inputMode="none" (not readOnly) to suppress the
+    // mobile software keyboard. readOnly would break both focus-on-click and
+    // RAC's keyboard navigation, so the input must stay editable-but-focusable.
+    expect(selectboxInput).toHaveAttribute("inputmode", "none")
+    expect(selectboxInput).not.toHaveAttribute("readonly")
 
+    // Clicking focuses the input and opens the dropdown with the full list.
     await user.click(selectboxInput)
     await waitFor(() => {
       expect(screen.queryAllByRole("option")).toHaveLength(3)
     })
 
-    await user.type(selectboxInput, "no")
+    // Typing is blocked, so the list stays unfiltered. Using keyboard() (not
+    // type()) avoids an implicit re-click, proving the earlier click is what
+    // focused the input.
+    await user.keyboard("no")
     expect(screen.queryAllByRole("option")).toHaveLength(3)
 
-    // Navigating to a non-first option proves React Aria's keyboard navigation
-    // still works with the native readonly attribute — a match on "no" (the
-    // second option) rules out the auto-select-first fallback masking a
-    // regression.
-    act(() => selectboxInput.focus())
+    // Arrow/Enter navigation works straight after the click with no manual
+    // focus() — this catches the click-then-keyboard focus regression. Landing
+    // on "no" (the second option) rules out an auto-select-first fallback.
     await user.keyboard("{ArrowDown}{ArrowDown}{Enter}")
     expect(currProps.onChange).toHaveBeenCalledWith("no")
   })

@@ -45,7 +45,6 @@ import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLa
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
-import useTimeout from "~lib/hooks/useTimeout"
 import { convertRemToPx } from "~lib/theme/utils"
 import {
   filterSelectOptions,
@@ -138,6 +137,14 @@ const renderOption = (item: unknown): ReactElement => {
   )
 }
 
+/**
+ * Swallow paste and IME composition events so FILTER_MODE_NONE inputs stay
+ * non-editable, mirroring the character blocking in onKeyDownCapture.
+ */
+const preventInputEvent = (e: React.SyntheticEvent): void => {
+  e.preventDefault()
+}
+
 const Selectbox: FC<Props> = ({
   disabled,
   value: propValue,
@@ -188,11 +195,6 @@ const Selectbox: FC<Props> = ({
   // prevents auto-open on Tab-focus (which caused spurious reopens after reruns).
   const openDropdownRef = useRef<(() => void) | null>(null)
   const closeDropdownRef = useRef<(() => void) | null>(null)
-  const { restart: scheduleReadonlyInputOpen } = useTimeout(
-    () => openDropdownRef.current?.(),
-    0,
-    { autoStart: false }
-  )
 
   // Always-current mirrors of state values, for use inside stale RAC closures
   // that capture their dependencies at registration time.
@@ -288,11 +290,13 @@ const Selectbox: FC<Props> = ({
 
   const isFilterNone =
     filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
-  // FILTER_MODE_NONE must use the native readonly attribute so mobile browsers
-  // do not open the software keyboard. The manual pointer and keyboard handlers
-  // below keep the dropdown and option navigation available.
+  // Don't use `readOnly` for FILTER_MODE_NONE: it disables RAC's internal
+  // keyboard navigation (Arrow keys, Enter) and makes Chromium close the
+  // ComboBox during the pointer-event lifecycle. Instead, suppress the mobile
+  // software keyboard with inputMode="none" (see the input below) and block
+  // character input via onKeyDown/onPaste.
   const inputReadOnly =
-    isFilterNone || (isMobile() && options.length <= 10 && !acceptNewOptions)
+    isMobile() && options.length <= 10 && !acceptNewOptions && !isFilterNone
 
   /**
    * Commit a selection: update local state and notify the parent.
@@ -386,29 +390,17 @@ const Selectbox: FC<Props> = ({
 
   // Open on pointer-click. With menuTrigger="manual", opening on pointerDown
   // (before focus) avoids a timing gap where focus arrives first with no open action.
-  // Preventing pointer focus on readonly inputs also avoids Chromium immediately
-  // closing the dropdown after it opens. Keyboard focus remains available via Tab.
-  const handleInputPointerDown = useCallback(
-    (e: React.PointerEvent<HTMLInputElement>): void => {
-      if (selectDisabled) return
-      if (inputReadOnly) {
-        e.preventDefault()
-        // React Aria may close a readonly ComboBox during the rest of the
-        // pointer event. Reopen after that event lifecycle has completed.
-        scheduleReadonlyInputOpen()
-        return
-      }
-      openDropdownRef.current?.()
-    },
-    [inputReadOnly, scheduleReadonlyInputOpen, selectDisabled]
-  )
+  const handleInputPointerDown = useCallback((): void => {
+    if (selectDisabled) return
+    openDropdownRef.current?.()
+  }, [selectDisabled])
 
   /**
    * Capture-phase keydown — fires before RAC's handler:
    * - Records wasOpenBeforeEnterRef so the bubble-phase handler can check
    *   whether the dropdown was open before RAC may have closed it.
    * - Opens the dropdown on ArrowUp/Down when closed.
-   * - Defensively blocks character input for FILTER_MODE_NONE.
+   * - Blocks character input for FILTER_MODE_NONE (can't use readOnly — see above).
    * - Clears the value on Escape when clearable.
    */
   const handleInputKeyDownCapture = useCallback(
@@ -522,13 +514,19 @@ const Selectbox: FC<Props> = ({
             <StyledInput
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}
+              // FILTER_MODE_NONE disables typing. inputMode="none" keeps the
+              // mobile software keyboard from opening while leaving the input
+              // focusable, so click/Tab still open the dropdown and Arrow/Enter
+              // navigation keeps working (unlike readOnly, which breaks both).
+              // $typingDisabled hides the caret and shows a pointer cursor so
+              // the input still looks non-editable, like a plain select.
+              inputMode={isFilterNone ? "none" : undefined}
+              $typingDisabled={isFilterNone}
               onPointerDown={handleInputPointerDown}
               onKeyDownCapture={handleInputKeyDownCapture}
               onKeyDown={handleInputKeyDown}
-              onPaste={isFilterNone ? e => e.preventDefault() : undefined}
-              onCompositionStart={
-                isFilterNone ? e => e.preventDefault() : undefined
-              }
+              onPaste={isFilterNone ? preventInputEvent : undefined}
+              onCompositionStart={isFilterNone ? preventInputEvent : undefined}
               $placeholderColor={
                 selectDisabled ? theme.colors.fadedText40 : undefined
               }
