@@ -447,8 +447,9 @@ def test_multiselect_dropdown_renders_above_popover_body(app: Page):
     # body painted over it (the bug), elementFromPoint returns the popover body
     # instead of the option.
     def option_is_on_top() -> bool:
-        return first_option.evaluate(
-            """(el) => {
+        return bool(
+            first_option.evaluate(
+                """(el) => {
                 const rect = el.getBoundingClientRect();
                 const topEl = document.elementFromPoint(
                     rect.left + rect.width / 2,
@@ -456,6 +457,7 @@ def test_multiselect_dropdown_renders_above_popover_body(app: Page):
                 );
                 return el === topEl || el.contains(topEl);
             }"""
+            )
         )
 
     wait_until(app, lambda: option_is_on_top() is True)
