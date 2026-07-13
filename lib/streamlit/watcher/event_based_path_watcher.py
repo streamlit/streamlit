@@ -63,6 +63,7 @@ from typing_extensions import Self
 from watchdog import events
 from watchdog.observers import Observer
 
+from streamlit import env_util
 from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.logger import get_logger
 from streamlit.util import repr_
@@ -445,7 +446,10 @@ class _FolderEventHandler(events.FileSystemEventHandler):
 
             # Windows can report the same path with an extended-length prefix
             # (``\\?\``), which does not compare equal to the standard spelling.
-            if changed_path_info is None:
+            # On other platforms path comparison is exact, so the dict lookup
+            # above already covers every equivalent spelling and this fallback
+            # scan can be skipped.
+            if changed_path_info is None and env_util.IS_WINDOWS:
                 for path, info in self._watched_paths.items():
                     if util.paths_are_same(path, abs_changed_path):
                         changed_path_info = info
@@ -506,11 +510,6 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             # briefly and re-read the file. If the hash reverts to the original
             # value, this was likely a spurious event and we should ignore it.
             # See: https://github.com/streamlit/streamlit/issues/13954
-            # Import at function level to avoid circular imports and
-            # because this code path is rarely executed (only on Windows
-            # after a hash change is detected)
-            from streamlit import env_util
-
             if env_util.IS_WINDOWS:
                 import time
 

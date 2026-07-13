@@ -140,7 +140,10 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         ev = events.FileSystemEvent(equivalent_path)
         ev.event_type = events.EVENT_TYPE_MODIFIED
-        folder_handler.on_modified(ev)
+        # The normalized-spelling fallback only runs on Windows, where the same
+        # path can be reported with an extended-length prefix.
+        with mock.patch.object(event_based_path_watcher.env_util, "IS_WINDOWS", True):
+            folder_handler.on_modified(ev)
 
         cb.assert_called_once_with(equivalent_path)
         self.mock_util.paths_are_same.assert_called_once_with(
