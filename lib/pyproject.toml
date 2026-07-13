@@ -72,9 +72,9 @@ dependencies = [
   "pydeck>=0.8.0b4,<1",
   # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
   "protobuf>=3.20,<8",
-  # pyarrow 25.0.0 has a crash issue in Streamlit's script-thread import pattern.
+  # PyArrow 25.0.0 can segfault when first imported from a short-lived worker thread.
   # See https://github.com/apache/arrow/issues/50471.
-  "pyarrow>=7.0,<25.0.0",
+  "pyarrow>=7.0,<25",
   "requests>=2.27,<3",
   "tenacity>=8.1.0,<10",
   # Starting from Python 3.11, Python has built in support for reading TOML files.
