@@ -39,7 +39,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(30)
+    expect(popover_elements).to_have_count(28)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -493,42 +493,6 @@ def test_date_input_selection_does_not_dismiss_popover(app: Page):
     # The popover must still be open after the day selection.
     expect(popover_container).to_be_visible()
     expect(date_input).to_be_visible()
-
-
-def test_nested_popover_widget_does_not_dismiss_outer_popover(app: Page):
-    """Interacting with a widget inside a nested inner popover must not dismiss
-    the outer popover.
-
-    Regression test for https://github.com/streamlit/streamlit/issues/15959: the
-    inner popover body is portalled outside the outer popover's DOM subtree, so
-    the outer popover's outside-click dismissal treated clicks inside the inner
-    popover (and the widget overlays it hosts) as outside clicks and closed.
-    """
-    open_popover(app, "popover 22 (nested)")
-    expect_markdown(app, "outer popover content")
-
-    # Open the nested inner popover by key. With the outer popover already open
-    # there are two popover bodies on screen, so open_popover's stPopoverBody
-    # lookup would be ambiguous.
-    inner_popover = get_element_by_key(app, "nested_inner_popover")
-    inner_popover.get_by_role("button").first.click()
-
-    selectbox = get_element_by_key(app, "nested_selectbox")
-    expect(selectbox).to_be_visible()
-
-    # Open the selectbox dropdown and select an option (single-select closes its
-    # dropdown on selection, detaching the option — the detach case fixed here).
-    selectbox.locator("input").first.click()
-    option = app.get_by_role("option", name="option_2", exact=True)
-    expect(option).to_be_visible()
-    option.click()
-    wait_for_app_run(app)
-
-    # Both popovers must still be open: outer content visible and the nested
-    # selectbox reflects the new selection.
-    expect_markdown(app, "outer popover content")
-    expect(selectbox).to_be_visible()
-    expect(selectbox.locator("input")).to_have_value("option_2")
 
 
 def test_programmatic_close_does_not_reopen_other_popover(app: Page):

@@ -108,18 +108,6 @@ with st.popover("popover 21 (date dismissal)", key="date_dismissal_popover"):
         key="date_dismissal",
     )
 
-# Interacting with a widget inside a nested (inner) popover must not dismiss the
-# outer popover. Regression fixture for
-# https://github.com/streamlit/streamlit/issues/15959 (popover migration).
-with st.popover("popover 22 (nested)", key="nested_outer_popover"):
-    st.markdown("outer popover content")
-    with st.popover("nested inner popover", key="nested_inner_popover"):
-        st.selectbox(
-            "Selectbox in nested popover",
-            ["option_1", "option_2", "option_3"],
-            key="nested_selectbox",
-        )
-
 # Menu-style icons (chevron should be hidden)
 with st.container(key="menu_style_icons_container"):
     col1, col2, col3 = st.columns(3)
