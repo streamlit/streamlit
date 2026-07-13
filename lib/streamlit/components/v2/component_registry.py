@@ -166,7 +166,7 @@ class BidiComponentDefinition:
 
     @property
     def is_placeholder(self) -> bool:
-        """Return True if this definition is a placeholder (no content).
+        """Whether this definition is a placeholder (no content).
 
         Placeholders are typically created during the manifest scanning phase
         when we discover a component's existence but haven't yet loaded its
@@ -176,7 +176,7 @@ class BidiComponentDefinition:
 
     @property
     def css_url(self) -> str | None:
-        """Return the asset-dir-relative URL path for CSS when file-backed.
+        """The asset-dir-relative URL path for CSS when file-backed.
 
         When present, servers construct
         ``/_stcore/bidi-components/<component>/<css_url>`` using this value. If
@@ -191,7 +191,7 @@ class BidiComponentDefinition:
 
     @property
     def js_url(self) -> str | None:
-        """Return the asset-dir-relative URL path for JS when file-backed.
+        """The asset-dir-relative URL path for JS when file-backed.
 
         When present, servers construct
         ``/_stcore/bidi-components/<component>/<js_url>`` using this value. If
@@ -246,7 +246,7 @@ class BidiComponentDefinition:
 
     @property
     def css_content(self) -> str | None:
-        """Return inline CSS content or ``None`` if file-backed or missing."""
+        """Inline CSS content or ``None`` if file-backed or missing."""
         if self._has_css_path or self.css is None:
             return None
         # Return as string if it's not a path
@@ -254,7 +254,7 @@ class BidiComponentDefinition:
 
     @property
     def js_content(self) -> str | None:
-        """Return inline JavaScript content or ``None`` if file-backed or missing."""
+        """Inline JavaScript content or ``None`` if file-backed or missing."""
         if self._has_js_path or self.js is None:
             return None
         # Return as string if it's not a path
@@ -262,12 +262,12 @@ class BidiComponentDefinition:
 
     @property
     def html_content(self) -> str | None:
-        """Return inline HTML content or ``None`` if not provided."""
+        """Inline HTML content or ``None`` if not provided."""
         return self.html
 
     @property
     def source_paths(self) -> dict[str, str]:
-        """Return source directories for file-backed CSS/JS content.
+        """Source directories for file-backed CSS/JS content.
 
         The returned mapping contains keys like ``"js"`` and ``"css"`` with the
         directory path from which each was loaded.

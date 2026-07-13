@@ -116,6 +116,45 @@ describe("useDataFrameCapabilities", () => {
     })
   })
 
+  describe("canShowColumnStatistics", () => {
+    it("returns true for normal read-only tables", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities(defaultParams)
+      )
+      expect(result.current.canShowColumnStatistics).toBe(true)
+    })
+
+    it.each([
+      ["DYNAMIC editing mode", { editingMode: DYNAMIC }],
+      ["ADD_ONLY editing mode", { editingMode: ADD_ONLY }],
+      ["DELETE_ONLY editing mode", { editingMode: DELETE_ONLY }],
+      ["FIXED editing mode", { editingMode: FIXED }],
+      ["empty tables", { numDataRows: 0 }],
+    ])("returns false for %s", (_description, overrides) => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({ ...defaultParams, ...overrides })
+      )
+      expect(result.current.canShowColumnStatistics).toBe(false)
+    })
+
+    it("returns true for large tables", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({
+          ...defaultParams,
+          numDataRows: LARGE_TABLE_ROWS_THRESHOLD + 1,
+        })
+      )
+      expect(result.current.canShowColumnStatistics).toBe(true)
+    })
+
+    it("is not affected by the disabled flag", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({ ...defaultParams, disabled: true })
+      )
+      expect(result.current.canShowColumnStatistics).toBe(true)
+    })
+  })
+
   describe("canEdit", () => {
     it("returns false for READ_ONLY mode", () => {
       const { result } = renderHook(() =>

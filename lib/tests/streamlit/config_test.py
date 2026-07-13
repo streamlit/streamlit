@@ -799,6 +799,7 @@ class ConfigTest(unittest.TestCase):
                 "server.headless",
                 "server.maxMessageSize",
                 "server.maxUploadSize",
+                "server.maxWidgetStateSize",
                 "server.port",
                 "server.runOnSave",
                 "server.scriptHealthCheckEnabled",
@@ -806,6 +807,7 @@ class ConfigTest(unittest.TestCase):
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "server.trustedUserHeaders",
+                "server.unsafeMetricsUserAttributes",
                 "ui.hideTopBar",
             ]
         )
@@ -971,6 +973,69 @@ class ConfigTest(unittest.TestCase):
         ):
             config._parse_trusted_user_headers()
 
+    def test_unsafe_metrics_user_attributes_option_attrs(self):
+        # The option should be a hidden, multiple-value list defaulting to [].
+        option = config._config_options["server.unsafeMetricsUserAttributes"]
+        assert option.multiple
+        assert option.default_val == []
+        assert option.visibility == "hidden"
+        assert config.get_option("server.unsafeMetricsUserAttributes") == []
+
+    def test_unsafe_metrics_user_attributes_parses_from_toml(self):
+        toml_content = """
+        [server]
+        unsafeMetricsUserAttributes = ["email", "user_name"]
+        """
+        config._update_config_with_toml(toml_content, "test")
+        assert config.get_option("server.unsafeMetricsUserAttributes") == [
+            "email",
+            "user_name",
+        ]
+
+    def test_check_metrics_user_attributes_rejects_reserved_name(self):
+        config._set_option(
+            "server.unsafeMetricsUserAttributes", ["email", "type"], "test"
+        )
+        with pytest.raises(
+            RuntimeError,
+            match=r"reserved label name.*type",
+        ):
+            config._check_metrics_user_attributes()
+
+    def test_check_metrics_user_attributes_allows_non_reserved_names(self):
+        config._set_option(
+            "server.unsafeMetricsUserAttributes", ["email", "user_name"], "test"
+        )
+        # Should not raise.
+        config._check_metrics_user_attributes()
+
+    def test_check_metrics_user_attributes_rejects_invalid_label_name(self):
+        # A name that is not a valid OpenMetrics label (contains a hyphen) is
+        # rejected so the endpoint cannot emit malformed metrics.
+        config._set_option(
+            "server.unsafeMetricsUserAttributes", ["email", "user-name"], "test"
+        )
+        with pytest.raises(
+            RuntimeError,
+            match=r"invalid label name.*user-name",
+        ):
+            config._check_metrics_user_attributes()
+
+    def test_check_metrics_user_attributes_rejects_non_string_entries(self):
+        # Non-string entries produce a deterministic RuntimeError instead of a
+        # generic type error later when used as metric label names.
+        config._set_option("server.unsafeMetricsUserAttributes", ["email", 123], "test")
+        with pytest.raises(
+            RuntimeError,
+            match=r"must contain only strings.*123",
+        ):
+            config._check_metrics_user_attributes()
+
+    def test_check_metrics_user_attributes_noop_when_empty(self):
+        # The default empty list disables the feature and must not raise.
+        config._set_option("server.unsafeMetricsUserAttributes", [], "test")
+        config._check_metrics_user_attributes()
+
     def test_maybe_convert_to_number(self):
         assert config._maybe_convert_to_number("1234") == 1234
         assert config._maybe_convert_to_number("1234.5678") == 1234.5678
@@ -1010,6 +1075,12 @@ class ConfigTest(unittest.TestCase):
 
         config._set_option("browser.gatherUsageStats", "test", "test")
         assert config.get_option("browser.gatherUsageStats") == "test"
+
+    def test_set_user_option_raises_for_unrecognized_key(self):
+        """set_user_option raises for an unknown config option key."""
+        with pytest.raises(StreamlitAPIException) as e:
+            config.set_user_option("not.a.real.option", "value")
+        assert "Unrecognized config option: not.a.real.option" in str(e.value)
 
     def test_is_manually_set(self):
         config._set_option("browser.serverAddress", "some.bucket", "test")
@@ -1614,6 +1685,9 @@ class ConfigLoadingTest(unittest.TestCase):
 
     def test_max_message_size_default_values(self):
         assert config.get_option("server.maxMessageSize") == 200
+
+    def test_max_widget_state_size_default_values(self):
+        assert config.get_option("server.maxWidgetStateSize") == 25
 
     def test_config_options_removed_on_reparse(self):
         """Test that config options that are removed in a file are also removed

@@ -15,13 +15,33 @@
  */
 
 import "@testing-library/jest-dom/vitest"
-import { configure } from "@testing-library/react"
-import { vi } from "vitest"
+import { act, configure } from "@testing-library/react"
+// FRAGILE: setInteractionModality has no public export today, so we import from a
+// private react-aria path. This may break on minor/patch upgrades — migrate to the
+// public API if React Aria ever exposes it.
+import { setInteractionModality } from "react-aria/private/interactions/useFocusVisible"
+import { beforeEach, vi } from "vitest"
 import "vitest-canvas-mock"
 
 // Bump the default timeout for async utilities to 5 seconds (default is 1000ms)
 // due to the slower machine speeds in our CI environment.
 configure({ asyncUtilTimeout: 5_000 })
+
+// React Aria's useTooltipTrigger only opens a hover tooltip when
+// getInteractionModality() === "pointer". JSDOM has no real mouse movement, so the
+// modality is never "pointer" on its own — set it before each test. We call
+// setInteractionModality directly (renderHook interferes with React.lazy/Suspense)
+// and wrap it in act() since it can trigger state updates in mounted
+// useFocusVisible hooks.
+//
+// This is safe to apply globally: it only affects React Aria's internal modality
+// variable (which gates hover-triggered tooltip opening), NOT the browser's
+// :focus-visible heuristic. Tests asserting :focus-visible styling are unaffected.
+beforeEach(() => {
+  act(() => {
+    setInteractionModality("pointer")
+  })
+})
 
 // In the event a sub-library uses the jest global, we need to make sure it's
 // aliased to the vi global. An example is timers using dom testing library

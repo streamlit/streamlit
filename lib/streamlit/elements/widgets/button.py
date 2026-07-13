@@ -48,7 +48,7 @@ from streamlit.errors import (
     StreamlitPageNotFoundError,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import StreamlitPage, _validate_registered_page
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
@@ -1566,6 +1566,7 @@ class ButtonMixin:
                     "page_link", page_link_proto, layout_config=layout_config
                 )
 
+            _validate_registered_page(page)
             page_link_proto.page_script_hash = page._script_hash
             page_link_proto.page = page.url_path
         else:
@@ -1674,7 +1675,9 @@ class ButtonMixin:
         if runtime.exists():
             if is_in_form(self.dg) and not is_form_submitter:
                 raise StreamlitAPIException(
-                    f"`st.button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
+                    "`st.button()` can't be used in an `st.form()`. Use "
+                    "`st.form_submit_button()` instead to submit the form."
+                    f"{FORM_DOCS_INFO}"
                 )
             if not is_in_form(self.dg) and is_form_submitter:
                 raise StreamlitAPIException(
@@ -1723,7 +1726,7 @@ class ButtonMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 

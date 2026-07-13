@@ -293,7 +293,7 @@ class BidiComponentMixin:
             If this is omitted, a key will be generated based on the
             component's execution sequence.
         isolate_styles
-            Whether to sandbox the component's styles in a shadow root.
+            Whether to isolate the component's styles in a shadow root.
             Defaults to True.
         data
             Data to pass to the component. This can be any JSON-serializable
@@ -533,5 +533,5 @@ class BidiComponentMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

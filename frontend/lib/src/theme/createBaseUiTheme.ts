@@ -15,6 +15,9 @@
  */
 
 import type { Primitives as ThemePrimitives } from "baseui"
+// The explicit `.js` extension is required to import the CommonJS build of baseui
+// for the interop cast below, so the extension rule is disabled here.
+// eslint-disable-next-line import-x/extensions
 import * as baseuiCjs from "baseui/index.js"
 import type { Theme as BaseTheme } from "baseui/theme"
 import { transparentize } from "color2k"

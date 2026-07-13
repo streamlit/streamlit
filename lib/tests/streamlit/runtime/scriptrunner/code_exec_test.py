@@ -12,16 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
 from parameterized import parameterized
 
+from streamlit.errors import FragmentHandledException
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
+from streamlit.runtime.scriptrunner.exec_code import (
+    exec_func_with_error_handling,
+    modified_sys_path,
+)
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
@@ -121,6 +126,29 @@ class TestWrapInTryAndExec(unittest.TestCase):
         assert rerun_exception_data is None
         assert premature_stop is True
         assert isinstance(uncaught_exception, exception_type)
+
+    def test_func_throws_fragment_handled_exception(self) -> None:
+        """A FragmentHandledException is treated as an error without an uncaught exception.
+
+        It is already surfaced inside the fragment, so
+        exec_func_with_error_handling must not re-report it as uncaught.
+        """
+
+        def test_func() -> None:
+            raise FragmentHandledException(RuntimeError("inner"))
+
+        (
+            _,
+            run_without_errors,
+            rerun_exception_data,
+            premature_stop,
+            uncaught_exception,
+        ) = exec_func_with_error_handling(test_func, self.ctx)
+
+        assert run_without_errors is False
+        assert rerun_exception_data is None
+        assert premature_stop is True
+        assert uncaught_exception is None
 
 
 class TestOnScriptErrorHandler(unittest.TestCase):
@@ -330,3 +358,53 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         )
         # The original exception should still be shown in the UI
         mock_show.assert_called_once_with(test_exception)
+
+
+class TestModifiedSysPath(unittest.TestCase):
+    """Tests for the modified_sys_path context manager."""
+
+    def test_inserts_and_removes_path(self) -> None:
+        """The path is added on enter and removed on exit when not already present."""
+        unique_path = "/tmp/streamlit-modified-sys-path-test-unique"
+        assert unique_path not in sys.path
+
+        try:
+            with modified_sys_path(unique_path):
+                assert sys.path[0] == unique_path
+
+            assert unique_path not in sys.path
+        finally:
+            # Defensive cleanup in case a mid-test assertion leaves
+            # the path on sys.path (sys.path is shared global state).
+            sys.path[:] = [p for p in sys.path if p != unique_path]
+
+    def test_does_not_remove_path_already_on_sys_path(self) -> None:
+        """If the path is already on sys.path, exit must not remove it."""
+        unique_path = "/tmp/streamlit-modified-sys-path-test-existing"
+        sys.path.insert(0, unique_path)
+        try:
+            with modified_sys_path(unique_path):
+                assert sys.path.count(unique_path) == 1
+
+            assert unique_path in sys.path
+        finally:
+            sys.path.remove(unique_path)
+
+    def test_repr_returns_string(self) -> None:
+        """modified_sys_path.__repr__ identifies the context manager."""
+        assert "modified_sys_path" in repr(modified_sys_path("/tmp/some-path"))
+
+    def test_exit_handles_path_removed_externally(self) -> None:
+        """ValueError from sys.path.remove is swallowed when the entry is gone."""
+        unique_path = "/tmp/streamlit-modified-sys-path-removed-externally"
+        assert unique_path not in sys.path
+
+        try:
+            # Removing the entry from inside the context exercises the
+            # ValueError-swallowing branch on exit.
+            with modified_sys_path(unique_path):
+                sys.path.remove(unique_path)
+
+            assert unique_path not in sys.path
+        finally:
+            sys.path[:] = [p for p in sys.path if p != unique_path]

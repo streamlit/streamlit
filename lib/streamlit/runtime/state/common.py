@@ -55,6 +55,11 @@ WidgetCallback: TypeAlias = Callable[..., None]
 # Currently only supports binding to query params
 BindOption: TypeAlias = Literal["query-params"] | None
 
+# Type for the persist_state parameter on widgets.
+# "page" keeps the widget value while it is not rendered on the same page.
+# "session" keeps it for the whole session, including across page switches.
+PersistStateOption: TypeAlias = Literal["page", "session"] | None
+
 # A deserializer receives the value from whatever field is set on the
 # WidgetState proto, and returns a regular python value. A serializer
 # receives a regular python value, and returns something suitable for
@@ -154,6 +159,11 @@ class WidgetMetadata(Generic[T]):
     # Optional binding for the widget's value to external state (e.g. query params)
     bind: BindOption = None
 
+    # Optional server-side persistence of the widget's value when it is not
+    # rendered. "page" keeps the value while on the same page; "session" keeps it
+    # for the whole session, including across page switches. None disables it.
+    persist_state: PersistStateOption = None
+
     # The list of valid formatted option strings for selection widgets.
     # When set, _seed_widget_from_url validates URL values against this list and
     # rejects any that aren't valid options (e.g., ?foo=invalid). Widgets with a fixed set
@@ -207,10 +217,18 @@ class RegisterWidgetResult(Generic[T_co]):
         returned from the frontend.
 
         Implies an update to the frontend is needed.
+    incoming_serialized_value : str or None
+        The widget's stored serialized (wire) value as it entered this run,
+        captured before this run's serializer was applied. ``None`` for
+        non-string widgets or when no value is stored yet. Because it's the raw
+        wire form (not re-derived from the deserialized ``value``), callers can
+        reconcile a stored value against freshly computed state even when the
+        deserialized value is stale.
     """
 
     value: T_co
     value_changed: bool
+    incoming_serialized_value: str | None = None
 
     @classmethod
     def failure(

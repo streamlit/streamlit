@@ -124,6 +124,13 @@ updates:
     # Allow a limited number of update PRs at a time
     # to keep the number of parallel dependency updates manageable.
     open-pull-requests-limit: 3
+    # The published package manifest is owned by the /lib uv job below. The
+    # root uv job should only update the dev/test environment.
+    exclude-paths:
+      - "lib/pyproject.toml"
+    # Avoid raising lower-bound constraints when the latest release is already
+    # allowed; keeps the dev/test environment on broad ranges.
+    versioning-strategy: increase-if-necessary
 
     # Use cooldown to avoid updating dependencies too frequently
     # and minimize risk of supply chain attacks.
@@ -143,6 +150,13 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 3
+    # Let Dependabot classify the published Streamlit package as a library, which
+    # widens supported version ranges internally. Explicit
+    # `versioning-strategy: widen` is not currently accepted for the uv ecosystem
+    # by GitHub's dependabot.yml schema (only lockfile-only, auto, increase, and
+    # increase-if-necessary are), so `auto` is used to opt into widening.
+    # Tracking issue: https://github.com/dependabot/dependabot-core/issues/15290
+    versioning-strategy: auto
 
     cooldown:
       default-days: 5
@@ -164,6 +178,12 @@ updates:
       - "impact:internal"
       - "autofix"
       - "never-stale"
+
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action/init"
+          - "github/codeql-action/analyze"
 
   # Keep pre-commit hooks up to date
   - package-ecosystem: "pre-commit"

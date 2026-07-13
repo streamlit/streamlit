@@ -15,22 +15,25 @@ on:
         required: false
         type: string
 
-# Computed PR number and model for use in jobs
-# Model priority: manual input > repository variable (AI_PR_REVIEW_MODELS) > default
+# Computed PR number and model sets for use in jobs
+# Model priority: manual input > ai-final-review label > repository variable (AI_PR_REVIEW_MODELS) > default
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
-  MODEL: ${{ github.event.inputs.model || vars.AI_PR_REVIEW_MODELS || 'gpt-5.3-codex-high,claude-4.6-opus-high-thinking' }}
+  MODEL_INPUT: ${{ github.event.inputs.model || '' }}
+  DEFAULT_AI_PR_REVIEW_MODELS: ${{ vars.AI_PR_REVIEW_MODELS || 'gpt-5.3-codex-high,claude-4.6-opus-high-thinking' }}
+  FINAL_AI_PR_REVIEW_MODELS: "gpt-5.4-xhigh,gemini-3.1-pro,claude-opus-4-8-thinking-xhigh"
 
 jobs:
   # Job 1: Parse model list and check for API key
   parse-models:
-    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-review'
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-review' || github.event.label.name == 'ai-final-review'
     runs-on: ubuntu-latest
     outputs:
       models_json: ${{ steps.parse.outputs.models_json }}
       model_count: ${{ steps.parse.outputs.model_count }}
       judge_model: ${{ steps.parse.outputs.judge_model }}
       judge_model_id: ${{ steps.parse.outputs.judge_model_id }}
+      trigger_label: ${{ steps.parse.outputs.trigger_label }}
       has_key: ${{ steps.check-key.outputs.has_key }}
     steps:
       - name: Check for API key
@@ -47,23 +50,35 @@ jobs:
 
       - name: Parse model list
         id: parse
+        env:
+          EVENT_LABEL: ${{ github.event.label.name }}
         run: |
-          # Guard against empty/whitespace model input
+          REVIEW_LABEL=""
+          if [ "$EVENT_LABEL" = "ai-review" ] || [ "$EVENT_LABEL" = "ai-final-review" ]; then
+            REVIEW_LABEL="$EVENT_LABEL"
+          fi
+
+          if [ "$REVIEW_LABEL" = "ai-final-review" ]; then
+            FALLBACK_MODEL="$FINAL_AI_PR_REVIEW_MODELS"
+          else
+            FALLBACK_MODEL="$DEFAULT_AI_PR_REVIEW_MODELS"
+          fi
+
+          MODEL="$MODEL_INPUT"
           if [ -z "${MODEL// /}" ]; then
-            echo "::error::MODEL is empty or whitespace-only. Using default."
-            MODEL="claude-4.6-opus-high-thinking"
+            MODEL="$FALLBACK_MODEL"
           fi
 
           # Split comma-separated, trim whitespace, convert to JSON array
-          # Use $MODEL shell variable (set from env) instead of ${{ env.MODEL }} for security
+          # Use $MODEL shell variable instead of direct expression interpolation for security
           MODELS_JSON=$(echo "$MODEL" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | jq -R . | jq -sc .)
 
           # Verify we have at least one model
           MODEL_COUNT=$(echo "$MODELS_JSON" | jq 'length')
           if [ "$MODEL_COUNT" -eq 0 ]; then
-            echo "::error::No valid models found after parsing. Using default."
-            MODELS_JSON='["claude-4.6-opus-high-thinking"]'
-            MODEL_COUNT=1
+            echo "::error::No valid models found after parsing. Using fallback."
+            MODELS_JSON=$(echo "$FALLBACK_MODEL" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | jq -R . | jq -sc .)
+            MODEL_COUNT=$(echo "$MODELS_JSON" | jq 'length')
           fi
 
           # The last model in the list serves as the "judge" for consolidating multi-model reviews
@@ -75,11 +90,13 @@ jobs:
           echo "model_count=$MODEL_COUNT" >> $GITHUB_OUTPUT
           echo "judge_model=$JUDGE_MODEL" >> $GITHUB_OUTPUT
           echo "judge_model_id=$JUDGE_MODEL_ID" >> $GITHUB_OUTPUT
+          echo "trigger_label=$REVIEW_LABEL" >> $GITHUB_OUTPUT
 
           echo "Parsed models: $MODELS_JSON"
           echo "Model count: $MODEL_COUNT"
           echo "Judge model: $JUDGE_MODEL"
           echo "Judge model ID: $JUDGE_MODEL_ID"
+          echo "Trigger label: ${REVIEW_LABEL:-manual}"
 
   # Job 2: AI performs the review with READ-ONLY access (matrix for multi-model)
   ai-pr-review:
@@ -381,7 +398,7 @@ jobs:
   # Job 4: Post the review with WRITE access (no agent)
   ai-pr-post-review:
     needs: [parse-models, ai-pr-review, consolidate-reviews]
-    # Run on success or failure, but NOT when skipped (i.e., label wasn't 'ai-review')
+    # Run on success or failure, but NOT when skipped (i.e., label wasn't an AI review label)
     if: always() && needs.parse-models.result != 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -391,14 +408,20 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Remove 'ai-review' label
+      - name: Remove AI review request label
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
+          EVENT_LABEL: ${{ github.event.label.name }}
         run: |
-          gh pr edit "$PR_NUMBER_ENV" --remove-label "ai-review" --repo "$REPOSITORY"
+          # Derive the label to remove from the triggering event rather than the
+          # parse-models output, so the label is still cleaned up even if the parse
+          # step failed. The equality checks keep removal limited to known labels.
+          if [ "$EVENT_LABEL" = "ai-review" ] || [ "$EVENT_LABEL" = "ai-final-review" ]; then
+            gh pr edit "$PR_NUMBER_ENV" --remove-label "$EVENT_LABEL" --repo "$REPOSITORY" || true
+          fi
 
       - name: Download consolidated review
         id: download-consolidated
@@ -424,16 +447,27 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
+          TRIGGER_LABEL: ${{ needs.parse-models.outputs.trigger_label }}
         run: |
-          gh pr comment "$PR_NUMBER_ENV" --body "ℹ️ **AI Review Not Available via Label**
+          if [ -n "$TRIGGER_LABEL" ]; then
+            REQUEST_SOURCE="The \`$TRIGGER_LABEL\` label cannot trigger AI reviews for this PR"
+          else
+            REQUEST_SOURCE="The AI PR Review workflow cannot run for this PR"
+          fi
 
-          The \`ai-review\` label cannot trigger AI reviews for this PR because the required API key is not available. This typically happens for PRs from forked repositories.
+          cat > missing-key-comment.md <<EOF
+          ℹ️ **AI Review Not Available**
+
+          ${REQUEST_SOURCE} because the required API key is not available. This typically happens for PRs from forked repositories.
 
           **To request an AI review, a maintainer can:**
           1. Go to the [AI PR Review workflow](https://github.com/streamlit/streamlit/actions/workflows/ai-pr-review.yml)
           2. Click **Run workflow**
           3. Enter the PR number: \`$PR_NUMBER_ENV\`
-          4. Click **Run workflow**" --repo "$REPOSITORY"
+          4. Click **Run workflow**
+          EOF
+
+          gh pr comment "$PR_NUMBER_ENV" --body-file missing-key-comment.md --repo "$REPOSITORY"
 
       - name: Post review
         id: post_review
@@ -521,12 +555,23 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           SERVER_URL: ${{ github.server_url }}
           RUN_ID: ${{ github.run_id }}
+          TRIGGER_LABEL: ${{ needs.parse-models.outputs.trigger_label }}
         run: |
-          gh pr comment "$PR_NUMBER_ENV" --body "⚠️ **AI Review Failed**
+          if [ -n "$TRIGGER_LABEL" ]; then
+            RETRY_TEXT="You can retry by adding the \`$TRIGGER_LABEL\` label again or manually triggering the workflow."
+          else
+            RETRY_TEXT="You can retry by manually triggering the workflow."
+          fi
+
+          cat > failure-comment.md <<EOF
+          ⚠️ **AI Review Failed**
 
           The AI review job failed to complete. Please check the [workflow run](${SERVER_URL}/$REPOSITORY/actions/runs/${RUN_ID}) for details.
 
-          You can retry by adding the 'ai-review' label again or manually triggering the workflow." --repo "$REPOSITORY"
+          ${RETRY_TEXT}
+          EOF
+
+          gh pr comment "$PR_NUMBER_ENV" --body-file failure-comment.md --repo "$REPOSITORY"
 
       - name: Apply label based on verdict
         if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success'

@@ -36,7 +36,7 @@ from streamlit.elements.lib.options_selector_utils import (
     SelectWidgetFilterMode,
     create_mappings,
     maybe_coerce_enum,
-    validate_and_sync_value_with_options,
+    resolve_value_against_options,
     validate_select_widget_filter_mode,
 )
 from streamlit.elements.lib.policies import (
@@ -57,6 +57,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -190,6 +191,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> None: ...  # Returns None if options is empty and accept_new_options is False
 
     @overload
@@ -212,6 +214,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T: ...
 
     @overload
@@ -234,6 +237,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | str: ...
 
     @overload
@@ -256,6 +260,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | None: ...
 
     @overload
@@ -278,6 +283,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | str | None: ...
 
     @overload
@@ -300,6 +306,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | str | None: ...
 
     @gather_metrics("selectbox")
@@ -322,6 +329,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | str | None:
         r"""Display a select widget.
 
@@ -481,6 +489,21 @@ class SelectboxMixin:
             from the URL. If ``index`` is ``None``, an empty query
             parameter (e.g., ``?my_key=``) clears the widget.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         any
@@ -567,6 +590,7 @@ class SelectboxMixin:
             filter_mode=filter_mode,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -589,6 +613,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> T | str | None:
         key = to_key(key)
@@ -693,6 +718,7 @@ class SelectboxMixin:
             ctx=ctx,
             value_type="string_value",
             bind=bind,
+            persist_state=persist_state,
             # Clearable when index=None: the widget can be in an empty state,
             # so ?key= (empty URL param) should clear the widget to None.
             clearable=(index is None),
@@ -707,12 +733,17 @@ class SelectboxMixin:
             current_value = widget_state.value
             value_needs_reset = False
         else:
-            # Validate the current value against the new options.
-            # If the value is no longer valid (not in options), reset to default.
-            # This handles the case where options change dynamically and the
-            # previously selected value is no longer available.
-            current_value, value_needs_reset = validate_and_sync_value_with_options(
-                widget_state.value, opt, index, key, format_func
+            # Reset the selection only if the stored value no longer matches any
+            # option; see resolve_value_against_options for the format_func and
+            # wire-label fallback logic.
+            current_value, value_needs_reset = resolve_value_against_options(
+                widget_state.value,
+                opt,
+                formatted_option_to_option_index,
+                index,
+                key,
+                format_func,
+                widget_state.incoming_serialized_value,
             )
 
         if value_needs_reset or widget_state.value_changed:
@@ -735,5 +766,5 @@ class SelectboxMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

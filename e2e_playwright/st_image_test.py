@@ -218,19 +218,25 @@ def test_svg_images(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 def set_fullscreen(image_wrapper: Locator, open: bool):
+    toolbar = image_wrapper.get_by_test_id("stElementToolbar")
     fullscreen_button = image_wrapper.get_by_role(
         "button", name="Fullscreen" if open else "Close fullscreen"
     )
+    # The toolbar (and its fullscreen button) only becomes interactive on hover
+    # and fades in via an opacity transition. In webkit a click dispatched while
+    # the toolbar is still fading in can be swallowed, leaving fullscreen
+    # un-toggled. Hover first and wait for the toolbar to be fully opaque before
+    # clicking (mirrors the pattern in shared/toolbar_utils.py).
+    image_wrapper.hover()
+    expect(toolbar).to_have_css("opacity", "1")
     expect(fullscreen_button).to_be_visible()
     fullscreen_button.click()
-    # Wait for the fullscreen CSS transition to complete by checking position style
-    # The stFullScreenFrame element (grandparent of stImage, parent of image_wrapper)
-    # becomes position:fixed when open
-    fullscreen_frame = image_wrapper.locator("..")
-    if open:
-        expect(fullscreen_frame).to_have_css("position", "fixed")
-    else:
-        expect(fullscreen_frame).to_have_css("position", "static")
+    # Wait for the toolbar button to flip to its opposite label, which confirms
+    # the fullscreen state has finished toggling before we take a snapshot.
+    toggled_button = image_wrapper.get_by_role(
+        "button", name="Close fullscreen" if open else "Fullscreen"
+    )
+    expect(toggled_button).to_be_visible()
 
 
 # SVGs without width or height are not rendered correctly in Firefox

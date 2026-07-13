@@ -17,6 +17,7 @@
 import {
   FC,
   memo,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -25,7 +26,13 @@ import {
 } from "react"
 
 import { Global } from "@emotion/react"
-import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
+import {
+  Check,
+  ContentCopy,
+  FileDownload,
+  InsertChart,
+  TableChart,
+} from "@emotion-icons/material-outlined"
 
 import {
   IArrowData,
@@ -33,6 +40,7 @@ import {
   streamlit,
   VegaLiteChart as VegaLiteChartProto,
 } from "@streamlit/protobuf"
+import { isLocalhost } from "@streamlit/utils"
 
 import {
   shouldHeightStretch,
@@ -45,6 +53,7 @@ import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame/ReadOnlyGrid"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -239,10 +248,52 @@ const ArrowVegaLiteChart: FC<Props> = ({
 
   // This hook provides lifecycle functions for creating and removing the view.
   // It also will update the view if the data changes (and not the spec)
-  const { createView, updateView, finalizeView, resizeView, isViewReady } =
-    useVegaEmbed(element, widgetMgr, fragmentId)
+  const {
+    createView,
+    updateView,
+    finalizeView,
+    resizeView,
+    exportToPng,
+    isViewReady,
+  } = useVegaEmbed(element, widgetMgr, fragmentId)
 
   const { data, datasets, spec, baseSpecKey } = element
+  const { isCopied, copyToClipboard } = useCopyToClipboard()
+  const showCopySpecAction = isLocalhost()
+
+  const handleDownloadPng = useCallback(() => {
+    void (async () => {
+      const pngUrl = await exportToPng()
+      if (!pngUrl) {
+        return
+      }
+
+      // Build a `YYYY-MM-DDTHH-MM` timestamp from local time so the filename
+      // reflects the user's wall-clock time rather than UTC.
+      const now = new Date()
+      const pad = (value: number): string => String(value).padStart(2, "0")
+      const timestamp =
+        `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+        `T${pad(now.getHours())}-${pad(now.getMinutes())}`
+      const link = document.createElement("a")
+      link.setAttribute("href", pngUrl)
+      link.setAttribute("download", `${timestamp}_chart.png`)
+      link.style.display = "none"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    })()
+  }, [exportToPng])
+
+  const handleCopySpec = useCallback(() => {
+    // `spec` is typed as string but is the parsed spec object at runtime
+    // (see useVegaElementPreprocessor), so we serialize it for the clipboard.
+    // Guard against the (typed) string case defensively so we never
+    // double-encode the JSON if the contract ever changes.
+    copyToClipboard(
+      typeof spec === "string" ? spec : JSON.stringify(spec, null, 2)
+    )
+  }, [copyToClipboard, spec])
 
   // Track the last dimensions to avoid redundant resize calls
   const lastDimensionsRef = useRef<{ width: number; height: number } | null>(
@@ -444,6 +495,23 @@ const ArrowVegaLiteChart: FC<Props> = ({
             onClick={() => {
               setShowData(true)
             }}
+          />
+        )}
+        {isViewReady && (
+          <ToolbarAction
+            label="Download as PNG"
+            icon={FileDownload}
+            onClick={handleDownloadPng}
+          />
+        )}
+        {showCopySpecAction && (
+          <ToolbarAction
+            // Announce the copied state to assistive tech (the icon swap alone
+            // is not exposed as an accessible name change). Keep the default
+            // label as the spec-specific name so e2e/queries stay stable.
+            label={isCopied ? "Copied!" : "Copy Vega-Lite spec"}
+            icon={isCopied ? Check : ContentCopy}
+            onClick={handleCopySpec}
           />
         )}
       </Toolbar>

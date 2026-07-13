@@ -78,6 +78,13 @@ message BackendOperationRequest {
   oneof payload {
     // Deferred file download request
     DeferredFileRequestPayload deferred_file = 3;
+
+    // One-click install of the bundled Streamlit agent skills
+    InstallSkillsRequestPayload install_skills = 4;
+
+    // Permanently dismiss the "install skills" nudge (writes a server-side
+    // marker so it is not shown again)
+    DismissSkillsNudgeRequestPayload dismiss_skills_nudge = 5;
   }
 }
 
@@ -85,3 +92,10 @@ message BackendOperationRequest {
 message DeferredFileRequestPayload {
   string file_id = 1;
 }
+
+// Payload for one-click skills install. Currently carries no options; the
+// server installs in project mode by default.
+message InstallSkillsRequestPayload {}
+
+// Payload to permanently dismiss the "install skills" nudge.
+message DismissSkillsNudgeRequestPayload {}

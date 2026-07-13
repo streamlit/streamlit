@@ -20,6 +20,7 @@ from e2e_playwright.conftest import (
 )
 from e2e_playwright.shared.app_utils import get_element_by_key
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
+from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 TOTAL_LINE_CHARTS = 15
 
@@ -29,8 +30,9 @@ def test_line_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     line_chart_elements = app.get_by_test_id("stVegaLiteChart")
     expect(line_chart_elements).to_have_count(TOTAL_LINE_CHARTS)
 
-    # Also make sure that all Vega display objects are rendered:
-    expect(line_chart_elements.locator("[role='graphics-document']")).to_have_count(
+    # Also make sure that all Vega display objects are rendered (the
+    # graphics-document role is set on each chart container once rendered):
+    expect(get_vega_graphics_document(line_chart_elements)).to_have_count(
         TOTAL_LINE_CHARTS
     )
 
@@ -64,16 +66,14 @@ def test_line_chart_width_height(app: Page, assert_snapshot: ImageCompareFunctio
     """Test that st.line_chart renders correctly with different width and height."""
     content_width_chart = app.get_by_test_id("stVegaLiteChart").nth(12)
 
-    expect(content_width_chart.locator("[role='graphics-document']")).to_have_count(1)
+    expect(get_vega_graphics_document(content_width_chart)).to_have_count(1)
     assert_snapshot(
         content_width_chart,
         name="st_line_chart-width_content",
     )
 
     stretch_height_chart_container = get_element_by_key(app, "test_height_stretch")
-    expect(
-        stretch_height_chart_container.locator("[role='graphics-document']")
-    ).to_have_count(1)
+    expect(get_vega_graphics_document(stretch_height_chart_container)).to_have_count(1)
     assert_snapshot(
         stretch_height_chart_container,
         name="st_line_chart-height_stretch",
@@ -88,9 +88,7 @@ def test_fixed_width_in_horizontal_container(
         app, "test_fixed_width_in_horizontal_container"
     )
 
-    expect(
-        fixed_width_chart_container.locator("[role='graphics-document']")
-    ).to_have_count(1)
+    expect(get_vega_graphics_document(fixed_width_chart_container)).to_have_count(1)
     assert_snapshot(
         fixed_width_chart_container,
         name="st_line_chart-fixed_width_in_horizontal_container",
@@ -106,7 +104,7 @@ def test_content_width_chart_show_data(
 
     content_width_chart = all_charts.nth(12)
     expect(content_width_chart).to_be_visible()
-    expect(content_width_chart.locator("[role='graphics-document']")).to_be_visible()
+    expect(get_vega_graphics_document(content_width_chart)).to_be_visible()
 
     # Get toolbar from parent container (standard DOM structure for Vega-Lite charts)
     toolbar = content_width_chart.locator("..").get_by_test_id("stElementToolbar")
@@ -131,8 +129,9 @@ def test_themed_line_chart_rendering(
     line_chart_elements = themed_app.get_by_test_id("stVegaLiteChart")
     expect(line_chart_elements).to_have_count(TOTAL_LINE_CHARTS)
 
-    # Also make sure that all Vega display objects are rendered:
-    expect(line_chart_elements.locator("[role='graphics-document']")).to_have_count(
+    # Also make sure that all Vega display objects are rendered (the
+    # graphics-document role is set on each chart container once rendered):
+    expect(get_vega_graphics_document(line_chart_elements)).to_have_count(
         TOTAL_LINE_CHARTS
     )
 
@@ -149,7 +148,7 @@ def test_multi_line_hover(app: Page, assert_snapshot: ImageCompareFunction):
     expect(multi_line_chart).to_be_visible()
 
     multi_line_chart.scroll_into_view_if_needed()
-    multi_line_chart.locator("[role='graphics-document']").hover(
+    get_vega_graphics_document(multi_line_chart).hover(
         position={"x": 100, "y": 100}, force=True
     )
 
@@ -165,7 +164,7 @@ def test_single_line_hover(app: Page, assert_snapshot: ImageCompareFunction):
     expect(single_line_chart).to_be_visible()
 
     single_line_chart.scroll_into_view_if_needed()
-    single_line_chart.locator("[role='graphics-document']").hover(
+    get_vega_graphics_document(single_line_chart).hover(
         position={"x": 100, "y": 100}, force=True
     )
 
@@ -183,7 +182,7 @@ def test_column_order_with_colors(app: Page, assert_snapshot: ImageCompareFuncti
     expect(column_order_chart).to_be_visible()
 
     # The chart should have 3 lines in the specified order
-    vega_display = column_order_chart.locator("[role='graphics-document']")
+    vega_display = get_vega_graphics_document(column_order_chart)
     expect(vega_display).to_be_visible()
 
     # Hover to show tooltip and verify the order

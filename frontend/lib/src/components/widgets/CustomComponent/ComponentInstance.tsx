@@ -30,13 +30,12 @@ import { flushSync } from "react-dom"
 import {
   ComponentInstance as ComponentInstanceProto,
   ISpecialArg,
-  Skeleton as SkeletonProto,
 } from "@streamlit/protobuf"
 import { StreamlitConfig } from "@streamlit/utils"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
-import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
 import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -411,11 +410,10 @@ function ComponentInstance(props: Props): ReactElement {
     // if height is explicitly set to 0, we don’t want to show the skeleton at all
     frameHeight !== 0 && (
       // Skeletons will have a default height if no frameHeight was specified
-      <Skeleton
-        element={SkeletonProto.create({
-          height: frameHeight,
-          style: SkeletonProto.SkeletonStyle.ELEMENT,
-        })}
+      <SquareSkeleton
+        data-testid="stSkeleton"
+        height={frameHeight ? `${frameHeight}px` : undefined}
+        aria-hidden="true"
       />
     )
 

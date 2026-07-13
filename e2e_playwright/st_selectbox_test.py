@@ -18,7 +18,12 @@ from typing import TYPE_CHECKING
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.conftest import (
+    rerun_app,
+    wait_for_app_loaded,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -34,7 +39,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 26
+NUM_SELECTBOXES = 28
 
 
 def get_selectbox_input(
@@ -159,6 +164,24 @@ def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFuncti
     selection_dropdown.get_by_role("option").nth(1).click()
     # Check that selection worked:
     expect_markdown(app, "value 4: e2e/scripts/st_warning.py")
+
+
+def test_keeps_selection_with_identity_dependent_format_func(app: Page):
+    """Test that custom-object selections persist with an identity-dependent format_func.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15618. The
+    option class is redefined every rerun, so a format_func that looks options up
+    in a dict used to raise on the stored value and revert the selection.
+    """
+    label = "selectbox 24 (custom objects with identity-dependent format_func)"
+    select_selectbox_option(app, label, "II (two)")
+
+    # The selection must reflect the second option, not revert to the first.
+    expect_markdown(app, "value 24: two")
+
+    # It must also survive a fresh rerun (where the bug originally triggered).
+    rerun_app(app)
+    expect_markdown(app, "value 24: two")
 
 
 def test_handles_option_selection_via_typing(app: Page):
@@ -529,6 +552,40 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
 
     options.nth(1).click()
     expect_markdown(app, "value 23: No")
+
+
+def test_selectbox_virtualizes_large_option_list(app: Page):
+    """Test that a selectbox with many options only renders a small window of
+    option rows (virtualization) while keeping far-down options selectable.
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 25 (large virtualized list)")
+    selectbox_input.click()
+    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
+    selectbox_input.press("ArrowDown")
+
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(selection_dropdown).to_be_visible()
+
+    options = selection_dropdown.get_by_role("option")
+    # The top of the list is rendered when the dropdown opens.
+    expect(options.first).to_be_visible()
+    expect(
+        selection_dropdown.get_by_role("option", name="Option 0", exact=True)
+    ).to_be_visible()
+
+    # Virtualization: only a small window of the 1000 options is in the DOM, so a
+    # far-down option is NOT rendered even though it exists in the collection.
+    # Use wait_until (auto-retrying) rather than a bare assert on a snapshot
+    # count to avoid flakiness while the virtualizer settles its window.
+    wait_until(app, lambda: options.count() < 100)
+    expect(
+        selection_dropdown.get_by_role("option", name="Option 999", exact=True)
+    ).to_have_count(0)
+
+    # A far-down option can still be selected by typing to filter for it.
+    selectbox_input.fill("Option 987")
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 25: Option 987")
 
 
 # --- Query param binding tests ---

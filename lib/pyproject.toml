@@ -72,10 +72,9 @@ dependencies = [
   "pydeck>=0.8.0b4,<1",
   # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
   "protobuf>=3.20,<8",
-  # pyarrow is not semantically versioned, gets new major versions frequently, and
-  # doesn't tend to break the API on major version upgrades, so we don't put an
-  # upper bound on it.
-  "pyarrow>=7.0",
+  # PyArrow 25.0.0 can segfault when first imported from a short-lived worker thread.
+  # See https://github.com/apache/arrow/issues/50471.
+  "pyarrow>=7.0,<25",
   "requests>=2.27,<3",
   "tenacity>=8.1.0,<10",
   # Starting from Python 3.11, Python has built in support for reading TOML files.
@@ -110,8 +109,12 @@ snowflake = [
 ]
 # Optional dependency required for PDF rendering:
 pdf = ["streamlit-pdf>=1.0.0"]
-# Optional dependency required for auth:
-auth = ["Authlib>=1.3.2"]
+# Optional dependencies required for auth:
+auth = [
+  "Authlib>=1.3.2",
+  # Required by Authlib's Starlette integration.
+  "httpx>=0.24.1",
+]
 # Optional charting dependencies:
 charts = [
   "matplotlib>=3.0.0",
