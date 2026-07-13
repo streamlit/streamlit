@@ -245,18 +245,30 @@ def test_install_skills_handler_reports_failure() -> None:
     assert not response.HasField("install_skills")
 
 
-def test_install_skills_handler_forwards_failure_reason() -> None:
+@pytest.mark.parametrize(
+    ("reason", "message"),
+    [
+        ("copy_failed", "Couldn't write .agents/skills/developing-with-streamlit."),
+        (
+            "source_missing",
+            "The bundled skill was not found in your Streamlit installation.",
+        ),
+        ("conflict", ".agents/skills/developing-with-streamlit already exists."),
+        ("symlinks_unsupported", "Symlinks not supported."),
+    ],
+)
+def test_install_skills_handler_forwards_failure_reason(
+    reason: str, message: str
+) -> None:
     """A ``skills._InstallError`` propagates its machine-readable ``reason`` into
     the response's ``error_reason`` so the client can split install-failure
-    telemetry by cause (e.g. the Windows symlink → GitHub-download fallback)."""
+    telemetry by cause (e.g. a copy failure vs a pre-existing conflict)."""
     with (
         patch("streamlit.config.get_option", return_value=False),
         patch.object(skills, "detect_installed_agents", return_value=["claude"]),
         patch(
             "streamlit.web.skills.install_skills",
-            side_effect=skills._InstallError(
-                "Failed to download skills from GitHub", reason="download_failed"
-            ),
+            side_effect=skills._InstallError(message, reason=reason),
         ),
     ):
         response = asyncio.run(
@@ -265,8 +277,8 @@ def test_install_skills_handler_forwards_failure_reason() -> None:
             )
         )
 
-    assert response.error_msg == "Failed to download skills from GitHub"
-    assert response.error_reason == "download_failed"
+    assert response.error_msg == message
+    assert response.error_reason == reason
     assert not response.HasField("install_skills")
 
 

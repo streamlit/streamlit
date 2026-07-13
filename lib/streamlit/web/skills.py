@@ -16,18 +16,14 @@
 
 from __future__ import annotations
 
-import io
 import os
 import shutil
 import sys
-import tarfile
 import tempfile
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 from typing import Final
-from urllib import request
-from urllib.error import URLError
 
 import click
 
@@ -35,11 +31,6 @@ import streamlit
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
-
-# GitHub URL for downloading global skills (versioned tag)
-_GLOBAL_SKILLS_URL: Final[str] = (
-    "https://github.com/streamlit/agent-skills/archive/refs/tags/v1.tar.gz"
-)
 
 # Skill name installed in global mode
 _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
@@ -50,7 +41,7 @@ class _InstallError(click.ClickException):
 
     Behaves like a normal ``click.ClickException`` — its ``format_message`` still
     supplies the user-facing text shown in the CLI and the in-app nudge — but also
-    carries a bounded ``reason`` (e.g. ``"conflict"``, ``"download_failed"``,
+    carries a bounded ``reason`` (e.g. ``"conflict"``, ``"copy_failed"``,
     ``"symlinks_unsupported"``) that the backend-operation handler forwards to the
     client so the nudge's install-failure telemetry can be split by cause. The
     reason is a fixed vocabulary set at each raise site, never user input, so it is
@@ -86,7 +77,13 @@ class _InstallResult:
 
     installed: list[str] = field(default_factory=list)
     up_to_date: list[str] = field(default_factory=list)
+    # ``skipped``: a pre-existing, non-Streamlit path blocks the install (a user
+    # file or foreign symlink) — the user must remove it. ``failed``: the write
+    # itself errored (permissions, disk, or the Windows 260-char path limit) even
+    # though nothing was in the way. They surface distinct errors and distinct
+    # telemetry reasons ("conflict" vs "copy_failed"), so keep them separate.
     skipped: list[str] = field(default_factory=list)
+    failed: list[str] = field(default_factory=list)
 
 
 def _get_source_skills_dir() -> Path:
@@ -440,68 +437,14 @@ def _install_skill_copy(
         temp_path = target_path.with_name(f".{skill_name}.tmp")
         if temp_path.exists() and target_path.exists():
             shutil.rmtree(temp_path, ignore_errors=True)
-        result.skipped.append(f"{rel_target_path} (copy failed: {e})")
-
-
-def _download_global_skill(url: str, skill_name: str) -> Path:
-    """Download and extract global skill from GitHub.
-
-    Returns path to extracted skill directory in a temporary location.
-    Raises click.ClickException on network or extraction errors.
-    """
-    try:
-        with request.urlopen(url, timeout=30) as response:  # noqa: S310
-            data = response.read()
-    except URLError as e:
-        raise _InstallError(
-            f"Failed to download skills from GitHub: {e}\n"
-            "Check your network connection and try again.",
-            reason="download_failed",
-        ) from e
-
-    # Extract tarball to temp directory
-    temp_dir = Path(tempfile.mkdtemp(prefix="streamlit-skills-"))
-    try:
-        with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
-            # Security: prevent path traversal and other attacks by filtering members.
-            # On Python 3.12+, use filter='data' which blocks absolute paths,
-            # parent directory references (..), and special files (devices, fifos, etc.).
-            # On earlier versions, manually filter to regular files and directories only.
-            if sys.version_info >= (3, 12):
-                tar.extractall(temp_dir, filter="data")
-            else:
-                # Manual safe extraction for Python 3.10/3.11
-                safe_members = [
-                    m
-                    for m in tar.getmembers()
-                    if (m.isfile() or m.isdir())
-                    and not os.path.isabs(m.name)
-                    and ".." not in m.name.split("/")
-                ]
-                tar.extractall(temp_dir, members=safe_members)  # noqa: S202
-    except tarfile.TarError as e:
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        raise _InstallError(
-            f"Failed to extract skills archive: {e}", reason="extract_failed"
-        ) from e
-
-    # Find skill directory - search all top-level directories in case archive has
-    # multiple entries (typically GitHub archives have one: repo-name-tag/)
-    extracted_dirs = [d for d in temp_dir.iterdir() if d.is_dir()]
-    if not extracted_dirs:
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        raise _InstallError("Downloaded archive is empty", reason="download_empty")
-
-    for archive_root in extracted_dirs:
-        skill_path = archive_root / skill_name
-        if skill_path.is_dir() and (skill_path / "SKILL.md").is_file():
-            return skill_path
-
-    shutil.rmtree(temp_dir, ignore_errors=True)
-    raise _InstallError(
-        f"Skill '{skill_name}' not found in downloaded archive",
-        reason="archive_missing_skill",
-    )
+        # A write failure (permissions, disk, Windows MAX_PATH), NOT a conflict:
+        # nothing pre-existed at the target. Bucket it separately so it surfaces
+        # the right message/reason, and log the underlying OS error (never shown
+        # to the user, so it can't leak an absolute path into the nudge).
+        _LOGGER.warning(
+            "Failed to copy skill %r into %s", skill_name, target_dir, exc_info=e
+        )
+        result.failed.append(f"{rel_target_path} (copy failed: {e})")
 
 
 def _print_result(result: _InstallResult) -> None:
@@ -524,6 +467,11 @@ def _print_result(result: _InstallResult) -> None:
         click.secho("\n⚠ Skipped due to conflicts:", fg="yellow", bold=True)
         for path in result.skipped:
             click.echo(f"  {click.style('→', fg='yellow')} {path}")
+
+    if result.failed:
+        click.secho("\n✗ Failed to write:", fg="red", bold=True)
+        for path in result.failed:
+            click.echo(f"  {click.style('→', fg='red')} {path}")
 
 
 def _prompt_install_mode() -> str:
@@ -592,12 +540,14 @@ def _confirm_project_installation(
 def _confirm_global_installation(target_dirs: list[Path]) -> bool:
     """Show global installation plan and confirm with user."""
     click.echo()
-    click.echo("Installing globally (downloads from GitHub)")
+    click.echo(
+        "Installing globally (copies the bundled skill from your Streamlit install)"
+    )
 
     click.secho("\nSource:", bold=True)
     click.echo(
         f"  {click.style('•', fg='magenta')} "
-        f"{click.style(_GLOBAL_SKILLS_URL, fg='cyan')}"
+        f"{click.style(str(_get_source_skills_dir() / _GLOBAL_SKILL_NAME), fg='cyan')}"
     )
 
     click.secho("\nSkill to install:", bold=True)
@@ -622,29 +572,55 @@ def _confirm_global_installation(target_dirs: list[Path]) -> bool:
     return click.confirm("Proceed with installation?", default=True)
 
 
+def _collapse_display_paths(entries: list[str]) -> str:
+    """Collapse ``"<path> (<reason>)"`` entries to a comma-joined list of concise
+    ``<harness>/skills/<skill>`` tails.
+
+    Install-error messages surface the offending paths so the user knows what to
+    act on, but the in-app nudge shows them verbatim — so we drop everything
+    above the last three path parts to never leak an absolute server path when
+    the server's cwd isn't the project root.
+    """
+    paths = []
+    for entry in entries:
+        raw = entry.split(" (", 1)[0]
+        parts = Path(raw).parts
+        paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
+    return ", ".join(paths)
+
+
 def _conflict_error(skipped: list[str]) -> _InstallError:
     """Build a specific "couldn't install" error that names the conflicting
     paths, rather than a vague "remove conflicting files".
 
     ``skipped`` entries are formatted ``"<path> (<reason>)"``. We surface the
-    paths so the user knows exactly what to remove, collapsed to the concise
-    ``<harness>/skills/<skill>`` tail (like the install summary) so the message
-    never leaks an absolute path when the server's cwd isn't the project root.
-    This message is what the in-app nudge shows verbatim on failure, so it must
-    stand on its own (the CLI's detailed ``_print_result`` output never reaches
-    the browser).
+    paths so the user knows exactly what to remove. This message is what the
+    in-app nudge shows verbatim on failure, so it must stand on its own (the
+    CLI's detailed ``_print_result`` output never reaches the browser).
     """
-    paths = []
-    for entry in skipped:
-        raw = entry.split(" (", 1)[0]
-        parts = Path(raw).parts
-        paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
-    joined = ", ".join(paths)
-    plural = len(paths) != 1
+    joined = _collapse_display_paths(skipped)
+    plural = len(skipped) != 1
     return _InstallError(
         f"{joined} already exist{'' if plural else 's'}. "
         f"Remove {'them' if plural else 'it'} and try again.",
         reason="conflict",
+    )
+
+
+def _copy_failed_error(failed: list[str]) -> _InstallError:
+    """Build a "couldn't write the skill" error for copy failures.
+
+    Distinct from :func:`_conflict_error`: these paths did not pre-exist — the
+    copy itself failed (permissions, disk, or the Windows 260-character path
+    limit). Like the conflict error the message stands on its own for the in-app
+    nudge and collapses to the concise path tail so it never leaks an absolute
+    server path; the underlying OS error is logged, not shown.
+    """
+    joined = _collapse_display_paths(failed)
+    return _InstallError(
+        f"Couldn't write {joined}. Check that you have write permission and "
+        "that the path isn't too long, then try again.",
+        reason="copy_failed",
     )
 
 
@@ -658,8 +634,12 @@ def _install_project_skills(
     # Discover bundled skills
     source_skills_dir = _get_source_skills_dir()
     if not source_skills_dir.is_dir():
+        # Keep the absolute path in the server log only - this message is shown
+        # verbatim in the in-app nudge, so it must not leak a server path.
+        _LOGGER.warning("Bundled skills directory not found at %s", source_skills_dir)
         raise _InstallError(
-            f"Bundled skills directory not found: {source_skills_dir}",
+            "Bundled skills were not found in your Streamlit installation. "
+            "Reinstall Streamlit and try again.",
             reason="source_missing",
         )
 
@@ -782,7 +762,16 @@ def _install_project_skills(
 
 
 def _install_global_skills(*, yes: bool = False) -> _InstallResult:
-    """Install skills globally by downloading from GitHub."""
+    """Install skills globally by copying from the bundled Streamlit package.
+
+    The skill files already ship inside the installed ``streamlit`` package
+    (:func:`_get_source_skills_dir`), so we copy them from local disk instead of
+    downloading from GitHub. This is what the Windows symlink→global fallback
+    reaches, and the old GitHub download made the in-app one-click install fail
+    for ~1 in 8 Windows users on locked-down networks (see issue #15933). Copying
+    the bundled skill also keeps the global install matched to the running
+    Streamlit version, exactly like the project-mode symlinks.
+    """
     target_dirs = _get_global_target_dirs()
 
     # Confirm installation
@@ -790,54 +779,61 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
         click.echo("Installation cancelled.")
         raise click.Abort()
 
-    # Download skill from GitHub
-    click.echo("Downloading skills from GitHub...")
-    skill_path = _download_global_skill(_GLOBAL_SKILLS_URL, _GLOBAL_SKILL_NAME)
+    # Copy the skill from the local package - no network dependency.
+    source_skills_dir = _get_source_skills_dir()
+    if not (source_skills_dir / _GLOBAL_SKILL_NAME / "SKILL.md").is_file():
+        # Keep the absolute path in the server log only - this message is shown
+        # verbatim in the in-app nudge, so it must not leak a server path.
+        _LOGGER.warning(
+            "Bundled skill %r not found under %s", _GLOBAL_SKILL_NAME, source_skills_dir
+        )
+        raise _InstallError(
+            f"The bundled '{_GLOBAL_SKILL_NAME}' skill was not found in your "
+            "Streamlit installation. Reinstall Streamlit and try again.",
+            reason="source_missing",
+        )
 
-    try:
-        # Install to each target directory
-        result = _InstallResult()
-        # For global install, only one skill is installed but we use a set for consistency
-        bundled_skill_names = {_GLOBAL_SKILL_NAME}
-        for target_dir in target_dirs:
-            _install_skill_copy(
-                _GLOBAL_SKILL_NAME,
-                skill_path.parent,
-                target_dir,
-                result,
-                bundled_skill_names,
-            )
+    # Install to each target directory
+    result = _InstallResult()
+    # For global install, only one skill is installed but we use a set for consistency
+    bundled_skill_names = {_GLOBAL_SKILL_NAME}
+    for target_dir in target_dirs:
+        _install_skill_copy(
+            _GLOBAL_SKILL_NAME,
+            source_skills_dir,
+            target_dir,
+            result,
+            bundled_skill_names,
+        )
 
-        # Report results
-        _print_result(result)
+    # Report results
+    _print_result(result)
 
-        if result.installed or result.up_to_date:
+    if result.installed or result.up_to_date:
+        click.echo()
+        click.secho(
+            "✨ Successfully installed globally",
+            fg="green",
+            bold=True,
+        )
+        if result.installed:
             click.echo()
+            click.secho("Note: ", fg="bright_black", bold=True, nl=False)
             click.secho(
-                "✨ Successfully installed globally",
-                fg="green",
-                bold=True,
+                "Global skills include a discover.py script that finds",
+                fg="bright_black",
             )
-            if result.installed:
-                click.echo()
-                click.secho("Note: ", fg="bright_black", bold=True, nl=False)
-                click.secho(
-                    "Global skills include a discover.py script that finds",
-                    fg="bright_black",
-                )
-                click.secho(
-                    "      project-specific bundled skills at runtime.",
-                    fg="bright_black",
-                )
-        elif result.skipped:
-            raise _conflict_error(result.skipped)
+            click.secho(
+                "      project-specific bundled skills at runtime.",
+                fg="bright_black",
+            )
+    # A write failure is more specific than a conflict, so report it first.
+    elif result.failed:
+        raise _copy_failed_error(result.failed)
+    elif result.skipped:
+        raise _conflict_error(result.skipped)
 
-        return result
-    finally:
-        # Clean up temp directory
-        temp_root = skill_path.parent.parent
-        if temp_root.name.startswith("streamlit-skills-"):
-            shutil.rmtree(temp_root, ignore_errors=True)
+    return result
 
 
 def install_skills(
@@ -910,10 +906,11 @@ def summarize_install(result: _InstallResult) -> str:
     """Return a short, user-facing summary of an install for the in-app nudge.
 
     Reports where skills were newly installed, or that they were already up to
-    date, and flags any skills skipped due to conflicts so a partial install is
-    not silently presented as a complete success. Used to give the one-click
-    "install skills" toast concrete feedback instead of a generic confirmation.
-    Returns an empty string when there is nothing meaningful to report.
+    date, and flags any skills skipped due to conflicts or that failed to write
+    so a partial install is not silently presented as a complete success. Used
+    to give the one-click "install skills" toast concrete feedback instead of a
+    generic confirmation. Returns an empty string when there is nothing
+    meaningful to report.
     """
     parts: list[str] = []
     if result.installed:
@@ -932,6 +929,15 @@ def summarize_install(result: _InstallResult) -> str:
         count = len(result.skipped)
         noun = "skill" if count == 1 else "skills"
         parts.append(f"{count} {noun} skipped due to conflicts.")
+    if result.failed:
+        # Surface write failures (permissions, disk, Windows MAX_PATH) too. A
+        # global install writes to every target dir (e.g. ~/.agents and
+        # ~/.claude); if one succeeds and another errors, the success branch
+        # above still runs, so without this the toast would read as a clean
+        # success while the harness the user actually runs got nothing.
+        count = len(result.failed)
+        noun = "skill" if count == 1 else "skills"
+        parts.append(f"{count} {noun} failed to install.")
     return " ".join(parts)
 
 

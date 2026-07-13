@@ -210,7 +210,7 @@ class InstallSkillsHandler(BackendOperationHandler):
         # predicate. Three conditions make a request anomalous and unsafe to honor:
         #   - headless mode (deployments / CI / SiS): the nudge is never shown
         #     there, so the request is a replayed/spoofed BackMsg; refuse the
-        #     filesystem writes (and the GitHub download in the global fallback).
+        #     filesystem writes.
         #   - no agent harness present: nothing would consume the skills.
         #   - the browser is not on a direct-loopback connection: the same
         #     conservative eligibility rule the nudge display uses, so a
@@ -243,8 +243,8 @@ class InstallSkillsHandler(BackendOperationHandler):
             )
 
         try:
-            # Run off the event loop: installing does filesystem I/O (and, in
-            # the global fallback, a network download). Resolve the install root
+            # Run off the event loop: installing does filesystem I/O (copying
+            # the bundled skill from the local package). Resolve the install root
             # from the app dir so it lands in the tree the nudge detection scans.
             result = await asyncio.to_thread(
                 skills.install_skills, global_mode=False, yes=True, app_dir=app_dir
@@ -255,7 +255,7 @@ class InstallSkillsHandler(BackendOperationHandler):
             format_message = getattr(ex, "format_message", None)
             detail = format_message() if callable(format_message) else str(ex)
             # ``skills._InstallError`` carries a bounded, machine-readable ``reason``
-            # (e.g. "conflict", "download_failed", "symlinks_unsupported") that the
+            # (e.g. "conflict", "copy_failed", "symlinks_unsupported") that the
             # client forwards to telemetry so the nudge's install-failure rate can
             # be split by cause. Any other exception is classified "unknown".
             reason = getattr(ex, "reason", "unknown")

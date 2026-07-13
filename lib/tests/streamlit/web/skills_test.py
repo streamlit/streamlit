@@ -16,13 +16,9 @@
 
 from __future__ import annotations
 
-import contextlib
-import io
 import os
-import tarfile
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
-from urllib.error import URLError
+from unittest.mock import patch
 
 import click
 import pytest
@@ -898,9 +894,7 @@ class TestInstallSkillsCli:
         with (
             patch("pathlib.Path.home", return_value=home),
             patch.object(
-                skills,
-                "_download_global_skill",
-                return_value=mock_source_skills_dir / "developing-with-streamlit",
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
         ):
             result = runner.invoke(cli.main, ["skills", "--global", "--yes"])
@@ -1055,9 +1049,7 @@ class TestInstallSkillsCli:
         with (
             patch("pathlib.Path.home", return_value=home),
             patch.object(
-                skills,
-                "_download_global_skill",
-                return_value=mock_source_skills_dir / "developing-with-streamlit",
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
         ):
             result = runner.invoke(cli.main, ["skills", "-g", "-y"])
@@ -1076,9 +1068,7 @@ class TestInstallSkillsCli:
         with (
             patch("pathlib.Path.home", return_value=home),
             patch.object(
-                skills,
-                "_download_global_skill",
-                return_value=mock_source_skills_dir / "developing-with-streamlit",
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
         ):
             runner.invoke(cli.main, ["skills", "-g", "-y"])
@@ -1210,143 +1200,6 @@ class TestInstallProjectSkillsCancellation:
         ).exists()
 
 
-class TestDownloadGlobalSkill:
-    """Tests for _download_global_skill."""
-
-    def test_raises_on_network_error(self) -> None:
-        """Raises ClickException on network failure."""
-        with patch.object(skills.request, "urlopen", side_effect=URLError("Network")):
-            with pytest.raises(click.ClickException, match="Failed to download") as exc:
-                skills._download_global_skill(
-                    "https://example.com/test.tar.gz", "skill"
-                )
-        assert exc.value.reason == "download_failed"
-
-    def test_raises_on_empty_archive(self, tmp_path: Path) -> None:
-        """Raises ClickException when archive is empty."""
-        # Create an empty tar.gz
-        tar_buffer = io.BytesIO()
-        with tarfile.open(fileobj=tar_buffer, mode="w:gz"):
-            pass  # Empty archive
-        tar_buffer.seek(0)
-
-        mock_response = MagicMock()
-        mock_response.read.return_value = tar_buffer.getvalue()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-
-        with patch.object(skills.request, "urlopen", return_value=mock_response):
-            with pytest.raises(click.ClickException, match="archive is empty") as exc:
-                skills._download_global_skill(
-                    "https://example.com/test.tar.gz", "skill"
-                )
-        assert exc.value.reason == "download_empty"
-
-    def test_raises_on_missing_skill(self, tmp_path: Path) -> None:
-        """Raises ClickException when skill not found in archive."""
-        # Create archive with a different skill
-        tar_buffer = io.BytesIO()
-        with tarfile.open(fileobj=tar_buffer, mode="w:gz") as tar:
-            # Add a root directory
-            root_info = tarfile.TarInfo(name="repo-v1/")
-            root_info.type = tarfile.DIRTYPE
-            root_info.mode = 0o755  # Ensure directory is traversable
-            tar.addfile(root_info)
-            # Add a different skill
-            other_skill = tarfile.TarInfo(name="repo-v1/other-skill/")
-            other_skill.type = tarfile.DIRTYPE
-            other_skill.mode = 0o755
-            tar.addfile(other_skill)
-        tar_buffer.seek(0)
-
-        mock_response = MagicMock()
-        mock_response.read.return_value = tar_buffer.getvalue()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-
-        with patch.object(skills.request, "urlopen", return_value=mock_response):
-            with pytest.raises(
-                click.ClickException, match="not found in downloaded"
-            ) as exc:
-                skills._download_global_skill(
-                    "https://example.com/test.tar.gz", "missing-skill"
-                )
-        assert exc.value.reason == "archive_missing_skill"
-
-    def test_extracts_skill_successfully(self, tmp_path: Path) -> None:
-        """Successfully extracts skill from valid archive."""
-        # Create archive with the expected skill
-        tar_buffer = io.BytesIO()
-        with tarfile.open(fileobj=tar_buffer, mode="w:gz") as tar:
-            # Add root directory
-            root_info = tarfile.TarInfo(name="repo-v1/")
-            root_info.type = tarfile.DIRTYPE
-            root_info.mode = 0o755  # Ensure directory is traversable
-            tar.addfile(root_info)
-            # Add skill directory
-            skill_dir = tarfile.TarInfo(name="repo-v1/test-skill/")
-            skill_dir.type = tarfile.DIRTYPE
-            skill_dir.mode = 0o755
-            tar.addfile(skill_dir)
-            # Add SKILL.md file
-            skill_md = tarfile.TarInfo(name="repo-v1/test-skill/SKILL.md")
-            content = b"# Test Skill\n"
-            skill_md.size = len(content)
-            tar.addfile(skill_md, io.BytesIO(content))
-        tar_buffer.seek(0)
-
-        mock_response = MagicMock()
-        mock_response.read.return_value = tar_buffer.getvalue()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-
-        with patch.object(skills.request, "urlopen", return_value=mock_response):
-            result = skills._download_global_skill(
-                "https://example.com/test.tar.gz", "test-skill"
-            )
-
-        assert result.name == "test-skill"
-        assert (result / "SKILL.md").is_file()
-
-    def test_blocks_path_traversal_members(self, tmp_path: Path) -> None:
-        """A malicious archive member is never written outside the extraction dir.
-
-        Guards the ``tarfile`` ``data`` filter (Python 3.12+) and the manual
-        absolute-/``..``-path filter (3.10/3.11) in ``_download_global_skill``.
-        An absolute-path member targeting an arbitrary location must not be
-        extracted: on 3.12+ the data filter rejects the archive (ClickException);
-        on 3.10/3.11 the member is silently dropped (and the requested skill is
-        then "not found"). Either way the target file must not exist afterward.
-        """
-        evil_target = tmp_path / "pwned.txt"
-        tar_buffer = io.BytesIO()
-        with tarfile.open(fileobj=tar_buffer, mode="w:gz") as tar:
-            root_info = tarfile.TarInfo(name="repo-v1/")
-            root_info.type = tarfile.DIRTYPE
-            root_info.mode = 0o755
-            tar.addfile(root_info)
-            # Malicious absolute-path member attempting an arbitrary file write.
-            evil = tarfile.TarInfo(name=str(evil_target))
-            content = b"pwned"
-            evil.size = len(content)
-            tar.addfile(evil, io.BytesIO(content))
-        tar_buffer.seek(0)
-
-        mock_response = MagicMock()
-        mock_response.read.return_value = tar_buffer.getvalue()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-
-        with patch.object(skills.request, "urlopen", return_value=mock_response):
-            # 3.12+ rejects the unsafe member outright; older versions drop it.
-            with contextlib.suppress(click.ClickException):
-                skills._download_global_skill(
-                    "https://example.com/test.tar.gz", "skill"
-                )
-
-        assert not evil_target.exists()
-
-
 class TestSkillCopyMatches:
     """Tests for _skill_copy_matches."""
 
@@ -1432,7 +1285,7 @@ class TestInstallSkillCopyEdgeCases:
                 {"developing-with-streamlit"},
             )
 
-        assert any("copy failed" in s for s in result.skipped)
+        assert any("copy failed" in s for s in result.failed)
 
     def test_preserves_existing_directory_on_copy_failure(
         self, tmp_path: Path, mock_source_skills_dir: Path
@@ -1461,7 +1314,7 @@ class TestInstallSkillCopyEdgeCases:
         # Original should be preserved with old content
         assert target.is_dir()
         assert (target / "SKILL.md").read_text() == "# Old version\n"
-        assert any("copy failed" in s for s in result.skipped)
+        assert any("copy failed" in s for s in result.failed)
 
 
 class TestInstallSkillSymlinkEdgeCases:
@@ -1574,9 +1427,7 @@ class TestGlobalInstallationConflicts:
         with (
             patch("pathlib.Path.home", return_value=home),
             patch.object(
-                skills,
-                "_download_global_skill",
-                return_value=mock_source_skills_dir / "developing-with-streamlit",
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
         ):
             result = runner.invoke(cli.main, ["skills", "--global", "--yes"])
@@ -1603,9 +1454,7 @@ class TestInteractiveModeSelection:
             patch.object(skills, "_prompt_install_mode", return_value="global"),
             patch.object(skills, "_confirm_global_installation", return_value=True),
             patch.object(
-                skills,
-                "_download_global_skill",
-                return_value=mock_source_skills_dir / "developing-with-streamlit",
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
         ):
             mock_sys.stdin.isatty.return_value = True
@@ -1819,6 +1668,68 @@ class TestSummarizeInstall:
             "Skills are already up to date. 2 skills skipped due to conflicts."
         )
 
+    def test_reports_failed_alongside_installed(self) -> None:
+        """A partial global install (one target written, another failed to write,
+        e.g. Windows MAX_PATH or a permission error) is not presented as a clean
+        success: the failed target is surfaced too.
+        """
+        result = skills._InstallResult(
+            installed=[".agents/skills/developing-with-streamlit"],
+            failed=[
+                (
+                    ".claude/skills/developing-with-streamlit "
+                    "(copy failed: [Errno 13] Permission denied)"
+                )
+            ],
+        )
+        assert skills.summarize_install(result) == (
+            "Installed to .agents/skills. 1 skill failed to install."
+        )
+
+
+class TestGlobalInstallFailureReasons:
+    """The bundled-copy global install (and the Windows symlink->global fallback
+    that reaches it) tags failures with a machine-readable ``reason`` the handler
+    forwards to install telemetry, so the post-fix residual stays measurable."""
+
+    def test_copy_failure_reports_copy_failed_reason(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """An OSError while writing the copy (permissions, disk, or the Windows
+        260-char path limit) raises ``reason="copy_failed"`` - not the
+        pre-existing-path ``"conflict"`` it used to be mislabeled as."""
+        home = tmp_path / "home"
+        home.mkdir()
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch.object(
+                skills.shutil, "copytree", side_effect=OSError("Filename too long")
+            ),
+        ):
+            with pytest.raises(skills._InstallError) as exc:
+                skills._install_global_skills(yes=True)
+        assert exc.value.reason == "copy_failed"
+
+    def test_missing_bundled_skill_reports_source_missing_reason(
+        self, tmp_path: Path
+    ) -> None:
+        """When the package ships no bundled skill the install fails fast with
+        ``reason="source_missing"`` - there is no network fetch to fall back on."""
+        home = tmp_path / "home"
+        home.mkdir()
+        empty_source = tmp_path / "empty" / ".agents" / "skills"
+        empty_source.mkdir(parents=True)
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(skills, "_get_source_skills_dir", return_value=empty_source),
+        ):
+            with pytest.raises(skills._InstallError) as exc:
+                skills._install_global_skills(yes=True)
+        assert exc.value.reason == "source_missing"
+
 
 class TestConflictError:
     """_conflict_error names the specific conflicting paths (the message the
@@ -1864,6 +1775,30 @@ class TestConflictError:
         )
         assert isinstance(err, skills._InstallError)
         assert err.reason == "conflict"
+
+
+class TestCopyFailedError:
+    """_copy_failed_error reports a failed *write* (not a pre-existing conflict)
+    and, like _conflict_error, collapses paths so the in-app nudge never shows an
+    absolute server path."""
+
+    def test_carries_copy_failed_reason_and_collapses_paths(self) -> None:
+        """Tagged ``reason="copy_failed"``; the absolute target path collapses to
+        the concise <harness>/skills/<skill> tail and the raw OS error (which may
+        contain an absolute path) is dropped entirely."""
+        err = skills._copy_failed_error(
+            [
+                (
+                    "/abs/home/.agents/skills/developing-with-streamlit "
+                    "(copy failed: [Errno 13] Permission denied: '/abs/home/x')"
+                )
+            ]
+        )
+        assert isinstance(err, skills._InstallError)
+        assert err.reason == "copy_failed"
+        message = err.format_message()
+        assert "/abs/home" not in message
+        assert ".agents/skills/developing-with-streamlit" in message
 
 
 class TestInstallSkillsReturnsResult:
@@ -2143,7 +2078,7 @@ class TestInstallProjectSkillsFallbackErrors:
         ("global_install_side_effect", "match"),
         [
             (click.exceptions.Abort(), "Installation incomplete"),
-            (click.ClickException("download failure"), "download failure"),
+            (click.ClickException("global install failed"), "global install failed"),
         ],
         ids=["user_aborted_global_install", "global_install_click_exception"],
     )
@@ -2212,32 +2147,3 @@ class TestInstallSkillCopyTempCleanup:
         assert not (target / "stale-file.txt").exists()
         # Temp directory must be cleaned up after the swap.
         assert not leftover_temp.exists()
-
-
-class TestInstallGlobalSkillsCleanup:
-    """Tests for temp directory cleanup at the end of _install_global_skills."""
-
-    def test_cleans_up_streamlit_skills_prefixed_temp_dir(
-        self, tmp_path: Path, mock_source_skills_dir: Path
-    ) -> None:
-        """Removes temp directories that follow the streamlit-skills- naming convention."""
-        home = tmp_path / "home"
-        home.mkdir(parents=True)
-
-        # Simulate the layout created by _download_global_skill:
-        # /tmp/streamlit-skills-XXXX/archive_root/<skill_name>/SKILL.md
-        temp_root = tmp_path / "streamlit-skills-test"
-        archive_root = temp_root / "archive-root"
-        skill_dir = archive_root / "developing-with-streamlit"
-        skill_dir.mkdir(parents=True)
-        (skill_dir / "SKILL.md").write_text("# Test Skill\n", encoding="utf-8")
-
-        with (
-            patch("pathlib.Path.home", return_value=home),
-            patch.object(skills, "_download_global_skill", return_value=skill_dir),
-        ):
-            skills._install_global_skills(yes=True)
-
-        # The temp root was cleaned up because its name starts with
-        # "streamlit-skills-".
-        assert not temp_root.exists()
