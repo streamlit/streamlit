@@ -29,6 +29,7 @@ import { getLogger } from "loglevel"
 import {
   BaseColumn,
   isErrorCell,
+  valuesEqual,
 } from "~lib/components/widgets/DataFrame/columns"
 import { notNullOrUndefined } from "~lib/util/utils"
 
@@ -61,6 +62,8 @@ interface UseDataEditorParams {
   editingState: MutableRefObject<EditingState>
   /** Function to get a specific cell. */
   getCellContent: ([col, row]: readonly [number, number]) => GridCell
+  /** Function to get the source value before applying stored edits. */
+  getSourceCellValue?: (column: BaseColumn, originalRow: number) => unknown
   /**
    * Function to map a row ID of the current state to the original row ID.
    * This mainly changed by sorting of columns.
@@ -94,12 +97,33 @@ function useDataEditor({
   canDeleteRows,
   editingState,
   getCellContent,
+  getSourceCellValue = () => undefined,
   getOriginalIndex,
   refreshCells,
   updateNumRows,
   syncEditState,
   clearSelection,
 }: UseDataEditorParams): DataEditorReturn {
+  /**
+   * Returns `true` if the new value would revert an existing edit of a
+   * non-added row back to its current source value, meaning the edit should
+   * be cleared instead of stored.
+   */
+  const editRevertsToSourceValue = useCallback(
+    (
+      column: BaseColumn,
+      originalCol: number,
+      originalRow: number,
+      newValue: unknown
+    ): boolean =>
+      !editingState.current.isAddedRow(originalRow) &&
+      notNullOrUndefined(
+        editingState.current.getCell(originalCol, originalRow)
+      ) &&
+      valuesEqual(getSourceCellValue(column, originalRow), newValue, column),
+    [editingState, getSourceCellValue]
+  )
+
   const onCellEdited = useCallback(
     (
       [col, row]: readonly [number, number],
@@ -122,7 +146,10 @@ function useDataEditor({
       const currentCell = getCellContent([col, row])
       const currentValue = column.getCellValue(currentCell)
       const newValue = column.getCellValue(updatedCell)
-      if (!isErrorCell(currentCell) && newValue === currentValue) {
+      if (
+        !isErrorCell(currentCell) &&
+        valuesEqual(newValue, currentValue, column)
+      ) {
         // No editing is required since the values did not change
         return
       }
@@ -130,6 +157,15 @@ function useDataEditor({
       const newCell = column.getCell(newValue, true)
       // Only update the cell if the new cell is not causing any errors:
       if (!isErrorCell(newCell)) {
+        if (
+          editRevertsToSourceValue(column, originalCol, originalRow, newValue)
+        ) {
+          editingState.current.clearCell(originalCol, originalRow)
+          syncEditState()
+          refreshCells([{ cell: [col, row] }])
+          return
+        }
+
         editingState.current.setCell(originalCol, originalRow, {
           ...newCell,
           lastUpdated: performance.now(),
@@ -142,7 +178,15 @@ function useDataEditor({
         )
       }
     },
-    [columns, editingState, getOriginalIndex, getCellContent, syncEditState]
+    [
+      columns,
+      editingState,
+      getOriginalIndex,
+      getCellContent,
+      editRevertsToSourceValue,
+      syncEditState,
+      refreshCells,
+    ]
   )
 
   /**
@@ -300,11 +344,22 @@ function useDataEditor({
               )
               const newValue = column.getCellValue(newCell)
               // Edit the cell only if the value actually changed:
-              if (newValue !== currentValue) {
-                editingState.current.setCell(originalCol, originalRow, {
-                  ...newCell,
-                  lastUpdated: performance.now(),
-                })
+              if (!valuesEqual(newValue, currentValue, column)) {
+                if (
+                  editRevertsToSourceValue(
+                    column,
+                    originalCol,
+                    originalRow,
+                    newValue
+                  )
+                ) {
+                  editingState.current.clearCell(originalCol, originalRow)
+                } else {
+                  editingState.current.setCell(originalCol, originalRow, {
+                    ...newCell,
+                    lastUpdated: performance.now(),
+                  })
+                }
 
                 updatedCells.push({
                   cell: [colIndex, rowIndex],
@@ -328,6 +383,7 @@ function useDataEditor({
       canAddRows,
       getOriginalIndex,
       getCellContent,
+      editRevertsToSourceValue,
       appendEmptyRow,
       syncEditState,
       refreshCells,
