@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -96,6 +97,12 @@ class EmptyMixin:
 
         """
         empty_proto = EmptyProto()
+        ctx = get_script_run_ctx()
+        if ctx is not None and self.dg._cursor is not None:
+            ctx.shared.clear_widget_registrations_at_delta_path(
+                tuple(self.dg._cursor.delta_path)
+            )
+
         return self.dg._enqueue("empty", empty_proto)
 
     @property

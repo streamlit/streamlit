@@ -38,6 +38,10 @@ class SharedRunState:
         self.form_ids_this_run: ThreadSafeSet[str] = ThreadSafeSet()
         self.new_fragment_ids: ThreadSafeSet[str] = ThreadSafeSet()
 
+         self._element_ids_by_delta_path_lock = threading.Lock()
+        self._element_ids_by_delta_path: dict[tuple[int, ...], set[str]] = {}
+        self._user_keys_by_delta_path: dict[tuple[int, ...], set[str]] = {}
+
         self._telemetry_lock = threading.Lock()
         self._tracked_commands: list[Command] = []
         self._tracked_commands_counter: collections.Counter[str] = collections.Counter()
@@ -53,9 +57,56 @@ class SharedRunState:
         self.form_ids_this_run.clear()
         self.new_fragment_ids.clear()
 
+        with self._element_ids_by_delta_path_lock:
+            self._element_ids_by_delta_path.clear()
+            self._user_keys_by_delta_path.clear()
+
         with self._telemetry_lock:
             self._tracked_commands = []
             self._tracked_commands_counter = collections.Counter()
+
+    def track_element_id_delta_path(
+        self,
+        element_id: str,
+        user_key: str | None,
+        delta_path: tuple[int, ...] | None,
+    ) -> None:
+        """Associate an element ID with the delta path it occupies."""
+        if delta_path is None:
+            return
+
+        with self._element_ids_by_delta_path_lock:
+            self._element_ids_by_delta_path.setdefault(delta_path, set()).add(
+                element_id
+            )
+            if user_key is not None:
+                self._user_keys_by_delta_path.setdefault(delta_path, set()).add(
+                    user_key
+                )
+
+    def clear_widget_registrations_at_delta_path(
+        self, delta_path: tuple[int, ...]
+    ) -> None:
+        """Clear same-run widget registrations at the given delta path.
+
+        ``st.empty`` replaces the element tree at its own delta path. Any
+        widgets registered at that path or beneath it no longer exist in the
+        visible app and should not block new widgets created later in the same
+        script run.
+        """
+        element_ids: set[str] = set()
+        user_keys: set[str] = set()
+        with self._element_ids_by_delta_path_lock:
+            for path in list(self._element_ids_by_delta_path):
+                if path[: len(delta_path)] == delta_path:
+                    element_ids.update(self._element_ids_by_delta_path.pop(path))
+                    user_keys.update(self._user_keys_by_delta_path.pop(path, set()))
+
+        if not element_ids:
+            return
+
+        self.widget_ids_this_run.difference_update(element_ids)
+        self.widget_user_keys_this_run.difference_update(user_keys)
 
     @property
     def tracked_commands(self) -> tuple[Command, ...]:

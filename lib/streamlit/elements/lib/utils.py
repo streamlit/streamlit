@@ -111,7 +111,11 @@ def to_key(key: Key | None) -> str | None:
 
 
 def _register_element_id(
-    ctx: ScriptRunContext, element_type: str, element_id: str
+    ctx: ScriptRunContext,
+    element_type: str,
+
+        element_id: str,
+    delta_path: tuple[int, ...] | None = None,
 ) -> None:
     """Register the element ID and key for the given element.
 
@@ -144,6 +148,8 @@ def _register_element_id(
 
     if not ctx.shared.widget_ids_this_run.check_and_add(element_id):
         raise StreamlitDuplicateElementId(element_type)
+
+    ctx.shared.track_element_id_delta_path(element_id, user_key, delta_path)
 
 
 def _compute_element_id(
@@ -243,6 +249,10 @@ def compute_and_register_element_id(
         kwargs_to_use = {} if ignore_command_kwargs else {**kwargs}
 
     if ctx:
+        delta_path = None
+        if dg is not None and dg._active_dg._cursor is not None:
+            delta_path = tuple(dg._active_dg._cursor.delta_path)
+
         # Add the active script hash to give elements on different
         # pages unique IDs. This is added even if
         # key_as_main_identity is specified.
@@ -258,7 +268,7 @@ def compute_and_register_element_id(
     element_id = _compute_element_id(element_type, user_key, **kwargs_to_use)
 
     if ctx:
-        _register_element_id(ctx, element_type, element_id)
+        _register_element_id(ctx, element_type, element_id, delta_path)
     return element_id
 
 
