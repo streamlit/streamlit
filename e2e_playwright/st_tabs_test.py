@@ -499,11 +499,11 @@ def test_nested_tabs_stay_collapsed_after_rerun(app: Page):
 
 
 def test_tabs_fixed_height_scrolls_active_panel(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """A pixel height sizes the tab container and scrolls the active panel."""
     fixed_height_tabs = get_element_by_key(
-        themed_app, "tabs_fixed_height_container"
+        app, "tabs_fixed_height_container"
     ).get_by_test_id("stTabs")
 
     # The container itself should have the pixel height applied inline.

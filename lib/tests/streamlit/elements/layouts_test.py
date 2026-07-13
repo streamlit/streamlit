@@ -1805,12 +1805,11 @@ class TabsTest(DeltaGeneratorTestCase):
         with st.form("form"):
             st.tabs(["A", "B"], on_change="rerun")
 
-    def test_default_height_not_set(self) -> None:
-        """Test that no height_config is set by default."""
+    def test_default_height_is_content(self) -> None:
+        """Test that the default height matches the content height."""
         st.tabs(["A", "B"])
         tab_container_block = self.get_all_deltas_from_queue()[0]
-        # By default, no height config is set; the container matches its content.
-        assert not tab_container_block.add_block.HasField("height_config")
+        assert tab_container_block.add_block.height_config.use_content
         assert not tab_container_block.add_block.allow_empty
 
     def test_height_pixel(self) -> None:

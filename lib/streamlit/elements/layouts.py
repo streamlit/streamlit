@@ -633,7 +633,7 @@ class LayoutsMixin:
         tabs: Sequence[str],
         *,
         width: WidthWithoutContent = "stretch",
-        height: Height | None = None,
+        height: Height = "content",
         default: str | None = None,
         key: Key | None = None,
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
@@ -688,13 +688,11 @@ class LayoutsMixin:
               the parent container, the width of the container matches the width
               of the parent container.
 
-        height : "stretch", "content", int, or None
+        height : "content", "stretch", or int
             The height of the tab container. This can be one of the following:
 
-            - ``None`` (default): The height of the container matches the
+            - ``"content"`` (default): The height of the container matches the
               height of its content.
-            - ``"content"``: The height of the container matches the height
-              of its content.
             - ``"stretch"``: The height of the container matches the height
               of the parent container, and content that overflows scrolls
               inside the active tab panel. If the container is not in a
@@ -981,13 +979,12 @@ class LayoutsMixin:
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        if height is not None:
-            validate_height(height, allow_content=True)
-            block_proto.height_config.CopyFrom(get_height_config(height))
-            if isinstance(height, int):
-                # Ensure the fixed-height tab container renders even when the
-                # active tab is empty, so the reserved space is preserved.
-                block_proto.allow_empty = True
+        validate_height(height, allow_content=True)
+        block_proto.height_config.CopyFrom(get_height_config(height))
+        if isinstance(height, int):
+            # Ensure the fixed-height tab container renders even when the
+            # active tab is empty, so the reserved space is preserved.
+            block_proto.allow_empty = True
 
         # Compute the current tab index from the label
         try:

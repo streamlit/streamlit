@@ -413,7 +413,7 @@ export const BlockNodeRenderer = (
     // `height="content"` config yields `styles.height === "auto"`, which
     // shouldn't switch tabs into the fill-and-scroll layout — that would clip
     // content that legitimately overflows (tooltips, focus rings, drop
-    // shadows). `heightConfig` is absent when the user passed `height=None`.
+    // shadows).
     const heightConfig = node.deltaBlock.heightConfig
     const hasConstrainingHeight =
       notNullOrUndefined(heightConfig) && !heightConfig.useContent
