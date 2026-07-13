@@ -507,8 +507,9 @@ def test_nested_popover_widget_does_not_dismiss_outer_popover(app: Page):
     open_popover(app, "popover 22 (nested)")
     expect_markdown(app, "outer popover content")
 
-    # Open the nested inner popover via its key (its label also appears in the
-    # outer popover's subtree).
+    # Open the nested inner popover by key. With the outer popover already open
+    # there are two popover bodies on screen, so open_popover's stPopoverBody
+    # lookup would be ambiguous.
     inner_popover = get_element_by_key(app, "nested_inner_popover")
     inner_popover.get_by_role("button").first.click()
 
