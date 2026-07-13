@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Final, NamedTuple, cast
 
 from streamlit import config, file_util
 from streamlit.logger import get_logger
+from streamlit.watcher import util
 from streamlit.watcher.folder_black_list import FolderBlackList
 from streamlit.watcher.path_watcher import (
     NoOpPathWatcher,
@@ -127,13 +128,15 @@ class LocalSourcesWatcher:
         _LOGGER.debug("Path changed: %s", filepath)
 
         norm_filepath = os.path.realpath(filepath)
-        if norm_filepath not in self._watched_modules:
+        is_watched_file = norm_filepath in self._watched_modules or any(
+            util.paths_are_same(watched_path, norm_filepath)
+            for watched_path in self._watched_modules
+        )
+        if not is_watched_file:
             # Check if this is a file in a watched directory
             for watched_path in self._watched_modules:
-                if (
-                    os.path.isdir(watched_path)
-                    and os.path.commonpath([watched_path, norm_filepath])
-                    == watched_path
+                if os.path.isdir(watched_path) and util.path_is_in_directory(
+                    norm_filepath, watched_path
                 ):
                     _LOGGER.debug("File changed in watched directory: %s", filepath)
                     for cb in self._on_path_changed:

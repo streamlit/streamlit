@@ -443,6 +443,14 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             # First check if the exact path is being watched
             changed_path_info = self._watched_paths.get(abs_changed_path, None)
 
+            # Windows can report the same path with an extended-length prefix
+            # (``\\?\``), which does not compare equal to the standard spelling.
+            if changed_path_info is None:
+                for path, info in self._watched_paths.items():
+                    if util.paths_are_same(path, abs_changed_path):
+                        changed_path_info = info
+                        break
+
             # If the exact path isn't found, check if it's inside any watched
             # directories. This is necessary for the folder watching feature to
             # detect changes to files within watched directories, not just the
@@ -451,21 +459,9 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                 for path, info in self._watched_paths.items():
                     if not os.path.isdir(path):
                         continue
-                    try:
-                        if os.path.commonpath([path, abs_changed_path]) == path:
-                            changed_path_info = info
-                            break
-                    except ValueError as ex:
-                        # On Windows, os.path.commonpath raises ValueError when paths
-                        # are on different drives. In that case, the changed path
-                        # cannot be inside the watched directory.
-                        _LOGGER.debug(
-                            "Ignoring changed path %s.\nWatched_paths: %s",
-                            abs_changed_path,
-                            self._watched_paths,
-                            exc_info=ex,
-                        )
-                        continue
+                    if util.path_is_in_directory(abs_changed_path, path):
+                        changed_path_info = info
+                        break
 
         # If we still haven't found a matching path, ignore this event
         if changed_path_info is None:
