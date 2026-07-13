@@ -1518,6 +1518,7 @@ def _evaluate_nudge(
     agents: tuple[str, ...] = ("claude",),
     installed_skills: tuple[str, ...] = (),
     marker_exists: bool = False,
+    would_be_refused: bool = False,
 ) -> bool:
     """Run ``should_show_skills_nudge`` with the given conditions patched in."""
     marker = tmp_path / ".skills_nudge_dismissed"
@@ -1536,6 +1537,13 @@ def _evaluate_nudge(
         patch(
             "streamlit.web.skills.detect_installed_skills",
             return_value=list(installed_skills),
+        ),
+        # Keep the gate hermetic: otherwise the conflict-aware suppression check
+        # hits the real filesystem (a dev machine's ~/.claude makes .claude/skills
+        # a real target) and may run the symlink probe.
+        patch(
+            "streamlit.web.skills._project_install_would_be_refused",
+            return_value=would_be_refused,
         ),
     ):
         return skills.should_show_skills_nudge()
@@ -1577,6 +1585,16 @@ def test_should_show_skills_nudge_hidden_when_skills_installed(tmp_path: Path) -
         )
         is False
     )
+
+
+def test_should_show_skills_nudge_hidden_when_install_would_conflict(
+    tmp_path: Path,
+) -> None:
+    """No nudge when a one-click install would deterministically refuse (a
+    non-managed file/dir occupies every target). Without this the user is stuck
+    in a nudge -> install -> conflict loop with no reachable SKILL.md to break
+    it."""
+    assert _evaluate_nudge(tmp_path, would_be_refused=True) is False
 
 
 def test_should_show_skills_nudge_returns_false_on_error() -> None:
@@ -1842,6 +1860,273 @@ class TestInstallDetectRoundtrip:
             # pre-install values (empty / True) and the nudge would re-appear.
             assert skills.detect_installed_skills(str(app_dir)) != []
             assert skills.should_show_skills_nudge(str(app_dir)) is False
+
+
+class TestSymlinkTargetWouldConflict:
+    """_symlink_target_would_conflict is the shared per-target conflict rule: a
+    real (non-symlink) file or directory blocks; a symlink or a missing path
+    does not."""
+
+    def test_real_file_conflicts(self, tmp_path: Path) -> None:
+        """A regular file at the target blocks a symlink install."""
+        target = tmp_path / "developing-with-streamlit"
+        target.write_text("not a skill", encoding="utf-8")
+        assert skills._symlink_target_would_conflict(target) is True
+
+    def test_real_directory_conflicts(self, tmp_path: Path) -> None:
+        """A real directory at the target blocks a symlink install."""
+        target = tmp_path / "developing-with-streamlit"
+        target.mkdir()
+        assert skills._symlink_target_would_conflict(target) is True
+
+    def test_valid_symlink_does_not_conflict(self, tmp_path: Path) -> None:
+        """A symlink is replaced by the installer, not blocked."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        real = tmp_path / "real"
+        real.mkdir()
+        link = tmp_path / "developing-with-streamlit"
+        link.symlink_to(real, target_is_directory=True)
+        assert skills._symlink_target_would_conflict(link) is False
+
+    def test_broken_symlink_does_not_conflict(self, tmp_path: Path) -> None:
+        """A broken symlink (exists() is False) is not a conflict; the installer
+        unlinks and replaces it."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        link = tmp_path / "developing-with-streamlit"
+        link.symlink_to(tmp_path / "missing", target_is_directory=True)
+        assert skills._symlink_target_would_conflict(link) is False
+
+    def test_missing_path_does_not_conflict(self, tmp_path: Path) -> None:
+        """An absent target is free for the installer to create."""
+        target = tmp_path / "developing-with-streamlit"
+        assert skills._symlink_target_would_conflict(target) is False
+
+
+class TestProjectInstallWouldBeRefused:
+    """_project_install_would_be_refused mirrors the installer: it returns True
+    only when EVERY (skill, target) pair is blocked by a real file/dir AND
+    symlinks are supported (the only mode that hard-refuses). It reuses the
+    installer's own resolvers so the show-gate cannot drift from the install."""
+
+    @staticmethod
+    def _run(
+        *,
+        source_dir: Path,
+        target_dirs: list[Path],
+        symlinks_supported: bool = True,
+        project_root: Path | None = None,
+    ) -> bool:
+        with (
+            patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
+            patch.object(
+                skills, "_find_project_root", return_value=project_root or source_dir
+            ),
+            patch.object(skills, "_get_project_target_dirs", return_value=target_dirs),
+            patch.object(
+                skills, "_symlinks_supported", return_value=symlinks_supported
+            ),
+        ):
+            return skills._project_install_would_be_refused(None)
+
+    def test_file_at_sole_target_is_refused(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A regular file occupying the only target -> deterministic refusal."""
+        target_dir = tmp_path / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        (target_dir / "developing-with-streamlit").write_text("x", encoding="utf-8")
+        assert self._run(source_dir=mock_source_skills_dir, target_dirs=[target_dir])
+
+    def test_empty_dir_at_target_is_refused(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A real (empty) directory at the target is a conflict in symlink mode."""
+        target_dir = tmp_path / ".agents" / "skills"
+        (target_dir / "developing-with-streamlit").mkdir(parents=True)
+        assert self._run(source_dir=mock_source_skills_dir, target_dirs=[target_dir])
+
+    def test_all_targets_blocked_is_refused(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Refusal requires every target blocked (project + .claude)."""
+        agents_dir = tmp_path / ".agents" / "skills"
+        claude_dir = tmp_path / ".claude" / "skills"
+        for d in (agents_dir, claude_dir):
+            (d / "developing-with-streamlit").mkdir(parents=True)
+        assert self._run(
+            source_dir=mock_source_skills_dir, target_dirs=[agents_dir, claude_dir]
+        )
+
+    def test_one_free_target_is_not_refused(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A single installable target means partial success, not a refusal, so
+        the nudge must keep showing."""
+        agents_dir = tmp_path / ".agents" / "skills"
+        claude_dir = tmp_path / ".claude" / "skills"
+        (agents_dir / "developing-with-streamlit").mkdir(parents=True)
+        claude_dir.mkdir(parents=True)  # free
+        assert not self._run(
+            source_dir=mock_source_skills_dir, target_dirs=[agents_dir, claude_dir]
+        )
+
+    def test_symlink_at_target_is_not_refused(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A symlink is replaced, not blocked -> not a refusal."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir = tmp_path / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        (target_dir / "developing-with-streamlit").symlink_to(
+            mock_source_skills_dir / "developing-with-streamlit",
+            target_is_directory=True,
+        )
+        assert not self._run(
+            source_dir=mock_source_skills_dir, target_dirs=[target_dir]
+        )
+
+    def test_missing_target_skill_is_not_refused(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """An absent target skill path is installable -> not a refusal."""
+        target_dir = tmp_path / ".agents" / "skills"
+        target_dir.mkdir(parents=True)  # the skill subpath is absent
+        assert not self._run(
+            source_dir=mock_source_skills_dir, target_dirs=[target_dir]
+        )
+
+    def test_no_bundled_skills_is_not_refused(self, tmp_path: Path) -> None:
+        """With no discoverable bundled skills there is nothing to refuse."""
+        empty_source = tmp_path / ".agents" / "skills"
+        empty_source.mkdir(parents=True)
+        target_dir = tmp_path / "t"
+        (target_dir / "developing-with-streamlit").mkdir(parents=True)
+        assert not self._run(source_dir=empty_source, target_dirs=[target_dir])
+
+    def test_symlinks_unsupported_is_not_refused(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """When symlinks are unsupported the install falls back to a global copy
+        that can succeed, so a blocked project target is not a refusal."""
+        target_dir = tmp_path / ".agents" / "skills"
+        (target_dir / "developing-with-streamlit").mkdir(parents=True)
+        assert not self._run(
+            source_dir=mock_source_skills_dir,
+            target_dirs=[target_dir],
+            symlinks_supported=False,
+        )
+
+    def test_resolver_error_fails_open(self) -> None:
+        """A probe error suppresses nothing: returns False so the nudge still
+        shows rather than being spuriously hidden."""
+        with patch.object(
+            skills, "_get_source_skills_dir", side_effect=OSError("boom")
+        ):
+            assert skills._project_install_would_be_refused(None) is False
+
+
+class TestNudgeSuppressedWhenInstallWouldConflict:
+    """End-to-end: when a non-managed file/dir occupies every install target the
+    marker-based detection can't see it (no SKILL.md), but the installer refuses
+    with reason='conflict'. The show-gate must suppress the nudge so the user is
+    not stuck in an unbreakable nudge -> install -> conflict loop. Ties the gate's
+    suppression to the installer's refusal on identical filesystem state.
+    """
+
+    @staticmethod
+    def _clear_caches() -> None:
+        skills._detect_installed_skills_cached.cache_clear()
+        skills._detect_installed_agents_cached.cache_clear()
+
+    @staticmethod
+    def _bundled_source(base: Path) -> Path:
+        source_dir = base / "pkg" / ".agents" / "skills"
+        skill_dir = source_dir / "developing-with-streamlit"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("# Skill\n", encoding="utf-8")
+        return source_dir
+
+    @pytest.mark.parametrize("blocker", ["file", "dir"])
+    def test_gate_suppresses_exactly_what_install_refuses(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, blocker: str
+    ) -> None:
+        """A blocking file/dir at EVERY target: detection empty, gate False,
+        install raises a conflict."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        base = tmp_path.resolve()
+
+        home = base / "home"
+        (home / ".claude").mkdir(parents=True)
+        monkeypatch.setenv("HOME", str(home))
+
+        source_dir = self._bundled_source(base)
+
+        project = base / "project"
+        app_dir = project / "src"
+        app_dir.mkdir(parents=True)
+
+        # Occupy every project target with a non-managed blocker (no SKILL.md).
+        for target in (
+            project / ".agents" / "skills",
+            project / ".claude" / "skills",
+        ):
+            target.mkdir(parents=True)
+            blocking = target / "developing-with-streamlit"
+            if blocker == "file":
+                blocking.write_text("not a skill", encoding="utf-8")
+            else:
+                blocking.mkdir()
+
+        with (
+            patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
+            patch("streamlit.config.get_option", return_value=False),
+        ):
+            self._clear_caches()
+            # No reachable SKILL.md -> marker detection sees nothing...
+            assert skills.detect_installed_skills(str(app_dir)) == []
+            # ...but the gate suppresses because the install can only conflict.
+            assert skills.should_show_skills_nudge(str(app_dir)) is False
+            # ...and the install does deterministically refuse with a conflict.
+            with pytest.raises(skills._InstallError) as exc:
+                skills.install_skills(global_mode=False, yes=True, app_dir=str(app_dir))
+            assert exc.value.reason == "conflict"
+
+    def test_partial_conflict_still_nudges(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Only one of two targets blocked: the install partially succeeds, so the
+        gate must keep nudging rather than over-suppress."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        base = tmp_path.resolve()
+
+        home = base / "home"
+        (home / ".claude").mkdir(parents=True)
+        monkeypatch.setenv("HOME", str(home))
+
+        source_dir = self._bundled_source(base)
+
+        project = base / "project"
+        app_dir = project / "src"
+        app_dir.mkdir(parents=True)
+
+        # Block only .agents/skills; leave .claude/skills free.
+        blocked = project / ".agents" / "skills"
+        blocked.mkdir(parents=True)
+        (blocked / "developing-with-streamlit").write_text("x", encoding="utf-8")
+        (project / ".claude" / "skills").mkdir(parents=True)
+
+        with (
+            patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
+            patch("streamlit.config.get_option", return_value=False),
+        ):
+            self._clear_caches()
+            assert skills.should_show_skills_nudge(str(app_dir)) is True
+            # The install partially succeeds (does not raise): .claude gets it.
+            result = skills.install_skills(
+                global_mode=False, yes=True, app_dir=str(app_dir)
+            )
+            assert result.installed  # .claude/skills got the symlink
+            assert result.skipped  # .agents/skills conflicted
 
 
 class TestGenerateGitignoreSnippetEdgeCases:
