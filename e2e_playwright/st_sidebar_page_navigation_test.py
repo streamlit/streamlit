@@ -14,7 +14,11 @@
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.conftest import (
+    wait_for_app_loaded,
+    wait_for_app_run,
+    wait_until,
+)
 
 
 def _sidebar_nav_link(app: Page, name: str) -> Locator:
@@ -44,7 +48,13 @@ def test_explicit_sidebar_state_applies_only_on_page_navigation(app: Page) -> No
     expect(sidebar).to_have_attribute("aria-expanded", "false")
 
     # Page configuration must not overwrite the user-owned storage value.
-    assert app.evaluate("window.localStorage.getItem('stSidebarCollapsed-')") == "false"
+    wait_until(
+        app,
+        lambda: (
+            app.evaluate("window.localStorage.getItem('stSidebarCollapsed-')")
+            == "false"
+        ),
+    )
 
     # A browser reload is not an in-app page transition, so the stored user
     # preference continues to win over the page's initial config.
