@@ -91,7 +91,7 @@
     "node-emoji": "^2.2.0",
     "numbro": "^2.5.0",
     "plotly.js": "^3.7.0",
-    "protobufjs": "^8.6.6",
+    "protobufjs": "^8.7.0",
     "query-string": "^9.4.1",
     "re-resizable": "^6.11.2",
     "react-aria-components": "^1.19.0",
@@ -171,7 +171,7 @@
     "vite": "^8.1.3",
     "vite-plugin-dts": "^5.0.3",
     "vite-plugin-svgr": "^5.2.0",
-    "vitest": "^4.1.9",
+    "vitest": "^4.1.10",
     "vitest-canvas-mock": "^1.1.4",
     "vitest-fetch-mock": "^0.4.5"
   },

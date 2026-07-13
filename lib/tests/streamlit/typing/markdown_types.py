@@ -87,7 +87,7 @@ if TYPE_CHECKING:
     markdown("Text", text_alignment="start")  # type: ignore[arg-type]
 
     # Passing help as positional argument (should be keyword-only)
-    markdown("Text", False, "help text")  # type: ignore[misc]
+    markdown("Text", False, "help text")  # type: ignore[call-arg]
 
     # Invalid anchors value (must be bool)
     markdown("# H", anchors="yes")  # type: ignore[arg-type]
