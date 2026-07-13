@@ -125,16 +125,24 @@ runs:
         # from pypi:
         uv pip install --editable ./lib --no-deps
       shell: bash
-    - name: Show environment info
+    - name: Generate Protobufs
+      run: make protobuf
+      shell: bash
+    # `uv run` in `make protobuf` may update the environment, so report versions
+    # only after generation has completed.
+    - name: Show final environment info
       run: |
-        echo "Show environment info"
         echo "Python version:"
         python --version
         echo "uv version:"
         uv --version
         echo "Installed dependencies:"
         uv pip list
-      shell: bash
-    - name: Generate Protobufs
-      run: make protobuf
+        echo "PyArrow runtime:"
+        python - <<'PY'
+        import pyarrow as pa
+
+        print(f"version={pa.__version__}")
+        print(f"memory_pool={pa.default_memory_pool().backend_name}")
+        PY
       shell: bash
