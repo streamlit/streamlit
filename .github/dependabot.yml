@@ -142,7 +142,7 @@ updates:
     # Use cooldown to avoid updating dependencies too frequently
     # and minimize risk of supply chain attacks.
     cooldown:
-      default-days: 5
+      default-days: 4
 
     labels:
       - "change:chore"
@@ -158,17 +158,11 @@ updates:
           - "ty"
           - "types-*"
           - "*-stubs"
-        update-types:
-          - "minor"
-          - "patch"
       python-playwright:
         patterns:
           - "playwright"
           - "pytest-playwright"
           - "pixelmatch"
-        update-types:
-          - "minor"
-          - "patch"
       python-testing:
         patterns:
           - "pytest*"
@@ -176,16 +170,6 @@ updates:
           - "parameterized"
           - "requests-mock"
           - "testfixtures"
-        update-types:
-          - "minor"
-          - "patch"
-      # Catch unmatched root Python minor/patch updates after the more specific groups.
-      python-dev-minor-patch:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
 
   # Keep streamlit package runtime dependencies up to date
   # lib/pyproject.toml contains the published package's dependencies
@@ -202,7 +186,7 @@ updates:
     versioning-strategy: auto
 
     cooldown:
-      default-days: 5
+      default-days: 4
 
     labels:
       - "change:chore"
