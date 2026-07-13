@@ -108,18 +108,16 @@ export const StyledVegaLiteChartContainer =
         display: "inline-block",
         boxSizing: "border-box",
 
-        ".chart-wrapper": {
-          "&.fit-x": {
-            width: "100%",
-          },
-          "&.fit-y": {
-            height: "100%",
-          },
-          // Reset pointer events on background/foreground SVG paths to display tooltips on all layers in dialogs.
-          "svg.marks g.role-scope": {
-            "path.background, path.foreground": {
-              pointerEvents: "auto",
-            },
+        "&.fit-x": {
+          width: "100%",
+        },
+        "&.fit-y": {
+          height: "100%",
+        },
+        // Reset pointer events on background/foreground SVG paths to display tooltips on all layers in dialogs.
+        "svg.marks g.role-scope": {
+          "path.background, path.foreground": {
+            pointerEvents: "auto",
           },
         },
       },

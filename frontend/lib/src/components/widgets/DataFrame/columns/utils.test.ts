@@ -18,6 +18,7 @@ import { Field, makeVector, Utf8 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
+import JsonColumn from "./JsonColumn"
 import {
   arrayToCopyValue,
   BaseColumnProps,
@@ -41,9 +42,10 @@ import {
   toSafeNumber,
   toSafeString,
   truncateDecimals,
+  valuesEqual,
 } from "./utils"
 
-import { TextColumn } from "./index"
+import { DateTimeColumn, ListColumn, NumberColumn, TextColumn } from "./index"
 
 const MOCK_TEXT_COLUMN_PROPS = {
   id: "column_1",
@@ -94,6 +96,68 @@ describe("isErrorCell", () => {
       allowOverlay: true,
     }
     expect(isErrorCell(textCell)).toEqual(false)
+  })
+})
+
+describe("valuesEqual", () => {
+  it("treats null and undefined as equal", () => {
+    const column = TextColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    expect(valuesEqual(null, undefined, column)).toBe(true)
+    expect(valuesEqual(null, "", column)).toBe(false)
+  })
+
+  it("uses Object.is for default comparisons", () => {
+    const column = TextColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    expect(valuesEqual("foo", "foo", column)).toBe(true)
+    expect(valuesEqual("foo", "bar", column)).toBe(false)
+    expect(valuesEqual(Number.NaN, Number.NaN, column)).toBe(true)
+  })
+
+  it("uses array equality for list columns", () => {
+    const column = ListColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    expect(valuesEqual(["foo", "bar"], ["foo", "bar"], column)).toBe(true)
+    expect(valuesEqual(["foo", "bar"], ["bar", "foo"], column)).toBe(false)
+  })
+
+  it("uses JSON string equality for JSON columns", () => {
+    const column = JsonColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    expect(valuesEqual({ foo: "bar" }, { foo: "bar" }, column)).toBe(true)
+    expect(valuesEqual({ foo: "bar" }, { foo: "baz" }, column)).toBe(false)
+  })
+
+  it("uses timestamp equality for datetime columns", () => {
+    const column = DateTimeColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    expect(
+      valuesEqual("2024-01-01T00:00:00.000Z", "2024-01-01T00:00:00Z", column)
+    ).toBe(true)
+    expect(
+      valuesEqual("2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z", column)
+    ).toBe(false)
+  })
+
+  it("uses numeric equality for number columns", () => {
+    const column = NumberColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    expect(valuesEqual("5", 5, column)).toBe(true)
+    expect(valuesEqual("5", 6, column)).toBe(false)
+  })
+
+  it("falls back to identity comparison when a comparator throws", () => {
+    // JSON columns serialize via JSON.stringify, which throws on circular
+    // structures. The central valuesEqual should catch that and fall back to
+    // an identity check instead of propagating the error.
+    const column = JsonColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    const circular: Record<string, unknown> = { foo: "bar" }
+    circular.self = circular
+
+    expect(valuesEqual(circular, circular, column)).toBe(true)
+    expect(valuesEqual(circular, { foo: "bar" }, column)).toBe(false)
   })
 })
 

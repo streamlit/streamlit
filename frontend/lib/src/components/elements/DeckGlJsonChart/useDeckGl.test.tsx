@@ -197,6 +197,83 @@ describe("useDeckGl", () => {
         expect(result.html).toBe(expected)
       }
     )
+
+    it.each([
+      {
+        description: "direct object properties",
+        object: {
+          siteName: "A & B",
+          notes: `<img src=x onerror="alert('xss')">`,
+        },
+        expected:
+          "<b>A &amp; B</b><br/>&lt;img src=x onerror=&quot;alert(&#x27;xss&#x27;)&quot;&gt;",
+      },
+      {
+        description: "nested properties field",
+        object: {
+          properties: {
+            siteName: "A & B",
+            notes: "<svg onload=alert(1)>",
+          },
+        },
+        expected: "<b>A &amp; B</b><br/>&lt;svg onload=alert(1)&gt;",
+      },
+      {
+        // Guards against `$` sequences (e.g. `` $` ``) in interpolated values
+        // being treated as `String.prototype.replace` patterns.
+        description: "values containing `$` replacement patterns",
+        object: {
+          siteName: "x",
+          notes: "a$`b",
+        },
+        expected: "<b>x</b><br/>a$`b",
+      },
+    ])(
+      "should escape interpolated html tooltip values from $description",
+      ({ object, expected }) => {
+        const {
+          result: { current },
+        } = renderHook(hookProps => useDeckGl(hookProps), {
+          initialProps: getUseDeckGlProps({
+            tooltip: JSON.stringify({
+              html: "<b>{siteName}</b><br/>{notes}",
+            }),
+          }),
+        })
+
+        const result = current.createTooltip({ object } as PickingInfo)
+
+        if (result === null || typeof result !== "object") {
+          throw new Error("Expected result to be an object")
+        }
+
+        expect(result.html).toBe(expected)
+      }
+    )
+
+    it("should preserve unescaped values in text tooltips", () => {
+      const {
+        result: { current },
+      } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: getUseDeckGlProps({
+          tooltip: JSON.stringify({
+            text: "{notes}",
+          }),
+        }),
+      })
+
+      const result = current.createTooltip({
+        object: {
+          notes: "<b>plain text</b>",
+        },
+      } as PickingInfo)
+
+      if (result === null || typeof result !== "object") {
+        throw new Error("Expected result to be an object")
+      }
+
+      expect(result.text).toBe("<b>plain text</b>")
+    })
   })
 
   describe("deck memo behavior", () => {

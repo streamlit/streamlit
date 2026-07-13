@@ -9,10 +9,11 @@
   ],
   "type": "module",
   "scripts": {
-    "typecheck:all": "cd $INIT_CWD && tsc"
+    "typecheck:all": "cd $INIT_CWD && node \"$PROJECT_CWD/node_modules/typescript-v7/bin/tsc\""
   },
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "typescript-v7": "npm:typescript@7.0.2"
   },
   "browserslist": [
     ">0.2%",

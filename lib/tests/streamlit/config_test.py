@@ -1087,6 +1087,12 @@ class ConfigTest(unittest.TestCase):
         config._set_option("browser.gatherUsageStats", "test", "test")
         assert config.get_option("browser.gatherUsageStats") == "test"
 
+    def test_set_user_option_raises_for_unrecognized_key(self):
+        """set_user_option raises for an unknown config option key."""
+        with pytest.raises(StreamlitAPIException) as e:
+            config.set_user_option("not.a.real.option", "value")
+        assert "Unrecognized config option: not.a.real.option" in str(e.value)
+
     def test_is_manually_set(self):
         config._set_option("browser.serverAddress", "some.bucket", "test")
         assert config.is_manually_set("browser.serverAddress")
