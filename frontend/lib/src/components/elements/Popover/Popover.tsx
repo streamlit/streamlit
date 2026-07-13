@@ -277,7 +277,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       // (capture phase) so that click isn't misread as an outside click once the
       // overlay has detached the activated option.
       if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
-        interactionInsideRef.current = isInsidePopoverOrOverlay(e.target as Node)
+        interactionInsideRef.current = isInsidePopoverOrOverlay(
+          e.target as Node
+        )
       }
     }
 
