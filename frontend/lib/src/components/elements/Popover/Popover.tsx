@@ -180,6 +180,14 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
   const popoverBodyRef = useRef<HTMLDivElement>(null)
 
+  // Records, on pointerdown, whether the interaction started inside the
+  // popover, its trigger, or a Streamlit overlay root. We capture it here
+  // because some overlays close synchronously on selection (e.g. the date
+  // picker calendar and the single-select dropdown), detaching the clicked
+  // node from the DOM before the follow-up `click` fires — at which point
+  // `e.target` is orphaned and `closest(...)` can no longer find the overlay.
+  const pointerDownInsideRef = useRef(false)
+
   // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
   // fully replaced with FloatingPortal here because Popover has no collection
   // system dependency — it renders arbitrary children, not ComboBox items.
@@ -201,28 +209,39 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   useEffect(() => {
     if (!open) return
 
+    // True when a node belongs to this popover, its trigger, or any Streamlit
+    // overlay surface (BaseWeb dropdowns/calendars, dataframe portals, and —
+    // via `data-st-overlay-root` on the popover body — nested popovers). Clicks
+    // on these must not dismiss the popover, matching the same contract the
+    // modal dialog uses (see Modal's shouldCloseOnInteractOutside).
+    const isInsidePopoverOrOverlay = (target: Node | null): boolean => {
+      if (!target) return false
+      const element = target instanceof Element ? target : target.parentElement
+      return Boolean(
+        triggerRef.current?.contains(target) ||
+        popoverBodyRef.current?.contains(target) ||
+        element?.closest('[data-st-overlay-root="true"]')
+      )
+    }
+
+    const handlePointerDown = (e: PointerEvent): void => {
+      pointerDownInsideRef.current = isInsidePopoverOrOverlay(e.target as Node)
+    }
+
     const handleClick = (e: MouseEvent): void => {
       // In test environments (JSDOM), act() flushes useEffect synchronously,
       // so this listener can be live during the same click that opened the
       // popover. The timestamp guard prevents that click from closing it.
       if (Date.now() - openedAtRef.current < 50) return
-      const target = e.target as Node
-      // A widget inside the popover (e.g. multiselect, date_input) opens its
-      // dropdown/calendar in a shared overlay host portalled outside the
-      // popover body. Interacting with those overlays must not dismiss the
-      // popover. They are tagged `data-st-overlay-root`, matching the same
-      // contract the modal dialog uses (see Modal's shouldCloseOnInteractOutside).
-      const targetElement =
-        target instanceof Element ? target : target.parentElement
-      if (targetElement?.closest('[data-st-overlay-root="true"]')) {
-        return
-      }
-      if (
-        !triggerRef.current?.contains(target) &&
-        !popoverBodyRef.current?.contains(target)
-      ) {
-        handleClose()
-      }
+      // Skip dismissal if the interaction started inside the popover/an overlay
+      // (pointerDownInsideRef) or the click itself lands inside one (covers
+      // keyboard activations that fire `click` without a preceding pointerdown).
+      const skip =
+        pointerDownInsideRef.current ||
+        isInsidePopoverOrOverlay(e.target as Node)
+      pointerDownInsideRef.current = false
+      if (skip) return
+      handleClose()
     }
 
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -246,9 +265,13 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       }
     }
 
+    // Capture phase so we record the target before an overlay's own handler
+    // can select-and-close (which detaches the node).
+    document.addEventListener("pointerdown", handlePointerDown, true)
     document.addEventListener("click", handleClick)
     document.addEventListener("keydown", handleKeyDown, true)
     return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true)
       document.removeEventListener("click", handleClick)
       document.removeEventListener("keydown", handleKeyDown, true)
     }
@@ -312,6 +335,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           <StyledPopoverBody
             ref={setFloatingRef}
             data-testid="stPopoverBody"
+            // Marks the body as an overlay surface so a nested popover (or the
+            // widget overlays inside it) doesn't dismiss an enclosing popover
+            // whose dismissal logic checks this attribute.
+            data-st-overlay-root="true"
             role="dialog"
             aria-label={element.label}
             style={floatingStyles}

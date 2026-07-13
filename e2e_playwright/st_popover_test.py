@@ -39,7 +39,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(28)
+    expect(popover_elements).to_have_count(30)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -464,6 +464,68 @@ def test_multiselect_dropdown_renders_above_popover_body(app: Page):
     first_option.click()
     wait_for_app_run(app)
     expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(1)
+
+
+def test_date_input_selection_does_not_dismiss_popover(app: Page):
+    """Selecting a day in a date_input calendar opened inside a popover must not
+    dismiss the popover.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15959: the
+    popover read the click target at `click` time, but BaseWeb closes the
+    calendar synchronously on selection, detaching the clicked day before the
+    handler ran — so the popover treated it as an outside click and closed.
+    """
+    popover_container = open_popover(app, "popover 21 (date dismissal)")
+    date_input = popover_container.get_by_test_id("stDateInput")
+    expect(date_input).to_be_visible()
+
+    # Open the calendar.
+    date_input.locator("input").first.click()
+    calendar = app.locator('[data-baseweb="calendar"]')
+    expect(calendar).to_be_visible()
+
+    # Select a different day.
+    calendar.get_by_text("15", exact=True).first.click()
+    wait_for_app_run(app)
+
+    # The popover must still be open after the day selection.
+    expect(popover_container).to_be_visible()
+    expect(date_input).to_be_visible()
+
+
+def test_nested_popover_widget_does_not_dismiss_outer_popover(app: Page):
+    """Interacting with a widget inside a nested inner popover must not dismiss
+    the outer popover.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15959: the
+    inner popover body is portalled outside the outer popover's DOM subtree, so
+    the outer popover's outside-click dismissal treated clicks inside the inner
+    popover (and the widget overlays it hosts) as outside clicks and closed.
+    """
+    open_popover(app, "popover 22 (nested)")
+    expect_markdown(app, "outer popover content")
+
+    # Open the nested inner popover via its key (its label also appears in the
+    # outer popover's subtree).
+    inner_popover = get_element_by_key(app, "nested_inner_popover")
+    inner_popover.get_by_role("button").first.click()
+
+    selectbox = get_element_by_key(app, "nested_selectbox")
+    expect(selectbox).to_be_visible()
+
+    # Open the selectbox dropdown and select an option (single-select closes its
+    # dropdown on selection, detaching the option — the detach case fixed here).
+    selectbox.locator("input").first.click()
+    option = app.get_by_role("option", name="option_2", exact=True)
+    expect(option).to_be_visible()
+    option.click()
+    wait_for_app_run(app)
+
+    # Both popovers must still be open: outer content visible and the nested
+    # selectbox reflects the new selection.
+    expect_markdown(app, "outer popover content")
+    expect(selectbox).to_be_visible()
+    expect(selectbox.locator("input")).to_have_value("option_2")
 
 
 def test_programmatic_close_does_not_reopen_other_popover(app: Page):

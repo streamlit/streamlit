@@ -143,6 +143,67 @@ describe("Popover container", () => {
     }
   })
 
+  it("stays open when a close-on-select overlay detaches the clicked node", async () => {
+    // Some overlays (date picker calendar, single-select dropdown) close
+    // synchronously on selection, detaching the clicked node before the
+    // document click handler runs. Capturing the target on pointerdown keeps
+    // the popover open. Regression test for
+    // https://github.com/streamlit/streamlit/issues/15959.
+    const user = userEvent.setup()
+    const props = getProps()
+
+    const overlayHost = document.createElement("div")
+    overlayHost.setAttribute("data-st-overlay-root", "true")
+    const overlayOption = document.createElement("button")
+    overlayOption.textContent = "day 15"
+    overlayHost.appendChild(overlayOption)
+    document.body.appendChild(overlayHost)
+    // Simulate the overlay detaching the clicked node on selection.
+    overlayOption.addEventListener("click", () => overlayHost.remove())
+
+    try {
+      render(
+        <Popover {...props}>
+          <div>test</div>
+        </Popover>
+      )
+
+      await user.click(screen.getByText("label"))
+      expect(screen.queryByText("test")).toBeVisible()
+
+      await new Promise(resolve => setTimeout(resolve, 60))
+
+      await user.click(screen.getByText("day 15"))
+      // pointerdown captured the click as inside an overlay root before the
+      // node detached, so the popover stays open.
+      expect(screen.queryByText("test")).toBeVisible()
+    } finally {
+      if (overlayHost.parentNode) {
+        document.body.removeChild(overlayHost)
+      }
+    }
+  })
+
+  it("tags the popover body as an overlay root", async () => {
+    // The body is marked data-st-overlay-root so a nested inner popover (whose
+    // body is portalled outside the outer popover) doesn't dismiss the outer
+    // popover. Regression test for
+    // https://github.com/streamlit/streamlit/issues/15959.
+    const user = userEvent.setup()
+    const props = getProps()
+    render(
+      <Popover {...props}>
+        <div>test</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+    expect(screen.getByTestId("stPopoverBody")).toHaveAttribute(
+      "data-st-overlay-root",
+      "true"
+    )
+  })
+
   it("should render correctly with width=stretch and help", async () => {
     const user = userEvent.setup()
     // Hover to see tooltip content

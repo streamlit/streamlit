@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import datetime
+
 import numpy as np
 import pandas as pd
 
@@ -95,6 +97,28 @@ with st.popover(
         ["option_1", "option_2", "option_3"],
         key="ms_stacking",
     )
+
+# Selecting a day in a date_input calendar opened inside a popover must not
+# dismiss the popover. Regression fixture for
+# https://github.com/streamlit/streamlit/issues/15959 (popover migration).
+with st.popover("popover 21 (date dismissal)", key="date_dismissal_popover"):
+    st.date_input(
+        "Date in popover",
+        value=datetime.date(2020, 1, 1),
+        key="date_dismissal",
+    )
+
+# Interacting with a widget inside a nested (inner) popover must not dismiss the
+# outer popover. Regression fixture for
+# https://github.com/streamlit/streamlit/issues/15959 (popover migration).
+with st.popover("popover 22 (nested)", key="nested_outer_popover"):
+    st.markdown("outer popover content")
+    with st.popover("nested inner popover", key="nested_inner_popover"):
+        st.selectbox(
+            "Selectbox in nested popover",
+            ["option_1", "option_2", "option_3"],
+            key="nested_selectbox",
+        )
 
 # Menu-style icons (chevron should be hidden)
 with st.container(key="menu_style_icons_container"):
