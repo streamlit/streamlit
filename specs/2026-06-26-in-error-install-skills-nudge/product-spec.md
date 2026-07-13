@@ -8,10 +8,13 @@ created: 2026-06-26
 ## Summary
 
 Adds a one-click **"Install skills"** call-to-action **inside the error box**
-(`ExceptionElement`) during local development. When a developer hits an uncaught
-error, has an AI coding agent, but hasn't installed Streamlit's agent skills, a
-small "tip" band at the foot of the error offers a one-click install right at the
-moment of pain.
+(`ExceptionElement`) during local development. When a developer hits an error that
+**Streamlit itself raised** (e.g. a `StreamlitAPIException`), has an AI coding agent,
+but hasn't installed Streamlit's agent skills, a small "tip" band at the foot of the
+error offers a one-click install right at the moment of pain. The callout is
+deliberately **not** shown for arbitrary user/runtime errors (a `ZeroDivisionError`
+in the developer's own logic won't be fixed by installing Streamlit skills) — see
+*Problem → Which errors?*.
 
 This is the second of two adoption surfaces for Streamlit's agent skills. The first
 is the proactive startup **toast** ([PR 15473](https://github.com/streamlit/streamlit/pull/15473)),
@@ -38,6 +41,26 @@ box already nudges users toward external help ("Ask Google", "Ask ChatGPT"). Off
 converts that frustration into a one-click setup step, without adding a separate
 component to maintain.
 
+### Which errors?
+
+Not every traceback is one our skills can help with. A `ZeroDivisionError` or a
+`KeyError` in the developer's own logic won't be fixed by teaching their agent about
+Streamlit — nudging "install skills" there is noise. So the callout is scoped to
+**errors Streamlit itself raises**: `StreamlitAPIException` and the other exception
+types Streamlit defines (all subclasses of the base `streamlit.errors.Error`). These
+signal misuse of the Streamlit API — precisely the class of mistake the skills exist to
+prevent, so *"fix errors like this"* is an honest promise here.
+
+We lose no reach by narrowing this surface: the proactive startup **toast** (#15473)
+still carries the broad "install skills" prompt for everyone, so a developer who hits a
+generic Python error has already been offered the skills once. The in-error callout is
+the *high-intent* reinforcement, and it only fires when the skills would actually move
+the needle.
+
+> **Decision (2026-06-29, per Johannes Rieke, PM):** show the in-error callout **only
+> for Streamlit-raised exceptions**, not on every error. This resolves the open
+> question of scope from the original draft (which showed it on every uncaught error).
+
 ## Proposal
 
 ### Design
@@ -46,6 +69,10 @@ A tasteful "tip" band at the foot of the error box: a brand-accent left stripe +
 accent wash, a sparkle icon, one line of copy, and a lightweight text-style action. It
 reads as a peer of the error's existing **Copy / Ask Google / Ask ChatGPT** links — not
 a panel that overwhelms them.
+
+The specific styling shown in the mocks below (the left accent stripe, the red tones,
+and the current alignment) is **not final** — it needs the design pass with Jessi called
+out in the blocking note after the copy table before this ships.
 
 **Idle** — shown at the foot of the error box. (The toast in the top-right is the
 separate startup nudge from #15473, included here to show how the two surfaces relate;
@@ -69,8 +96,16 @@ Copy:
 | Success | ✓ Skills installed — your AI assistant is ready to help.                  | _(auto-dismiss)_ |
 | Error   | Couldn't install skills. _\<server reason\>_ (e.g. "… already exist. Remove them and try again.") | **Retry** |
 
-> A short design pass on the surfaces (toast + callout) with Jessi is a planned
-> follow-up — copy, spacing, and icon treatment may change.
+> **Design pass with Jessi required before ship — blocking.** Raised by Johannes in
+> review (2026-06-29); still open. The current mock's styling does not yet match our
+> design system and must be reworked with Jessi (design) before this ships:
+>
+> - **Red tones don't match** the design system — retone to the system's error/accent palette.
+> - **Remove or replace the left red bar** — the accent left stripe doesn't fit our design system.
+> - **Fix the alignment** — the callout's alignment is currently a bit off.
+>
+> Copy, spacing, and icon treatment across both surfaces (toast + callout) may also
+> shift as part of this pass.
 
 ### Behavior
 
@@ -80,6 +115,11 @@ Copy:
   "Ask ChatGPT" links (`shouldShowLinks`): a direct-loopback (localhost) connection,
   not embedded, not on Community Cloud / SiS.
 - It's an **error, not a warning** (`!element.isWarning`).
+- The error is a **Streamlit-raised exception.** Only exceptions Streamlit itself
+  defines qualify (`StreamlitAPIException` and the other subclasses of
+  `streamlit.errors.Error`); arbitrary user/runtime errors like `ZeroDivisionError` or
+  `KeyError` do **not** trigger the callout. The backend flags this on the exception
+  proto (see *Implementation notes*); rationale in *Problem → Which errors?*.
 - An **AI coding agent is detected** and skills are **not already installed** this
   session.
 - The **startup toast is not currently showing** (mutual exclusion).
@@ -106,7 +146,16 @@ removes itself on success; the permanent opt-out lives on the toast.
 
 ### Implementation notes (for context)
 
-- **No proto change.** No `Exception.proto` change is required.
+- **One small, additive `Exception.proto` field.** To scope the callout to
+  Streamlit-raised errors, the frontend must know whether an exception is
+  Streamlit-defined. The backend already knows (`isinstance(exc, streamlit.errors.Error)`
+  during `marshall`), so we surface it as a single new boolean on `Exception.proto`
+  (e.g. `is_streamlit_exception`). This is backwards-compatible: proto3 defaults it to
+  `false`, and existing external consumers of the (deliberately stable) `Exception`
+  proto are unaffected. A frontend allowlist of exception **type-name strings** was
+  considered and rejected — it's fragile (it would miss non-`Streamlit`-prefixed types
+  like `DuplicateWidgetID`, and the `alternate_name` override can replace `type`
+  entirely).
 - **Reuses the toast's install backend verbatim.** The only new wiring is a
   `SkillsInstallContext` (lib core) that feeds an app-level install callback down to the
   lib-level `ExceptionElement` — mirroring how `LibConfigContext` feeds `showErrorLinks`.
@@ -119,7 +168,9 @@ removes itself on success; the permanent opt-out lives on the toast.
 
 - **`SCRIPT_COMPILE_ERROR` modal (syntax errors).** The full-screen compile-error modal
   is a separate surface; adding the callout there is a documented follow-up.
-- **Design pass with Jessi** on copy, spacing, and icon treatment across both surfaces.
+- **Design pass with Jessi — pre-ship gate, not a follow-up.** Red tones, the left red
+  bar, and alignment must be fixed with design before this ships; details in the
+  blocking note under *Proposal → Design*.
 - Non-localhost / hosted environments — intentionally excluded; the skills target a
   local coding agent.
 
@@ -128,7 +179,7 @@ removes itself on success; the permanent opt-out lives on the toast.
 | Item                       | ✅ or comment                                                                                                   |
 |----------------------------|-----------------------------------------------------------------------------------------------------------------|
 | Works on SiS, Cloud, etc?  | Intentionally **localhost-dev only** — suppressed on Cloud / SiS / embed (same gate as the "Ask ChatGPT" links). |
-| No breaking API changes    | Yes — no proto change, no public Python API; purely additive frontend surface reusing the existing install handler. |
+| No breaking API changes    | Yes — one **additive, backwards-compatible** `Exception.proto` field (`is_streamlit_exception`, defaults `false`); no public Python API change. Reuses the existing install handler. |
 | No new dependencies        | Yes.                                                                                                            |
 | Metrics collected          | Yes — new `surface` dimension on the install `MetricsEvent` (`toast` vs `errorCallout`).                         |
 | Any security/legal impact? | Low — install is a local-filesystem action, gated on a direct-loopback connection, reusing the toast PR's `InstallSkillsHandler`. |
