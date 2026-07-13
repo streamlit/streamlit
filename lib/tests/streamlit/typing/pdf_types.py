@@ -64,4 +64,4 @@ if TYPE_CHECKING:
     pdf("file.pdf", height="content")  # type: ignore[arg-type]
 
     # height is keyword-only and cannot be passed positionally
-    pdf("file.pdf", 600)  # type: ignore[misc]
+    pdf("file.pdf", 600)  # type: ignore[call-arg]

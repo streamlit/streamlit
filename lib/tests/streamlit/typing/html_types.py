@@ -79,4 +79,4 @@ if TYPE_CHECKING:
     html("<p>Text</p>", width="invalid")  # type: ignore[arg-type]
 
     # width is keyword-only (cannot be passed positionally)
-    html("<p>Text</p>", "stretch")  # type: ignore[misc]
+    html("<p>Text</p>", "stretch")  # type: ignore[call-arg]
