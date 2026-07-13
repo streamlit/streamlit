@@ -57,9 +57,11 @@ export const REQUEST_TIMED_OUT_MESSAGE = "Request timed out"
  * Error a backend operation rejects with when the server returns a failure.
  * Carries the server's machine-readable `reason` (e.g. the skills-install
  * failure cause) alongside the human-readable message, so callers can route it
- * to telemetry without parsing the message text.
+ * to telemetry without parsing the message text. Not exported: it is thrown
+ * from within this module and consumers read the `reason` property structurally
+ * (`(error as { reason?: string }).reason`) rather than via `instanceof`.
  */
-export class BackendOperationError extends Error {
+class BackendOperationError extends Error {
   public readonly reason?: string
 
   constructor(message: string, reason?: string) {
