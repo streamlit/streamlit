@@ -159,6 +159,15 @@ integration = [
 ]
 ```
 
+Listing `dependencies = ["streamlit"]` makes the editable package a real node in the resolved
+lock graph so its runtime dependencies from `lib/pyproject.toml` are locked, rather than only
+being available through a source mapping. The existing `[tool.uv.sources]` editable entry for
+`streamlit` must remain alongside this: `project.dependencies` names the requirement, while
+`[tool.uv.sources]` tells uv to satisfy it from the local editable path instead of PyPI.
+Streamlit's transitive dependencies resolve identically either way because the local editable
+source is used in both cases; the only change is that they now appear in the committed lock
+under the `streamlit` node. Validate this during implementation with a no-op `uv lock` diff.
+
 `test` is intentionally the reusable base group, not a second environment that developers
 select alongside `dev`. Selecting `dev` already includes all test dependencies. The two
 supersets serve different purposes:
@@ -315,7 +324,10 @@ Treat minimum dependency testing as an intentional escape from the project envir
 The minimum job must generate Python protobuf code compatible with protobuf 3.20. Preferred
 implementation:
 
-- Install/download the minimum supported protoc release for this job.
+- Install/download the minimum supported protoc release for this job. The generated Python
+  code must import under the protobuf 3.20 runtime, which in practice means a protoc from the
+  3.x or early 4.x series; the currently pinned protoc 26.1 emits code that requires a newer
+  runtime. Confirm the exact compatible protoc version during implementation.
 - Regenerate Python protobuf files with that compiler after minimum dependencies are
   installed.
 - Keep frontend protobuf generation in the standard setup path; only Python generated code
@@ -371,9 +383,12 @@ from `lib/pyproject.toml` that are not advanced by the root Dependabot job.
 
 Do not pass a one-off five-day `--exclude-newer` value while `pyproject.toml` declares
 `exclude-newer = "24 hours"`; the resulting lock options may disagree with normal lock
-checks. If a five-day supply-chain delay is desired, change the project setting globally to
-`"5 days"` in the same PR. The existing one-day uv cooldown and five-day Dependabot cooldown
-are compatible according to the
+checks. Concretely, `uv lock` records the effective `options.exclude-newer` in the lock
+header, so a lock produced with a one-off five-day value would fail the next `uv lock --check`
+(and therefore every locked CI run) because the header would not match the project-level
+`"24 hours"` setting. If a five-day supply-chain delay is desired, change the project setting
+globally to `"5 days"` in the same PR. The existing one-day uv cooldown and five-day
+Dependabot cooldown are compatible according to the
 [uv Dependabot guide](https://docs.astral.sh/uv/guides/integration/dependabot/).
 
 Existing unlocked wheel-install canaries remain valuable:
@@ -598,7 +613,7 @@ review to surface its changes.
    days to match Dependabot. Do not override it only in the scheduled workflow.
 3. **Protobuf lower bound:** Generate min-compatible code in the minimum job, or raise the
    published protobuf minimum. Preferred: preserve 3.20 by generating with a compatible
-   protoc in that job.
+   protoc (3.x / early 4.x series, not the pinned protoc 26.1) in that job.
 4. **Environment command interface:** Separate Make targets versus one validated
    `PYTHON_DEPENDENCY_GROUP` variable. Both must use explicit no-default-group semantics.
 5. **Root development Python range:** Optionally restrict lock resolution to the currently
