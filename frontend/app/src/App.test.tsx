@@ -87,6 +87,7 @@ import {
   IPageNotFound,
   IParentMessage,
   Navigation,
+  PageConfig,
   SessionEvent,
   SessionStatus,
   TextInput,
@@ -1826,7 +1827,31 @@ describe("App", () => {
 
     afterEach(() => {
       document.title = documentTitle
+      window.localStorage.clear()
     })
+
+    const TWO_PAGE_NAV_APP_PAGES = [
+      {
+        pageScriptHash: "page_script_hash",
+        pageName: "Page 1",
+        urlPathname: "page-1",
+        isDefault: true,
+      },
+      {
+        pageScriptHash: "page_2_hash",
+        pageName: "Page 2",
+        urlPathname: "page-2",
+      },
+    ]
+
+    const sendTwoPageNavigation = (pageScriptHash: string): void => {
+      sendForwardMessage("navigation", {
+        appPages: TWO_PAGE_NAV_APP_PAGES,
+        pageScriptHash,
+        position: Navigation.Position.SIDEBAR,
+        sections: [],
+      })
+    }
 
     it("sets document title when 'PageConfig.title' is set", () => {
       renderApp(getProps())
@@ -1835,6 +1860,69 @@ describe("App", () => {
       })
 
       expect(document.title).toBe("Jabberwocky")
+    })
+
+    it("applies explicit sidebar state when entering a different page", () => {
+      window.localStorage.setItem("stSidebarCollapsed-", "false")
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendTwoPageNavigation("page_script_hash")
+      sendForwardMessage(
+        "pageConfigChanged",
+        { initialSidebarState: PageConfig.SidebarState.COLLAPSED },
+        { activeScriptHash: "page_script_hash" }
+      )
+
+      // On initial load, the existing persisted preference remains
+      // authoritative even when the page config says collapsed.
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "page_2_hash",
+        scriptRunId: "page_2_run_id",
+      })
+      sendTwoPageNavigation("page_2_hash")
+      sendForwardMessage(
+        "pageConfigChanged",
+        { initialSidebarState: PageConfig.SidebarState.COLLAPSED },
+        { activeScriptHash: "page_2_hash" }
+      )
+
+      // The destination config applies even though it has the same enum value
+      // as the source page, so navigation cannot rely on value inequality.
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "false"
+      )
+      expect(window.localStorage.getItem("stSidebarCollapsed-")).toBe("false")
+    })
+
+    it("does not treat common-script page config as destination config", () => {
+      window.localStorage.setItem("stSidebarCollapsed-", "false")
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "page_2_hash",
+        scriptRunId: "page_2_run_id",
+      })
+      sendTwoPageNavigation("page_2_hash")
+      sendForwardMessage(
+        "pageConfigChanged",
+        { initialSidebarState: PageConfig.SidebarState.COLLAPSED },
+        { activeScriptHash: "page_hash" }
+      )
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
     })
   })
 

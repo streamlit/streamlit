@@ -58,7 +58,7 @@ import {
   useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
-import { Navigation } from "@streamlit/protobuf"
+import { Navigation, PageConfig } from "@streamlit/protobuf"
 
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
 import {
@@ -116,6 +116,13 @@ export interface AppViewProps {
 
   navigationPosition: Navigation.Position
 
+  /**
+   * Bumped when an explicit sidebar state is received while entering a new
+   * page. This is intentionally separate from initialSidebarState because two
+   * adjacent pages can configure the same value.
+   */
+  sidebarPageChangeSequence: number
+
   topRightContent?: React.ReactNode
 
   wideMode: boolean
@@ -158,6 +165,7 @@ function AppView(props: AppViewProps): ReactElement {
     sendMessageToHost,
     endpoints,
     navigationPosition,
+    sidebarPageChangeSequence,
     topRightContent,
     wideMode,
     embedded,
@@ -209,7 +217,8 @@ function AppView(props: AppViewProps): ReactElement {
 
   const { activeTheme } = useContext(ThemeContext)
 
-  const { appPages, pageLinkBaseUrl } = useContext(NavigationContext)
+  const { appPages, pageLinkBaseUrl, currentPageScriptHash } =
+    useContext(NavigationContext)
 
   const { initialSidebarState, appLogo, hideSidebarNav, isSidebarLocked } =
     useContext(SidebarConfigContext)
@@ -308,11 +317,65 @@ function AppView(props: AppViewProps): ReactElement {
     )
   })
 
+  const previousPageScriptHashRef = useRef(currentPageScriptHash)
+  const consumedSidebarPageChangeSequenceRef = useRef(
+    sidebarPageChangeSequence
+  )
+  const pageEntrySidebarStateRef = useRef<PageConfig.SidebarState | null>(null)
+
+  // Reconcile the sidebar collapse state during render (the sanctioned
+  // "adjust state when a prop changes" pattern) instead of an effect. The refs
+  // below are consumed and updated in the same pass, so this relies on React
+  // committing the accompanying setSidebarIsCollapsed update synchronously. The
+  // page-entry override is only driven by non-transition ForwardMsg updates
+  // (which commit), so a discarded/interrupted render dropping the override is
+  // not a concern in practice.
   useExecuteWhenChanged(() => {
+    const collapseForSidebarState = (
+      sidebarState: PageConfig.SidebarState
+    ): void => {
+      setSidebarIsCollapsed(
+        shouldCollapse(
+          sidebarState,
+          parseInt(activeTheme.emotion.breakpoints.md, 10),
+          innerWidth
+        )
+      )
+    }
+
+    const previousPageScriptHash = previousPageScriptHashRef.current
+    const pageChanged =
+      previousPageScriptHash !== "" &&
+      currentPageScriptHash !== "" &&
+      previousPageScriptHash !== currentPageScriptHash
+    previousPageScriptHashRef.current = currentPageScriptHash
+
+    const hasExplicitPageEntryState =
+      consumedSidebarPageChangeSequenceRef.current !==
+      sidebarPageChangeSequence
+
+    if (hasExplicitPageEntryState && innerWidth > 0) {
+      consumedSidebarPageChangeSequenceRef.current = sidebarPageChangeSequence
+      pageEntrySidebarStateRef.current = initialSidebarState
+      collapseForSidebarState(initialSidebarState)
+      return
+    }
+
+    if (pageChanged) {
+      // A destination without an explicit sidebar state falls back to the
+      // user's persisted preference.
+      pageEntrySidebarStateRef.current = null
+    }
+
     if (innerWidth > 0 && showSidebar) {
       // Locked sidebar (desktop only) always stays open; skip saved preference.
       if (isEffectivelyLocked) {
         setSidebarIsCollapsed(false)
+        return
+      }
+
+      if (pageEntrySidebarStateRef.current !== null) {
+        collapseForSidebarState(pageEntrySidebarStateRef.current)
         return
       }
 
@@ -322,13 +385,7 @@ function AppView(props: AppViewProps): ReactElement {
         // User has adjusted the sidebar, respect it
         setSidebarIsCollapsed(savedSidebarState)
       } else {
-        setSidebarIsCollapsed(
-          shouldCollapse(
-            initialSidebarState,
-            parseInt(activeTheme.emotion.breakpoints.md, 10),
-            innerWidth
-          )
-        )
+        collapseForSidebarState(initialSidebarState)
       }
     }
   }, [
@@ -338,6 +395,8 @@ function AppView(props: AppViewProps): ReactElement {
     activeTheme.emotion.breakpoints.md,
     pageLinkBaseUrl,
     isEffectivelyLocked,
+    currentPageScriptHash,
+    sidebarPageChangeSequence,
   ])
 
   const setSidebarCollapsedWithOptionalPersistence = useCallback(
@@ -345,6 +404,9 @@ function AppView(props: AppViewProps): ReactElement {
       // Locked sidebar (desktop only) cannot be collapsed; skip localStorage writes.
       if (isEffectivelyLocked) {
         return
+      }
+      if (shouldPersist) {
+        pageEntrySidebarStateRef.current = null
       }
       setSidebarIsCollapsed(isCollapsed)
       if (shouldPersist) {
