@@ -180,13 +180,15 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
   const popoverBodyRef = useRef<HTMLDivElement>(null)
 
-  // Records, on pointerdown, whether the interaction started inside the
-  // popover, its trigger, or a Streamlit overlay root. We capture it here
-  // because some overlays close synchronously on selection (e.g. the date
-  // picker calendar and the single-select dropdown), detaching the clicked
-  // node from the DOM before the follow-up `click` fires — at which point
-  // `e.target` is orphaned and `closest(...)` can no longer find the overlay.
-  const pointerDownInsideRef = useRef(false)
+  // Records whether the most recent interaction (pointerdown, or Enter/Space
+  // keydown) started inside the popover, its trigger, or a Streamlit overlay
+  // root. We capture it in the capture phase because some overlays close
+  // synchronously on selection (e.g. the date picker calendar and the
+  // single-select dropdown), detaching the activated node from the DOM before
+  // the follow-up `click` fires — at which point `e.target` is orphaned and
+  // `closest(...)` can no longer find the overlay. Covers both mouse and
+  // keyboard activation, which can dispatch a `click` with no prior pointerdown.
+  const interactionInsideRef = useRef(false)
 
   // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
   // fully replaced with FloatingPortal here because Popover has no collection
@@ -209,6 +211,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   useEffect(() => {
     if (!open) return
 
+    // Reset on (re)open so a stale origin from a previous interaction — e.g. an
+    // inside pointerdown followed by an Escape that never produced a click —
+    // can't cause the next outside click to be misclassified as inside.
+    interactionInsideRef.current = false
+
     // True when a node belongs to this popover, its trigger, or any Streamlit
     // overlay surface (BaseWeb dropdowns/calendars, dataframe portals, and —
     // via `data-st-overlay-root` on the popover body — nested popovers). Clicks
@@ -225,7 +232,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
 
     const handlePointerDown = (e: PointerEvent): void => {
-      pointerDownInsideRef.current = isInsidePopoverOrOverlay(e.target as Node)
+      interactionInsideRef.current = isInsidePopoverOrOverlay(e.target as Node)
     }
 
     const handleClick = (e: MouseEvent): void => {
@@ -234,12 +241,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       // popover. The timestamp guard prevents that click from closing it.
       if (Date.now() - openedAtRef.current < 50) return
       // Skip dismissal if the interaction started inside the popover/an overlay
-      // (pointerDownInsideRef) or the click itself lands inside one (covers
-      // keyboard activations that fire `click` without a preceding pointerdown).
+      // (interactionInsideRef, captured before any select-and-close detaches the
+      // node) or the click itself lands inside one.
       const skip =
-        pointerDownInsideRef.current ||
+        interactionInsideRef.current ||
         isInsidePopoverOrOverlay(e.target as Node)
-      pointerDownInsideRef.current = false
+      interactionInsideRef.current = false
       if (skip) return
       handleClose()
     }
@@ -262,6 +269,15 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         e.preventDefault()
         handleClose()
         triggerRef.current?.querySelector<HTMLButtonElement>("button")?.focus()
+        return
+      }
+
+      // Enter/Space can activate a close-on-select overlay option and dispatch
+      // a follow-up `click` with no preceding pointerdown. Record the origin now
+      // (capture phase) so that click isn't misread as an outside click once the
+      // overlay has detached the activated option.
+      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+        interactionInsideRef.current = isInsidePopoverOrOverlay(e.target as Node)
       }
     }
 

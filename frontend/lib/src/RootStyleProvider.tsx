@@ -90,7 +90,8 @@ export function RootStyleProvider(
       // BaseWeb layers render in the basewebOverlay tier, which sits above the
       // popup layer (React Aria dialogs, floating-ui popover body) so legacy
       // dropdowns and calendars — including ones opened inside an st.popover —
-      // render on top, and below tablePortal so dataframe overlays stay on top.
+      // render on top, and below toast/tablePortal so toasts and dataframe
+      // overlays stay on top.
       zIndex={basewebOverlayZIndex}
       overrides={baseProviderOverrides}
     >

@@ -184,6 +184,50 @@ describe("Popover container", () => {
     }
   })
 
+  it("stays open when a keyboard-activated overlay option detaches before click", async () => {
+    // Enter/Space on an overlay option can dispatch a `click` with no preceding
+    // pointerdown, and a close-on-select overlay may detach the option first —
+    // orphaning the click target. Recording the origin on the Enter keydown
+    // (capture phase) keeps the popover open. Regression test for
+    // https://github.com/streamlit/streamlit/issues/15959.
+    const user = userEvent.setup()
+    const props = getProps()
+
+    const overlayHost = document.createElement("div")
+    overlayHost.setAttribute("data-st-overlay-root", "true")
+    const overlayOption = document.createElement("button")
+    overlayOption.textContent = "day 15"
+    overlayHost.appendChild(overlayOption)
+    document.body.appendChild(overlayHost)
+
+    try {
+      render(
+        <Popover {...props}>
+          <div>test</div>
+        </Popover>
+      )
+
+      await user.click(screen.getByText("label"))
+      expect(screen.queryByText("test")).toBeVisible()
+
+      await new Promise(resolve => setTimeout(resolve, 60))
+
+      // Enter keydown inside the overlay records the interaction origin before
+      // the overlay detaches the option node...
+      overlayOption.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+      )
+      overlayHost.remove()
+      // ...so the follow-up click with an orphaned target does not dismiss.
+      document.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+      expect(screen.queryByText("test")).toBeVisible()
+    } finally {
+      if (overlayHost.parentNode) {
+        document.body.removeChild(overlayHost)
+      }
+    }
+  })
+
   it("tags the popover body as an overlay root", async () => {
     // The body is marked data-st-overlay-root so a nested inner popover (whose
     // body is portalled outside the outer popover) doesn't dismiss the outer
