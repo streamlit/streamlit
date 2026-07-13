@@ -277,6 +277,46 @@ class EditingState {
   }
 
   /**
+   * Clears an edited cell from the editing state for the given column and row.
+   *
+   * @param col - The column index
+   * @param row - The row index
+   */
+  clearCell(col: number, row: number): void {
+    if (this.isAddedRow(row)) {
+      // Added rows have their own state and don't have source data to compare.
+      return
+    }
+
+    const rowCache = this.editedCells.get(row)
+    if (isNullOrUndefined(rowCache)) {
+      return
+    }
+
+    rowCache.delete(col)
+    if (rowCache.size === 0) {
+      this.editedCells.delete(row)
+    }
+  }
+
+  /**
+   * Iterates over all edited cells.
+   *
+   * @param callback - The callback to call for each edited cell
+   */
+  forEachEditedCell(
+    callback: (col: number, row: number, cell: GridCell) => void
+  ): void {
+    // Snapshot the entries so the callback can safely clear cells (which
+    // mutates the underlying maps) while we iterate over them.
+    Array.from(this.editedCells.entries()).forEach(([row, rowCache]) => {
+      Array.from(rowCache.entries()).forEach(([col, cell]) => {
+        callback(col, row, cell)
+      })
+    })
+  }
+
+  /**
    * Adds a new row to the editing state.
    *
    * @param rowCells - The cells of the row to add
