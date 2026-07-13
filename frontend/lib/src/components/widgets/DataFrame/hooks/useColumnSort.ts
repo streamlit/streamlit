@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { DataEditorProps, GridCell } from "@glideapps/glide-data-grid"
 import { useColumnSort as useGlideColumnSort } from "@glideapps/glide-data-grid-source"
@@ -113,6 +113,17 @@ function useColumnSort({
     }
     return map
   }, [columns])
+
+  // Hidden columns are removed from `columns`. Clear an active sort when that
+  // happens so the data does not silently revert to unsorted and then
+  // unexpectedly reactivate the old sort if the column is shown again.
+  useEffect(() => {
+    setSort(currentSort =>
+      currentSort !== undefined && !columnsById.has(currentSort.columnId)
+        ? undefined
+        : currentSort
+    )
+  }, [columnsById])
 
   const glideColumns = useMemo(
     () => columns.map(column => toGlideColumn(column)),

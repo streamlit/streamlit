@@ -518,31 +518,38 @@ def _marshall_lazy_dataframe(
     if source_mgr is None:
         return False
 
-    coordinates = dg._get_delta_path_str()
-    registered = source_mgr.register_source(
-        source, coordinates, page_size=dataframe_source.DEFAULT_PAGE_SIZE
+    # Resolve every source-dependent value and serialize the first page before
+    # registration. If loading or serialization fails, no coordinate reference
+    # is left behind retaining a potentially large in-memory or remote source.
+    page_size = dataframe_source.DEFAULT_PAGE_SIZE
+    row_count = source.row_count
+    access_mode = source.access_mode
+    sortable = source.sortable
+    initial_table = source.load_rows(0, page_size)
+    initial_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(
+        initial_table, truncate=False
     )
+
+    coordinates = dg._get_delta_path_str()
+    registered = source_mgr.register_source(source, coordinates, page_size=page_size)
 
     lazy_data = proto.lazy_data
     lazy_data.source_id = registered.source_id
     lazy_data.generation = registered.generation
     lazy_data.page_size = registered.page_size
     lazy_data.initial_offset = 0
-    lazy_data.access_mode = _ACCESS_MODE_TO_PROTO[source.access_mode]
-    lazy_data.sortable = source.sortable
+    lazy_data.access_mode = _ACCESS_MODE_TO_PROTO[access_mode]
+    lazy_data.sortable = sortable
     # ``row_count`` is optional in the proto: unknown-size (future sequential)
     # sources report ``None`` and leave the field unset.
-    if source.row_count is not None:
-        lazy_data.row_count = source.row_count
+    if row_count is not None:
+        lazy_data.row_count = row_count
 
     # Serve the first page as the initial chunk. It carries the Arrow schema and
     # the first visible rows so the frontend can render columns immediately.
     # Never truncate lazy chunks: the frontend maps each chunk to a fixed
     # ``page_size`` row window, so dropping rows would misalign offsets.
-    initial_table = source.load_rows(0, registered.page_size)
-    lazy_data.initial_chunk.data = dataframe_util.convert_arrow_table_to_arrow_bytes(
-        initial_table, truncate=False
-    )
+    lazy_data.initial_chunk.data = initial_bytes
     return True
 
 
@@ -1029,9 +1036,15 @@ class ArrowMixin:
 
         # Resolve whether this dataframe should be delivered lazily. This may
         # raise a StreamlitAPIException for incompatible `lazy=True` requests.
-        lazy_source = dataframe_source.resolve_lazy_source(
+        resolved_dataframe = dataframe_source.resolve_lazy_source(
             data, lazy, is_selection_activated=is_selection_activated
         )
+        if isinstance(resolved_dataframe, dataframe_source.EagerDataframeFallback):
+            eager_fallback_data = resolved_dataframe.data
+            lazy_source = None
+        else:
+            eager_fallback_data = None
+            lazy_source = resolved_dataframe
 
         processed_column_config, button_columns = extract_button_column_configs(
             column_config
@@ -1101,7 +1114,8 @@ class ArrowMixin:
 
             # Convert the input data into a pandas.DataFrame
             data_df = dataframe_util.convert_anything_to_pandas_df(
-                data, ensure_copy=False
+                eager_fallback_data if eager_fallback_data is not None else data,
+                ensure_copy=False,
             )
             has_range_index = dataframe_util.has_range_index(data_df)
             apply_data_specific_configs(column_config_mapping, data_format)

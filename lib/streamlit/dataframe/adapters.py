@@ -29,11 +29,8 @@ Adapters use optional detection only and never require new dependencies.
 
 from __future__ import annotations
 
-import hashlib
 import threading
 from typing import TYPE_CHECKING, Any, Final
-
-from cachetools import TTLCache
 
 from streamlit import dataframe_util
 from streamlit.dataframe.source import AccessMode
@@ -45,53 +42,6 @@ if TYPE_CHECKING:
     from streamlit.dataframe.source import DataframeSource, SortSpec
 
 _LOGGER: Final = get_logger(__name__)
-_ROW_COUNT_CACHE_MAX_ENTRIES: Final = 256
-_ROW_COUNT_CACHE_TTL_SECONDS: Final = 60
-_ROW_COUNT_CACHE: Final[TTLCache[tuple[str, str], int]] = TTLCache(
-    maxsize=_ROW_COUNT_CACHE_MAX_ENTRIES, ttl=_ROW_COUNT_CACHE_TTL_SECONDS
-)
-_ROW_COUNT_CACHE_LOCK: Final = threading.Lock()
-
-
-def _get_session_id() -> str:
-    """Return the current session id for session-scoped adapter caches."""
-    from streamlit.runtime.scriptrunner_utils.script_run_context import (
-        get_script_run_ctx,
-    )
-
-    ctx = get_script_run_ctx(suppress_warning=True)
-    if ctx is None:
-        return "dontcare"
-    return ctx.session_id
-
-
-def _stable_hash(prefix: str, payload: object) -> str:
-    payload_bytes = repr(payload).encode("utf-8", errors="replace")
-    digest = hashlib.sha256(payload_bytes).hexdigest()
-    return f"{prefix}:{digest}"
-
-
-def _cached_row_count(cache_key: str | None, compute: Any) -> int:
-    """Return a cached row count for stable native query plans."""
-    if cache_key is None:
-        return int(compute())
-
-    scoped_key = (_get_session_id(), cache_key)
-    with _ROW_COUNT_CACHE_LOCK:
-        cached = _ROW_COUNT_CACHE.get(scoped_key)
-    if cached is not None:
-        return cached
-
-    row_count = int(compute())
-    with _ROW_COUNT_CACHE_LOCK:
-        _ROW_COUNT_CACHE[scoped_key] = row_count
-    return row_count
-
-
-def _clear_row_count_cache() -> None:
-    """Clear the native row-count cache. Intended for tests."""
-    with _ROW_COUNT_CACHE_LOCK:
-        _ROW_COUNT_CACHE.clear()
 
 
 def try_create_native_source(data: object) -> DataframeSource | None:
@@ -132,8 +82,6 @@ class PolarsLazyFrameSource:
         # the type-checking environment.
         self._lf: Any = lazy_frame
         self._row_count: int | None = None
-        self._row_count_cache_key: str | None = None
-        self._row_count_cache_key_loaded = False
         self._schema: pa.Schema | None = None
         # Guards the lazily-initialized properties below. Chunk requests run in
         # worker threads (asyncio.to_thread), so concurrent first accesses could
@@ -147,29 +95,8 @@ class PolarsLazyFrameSource:
 
             with self._lock:
                 if self._row_count is None:
-                    self._row_count = _cached_row_count(
-                        self.row_count_cache_key,
-                        lambda: self._lf.select(pl.len()).collect().item(),
-                    )
+                    self._row_count = int(self._lf.select(pl.len()).collect().item())
         return self._row_count
-
-    @property
-    def row_count_cache_key(self) -> str | None:
-        if not self._row_count_cache_key_loaded:
-            try:
-                plan = self._lf.explain(optimized=True)
-            except TypeError:
-                try:
-                    plan = self._lf.explain()
-                except Exception:
-                    plan = None
-            except Exception:
-                plan = None
-            self._row_count_cache_key = (
-                None if plan is None else _stable_hash("polars-lazyframe", plan)
-            )
-            self._row_count_cache_key_loaded = True
-        return self._row_count_cache_key
 
     @property
     def schema(self) -> pa.Schema:
@@ -210,17 +137,20 @@ class PolarsLazyFrameSource:
             # it) so the row order is total and stable across requests. A row
             # index avoids ordering by every column, which could fail for
             # unorderable column types (e.g. nested/struct columns).
+            row_index_column = self._ROW_INDEX_COLUMN
+            while row_index_column in self.schema.names:
+                row_index_column = f"_{row_index_column}"
             with_row_index = getattr(frame, "with_row_index", None)
             if with_row_index is not None:
-                frame = with_row_index(self._ROW_INDEX_COLUMN)
+                frame = with_row_index(row_index_column)
             else:
                 # `with_row_index` was introduced in Polars 0.20.4. Older
                 # supported versions expose the same behavior as `with_row_count`.
-                frame = frame.with_row_count(self._ROW_INDEX_COLUMN)
+                frame = frame.with_row_count(row_index_column)
             frame = frame.sort(
-                [sort.column, self._ROW_INDEX_COLUMN],
+                [sort.column, row_index_column],
                 descending=[sort.descending, False],
-            ).drop(self._ROW_INDEX_COLUMN)
+            ).drop(row_index_column)
         chunk = frame.slice(max(0, offset), max(0, limit)).collect()
         return _align_to_schema(chunk.to_arrow(), self.schema)
 
@@ -247,8 +177,6 @@ class SnowparkDataframeSource:
         # in the type-checking environment.
         self._df: Any = snowpark_df
         self._row_count: int | None = None
-        self._row_count_cache_key: str | None = None
-        self._row_count_cache_key_loaded = False
         self._schema: pa.Schema | None = None
         # The first page is loaded to derive a canonical schema; cache it so the
         # initial chunk request does not re-query.
@@ -264,23 +192,8 @@ class SnowparkDataframeSource:
         if self._row_count is None:
             with self._lock:
                 if self._row_count is None:
-                    self._row_count = _cached_row_count(
-                        self.row_count_cache_key, self._df.count
-                    )
+                    self._row_count = int(self._df.count())
         return self._row_count
-
-    @property
-    def row_count_cache_key(self) -> str | None:
-        if not self._row_count_cache_key_loaded:
-            try:
-                queries = self._df.queries
-            except Exception:
-                queries = None
-            self._row_count_cache_key = (
-                None if queries is None else _stable_hash("snowpark", queries)
-            )
-            self._row_count_cache_key_loaded = True
-        return self._row_count_cache_key
 
     @property
     def schema(self) -> pa.Schema:

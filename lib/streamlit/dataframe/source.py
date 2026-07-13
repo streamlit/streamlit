@@ -25,6 +25,7 @@ API in the first version.
 
 from __future__ import annotations
 
+import json
 import threading
 from dataclasses import dataclass
 from enum import Enum
@@ -74,6 +75,19 @@ class SortSpec:
 
     column: str
     descending: bool = False
+
+
+@dataclass(frozen=True)
+class EagerDataframeFallback:
+    """A pre-converted dataframe that must continue through eager rendering.
+
+    Resolving ``lazy=True`` for an arbitrary eager input requires materializing
+    it to determine its row count. Returning that converted value prevents
+    one-shot inputs, such as generators, from being consumed a second time by
+    the regular eager serialization path.
+    """
+
+    data: DataFrame
 
 
 class AccessMode(Enum):
@@ -161,6 +175,44 @@ def _pandas_to_arrow_table(df: DataFrame) -> pa.Table:
         return pa.Table.from_pandas(fixed, preserve_index=True)
 
 
+def _materialize_arrow_table_index(table: pa.Table) -> pa.Table:
+    """Materialize a metadata-only pandas RangeIndex in ``table``.
+
+    ``pa.Table.from_pandas`` stores a RangeIndex only in schema metadata by
+    default. Since slicing preserves that metadata verbatim, every lazy chunk
+    would otherwise recreate the index from its original start. Materializing
+    the index makes its values travel with slices and server-side sorts.
+    """
+    metadata = table.schema.pandas_metadata
+    if metadata is None or not any(
+        isinstance(index, dict) and index.get("kind") == "range"
+        for index in metadata.get("index_columns", [])
+    ):
+        return table
+
+    import pyarrow as pa
+
+    dataframe = table.to_pandas()
+    logical_index_name = dataframe.index.name
+    physical_index_name = "__streamlit_lazy_index__"
+    while physical_index_name in dataframe.columns:
+        physical_index_name = f"_{physical_index_name}"
+    dataframe.index.name = physical_index_name
+    materialized = pa.Table.from_pandas(dataframe, preserve_index=True)
+
+    # The temporary physical name must remain unique in Arrow, but preserve the
+    # user's logical pandas index name (including an unnamed RangeIndex) in the
+    # metadata that drives frontend index rendering.
+    schema_metadata = dict(materialized.schema.metadata or {})
+    pandas_metadata = json.loads(schema_metadata[b"pandas"])
+    for column in pandas_metadata.get("columns", []):
+        if column.get("field_name") == physical_index_name:
+            column["name"] = logical_index_name
+            break
+    schema_metadata[b"pandas"] = json.dumps(pandas_metadata).encode()
+    return materialized.replace_schema_metadata(schema_metadata)
+
+
 class InMemoryDataframeSource:
     """A lazy source backed by a fully-materialized in-memory ``pyarrow.Table``.
 
@@ -218,37 +270,27 @@ class InMemoryDataframeSource:
         with self._lock:
             if self._sorted_cache is not None and self._sorted_cache[0] == sort:
                 return self._sorted_cache[1]
-
-        # Sort outside the lock so an expensive sort doesn't serialize all
-        # chunk requests.
-        sorted_table = self._sort_table(sort)
-        with self._lock:
-            # A concurrent request for the same sort may have populated the
-            # cache while we were sorting; reuse it so both callers share one
-            # table instead of overwriting each other's result.
-            if self._sorted_cache is not None and self._sorted_cache[0] == sort:
-                return self._sorted_cache[1]
+            # Keep the first full-table sort inside the lock. Chunk requests
+            # with the same new sort state can arrive concurrently; sorting
+            # outside the lock would make each request allocate and compute an
+            # identical sorted table before any one of them populated the
+            # cache.
+            sorted_table = self._sort_table(sort)
             self._sorted_cache = (sort, sorted_table)
-        return sorted_table
+            return sorted_table
 
     def _sort_table(self, sort: SortSpec) -> pa.Table:
         import pyarrow.compute as pc
 
         order = "descending" if sort.descending else "ascending"
-        try:
-            # ``pc.sort_indices`` is available since pyarrow 1.0 but is not
-            # exposed by the type stubs, hence the suppressions below.
-            indices = pc.sort_indices(  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
-                self._table, sort_keys=[(sort.column, order)]
-            )
-            return self._table.take(indices)
-        except Exception as ex:
-            _LOGGER.warning(
-                "Failed to sort lazy dataframe by column %r; returning unsorted data.",
-                sort.column,
-                exc_info=ex,
-            )
-            return self._table
+        # ``pc.sort_indices`` is available since pyarrow 1.0 but is not exposed
+        # by the type stubs, hence the suppressions below. Unsupported Arrow
+        # types must raise: silently returning the original table would leave a
+        # sort indicator visible while presenting unsorted rows.
+        indices = pc.sort_indices(  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+            self._table, sort_keys=[(sort.column, order)]
+        )
+        return self._table.take(indices)
 
 
 def _in_memory_source_from_pandas(df: DataFrame) -> InMemoryDataframeSource:
@@ -338,11 +380,13 @@ def resolve_lazy_source(
     lazy: bool | None,
     *,
     is_selection_activated: bool,
-) -> DataframeSource | None:
+) -> DataframeSource | EagerDataframeFallback | None:
     """Decide whether to deliver ``data`` lazily and build the source if so.
 
-    Returns a :class:`DataframeSource` when lazy delivery should be used, or
-    ``None`` to keep the existing eager / capped-preview path.
+    Returns a :class:`DataframeSource` when lazy delivery should be used,
+    :class:`EagerDataframeFallback` when resolution already converted an input
+    that should remain eager, or ``None`` to keep the existing eager /
+    capped-preview path.
 
     Raises
     ------
@@ -355,12 +399,6 @@ def resolve_lazy_source(
         return None
 
     if lazy is False:
-        return None
-
-    if lazy is None and config.get_option("global.appTest"):
-        # AppTest exposes dataframe values through the element tree, not through
-        # frontend chunk requests. Keep the default path eager so existing tests
-        # that inspect ``at.dataframe[0].value`` keep seeing the rendered data.
         return None
 
     is_styler = dataframe_util.is_pandas_styler(data)
@@ -382,6 +420,13 @@ def resolve_lazy_source(
             )
         # For lazy=None we fall back to eager rendering to preserve the existing
         # selection behavior.
+        return None
+
+    if config.get_option("global.appTest"):
+        # AppTest exposes dataframe values through the element tree, not through
+        # frontend chunk requests. Keep all AppTest dataframes eager, including
+        # explicit ``lazy=True`` calls, so ``Dataframe.value`` is never silently
+        # truncated to the initial chunk.
         return None
 
     # 1) Native adapter for supported unevaluated objects (Polars LazyFrame,
@@ -431,7 +476,7 @@ def resolve_lazy_source(
         if _has_multi_level_columns(data):
             return None
         if _should_lazy_load_in_memory(lazy, data.num_rows):
-            return InMemoryDataframeSource(data)
+            return InMemoryDataframeSource(_materialize_arrow_table_index(data))
         return None
 
     # 5) Unevaluated object without a ready native adapter.
@@ -450,9 +495,10 @@ def resolve_lazy_source(
     if lazy is True:
         df = dataframe_util.convert_anything_to_pandas_df(data, ensure_copy=True)
         # Multi-level column headers are not supported for lazy loading; fall
-        # back to eager rendering.
+        # back to eager rendering. Return the converted dataframe so one-shot
+        # inputs are not consumed again by the eager serialization path.
         if _has_multi_level_columns(df) or len(df) <= FORCED_LAZY_MIN_ROWS:
-            return None
+            return EagerDataframeFallback(df)
         return _in_memory_source_from_pandas(df)
 
     # 7) lazy=None and not a large in-memory dataframe: keep eager.

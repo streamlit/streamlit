@@ -97,7 +97,8 @@ function makeClient(
 
 function renderLoader(
   client: BackendOperationClient | undefined,
-  pageSize: number = PAGE_SIZE
+  pageSize: number = PAGE_SIZE,
+  numRows: number = 4
 ): {
   result: { current: ReturnType<typeof useLazyDataLoader> }
 } {
@@ -106,7 +107,7 @@ function renderLoader(
     useLazyDataLoader({
       initialChunk,
       columns: MOCK_COLUMNS,
-      numRows: 4,
+      numRows,
       sourceId: SOURCE_ID,
       generation: GENERATION,
       pageSize,
@@ -234,6 +235,55 @@ describe("useLazyDataLoader", () => {
     for (const call of request.mock.calls) {
       expect(call[0].offset).toBeLessThan(4)
     }
+  })
+
+  it("drops debounced chunks from superseded visible ranges", async () => {
+    const { client, request } = makeClient(() =>
+      Promise.resolve({
+        sourceId: SOURCE_ID,
+        generation: GENERATION,
+        arrowData: { data: UNICODE },
+      })
+    )
+    const { result } = renderLoader(client, PAGE_SIZE, 200)
+
+    act(() => {
+      result.current.onVisibleRegionChanged({
+        x: 0,
+        y: 10,
+        width: 1,
+        height: 2,
+      })
+      result.current.onVisibleRegionChanged({
+        x: 0,
+        y: 100,
+        width: 1,
+        height: 2,
+      })
+    })
+
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(3))
+    expect(request.mock.calls.map(call => call[0].offset)).toEqual([
+      98, 100, 102,
+    ])
+  })
+
+  it("bounds concurrent requests for a large visible range", async () => {
+    const { client, request } = makeClient(
+      () => new Promise<IDataframeChunkResponsePayload>(() => undefined)
+    )
+    const { result } = renderLoader(client, PAGE_SIZE, 200)
+
+    act(() => {
+      result.current.onVisibleRegionChanged({
+        x: 0,
+        y: 2,
+        width: 1,
+        height: 100,
+      })
+    })
+
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(4))
   })
 
   it("retries a previously failed chunk when it is scrolled back into view", async () => {

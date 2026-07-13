@@ -309,23 +309,19 @@ def test_dataframe_value_keeps_auto_lazy_candidates_eager_in_app_test(
     assert dataframe.value["a"].tolist() == [1, 2, 3, 4]
 
 
-def test_dataframe_value_reads_lazy_initial_chunk(
-    monkeypatch: pytest.MonkeyPatch,
-):
-    monkeypatch.setattr(dataframe_source, "FORCED_LAZY_MIN_ROWS", 1)
-
+def test_dataframe_value_keeps_explicit_lazy_data_complete():
     def script():
         import pandas as pd
 
         import streamlit as st
 
-        st.dataframe(pd.DataFrame({"a": [1, 2, 3, 4]}), lazy=True)
+        st.dataframe(pd.DataFrame({"a": range(1001)}), lazy=True)
 
     at = AppTest.from_function(script).run()
     dataframe = at.dataframe[0]
 
-    assert dataframe.proto.HasField("lazy_data")
-    assert dataframe.value["a"].tolist() == [1, 2, 3, 4]
+    assert not dataframe.proto.HasField("lazy_data")
+    assert dataframe.value["a"].tolist() == list(range(1001))
 
 
 def test_date_input():

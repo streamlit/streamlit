@@ -17,9 +17,10 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Final
+from functools import partial
+from typing import TYPE_CHECKING, Final, TypeAlias
 
-from streamlit.dataframe.source import SortSpec
+from streamlit.dataframe.source import MAX_CHUNK_ROWS, SortSpec
 from streamlit.logger import get_logger
 from streamlit.proto.Dataframe_pb2 import SortState
 from streamlit.proto.ForwardMsg_pb2 import (
@@ -36,6 +37,10 @@ if TYPE_CHECKING:
     from streamlit.runtime.dataframe_source_manager import DataframeSourceManager
 
 _LOGGER: Final = get_logger(__name__)
+_MAX_CONCURRENT_REQUESTS_PER_SOURCE: Final = 4
+
+_SourceKey: TypeAlias = tuple[str, str, str]
+_ChunkKey: TypeAlias = tuple[str, str, str, int, int, str | None, bool]
 
 
 def _sort_from_proto(request: BackendOperationRequest) -> SortSpec | None:
@@ -60,6 +65,46 @@ class DataframeChunkHandler(BackendOperationHandler):
 
     def __init__(self, get_source_mgr: Callable[[], DataframeSourceManager]) -> None:
         self._get_source_mgr = get_source_mgr
+        # Calls for one source are bounded before entering asyncio.to_thread so
+        # a modified or over-eager client cannot fill the shared worker pool.
+        # Identical requests share one task, which also avoids repeating remote
+        # queries and full-table sorts.
+        self._source_semaphores: dict[_SourceKey, asyncio.Semaphore] = {}
+        self._in_flight: dict[_ChunkKey, asyncio.Task[tuple[bytes, int]]] = {}
+
+    async def _load_chunk(
+        self,
+        source_key: _SourceKey,
+        session_id: str,
+        source_id: str,
+        generation: str,
+        offset: int,
+        limit: int,
+        sort: SortSpec | None,
+    ) -> tuple[bytes, int]:
+        semaphore = self._source_semaphores.setdefault(
+            source_key, asyncio.Semaphore(_MAX_CONCURRENT_REQUESTS_PER_SOURCE)
+        )
+        async with semaphore:
+            return await asyncio.to_thread(
+                self._get_source_mgr().load_chunk,
+                session_id,
+                source_id,
+                generation,
+                offset,
+                limit,
+                sort,
+            )
+
+    def _remove_completed_task(
+        self, chunk_key: _ChunkKey, task: asyncio.Task[tuple[bytes, int]]
+    ) -> None:
+        """Remove completed request state while preserving any replacement task."""
+        if self._in_flight.get(chunk_key) is task:
+            del self._in_flight[chunk_key]
+        source_key = chunk_key[:3]
+        if not any(key[:3] == source_key for key in self._in_flight):
+            self._source_semaphores.pop(source_key, None)
 
     async def handle(
         self,
@@ -68,17 +113,40 @@ class DataframeChunkHandler(BackendOperationHandler):
     ) -> BackendOperationResponse:
         payload = request.dataframe_chunk
         sort = _sort_from_proto(request)
+        limit = min(max(payload.limit, 0), MAX_CHUNK_ROWS)
+        source_key: _SourceKey = (
+            session_id,
+            payload.source_id,
+            payload.generation,
+        )
+        chunk_key: _ChunkKey = (
+            *source_key,
+            payload.offset,
+            limit,
+            sort.column if sort is not None else None,
+            sort.descending if sort is not None else False,
+        )
+
+        task = self._in_flight.get(chunk_key)
+        if task is None:
+            task = asyncio.create_task(
+                self._load_chunk(
+                    source_key,
+                    session_id,
+                    payload.source_id,
+                    payload.generation,
+                    payload.offset,
+                    limit,
+                    sort,
+                )
+            )
+            self._in_flight[chunk_key] = task
+            task.add_done_callback(partial(self._remove_completed_task, chunk_key))
 
         try:
-            arrow_bytes, offset = await asyncio.to_thread(
-                self._get_source_mgr().load_chunk,
-                session_id,
-                payload.source_id,
-                payload.generation,
-                payload.offset,
-                payload.limit,
-                sort,
-            )
+            # Shield the shared operation so cancellation of one waiter does not
+            # cancel the request for every other waiter using the same task.
+            arrow_bytes, offset = await asyncio.shield(task)
         except DataframeSourceError as err:
             # Expected validation failures (stale generation, unknown source,
             # etc.). The message is safe to surface to the frontend.

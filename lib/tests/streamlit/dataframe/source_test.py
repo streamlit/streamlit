@@ -16,6 +16,9 @@
 
 from __future__ import annotations
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
 import pandas as pd
 import pyarrow as pa
@@ -27,6 +30,7 @@ from streamlit.dataframe.source import (
     FORCED_LAZY_MIN_ROWS,
     UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD,
     AccessMode,
+    EagerDataframeFallback,
     InMemoryDataframeSource,
     SortSpec,
     resolve_lazy_source,
@@ -99,6 +103,42 @@ def test_in_memory_source_sorts_descending() -> None:
     source = InMemoryDataframeSource(_make_table(50))
     chunk = source.load_rows(0, 3, sort=SortSpec("a", descending=True))
     assert chunk.column("a").to_pylist() == [49, 48, 47]
+
+
+def test_in_memory_source_computes_concurrent_sort_once() -> None:
+    """Concurrent chunks with one sort state share the cached full-table sort."""
+    source = InMemoryDataframeSource(_make_table(50))
+    original_sort = source._sort_table
+    sort_started = threading.Event()
+    release_sort = threading.Event()
+    call_count = 0
+
+    def slow_sort(sort: SortSpec) -> pa.Table:
+        nonlocal call_count
+        call_count += 1
+        sort_started.set()
+        assert release_sort.wait(timeout=5)
+        return original_sort(sort)
+
+    source._sort_table = slow_sort  # type: ignore[method-assign]
+    sort = SortSpec("a", descending=True)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(source.load_rows, 0, 3, sort=sort)
+        assert sort_started.wait(timeout=5)
+        second = executor.submit(source.load_rows, 3, 3, sort=sort)
+        release_sort.set()
+        assert first.result().column("a").to_pylist() == [49, 48, 47]
+        assert second.result().column("a").to_pylist() == [46, 45, 44]
+
+    assert call_count == 1
+
+
+def test_in_memory_source_unsupported_sort_raises() -> None:
+    """Unsupported Arrow sorts fail instead of presenting unsorted rows as sorted."""
+    source = InMemoryDataframeSource(pa.table({"nested": [[1], [2]]}))
+
+    with pytest.raises(pa.ArrowTypeError, match="Sorting not supported"):
+        source.load_rows(0, 2, sort=SortSpec("nested"))
 
 
 def test_in_memory_source_unknown_sort_column_returns_unsorted() -> None:
@@ -187,6 +227,23 @@ def test_resolve_forced_lazy_pyarrow_table() -> None:
     assert isinstance(source, InMemoryDataframeSource)
 
 
+def test_pyarrow_pandas_range_index_is_materialized_for_lazy_chunks() -> None:
+    """A metadata-only Arrow RangeIndex keeps absolute values across chunks."""
+    table = pa.Table.from_pandas(pd.DataFrame({"a": np.arange(2000)}))
+    source = resolve_lazy_source(table, True, is_selection_activated=False)
+    assert isinstance(source, InMemoryDataframeSource)
+
+    chunk = source.load_rows(500, 3)
+    result = convert_arrow_bytes_to_pandas_df(convert_arrow_table_to_arrow_bytes(chunk))
+    assert list(result.index) == [500, 501, 502]
+
+    sorted_chunk = source.load_rows(0, 3, sort=SortSpec("a", descending=True))
+    sorted_result = convert_arrow_bytes_to_pandas_df(
+        convert_arrow_table_to_arrow_bytes(sorted_chunk)
+    )
+    assert list(sorted_result.index) == [1999, 1998, 1997]
+
+
 def _make_multiindex_pandas(num_rows: int) -> pd.DataFrame:
     """Build a pandas DataFrame with two-level (MultiIndex) column headers."""
     columns = pd.MultiIndex.from_tuples(
@@ -235,6 +292,16 @@ def test_resolve_forced_lazy_numpy_fallback() -> None:
     source = resolve_lazy_source(data, True, is_selection_activated=False)
     assert isinstance(source, InMemoryDataframeSource)
     assert source.row_count == FORCED_LAZY_MIN_ROWS + 1
+
+
+def test_resolve_small_generator_returns_converted_eager_fallback() -> None:
+    """A one-shot input is returned after counting so eager rendering can reuse it."""
+    data = ({"a": value} for value in range(3))
+
+    resolved = resolve_lazy_source(data, True, is_selection_activated=False)
+
+    assert isinstance(resolved, EagerDataframeFallback)
+    assert resolved.data["a"].tolist() == [0, 1, 2]
 
 
 def test_resolve_styler_lazy_true_raises() -> None:

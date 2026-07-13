@@ -17,6 +17,8 @@
 from __future__ import annotations
 
 import asyncio
+import threading
+import time
 from unittest.mock import patch
 
 import pyarrow as pa
@@ -130,3 +132,67 @@ def test_handle_unexpected_error_returns_generic_message() -> None:
     assert response.error_msg == "Failed to load dataframe chunk."
     assert not response.HasField("dataframe_chunk")
     assert mgr.get_source_count() == 0
+
+
+def test_handle_coalesces_identical_concurrent_requests() -> None:
+    """Identical requests share one worker operation."""
+    handler, mgr, reg = _setup()
+    original_load_chunk = mgr.load_chunk
+    call_count = 0
+    call_lock = threading.Lock()
+
+    def slow_load_chunk(*args: object) -> tuple[bytes, int]:
+        nonlocal call_count
+        with call_lock:
+            call_count += 1
+        time.sleep(0.05)
+        return original_load_chunk(*args)  # type: ignore[arg-type]
+
+    mgr.load_chunk = slow_load_chunk  # type: ignore[method-assign]
+
+    async def run_requests():
+        requests = [_build_request(reg, offset=10, limit=3) for _ in range(8)]
+        return await asyncio.gather(
+            *(handler.handle(request, reg.session_id) for request in requests)  # type: ignore[attr-defined]
+        )
+
+    responses = asyncio.run(run_requests())
+
+    assert call_count == 1
+    assert all(response.error_msg == "" for response in responses)
+
+
+def test_handle_bounds_concurrency_per_source() -> None:
+    """Distinct requests cannot exhaust the worker pool for one source."""
+    handler, mgr, reg = _setup()
+    original_load_chunk = mgr.load_chunk
+    active_calls = 0
+    max_active_calls = 0
+    call_lock = threading.Lock()
+
+    def slow_load_chunk(*args: object) -> tuple[bytes, int]:
+        nonlocal active_calls, max_active_calls
+        with call_lock:
+            active_calls += 1
+            max_active_calls = max(max_active_calls, active_calls)
+        try:
+            time.sleep(0.05)
+            return original_load_chunk(*args)  # type: ignore[arg-type]
+        finally:
+            with call_lock:
+                active_calls -= 1
+
+    mgr.load_chunk = slow_load_chunk  # type: ignore[method-assign]
+
+    async def run_requests():
+        requests = [
+            _build_request(reg, offset=index * 5, limit=3) for index in range(12)
+        ]
+        return await asyncio.gather(
+            *(handler.handle(request, reg.session_id) for request in requests)  # type: ignore[attr-defined]
+        )
+
+    responses = asyncio.run(run_requests())
+
+    assert max_active_calls == 4
+    assert all(response.error_msg == "" for response in responses)

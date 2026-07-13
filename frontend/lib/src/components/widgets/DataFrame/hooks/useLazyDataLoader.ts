@@ -43,6 +43,9 @@ const CHUNK_REQUEST_DEBOUNCE_MS = 150
 /** Number of extra chunks to prefetch before and after the visible range. */
 const PREFETCH_BUFFER_CHUNKS = 1
 
+/** Maximum chunk operations this hook may have in flight at once. */
+const MAX_CONCURRENT_CHUNK_REQUESTS = 4
+
 const LOADING_CELL: LoadingCell = {
   kind: GridCellKind.Loading,
   allowOverlay: false,
@@ -226,7 +229,11 @@ function useLazyDataLoader({
     () => {
       const indices = Array.from(pendingRef.current)
       pendingRef.current.clear()
-      indices.forEach(requestChunk)
+      const availableSlots = Math.max(
+        0,
+        MAX_CONCURRENT_CHUNK_REQUESTS - controller.inFlight.size
+      )
+      indices.slice(0, availableSlots).forEach(requestChunk)
     },
     CHUNK_REQUEST_DEBOUNCE_MS
   )
@@ -322,6 +329,7 @@ function useLazyDataLoader({
         cache.getChunkIndex(lastRow) + PREFETCH_BUFFER_CHUNKS,
         maxChunk
       )
+      const latestVisibleRange = new Set<number>()
       for (
         let chunkIndex = firstChunk;
         chunkIndex <= lastChunk;
@@ -338,10 +346,17 @@ function useLazyDataLoader({
         if (cache.getFailure(chunkIndex) !== undefined) {
           cache.clearFailure(chunkIndex)
         }
-        scheduleRequest(chunkIndex)
+        latestVisibleRange.add(chunkIndex)
       }
+
+      // Replace chunks accumulated for older scroll positions instead of
+      // appending forever during a scrollbar drag. Missing visible chunks that
+      // do not fit within the concurrency limit are scheduled again when a
+      // completed request repaints the grid.
+      pendingRef.current = latestVisibleRange
+      flushPendingRequests()
     },
-    [controller, numRows, scheduleRequest]
+    [controller, numRows, flushPendingRequests]
   )
 
   return useMemo(

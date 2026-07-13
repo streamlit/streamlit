@@ -369,6 +369,24 @@ describe("useColumnSort hook", () => {
       expect(result.current.getOriginalIndex(7)).toBe(7)
     })
 
+    it("clears sorting permanently when the active column is hidden", () => {
+      const { result, rerender } = renderHook(
+        ({ columns }: { columns: BaseColumn[] }) =>
+          useColumnSort({ ...serverProps, columns }),
+        { initialProps: { columns: MOCK_COLUMNS } }
+      )
+
+      act(() => result.current.sortColumn(0, "asc"))
+      expect(result.current.serverSortState?.column).toBe("column_1")
+
+      rerender({ columns: [MOCK_COLUMNS[1]] })
+      expect(result.current.serverSortState).toBeUndefined()
+
+      rerender({ columns: MOCK_COLUMNS })
+      expect(result.current.serverSortState).toBeUndefined()
+      expect(result.current.columns[0].title).toBe("column_1")
+    })
+
     it("ignores columns without a backend field name (index columns)", () => {
       const indexColumn = {
         ...MOCK_COLUMNS[0],

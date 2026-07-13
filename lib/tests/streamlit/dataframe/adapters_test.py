@@ -35,13 +35,6 @@ from streamlit.dataframe.adapters import (
 from streamlit.dataframe.source import AccessMode, SortSpec
 
 
-@pytest.fixture(autouse=True)
-def clear_row_count_cache():
-    adapters._clear_row_count_cache()
-    yield
-    adapters._clear_row_count_cache()
-
-
 class _FakeLimited:
     """Result of ``FakeSnowparkDataFrame.limit`` exposing ``to_pandas``."""
 
@@ -118,16 +111,16 @@ def test_snowpark_row_count_uses_count() -> None:
     assert fake.count_calls == 1
 
 
-def test_snowpark_row_count_reuses_cache_for_same_query() -> None:
-    """Equivalent Snowpark query plans reuse the session-scoped row-count cache."""
+def test_snowpark_row_count_is_fresh_for_each_source() -> None:
+    """A new source recounts because the same query plan may have changed."""
     first = _make_fake(10)
-    second = _make_fake(10)
+    second = _make_fake(11)
 
     assert SnowparkDataframeSource(first).row_count == 10
-    assert SnowparkDataframeSource(second).row_count == 10
+    assert SnowparkDataframeSource(second).row_count == 11
 
     assert first.count_calls == 1
-    assert second.count_calls == 0
+    assert second.count_calls == 1
 
 
 def test_snowpark_schema_exposes_columns() -> None:
@@ -301,3 +294,31 @@ def test_polars_lazyframe_sort_is_deterministic_across_chunks() -> None:
     # The tiebreaker column must not leak into the returned schema.
     assert first.schema.names == ["k", "v"]
     assert source.schema.names == ["k", "v"]
+
+
+@pytest.mark.require_integration
+def test_polars_lazyframe_sort_avoids_row_index_name_collision() -> None:
+    """Sorting preserves a user column matching the internal tiebreaker name."""
+    import polars as pl
+
+    from streamlit.dataframe.adapters import PolarsLazyFrameSource
+
+    internal_name = PolarsLazyFrameSource._ROW_INDEX_COLUMN
+    source = PolarsLazyFrameSource(
+        pl.LazyFrame(
+            {
+                "k": [2, 1, 3],
+                internal_name: ["user-a", "user-b", "user-c"],
+            }
+        )
+    )
+
+    chunk = source.load_rows(0, 3, sort=SortSpec("k"))
+
+    assert chunk.schema.names == ["k", internal_name]
+    assert chunk.column("k").to_pylist() == [1, 2, 3]
+    assert chunk.column(internal_name).to_pylist() == [
+        "user-b",
+        "user-a",
+        "user-c",
+    ]
