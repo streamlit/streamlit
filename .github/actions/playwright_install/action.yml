@@ -100,3 +100,5 @@ runs:
         else
           python -m playwright install
         fi
+        echo "Installed Playwright browser versions:"
+        python -m playwright install --dry-run

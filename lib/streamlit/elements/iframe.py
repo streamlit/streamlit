@@ -172,6 +172,14 @@ class IframeMixin:
         If you want to insert HTML text into your app without an iframe, try
         ``st.html`` instead.
 
+        .. warning::
+            The HTML string is embedded as-is in an iframe that allows
+            JavaScript execution and same-origin access to the Streamlit app.
+            Never pass untrusted HTML from users, query parameters, databases,
+            uploaded files, LLM output, or other external sources to this
+            function. Use ``st.html`` for sanitized HTML snippets that don't
+            need full iframe behavior.
+
         .. deprecated::
             ``st.components.v1.html`` is deprecated and will be removed in a
             future release. Please use ``st.iframe`` instead, which provides
@@ -256,6 +264,15 @@ class IframeMixin:
 
         ``st.iframe`` embeds external URLs, HTML content, or local files in an
         iframe. It auto-detects the input type and handles it appropriately.
+
+        .. warning::
+            HTML strings, local HTML files, and same-origin relative URLs are
+            embedded as-is in an iframe that allows JavaScript execution and
+            same-origin access to the Streamlit app. Never pass untrusted HTML
+            or untrusted ``src`` values from users, query parameters, databases,
+            uploaded files, LLM output, or other external sources to
+            ``st.iframe``. Use ``st.html`` for sanitized HTML snippets that
+            don't need full iframe behavior.
 
         Parameters
         ----------
