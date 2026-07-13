@@ -84,6 +84,65 @@ describe("Popover container", () => {
     expect(screen.queryByText("test")).toBeVisible()
   })
 
+  it("closes when clicking outside the popover", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(
+      <div>
+        <button type="button">outside</button>
+        <Popover {...props}>
+          <div>test</div>
+        </Popover>
+      </div>
+    )
+
+    await user.click(screen.getByText("label"))
+    expect(screen.queryByText("test")).toBeVisible()
+
+    // Wait past the "just opened" guard that ignores the opening click.
+    await new Promise(resolve => setTimeout(resolve, 60))
+
+    await user.click(screen.getByText("outside"))
+    expect(screen.queryByText("test")).not.toBeInTheDocument()
+  })
+
+  it("stays open when interacting with a Streamlit overlay root", async () => {
+    // A widget inside the popover (e.g. multiselect) renders its dropdown in a
+    // shared overlay host portalled outside the popover body. Clicking it must
+    // not dismiss the popover. Regression test for
+    // https://github.com/streamlit/streamlit/issues/15959.
+    const user = userEvent.setup()
+    const props = getProps()
+
+    const overlayHost = document.createElement("div")
+    overlayHost.setAttribute("data-st-overlay-root", "true")
+    const overlayOption = document.createElement("button")
+    overlayOption.textContent = "dropdown option"
+    overlayHost.appendChild(overlayOption)
+    document.body.appendChild(overlayHost)
+
+    try {
+      render(
+        <Popover {...props}>
+          <div>test</div>
+        </Popover>
+      )
+
+      await user.click(screen.getByText("label"))
+      expect(screen.queryByText("test")).toBeVisible()
+
+      // Wait past the "just opened" guard so this click is treated as a real
+      // outside interaction (which would otherwise close the popover).
+      await new Promise(resolve => setTimeout(resolve, 60))
+
+      await user.click(screen.getByText("dropdown option"))
+      // The popover must remain open after interacting with the overlay root.
+      expect(screen.queryByText("test")).toBeVisible()
+    } finally {
+      document.body.removeChild(overlayHost)
+    }
+  })
+
   it("should render correctly with width=stretch and help", async () => {
     const user = userEvent.setup()
     // Hover to see tooltip content

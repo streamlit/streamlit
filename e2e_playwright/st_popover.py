@@ -84,6 +84,18 @@ with st.popover("popover 18 (primary)", type="primary"):
 with st.popover("popover 19 (tertiary)", type="tertiary"):
     st.markdown("Dummy content")
 
+# A multiselect dropdown (still rendered via BaseWeb) opened inside a popover
+# must paint above the popover body. Regression fixture for
+# https://github.com/streamlit/streamlit/issues/15959
+with st.popover(
+    "popover 20 (multiselect stacking)", key="multiselect_stacking_popover"
+):
+    st.multiselect(
+        "Multiselect in popover",
+        ["option_1", "option_2", "option_3"],
+        key="ms_stacking",
+    )
+
 # Menu-style icons (chevron should be hidden)
 with st.container(key="menu_style_icons_container"):
     col1, col2, col3 = st.columns(3)

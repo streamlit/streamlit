@@ -17,7 +17,11 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -35,7 +39,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(27)
+    expect(popover_elements).to_have_count(28)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -419,6 +423,47 @@ def test_popover_menu_style_icons_hide_chevron(
 
     # Snapshot the container with all three menu-style icon popovers
     assert_snapshot(container, name="st_popover-menu_style_icons")
+
+
+def test_multiselect_dropdown_renders_above_popover_body(app: Page):
+    """A BaseWeb dropdown (multiselect) opened inside a popover must render above
+    the popover body, not behind it.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15959: the
+    floating-ui popover body and the BaseWeb overlay layer host both resolved to
+    the `popup` z-index, so the popover body (mounted later) painted over the
+    dropdown and hid the options.
+    """
+    popover_container = open_popover(app, "popover 20 (multiselect stacking)")
+    multiselect = popover_container.get_by_test_id("stMultiSelect")
+    expect(multiselect).to_be_visible()
+
+    # Open the multiselect dropdown.
+    multiselect.locator("input").first.click()
+    first_option = app.get_by_role("option", name="option_1", exact=True)
+    expect(first_option).to_be_visible()
+
+    # The option must be the top-most element at its own center. If the popover
+    # body painted over it (the bug), elementFromPoint returns the popover body
+    # instead of the option.
+    def option_is_on_top() -> bool:
+        return first_option.evaluate(
+            """(el) => {
+                const rect = el.getBoundingClientRect();
+                const topEl = document.elementFromPoint(
+                    rect.left + rect.width / 2,
+                    rect.top + rect.height / 2
+                );
+                return el === topEl || el.contains(topEl);
+            }"""
+        )
+
+    wait_until(app, lambda: option_is_on_top() is True)
+
+    # Selecting the option must work (would fail the click hit-test if occluded).
+    first_option.click()
+    wait_for_app_run(app)
+    expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(1)
 
 
 def test_programmatic_close_does_not_reopen_other_popover(app: Page):

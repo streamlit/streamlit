@@ -207,6 +207,16 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       // popover. The timestamp guard prevents that click from closing it.
       if (Date.now() - openedAtRef.current < 50) return
       const target = e.target as Node
+      // A widget inside the popover (e.g. multiselect, date_input) opens its
+      // dropdown/calendar in a shared overlay host portalled outside the
+      // popover body. Interacting with those overlays must not dismiss the
+      // popover. They are tagged `data-st-overlay-root`, matching the same
+      // contract the modal dialog uses (see Modal's shouldCloseOnInteractOutside).
+      const targetElement =
+        target instanceof Element ? target : target.parentElement
+      if (targetElement?.closest('[data-st-overlay-root="true"]')) {
+        return
+      }
       if (
         !triggerRef.current?.contains(target) &&
         !popoverBodyRef.current?.contains(target)

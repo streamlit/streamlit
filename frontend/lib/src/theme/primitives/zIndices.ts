@@ -25,6 +25,12 @@ const headerDecoration = balloons - 1
 // Used for popup menus, chart tooltips, and other aspects
 // that need to be shown above the fullscreen wrapper
 const popup = fullscreenWrapper + 10
+// Used for the shared BaseWeb overlay layer host (legacy dropdowns/calendars for
+// widgets such as multiselect, date_input, time_input). Anchored just above popup
+// so a BaseWeb dropdown opened inside a floating-ui popover (which sits at popup)
+// paints above the popover body, while staying below tablePortal so dataframe
+// overlays remain on top.
+const basewebOverlay = popup + 2
 // Used for modal dialog backdrops and surfaces. Keep this below popup so
 // nested overlays opened from dialogs render above the modal surface.
 const modal = popup - 1
@@ -54,6 +60,7 @@ export const zIndices = {
   sidebarMobile,
   modal,
   popup,
+  basewebOverlay,
   fullscreenWrapper,
   tablePortal,
   tablePortalTooltip,
