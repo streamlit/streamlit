@@ -363,6 +363,38 @@ describe("Selectbox widget", () => {
     expect(currProps.onChange).toHaveBeenCalledWith("no")
   })
 
+  it("blocks paste and IME composition input when filterMode is none", async () => {
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["yes", "no", "maybe"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
+      value: undefined,
+    })
+    render(<Selectbox {...currProps} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    await user.click(selectboxInput)
+    await waitFor(() => {
+      expect(screen.queryAllByRole("option")).toHaveLength(3)
+    })
+
+    // Pasting must not enter text or filter the list: onPaste calls
+    // preventDefault, so the input value never changes and the full list stays.
+    await user.paste("maybe")
+    expect(selectboxInput).toHaveValue("")
+    expect(screen.queryAllByRole("option")).toHaveLength(3)
+
+    // IME composition is likewise blocked: onCompositionStart cancels the
+    // event (dispatchEvent returns false), so composed text can never begin
+    // entering the input and the option list stays unfiltered.
+    const compositionAllowed = fireEvent.compositionStart(selectboxInput, {
+      data: "n",
+    })
+    expect(compositionAllowed).toBe(false)
+    expect(selectboxInput).toHaveValue("")
+    expect(screen.queryAllByRole("option")).toHaveLength(3)
+  })
+
   it("updates value if new value provided from parent", () => {
     const { rerender } = render(<Selectbox {...props} />)
     expect(screen.getByDisplayValue(props.options[0])).toBeVisible()
