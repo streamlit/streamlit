@@ -9,8 +9,8 @@ created: 2026-05-13
 
 Add an `apply_edits` callback parameter to `st.data_editor` that gives users explicit control
 over when and how edits are committed. The callback receives the source dataframe, edited
-dataframe, and raw edit state, handles persistence (e.g., database writes), and returns the new
-source dataframe. This enables clean patterns for database-backed editing, validation, and
+dataframe, and normalized edit state, handles persistence (e.g., database writes), and returns the
+new source dataframe. This enables clean patterns for database-backed editing, validation, and
 programmatic reset/revert.
 
 The detailed implementation design lives in
@@ -26,8 +26,9 @@ which covers the Phase 2 backend/frontend changes required for this API.
   `num_rows="fixed"`, but dynamic row operations still need explicit handling.
 
 - [#6540](https://github.com/streamlit/streamlit/issues/6540) — Users want to programmatically
-  revert deleted rows or reset the editor to fresh data. Currently, setting session state manually
-  is disallowed and changing source data doesn't properly update the editor.
+  revert deleted rows or reset the editor to fresh data. Direct assignment to the widget's
+  session-state value remains disallowed, and changing the source does not provide an explicit
+  clear/commit operation for pending edits.
 
 ### Current Pain Points
 
@@ -67,6 +68,43 @@ detection may be added later as a convenience path.
 
 ## Proposal
 
+### Naming
+
+`apply_edits` is the working parameter name, but the final name remains open for API review. The
+[PR discussion](https://github.com/streamlit/streamlit/pull/15179#issuecomment-4959072778) raises a
+useful tension with Streamlit's existing callback conventions: most event callbacks use `on_*`,
+while callback-like transformation parameters can use names such as `format_func`.
+
+This function is not a conventional notification callback:
+
+- It runs during `st.data_editor` execution, not before the script body like `on_change`.
+- Streamlit supplies editor-specific arguments (`source_df`, `edited_df`, and `edits`).
+- Streamlit consumes the returned dataframe as the new source and clears edit state on success.
+- A validation exception rejects the commit and preserves edit state.
+
+The name should therefore communicate a state transition or transformation, avoid implying that
+the return value is ignored, and remain distinct from the existing `on_change` callback.
+
+| Candidate | Strengths | Concerns |
+|-----------|-----------|----------|
+| `apply_edits` | Direct and action-oriented; describes applying the pending edit transaction to the source | `edited_df` already has the edits applied, so the name can obscure that the function actually accepts/persists/transforms the result |
+| `commit_edits` | Best communicates the success boundary and subsequent state clear | "Commit" can imply durable database persistence even when the function only validates or updates session state |
+| `apply_edits_func` | Makes the callable nature explicit and aligns with `format_func`-style parameters | Longer and somewhat redundant; adding `_func` does not clarify the function's commit semantics |
+| `commit_func` | Short `_func` alternative that communicates a commit boundary | Too generic in signatures, documentation, and autocomplete; omits what is being committed |
+| `resolve_edits` | Captures accept, reject, normalize, or refresh behavior without requiring external persistence | Less immediately obvious that a successful return clears the pending edit state |
+| `process_edits` | Neutral and flexible across persistence and validation use cases | Generic; does not communicate the authoritative return value or commit boundary |
+| `on_apply_edits` | Follows Streamlit's established `on_*` callback shape | Awkward phrasing and suggests a notification whose return value is ignored |
+| `on_commit` | Concise and familiar event-callback terminology | Suggests side effects rather than a required dataframe return and can be confused with a future general commit event |
+
+The strongest alternative is `commit_edits`. If explicit `_func` alignment is considered more
+important, prefer `apply_edits_func` over the underspecified `commit_func`. The current leaning is
+to retain `apply_edits` because it avoids `on_*` notification semantics and does not imply that
+external durable persistence is required, but this should be resolved during API review.
+
+Do not overload `on_change` by interpreting a non-`None` return value as an edit commit. That would
+require data-editor-specific callback arguments, change its execution timing, and make
+`st.data_editor.on_change` behave differently from the same parameter on other widgets.
+
 ### API
 
 Add a new optional parameter `apply_edits` to `st.data_editor`:
@@ -83,11 +121,12 @@ def data_editor(
 ) -> DataTypes:
 ```
 
-**Note on DataFrame type**: The callback signature uses `pd.DataFrame` for simplicity. `st.data_editor`
-accepts and preserves return types for many dataframe-like inputs (Polars, numpy arrays, etc.),
-but the callback always receives and must return `pd.DataFrame`. The implementation normalizes
-inputs to pandas before invoking the callback and converts the return value back to the original
-`data_format` as needed. This simplifies the callback API while preserving existing type behavior.
+**Note on DataFrame type**: The callback signature uses `pd.DataFrame` for simplicity.
+`st.data_editor` accepts and preserves return types for many dataframe-like inputs (Polars, NumPy
+arrays, etc.), but the callback always receives and must return `pd.DataFrame`. The implementation
+normalizes inputs to pandas before invoking the callback and converts the final success or
+validation-error result back to the original `data_format`. Returning any other type from the
+callback raises an actionable `StreamlitAPIException`.
 
 **Performance caveat (non-pandas inputs)**: For non-pandas inputs this forces a round-trip
 conversion (e.g., Polars → pandas → Polars) on every rerun where the callback runs, which is not
@@ -99,17 +138,26 @@ just here) so Polars/PyArrow users aren't surprised. A future enhancement could 
 the data in its original `data_format` to avoid the round-trip; deferred to keep the initial API
 minimal.
 
+For baseline persistence with non-pandas input, store the converted `st.data_editor` return value
+after the call or explicitly convert the callback's pandas result before putting it in session
+state. Storing `edited_df` directly inside the callback changes the next input to pandas, which can
+change widget identity because the source `data_format` is part of the compatibility signature.
+
+`pandas.Styler` is not supported with `apply_edits` in the initial release. Styles are computed
+from the pre-callback dataframe and may no longer align after the callback adds, deletes, or
+refreshes rows.
+
 **Parameters:**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `apply_edits` | `Callable[[pd.DataFrame, pd.DataFrame, DataEditorEditState], pd.DataFrame] \| None` | Callback invoked when edits are present. Receives source dataframe first, edited dataframe second, and raw edit state third. Returns new source dataframe. |
+| `apply_edits` | `Callable[[pd.DataFrame, pd.DataFrame, DataEditorEditState], pd.DataFrame] \| None` | Callback invoked when edits are present. Receives source dataframe first, edited dataframe second, and normalized edit state third. Returns new source dataframe. |
 
 **Validation exception:**
 
 Add `DataEditorValidationError` as an explicit public exception for validation failures that are
-safe to display to end users. The implementation should expose it from `streamlit.errors` and may
-also re-export it from `streamlit` for ergonomic examples.
+safe to display to end users. Expose it from `streamlit.errors`, matching the existing public
+exception namespace.
 
 **Callback signature:**
 
@@ -117,7 +165,7 @@ also re-export it from `streamlit` for ergonomic examples.
 def apply_edits(
     source_df: pd.DataFrame,   # Original data passed to st.data_editor
     edited_df: pd.DataFrame,   # Data with edits already applied
-    edits: DataEditorEditState,  # Raw edit state for fine-grained control
+    edits: DataEditorEditState,  # Normalized edit state for fine-grained control
 ) -> pd.DataFrame:
     ...
 ```
@@ -148,16 +196,13 @@ class DataEditorEditState(TypedDict):
 
 **Type export for callback annotation:**
 
-`DataEditorEditState` should be exported from a stable public typing namespace. Do **not** point
-users at `streamlit.elements.lib.column_types` (internal), and do **not** export it from
-`streamlit.column_config`: that module is for column display/editing configuration, and its public
-`__all__` does not include the internal `ColumnConfig` `TypedDict`.
-
-Recommended implementation path: add a public `streamlit.types` namespace and export the data-editor
-callback type from there:
+Rename the backend's internal `EditingState` TypedDict to `DataEditorEditState` and document it from
+the owning module, consistent with existing public state types such as `DataframeState`. Avoid
+creating a new `streamlit.types` namespace solely for this type, and do **not** export it from
+`streamlit.column_config`, which is limited to column display/editing configuration.
 
 ```python
-from streamlit.types import DataEditorEditState
+from streamlit.elements.widgets.data_editor import DataEditorEditState
 
 def my_callback(
     source_df: pd.DataFrame,
@@ -167,10 +212,9 @@ def my_callback(
     ...
 ```
 
-**Note on naming**: The internal codebase uses `EditingState` for the frontend's positional edit
-buffer. `DataEditorEditState` is the user-facing alias — same shape, but with int keys
-(post-conversion) and documented as part of the public API. The callback always receives the
-converted `DataEditorEditState`, not the raw JSON widget state.
+**Note on naming**: The frontend continues to use `EditingState` for its positional edit buffer.
+`DataEditorEditState` is the backend/user-facing TypedDict, with integer keys after deserialization.
+The callback receives this normalized state, not the raw JSON widget value.
 
 The type is documented in `DataEditorEditState` shape (post-conversion with int keys) — static type
 checkers will see `dict[int, dict[str, Any]]` for `edited_rows`, matching the runtime behavior.
@@ -181,14 +225,27 @@ checkers will see `dict[int, dict[str, Any]]` for `edited_rows`, matching the ru
 |--------|----------|
 | **When called** | On rerun when edits are present (not on every render) |
 | **Input** | `source_df` + `edited_df` + `edits` |
-| **Return value** | New source dataframe; becomes the baseline for *this render*, edit state cleared |
+| **Return value** | New pandas source dataframe with an editing-compatible schema; becomes the baseline for *this render*, edit state cleared |
 | **Baseline persistence** | The callback's return value is used for the current render only. For the baseline to persist across reruns, it must be stored externally (session state, database, or a cache that is updated/invalidated after commit). Button-only reruns with no edits will NOT invoke `apply_edits` — the `data` argument is re-evaluated as the baseline. |
 | **Exception** | See "Error Handling" below |
 | **No edits** | Callback not invoked; widget renders source data as-is |
 | **With forms** | Not supported in the initial release; see "Forms enforcement" below |
-| **Return value of `st.data_editor`** | Callback's result on success; `edited_df` on exception |
-| **Widget edit state (`st.session_state[key]`)** | Cleared on success; preserved on exception |
-| **Element identity** | With `key` and `apply_edits`, identity is based on an editing-compatible signature for all `num_rows` modes, not full Arrow data bytes |
+| **Return value of `st.data_editor`** | Callback's result on success; `edited_df` on validation exception; both converted to the original input format |
+| **Widget edit state (`st.session_state[key]`)** | Cleared on success; preserved on validation exception |
+| **Element identity** | With `key` and `apply_edits`, identity is based on an editing-compatible signature for all `num_rows` modes, excluding row count and meaningful index values controlled by the callback |
+
+**Compatible callback results**: The callback may change cell values, row count, and index values,
+but it must preserve column order, index kind/names, Arrow field types/nullability, and parsing data
+kinds. The implementation reruns dataframe normalization and schema validation on the returned
+dataframe. Incompatible results raise `StreamlitAPIException` rather than rendering a new schema
+under the old widget identity. Database refreshes may still return server-generated IDs,
+timestamps, normalized values, and committed row changes in existing columns.
+
+**External-change limitation**: While edits are pending, `data` must remain the last committed
+baseline. Independently reordering or replacing source rows is out of scope because the edit state
+contains positions, not original row identity or a source version. Apps using optimistic
+concurrency should keep a version column in the baseline, verify it during `apply_edits`, and raise
+`DataEditorValidationError` on conflict. Automatic reconciliation belongs to a future phase.
 
 #### How to Persist the Baseline
 
@@ -226,6 +283,26 @@ st.data_editor(
 For database-backed data, store the refreshed baseline in session state or invalidate/update any
 cache immediately after committing edits. A TTL-only cache can serve stale pre-commit data on the
 next non-edit rerun.
+
+For non-pandas input, persist the converted widget return value so the source format remains stable:
+
+```python
+if "polars_df" not in st.session_state:
+    st.session_state.polars_df = load_polars_data()
+
+def accept_polars_edits(source_df, edited_df, edits):
+    save_to_database(edited_df)
+    return edited_df
+
+st.session_state.polars_df = st.data_editor(
+    st.session_state.polars_df,
+    key="editor",
+    apply_edits=accept_polars_edits,
+)
+```
+
+Here `st.data_editor` converts the callback's pandas result back to the original Polars format
+before it is stored.
 
 ### Examples
 
@@ -352,11 +429,12 @@ commit" workflows.
 
 | Feature | Interaction |
 |---------|-------------|
-| `on_change` | `on_change` runs in the ScriptRunner thread via `on_script_will_rerun()` before the script body reaches `st.data_editor`; `apply_edits` runs during that rerun inside `st.data_editor`. `on_change` cannot observe post-`apply_edits` state. |
+| `on_change` | Not supported together in the initial release. `on_change` runs before the script body and could mutate the source before positional edits are applied. |
 | `key` | **Required** for `apply_edits` to work correctly. See enforcement below. |
 | `num_rows` | Works with all modes; most useful for `"add"`, `"delete"`, `"dynamic"` |
 | `disabled` | If all editing disabled, no edits occur, callback not invoked |
-| `column_config` | No interaction; column config affects editing UI, not callback |
+| `column_config` | The callback receives normalized data only; config is reapplied when validating and rendering its result. |
+| `pandas.Styler` | Not supported in the initial release because pre-callback styles may not match callback-returned rows |
 | Forms | Not supported in the initial release; `apply_edits` inside `st.form` raises `StreamlitAPIException` |
 | Fragments | Works within fragments; callback runs during fragment rerun |
 
@@ -365,8 +443,9 @@ commit" workflows.
 Without `key`, the element ID is derived from full Arrow bytes, so every successful `apply_edits`
 invocation can change the widget ID on the next render and drop the first subsequent edit. With a
 key, the tech design must use signature-based identity for `apply_edits` in **all** `num_rows`
-modes (`"fixed"`, `"add"`, `"delete"`, and `"dynamic"`), excluding row count from the
-`apply_edits` identity signature so committed row operations do not remount the widget.
+modes (`"fixed"`, `"add"`, `"delete"`, and `"dynamic"`), excluding row count and meaningful index
+values from the `apply_edits` identity signature so committed row operations do not remount the
+widget.
 
 If `apply_edits` is provided without `key`, raise `StreamlitAPIException` with an actionable message
 (per API principle #23 "Fail Fast, Fail Helpfully"):
@@ -378,6 +457,12 @@ raise StreamlitAPIException(
     "so edit state can be preserved across reruns."
 )
 ```
+
+**`on_change` enforcement:**
+
+If `on_change` and `apply_edits` are both provided, raise `StreamlitAPIException`. Supporting both
+later requires a contract that prevents `on_change` from changing the baseline before
+`apply_edits` receives positional edit metadata.
 
 **Forms enforcement:**
 
@@ -404,8 +489,8 @@ When the callback raises an exception, behavior depends on the exception type:
 
 **Other exceptions** (`ValueError`, `TypeError`, database errors, network failures, etc.):
 - Propagated to Streamlit's normal exception handling
-- This prevents accidentally leaking backend details (connection strings, SQL errors, stack traces)
-  via `st.error(str(exception))`
+- They retain Streamlit's configured error-detail, redaction, logging, and monitoring behavior
+  instead of being unconditionally rendered via `st.error(str(exception))`
 
 **Security note**: Only `DataEditorValidationError` displays its message via `st.error()`. Broadly
 catching `ValueError` or `TypeError` is unsafe because third-party validators may include input
@@ -436,6 +521,10 @@ result = st.data_editor(df, key="editor", apply_edits=validate_and_save)
 - **Partial success**: All-or-nothing semantics; no per-row error handling
 - **Conflict resolution UI**: If callback returns data that conflicts with pending edits, no
   merge UI is provided — callback's return value wins
+- **Independent external source changes**: Reordering or replacing the baseline while positional
+  edits are pending requires source-version and row-identity metadata planned for a future phase
+- **Schema-changing callback results**: The initial release requires an editing-compatible schema
+- **Pandas Styler callbacks**: Deferred until styles can be safely recomputed for callback results
 - **Automatic retry**: On exception, user must manually trigger next edit to retry
 - **Automatic commit detection**: For simple `st.session_state.df = st.data_editor(...)` patterns,
   automatic detection of committed edits may be added as a convenience path in the future
@@ -447,7 +536,7 @@ result = st.data_editor(df, key="editor", apply_edits=validate_and_save)
 | Works on SiS, Cloud, etc? | Yes — standard callback execution |
 | No breaking API changes | Yes — new optional parameter only |
 | No new dependencies | Yes |
-| New proto fields | Yes — `editing_state` plus a per-signal nonce/counter to clear frontend state exactly once |
+| New proto fields | Yes — `editing_state = 14` and `editing_state_nonce = 15` clear frontend state exactly once per signal |
 | Metrics collected | Track `apply_edits` usage vs. without |
-| Any security/legal impact? | None — callback runs user code like `on_change` |
+| Any security/legal impact? | No new privileges; only explicit `DataEditorValidationError` messages are rendered inline |
 | Any docs changes needed? | Yes — document `apply_edits` parameter and patterns |

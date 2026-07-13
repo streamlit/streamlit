@@ -212,7 +212,7 @@ edited_df = st.data_editor(
 
 Access edit details via `st.session_state["my_editor"]["edited_rows"]`.
 
-**Preserving edits on data refresh** — With a `key` and `num_rows="fixed"`, edits are kept when the data's *values* change and only reset when its structure changes (columns, dtypes, row count, or index labels). An edit is dropped once its value matches the new data. Edits are matched by row position, so use a meaningful index if edits should follow specific rows when the data is reordered. Omit `key` to reset edits on every data change.
+**Preserving edits on data refresh** — With a `key` and `num_rows="fixed"`, edits are kept when the data's *values* change and only reset when its structure changes (columns, dtypes, row count, or index labels). An edit is dropped once its value matches the new data. Edits are matched by row position. If rows may be reordered, use a meaningful index so Streamlit can detect the reorder and clear stale edits; edits are not remapped by index. Omit `key` to reset edits on every data change.
 
 **Double-input anti-pattern** — assigning the result back to the same session state used as input causes every other edit to disappear:
 

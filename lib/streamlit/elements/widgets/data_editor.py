@@ -944,9 +944,10 @@ class DataEditorMixin:
                 applies only with ``num_rows="fixed"`` and only while the data's
                 structure stays the same; edits reset when the columns, column
                 types, row count, or index labels change. Edits are matched by
-                row position, so use a meaningful index if edits should follow
-                specific rows when the data is reordered. Omit ``key`` to reset
-                all edits whenever the data changes.
+                row position. If rows may be reordered, use a meaningful index
+                so Streamlit can detect the reorder and clear stale edits;
+                edits are not remapped by index. Omit ``key`` to reset all edits
+                whenever the data changes.
 
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
