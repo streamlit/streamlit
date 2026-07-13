@@ -176,6 +176,10 @@ interface UseWidgetStateReturn {
   editingState: MutableRefObject<EditingState>
   // The current number of rows (including additions/deletions)
   numRows: number
+  // Counter that increments once pending edits have been restored from the
+  // widget manager on initial mount. Consumers can watch this to reconcile the
+  // restored edits (e.g. clear edits that already match the current source).
+  editStateHydrationCount: number
   // Callback to reset the editing state
   resetEditingState: () => void
   // Callback to update numRows from editing state
@@ -240,6 +244,11 @@ function useWidgetState({
   )
   const [numRows, setNumRows] = useState(editingStateRef.current.getNumRows())
 
+  // Bumped after the initial hydration of edits from the widget manager so
+  // edit reconciliation can run against the restored edits (which may already
+  // match the current source data).
+  const [editStateHydrationCount, setEditStateHydrationCount] = useState(0)
+
   // Reset editing state when originalNumRows changes.
   // Using useExecuteWhenChanged instead of useEffect to follow React best practices
   // for adjusting state when props change (avoids extra render cycle).
@@ -297,6 +306,9 @@ function useWidgetState({
 
       editingStateRef.current.fromJson(initialWidgetValue, originalColumns)
       setNumRows(editingStateRef.current.getNumRows())
+      // Signal that edits were restored so reconciliation can clear any
+      // restored edits that already match the current source data.
+      setEditStateHydrationCount(count => count + 1)
     },
     // We only want to run this effect once during the initial component load
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -642,6 +654,7 @@ function useWidgetState({
   return {
     editingState: editingStateRef,
     numRows,
+    editStateHydrationCount,
     resetEditingState,
     updateNumRows,
     syncEditState,

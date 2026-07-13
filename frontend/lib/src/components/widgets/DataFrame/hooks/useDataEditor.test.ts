@@ -102,6 +102,14 @@ const getCellContentMock = vi
     }
     return column.getCell("foo")
   })
+const getSourceCellValueMock = vi
+  .fn()
+  .mockImplementation((column: BaseColumn) => {
+    if (column.kind === "number") {
+      return 123
+    }
+    return "foo"
+  })
 
 describe("useDataEditor hook", () => {
   beforeEach(() => {
@@ -149,6 +157,55 @@ describe("useDataEditor hook", () => {
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
       '{"edited_rows":{"0":{"column_2":"bar"}},"added_rows":[],"deleted_rows":[]}'
+    )
+  })
+
+  it("clears an existing edit when a cell is edited back to the source value", () => {
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+    editingState.current.setCell(1, 0, MOCK_COLUMNS[1].getCell("bar"))
+
+    const getCellContent = vi
+      .fn()
+      .mockImplementation(([col, row]: readonly [number, number]) => {
+        return (
+          editingState.current.getCell(MOCK_COLUMNS[col].indexNumber, row) ??
+          getCellContentMock([col, row])
+        )
+      })
+
+    const { result } = renderHook(() => {
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
+        editingState,
+        getCellContent,
+        getSourceCellValue: getSourceCellValueMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
+        updateNumRows,
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
+    })
+
+    if (typeof result.current.onCellEdited !== "function") {
+      throw new Error("onCellEdited is expected to be a function")
+    }
+
+    result.current.onCellEdited(
+      [1, 0],
+      MOCK_COLUMNS[1].getCell("foo") as TextCell
+    )
+
+    expect(editingState.current.getCell(1, 0)).toBeUndefined()
+    expect(syncEditsMock).toHaveBeenCalled()
+    expect(refreshCellsMock).toHaveBeenCalledWith([{ cell: [1, 0] }])
+    expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
+      '{"edited_rows":{},"added_rows":[],"deleted_rows":[]}'
     )
   })
 
@@ -244,6 +301,52 @@ describe("useDataEditor hook", () => {
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
       '{"edited_rows":{"1":{"column_1":321,"column_2":"bar"}},"added_rows":[],"deleted_rows":[]}'
+    )
+  })
+
+  it("clears an existing edit when pasted data matches the source value", () => {
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+    editingState.current.setCell(1, 0, MOCK_COLUMNS[1].getCell("bar"))
+
+    const getCellContent = vi
+      .fn()
+      .mockImplementation(([col, row]: readonly [number, number]) => {
+        return (
+          editingState.current.getCell(MOCK_COLUMNS[col].indexNumber, row) ??
+          getCellContentMock([col, row])
+        )
+      })
+
+    const { result } = renderHook(() => {
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
+        editingState,
+        getCellContent,
+        getSourceCellValue: getSourceCellValueMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
+        updateNumRows,
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
+    })
+
+    if (typeof result.current.onPaste !== "function") {
+      throw new Error("onPaste is expected to be a function")
+    }
+
+    result.current.onPaste([1, 0], [["foo"]])
+
+    expect(editingState.current.getCell(1, 0)).toBeUndefined()
+    expect(syncEditsMock).toHaveBeenCalled()
+    expect(refreshCellsMock).toHaveBeenCalledWith([{ cell: [1, 0] }])
+    expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
+      '{"edited_rows":{},"added_rows":[],"deleted_rows":[]}'
     )
   })
 
