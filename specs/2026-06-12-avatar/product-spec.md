@@ -55,6 +55,7 @@ st.avatar(
     caption: str | None = None,
     size: Literal["small", "medium", "large"] | int = "medium",
     border: bool = False,
+    link: str | None = None,
     on_click: Literal["ignore", "rerun"] | Callable[..., None] = "ignore",
     args: tuple[Any, ...] | None = None,
     kwargs: dict[str, Any] | None = None,
@@ -88,7 +89,8 @@ st.avatar("https://avatars.githubusercontent.com/u/1673013")
 | `caption` | `str \| None` | `None` | Secondary text shown below the label (typically a role or status). Supports markdown and renders in the muted caption style used elsewhere in Streamlit. |
 | `size` | `"small" \| "medium" \| "large" \| int` | `"medium"` | Diameter of the circular avatar image only. Semantic sizes map to rem-based values (`small` ≈ 1.5rem, `medium` ≈ 2.5rem, `large` ≈ 4rem; exact values TBD with design) so they scale with the root font size. An `int` sets a custom diameter in pixels and must be a positive value; non-positive values raise a `StreamlitAPIException` (Fail Fast). No upper bound is enforced, but very large values are clamped to the element's container width at render time. |
 | `border` | `bool` | `False` | If `True`, draws a subtle border around the avatar (useful for light images on light backgrounds). |
-| `on_click` | `"ignore" \| "rerun" \| Callable[..., None]` | `"ignore"` | Click behavior. `"ignore"` disables click interaction (avatar is purely decorative). `"rerun"` triggers a rerun when clicked. A callable runs as a callback before the rerun, receiving `args`/`kwargs`. Follows the `st.button` click pattern (a click action), not the `on_change` value-change pattern. |
+| `link` | `str \| None` | `None` | The URL to open in a new tab when a user clicks the avatar. As with `st.image`, this can be an external URL like `"https://streamlit.io"` or a relative path like `"/my_page"`. If `None`, the avatar does not include a hyperlink. `link` and `on_click` can be used together. |
+| `on_click` | `"ignore" \| "rerun" \| Callable[..., None]` | `"ignore"` | Click behavior. `"ignore"` disables rerun and callback behavior; a configured `link` still opens. `"rerun"` triggers a rerun when clicked. A callable runs as a callback before the rerun, receiving `args`/`kwargs`. Follows the `st.button` click pattern (a click action), not the `on_change` value-change pattern. |
 | `args` | `tuple[Any, ...] \| None` | `None` | An optional tuple of positional arguments passed to the `on_click` callback. Mirrors `st.button`'s `args` (Principle #11). |
 | `kwargs` | `dict[str, Any] \| None` | `None` | An optional dictionary of keyword arguments passed to the `on_click` callback. Mirrors `st.button`'s `kwargs` (Principle #11). |
 | `key` | `str \| None` | `None` | Unique key for the element. Required when multiple clickable avatars would otherwise share identical parameters. |
@@ -99,7 +101,8 @@ st.avatar("https://avatars.githubusercontent.com/u/1673013")
 element `st.image`. (`st.logo` is also a display element but returns `None`; `st.avatar`
 returns a `DeltaGenerator` so the display-only call can be chained like other elements.)
 When `on_click="rerun"` or a callback is provided, `st.avatar` returns a `bool`: `True`
-only on the rerun triggered by a click, and `False` otherwise.
+only on the rerun triggered by a click, and `False` otherwise. Providing `link` does not
+change the return type.
 
 Because the return type depends on the runtime value of `on_click`, the implementation will
 provide `@overload` stubs (as `st.download_button` and `st.link_button` already do) so that
@@ -151,6 +154,12 @@ The main open design question is whether `st.avatar` should support click intera
 because enabling clicks changes it from a display element into a widget (conditional return
 type, requires `key`). Two options:
 
+`link` is independent of `on_click`, following the existing `st.link_button` pattern. With
+`on_click="ignore"`, clicking opens the link in a new tab without rerunning the app. With
+`on_click="rerun"` or a callback, the link opens and the configured rerun or callback also
+occurs. This lets an avatar navigate to a profile and optionally update app state from the
+same interaction.
+
 **Option 1: Clickable widget** ✅ PREFERRED
 
 Add `on_click: Literal["ignore", "rerun"] | Callable[..., None] = "ignore"` plus `args`,
@@ -163,8 +172,9 @@ if st.avatar("profile.jpg", label="Jane Smith", on_click="rerun", key="profile")
     st.write("Profile clicked!")
 ```
 
-A clickable avatar should be keyboard-accessible: expose it as a button (`role="button"`,
-focusable, activatable with Enter/Space) with an `aria-label` derived from `label`.
+A clickable avatar should be keyboard-accessible and have an accessible name derived from
+`label`. Link-only avatars should expose link semantics, while avatars with `on_click`
+behavior should follow the accessible interaction pattern used by `st.link_button`.
 
 - Pros: Enables clickable profiles (open a dialog, navigate to a detail view) directly;
   `on_click="ignore"` keeps the common display-only case a one-liner.
@@ -196,6 +206,18 @@ st.avatar(
     "https://avatars.githubusercontent.com/u/1673013",
     label="Adrien Treuille",
     caption="Co-founder",
+)
+```
+
+**Avatar linked to a profile:**
+
+```python
+import streamlit as st
+
+st.avatar(
+    "https://avatars.githubusercontent.com/u/1673013",
+    label="Adrien Treuille",
+    link="https://github.com/treuille",
 )
 ```
 
@@ -300,5 +322,5 @@ later if needed (see Out of Scope).
 | No breaking API changes    | ✅ New, additive command                                            |
 | No new dependencies        | ✅ Reuses `st.image`/`st.chat_message` rendering internals          |
 | Metrics collected          | ✅ `st.avatar` via `gather_metrics`                                 |
-| Any security/legal impact? | ✅ Same image-handling surface as `st.image`; clicks use the existing widget/callback path |
+| Any security/legal impact? | ✅ Same image/link-handling surface as `st.image`; clicks use the existing widget/callback path |
 | Any docs changes needed?   | ✅ New command page + mention alongside `st.image` / `st.logo`      |
