@@ -1913,6 +1913,7 @@ class TestProjectInstallWouldBeRefused:
         *,
         source_dir: Path,
         target_dirs: list[Path],
+        global_target_dirs: list[Path] | None = None,
         symlinks_supported: bool = True,
         project_root: Path | None = None,
     ) -> bool:
@@ -1922,6 +1923,9 @@ class TestProjectInstallWouldBeRefused:
                 skills, "_find_project_root", return_value=project_root or source_dir
             ),
             patch.object(skills, "_get_project_target_dirs", return_value=target_dirs),
+            patch.object(
+                skills, "_get_global_target_dirs", return_value=global_target_dirs or []
+            ),
             patch.object(
                 skills, "_symlinks_supported", return_value=symlinks_supported
             ),
@@ -2003,16 +2007,70 @@ class TestProjectInstallWouldBeRefused:
         (target_dir / "developing-with-streamlit").mkdir(parents=True)
         assert not self._run(source_dir=empty_source, target_dirs=[target_dir])
 
-    def test_symlinks_unsupported_is_not_refused(
+    def test_symlinks_unsupported_free_global_is_not_refused(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """When symlinks are unsupported the install falls back to a global copy
-        that can succeed, so a blocked project target is not a refusal."""
-        target_dir = tmp_path / ".agents" / "skills"
-        (target_dir / "developing-with-streamlit").mkdir(parents=True)
+        """Symlinks unsupported + a blocked project target but a free global
+        target: the install falls back to a global copy that succeeds, so the
+        nudge must keep showing."""
+        project_target = tmp_path / ".agents" / "skills"
+        (project_target / "developing-with-streamlit").mkdir(parents=True)
+        global_target = tmp_path / "home" / ".agents" / "skills"
+        global_target.mkdir(parents=True)  # free - no blocker
         assert not self._run(
             source_dir=mock_source_skills_dir,
-            target_dirs=[target_dir],
+            target_dirs=[project_target],
+            global_target_dirs=[global_target],
+            symlinks_supported=False,
+        )
+
+    def test_copy_mode_all_global_files_blocked_is_refused(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Symlinks unsupported + a real FILE at every global target: the global
+        copy fallback deterministically refuses, so suppress the nudge (the
+        Windows-without-Developer-Mode residual loop this closes)."""
+        g_agents = tmp_path / "home" / ".agents" / "skills"
+        g_claude = tmp_path / "home" / ".claude" / "skills"
+        for g in (g_agents, g_claude):
+            g.mkdir(parents=True)
+            (g / "developing-with-streamlit").write_text("x", encoding="utf-8")
+        assert self._run(
+            source_dir=mock_source_skills_dir,
+            target_dirs=[tmp_path / ".agents" / "skills"],  # project targets free
+            global_target_dirs=[g_agents, g_claude],
+            symlinks_supported=False,
+        )
+
+    def test_copy_mode_ignores_free_project_targets(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Regression guard: in copy mode the install ignores project targets, so
+        a blocked global target refuses even when project targets are free -
+        the exact case a project-only check would miss."""
+        project_target = tmp_path / ".agents" / "skills"
+        project_target.mkdir(parents=True)  # free
+        g = tmp_path / "home" / ".agents" / "skills"
+        g.mkdir(parents=True)
+        (g / "developing-with-streamlit").write_text("x", encoding="utf-8")
+        assert self._run(
+            source_dir=mock_source_skills_dir,
+            target_dirs=[project_target],
+            global_target_dirs=[g],
+            symlinks_supported=False,
+        )
+
+    def test_copy_mode_real_dir_at_global_is_not_refused(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A real DIRECTORY at a global target is replaced by the copy (not a
+        conflict), so it is not a refusal - unlike the symlink-mode rule."""
+        g = tmp_path / "home" / ".agents" / "skills"
+        (g / "developing-with-streamlit").mkdir(parents=True)
+        assert not self._run(
+            source_dir=mock_source_skills_dir,
+            target_dirs=[tmp_path / ".agents" / "skills"],
+            global_target_dirs=[g],
             symlinks_supported=False,
         )
 
@@ -2127,6 +2185,45 @@ class TestNudgeSuppressedWhenInstallWouldConflict:
             )
             assert result.installed  # .claude/skills got the symlink
             assert result.skipped  # .agents/skills conflicted
+
+    def test_copy_mode_loop_is_closed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Windows-without-Developer-Mode audience: symlinks unsupported, so the
+        install falls back to a global COPY. When a real file occupies every
+        global target the copy also refuses (reason='conflict'); the gate must
+        suppress that loop too."""
+        base = tmp_path.resolve()
+
+        home = base / "home"
+        (home / ".claude").mkdir(parents=True)
+        monkeypatch.setenv("HOME", str(home))
+
+        source_dir = self._bundled_source(base)
+
+        project = base / "project"
+        app_dir = project / "src"
+        app_dir.mkdir(parents=True)
+
+        # A real file blocks every global copy target (no SKILL.md).
+        for g in (home / ".agents" / "skills", home / ".claude" / "skills"):
+            g.mkdir(parents=True)
+            (g / "developing-with-streamlit").write_text(
+                "not a skill", encoding="utf-8"
+            )
+
+        with (
+            patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
+            # Force the symlinks-unsupported path (both gate and install).
+            patch.object(skills, "_symlinks_supported", return_value=False),
+            patch("streamlit.config.get_option", return_value=False),
+        ):
+            self._clear_caches()
+            assert skills.detect_installed_skills(str(app_dir)) == []
+            assert skills.should_show_skills_nudge(str(app_dir)) is False
+            with pytest.raises(skills._InstallError) as exc:
+                skills.install_skills(global_mode=False, yes=True, app_dir=str(app_dir))
+            assert exc.value.reason == "conflict"
 
 
 class TestGenerateGitignoreSnippetEdgeCases:

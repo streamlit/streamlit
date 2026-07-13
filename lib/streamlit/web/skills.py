@@ -1071,24 +1071,33 @@ def clear_installed_skills_cache() -> None:
 
 
 def _project_install_would_be_refused(app_dir: str | None) -> bool:
-    """Return whether a one-click project install would deterministically refuse.
+    """Return whether the one-click install the nudge triggers would refuse.
 
-    Mirrors :func:`_install_project_skills`, which raises a conflict error only
-    when nothing installs and nothing is already up to date — i.e. every
-    ``(skill, target)`` pair is blocked by a real, non-managed file or directory.
-    It reuses the installer's own resolvers (:func:`_find_project_root`,
-    :func:`_get_project_target_dirs`, :func:`_discover_skills`) and its per-target
-    conflict rule (:func:`_symlink_target_would_conflict`) so the show-gate and
-    the installer cannot drift.
+    The nudge triggers ``install_skills(global_mode=False, ...)``, which installs
+    project symlinks or — when symlinks are unsupported (e.g. Windows without
+    Developer Mode) — falls back to a global copy. This mirrors BOTH refusal
+    paths so the show-gate stops recommending an install that can only conflict:
+    without it, a stray non-managed ``developing-with-streamlit`` path with no
+    ``SKILL.md`` is invisible to the marker-based detection yet a hard conflict
+    for the installer, so the nudge shows, the install refuses, and the loop
+    repeats every session.
 
-    Used by the nudge show-gate to stop recommending an install that can only
-    fail: without this, a stray non-managed ``developing-with-streamlit`` file or
-    directory at the target has no ``SKILL.md`` for the marker-based detection to
-    find, so the nudge shows, the install refuses, and the loop repeats every
-    session. Intentionally uncached (unlike ``detect_installed_skills``) so that
-    removing the blocker re-shows the nudge on the next session, and fails open
-    (returns ``False``) on any error so a probe failure never suppresses the
-    nudge spuriously.
+    It reuses the installer's own resolvers and per-mode conflict rules so the
+    two cannot drift:
+
+    - Symlink mode: refuses only when every project ``(skill, target)`` pair is
+      blocked by a real, non-symlink file/dir (:func:`_symlink_target_would_conflict`).
+    - Copy mode (symlinks unsupported): the global fallback copies the single
+      global skill and refuses only when every global target is a real
+      (non-symlink) FILE — a real dir is replaced, a name-owned symlink is
+      unlinked+replaced, and a missing path is copied, so none of those refuse.
+
+    The cheap stat-only checks run first; the ``_symlinks_supported`` probe
+    (which writes a temp symlink into ``project_root``) is only reached when one
+    target set is already fully blocked, keeping the common no-conflict path
+    write-free. Intentionally uncached so removing the blocker re-shows the nudge
+    next session, and fails open (returns ``False``) on any error so a probe
+    failure never suppresses the nudge spuriously.
     """
     try:
         source_skills_dir = _get_source_skills_dir()
@@ -1096,20 +1105,34 @@ def _project_install_would_be_refused(app_dir: str | None) -> bool:
         if not skill_names:
             return False
         project_root = _find_project_root(Path(app_dir) if app_dir else None)
-        target_dirs = _get_project_target_dirs(project_root)
-        if not target_dirs:
+
+        # Symlink-mode refusal: every project (skill, target) pair blocked by a
+        # real, non-managed file/dir.
+        project_targets = _get_project_target_dirs(project_root)
+        project_all_blocked = bool(project_targets) and all(
+            _symlink_target_would_conflict(target_dir / skill_name)
+            for target_dir in project_targets
+            for skill_name in skill_names
+        )
+        # Copy-mode refusal (the symlinks-unsupported global fallback): every
+        # global target is a real, non-symlink FILE. A real dir is replaced, so
+        # do NOT reuse _symlink_target_would_conflict here.
+        global_targets = _get_global_target_dirs()
+        global_all_blocked = bool(global_targets) and all(
+            (target_dir / _GLOBAL_SKILL_NAME).is_file()
+            and not (target_dir / _GLOBAL_SKILL_NAME).is_symlink()
+            for target_dir in global_targets
+        )
+        if not project_all_blocked and not global_all_blocked:
+            # Common case: neither mode is fully blocked, so the install can make
+            # progress. Return without the symlink-support write-probe.
             return False
-        for target_dir in target_dirs:
-            for skill_name in skill_names:
-                if not _symlink_target_would_conflict(target_dir / skill_name):
-                    # A single installable pair means partial success, not a
-                    # refusal - the newly installed skill is detected next
-                    # session and the nudge self-terminates.
-                    return False
-        # Every target is blocked. The installer only refuses in symlink mode; if
-        # symlinks are unsupported it falls back to a global copy that writes
-        # elsewhere and can still succeed, so that is not a deterministic refusal.
-        return _symlinks_supported(project_root, source_skills_dir / skill_names[0])
+
+        # One mode is fully blocked; only the mode the installer actually uses
+        # decides. This is the sole branch that probes symlink support.
+        if _symlinks_supported(project_root, source_skills_dir / skill_names[0]):
+            return project_all_blocked
+        return global_all_blocked
     except (OSError, RuntimeError):
         return False
 
