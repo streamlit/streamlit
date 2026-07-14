@@ -68,7 +68,7 @@
     "axios": "^1.18.1",
     "baseui": "12.2.0",
     "classnames": "^2.3.2",
-    "color2k": "^2.0.2",
+    "color2k": "^2.0.4",
     "d3": "^7.9.0",
     "d3-graphviz": "^5.6.0",
     "date-fns": "^4.4.0",
@@ -124,7 +124,7 @@
     "vega-embed": "^7.1.0",
     "vega-interpreter": "^2.2.1",
     "vega-lite": "6.4.3",
-    "wavesurfer.js": "^7.12.8",
+    "wavesurfer.js": "^7.12.10",
     "xxhashjs": "^0.2.2"
   },
   "peerDependencies": {

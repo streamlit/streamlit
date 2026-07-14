@@ -3589,7 +3589,7 @@ __metadata:
     buffer: "npm:^6.0.3"
     chrome-launcher: "npm:^1.2.1"
     classnames: "npm:^2.3.2"
-    color2k: "npm:^2.0.2"
+    color2k: "npm:^2.0.4"
     hoist-non-react-statics: "npm:^3.3.2"
     humanize-string: "npm:^3.1.0"
     iframe-resizer: "npm:4.3.11"
@@ -3723,7 +3723,7 @@ __metadata:
     axios-mock-adapter: "npm:^2.1.0"
     baseui: "npm:12.2.0"
     classnames: "npm:^2.3.2"
-    color2k: "npm:^2.0.2"
+    color2k: "npm:^2.0.4"
     d3: "npm:^7.9.0"
     d3-graphviz: "npm:^5.6.0"
     date-fns: "npm:^4.4.0"
@@ -3790,7 +3790,7 @@ __metadata:
     vitest: "npm:^4.1.10"
     vitest-canvas-mock: "npm:^1.1.4"
     vitest-fetch-mock: "npm:^0.4.5"
-    wavesurfer.js: "npm:^7.12.8"
+    wavesurfer.js: "npm:^7.12.10"
     xxhashjs: "npm:^0.2.2"
   peerDependencies:
     react: ^17.0.0 || ^18.0.0
@@ -4967,11 +4967,11 @@ __metadata:
   linkType: hard
 
 "@types/node@npm:>=24 <25":
-  version: 24.13.2
-  resolution: "@types/node@npm:24.13.2"
+  version: 24.13.3
+  resolution: "@types/node@npm:24.13.3"
   dependencies:
     undici-types: "npm:~7.18.0"
-  checksum: 10c0/d7d48a88a4feb0a6aac3cbfaf9ef3b12752b4b09447f88dd0b4c77c03b281e3d4330fe6982a99aedcd63fc16c7540a0c248b91eb2abb0b3edd884d7fe684e9ea
+  checksum: 10c0/a5bc08f49b9581dcdca90e02cd77197a3c799840807664942e5cd5161a553d4d2ae8064f7e3294410d748d7d098b5c1848be7fa50c06f29c4193ab16be4e59eb
   languageName: node
   linkType: hard
 
@@ -7105,17 +7105,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"color2k@npm:2.0.3":
-  version: 2.0.3
-  resolution: "color2k@npm:2.0.3"
-  checksum: 10c0/e7c13d212c9d1abb1690e378bbc0a6fb1751e4b02e9a73ba3b2ade9d54da673834597d342791d577d1ce400ec486c7f92c5098f9fa85cd113bcfde57420a2bb9
-  languageName: node
-  linkType: hard
-
-"color2k@patch:color2k@npm%3A2.0.3#~/.yarn/patches/color2k-npm-2.0.3-41f760285e.patch":
-  version: 2.0.3
-  resolution: "color2k@patch:color2k@npm%3A2.0.3#~/.yarn/patches/color2k-npm-2.0.3-41f760285e.patch::version=2.0.3&hash=0e4d2b"
-  checksum: 10c0/99113a128764c7ab0937efce2402668ece04edfb4640ea9879dd479de0bd18a3d6ede251c24611b4dce8cef775c6de037e2cd2f9a7fde9223f5f1dd4f0917b50
+"color2k@npm:^2.0.4":
+  version: 2.0.4
+  resolution: "color2k@npm:2.0.4"
+  checksum: 10c0/cb2bf3661a16e96e44ad07ad6b9b68037118405a154950597fe8d6cdde24cc277945d73e7ef29049b8511f14559b5c3e02c2e5c29e75568e31efc5b5c0f4d3e5
   languageName: node
   linkType: hard
 
@@ -12241,9 +12234,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knip@npm:^6.24.0":
-  version: 6.24.0
-  resolution: "knip@npm:6.24.0"
+"knip@npm:^6.25.0":
+  version: 6.25.0
+  resolution: "knip@npm:6.25.0"
   dependencies:
     fdir: "npm:^6.5.0"
     formatly: "npm:^0.3.0"
@@ -12261,7 +12254,7 @@ __metadata:
   bin:
     knip: bin/knip.js
     knip-bun: bin/knip-bun.js
-  checksum: 10c0/fe55ed075fd240e678a0064895d5361b2758fdfbe40a53823cbb2b59f1e2a6fb67e7f6f1f12d7312c525c8c910afbe93c8368d3e61eeac876effe80f4bbd4c45
+  checksum: 10c0/4f91895d9dc6d4112f6bcaee0a22e6c5c9357907b6396d1a2f06ee36229414d3b2776a5d91be69da7fa349b6a7f8074b3df775fc1ac7db6aca46d9eded073300
   languageName: node
   linkType: hard
 
@@ -17106,7 +17099,7 @@ __metadata:
     eslint-plugin-testing-library: "npm:^7.16.2"
     globals: "npm:^17.7.0"
     jiti: "npm:^2.7.0"
-    knip: "npm:^6.24.0"
+    knip: "npm:^6.25.0"
     oxfmt: "npm:^0.58.0"
     oxlint: "npm:^1.73.0"
     typescript: "npm:^6.0.3"
@@ -19306,10 +19299,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wavesurfer.js@npm:^7.12.8":
-  version: 7.12.8
-  resolution: "wavesurfer.js@npm:7.12.8"
-  checksum: 10c0/92097742f4652639e4df98e7c460fcd340779f088a91515df91933f02f973ef27031077d2e9d90c2922c61bd2a952a0c13c41e2770692e694b3dca2c53d3af70
+"wavesurfer.js@npm:^7.12.10":
+  version: 7.12.10
+  resolution: "wavesurfer.js@npm:7.12.10"
+  checksum: 10c0/ece78a38a8679d34395194f9eeca9fa2b5b9c772c1e66c81cd3103fbc62a1a365973ac9b31ceeb6448e5b9fa8c14da477eb7286ad28c42ce939998aa71e3af1f
   languageName: node
   linkType: hard
 
