@@ -69,10 +69,28 @@ def test_explicit_sidebar_state_applies_only_on_page_navigation(app: Page) -> No
     wait_for_app_run(app)
     expect(sidebar).to_have_attribute("aria-expanded", "false")
 
-    # Expand via a user action so navigation is available, then verify a page
-    # without explicit config uses the persisted expanded preference.
-    app.get_by_test_id("stExpandSidebarButton").click()
+    # Force-expand direction (issue #12065 is bidirectional): entering a page
+    # whose explicit state is "expanded" must expand a collapsed sidebar, even
+    # over a persisted collapsed preference. The sidebar is still collapsed here,
+    # so navigate via the main-content button rather than a (hidden) nav link.
+    app.evaluate("window.localStorage.setItem('stSidebarCollapsed-', 'true')")
+    app.get_by_role("button", name="Switch to expanded page").click()
+    wait_for_app_run(app)
+    expect(
+        app.get_by_test_id("stHeading").filter(has_text="Expanded page")
+    ).to_be_visible()
     expect(sidebar).to_have_attribute("aria-expanded", "true")
+
+    # The page-entry override must not overwrite the user's stored preference.
+    wait_until(
+        app,
+        lambda: (
+            app.evaluate("window.localStorage.getItem('stSidebarCollapsed-')") == "true"
+        ),
+    )
+
+    # A page without explicit config uses the persisted preference: the stored
+    # collapsed value now wins on entry to the unconfigured page.
     _sidebar_nav_link(app, "Unconfigured").click()
     wait_for_app_run(app)
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    expect(sidebar).to_have_attribute("aria-expanded", "false")

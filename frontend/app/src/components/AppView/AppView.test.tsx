@@ -1599,6 +1599,48 @@ describe("AppView element", () => {
       )
     })
 
+    it("keeps a locked desktop sidebar open when entering a page", () => {
+      // A stored collapsed preference must not win, and neither should the
+      // page-entry override path collapse a locked sidebar.
+      window.localStorage.setItem("stSidebarCollapsed-", "true")
+
+      const initialProps = getProps({
+        elements: elementsWithSidebar,
+        sidebarPageChangeSequence: 0,
+      })
+      const { rerenderWithContexts } = renderWithContexts(
+        <AppView {...initialProps} />,
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.LOCKED,
+          },
+          navigationContext: { currentPageScriptHash: "page-1" },
+        }
+      )
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+
+      // Entering a new page bumps the sequence; the locked sidebar must stay
+      // open through the page-entry branch instead of being collapsed.
+      rerenderWithContexts(
+        <AppView {...initialProps} sidebarPageChangeSequence={1} />,
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.LOCKED,
+          },
+          navigationContext: { currentPageScriptHash: "page-2" },
+        }
+      )
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+    })
+
     it("uses persisted state on a later page without explicit sidebar config", () => {
       window.localStorage.setItem("stSidebarCollapsed-", "false")
 

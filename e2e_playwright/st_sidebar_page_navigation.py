@@ -27,6 +27,10 @@ def collapsed_page() -> None:
     st.header("Collapsed page")
     st.sidebar.write("Collapsed page sidebar")
     st.button("Rerun collapsed page")
+    # Main-content navigation stays reachable while the sidebar (and its nav
+    # links) is collapsed, so tests can enter another page without expanding it.
+    if st.button("Switch to expanded page"):
+        st.switch_page(expanded)
 
 
 def unconfigured_page() -> None:
@@ -34,10 +38,8 @@ def unconfigured_page() -> None:
     st.sidebar.write("Unconfigured page sidebar")
 
 
-st.navigation(
-    [
-        st.Page(expanded_page, title="Expanded", default=True),
-        st.Page(collapsed_page, title="Collapsed"),
-        st.Page(unconfigured_page, title="Unconfigured"),
-    ]
-).run()
+expanded = st.Page(expanded_page, title="Expanded", default=True)
+collapsed = st.Page(collapsed_page, title="Collapsed")
+unconfigured = st.Page(unconfigured_page, title="Unconfigured")
+
+st.navigation([expanded, collapsed, unconfigured]).run()

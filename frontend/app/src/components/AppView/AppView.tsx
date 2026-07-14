@@ -357,7 +357,14 @@ function AppView(props: AppViewProps): ReactElement {
     if (hasExplicitPageEntryState && innerWidth > 0) {
       consumedSidebarPageChangeSequenceRef.current = sidebarPageChangeSequence
       pageEntrySidebarStateRef.current = initialSidebarState
-      collapseForSidebarState(initialSidebarState)
+      if (isEffectivelyLocked) {
+        // A locked desktop sidebar stays open and non-dismissible; page-entry
+        // config must not collapse it. Keep this consistent with the locked
+        // guard below and in setSidebarCollapsedWithOptionalPersistence.
+        setSidebarIsCollapsed(false)
+      } else {
+        collapseForSidebarState(initialSidebarState)
+      }
       return
     }
 
