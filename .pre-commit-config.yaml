@@ -30,6 +30,11 @@ repos:
       # Run the formatter.
       - id: ruff-format
         types_or: [python, pyi]
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.11.28
+    hooks:
+      - id: uv-lock
+        files: ^(pyproject\.toml|lib/pyproject\.toml|uv\.lock)$
   - repo: local
     hooks:
       - id: oxlint-frontend
@@ -215,6 +220,7 @@ repos:
           |^proto/streamlit/proto/openmetrics_data_model.proto$
           |\.snap$
       - id: check-added-large-files
+        exclude: ^uv\.lock$
       - id: check-json
         # Note that this should be the same as the check-json5 hook's files
         # property

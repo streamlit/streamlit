@@ -132,10 +132,11 @@ jobs:
           # which might cause some unexpected issues with dependencies.
           use_cached_venv: false
       - name: Install integration dependencies
-        run: uv sync --python python --group integration
+        run: uv sync --python python --locked --no-default-groups --group integration
       - name: Run Python integration tests
         run: make python-integration-tests
         env:
+          UV_NO_SYNC: 1
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
       - name: Upload coverage data
@@ -188,13 +189,63 @@ jobs:
             echo "min constraints file is up to date."
           fi
       - name: Install min dependencies (force reinstall)
-        run: uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
+        run: uv pip install --no-config -r scripts/assets/min-constraints-gen.txt --force-reinstall
       - name: Make local modules visible
         run: uv pip install --editable ./lib --no-deps
+      - name: Verify minimum dependency versions
+        run: |
+          uv run --no-sync python - <<'PY'
+          from importlib.metadata import version
+
+          from packaging.version import Version
+
+          expected = {
+              "numpy": "1.23",
+              "pandas": "1.4.0",
+              "pillow": "7.1.0",
+              "protobuf": "3.20",
+              "pyarrow": "7.0",
+          }
+          for package, expected_version in expected.items():
+              actual_version = version(package)
+              assert Version(actual_version) == Version(expected_version), (
+                  f"{package}: expected {expected_version}, found {actual_version}"
+              )
+              print(f"{package}=={actual_version}")
+          PY
+      - name: Install minimum-compatible protoc
+        env:
+          PROTOC_VERSION: "3.20.0"
+        run: |
+          archive="protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          url="https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${archive}"
+          curl -fL --retry 5 --retry-all-errors --retry-delay 3 -o "$RUNNER_TEMP/$archive" "$url"
+          unzip -tq "$RUNNER_TEMP/$archive"
+          unzip -q "$RUNNER_TEMP/$archive" -d "$RUNNER_TEMP/protoc-min"
+          echo "$RUNNER_TEMP/protoc-min/bin" >> "$GITHUB_PATH"
+      - name: Generate and import minimum-compatible Python protobufs
+        env:
+          UV_NO_SYNC: 1
+        run: |
+          protoc --version
+          make protobuf-python-runtime
+          uv run python - <<'PY'
+          import importlib
+          from pathlib import Path
+
+          modules = sorted(Path("lib/streamlit/proto").glob("*_pb2.py"))
+          for module in modules:
+              importlib.import_module(f"streamlit.proto.{module.stem}")
+          print(f"Imported {len(modules)} generated protobuf modules")
+          PY
       - name: Run Python Tests
         run: make python-tests
+        env:
+          UV_NO_SYNC: 1
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
+        env:
+          UV_NO_SYNC: 1
       - name: Upload coverage data
         uses: actions/upload-artifact@v7
         with:

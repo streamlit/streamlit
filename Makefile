@@ -16,13 +16,15 @@
 # /bin/sh is POSIX compliant, ie it's not bash.  So let's be explicit:
 SHELL=/bin/bash
 
-INSTALL_DEV_REQS ?= true
-INSTALL_TEST_REQS ?= true
+PYTHON_DEPENDENCY_GROUP ?= dev
+PYTHON_SYNC_LOCK_FLAG ?= --locked
 INSTALL_PLAYWRIGHT ?= true
 INSTALL_PLAYWRIGHT_DEPS ?= auto
 # Flags:
-#  - INSTALL_DEV_REQS: install dev requirements (default: true)
-#  - INSTALL_TEST_REQS: install test requirements (default: true)
+#  - PYTHON_DEPENDENCY_GROUP: final Python environment to install. Supported
+#    values are runtime, test, dev, and integration (default: dev).
+#  - PYTHON_SYNC_LOCK_FLAG: lock enforcement passed to uv sync (default: --locked).
+#    Automation that repairs the lock may explicitly set this to an empty value.
 #  - INSTALL_PLAYWRIGHT: install Playwright browsers during python-init (default: true)
 #    CI uses a dedicated action to install browsers and typically sets this to false.
 #    Local dev can opt out when not needed: `INSTALL_PLAYWRIGHT=false make init`
@@ -103,7 +105,20 @@ clean:
 
 .PHONY: protobuf
 # Recompile Protobufs for Python and the frontend.
-protobuf:
+protobuf: protobuf-python protobuf-frontend
+
+.PHONY: protobuf-python
+# Recompile Python Protobufs.
+protobuf-python:
+	@$(MAKE) _protobuf-python PROTOBUF_PYTHON_MYPY_OUTPUT=--mypy_out=lib
+
+.PHONY: protobuf-python-runtime
+# Recompile runtime Python Protobuf modules without mypy stubs.
+protobuf-python-runtime:
+	@$(MAKE) _protobuf-python PROTOBUF_PYTHON_MYPY_OUTPUT=
+
+.PHONY: _protobuf-python
+_protobuf-python:
   # Ensure protoc is installed and is >= MIN_PROTOC_VERSION.
 	@if ! command -v protoc &> /dev/null ; then \
 		echo "protoc not installed."; \
@@ -121,9 +136,12 @@ protobuf:
 	uv run protoc \
 		--proto_path=proto \
 		--python_out=lib \
-		--mypy_out=lib \
+		$(PROTOBUF_PYTHON_MYPY_OUTPUT) \
 		proto/streamlit/proto/*.proto
 
+.PHONY: protobuf-frontend
+# Recompile frontend Protobufs.
+protobuf-frontend:
 	@# JS/TS protobuf generation
 	@if [ ! -d "frontend/node_modules" ]; then \
 		echo "frontend/node_modules not found. Running 'make frontend-init' first..."; \
@@ -145,37 +163,68 @@ protobuf-format:
 .PHONY: python-init
 # Install Python dependencies and Streamlit in editable mode.
 python-init:
+	@case "${PYTHON_DEPENDENCY_GROUP}" in \
+		runtime|test|dev|integration) ;; \
+		*) \
+			echo "Unsupported PYTHON_DEPENDENCY_GROUP='${PYTHON_DEPENDENCY_GROUP}'. Expected one of: runtime, test, dev, integration."; \
+			exit 1; \
+		;; \
+	esac
 	@# Check if uv is installed
 	@if ! command -v uv > /dev/null 2>&1; then \
 		echo "Installing uv..."; \
 		pip install uv; \
 	fi
-	@# Determine which dependency group to sync
-	@if [ "${INSTALL_DEV_REQS}" = "true" ] && [ "${INSTALL_TEST_REQS}" = "true" ]; then \
-		echo "Installing dev dependencies (includes test)..."; \
-		uv sync --group dev; \
-	elif [ "${INSTALL_DEV_REQS}" = "true" ]; then \
-		echo "Installing dev dependencies..."; \
-		uv sync --group dev; \
-	elif [ "${INSTALL_TEST_REQS}" = "true" ]; then \
-		echo "Installing test dependencies..."; \
-		uv sync --group test; \
+	@# Sync exactly one final dependency selection. uv otherwise includes dev by default.
+	@if [ "${PYTHON_DEPENDENCY_GROUP}" = "runtime" ]; then \
+		echo "Installing runtime dependencies..."; \
+		uv sync ${PYTHON_SYNC_LOCK_FLAG} --no-default-groups; \
 	else \
-		echo "Installing base dependencies..."; \
-		uv sync; \
+		echo "Installing ${PYTHON_DEPENDENCY_GROUP} dependencies..."; \
+		uv sync ${PYTHON_SYNC_LOCK_FLAG} --no-default-groups --group "${PYTHON_DEPENDENCY_GROUP}"; \
 	fi
 	@# Install playwright if requested
-	@if [ "${INSTALL_TEST_REQS}" = "true" ] && [ "${INSTALL_PLAYWRIGHT}" = "true" ]; then \
+	@if [ "${PYTHON_DEPENDENCY_GROUP}" != "runtime" ] && [ "${INSTALL_PLAYWRIGHT}" = "true" ]; then \
 		if [ "${INSTALL_PLAYWRIGHT_DEPS}" = "false" ]; then \
-			uv run python -m playwright install; \
+			uv run --no-sync python -m playwright install; \
 		elif [ "${INSTALL_PLAYWRIGHT_DEPS}" = "true" ] || [ -f /etc/debian_version ] || [ "$$(uname)" = "Darwin" ]; then \
-			uv run python -m playwright install --with-deps; \
+			uv run --no-sync python -m playwright install --with-deps; \
 		else \
 			echo "Skipping 'playwright install --with-deps': not officially supported on this OS."; \
 			echo "Browsers will be downloaded. Install browser system libraries through your distro's package manager (see CONTRIBUTING.md)."; \
-			uv run python -m playwright install; \
+			uv run --no-sync python -m playwright install; \
 		fi; \
 	fi
+
+.PHONY: python-init-runtime
+# Install the locked runtime-only Python environment.
+python-init-runtime: PYTHON_DEPENDENCY_GROUP=runtime
+python-init-runtime: python-init
+
+.PHONY: python-init-test
+# Install the locked Python test environment.
+python-init-test: PYTHON_DEPENDENCY_GROUP=test
+python-init-test: python-init
+
+.PHONY: python-init-dev
+# Install the locked Python development environment.
+python-init-dev: PYTHON_DEPENDENCY_GROUP=dev
+python-init-dev: python-init
+
+.PHONY: python-init-integration
+# Install the locked Python integration environment.
+python-init-integration: PYTHON_DEPENDENCY_GROUP=integration
+python-init-integration: python-init
+
+.PHONY: check-python-lock
+# Check that Python dependency manifests agree with uv.lock.
+check-python-lock:
+	uv lock --check
+
+.PHONY: update-python-lock
+# Upgrade all Python dependencies recorded in uv.lock.
+update-python-lock:
+	env -u UV_LOCKED uv lock --upgrade
 
 .PHONY: python-lint
 # Lint and check formatting of Python files.
@@ -212,7 +261,7 @@ python-performance-tests:
 		lib/tests/
 
 .PHONY: python-integration-tests
-# Run Python integration tests. Requires `uv sync --group integration` to be run first.
+# Run Python integration tests. Requires `make python-init-integration` first.
 python-integration-tests:
 	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
 	MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v -l \
@@ -545,10 +594,8 @@ update-headers:
 .PHONY: update-min-deps
 # Update minimum dependency constraints file.
 update-min-deps:
-	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init >/dev/null
-	# Install streamlit in editable mode (needed by get_min_versions.py)
-	uv pip install --editable ./lib --no-deps
-	uv run python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
+	INSTALL_PLAYWRIGHT=false $(MAKE) python-init-dev >/dev/null
+	uv run --no-sync python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
 
 .PHONY: debug-e2e-test
 # Run a playwright e2e test in debug mode. Use it via `make debug-e2e-test st_command_test.py`.

@@ -28,12 +28,18 @@ name = "streamlit-dev"
 version = "0.0.0"
 description = "Development environment for Streamlit"
 requires-python = ">=3.10"
-# Empty dependencies - the actual package is installed via [tool.uv.sources]
-dependencies = []
+# The published package metadata remains in lib/pyproject.toml. This requirement
+# makes its runtime dependencies part of the development lock graph, while the
+# source mapping below keeps the package editable.
+dependencies = ["streamlit"]
 
 [tool.uv]
+# The development toolchain is the default local environment.
+default-groups = ["dev"]
 # Minimum uv version required for this project
-required-version = ">=0.9.17"
+required-version = ">=0.11.28"
+# Resolve the development lock only for the currently supported Python range.
+environments = ["python_version < '3.15'"]
 # Exclude packages published in the last 24 hours to lower risk from supply chain attacks
 exclude-newer = "24 hours"
 # Explicit pandas version constraints by Python version:
@@ -55,7 +61,6 @@ streamlit = { path = "lib", editable = true }
 # Development dependencies - includes test group
 dev = [
   { include-group = "test" },
-  "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
   "ty==0.0.56",
@@ -91,7 +96,6 @@ dev = [
 
 # Test dependencies
 test = [
-  "streamlit",
   # Testing infrastructure dependencies:
   # pytest >= 9.1.0 is causing issues and is not yet supported.
   "pytest>=9.0.3,<9.1.0",
@@ -143,7 +147,6 @@ test = [
 # Integration test dependencies
 integration = [
   { include-group = "test" },
-  "streamlit",
   # Snowflake dependencies:
   "snowflake-snowpark-python[modin]>=1.17.0",
   "snowflake-connector-python>=3.3.0",

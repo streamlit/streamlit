@@ -14,14 +14,23 @@ all-dev                   Install all dependencies and editable Streamlit, but d
 init                      Install all dependencies and build protobufs.
 clean                     Remove all generated files.
 protobuf                  Recompile Protobufs for Python and the frontend.
+protobuf-python           Recompile Python Protobufs.
+protobuf-python-runtime   Recompile runtime Python Protobuf modules without mypy stubs.
+protobuf-frontend         Recompile frontend Protobufs.
 protobuf-lint             Lint and check formatting of protobuf files (buf).
 protobuf-format           Format protobuf files (buf).
 python-init               Install Python dependencies and Streamlit in editable mode.
+python-init-runtime       Install the locked runtime-only Python environment.
+python-init-test          Install the locked Python test environment.
+python-init-dev           Install the locked Python development environment.
+python-init-integration   Install the locked Python integration environment.
+check-python-lock         Check that Python dependency manifests agree with uv.lock.
+update-python-lock        Upgrade all Python dependencies recorded in uv.lock.
 python-lint               Lint and check formatting of Python files.
 python-format             Format Python files.
 python-tests              Run Python unit tests.
 python-performance-tests  Run Python performance tests.
-python-integration-tests  Run Python integration tests. Requires `uv sync --group integration` to be run first.
+python-integration-tests  Run Python integration tests. Requires `make python-init-integration` first.
 python-types              Run the Python type checker.
 frontend-init             Install all frontend dependencies.
 frontend                  Build the frontend.

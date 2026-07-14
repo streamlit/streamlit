@@ -200,13 +200,26 @@ git checkout -b ${BRANCH_NAME}
 
 ### 3. Create a new Python environment
 
-We use [uv](https://docs.astral.sh/uv/) to manage Python dependencies and virtual environments. If you don't have uv installed, you can install it with:
+We use [uv](https://docs.astral.sh/uv/) to manage Python dependencies and virtual environments. Use uv 0.11.28 or newer; CI and pre-commit use exactly 0.11.28 so automated lock updates are consistent. If you don't have uv installed, you can install it with:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+The committed `uv.lock` is the source of truth for development and normal CI environments. It does not lock dependencies for users installing the published Streamlit wheel; those remain governed by the ranges in `lib/pyproject.toml`.
+
 The virtual environment and dependencies will be automatically created and managed when you run `make all-dev` in the next step. uv creates a `.venv` directory in the repository root.
+
+You can also install one explicit final environment:
+
+| Environment | Command |
+|---|---|
+| Runtime only | `make python-init-runtime` |
+| Unit/E2E tests | `make python-init-test` |
+| Development (tests plus lint, types, and release tools) | `make python-init-dev` |
+| Integration tests | `make python-init-integration` |
+
+These commands exact-sync the same `.venv`, so switching selections mutates it. Set a distinct `UV_PROJECT_ENVIRONMENT` path for each selection if you need simultaneous environments.
 
 ## How to develop Streamlit
 
@@ -273,6 +286,8 @@ make init
 
 > [!IMPORTANT]
 > If your change updates `frontend/yarn.lock` (for example, after adding or upgrading dependencies), run `cd frontend && yarn dedupe` before committing. Our `scripts/check_yarn_dedupe.sh` hook enforces this locally (via pre-commit) and in CI, so handling it upfront keeps your PR green.
+
+For Python dependencies, edit the relevant `pyproject.toml`, run `uv lock`, review the generated lock diff, and commit both files. Use `uv lock --upgrade-package <package>` for a targeted upgrade, `make update-python-lock` for a full compatible upgrade, and `make check-python-lock` to verify manifest consistency. Do not hand-edit `uv.lock`.
 
 ### 6. Running tests
 
@@ -436,7 +451,7 @@ def test_streamlit_version(self):
       ?      ^
 ```
 
-To fix this make sure your Python environment is set up correctly. Try running `uv sync --group dev` to reinstall dependencies, or delete the `.venv` directory and run `make all-dev` again to recreate the environment.
+To fix this make sure your Python environment is set up correctly. Try running `make python-init-dev` to reinstall locked dependencies, or delete the `.venv` directory and run `make all-dev` again to recreate the environment.
 
 #### `protoc` command fails because of version mismatch
 
@@ -480,5 +495,16 @@ protoc --version
 ## Introducing dependencies
 
 We aim to only introduce dependencies in this project that have reasonable restrictions and comply with various laws.
+
+Normal validation uses `uv.lock` for deterministic dependencies. CI separately tests the published minimum runtime versions without project synchronization, and the weekly `update-python-lock.yml` workflow upgrades the complete compatible graph and opens a PR when it changes. This preserves explicit minimum- and newest-compatible coverage without making unrelated PRs depend on upstream release timing.
+
+If `uv.lock` conflicts during a merge, regenerate it instead of hand-merging:
+
+```bash
+git checkout origin/develop -- uv.lock
+uv lock
+```
+
+Package name or version changes in `lib/pyproject.toml` also require `uv lock`, because the editable package identity is recorded in the lock.
 
 ![Views](https://api.views-badge.org/badge/st-wiki-contributing)

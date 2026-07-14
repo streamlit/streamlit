@@ -62,7 +62,7 @@ Reusable composite actions in `.github/actions/` encapsulate common setup steps.
 | Action | Description |
 |--------|-------------|
 | `build_info` | Sets Python version env vars (`PYTHON_MIN_VERSION`, `PYTHON_MAX_VERSION`, `PYTHON_VERSIONS`). Call early in workflows. |
-| `make_init` | Full dev environment setup: uv, Python, Node/Yarn, protoc, virtualenv, protobufs. Does NOT install Playwright. |
+| `make_init` | Locked dev environment setup: uv 0.11.28, Python, Node/Yarn, protoc, lock-keyed virtualenv, protobufs. Does NOT install Playwright. Lock enforcement defaults on; only lock-repair workflows may disable it. |
 | `playwright_install` | Installs Playwright browsers with caching (by OS/arch/version). Call after `make_init` for E2E tests. |
 | `apt_mirror_fix` | Fixes slow Azure apt mirrors on Ubuntu runners. Called automatically by `playwright_install`. |
 | `preview_branch` | Sets `PREVIEW_BRANCH` and `BRANCH` env vars for PR preview deployments. Uses action inputs to mitigate script injection. |
@@ -155,6 +155,7 @@ steps:
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `update-browserslist-db.yml` | Weekly (Tuesdays) | Updates browserslist database, creates PR if changed |
+| `update-python-lock.yml` | Weekly (Mondays), manual dry run | Upgrades the complete compatible Python lock with uv 0.11.28 and creates a PR if changed |
 | `update-emojis-material-icons.yml` | Weekly (Tuesdays) | Updates emoji and Material icons assets |
 | `community-voting.yml` | Issue labeled | Adds voting comment and reaction to bug/enhancement issues |
 

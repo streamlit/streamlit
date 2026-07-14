@@ -37,6 +37,11 @@
 - Prefer `make` targets for all dev tasks (tests, lint, format, builds).
 - Always use `uv run` to run any Python command (e.g. `uv run streamlit`, `uv run pytest`, `uv run ruff`, `uv run mypy`, etc.).
 - Always use `uv run` for git commands that trigger hooks (e.g. `uv run git commit`, `uv run git push`). Pre-commit hooks require the uv environment to run linters and formatters.
+- The committed root `uv.lock` is the source of truth for normal development and CI. Do not hand-edit it.
+- Select one final Python environment with `make python-init-runtime`, `make python-init-test`, `make python-init-dev`, or `make python-init-integration`. Each exact-syncs the shared `.venv`; use separate `UV_PROJECT_ENVIRONMENT` paths when simultaneous environments are needed.
+- For Python dependency changes, edit the relevant `pyproject.toml`, run `uv lock`, and commit both files. Also run `uv lock` after changing the package name or version. Use `uv lock --upgrade-package <package>` for a targeted upgrade, `make update-python-lock` for a full compatible upgrade, and `make check-python-lock` to verify consistency.
+- If `uv.lock` conflicts during a merge, restore it with `git checkout origin/develop -- uv.lock`, then run `uv lock`; never hand-merge it.
+- Normal validation uses the lock, while CI separately tests declared minimum dependencies and the weekly `update-python-lock.yml` workflow refreshes the newest compatible dependency graph.
 - For Python unit tests: `uv run pytest` commands are allowed and encouraged for running specific tests during development.
 - For E2E tests: `uv run pytest` commands targeting `e2e_playwright/` files are blocked by policy.
   Use `make run-e2e-test <filename>` instead.
@@ -48,10 +53,16 @@ Selection of `make` commands for development (run in the repo root):
 - `help`: Show all available make commands. [~1s]
 - `check`: Run all checks (format, lint, types, unit tests) on changed files only. Add `E2E_CHECK=true` to include E2E tests. [varies by changes]
 - `protobuf`: Recompile Protobufs for Python and the frontend. [~5s]
+- `check-python-lock`: Verify that Python manifests agree with `uv.lock`. [~1s]
+- `update-python-lock`: Upgrade all compatible Python dependencies in `uv.lock`. [varies]
 - `autofix`: Autofix linting and formatting errors. [~30s]
 
 **Backend Development (Python):**
 
+- `python-init-runtime`: Install the locked runtime-only environment.
+- `python-init-test`: Install the locked test environment.
+- `python-init-dev`: Install the locked development environment.
+- `python-init-integration`: Install the locked integration environment.
 - `python-lint`: Lint and check formatting of Python files (ruff). [~1s]
 - `python-tests`: Run all Python unit tests (pytest). [~3min]
 - `python-types`: Run the Python type checker (mypy & ty). [~30s]

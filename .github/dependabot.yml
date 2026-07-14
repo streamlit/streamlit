@@ -115,8 +115,9 @@ updates:
           - "oxlint"
           - "oxfmt"
 
-  # Keep python dependencies up to date (via uv)
-  # Root pyproject.toml contains dev/test dependency groups
+  # Keep direct development/test/integration dependencies up to date. These
+  # PRs own the corresponding uv.lock update; the weekly full relock owns bulk
+  # transitive and editable-package runtime freshness.
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
@@ -143,6 +144,15 @@ updates:
       - "autofix"
       - "never-stale"
 
+    # Batch non-breaking direct updates while keeping major updates separate.
+    groups:
+      python-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
   # Keep streamlit package runtime dependencies up to date
   # lib/pyproject.toml contains the published package's dependencies
   - package-ecosystem: "uv"
@@ -150,13 +160,9 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 3
-    # Let Dependabot classify the published Streamlit package as a library, which
-    # widens supported version ranges internally. Explicit
-    # `versioning-strategy: widen` is not currently accepted for the uv ecosystem
-    # by GitHub's dependabot.yml schema (only lockfile-only, auto, increase, and
-    # increase-if-necessary are), so `auto` is used to opt into widening.
-    # Tracking issue: https://github.com/dependabot/dependabot-core/issues/15290
-    versioning-strategy: auto
+    # Widen the published library constraints when needed. Changes here can
+    # temporarily stale the root lock; the autofix uv-lock hook repairs it.
+    versioning-strategy: widen
 
     cooldown:
       default-days: 5

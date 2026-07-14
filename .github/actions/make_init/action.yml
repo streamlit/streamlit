@@ -11,6 +11,9 @@ inputs:
   use_cached_venv:
     description: "Use Cached Virtual Env"
     default: "true"
+  enforce_lock:
+    description: "Require pyproject manifests and environment syncs to match uv.lock"
+    default: "true"
 
 # There is an altered copy of these steps inlined in the python_min_deps
 # workflow. If you make changes to this action, apply them there too if appropriate.
@@ -22,6 +25,7 @@ runs:
     - name: Install uv and Python ${{ inputs.python_version }}
       uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
       with:
+        version: "0.11.28"
         python-version: ${{ inputs.python_version }}
         enable-cache: ${{ inputs.use_cached_venv }}
         cache-suffix: py${{ inputs.python_version }}
@@ -33,6 +37,27 @@ runs:
         ignore-nothing-to-cache: true
         # Use GitHub token to avoid API rate limiting
         github-token: ${{ github.token }}
+    - name: Configure Python lock enforcement
+      env:
+        ENFORCE_LOCK: ${{ inputs.enforce_lock }}
+      run: |
+        case "$ENFORCE_LOCK" in
+          true)
+            uv lock --check
+            echo "UV_LOCKED=1" >> "$GITHUB_ENV"
+            echo "PYTHON_SYNC_LOCK_FLAG=--locked" >> "$GITHUB_ENV"
+            ;;
+          false)
+            # Lock repair workflows must resolve changed manifests before
+            # running their autofix hooks.
+            echo "PYTHON_SYNC_LOCK_FLAG=" >> "$GITHUB_ENV"
+            ;;
+          *)
+            echo "::error::enforce_lock must be 'true' or 'false'"
+            exit 1
+            ;;
+        esac
+      shell: bash
     - name: Enable and Prepare Latest Yarn
       run: corepack enable
       shell: bash
@@ -73,32 +98,15 @@ runs:
         # Print out your System's protoc version:
         protoc --version
       shell: bash
-    # Combine hashes of the Python interpreter and config files into a cache key.
-    # This means that our virtualenv cache will expire each day. We do
-    # this because we are not using a lockfile to pin dependencies -
-    # instead, each time Github Actions rebuilds the virtualenv, it uses the
-    # latest compatible version of each dependency (which mirrors what
-    # happens when a user installs Streamlit locally). So we expire our
-    # virtualenv cache daily to prevent it from getting far out of sync
-    # with what a fresh Streamlit installation would look like.
-    - if: inputs.use_cached_venv == 'true'
-      name: Create Python environment cache key
-      run: |
-        # Create cache key from Python version, config files, and date
-        # (Python binary is now cached by setup-uv with cache-python: true)
-        echo "${{ inputs.python_version }}" > $GITHUB_WORKSPACE/python_cache_key.md5
-        md5sum pyproject.toml >> $GITHUB_WORKSPACE/python_cache_key.md5
-        md5sum lib/pyproject.toml >> $GITHUB_WORKSPACE/python_cache_key.md5
-        md5sum Makefile >> $GITHUB_WORKSPACE/python_cache_key.md5
-        date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
-      shell: bash
-    - if: inputs.use_cached_venv == 'true'
+    # The complete virtualenv is deterministic for this platform, interpreter,
+    # final dependency group, and lockfile. Unlocked repair jobs always sync.
+    - if: inputs.use_cached_venv == 'true' && inputs.enforce_lock == 'true'
       name: Restore virtualenv from cache
       id: cache-virtualenv
       uses: actions/cache@v5
       with:
         path: .venv
-        key: v2-python-venv-py${{ inputs.python_version }}-${{ hashFiles('**/python_cache_key.md5') }}
+        key: v3-python-venv-${{ runner.os }}-${{ runner.arch }}-py${{ inputs.python_version }}-dev-${{ hashFiles('uv.lock') }}
     - name: Check if venv is valid
       id: check-venv
       if: steps.cache-virtualenv.outputs.cache-hit == 'true'
@@ -117,19 +125,14 @@ runs:
       run: |
         # Do not install Playwright browsers in CI here; use the
         # shared action `./.github/actions/playwright_install` instead.
-        INSTALL_PLAYWRIGHT=false make python-init
-        # Run editable install again to ensure that the local
-        # streamlit module takes precedence. This is
-        # needed to fix an issue with nightly CI where
-        # it might end up installing the latest streamlit version
-        # from pypi:
-        uv pip install --editable ./lib --no-deps
+        PYTHON_DEPENDENCY_GROUP=dev \
+          PYTHON_SYNC_LOCK_FLAG="$PYTHON_SYNC_LOCK_FLAG" \
+          INSTALL_PLAYWRIGHT=false \
+          make python-init
       shell: bash
     - name: Generate Protobufs
       run: make protobuf
       shell: bash
-    # `uv run` in `make protobuf` may update the environment, so report versions
-    # only after generation has completed.
     - name: Show final environment info
       run: |
         echo "Python version:"

@@ -1,0 +1,120 @@
+name: Update Python Lock
+
+on:
+  schedule:
+    # Run at 6:30 UTC every Monday, separately from Tuesday maintenance jobs.
+    - cron: "30 6 * * Mon"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Resolve updates without creating a branch or PR"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-python-lock:
+    runs-on: ubuntu-latest
+    if: github.repository == 'streamlit/streamlit'
+
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v7
+        with:
+          ref: develop
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.28"
+          enable-cache: true
+
+      - name: Upgrade Python lock
+        run: uv lock --upgrade
+
+      - name: Check whether uv.lock changed
+        id: check-lock
+        run: |
+          if [[ -n "$(git status --porcelain -- uv.lock)" ]]; then
+            echo "lock_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "lock_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure Git
+        if: ${{ steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
+        run: |
+          git config user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
+
+      - name: Create update branch
+        id: create-branch
+        if: ${{ steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
+        run: |
+          branch_name="update-python-lock-$(date +%Y-%m-%d)-${GITHUB_RUN_ID}"
+          echo "branch_name=$branch_name" >> "$GITHUB_OUTPUT"
+          git checkout -b "$branch_name"
+
+      - name: Commit and push lock update
+        if: ${{ steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+        run: |
+          git add uv.lock
+          git commit -m "[chore] Update Python lock"
+          git push --set-upstream origin "$BRANCH_NAME"
+
+      - name: Create pull request
+        id: create-pr
+        if: ${{ steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
+        uses: actions/github-script@v9
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const created = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '[chore] Update Python lock',
+              head: process.env.BRANCH_NAME,
+              base: 'develop',
+              body: [
+                'Automated weekly refresh of all direct and transitive Python dependencies in `uv.lock`.',
+                '',
+                'The project-level 24-hour package cooldown remains in effect.',
+              ].join('\n'),
+              draft: false,
+            });
+
+            core.setOutput('pr_url', created.data.html_url);
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: created.data.number,
+              labels: ['change:chore', 'impact:internal', 'autofix', 'never-stale'],
+            });
+
+      - name: Write workflow summary
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          LOCK_CHANGED: ${{ steps.check-lock.outputs.lock_changed }}
+          PR_URL: ${{ steps.create-pr.outputs.pr_url }}
+        run: |
+          {
+            echo "## Python lock update summary"
+            echo "- uv.lock changed: ${LOCK_CHANGED}"
+            if [[ "$DRY_RUN" == "true" ]]; then
+              echo "- Dry run: true (no branch or PR created)"
+            elif [[ "$LOCK_CHANGED" == "true" ]]; then
+              echo "- PR: ${PR_URL:-n/a}"
+            else
+              echo "- No compatible updates found; no PR created"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
