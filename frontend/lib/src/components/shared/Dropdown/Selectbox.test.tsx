@@ -282,6 +282,63 @@ describe("Selectbox widget", () => {
     expect(options[0]).toHaveTextContent("b")
   })
 
+  it("filters options with fuzzy (non-contiguous) matches", async () => {
+    // Regression test for https://github.com/streamlit/streamlit/issues/16003
+    // Without a pass-through defaultFilter, RAC's built-in "contains" filter
+    // would intersect Streamlit's fuzzy result and drop non-contiguous matches
+    // (e.g. "ape" matches "Grape" contiguously but "Apple" only fuzzily).
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["Apple", "Apricot", "Banana", "Cherry", "Grape"],
+      value: undefined,
+    })
+    render(<Selectbox {...currProps} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.keyboard("ape")
+
+    // Both "Grape" (contains "ape") and "Apple" (fuzzy: A-p-(pl)-e) must match.
+    // Sorted by fuzzy score, "Grape" ranks first because "ape" is contiguous.
+    await waitFor(() => {
+      const options = screen.queryAllByRole("option")
+      expect(options).toHaveLength(2)
+      expect(options[0]).toHaveTextContent("Grape")
+      expect(options[1]).toHaveTextContent("Apple")
+    })
+    expect(
+      screen.queryByRole("option", { name: "Banana" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("No results")).not.toBeInTheDocument()
+  })
+
+  it("filters options with fuzzy match when no contiguous match exists", async () => {
+    // Regression test for https://github.com/streamlit/streamlit/issues/16003
+    // Queries with no contiguous substring in any option would previously be
+    // filtered to empty by RAC's built-in "contains" filter, showing "No results"
+    // even when Streamlit's fuzzy matcher had a valid match.
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["Apple", "Apricot", "Banana", "Cherry", "Grape"],
+      value: undefined,
+    })
+    render(<Selectbox {...currProps} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    // "aple" is not a contiguous substring of "Apple" but is a fuzzy match
+    // (A-p(-p)-l-e). Only "Apple" should be shown.
+    await user.keyboard("aple")
+
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Apple" })).toBeVisible()
+    })
+    expect(
+      screen.queryByRole("option", { name: "Grape" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("No results")).not.toBeInTheDocument()
+  })
+
   it("predictably produces case sensitive matches", async () => {
     const user = userEvent.setup()
     const currProps = getProps({
