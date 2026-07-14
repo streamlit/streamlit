@@ -65,6 +65,8 @@ interface UseDataFrameCapabilitiesParams {
   numDataRows: number
   /** Number of data columns in the table. */
   numDataColumns: number
+  /** Whether data export functionality is disabled by app config. */
+  disableDataExport: boolean
 }
 
 /**
@@ -98,6 +100,7 @@ function useDataFrameCapabilities({
   disabled,
   numDataRows,
   numDataColumns,
+  disableDataExport,
 }: UseDataFrameCapabilitiesParams): DataFrameCapabilities {
   return useMemo(() => {
     const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
@@ -122,7 +125,7 @@ function useDataFrameCapabilities({
 
     const canSearch = !isEmptyTable
 
-    const canExportCsv = !isLargeTable && !isEmptyTable
+    const canExportCsv = !disableDataExport && !isLargeTable && !isEmptyTable
 
     const canShowColumnStatistics = !isEmptyTable && editingMode === READ_ONLY
 
@@ -159,7 +162,7 @@ function useDataFrameCapabilities({
       supportsFillHandle,
       supportsRectangleSelection,
     }
-  }, [editingMode, disabled, numDataRows, numDataColumns])
+  }, [editingMode, disabled, numDataRows, numDataColumns, disableDataExport])
 }
 
 export default useDataFrameCapabilities
