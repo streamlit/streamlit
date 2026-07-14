@@ -139,7 +139,10 @@ const renderOption = (item: unknown): ReactElement => {
 
 /**
  * Swallow paste and IME composition events so FILTER_MODE_NONE inputs stay
- * non-editable, mirroring the character blocking in onKeyDownCapture.
+ * non-editable, mirroring the character blocking in onKeyDownCapture. Paste
+ * cancellation is honored by browsers; compositionstart cancellation is
+ * best-effort (some browsers ignore preventDefault on it), so IME text may
+ * still slip in — but it is never committed as a selection.
  */
 const preventInputEvent = (e: React.SyntheticEvent): void => {
   e.preventDefault()
@@ -514,12 +517,9 @@ const Selectbox: FC<Props> = ({
             <StyledInput
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}
-              // FILTER_MODE_NONE disables typing. inputMode="none" keeps the
-              // mobile software keyboard from opening while leaving the input
-              // focusable, so click/Tab still open the dropdown and Arrow/Enter
-              // navigation keeps working (unlike readOnly, which breaks both).
-              // $typingDisabled hides the caret and shows a pointer cursor so
-              // the input still looks non-editable, like a plain select.
+              // inputMode="none" suppresses the mobile software keyboard while
+              // keeping the input focusable (unlike readOnly — see above).
+              // $typingDisabled hides the caret and shows a pointer cursor.
               inputMode={isFilterNone ? "none" : undefined}
               $typingDisabled={isFilterNone}
               onPointerDown={handleInputPointerDown}

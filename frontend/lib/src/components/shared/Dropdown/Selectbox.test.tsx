@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { act, fireEvent, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  createEvent,
+  fireEvent,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { streamlit } from "@streamlit/protobuf"
@@ -385,13 +391,17 @@ describe("Selectbox widget", () => {
     expect(selectboxInput).toHaveValue("")
     expect(screen.queryAllByRole("option")).toHaveLength(3)
 
-    // IME composition is likewise blocked: onCompositionStart cancels the
-    // event (dispatchEvent returns false), so composed text can never begin
-    // entering the input and the option list stays unfiltered.
-    const compositionAllowed = fireEvent.compositionStart(selectboxInput, {
+    // IME composition: onCompositionStart calls preventDefault as a best-effort
+    // block. Real browsers may ignore preventDefault on compositionstart, so we
+    // only assert that our handler requests cancellation (not that jsdom reports
+    // the event as canceled, which would be a jsdom-only artifact). The value and
+    // option list must stay unchanged regardless.
+    const compositionEvent = createEvent.compositionStart(selectboxInput, {
       data: "n",
     })
-    expect(compositionAllowed).toBe(false)
+    const preventDefaultSpy = vi.spyOn(compositionEvent, "preventDefault")
+    fireEvent(selectboxInput, compositionEvent)
+    expect(preventDefaultSpy).toHaveBeenCalled()
     expect(selectboxInput).toHaveValue("")
     expect(screen.queryAllByRole("option")).toHaveLength(3)
   })
