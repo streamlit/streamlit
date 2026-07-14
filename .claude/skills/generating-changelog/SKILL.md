@@ -100,6 +100,8 @@ Do NOT proceed to Step 6 until the user confirms.
 
 For each user-facing PR in `work-tmp/pr-categorized.json`, read its `body` field before writing the changelog entry. Use the PR description as the primary source of truth for what actually changed — the title alone can be imprecise. Focus on the opening summary paragraph(s) of the body; ignore checklists, reviewer notes, and screenshot sections.
 
+**Entry length:** Keep every entry to **one sentence, two at most**. Capture the high-level idea only — what changed and why it matters to the user. Do not enumerate sub-features, implementation details, parameter lists, or edge-case behaviors. Those details live in the API docs.
+
 Generate the file in the `work-tmp/` directory: `work-tmp/changelog-website-<new-tag>.md`
 
 ### Entry writing style by category
