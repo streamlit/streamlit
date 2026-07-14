@@ -1800,6 +1800,16 @@ class TestCopyFailedError:
         assert "/abs/home" not in message
         assert ".agents/skills/developing-with-streamlit" in message
 
+    def test_home_relative_path_keeps_tilde(self) -> None:
+        """A home-relative (``~/...``) target is shown whole, not stripped to a
+        project-local-looking tail — otherwise the 'remove it' hint points at the
+        wrong place. The ``~`` is a placeholder and leaks no server path."""
+        err = skills._copy_failed_error(
+            ["~/.agents/skills/developing-with-streamlit (copy failed: Disk full)"]
+        )
+        message = err.format_message()
+        assert "~/.agents/skills/developing-with-streamlit" in message
+
 
 class TestInstallSkillsReturnsResult:
     """install_skills returns the structured result for callers (e.g. the nudge)."""

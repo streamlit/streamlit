@@ -577,15 +577,23 @@ def _collapse_display_paths(entries: list[str]) -> str:
     ``<harness>/skills/<skill>`` tails.
 
     Install-error messages surface the offending paths so the user knows what to
-    act on, but the in-app nudge shows them verbatim — so we drop everything
-    above the last three path parts to never leak an absolute server path when
-    the server's cwd isn't the project root.
+    act on, but the in-app nudge shows them verbatim. A home-relative path
+    (``~/…``) is already short and leaks nothing — the ``~`` is a placeholder, not
+    a server path — so it is kept whole; dropping the ``~`` would make a home
+    target read as project-local and misdirect the "remove it" hint. Any other
+    path is collapsed to its last three parts so an absolute path (when the
+    server's cwd isn't the project root) can never leak.
     """
     paths = []
     for entry in entries:
         raw = entry.split(" (", 1)[0]
         parts = Path(raw).parts
-        paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
+        if parts and parts[0] == "~":
+            paths.append(Path(*parts).as_posix())
+        elif len(parts) >= 3:
+            paths.append(Path(*parts[-3:]).as_posix())
+        else:
+            paths.append(raw)
     return ", ".join(paths)
 
 

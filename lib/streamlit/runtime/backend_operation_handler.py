@@ -24,6 +24,8 @@ import asyncio
 from ipaddress import ip_address
 from typing import TYPE_CHECKING, Final, Protocol
 
+import click
+
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import (
     BackendOperationResponse,
@@ -251,18 +253,27 @@ class InstallSkillsHandler(BackendOperationHandler):
             )
         except Exception as ex:
             _LOGGER.warning("One-click skills install failed", exc_info=ex)
-            # click.ClickException carries a clean, user-facing message.
-            format_message = getattr(ex, "format_message", None)
-            detail = format_message() if callable(format_message) else str(ex)
-            # ``skills._InstallError`` carries a bounded, machine-readable ``reason``
-            # (e.g. "conflict", "copy_failed", "symlinks_unsupported") that the
-            # client forwards to telemetry so the nudge's install-failure rate can
-            # be split by cause. Any other exception is classified "unknown".
-            reason = getattr(ex, "reason", "unknown")
+            # Only ``click.ClickException`` messages are safe to show verbatim in
+            # the browser toast — they are developer-authored, never a raw OS
+            # string. For any other exception (e.g. an unexpected OSError whose
+            # message embeds an absolute path) use a generic message so a server
+            # path can't leak into the nudge.
+            detail = (
+                ex.format_message()
+                if isinstance(ex, click.ClickException)
+                else "Failed to install skills."
+            )
+            # ``skills._InstallError`` carries a bounded, machine-readable
+            # ``reason`` (e.g. "conflict", "copy_failed", "symlinks_unsupported")
+            # that the client forwards to telemetry so the nudge's install-failure
+            # rate can be split by cause. Bind it from the known type so
+            # ``error_reason`` is a provably bounded enum; any other exception is
+            # classified "unknown".
+            reason = ex.reason if isinstance(ex, skills._InstallError) else "unknown"
             return BackendOperationResponse(
                 request_id=request.request_id,
                 error_msg=detail or "Failed to install skills.",
-                error_reason=reason if isinstance(reason, str) else "unknown",
+                error_reason=reason,
             )
 
         # Invalidate the cached "skills installed" detection so a later session

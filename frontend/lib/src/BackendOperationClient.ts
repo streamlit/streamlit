@@ -34,11 +34,12 @@ const DEFERRED_FILE_REQUEST_TIMEOUT_MS = 180_000
 /**
  * Timeout for skills-install requests (3 minutes).
  *
- * The default 30s is too short here: a project-mode install is fast (it just
- * creates symlinks), but `streamlit skills` falls back to downloading the
- * skills archive from GitHub when symlinks aren't supported (e.g. Windows
- * without Developer Mode). That download can exceed 30s on a slow network,
- * which would surface a spurious "install failed" in the toast while the
+ * The default 30s is too short here. The install is always local: a
+ * project-mode install creates symlinks, and when symlinks aren't supported
+ * (e.g. Windows without Developer Mode) it copies the bundled skill from the
+ * local Streamlit package. Both are filesystem operations, but a large
+ * skill-directory copy onto a slow or network-mounted disk can still exceed
+ * 30s, which would surface a spurious "install failed" in the toast while the
  * server keeps installing. We use the same generous budget as deferred files.
  */
 const INSTALL_SKILLS_REQUEST_TIMEOUT_MS = 180_000

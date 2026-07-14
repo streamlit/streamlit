@@ -1591,17 +1591,17 @@ export class App extends PureComponent<Props, State> {
         return result.detail ?? undefined
       })
       .catch((error: unknown) => {
-        // A dropped or timed-out connection during a long install (e.g. the
-        // GitHub global fallback) rejects the request even though the server
-        // install may have completed. Count it separately — not as a failure,
-        // which would over-count the funnel — and surface a reassuring,
+        // A dropped or timed-out connection during a long install (e.g. a large
+        // skill-directory copy on a slow disk) rejects the request even though
+        // the server install may have completed. Count it separately — not as a
+        // failure, which would over-count the funnel — and surface a reassuring,
         // retry-friendly message; re-install is idempotent.
         if (isSkillsNudgeDroppedConnection(error)) {
           this.trackSkillsNudge("skillsNudgeInstallDropped")
           throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
         }
         // Append the server's machine-readable failure reason (e.g. "conflict",
-        // "download_failed", "symlinks_unsupported") as a label suffix — mirroring
+        // "copy_failed", "symlinks_unsupported") as a label suffix — mirroring
         // `skillsNudgeSuppressedNonLocal:<locality>` — so the install-failure rate
         // can be broken down by cause. The reason is a fixed server-side vocabulary
         // (never user input), safe to emit as a label.
