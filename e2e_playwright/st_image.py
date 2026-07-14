@@ -269,3 +269,12 @@ st.image(
     caption="Image with link.",
     link="https://streamlit.io",
 )
+
+# Image with a dangerous javascript: link. The frontend must neutralize this to
+# "#" to prevent XSS when the link is clicked.
+st.image(
+    img,
+    width=100,
+    caption="Image with dangerous link.",
+    link="javascript:alert('xss')",
+)
