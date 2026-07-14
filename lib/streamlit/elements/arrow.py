@@ -535,9 +535,7 @@ def _marshall_lazy_dataframe(
 
     lazy_data = proto.lazy_data
     lazy_data.source_id = registered.source_id
-    lazy_data.generation = registered.generation
     lazy_data.page_size = registered.page_size
-    lazy_data.initial_offset = 0
     lazy_data.access_mode = _ACCESS_MODE_TO_PROTO[access_mode]
     lazy_data.sortable = sortable
     # ``row_count`` is optional in the proto: unknown-size (future sequential)

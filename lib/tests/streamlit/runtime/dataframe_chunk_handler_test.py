@@ -54,7 +54,6 @@ def _build_request(
     request.dataframe_chunk.source_id = reg.source_id  # type: ignore[attr-defined]
     request.dataframe_chunk.offset = offset
     request.dataframe_chunk.limit = limit
-    request.dataframe_chunk.generation = reg.generation  # type: ignore[attr-defined]
     return request
 
 
@@ -70,7 +69,6 @@ def test_handle_returns_chunk() -> None:
     chunk = response.dataframe_chunk
     assert chunk.source_id == reg.source_id  # type: ignore[attr-defined]
     assert chunk.offset == 10
-    assert chunk.generation == reg.generation  # type: ignore[attr-defined]
     assert chunk.end_of_stream is False
     df = convert_arrow_bytes_to_pandas_df(chunk.arrow_data.data)
     assert df["a"].tolist() == [10, 11, 12]
@@ -87,18 +85,6 @@ def test_handle_applies_sort() -> None:
 
     df = convert_arrow_bytes_to_pandas_df(response.dataframe_chunk.arrow_data.data)
     assert df["a"].tolist() == [999, 998, 997]
-
-
-def test_handle_stale_generation_returns_error() -> None:
-    """A stale generation produces an error response, not a chunk."""
-    handler, _mgr, reg = _setup()
-    request = _build_request(reg)
-    request.dataframe_chunk.generation = "stale"
-
-    response = asyncio.run(handler.handle(request, reg.session_id))  # type: ignore[attr-defined]
-
-    assert "stale" in response.error_msg
-    assert not response.HasField("dataframe_chunk")
 
 
 def test_handle_wrong_session_returns_error() -> None:
@@ -125,7 +111,6 @@ def test_handle_unexpected_error_returns_generic_message() -> None:
     request.dataframe_chunk.source_id = "sid"
     request.dataframe_chunk.offset = 0
     request.dataframe_chunk.limit = 5
-    request.dataframe_chunk.generation = "gen"
 
     response = asyncio.run(handler.handle(request, "s1"))
 

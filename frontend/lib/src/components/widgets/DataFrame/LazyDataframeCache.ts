@@ -108,7 +108,7 @@ export class LazyDataframeCache {
     this.failedChunks.delete(chunkIndex)
   }
 
-  /** Remove all loaded and failed chunks (e.g. on sort or generation change). */
+  /** Remove all loaded and failed chunks (e.g. on source or sort change). */
   public clear(): void {
     this.chunks.clear()
     this.failedChunks.clear()

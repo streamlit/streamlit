@@ -84,8 +84,11 @@ message Dataframe {
 
 // Metadata for a lazily loaded dataframe. The data itself is fetched on demand
 // in row chunks via BackendOperationRequest/BackendOperationResponse, keyed by
-// `source_id` and `generation`.
+// `source_id`.
 message LazyDataframe {
+  reserved 3, 5, 8;
+  reserved "initial_offset", "generation", "serialized_schema";
+
   // Session-scoped, unguessable id of the backend data source. Used by the
   // frontend to request row chunks. Not usable across sessions.
   string source_id = 1;
@@ -94,17 +97,9 @@ message LazyDataframe {
   // (known-size sources). Reserved as optional for future sequential sources.
   optional uint64 row_count = 2;
 
-  // Row offset of the rows contained in `initial_chunk`.
-  uint64 initial_offset = 3;
-
   // Number of rows the backend serves per chunk. The frontend aligns its chunk
   // requests to this page size.
   uint32 page_size = 4;
-
-  // Generation token (UUID) that changes whenever the source is re-registered
-  // (rerun or source-config change). Chunk responses with a stale generation
-  // are ignored by the frontend.
-  string generation = 5;
 
   // How the source can be accessed.
   AccessMode access_mode = 6;
@@ -112,10 +107,6 @@ message LazyDataframe {
   // The initial row chunk as an Arrow IPC table including the full schema.
   // For lazy dataframes this carries the schema and the first visible rows.
   ArrowData initial_chunk = 7;
-
-  // Arrow IPC schema bytes. Only used as a fallback when `initial_chunk` is
-  // empty and a zero-row Arrow table is impractical for an adapter.
-  bytes serialized_schema = 8;
 
   // Whether server-side sorting is enabled for this source.
   bool sortable = 9;

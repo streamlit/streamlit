@@ -275,10 +275,10 @@ The initial element message should include:
 - Element metadata and layout options.
 - Source metadata, including a source id and optional row count.
 - Column schema.
-- An initial row chunk when it is cheap to fetch.
+- An initial row chunk containing the full Arrow schema.
 
-The first visible rows should render immediately when the initial chunk is present. Otherwise,
-the table should show loading rows and request the first visible chunk.
+The first visible rows should render immediately from the initial chunk. A zero-row initial chunk
+can carry the schema for a source that needs to defer fetching row data.
 
 ### Scrolling
 
@@ -389,9 +389,8 @@ Not supported in lazy mode:
 ### Cache and Invalidation
 
 - Lazy source state should be scoped to the user session.
-- Rerunning the script should create a new source generation when the element identity or source
-  configuration changes.
-- The frontend should discard chunks from older generations.
+- Rerunning the script should create a new source id when the element is registered again.
+- The frontend should discard chunks belonging to older source ids.
 - Server-side source state should be cleaned up when the session closes or the element
   disappears.
 - Fragment reruns should only prune lazy sources owned by the rerun fragment. Sources owned by

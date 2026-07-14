@@ -93,12 +93,11 @@ def _register(
 
 
 def test_register_source_returns_unique_ids() -> None:
-    """Each registration gets a unique source id and generation."""
+    """Each registration gets a unique source id."""
     mgr = DataframeSourceManager()
     reg1 = _register(mgr, coordinates="1.0.0")
     reg2 = _register(mgr, coordinates="1.0.1")
     assert reg1.source_id != reg2.source_id
-    assert reg1.generation != reg2.generation
     assert mgr.get_source_count() == 2
 
 
@@ -106,9 +105,7 @@ def test_load_chunk_returns_requested_rows() -> None:
     """A valid chunk request returns the requested Arrow rows."""
     mgr = DataframeSourceManager()
     reg = _register(mgr)
-    arrow_bytes, offset = mgr.load_chunk(
-        reg.session_id, reg.source_id, reg.generation, 100, 5, None
-    )
+    arrow_bytes, offset = mgr.load_chunk(reg.session_id, reg.source_id, 100, 5, None)
     assert offset == 100
     df = convert_arrow_bytes_to_pandas_df(arrow_bytes)
     assert df["a"].tolist() == [100, 101, 102, 103, 104]
@@ -121,7 +118,6 @@ def test_load_chunk_applies_sort() -> None:
     arrow_bytes, _ = mgr.load_chunk(
         reg.session_id,
         reg.source_id,
-        reg.generation,
         0,
         3,
         SortSpec("a", descending=True),
@@ -134,7 +130,7 @@ def test_load_chunk_unknown_source_raises() -> None:
     """Requesting an unknown source id raises a DataframeSourceError."""
     mgr = DataframeSourceManager()
     with pytest.raises(DataframeSourceError, match="not found"):
-        mgr.load_chunk("s1", "missing", "gen", 0, 5, None)
+        mgr.load_chunk("s1", "missing", 0, 5, None)
 
 
 def test_load_chunk_wrong_session_raises() -> None:
@@ -142,15 +138,7 @@ def test_load_chunk_wrong_session_raises() -> None:
     mgr = DataframeSourceManager()
     reg = _register(mgr, session_id="s1")
     with pytest.raises(DataframeSourceError, match="does not belong"):
-        mgr.load_chunk("other", reg.source_id, reg.generation, 0, 5, None)
-
-
-def test_load_chunk_stale_generation_raises() -> None:
-    """A stale generation token is rejected."""
-    mgr = DataframeSourceManager()
-    reg = _register(mgr)
-    with pytest.raises(DataframeSourceError, match="stale"):
-        mgr.load_chunk(reg.session_id, reg.source_id, "stale-gen", 0, 5, None)
+        mgr.load_chunk("other", reg.source_id, 0, 5, None)
 
 
 def test_load_chunk_negative_offset_raises() -> None:
@@ -158,16 +146,14 @@ def test_load_chunk_negative_offset_raises() -> None:
     mgr = DataframeSourceManager()
     reg = _register(mgr)
     with pytest.raises(DataframeSourceError, match="non-negative"):
-        mgr.load_chunk(reg.session_id, reg.source_id, reg.generation, -1, 5, None)
+        mgr.load_chunk(reg.session_id, reg.source_id, -1, 5, None)
 
 
 def test_load_chunk_caps_limit() -> None:
     """The chunk limit is capped at MAX_CHUNK_ROWS."""
     mgr = DataframeSourceManager()
     reg = _register(mgr, num_rows=20_000)
-    arrow_bytes, _ = mgr.load_chunk(
-        reg.session_id, reg.source_id, reg.generation, 0, 1_000_000, None
-    )
+    arrow_bytes, _ = mgr.load_chunk(reg.session_id, reg.source_id, 0, 1_000_000, None)
     df = convert_arrow_bytes_to_pandas_df(arrow_bytes)
     # Capped to MAX_CHUNK_ROWS (10_000), not the full 20_000 rows.
     assert len(df) == 10_000
@@ -183,7 +169,7 @@ def test_load_chunk_out_of_bounds_offset_returns_empty_chunk() -> None:
         reg.source, "load_rows", wraps=reg.source.load_rows
     ) as load_rows_spy:
         arrow_bytes, offset = mgr.load_chunk(
-            reg.session_id, reg.source_id, reg.generation, 1000, 5, None
+            reg.session_id, reg.source_id, 1000, 5, None
         )
 
     assert offset == 1000
@@ -209,9 +195,7 @@ def test_load_chunk_unknown_row_count_skips_short_circuit() -> None:
     ):
         reg = mgr.register_source(source, "1.0.0")
 
-    arrow_bytes, offset = mgr.load_chunk(
-        reg.session_id, reg.source_id, reg.generation, 0, 3, None
-    )
+    arrow_bytes, offset = mgr.load_chunk(reg.session_id, reg.source_id, 0, 3, None)
 
     assert offset == 0
     # The source was queried (not short-circuited to an empty chunk).
@@ -232,9 +216,9 @@ def test_re_register_same_coordinates_orphans_previous() -> None:
     # The first source is now orphaned and removed; the second remains.
     assert mgr.get_source_count() == 1
     with pytest.raises(DataframeSourceError):
-        mgr.load_chunk(reg1.session_id, reg1.source_id, reg1.generation, 0, 5, None)
+        mgr.load_chunk(reg1.session_id, reg1.source_id, 0, 5, None)
     # The new source still works.
-    mgr.load_chunk(reg2.session_id, reg2.source_id, reg2.generation, 0, 5, None)
+    mgr.load_chunk(reg2.session_id, reg2.source_id, 0, 5, None)
 
 
 def test_clear_session_refs_then_prune_removes_sources() -> None:
@@ -245,7 +229,7 @@ def test_clear_session_refs_then_prune_removes_sources() -> None:
     mgr.remove_orphaned_sources()
     assert mgr.get_source_count() == 0
     with pytest.raises(DataframeSourceError):
-        mgr.load_chunk(reg.session_id, reg.source_id, reg.generation, 0, 5, None)
+        mgr.load_chunk(reg.session_id, reg.source_id, 0, 5, None)
 
 
 def test_clear_session_refs_only_affects_target_session() -> None:
@@ -258,11 +242,9 @@ def test_clear_session_refs_only_affects_target_session() -> None:
     mgr.remove_orphaned_sources()
 
     with pytest.raises(DataframeSourceError):
-        mgr.load_chunk(
-            reg_s1.session_id, reg_s1.source_id, reg_s1.generation, 0, 5, None
-        )
+        mgr.load_chunk(reg_s1.session_id, reg_s1.source_id, 0, 5, None)
     # s2's source is still available.
-    mgr.load_chunk(reg_s2.session_id, reg_s2.source_id, reg_s2.generation, 0, 5, None)
+    mgr.load_chunk(reg_s2.session_id, reg_s2.source_id, 0, 5, None)
 
 
 def test_clear_session_refs_only_affects_target_fragments() -> None:
@@ -276,12 +258,10 @@ def test_clear_session_refs_only_affects_target_fragments() -> None:
     mgr.remove_orphaned_sources()
 
     with pytest.raises(DataframeSourceError):
-        mgr.load_chunk(
-            frag_a.session_id, frag_a.source_id, frag_a.generation, 0, 5, None
-        )
+        mgr.load_chunk(frag_a.session_id, frag_a.source_id, 0, 5, None)
 
-    mgr.load_chunk(body.session_id, body.source_id, body.generation, 0, 5, None)
-    mgr.load_chunk(frag_b.session_id, frag_b.source_id, frag_b.generation, 0, 5, None)
+    mgr.load_chunk(body.session_id, body.source_id, 0, 5, None)
+    mgr.load_chunk(frag_b.session_id, frag_b.source_id, 0, 5, None)
 
 
 def test_clear_session_refs_fragment_empty_list_is_noop() -> None:
@@ -292,7 +272,7 @@ def test_clear_session_refs_fragment_empty_list_is_noop() -> None:
     mgr.clear_session_refs("s1", fragment_ids=[])
     mgr.remove_orphaned_sources()
 
-    mgr.load_chunk(reg.session_id, reg.source_id, reg.generation, 0, 5, None)
+    mgr.load_chunk(reg.session_id, reg.source_id, 0, 5, None)
 
 
 def test_clear_all_for_session() -> None:

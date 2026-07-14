@@ -63,8 +63,6 @@ interface UseLazyDataLoaderParams {
   numRows: number
   /** The session-scoped source id. */
   sourceId: string
-  /** The source generation token (stale responses are ignored). */
-  generation: string
   /** The number of rows the backend serves per chunk. */
   pageSize: number
   /** The active server-side sort state, or undefined. */
@@ -95,16 +93,15 @@ interface LazyLoaderController {
  * debounced during rapid scrolling and deduplicated. A cache-version state is
  * bumped whenever a chunk arrives so the grid re-renders the affected cells.
  *
- * Changing the source (id/generation), page size, or sort state creates a
- * fresh cache; in-flight responses for a previous cache are written to a
- * discarded cache and therefore ignored.
+ * Changing the source id, page size, or sort state creates a fresh cache;
+ * in-flight responses for a previous cache are written to a discarded cache
+ * and therefore ignored.
  */
 function useLazyDataLoader({
   initialChunk,
   columns,
   numRows,
   sourceId,
-  generation,
   pageSize,
   sortState,
   backendOperationClient,
@@ -141,7 +138,7 @@ function useLazyDataLoader({
     }
     return { cache, inFlight: new Set<number>() }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sortKey captures sortState
-  }, [sourceId, generation, effectivePageSize, sortKey, initialChunk])
+  }, [sourceId, effectivePageSize, sortKey, initialChunk])
 
   const requestChunk = useCallback(
     (chunkIndex: number): void => {
@@ -180,16 +177,12 @@ function useLazyDataLoader({
           sourceId,
           offset,
           limit: effectivePageSize,
-          generation,
           sort: sortPayload,
         })
         .then(response => {
           inFlight.delete(chunkIndex)
-          // Ignore responses for a different source or stale generation.
-          if (
-            response.sourceId !== sourceId ||
-            response.generation !== generation
-          ) {
+          // Ignore responses for a source superseded by a rerun.
+          if (response.sourceId !== sourceId) {
             return
           }
           if (!response.arrowData?.data) {
@@ -216,7 +209,6 @@ function useLazyDataLoader({
       backendOperationClient,
       effectivePageSize,
       sourceId,
-      generation,
       sortState,
       bumpCacheVersion,
     ]
@@ -251,7 +243,7 @@ function useLazyDataLoader({
   // new request cycle (they would target a different cache/sort).
   useEffect(() => {
     pendingRef.current.clear()
-  }, [sourceId, generation, effectivePageSize, sortKey])
+  }, [sourceId, effectivePageSize, sortKey])
 
   const getCellContent = useCallback(
     ([col, row]: Item): GridCell => {

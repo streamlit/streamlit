@@ -21,8 +21,8 @@ short-lived Arrow row chunks instead of media-file URLs.
 Lifecycle:
 - ``register_source`` is called while a script runs, keyed by the dataframe
   element's delta-path coordinates. Re-registering at the same coordinates
-  replaces the previous source and assigns a new ``generation`` so stale
-  in-flight chunk responses are ignored by the frontend.
+  replaces the previous source with a new ``source_id`` so stale in-flight
+  chunk responses are ignored by the frontend.
 - ``clear_session_refs`` drops a session's coordinate references at the start of
   a full rerun (skipped for fragment reruns, like media files).
 - ``remove_orphaned_sources`` prunes sources no longer referenced by any session
@@ -31,7 +31,7 @@ Lifecycle:
 
 The manager is runtime-scoped with session-keyed internal maps. ``source_id`` is
 an unguessable token and chunk requests are validated against the requesting
-session and the active generation.
+session.
 """
 
 from __future__ import annotations
@@ -87,7 +87,6 @@ class RegisteredDataframeSource:
 
     source: DataframeSource
     source_id: str
-    generation: str
     page_size: int
     session_id: str
     coordinates: str
@@ -117,17 +116,14 @@ class DataframeSourceManager:
     ) -> RegisteredDataframeSource:
         """Register ``source`` for the current session at ``coordinates``.
 
-        Returns the registration metadata, including a fresh ``source_id`` and
-        ``generation``.
+        Returns the registration metadata, including a fresh ``source_id``.
         """
         session_id = _get_session_id()
         fragment_id = _get_fragment_id()
         source_id = uuid.uuid4().hex
-        generation = uuid.uuid4().hex
         entry = RegisteredDataframeSource(
             source=source,
             source_id=source_id,
-            generation=generation,
             page_size=page_size,
             session_id=session_id,
             coordinates=coordinates,
@@ -146,15 +142,14 @@ class DataframeSourceManager:
         self,
         session_id: str,
         source_id: str,
-        generation: str,
         offset: int,
         limit: int,
         sort: SortSpec | None,
     ) -> tuple[bytes, int]:
         """Load a row range and return ``(arrow_ipc_bytes, offset)``.
 
-        Validates that ``source_id`` belongs to ``session_id`` and that
-        ``generation`` is still active before loading any data.
+        Validates that ``source_id`` belongs to ``session_id`` before loading
+        any data.
 
         Raises
         ------
@@ -169,8 +164,6 @@ class DataframeSourceManager:
             raise DataframeSourceError("Dataframe source not found or expired.")
         if entry.session_id != session_id:
             raise DataframeSourceError("Dataframe source does not belong to session.")
-        if entry.generation != generation:
-            raise DataframeSourceError("Dataframe source generation is stale.")
 
         if offset < 0:
             raise DataframeSourceError("Chunk offset must be non-negative.")

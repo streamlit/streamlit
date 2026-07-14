@@ -68,7 +68,6 @@ describe("BackendOperationClient", () => {
       sourceId: "source-1",
       offset: 500,
       limit: 500,
-      generation: "gen-1",
     })
 
     expect(sendRequest).toHaveBeenCalledTimes(1)
@@ -78,7 +77,6 @@ describe("BackendOperationClient", () => {
     expect(request.dataframeChunk?.sourceId).toBe("source-1")
     expect(Number(request.dataframeChunk?.offset)).toBe(500)
     expect(request.dataframeChunk?.limit).toBe(500)
-    expect(request.dataframeChunk?.generation).toBe("gen-1")
     expect(client.pendingCount).toBe(1)
 
     const arrowData = { data: new Uint8Array([1, 2, 3]) }
@@ -88,7 +86,6 @@ describe("BackendOperationClient", () => {
         dataframeChunk: {
           sourceId: "source-1",
           offset: 500,
-          generation: "gen-1",
           arrowData,
         },
       })
@@ -97,6 +94,23 @@ describe("BackendOperationClient", () => {
     const resolved = await promise
     expect(resolved.sourceId).toBe("source-1")
     expect(Number(resolved.offset)).toBe(500)
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("allows two minutes for dataframe chunk requests", async () => {
+    vi.useFakeTimers()
+    const client = createClient()
+
+    const promise = client.requestDataframeChunk({
+      sourceId: "source-1",
+      offset: 500,
+      limit: 500,
+    })
+    vi.advanceTimersByTime(119_999)
+    expect(client.pendingCount).toBe(1)
+
+    vi.advanceTimersByTime(1)
+    await expect(promise).rejects.toThrow("Request timed out")
     expect(client.pendingCount).toBe(0)
   })
 

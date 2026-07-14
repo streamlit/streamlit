@@ -33,8 +33,8 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
 /** Timeout for deferred file requests (3 minutes). */
 const DEFERRED_FILE_REQUEST_TIMEOUT_MS = 180_000
 
-/** Timeout for lazy dataframe chunk requests (60 seconds). */
-const DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS = 60_000
+/** Timeout for lazy dataframe chunk requests (2 minutes). */
+const DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS = 120_000
 
 /**
  * Timeout for skills-install requests (3 minutes).
@@ -175,7 +175,7 @@ export class BackendOperationClient {
   /**
    * Request a chunk of rows for a lazy dataframe source.
    *
-   * @param payload - The chunk request (source id, offset, limit, generation, sort)
+   * @param payload - The chunk request (source id, offset, limit, sort)
    * @param timeoutMs - Optional timeout override
    * @returns A promise that resolves with the chunk response payload
    */

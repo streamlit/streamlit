@@ -39,8 +39,8 @@ if TYPE_CHECKING:
 _LOGGER: Final = get_logger(__name__)
 _MAX_CONCURRENT_REQUESTS_PER_SOURCE: Final = 4
 
-_SourceKey: TypeAlias = tuple[str, str, str]
-_ChunkKey: TypeAlias = tuple[str, str, str, int, int, str | None, bool]
+_SourceKey: TypeAlias = tuple[str, str]
+_ChunkKey: TypeAlias = tuple[str, str, int, int, str | None, bool]
 
 
 def _sort_from_proto(request: BackendOperationRequest) -> SortSpec | None:
@@ -77,7 +77,6 @@ class DataframeChunkHandler(BackendOperationHandler):
         source_key: _SourceKey,
         session_id: str,
         source_id: str,
-        generation: str,
         offset: int,
         limit: int,
         sort: SortSpec | None,
@@ -90,7 +89,6 @@ class DataframeChunkHandler(BackendOperationHandler):
                 self._get_source_mgr().load_chunk,
                 session_id,
                 source_id,
-                generation,
                 offset,
                 limit,
                 sort,
@@ -102,8 +100,8 @@ class DataframeChunkHandler(BackendOperationHandler):
         """Remove completed request state while preserving any replacement task."""
         if self._in_flight.get(chunk_key) is task:
             del self._in_flight[chunk_key]
-        source_key = chunk_key[:3]
-        if not any(key[:3] == source_key for key in self._in_flight):
+        source_key = chunk_key[:2]
+        if not any(key[:2] == source_key for key in self._in_flight):
             self._source_semaphores.pop(source_key, None)
 
     async def handle(
@@ -117,7 +115,6 @@ class DataframeChunkHandler(BackendOperationHandler):
         source_key: _SourceKey = (
             session_id,
             payload.source_id,
-            payload.generation,
         )
         chunk_key: _ChunkKey = (
             *source_key,
@@ -134,7 +131,6 @@ class DataframeChunkHandler(BackendOperationHandler):
                     source_key,
                     session_id,
                     payload.source_id,
-                    payload.generation,
                     payload.offset,
                     limit,
                     sort,
@@ -148,7 +144,7 @@ class DataframeChunkHandler(BackendOperationHandler):
             # cancel the request for every other waiter using the same task.
             arrow_bytes, offset = await asyncio.shield(task)
         except DataframeSourceError as err:
-            # Expected validation failures (stale generation, unknown source,
+            # Expected validation failures (unknown source, wrong session,
             # etc.). The message is safe to surface to the frontend.
             return BackendOperationResponse(
                 request_id=request.request_id,
@@ -170,7 +166,6 @@ class DataframeChunkHandler(BackendOperationHandler):
         chunk_response = DataframeChunkResponsePayload(
             source_id=payload.source_id,
             offset=offset,
-            generation=payload.generation,
             end_of_stream=False,
         )
         chunk_response.arrow_data.data = arrow_bytes

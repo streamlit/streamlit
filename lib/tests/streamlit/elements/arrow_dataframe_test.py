@@ -1475,7 +1475,6 @@ class ArrowDataFrameLazyTest(DeltaGeneratorTestCase):
             proto.lazy_data.access_mode == LazyDataframeProto.AccessMode.RANDOM_ACCESS
         )
         assert proto.lazy_data.source_id != ""
-        assert proto.lazy_data.generation != ""
         assert proto.lazy_data.page_size > 0
         # The eager arrow_data field stays empty in lazy mode.
         assert proto.arrow_data.data == b""
@@ -1576,7 +1575,6 @@ class ArrowDataFrameLazyTest(DeltaGeneratorTestCase):
         arrow_bytes, offset = mgr.load_chunk(
             mgr._sources[proto.lazy_data.source_id].session_id,
             proto.lazy_data.source_id,
-            proto.lazy_data.generation,
             0,
             10,
             None,

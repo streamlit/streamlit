@@ -167,7 +167,10 @@ function DataFrame({
     if (dataProp !== undefined) {
       return dataProp
     }
-    if (lazyData?.initialChunk) {
+    if (lazyData !== null) {
+      if (!lazyData.initialChunk) {
+        throw new Error("Lazy dataframe is missing its initial chunk")
+      }
       return new Quiver(lazyData.initialChunk)
     }
     if (!element.arrowData) {
@@ -349,7 +352,6 @@ function DataFrame({
       columns: originalColumns,
       numRows: originalNumRows,
       sourceId: lazyData?.sourceId ?? "",
-      generation: lazyData?.generation ?? "",
       pageSize: lazyData?.pageSize ?? 1,
       sortState: serverSortState,
       backendOperationClient,

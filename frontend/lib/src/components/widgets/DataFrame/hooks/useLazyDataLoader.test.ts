@@ -81,7 +81,6 @@ const MOCK_COLUMNS: BaseColumn[] = [
 ]
 
 const SOURCE_ID = "source-1"
-const GENERATION = "gen-1"
 const PAGE_SIZE = 2
 
 function makeClient(
@@ -109,7 +108,6 @@ function renderLoader(
       columns: MOCK_COLUMNS,
       numRows,
       sourceId: SOURCE_ID,
-      generation: GENERATION,
       pageSize,
       sortState: undefined,
       backendOperationClient: client,
@@ -138,7 +136,6 @@ describe("useLazyDataLoader", () => {
     const { client, request } = makeClient(() =>
       Promise.resolve({
         sourceId: SOURCE_ID,
-        generation: GENERATION,
         offset: PAGE_SIZE,
         arrowData: { data: UNICODE },
       })
@@ -154,7 +151,6 @@ describe("useLazyDataLoader", () => {
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
         sourceId: SOURCE_ID,
-        generation: GENERATION,
         offset: PAGE_SIZE,
         limit: PAGE_SIZE,
       })
@@ -188,7 +184,6 @@ describe("useLazyDataLoader", () => {
     const { client } = makeClient(() =>
       Promise.resolve({
         sourceId: SOURCE_ID,
-        generation: GENERATION,
         offset: PAGE_SIZE,
         arrowData: { data: UNICODE },
       })
@@ -211,7 +206,6 @@ describe("useLazyDataLoader", () => {
     const { client, request } = makeClient(() =>
       Promise.resolve({
         sourceId: SOURCE_ID,
-        generation: GENERATION,
         offset: PAGE_SIZE,
         arrowData: { data: UNICODE },
       })
@@ -241,7 +235,6 @@ describe("useLazyDataLoader", () => {
     const { client, request } = makeClient(() =>
       Promise.resolve({
         sourceId: SOURCE_ID,
-        generation: GENERATION,
         arrowData: { data: UNICODE },
       })
     )
@@ -294,7 +287,6 @@ describe("useLazyDataLoader", () => {
       }
       return Promise.resolve({
         sourceId: SOURCE_ID,
-        generation: GENERATION,
         offset: PAGE_SIZE,
         arrowData: { data: UNICODE },
       })
@@ -340,7 +332,6 @@ describe("useLazyDataLoader", () => {
     const { client, request } = makeClient(() =>
       Promise.resolve({
         sourceId: SOURCE_ID,
-        generation: GENERATION,
         offset: 1,
         arrowData: { data: UNICODE },
       })
@@ -357,11 +348,10 @@ describe("useLazyDataLoader", () => {
     )
   })
 
-  it("ignores responses with a stale generation", async () => {
+  it("ignores responses from a superseded source", async () => {
     const { client, request } = makeClient(() =>
       Promise.resolve({
-        sourceId: SOURCE_ID,
-        generation: "stale",
+        sourceId: "superseded-source",
         offset: PAGE_SIZE,
         arrowData: { data: UNICODE },
       })
