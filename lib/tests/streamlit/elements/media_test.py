@@ -32,7 +32,11 @@ from streamlit.elements.media import (
     _parse_start_time_end_time,
     marshall_video,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementKey,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -345,6 +349,69 @@ class MediaTest(DeltaGeneratorTestCase):
             )
 
             assert second_duplicate_id == second_duplicate_id_after_rerun
+
+    def test_audio_autoplay_with_key_avoids_duplicate_index_fallback(self):
+        """Passing distinct ``key`` values for repeated identical autoplay audio
+        calls should disambiguate them directly, without relying on the
+        occurrence-counter fallback (see GH issue #11360).
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            for i in range(3):
+                st.audio("foo.wav", "audio/wav", autoplay=True, key=f"audio-{i}")
+
+            ids = [
+                delta.new_element.audio.id for delta in self.get_all_deltas_from_queue()
+            ]
+            assert len(ids) == 3
+            assert len(set(ids)) == 3
+
+    def test_audio_autoplay_duplicate_key_raises(self):
+        """Reusing the same ``key`` for two autoplay audio elements should raise
+        the standard duplicate-key error, not be silently disambiguated.
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            st.audio("foo.wav", "audio/wav", autoplay=True, key="dup")
+            with pytest.raises(StreamlitDuplicateElementKey):
+                st.audio("bar.wav", "audio/wav", autoplay=True, key="dup")
+
+    def test_video_autoplay_with_key_avoids_duplicate_index_fallback(self):
+        """Passing distinct ``key`` values for repeated identical autoplay video
+        calls should disambiguate them directly, without relying on the
+        occurrence-counter fallback (see GH issue #11360).
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            for i in range(3):
+                st.video(
+                    "foo.mp4",
+                    "video/mp4",
+                    autoplay=True,
+                    muted=True,
+                    key=f"video-{i}",
+                )
+
+            ids = [
+                delta.new_element.video.id for delta in self.get_all_deltas_from_queue()
+            ]
+            assert len(ids) == 3
+            assert len(set(ids)) == 3
 
 
 class _RawIOReadReturnsNone(io.RawIOBase):
