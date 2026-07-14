@@ -207,6 +207,13 @@ updates:
       - "never-stale"
 
     groups:
+      github-actions-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
       codeql-action:
         patterns:
           - "github/codeql-action/init"
