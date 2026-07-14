@@ -193,8 +193,10 @@ jobs:
       - name: Make local modules visible
         run: uv pip install --editable ./lib --no-deps
       - name: Verify minimum dependency versions
+        env:
+          UV_NO_SYNC: 1
         run: |
-          uv run --no-sync python - <<'PY'
+          uv run python - <<'PY'
           from importlib.metadata import version
 
           from packaging.version import Version

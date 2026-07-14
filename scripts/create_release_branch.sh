@@ -21,5 +21,9 @@ VERSION_BRANCH="release/${VERSION}"
 git switch --create "$VERSION_BRANCH"
 python scripts/update_version.py "$VERSION"
 env -u UV_LOCKED uv lock
-git commit --all --message="Up version to ${VERSION}"
+# Stage tracked updates plus uv.lock explicitly, since `git commit --all` skips
+# an untracked lock when basing a patch on a tag that predates the committed lock.
+git add --update
+git add uv.lock
+git commit --message="Up version to ${VERSION}"
 git push origin "$VERSION_BRANCH"
