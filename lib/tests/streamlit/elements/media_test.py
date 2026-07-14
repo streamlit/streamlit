@@ -314,6 +314,38 @@ class MediaTest(DeltaGeneratorTestCase):
 
             assert first_id == second_id
 
+    def test_audio_autoplay_duplicate_id_stable_regardless_of_position(self):
+        """A repeated (duplicate) autoplay audio element's ID must only depend
+        on the relative order of the *other* duplicate calls, not on unrelated
+        elements elsewhere in the app (see GH issue #11360 discussion).
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+
+            # First "run": two identical audio elements, back to back.
+            st.audio("foo.wav", "audio/wav", autoplay=True)
+            st.audio("foo.wav", "audio/wav", autoplay=True)
+            second_duplicate_id = self.get_delta_from_queue().new_element.audio.id
+
+            # Simulate a rerun where unrelated elements are inserted before and
+            # between the two duplicate audio elements.
+            self.tearDown()
+            self.setUp()
+            st.write("An unrelated element inserted before both audio players")
+            st.audio("foo.wav", "audio/wav", autoplay=True)
+            st.write("An unrelated element inserted between the audio players")
+            st.audio("foo.wav", "audio/wav", autoplay=True)
+            second_duplicate_id_after_rerun = (
+                self.get_delta_from_queue().new_element.audio.id
+            )
+
+            assert second_duplicate_id == second_duplicate_id_after_rerun
+
 
 class _RawIOReadReturnsNone(io.RawIOBase):
     """Minimal RawIOBase whose read() returns None (non-standard but handled)."""
