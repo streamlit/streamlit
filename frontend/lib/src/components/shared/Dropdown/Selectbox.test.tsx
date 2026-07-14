@@ -23,7 +23,7 @@ import { render } from "~lib/test_util"
 import * as MobileUtil from "~lib/util/isMobile"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
-import Selectbox, { Props } from "./Selectbox"
+import Selectbox, { getInsertedText, Props } from "./Selectbox"
 
 vi.mock("~lib/WidgetStateManager")
 
@@ -604,5 +604,35 @@ describe("Selectbox widget with optional props", () => {
 
     // "AA" is case-sensitively distinct from "aa", "Aa", "aA" → Add option shown
     expect(screen.getByRole("option", { name: /Add: AA/i })).toBeVisible()
+  })
+})
+
+describe("getInsertedText", () => {
+  it.each([
+    // An unchanged label is not an insertion of new characters. Returning ""
+    // here (rather than treating it as a replace) prevents the committed label
+    // from clearing itself when RAC re-reports it on close/revert.
+    ["Banana", "Banana", ""],
+    ["Banana", "Bananac", "c"],
+    ["Banana", "Bananach", "ch"],
+    // Insertions at the start or middle are detected regardless of caret.
+    ["male", "xmale", "x"],
+    ["male", "mafle", "f"],
+    // Repeated characters do not confuse the prefix/suffix diff.
+    ["aa", "aaa", "a"],
+    // Empty committed label: everything typed is the insertion.
+    ["", "abc", "abc"],
+  ])("returns %j -> %j = %j", (before, after, expected) => {
+    expect(getInsertedText(before, after)).toBe(expected)
+  })
+
+  it.each([
+    // Not pure insertions (characters removed/replaced) → null, so the caller
+    // keeps the reported text as-is.
+    ["male", "mole", null],
+    ["Banana", "Cherry", null],
+    ["male", "mal", null],
+  ])("returns null for non-insertions %j -> %j", (before, after, expected) => {
+    expect(getInsertedText(before, after)).toBe(expected)
   })
 })

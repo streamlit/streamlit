@@ -100,7 +100,10 @@ const CREATABLE_ID = "__creatable__"
  * caret. Works purely from the reported input text, so it is independent of
  * caret position and browser-specific focus/selection behavior.
  */
-const getInsertedText = (before: string, after: string): string | null => {
+export const getInsertedText = (
+  before: string,
+  after: string
+): string | null => {
   const maxPrefix = Math.min(before.length, after.length)
   let prefix = 0
   while (prefix < maxPrefix && before[prefix] === after[prefix]) {
@@ -396,7 +399,10 @@ const Selectbox: FC<Props> = ({
     let nextText = text
     if (!filterActiveRef.current && committed !== "") {
       const inserted = getInsertedText(committed, text)
-      if (inserted !== null && inserted !== text) {
+      // An empty insertion means no new characters were typed (e.g. RAC
+      // reporting the unchanged committed label on close/revert), which must
+      // not clear the input.
+      if (inserted !== null && inserted !== "" && inserted !== text) {
         nextText = inserted
       }
     }
