@@ -1144,9 +1144,12 @@ def should_show_skills_nudge(app_dir: str | None = None) -> bool:
     AI agent harness is present but the bundled Streamlit skills are not yet
     installed, and the user has not permanently dismissed it. This mirrors the
     gating of the CLI recommendation printed on app startup. It is also
-    suppressed when a one-click install would deterministically refuse (a
-    non-managed file or directory already occupies every install target), so the
-    user is never nudged toward an action that can only fail.
+    suppressed when a one-click install would deterministically *conflict* at
+    every install target (a non-managed file or directory already occupies each
+    one), so the user is never nudged toward an install that can only conflict.
+    (Other always-fail causes — a missing bundled package, or a copy that errors
+    on permissions/path-length — stay fail-open: the nudge keeps showing, since
+    those can resolve without the user removing anything.)
 
     Parameters
     ----------
