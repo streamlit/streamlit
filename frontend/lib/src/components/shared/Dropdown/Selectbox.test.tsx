@@ -340,7 +340,7 @@ describe("Selectbox widget", () => {
 
     // filter_mode=None uses inputMode="none" (not readOnly) to suppress the
     // mobile software keyboard. readOnly would break both focus-on-click and
-    // RAC's keyboard navigation, so the input must stay editable-but-focusable.
+    // React Aria's keyboard navigation, so the input must stay editable-but-focusable.
     expect(selectboxInput).toHaveAttribute("inputmode", "none")
     expect(selectboxInput).not.toHaveAttribute("readonly")
 

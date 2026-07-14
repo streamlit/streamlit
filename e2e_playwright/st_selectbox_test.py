@@ -549,9 +549,9 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     # select) even though it stays focusable for keyboard navigation.
     expect(selectbox_input).to_have_css("caret-color", "rgba(0, 0, 0, 0)")
 
-    # Clicking must focus the input: a readonly + preventDefault approach used to
-    # drop focus, which broke the click-then-keyboard flow. Asserting focus here
-    # guards that regression deterministically.
+    # Clicking must focus the input. An earlier readonly + preventDefault approach
+    # dropped focus and broke the click-then-keyboard flow; this assertion guards
+    # that regression.
     selectbox_input.click()
     expect(selectbox_input).to_be_focused()
 

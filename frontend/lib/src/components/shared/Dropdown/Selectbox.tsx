@@ -290,7 +290,7 @@ const Selectbox: FC<Props> = ({
 
   const isFilterNone =
     filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
-  // Don't use `readOnly` for FILTER_MODE_NONE: it disables RAC's internal
+  // Don't use `readOnly` for FILTER_MODE_NONE: it disables React Aria's internal
   // keyboard navigation (Arrow keys, Enter) and makes Chromium close the
   // ComboBox during the pointer-event lifecycle. Instead, suppress the mobile
   // software keyboard with inputMode="none" (see the input below) and block
