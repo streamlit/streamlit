@@ -223,11 +223,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     // modal dialog uses (see Modal's shouldCloseOnInteractOutside).
     const isInsidePopoverOrOverlay = (target: Node | null): boolean => {
       if (!target) return false
-      const element = target instanceof Element ? target : target.parentElement
+      const targetElement =
+        target instanceof Element ? target : target.parentElement
       return Boolean(
         triggerRef.current?.contains(target) ||
         popoverBodyRef.current?.contains(target) ||
-        element?.closest('[data-st-overlay-root="true"]')
+        targetElement?.closest('[data-st-overlay-root="true"]')
       )
     }
 

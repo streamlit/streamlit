@@ -495,6 +495,34 @@ def test_date_input_selection_does_not_dismiss_popover(app: Page):
     expect(date_input).to_be_visible()
 
 
+def test_selectbox_selection_does_not_dismiss_popover(app: Page):
+    """Selecting an option in a React Aria selectbox opened inside a popover must
+    not dismiss the popover.
+
+    The selectbox dropdown (migrated to React Aria Components) portals to
+    document.body and is not tagged as a Streamlit overlay root, so it is not
+    matched by the popover's outside-click exclusions. It still does not dismiss
+    the popover because React Aria commits the selection via press events and
+    closes its own dropdown without an outside `click` reaching the popover's
+    document-level handler. This guards that contract for
+    https://github.com/streamlit/streamlit/issues/15959.
+    """
+    popover_container = open_popover(app, "popover 3 (with widgets)")
+    selectbox = popover_container.get_by_test_id("stSelectbox")
+    expect(selectbox).to_be_visible()
+
+    # Open the dropdown and select an option.
+    selectbox.locator("input").first.click()
+    option = app.get_by_role("option", name="b", exact=True)
+    expect(option).to_be_visible()
+    option.click()
+    wait_for_app_run(app)
+
+    # The popover must still be open, with the selection committed.
+    expect(popover_container).to_be_visible()
+    expect(selectbox.locator("input")).to_have_value("b")
+
+
 def test_programmatic_close_does_not_reopen_other_popover(app: Page):
     """Test that programmatically closing one popover does not cause it to
     reopen when another stateful popover is interacted with.
