@@ -24,8 +24,8 @@ from typing import TYPE_CHECKING, Final, TypeAlias, Union, cast
 from streamlit import runtime, type_util, url_util
 from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
-from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.lib.utils import SAFE_VALUES, compute_and_register_element_id
+from streamlit.errors import StreamlitAPIException, StreamlitDuplicateElementId
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -644,16 +644,7 @@ def marshall_video(
 
     if autoplay:
         proto.autoplay = autoplay
-        proto.id = compute_and_register_element_id(
-            "video",
-            # video does not yet allow setting a user-defined key
-            user_key=None,
-            key_as_main_identity=False,
-            dg=dg,
-            # Include the element's position in the app so that multiple
-            # video elements with identical arguments (e.g. in a loop) get
-            # distinct, stable IDs instead of colliding.
-            coordinates=coordinates,
+        common_id_kwargs: dict[str, SAFE_VALUES] = dict(
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,
@@ -663,6 +654,29 @@ def marshall_video(
             muted=muted,
             width=width,
         )
+        try:
+            # video does not yet allow setting a user-defined key, so identity is
+            # based on the element's arguments. This keeps the ID stable even if
+            # unrelated elements are added/removed elsewhere in the app.
+            proto.id = compute_and_register_element_id(
+                "video",
+                user_key=None,
+                key_as_main_identity=False,
+                dg=dg,
+                **common_id_kwargs,
+            )
+        except StreamlitDuplicateElementId:
+            # Multiple video elements with identical arguments (e.g. in a loop):
+            # fall back to including the element's position in the app so each
+            # one gets a distinct, stable ID instead of colliding.
+            proto.id = compute_and_register_element_id(
+                "video",
+                user_key=None,
+                key_as_main_identity=False,
+                dg=dg,
+                coordinates=coordinates,
+                **common_id_kwargs,
+            )
 
 
 def _parse_start_time_end_time(
@@ -848,15 +862,7 @@ def marshall_audio(
 
     if autoplay:
         proto.autoplay = autoplay
-        proto.id = compute_and_register_element_id(
-            "audio",
-            user_key=None,
-            key_as_main_identity=False,
-            dg=dg,
-            # Include the element's position in the app so that multiple
-            # audio elements with identical arguments (e.g. in a loop) get
-            # distinct, stable IDs instead of colliding.
-            coordinates=coordinates,
+        common_id_kwargs: dict[str, SAFE_VALUES] = dict(
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,
@@ -866,3 +872,26 @@ def marshall_audio(
             autoplay=autoplay,
             width=width,
         )
+        try:
+            # audio does not yet allow setting a user-defined key, so identity is
+            # based on the element's arguments. This keeps the ID stable even if
+            # unrelated elements are added/removed elsewhere in the app.
+            proto.id = compute_and_register_element_id(
+                "audio",
+                user_key=None,
+                key_as_main_identity=False,
+                dg=dg,
+                **common_id_kwargs,
+            )
+        except StreamlitDuplicateElementId:
+            # Multiple audio elements with identical arguments (e.g. in a loop):
+            # fall back to including the element's position in the app so each
+            # one gets a distinct, stable ID instead of colliding.
+            proto.id = compute_and_register_element_id(
+                "audio",
+                user_key=None,
+                key_as_main_identity=False,
+                dg=dg,
+                coordinates=coordinates,
+                **common_id_kwargs,
+            )

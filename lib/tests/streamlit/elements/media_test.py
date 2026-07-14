@@ -286,6 +286,34 @@ class MediaTest(DeltaGeneratorTestCase):
             assert len(ids) == 3
             assert len(set(ids)) == 3
 
+    def test_audio_autoplay_id_stable_regardless_of_position(self):
+        """A single (non-duplicated) autoplay audio element's ID must not depend
+        on its position in the app. Otherwise, inserting/removing unrelated
+        elements above it in a later rerun would change its ID and reset
+        playback, even though it's logically the same element.
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+
+            # First "run": the audio element is the first element on the page.
+            st.audio("foo.wav", "audio/wav", autoplay=True)
+            first_id = self.get_delta_from_queue().new_element.audio.id
+
+            # Simulate a rerun (fresh script run context) where an unrelated
+            # element now precedes the audio element, shifting its position.
+            self.tearDown()
+            self.setUp()
+            st.write("An unrelated element inserted before the audio player")
+            st.audio("foo.wav", "audio/wav", autoplay=True)
+            second_id = self.get_delta_from_queue().new_element.audio.id
+
+            assert first_id == second_id
+
 
 class _RawIOReadReturnsNone(io.RawIOBase):
     """Minimal RawIOBase whose read() returns None (non-standard but handled)."""
