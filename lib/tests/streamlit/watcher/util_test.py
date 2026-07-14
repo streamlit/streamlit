@@ -114,6 +114,7 @@ class DirHelperTests(unittest.TestCase):
         assert filename_prefixes == ["01", "02", "03"]
 
     def test_dirfiles_ignores_python_cache_artifacts(self):
+        """Test that _dirfiles excludes __pycache__, .pyc, and .pyo artifacts."""
         test_dir = Path(self._test_dir.name)
         cache_dir = test_dir / "__pycache__"
         cache_dir.mkdir()
@@ -140,6 +141,7 @@ class DirHelperTests(unittest.TestCase):
 
 class PathComparisonTests(unittest.TestCase):
     def test_windows_extended_paths_match_standard_paths(self):
+        """Test that extended-length/UNC Windows paths match their standard spelling."""
         with patch.object(util.env_util, "IS_WINDOWS", True):
             assert util.paths_are_same(
                 r"C:\project\module.py", r"\\?\c:\PROJECT\module.py"
@@ -153,6 +155,7 @@ class PathComparisonTests(unittest.TestCase):
             )
 
     def test_windows_paths_on_different_drives_do_not_match(self):
+        """Test that paths on different drives or distinct files are not matched."""
         with patch.object(util.env_util, "IS_WINDOWS", True):
             assert not util.path_is_in_directory(r"D:\project\module.py", r"C:\project")
             # Normalization must not collapse genuinely different files into a
@@ -162,6 +165,7 @@ class PathComparisonTests(unittest.TestCase):
             )
 
     def test_path_is_in_directory_handles_commonpath_value_error(self):
+        """Test that path_is_in_directory returns False when commonpath raises."""
         with patch.object(util.os.path, "commonpath", side_effect=ValueError):
             assert not util.path_is_in_directory("/other/file.py", "/watched")
 

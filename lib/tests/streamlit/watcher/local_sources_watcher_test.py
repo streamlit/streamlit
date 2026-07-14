@@ -544,6 +544,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_extended_windows_path_matches_watched_file(self, _fob):
+        """Test that an extended-length Windows path matches a watched file."""
         lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         callback = MagicMock()
         lsw.register_file_change_callback(callback)
@@ -565,6 +566,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_extended_windows_path_matches_watched_directory(self, _fob):
+        """Test that an extended-length Windows path matches a watched directory."""
         lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         callback = MagicMock()
         lsw.register_file_change_callback(callback)
