@@ -74,7 +74,7 @@ dependencies = [
   "protobuf>=3.20,<8",
   # PyArrow 25.0.0 can segfault when first imported from a short-lived worker thread.
   # See https://github.com/apache/arrow/issues/50471.
-  "pyarrow>=7.0,<25",
+  "pyarrow>=7.0,<26",
   "requests>=2.27,<3",
   "tenacity>=8.1.0,<10",
   # Starting from Python 3.11, Python has built in support for reading TOML files.
