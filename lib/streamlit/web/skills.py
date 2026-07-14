@@ -59,7 +59,7 @@ def _generate_gitignore_snippet(
             rel_dir = target_dir.relative_to(project_root)
         except ValueError:
             rel_dir = target_dir
-        lines.extend(f"{rel_dir}/{skill_name}/" for skill_name in skills)
+        lines.extend(f"{rel_dir}/{skill_name}" for skill_name in skills)
     return "\n".join(lines)
 
 
