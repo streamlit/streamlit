@@ -4311,7 +4311,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "altair", specifier = ">=4.0,!=5.4.0,!=5.4.1,<7" },
+    { name = "altair", specifier = ">=5.0.0,!=5.4.0,!=5.4.1,<7" },
     { name = "anyio", specifier = ">=4.0.0,<5" },
     { name = "authlib", marker = "extra == 'auth'", specifier = ">=1.3.2" },
     { name = "blinker", specifier = ">=1.5.0,<2" },

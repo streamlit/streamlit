@@ -56,7 +56,10 @@ dependencies = [
   # Altair 5.4.0 and 5.4.1 have compatibility issues with narwhals library
   # that cause st.line_chart and other built-in charts to fail rendering.
   # See: https://github.com/streamlit/streamlit/issues/12064
-  "altair>=4.0,<7,!=5.4.0,!=5.4.1",
+  # 5.0.0 is the first version exposing the offset encoding channels
+  # (alt.XOffset/alt.YOffset) and the alt.selection_point/selection_interval
+  # API that our built-in charts rely on.
+  "altair>=5.0.0,<7,!=5.4.0,!=5.4.1",
   "blinker>=1.5.0,<2",
   "cachetools>=5.5,<8",
   "click>=7.0,<9",
