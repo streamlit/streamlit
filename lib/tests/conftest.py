@@ -137,11 +137,12 @@ def pytest_collection_modifyitems(config, items):
 
 @pytest.fixture
 def anyio_backend() -> str:
-    # Pin the anyio backend for `@pytest.mark.anyio` tests to asyncio, which is
-    # what our server actually runs on. Without this, the anyio pytest plugin
-    # parametrizes over every backend it considers available; on the minimum
-    # supported anyio that includes trio, which is not a declared dependency and
-    # is therefore not installed, causing the trio variants to error out.
+    """Pin `@pytest.mark.anyio` tests to the asyncio backend."""
+    # asyncio is what our server actually runs on. Without this, the anyio
+    # pytest plugin parametrizes over every backend it considers available; on
+    # the minimum supported anyio that includes trio, which is not a declared
+    # dependency and is therefore not installed, causing the trio variants to
+    # error out.
     return "asyncio"
 
 

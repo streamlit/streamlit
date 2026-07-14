@@ -202,11 +202,13 @@ jobs:
           from packaging.version import Version
 
           expected = {
+              "altair": "5.0.0",
               "numpy": "1.23",
               "pandas": "1.4.0",
               "pillow": "7.1.0",
               "protobuf": "3.20",
               "pyarrow": "7.0",
+              "starlette": "0.46.0",
           }
           for package, expected_version in expected.items():
               actual_version = version(package)

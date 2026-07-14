@@ -16,6 +16,11 @@ permissions:
   contents: write
   pull-requests: write
 
+# Only one lock refresh at a time; a scheduled and a manual run should not race.
+concurrency:
+  group: update-python-lock
+  cancel-in-progress: false
+
 jobs:
   update-python-lock:
     runs-on: ubuntu-latest
@@ -69,6 +74,42 @@ jobs:
           git add uv.lock
           git commit -m "[chore] Update Python lock"
           git push --set-upstream origin "$BRANCH_NAME"
+
+      - name: Close superseded lock-update PRs
+        if: ${{ steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
+        uses: actions/github-script@v9
+        env:
+          NEW_BRANCH: ${{ steps.create-branch.outputs.branch_name }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Close any still-open lock-update PRs so only the latest one accumulates.
+            const openPrs = await github.paginate(github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              base: 'develop',
+              per_page: 100,
+            });
+            for (const pr of openPrs) {
+              if (
+                pr.head.ref !== process.env.NEW_BRANCH &&
+                pr.head.ref.startsWith('update-python-lock-')
+              ) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: 'Superseded by a newer automated Python lock update.',
+                });
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  state: 'closed',
+                });
+              }
+            }
 
       - name: Create pull request
         id: create-pr
