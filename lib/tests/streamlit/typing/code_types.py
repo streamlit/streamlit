@@ -83,4 +83,4 @@ if TYPE_CHECKING:
     code("print('Hello')", width="auto")  # type: ignore[arg-type]
 
     # Passing line_numbers as positional argument (should be keyword-only)
-    code("print('Hello')", "python", True)  # type: ignore[misc]
+    code("print('Hello')", "python", True)  # type: ignore[call-arg]

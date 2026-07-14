@@ -122,3 +122,11 @@ rerun_link_clicked = st.link_button(
     on_click="rerun",
 )
 st.write("Link Button with rerun value:", rerun_link_clicked)
+
+# Link button with a dangerous javascript: URL. The frontend must neutralize
+# this to "#" to prevent XSS when the button is clicked.
+st.link_button(
+    "Dangerous Link",
+    "javascript:alert('xss')",
+    key="dangerous_link_button",
+)

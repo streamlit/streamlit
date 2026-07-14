@@ -146,6 +146,12 @@ class StringUtilTest(unittest.TestCase):
 
         assert string_util.simplify_number(1000000000000) == "1t"
 
+        # Numbers beyond a trillion stay in trillions instead of raising an
+        # IndexError past the largest suffix.
+        assert string_util.simplify_number(1000000000000000) == "1000t"
+
+        assert string_util.simplify_number(2500000000000000000) == "2500000t"
+
     @parameterized.expand(
         [
             ("", "`", 0),

@@ -240,7 +240,27 @@ describe("Selectbox widget", () => {
     expect(screen.queryByRole("option", { name: "a" })).not.toBeInTheDocument()
     expect(screen.queryByRole("option", { name: "b" })).not.toBeInTheDocument()
     expect(screen.queryByRole("option", { name: "c" })).not.toBeInTheDocument()
-    expect(screen.getByText("No results")).toBeInTheDocument()
+    expect(screen.getByText("No results")).toBeVisible()
+  })
+
+  it("renders a styled empty state when no options match", async () => {
+    const user = userEvent.setup()
+    render(<Selectbox {...props} />)
+    const selectbox = screen.getByRole("combobox")
+    await openDropdown(user)
+    await user.clear(selectbox)
+    await user.type(selectbox, "1")
+    // The empty state should be centered and sized like the other dropdown
+    // empty states. The literal values below map to the theme tokens used by
+    // StyledEmptyState: height => sizes.emptyDropdownHeight (5.625rem),
+    // padding => spacing.sm (0.5rem), fontSize => fontSizes.sm (0.875rem).
+    expect(screen.getByText("No results")).toHaveStyle({
+      alignItems: "center",
+      justifyContent: "center",
+      height: "5.625rem",
+      padding: "0.5rem",
+      fontSize: "0.875rem",
+    })
   })
 
   it("filters options based on label with case insensitive", async () => {

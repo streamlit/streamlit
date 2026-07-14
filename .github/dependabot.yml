@@ -8,7 +8,7 @@ updates:
       interval: "daily"
     # Allow a limited number of update PRs at a time
     # to keep the number of parallel dependency updates manageable.
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 8
 
     # Use cooldown to avoid updating dependencies too frequently
     # and minimize risk of supply chain attacks.
@@ -114,6 +114,13 @@ updates:
         patterns:
           - "oxlint"
           - "oxfmt"
+      # Catch unmatched frontend minor/patch updates after the more specific groups.
+      frontend-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # Keep python dependencies up to date (via uv)
   # Root pyproject.toml contains dev/test dependency groups
@@ -123,7 +130,7 @@ updates:
       interval: "daily"
     # Allow a limited number of update PRs at a time
     # to keep the number of parallel dependency updates manageable.
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 8
     # The published package manifest is owned by the /lib uv job below. The
     # root uv job should only update the dev/test environment.
     exclude-paths:
@@ -135,7 +142,7 @@ updates:
     # Use cooldown to avoid updating dependencies too frequently
     # and minimize risk of supply chain attacks.
     cooldown:
-      default-days: 5
+      default-days: 4
 
     labels:
       - "change:chore"
@@ -143,13 +150,33 @@ updates:
       - "autofix"
       - "never-stale"
 
+    groups:
+      python-typing:
+        patterns:
+          - "mypy"
+          - "mypy-protobuf"
+          - "ty"
+          - "types-*"
+          - "*-stubs"
+      python-playwright:
+        patterns:
+          - "playwright"
+          - "pytest-playwright"
+          - "pixelmatch"
+      python-testing:
+        patterns:
+          - "pytest*"
+          - "hypothesis"
+          - "parameterized"
+          - "requests-mock"
+          - "testfixtures"
+
   # Keep streamlit package runtime dependencies up to date
   # lib/pyproject.toml contains the published package's dependencies
   - package-ecosystem: "uv"
     directory: "/lib"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 3
     # Let Dependabot classify the published Streamlit package as a library, which
     # widens supported version ranges internally. Explicit
     # `versioning-strategy: widen` is not currently accepted for the uv ecosystem
@@ -159,7 +186,7 @@ updates:
     versioning-strategy: auto
 
     cooldown:
-      default-days: 5
+      default-days: 4
 
     labels:
       - "change:chore"
