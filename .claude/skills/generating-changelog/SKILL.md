@@ -38,7 +38,7 @@ Run the fetch script to extract PR numbers from `git log` and batch-fetch metada
 uv run python scripts/changelog_fetch_prs.py <prev-tag> <new-tag>
 ```
 
-This produces `work-tmp/pr-data.json` — a JSON array of `{number, title, labels, author, related_issues, related_issues_truncated}` objects sorted by PR number.
+This produces `work-tmp/pr-data.json` — a JSON array of `{number, title, body, labels, author, related_issues, related_issues_truncated}` objects sorted by PR number. The `body` field contains the first 2500 characters of the PR description.
 
 `related_issues` is sourced from the same batched GraphQL query (no per-PR N+1 requests) and includes linked issue numbers plus 👍 counts:
 
@@ -96,7 +96,9 @@ Note: Internal-only feature PRs (e.g., e2e infra, CI workflows, agent skills) ar
 
 Do NOT proceed to Step 6 until the user confirms.
 
-## Step 6: Rewrite descriptions and generate output
+## Step 6: Read PR descriptions and generate output
+
+For each user-facing PR in `work-tmp/pr-categorized.json`, read its `body` field before writing the changelog entry. Use the PR description as the primary source of truth for what actually changed — the title alone can be imprecise. Focus on the opening summary paragraph(s) of the body; ignore checklists, reviewer notes, and screenshot sections.
 
 Generate the file in the `work-tmp/` directory: `work-tmp/changelog-website-<new-tag>.md`
 
