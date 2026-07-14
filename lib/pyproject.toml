@@ -82,8 +82,10 @@ dependencies = [
   "toml>=0.10.1,<2",
   # Starlette requires typing-extensions >= 4.10.
   "typing-extensions>=4.10.0,<5",
-  # ASGI web-framework:
-  "starlette>=0.40.0,<2",
+  # ASGI web-framework. 0.46.0 is the first version exposing
+  # `DEFAULT_EXCLUDED_CONTENT_TYPES` from `starlette.middleware.gzip`, which our
+  # gzip middleware imports.
+  "starlette>=0.46.0,<2",
   # ASGI server:
   "uvicorn>=0.30.0,<1",
   # Faster http parsing for Starlette server:
