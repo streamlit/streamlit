@@ -87,7 +87,7 @@ def test_hides_csv_export_for_dataframes_and_chart_table_view(app: Page):
 
 @pytest.mark.only_browser("chromium")
 def test_keeps_data_editor_clipboard_copy_enabled(app: Page):
-    """Verify clipboard copy remains available where Playwright supports it."""
+    """Data editor copy stays enabled. Chromium-only: reliable clipboard read/write in Playwright."""
     app.context.grant_permissions(["clipboard-read", "clipboard-write"])
 
     data_editor = _get_data_editor(app)
@@ -103,7 +103,7 @@ def test_keeps_data_editor_clipboard_copy_enabled(app: Page):
 
 @pytest.mark.only_browser("chromium")
 def test_disables_dataframe_clipboard_copy(app: Page):
-    """Verify read-only dataframe copy is blocked where clipboard reads work."""
+    """Read-only dataframe copy is blocked. Chromium-only: reliable clipboard read/write in Playwright."""
     app.context.grant_permissions(["clipboard-read", "clipboard-write"])
 
     read_only_dataframe = _get_read_only_dataframe(app)
@@ -121,7 +121,7 @@ def test_disables_dataframe_clipboard_copy(app: Page):
 
 @pytest.mark.only_browser("chromium")
 def test_disables_chart_table_view_clipboard_copy(app: Page):
-    """Verify chart table view copy is blocked where clipboard reads work."""
+    """Chart table view copy is blocked. Chromium-only: reliable clipboard read/write in Playwright."""
     app.context.grant_permissions(["clipboard-read", "clipboard-write"])
 
     chart_table_view = _show_chart_table_view(app)

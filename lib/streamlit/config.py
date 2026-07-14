@@ -634,11 +634,15 @@ _create_option(
 _create_option(
     "client.disableDataExport",
     description="""
-        Controls whether data export functionality is disabled in components
-        that support it. When true, CSV download controls are hidden and
-        clipboard copy is disabled for st.dataframe.
+        When true, hides the built-in controls for exporting data from
+        components that support it:
 
-        This only hides the built-in export/copy UI affordances. It does not
+        - Hides the CSV download button for st.dataframe, st.data_editor,
+          and chart table views.
+        - Disables clipboard copy for read-only tables (st.dataframe and
+          chart table views), while keeping st.data_editor copy/paste enabled.
+
+        This only hides the built-in export and copy controls. It does not
         prevent users from otherwise accessing the underlying data (e.g. via
         screenshots, browser developer tools, or network inspection), so it
         should not be relied upon as a security or data-protection control.
