@@ -404,6 +404,31 @@ describe("Selectbox widget", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("filters when the typed query equals the committed label", async () => {
+    // Edge case of the type-to-search diff: committed "a", the user types "a"
+    // so the browser reports "aa" and the diff yields "a" (== committed). This
+    // is still a real edit and must activate filtering / open the dropdown,
+    // not be mistaken for RAC's unchanged-label revert.
+    const user = userEvent.setup()
+    props = getProps({ options: ["a", "ab", "b"], value: "a" })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    // Simulate the browser appending "a" behind the committed "a".
+    act(() => {
+      // eslint-disable-next-line testing-library/prefer-user-event
+      fireEvent.change(input, { target: { value: "aa" } })
+    })
+
+    expect(input).toHaveValue("a")
+    // Filtering is active: "a"/"ab" match the query, "b" is filtered out.
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "ab" })).toBeVisible()
+    })
+    expect(screen.queryByRole("option", { name: "b" })).not.toBeInTheDocument()
+  })
+
   it("updates value if new value provided from parent", () => {
     const { rerender } = render(<Selectbox {...props} />)
     expect(screen.getByDisplayValue(props.options[0])).toBeVisible()

@@ -408,9 +408,12 @@ const Selectbox: FC<Props> = ({
     }
 
     setInputValue(nextText)
-    // RAC calls onInputChange(committedLabel) when the dropdown closes to
-    // revert the input — don't treat that automatic revert as user filtering.
-    if (nextText !== committed) {
+    // Decide filtering from the raw reported text, not from nextText: when the
+    // fresh-search diff yields a query equal to the committed label (e.g.
+    // committed "a", typing "a"), filtering must still activate. RAC reports
+    // text === committed when it reverts the input on close — that is the only
+    // case treated as a non-edit.
+    if (text !== committed) {
       setFilterActive(true)
       openDropdownRef.current?.()
     } else {
