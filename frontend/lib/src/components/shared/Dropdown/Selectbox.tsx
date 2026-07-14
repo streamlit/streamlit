@@ -92,6 +92,36 @@ type ComboOption = {
 const CREATABLE_ID = "__creatable__"
 
 /**
+ * If `after` is `before` with extra characters inserted (at any position),
+ * return just those inserted characters; otherwise return null.
+ *
+ * Used to detect the user typing over an untouched committed label so the
+ * first keystroke starts a fresh search instead of appending behind the
+ * caret. Works purely from the reported input text, so it is independent of
+ * caret position and browser-specific focus/selection behavior.
+ */
+const getInsertedText = (before: string, after: string): string | null => {
+  const maxPrefix = Math.min(before.length, after.length)
+  let prefix = 0
+  while (prefix < maxPrefix && before[prefix] === after[prefix]) {
+    prefix++
+  }
+  const maxSuffix = Math.min(before.length - prefix, after.length - prefix)
+  let suffix = 0
+  while (
+    suffix < maxSuffix &&
+    before[before.length - 1 - suffix] === after[after.length - 1 - suffix]
+  ) {
+    suffix++
+  }
+  // A pure insertion removes none of `before`'s characters.
+  if (before.slice(prefix, before.length - suffix) !== "") {
+    return null
+  }
+  return after.slice(prefix, after.length - suffix)
+}
+
+/**
  * Null-render component mounted inside <ComboBox> to expose RAC's internal
  * open/close methods via refs. Required because ComboBox v1.x has no controlled
  * isOpen prop; we use menuTrigger="manual" and open explicitly on pointer/key
@@ -356,10 +386,25 @@ const Selectbox: FC<Props> = ({
   }, [])
 
   const handleInputChange = useCallback((text: string): void => {
-    setInputValue(text)
+    const committed = valueRef.current ?? ""
+
+    // Typing over an untouched committed label starts a fresh search: replace
+    // the label with just the newly typed characters instead of editing it in
+    // place. The ComboBox keeps the committed label in the input with the caret
+    // at the end, so without this the first keystroke would append behind it
+    // (e.g. "Banana" + "c" -> "Bananac") and match nothing.
+    let nextText = text
+    if (!filterActiveRef.current && committed !== "") {
+      const inserted = getInsertedText(committed, text)
+      if (inserted !== null && inserted !== text) {
+        nextText = inserted
+      }
+    }
+
+    setInputValue(nextText)
     // RAC calls onInputChange(committedLabel) when the dropdown closes to
     // revert the input — don't treat that automatic revert as user filtering.
-    if (text !== (valueRef.current ?? "")) {
+    if (nextText !== committed) {
       setFilterActive(true)
       openDropdownRef.current?.()
     } else {
@@ -384,24 +429,6 @@ const Selectbox: FC<Props> = ({
     if (selectDisabled) return
     openDropdownRef.current?.()
   }, [selectDisabled])
-
-  // Select the committed label when the input gains focus so the first
-  // keystroke replaces it and starts a fresh search, instead of appending
-  // behind the caret (which is placed at the end of the text). The label
-  // stays visible until the user types. Skipped for the mobile read-only
-  // path where typing is disabled.
-  const handleInputFocus = useCallback(
-    (e: React.FocusEvent<HTMLInputElement>): void => {
-      if (inputReadOnly) return
-      // Only select while the input still shows the committed label. RAC can
-      // refocus the input mid-typing (e.g. when the dropdown opens); guarding
-      // on the current text avoids re-selecting and clobbering the query.
-      if (e.currentTarget.value === (valueRef.current ?? "")) {
-        e.currentTarget.select()
-      }
-    },
-    [inputReadOnly]
-  )
 
   /**
    * Capture-phase keydown — fires before RAC's handler:
@@ -523,7 +550,6 @@ const Selectbox: FC<Props> = ({
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}
               onPointerDown={handleInputPointerDown}
-              onFocus={handleInputFocus}
               onKeyDownCapture={handleInputKeyDownCapture}
               onKeyDown={handleInputKeyDown}
               onPaste={isFilterNone ? e => e.preventDefault() : undefined}

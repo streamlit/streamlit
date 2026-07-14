@@ -375,10 +375,11 @@ describe("Selectbox widget", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("does not re-select the query when RAC refocuses the input mid-typing", async () => {
-    // Guards the focus handler: it must only select while the input still
-    // shows the committed label, so a refocus after the first keystroke does
-    // not clobber characters already typed.
+  it("replaces the committed label when the browser appends the keystroke", async () => {
+    // Some browsers (e.g. Safari/WebKit) place the caret at the end of the
+    // committed label on click-focus, so the first keystroke arrives appended
+    // to the whole label. The change handler must still strip the label and
+    // keep only the typed character(s), regardless of caret behavior.
     const user = userEvent.setup()
     props = getProps({
       options: ["Apple", "Banana", "Cherry"],
@@ -388,13 +389,19 @@ describe("Selectbox widget", () => {
     const input = screen.getByRole("combobox")
 
     await user.click(input)
-    await user.keyboard("c")
-    // A second focus event (as RAC may fire when opening the dropdown) must
-    // not re-select the "c" the user just typed.
-    fireEvent.focus(input)
-    await user.keyboard("h")
+    // Simulate the browser appending "c" behind the committed "Banana".
+    act(() => {
+      // eslint-disable-next-line testing-library/prefer-user-event
+      fireEvent.change(input, { target: { value: "Bananac" } })
+    })
 
-    expect(input).toHaveValue("ch")
+    expect(input).toHaveValue("c")
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Cherry" })).toBeVisible()
+    })
+    expect(
+      screen.queryByRole("option", { name: "Banana" })
+    ).not.toBeInTheDocument()
   })
 
   it("updates value if new value provided from parent", () => {
