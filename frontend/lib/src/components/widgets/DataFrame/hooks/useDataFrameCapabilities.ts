@@ -74,6 +74,8 @@ interface UseDataFrameCapabilitiesParams {
   lazySortable?: boolean
   /** Whether the dataframe contains interactive ButtonColumn widgets. */
   hasButtonColumnInteractions?: boolean
+  /** Whether data export functionality is disabled by app config. */
+  disableDataExport: boolean
 }
 
 /**
@@ -110,6 +112,7 @@ function useDataFrameCapabilities({
   isLazy = false,
   lazySortable = false,
   hasButtonColumnInteractions = false,
+  disableDataExport,
 }: UseDataFrameCapabilitiesParams): DataFrameCapabilities {
   return useMemo(() => {
     const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
@@ -141,7 +144,8 @@ function useDataFrameCapabilities({
 
     const canSearch = !isLazy && !isEmptyTable
 
-    const canExportCsv = !isLazy && !isLargeTable && !isEmptyTable
+    const canExportCsv =
+      !isLazy && !disableDataExport && !isLargeTable && !isEmptyTable
 
     // Statistics are computed over the locally-available Quiver, so they are
     // only meaningful for read-only, non-empty, eagerly-loaded dataframes.
@@ -193,6 +197,7 @@ function useDataFrameCapabilities({
     isLazy,
     lazySortable,
     hasButtonColumnInteractions,
+    disableDataExport,
   ])
 }
 

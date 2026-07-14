@@ -51,7 +51,7 @@
   "packageManager": "yarn@4.13.0",
   "devDependencies": {
     "@bufbuild/buf": "^1.71.0",
-    "@eslint-react/eslint-plugin": "^5.12.0",
+    "@eslint-react/eslint-plugin": "^5.13.2",
     "@eslint/compat": "^2.1.0",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
@@ -74,8 +74,8 @@
     "globals": "^17.7.0",
     "jiti": "^2.7.0",
     "knip": "^6.24.0",
-    "oxfmt": "^0.57.0",
-    "oxlint": "^1.72.0",
+    "oxfmt": "^0.58.0",
+    "oxlint": "^1.73.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.63.0",
     "vitest": "^4.1.10"

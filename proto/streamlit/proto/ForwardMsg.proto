@@ -76,6 +76,7 @@ message ForwardMsg {
     PageNotFound page_not_found = 15;
     FileURLsResponse file_urls_response = 19;
     AutoRerun auto_rerun = 21;
+    StopAutoRerun stop_auto_rerun = 28;
 
     // App logo message
     Logo logo = 22;
@@ -108,7 +109,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8, 16, 25;
-  // Next: 28
+  // Next: 29
 }
 
 // Generic backend operation response for server-side operations without script rerun.

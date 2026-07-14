@@ -86,6 +86,7 @@ import {
   IPageInfo,
   IPageNotFound,
   IParentMessage,
+  IStopAutoRerun,
   Navigation,
   SessionEvent,
   SessionStatus,
@@ -440,6 +441,7 @@ type ForwardMsgType =
   | IPageInfo
   | IParentMessage
   | IPageNotFound
+  | IStopAutoRerun
   | Omit<SessionEvent, "toJSON">
   | Omit<SessionStatus, "toJSON">
 
@@ -4046,6 +4048,64 @@ describe("App", () => {
         // @ts-expect-error - sendMessage is a vi.fn mock in tests
         connectionManager.sendMessage.mock.calls.length - callsBefore
       ).toBeGreaterThanOrEqual(1)
+    })
+
+    it("cancels only the targeted fragment's timer on a stopAutoRerun message", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      type SentRerun = { fragmentId?: string; isAutoRerun?: boolean }
+      const autoRerunFragmentIdsSince = (
+        fromIndex: number
+      ): (string | undefined)[] => {
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        const calls = connectionManager.sendMessage.mock.calls as Array<
+          [{ rerunScript?: SentRerun }]
+        >
+        return calls
+          .slice(fromIndex)
+          .map(call => call[0].rerunScript)
+          .filter((rerunScript): rerunScript is SentRerun =>
+            Boolean(rerunScript?.isAutoRerun)
+          )
+          .map(rerunScript => rerunScript.fragmentId)
+      }
+
+      act(() => {
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "fragmentA",
+        })
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "fragmentB",
+        })
+        vi.advanceTimersByTime(1000)
+      })
+      expect(new Set(autoRerunFragmentIdsSince(0))).toEqual(
+        new Set(["fragmentA", "fragmentB"])
+      )
+
+      // The server evicts fragmentA and tells the client to cancel its timer.
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBeforeStop = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("stopAutoRerun", { fragmentIds: ["fragmentA"] })
+        vi.advanceTimersByTime(2000)
+      })
+
+      const idsAfterStop = autoRerunFragmentIdsSince(callsBeforeStop)
+      // fragmentB keeps ticking; fragmentA's timer was cancelled.
+      expect(idsAfterStop.length).toBeGreaterThan(0)
+      expect(idsAfterStop).not.toContain("fragmentA")
+      expect(idsAfterStop.every(id => id === "fragmentB")).toBe(true)
     })
   })
 

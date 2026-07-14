@@ -123,8 +123,10 @@ class TestGenerateGitignoreSnippet:
             skill_names, target_dirs, project_root
         )
 
-        assert "# Streamlit agent skills" in result
-        assert ".agents/skills/developing-with-streamlit/" in result
+        assert result == (
+            "# Streamlit agent skills (environment-specific symlinks)\n"
+            ".agents/skills/developing-with-streamlit"
+        )
 
     def test_generates_snippet_for_multiple_targets(self, tmp_path: Path) -> None:
         """Generates entries for both .agents and .claude target directories."""
@@ -139,8 +141,9 @@ class TestGenerateGitignoreSnippet:
             skill_names, target_dirs, project_root
         )
 
-        assert ".agents/skills/developing-with-streamlit/" in result
-        assert ".claude/skills/developing-with-streamlit/" in result
+        assert ".agents/skills/developing-with-streamlit" in result
+        assert ".claude/skills/developing-with-streamlit" in result
+        assert "developing-with-streamlit/" not in result
 
     def test_generates_snippet_for_multiple_skills(self, tmp_path: Path) -> None:
         """Generates entries for all discovered skills."""
@@ -152,8 +155,10 @@ class TestGenerateGitignoreSnippet:
             skill_names, target_dirs, project_root
         )
 
-        assert ".agents/skills/developing-with-streamlit/" in result
-        assert ".agents/skills/debugging-apps/" in result
+        assert ".agents/skills/developing-with-streamlit" in result
+        assert ".agents/skills/debugging-apps" in result
+        assert "developing-with-streamlit/" not in result
+        assert "debugging-apps/" not in result
 
 
 class TestFindProjectRoot:
@@ -1973,7 +1978,8 @@ class TestGenerateGitignoreSnippetEdgeCases:
         )
 
         # Snippet should contain the absolute path of the unrelated dir
-        assert f"{unrelated_dir}/my-skill/" in result
+        assert f"{unrelated_dir}/my-skill" in result
+        assert "my-skill/" not in result
 
 
 class TestGetDisplayPath:

@@ -271,6 +271,25 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert not self._storage.contains("inner")
         assert not self._storage.contains("leaf")
 
+    def test_clear_stale_descendants_returns_removed_ids(self):
+        """Removed descendant ids are returned so callers can react (e.g. cancel
+        auto-rerun timers)."""
+        self._set_fragment_chain("outer", "inner", "leaf")
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset({"outer"}))
+
+        assert set(removed) == {"inner", "leaf"}
+
+    def test_clear_stale_descendants_returns_empty_when_nothing_removed(self):
+        """When no descendant is evicted, an empty list is returned."""
+        self._set_fragment_chain("outer", "inner")
+
+        removed = self._storage.clear_stale_descendants(
+            "outer", frozenset({"outer", "inner"})
+        )
+
+        assert removed == []
+
     def test_clear_stale_descendants_keeps_reregistered_child(self):
         """Descendants re-registered during this run are preserved."""
         self._set_fragment_chain("outer", "inner")

@@ -618,6 +618,9 @@ class ArrowMixin:
         This command works with a wide variety of collection-like and
         dataframe-like object types.
 
+        To disable data export (CSV download and clipboard copy), set the
+        ``client.disableDataExport`` configuration option to ``True``.
+
         Parameters
         ----------
         data : dataframe-like, collection-like, or None

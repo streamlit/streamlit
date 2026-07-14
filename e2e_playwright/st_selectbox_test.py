@@ -212,6 +212,37 @@ def test_shows_correct_options_via_fuzzy_search(
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
 
 
+def test_type_to_search_replaces_committed_value(app: Page):
+    """Regression test for https://github.com/streamlit/streamlit/issues/15985.
+
+    With a value already committed, focusing the selectbox and typing must start
+    a fresh search (replacing the committed label) instead of appending the typed
+    characters behind it (which matched nothing).
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 1 (default)")
+    expect(selectbox_input).to_have_value("male")
+
+    # Click to focus, then type character-by-character to exercise the
+    # append-vs-replace behavior (fill() would replace the value wholesale).
+    selectbox_input.click()
+    selectbox_input.press_sequentially("fem")
+
+    # The committed "male" must be replaced by the query, not become "malefem".
+    expect(selectbox_input).to_have_value("fem")
+
+    # The dropdown filters to the matching option and hides the previous one.
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(1)
+    expect(options.first).to_have_text("female")
+    expect(
+        selection_dropdown.get_by_role("option", name="male", exact=True)
+    ).to_have_count(0)
+
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 1: female")
+
+
 def test_empty_selectbox_behaves_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -554,9 +585,13 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     expect_markdown(app, "value 23: No")
 
 
-def test_selectbox_virtualizes_large_option_list(app: Page):
+def test_selectbox_virtualizes_large_option_list(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test that a selectbox with many options only renders a small window of
-    option rows (virtualization) while keeping far-down options selectable.
+    option rows (virtualization) while keeping far-down options selectable, and
+    that filtering to an unmatched value shows the styled "No results" empty
+    state.
     """
     selectbox_input = get_selectbox_input(app, "selectbox 25 (large virtualized list)")
     selectbox_input.click()
@@ -581,6 +616,16 @@ def test_selectbox_virtualizes_large_option_list(app: Page):
     expect(
         selection_dropdown.get_by_role("option", name="Option 999", exact=True)
     ).to_have_count(0)
+
+    # Filtering to an unmatched value shows the styled empty-state popover.
+    selectbox_input.fill("No matching option")
+    expect(
+        selection_dropdown.get_by_role("option", name="No results", exact=True)
+    ).to_be_visible()
+    expect(
+        selection_dropdown.get_by_role("option", name="Option 0", exact=True)
+    ).to_have_count(0)
+    assert_snapshot(selection_dropdown, name="st_selectbox-no_results_popover")
 
     # A far-down option can still be selected by typing to filter for it.
     selectbox_input.fill("Option 987")

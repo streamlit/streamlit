@@ -83,19 +83,19 @@ dependencies = [
   # Starlette requires typing-extensions >= 4.10.
   "typing-extensions>=4.10.0,<5",
   # ASGI web-framework:
-  "starlette>=0.40.0",
+  "starlette>=0.40.0,<2",
   # ASGI server:
-  "uvicorn>=0.30.0",
+  "uvicorn>=0.30.0,<1",
   # Faster http parsing for Starlette server:
-  "httptools>=0.6.3",
+  "httptools>=0.6.3,<1",
   # Required by starlette:
-  "anyio>=4.0.0",
+  "anyio>=4.0.0,<5",
   # Required for file-upload support:
-  "python-multipart>=0.0.10",
+  "python-multipart>=0.0.10,<1",
   # Required for websocket support:
-  "websockets>=12.0.0",
+  "websockets>=12.0.0,<17",
   # Required for cookie signing:
-  "itsdangerous>=2.1.2",
+  "itsdangerous>=2.1.2,<3",
   # Don't require watchdog on MacOS, since it'll fail without xcode tools.
   # Without watchdog, we fallback to a polling file watcher to check for app changes.
   "watchdog>=2.1.5,<7; platform_system != 'Darwin'",

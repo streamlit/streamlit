@@ -1167,6 +1167,7 @@ def _populate_config_msg(msg: Config) -> None:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
     msg.show_error_links = _get_show_error_links()
+    msg.disable_data_export = config.get_option("client.disableDataExport")
 
 
 def _parse_and_populate_chart_colors(
