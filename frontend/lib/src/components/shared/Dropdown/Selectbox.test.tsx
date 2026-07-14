@@ -561,6 +561,25 @@ describe("Selectbox widget", () => {
       await user.type(input, "should not type")
       expect(screen.queryByText(/Add:/i)).not.toBeInTheDocument()
     })
+
+    it("uses inputMode=none instead of readonly for filterMode none", () => {
+      // On mobile, a small non-creatable selectbox normally gets `readonly` to
+      // suppress the software keyboard (see the test above). filter_mode=None
+      // must opt out of that via the `!isFilterNone` term and instead rely on
+      // inputMode="none", so the input stays focusable for React Aria keyboard
+      // navigation while the mobile keyboard is still suppressed. Desktop tests
+      // run with isMobile() false, so this is the only place the mobile-gated
+      // `!isFilterNone` term is exercised.
+      props = getProps({
+        acceptNewOptions: false,
+        options: ["yes", "no", "maybe"],
+        filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
+      })
+      render(<Selectbox {...props} />)
+      const input = screen.getByRole("combobox")
+      expect(input).toHaveAttribute("inputmode", "none")
+      expect(input).not.toHaveAttribute("readonly")
+    })
   })
 
   it("does not allow new options when acceptNewOptions is false", async () => {

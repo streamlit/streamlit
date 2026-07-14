@@ -568,6 +568,11 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     selectbox_input.press("n")
     selectbox_input.press("o")
     expect(options).to_have_count(3)
+    # The count above stays 3 even without blocking, since filter_mode=None
+    # disables filtering regardless. The real regression guard is that the
+    # blocked keystrokes entered no visible text (mirrors the unit test's
+    # toHaveValue("")).
+    expect(selectbox_input).to_have_value("")
 
     # Keyboard navigation still selects: a second ArrowDown reaches "No" and
     # Enter commits it, proving Arrow/Enter work after focusing via click.
