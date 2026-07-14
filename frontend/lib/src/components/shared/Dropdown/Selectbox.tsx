@@ -413,11 +413,15 @@ const Selectbox: FC<Props> = ({
     // committed "a", typing "a"), filtering must still activate. RAC reports
     // text === committed when it reverts the input on close — that is the only
     // case treated as a non-edit.
-    if (text !== committed) {
-      setFilterActive(true)
+    const isEdit = text !== committed
+    setFilterActive(isEdit)
+    // Update the ref synchronously too: setFilterActive only refreshes it on the
+    // next render, so a second keystroke arriving before that render would
+    // otherwise see a stale `false`, re-run the fresh-search strip against the
+    // committed label, and truncate a growing query (e.g. "ab" back to "b").
+    filterActiveRef.current = isEdit
+    if (isEdit) {
       openDropdownRef.current?.()
-    } else {
-      setFilterActive(false)
     }
   }, [])
 
