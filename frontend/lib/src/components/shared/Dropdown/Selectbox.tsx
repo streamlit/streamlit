@@ -415,10 +415,10 @@ const Selectbox: FC<Props> = ({
     // case treated as a non-edit.
     const isEdit = text !== committed
     setFilterActive(isEdit)
-    // Update the ref synchronously too: setFilterActive only refreshes it on the
-    // next render, so a second keystroke arriving before that render would
-    // otherwise see a stale `false`, re-run the fresh-search strip against the
-    // committed label, and truncate a growing query (e.g. "ab" back to "b").
+    // Update the ref synchronously, not just via setFilterActive, which
+    // refreshes it only on the next render. Otherwise a second keystroke before
+    // that render reads a stale `false` and re-strips the growing query (e.g.
+    // "ab" back to "b").
     filterActiveRef.current = isEdit
     if (isEdit) {
       openDropdownRef.current?.()
