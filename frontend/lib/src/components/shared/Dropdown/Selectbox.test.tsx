@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { act, fireEvent, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  createEvent,
+  fireEvent,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { streamlit } from "@streamlit/protobuf"
@@ -348,7 +354,7 @@ describe("Selectbox widget", () => {
     })
   })
 
-  it("keeps all options visible and the input readonly when filterMode is none", async () => {
+  it("keeps all options visible and blocks typing when filterMode is none", async () => {
     const user = userEvent.setup()
     const currProps = getProps({
       options: ["yes", "no", "maybe"],
@@ -358,16 +364,65 @@ describe("Selectbox widget", () => {
     render(<Selectbox {...currProps} />)
     const selectboxInput = screen.getByRole("combobox")
 
-    // With filter_mode=None the input is NOT marked readOnly — readOnly prevents
-    // React Aria from opening the dropdown on click/focus (menuTrigger="focus").
-    // Instead, character input is blocked via onKeyDown so options always show
-    // the full unfiltered list.
+    // filter_mode=None uses inputMode="none" (not readOnly) to suppress the
+    // mobile software keyboard. readOnly would break both focus-on-click and
+    // React Aria's keyboard navigation, so the input must stay editable-but-focusable.
+    expect(selectboxInput).toHaveAttribute("inputmode", "none")
     expect(selectboxInput).not.toHaveAttribute("readonly")
 
-    await openDropdown(user)
+    // Clicking focuses the input and opens the dropdown with the full list.
+    await user.click(selectboxInput)
+    await waitFor(() => {
+      expect(screen.queryAllByRole("option")).toHaveLength(3)
+    })
+
+    // Typing is blocked, so no visible text is entered and the list stays
+    // unfiltered. Using keyboard() (not type()) avoids an implicit re-click,
+    // proving the earlier click is what focused the input.
+    await user.keyboard("no")
+    expect(selectboxInput).toHaveValue("")
     expect(screen.queryAllByRole("option")).toHaveLength(3)
 
-    await user.type(selectboxInput, "no")
+    // Arrow/Enter navigation works straight after the click with no manual
+    // focus() — this catches the click-then-keyboard focus regression. Landing
+    // on "no" (the second option) rules out an auto-select-first fallback.
+    await user.keyboard("{ArrowDown}{ArrowDown}{Enter}")
+    expect(currProps.onChange).toHaveBeenCalledWith("no")
+  })
+
+  it("blocks paste and IME composition input when filterMode is none", async () => {
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["yes", "no", "maybe"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
+      value: undefined,
+    })
+    render(<Selectbox {...currProps} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    await user.click(selectboxInput)
+    await waitFor(() => {
+      expect(screen.queryAllByRole("option")).toHaveLength(3)
+    })
+
+    // Pasting must not enter text or filter the list: onPaste calls
+    // preventDefault, so the input value never changes and the full list stays.
+    await user.paste("maybe")
+    expect(selectboxInput).toHaveValue("")
+    expect(screen.queryAllByRole("option")).toHaveLength(3)
+
+    // IME composition: onCompositionStart calls preventDefault as a best-effort
+    // block. Real browsers may ignore preventDefault on compositionstart, so we
+    // only assert that our handler requests cancellation (not that jsdom reports
+    // the event as canceled, which would be a jsdom-only artifact). The value and
+    // option list must stay unchanged regardless.
+    const compositionEvent = createEvent.compositionStart(selectboxInput, {
+      data: "n",
+    })
+    const preventDefaultSpy = vi.spyOn(compositionEvent, "preventDefault")
+    fireEvent(selectboxInput, compositionEvent)
+    expect(preventDefaultSpy).toHaveBeenCalled()
+    expect(selectboxInput).toHaveValue("")
     expect(screen.queryAllByRole("option")).toHaveLength(3)
   })
 
@@ -631,6 +686,25 @@ describe("Selectbox widget", () => {
       expect(input).toHaveAttribute("readonly")
       await user.type(input, "should not type")
       expect(screen.queryByText(/Add:/i)).not.toBeInTheDocument()
+    })
+
+    it("uses inputMode=none instead of readonly for filterMode none", () => {
+      // On mobile, a small non-creatable selectbox normally gets `readonly` to
+      // suppress the software keyboard (see the test above). filter_mode=None
+      // must opt out of that via the `!isFilterNone` term and instead rely on
+      // inputMode="none", so the input stays focusable for React Aria keyboard
+      // navigation while the mobile keyboard is still suppressed. Desktop tests
+      // run with isMobile() false, so this is the only place the mobile-gated
+      // `!isFilterNone` term is exercised.
+      props = getProps({
+        acceptNewOptions: false,
+        options: ["yes", "no", "maybe"],
+        filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
+      })
+      render(<Selectbox {...props} />)
+      const input = screen.getByRole("combobox")
+      expect(input).toHaveAttribute("inputmode", "none")
+      expect(input).not.toHaveAttribute("readonly")
     })
   })
 
