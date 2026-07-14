@@ -148,6 +148,7 @@ import {
   ParentMessage,
   SessionEvent,
   SessionStatus,
+  StopAutoRerun,
   WidgetStates,
 } from "@streamlit/protobuf"
 import {
@@ -1052,6 +1053,8 @@ export class App extends PureComponent<Props, State> {
         pageProfile: (pageProfile: PageProfile) =>
           this.handlePageProfileMsg(pageProfile),
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
+        stopAutoRerun: (stopAutoRerun: StopAutoRerun) =>
+          this.handleStopAutoRerun(stopAutoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
@@ -1272,6 +1275,17 @@ export class App extends PureComponent<Props, State> {
     }, interval * 1000)
 
     this.autoRerunIntervals.set(fragmentId, { timer, interval })
+  }
+
+  /**
+   * Handler for ForwardMsg.stopAutoRerun messages. The server sends this when
+   * it evicts fragments (e.g. a nested ``run_every`` fragment whose ancestor
+   * stopped rendering it), so we cancel their pending auto-rerun timers.
+   */
+  handleStopAutoRerun = (stopAutoRerun: StopAutoRerun): void => {
+    stopAutoRerun.fragmentIds.forEach(fragmentId => {
+      this.clearAutoRerunInterval(fragmentId)
+    })
   }
 
   /**
