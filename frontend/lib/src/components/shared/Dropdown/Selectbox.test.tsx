@@ -351,6 +351,48 @@ describe("Selectbox widget", () => {
     expect(screen.queryAllByRole("option")).toHaveLength(3)
   })
 
+  it("replaces the committed label when typing after focus (type-to-search)", async () => {
+    // Regression test for https://github.com/streamlit/streamlit/issues/15985
+    // With a value already committed, focusing and typing must start a fresh
+    // search (replace the label) instead of appending behind it.
+    const user = userEvent.setup()
+    props = getProps({ options: ["Apple", "Banana", "Cherry"], value: "Banana" })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("Banana")
+
+    await user.click(input)
+    await user.keyboard("Ch")
+
+    // The committed "Banana" must be replaced, not appended to ("BananaCh").
+    expect(input).toHaveValue("Ch")
+    expect(
+      screen.getByRole("option", { name: "Cherry" })
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("option", { name: "Banana" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not re-select the query when RAC refocuses the input mid-typing", async () => {
+    // Guards the focus handler: it must only select while the input still
+    // shows the committed label, so a refocus after the first keystroke does
+    // not clobber characters already typed.
+    const user = userEvent.setup()
+    props = getProps({ options: ["Apple", "Banana", "Cherry"], value: "Banana" })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.keyboard("c")
+    // A second focus event (as RAC may fire when opening the dropdown) must
+    // not re-select the "c" the user just typed.
+    fireEvent.focus(input)
+    await user.keyboard("h")
+
+    expect(input).toHaveValue("ch")
+  })
+
   it("updates value if new value provided from parent", () => {
     const { rerender } = render(<Selectbox {...props} />)
     expect(screen.getByDisplayValue(props.options[0])).toBeVisible()

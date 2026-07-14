@@ -385,6 +385,24 @@ const Selectbox: FC<Props> = ({
     openDropdownRef.current?.()
   }, [selectDisabled])
 
+  // Select the committed label when the input gains focus so the first
+  // keystroke replaces it and starts a fresh search, instead of appending
+  // behind the caret (which is placed at the end of the text). The label
+  // stays visible until the user types. Skipped for the mobile read-only
+  // path where typing is disabled.
+  const handleInputFocus = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>): void => {
+      if (inputReadOnly) return
+      // Only select while the input still shows the committed label. RAC can
+      // refocus the input mid-typing (e.g. when the dropdown opens); guarding
+      // on the current text avoids re-selecting and clobbering the query.
+      if (e.currentTarget.value === (valueRef.current ?? "")) {
+        e.currentTarget.select()
+      }
+    },
+    [inputReadOnly]
+  )
+
   /**
    * Capture-phase keydown — fires before RAC's handler:
    * - Records wasOpenBeforeEnterRef so the bubble-phase handler can check
@@ -505,6 +523,7 @@ const Selectbox: FC<Props> = ({
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}
               onPointerDown={handleInputPointerDown}
+              onFocus={handleInputFocus}
               onKeyDownCapture={handleInputKeyDownCapture}
               onKeyDown={handleInputKeyDown}
               onPaste={isFilterNone ? e => e.preventDefault() : undefined}
