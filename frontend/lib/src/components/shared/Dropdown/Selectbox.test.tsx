@@ -350,10 +350,11 @@ describe("Selectbox widget", () => {
       expect(screen.queryAllByRole("option")).toHaveLength(3)
     })
 
-    // Typing is blocked, so the list stays unfiltered. Using keyboard() (not
-    // type()) avoids an implicit re-click, proving the earlier click is what
-    // focused the input.
+    // Typing is blocked, so no visible text is entered and the list stays
+    // unfiltered. Using keyboard() (not type()) avoids an implicit re-click,
+    // proving the earlier click is what focused the input.
     await user.keyboard("no")
+    expect(selectboxInput).toHaveValue("")
     expect(screen.queryAllByRole("option")).toHaveLength(3)
 
     // Arrow/Enter navigation works straight after the click with no manual
