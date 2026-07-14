@@ -39,8 +39,19 @@ def _set_up_signal_handler(server: Server) -> None:
     _LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number: int, stack_frame: Any) -> None:  # noqa: ARG001
-        # The server will shut down its threads and exit its loop.
-        server.stop()
+        # This handler can interrupt the event loop in the middle of a
+        # buffered console write, in which case the console output triggered
+        # by `Server.stop` raises "RuntimeError: reentrant call inside
+        # <_io.BufferedWriter>" (mainly on Windows). Defer the stop to the
+        # event loop instead of running it inline whenever possible.
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running event loop; the server will shut down its threads
+            # and exit its loop.
+            server.stop()
+        else:
+            loop.call_soon_threadsafe(server.stop)
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)

@@ -15,11 +15,13 @@
 from __future__ import annotations
 
 import asyncio
+import builtins
 from http.cookies import SimpleCookie
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from unittest.mock import MagicMock
 from urllib.parse import parse_qs, urlparse
 
+import pytest
 from authlib.integrations import starlette_client
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
@@ -28,6 +30,7 @@ from starlette.responses import PlainTextResponse, RedirectResponse, Response
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
+from streamlit.errors import StreamlitMissingAuthlibError
 from streamlit.web.server.starlette import starlette_app_utils, starlette_auth_routes
 from streamlit.web.server.starlette.starlette_auth_routes import (
     _get_cookie_path,
@@ -42,9 +45,6 @@ from streamlit.web.server.starlette.starlette_server_config import (
     USER_COOKIE_NAME,
 )
 from tests.testutil import patch_config_options
-
-if TYPE_CHECKING:
-    import pytest
 
 TORNADO_SIGNED_USER_COOKIE = (
     "2|1:0|10:1780515959|15:_streamlit_user|68:"
@@ -114,6 +114,60 @@ def _patch_login_with_dummy_client(monkeypatch: pytest.MonkeyPatch) -> None:
         "_create_oauth_client",
         lambda provider: (_DummyClient(), "/redirect"),
     )
+
+
+def _mock_missing_starlette_client_import(missing_module: str) -> Any:
+    original_import = builtins.__import__
+
+    def mock_import(
+        name: str,
+        globals: dict[str, Any] | None = None,
+        locals: dict[str, Any] | None = None,
+        fromlist: tuple[str, ...] = (),
+        level: int = 0,
+    ) -> Any:
+        if name == "authlib.integrations" and "starlette_client" in fromlist:
+            raise ModuleNotFoundError(
+                f"No module named '{missing_module}'", name=missing_module
+            )
+        return original_import(name, globals, locals, fromlist, level)
+
+    return mock_import
+
+
+@pytest.mark.parametrize(
+    "missing_module",
+    [
+        # Authlib itself is not installed.
+        "authlib",
+        # Authlib is installed but too old to expose the Starlette integration.
+        "authlib.integrations.starlette_client",
+    ],
+)
+def test_create_oauth_client_reports_missing_authlib(
+    monkeypatch: pytest.MonkeyPatch, missing_module: str
+) -> None:
+    """Report the auth extra install hint when Authlib is missing or too old."""
+    monkeypatch.setattr(
+        builtins, "__import__", _mock_missing_starlette_client_import(missing_module)
+    )
+
+    with pytest.raises(StreamlitMissingAuthlibError):
+        starlette_auth_routes._create_oauth_client("default")
+
+
+def test_create_oauth_client_preserves_nested_module_not_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Preserve nested import failures from Authlib's Starlette integration."""
+    monkeypatch.setattr(
+        builtins, "__import__", _mock_missing_starlette_client_import("httpx")
+    )
+
+    with pytest.raises(ModuleNotFoundError, match="httpx") as exc_info:
+        starlette_auth_routes._create_oauth_client("default")
+
+    assert exc_info.value.name == "httpx"
 
 
 def test_redirect_without_provider(monkeypatch: pytest.MonkeyPatch) -> None:

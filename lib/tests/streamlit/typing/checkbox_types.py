@@ -51,6 +51,9 @@ if TYPE_CHECKING:
     assert_type(
         checkbox("Accept terms", key="bind_checkbox", bind="query-params"), bool
     )
+    assert_type(
+        checkbox("Accept terms", key="persist_checkbox", persist_state="session"), bool
+    )
 
     def my_callback() -> None:
         pass
@@ -111,6 +114,9 @@ if TYPE_CHECKING:
     assert_type(toggle("Enable feature", width="stretch"), bool)
     assert_type(toggle("Enable feature", width=150), bool)
     assert_type(toggle("Enable feature", key="bind_toggle", bind="query-params"), bool)
+    assert_type(
+        toggle("Enable feature", key="persist_toggle", persist_state="page"), bool
+    )
 
     assert_type(toggle("Enable feature", on_change=my_callback), bool)
     assert_type(

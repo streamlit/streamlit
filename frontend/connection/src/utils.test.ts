@@ -481,6 +481,56 @@ describe("fetchWithTimeout", () => {
     })
   })
 
+  it("aborts the in-flight request when the external signal fires", async () => {
+    const externalController = new AbortController()
+    globalThis.fetch = vi.fn().mockImplementation((_url, options) => {
+      return new Promise((_resolve, reject) => {
+        options?.signal?.addEventListener("abort", () => {
+          reject(new DOMException("Aborted", "AbortError"))
+        })
+      })
+    })
+
+    const resultPromise = fetchWithTimeout(
+      mockUrl,
+      5000,
+      externalController.signal
+    )
+    externalController.abort()
+
+    // A caller-initiated abort must be reported as an abort, not a timeout.
+    await expect(resultPromise).rejects.toMatchObject({
+      name: "FetchError",
+      isAborted: true,
+      isTimeout: false,
+    })
+  })
+
+  it("aborts immediately when the external signal is already aborted", async () => {
+    const externalController = new AbortController()
+    externalController.abort()
+
+    globalThis.fetch = vi.fn().mockImplementation((_url, options) => {
+      return new Promise((_resolve, reject) => {
+        if (options?.signal?.aborted) {
+          reject(new DOMException("Aborted", "AbortError"))
+          return
+        }
+        options?.signal?.addEventListener("abort", () => {
+          reject(new DOMException("Aborted", "AbortError"))
+        })
+      })
+    })
+
+    await expect(
+      fetchWithTimeout(mockUrl, 5000, externalController.signal)
+    ).rejects.toMatchObject({
+      name: "FetchError",
+      isAborted: true,
+      isTimeout: false,
+    })
+  })
+
   it("throws FetchError with isNetworkError on TypeError", async () => {
     globalThis.fetch = vi
       .fn()

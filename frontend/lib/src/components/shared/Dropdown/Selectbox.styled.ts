@@ -189,6 +189,26 @@ export const StyledListBox = styled(ListBox)(({ theme }) => ({
   margin: theme.spacing.none,
 }))
 
+/**
+ * Message shown when filtering leaves the dropdown without any options.
+ * Matches the empty state used by the Multiselect dropdown.
+ */
+export const StyledEmptyState = styled.span(({ theme }) => ({
+  boxSizing: "border-box",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+  height: theme.sizes.emptyDropdownHeight,
+  padding: theme.spacing.sm,
+  color: theme.colors.fadedText60,
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.normal,
+  lineHeight: theme.lineHeights.base,
+  textAlign: "center",
+  cursor: "not-allowed",
+}))
+
 interface StyledListBoxItemProps {
   $isCreatable?: boolean
 }

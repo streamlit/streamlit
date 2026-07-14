@@ -135,6 +135,24 @@ describe("ImageList Element", () => {
       const caption = screen.getByTestId("stImageCaption")
       expect(caption).toHaveTextContent("Test caption")
     })
+
+    it.each([
+      "javascript:alert(1)",
+      "JAVASCRIPT:alert(1)",
+      "java\nscript:alert(1)",
+      "vbscript:msgbox(1)",
+    ])("blocks dangerous link URLs: %s", linkUrl => {
+      const props = getProps({
+        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+        link: linkUrl,
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("href", "#")
+      expect(link).toHaveAttribute("target", "_self")
+      expect(link).toHaveAttribute("rel", "noreferrer")
+    })
   })
 
   describe("New width configuration system", () => {

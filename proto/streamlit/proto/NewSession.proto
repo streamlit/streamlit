@@ -84,6 +84,21 @@ message Initialize {
   // True if the command used to start this app was `streamlit hello`.
   bool is_hello = 7;
 
+  // True when the server wants the frontend to show the "install skills"
+  // nudge. Only set in local development when an agent harness is detected,
+  // the bundled Streamlit skills are not yet installed, the user has not
+  // dismissed the nudge permanently, and the browser is connected directly
+  // over a loopback address. Frontend treats an unset value as false.
+  bool recommend_skills_install = 8;
+
+  // Connection-locality class of an otherwise-eligible nudge that was
+  // suppressed because the browser is NOT on a direct-loopback connection:
+  // "private" (RFC1918/Docker/VM/LAN), "other" (public/relayed), "unknown"
+  // (peer IP unavailable/unparseable), or empty when not applicable. Purely for
+  // adoption telemetry — it lets us measure how much of the agent-harness
+  // audience the conservative loopback gate excludes.
+  string skills_nudge_suppressed_locality = 9;
+
   reserved 5;
 }
 
@@ -122,6 +137,9 @@ message Config {
     SHOW_ERROR_LINKS_FALSE = 3;
   }
   ShowErrorLinks show_error_links = 9;
+
+  // See config option "client.disableDataExport".
+  bool disable_data_export = 10;
 
   reserved 1, 4;
 }

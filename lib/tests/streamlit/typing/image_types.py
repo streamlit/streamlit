@@ -120,4 +120,4 @@ if TYPE_CHECKING:
         "auto",
         None,
         "https://example.com",
-    )  # type: ignore[misc]
+    )  # type: ignore[call-arg]

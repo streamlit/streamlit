@@ -51,6 +51,7 @@ import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
@@ -81,6 +82,7 @@ import useDataEditor from "./hooks/useDataEditor"
 import useDataExporter from "./hooks/useDataExporter"
 import useDataFrameCapabilities from "./hooks/useDataFrameCapabilities"
 import useDataLoader from "./hooks/useDataLoader"
+import useEditReconciliation from "./hooks/useEditReconciliation"
 import useRowHover from "./hooks/useRowHover"
 import useSelectionHandler from "./hooks/useSelectionHandler"
 import useTableSizer from "./hooks/useTableSizer"
@@ -188,7 +190,8 @@ function DataFrame({
     useRowHover(gridTheme)
 
   // Default to false, if no libConfig, e.g. for tests
-  const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
+  const { enforceDownloadInNewTab = false, disableDataExport = false } =
+    useContext(LibConfigContext)
 
   const [isFocused, setIsFocused] = useState<boolean>(true)
   const [showSearch, setShowSearch] = useState(false)
@@ -220,6 +223,8 @@ function DataFrame({
   // editingMode field defined.
   const editingMode =
     element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
+  const isReadOnly = editingMode === DataframeProto.EditingMode.READ_ONLY
+  const isClipboardCopyDisabled = disableDataExport && isReadOnly
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
@@ -245,6 +250,7 @@ function DataFrame({
     disabled,
     numDataRows: originalNumRows,
     numDataColumns: dataDimensions.numDataColumns,
+    disableDataExport,
   })
 
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)
@@ -267,6 +273,7 @@ function DataFrame({
   const {
     editingState,
     numRows,
+    editStateHydrationCount,
     updateNumRows,
     syncEditState,
     createSyncSelectionState,
@@ -507,6 +514,15 @@ function DataFrame({
     enforceDownloadInNewTab
   )
 
+  const { getSourceCellValue } = useEditReconciliation({
+    data,
+    allColumns,
+    editingState,
+    isEditingEnabled: canEdit,
+    editStateHydrationCount,
+    syncEditState,
+  })
+
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
     useDataEditor({
       columns,
@@ -515,6 +531,7 @@ function DataFrame({
       canDeleteRows,
       editingState,
       getCellContent,
+      getSourceCellValue,
       getOriginalIndex,
       refreshCells,
       updateNumRows,
@@ -974,6 +991,7 @@ function DataFrame({
           // Activate keybindings:
           keybindings={{
             downFill: true,
+            copy: !isClipboardCopyDisabled,
             ...(isCellSelectionActivated || isLargeTable
               ? {
                   // Deactivate select all to prevent potential performance issues
@@ -1301,7 +1319,7 @@ function DataFrame({
           // by the transform property of the parent element).
           // The portal element is expected to always exist (-> PortalProvider).
           // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
-          document.querySelector("#portal") as HTMLElement
+          document.querySelector(`#${DATAFRAME_PORTAL_ID}`) as HTMLElement
         )}
       {buttonActionMenu &&
         createPortal(
@@ -1314,7 +1332,7 @@ function DataFrame({
             onCloseMenu={clearButtonActionMenu}
           />,
           // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
-          document.querySelector("#portal") as HTMLElement
+          document.querySelector(`#${DATAFRAME_PORTAL_ID}`) as HTMLElement
         )}
     </StyledResizableContainer>
   )

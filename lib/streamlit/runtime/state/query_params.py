@@ -22,11 +22,14 @@ from typing import TYPE_CHECKING, Any, Final, cast
 from urllib import parse
 
 from streamlit.errors import StreamlitAPIException, StreamlitQueryParamDictValueError
+from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 if TYPE_CHECKING:
     from _typeshed import SupportsKeysAndGetItem
+
+_LOGGER: Final = get_logger(__name__)
 
 QueryParamValue = str | Iterable[str]
 QueryParamsInput = Mapping[str, QueryParamValue] | Iterable[tuple[str, QueryParamValue]]
@@ -43,6 +46,43 @@ EMBED_QUERY_PARAMS_KEYS: Final[list[str]] = [
 PROTECTED_QUERY_PARAMS: Final[frozenset[str]] = frozenset(
     [EMBED_QUERY_PARAM, EMBED_OPTIONS_QUERY_PARAM]
 )
+_CLIENT_STATE_QUERY_STRING_MAX_LENGTH: Final[int] = 512 * 1024  # 512Ki characters
+_CLIENT_STATE_QUERY_STRING_MAX_FIELDS: Final[int] = 1000
+
+
+def sanitize_query_string(query_string: str) -> str:
+    """Return an empty query string when client input exceeds safe limits."""
+    if not query_string:
+        return ""
+
+    if len(query_string) > _CLIENT_STATE_QUERY_STRING_MAX_LENGTH:
+        _LOGGER.warning(
+            "Ignoring query string with %d characters because it exceeds the "
+            "%d character limit.",
+            len(query_string),
+            _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+        )
+        return ""
+
+    num_fields = query_string.count("&") + 1
+    if num_fields > _CLIENT_STATE_QUERY_STRING_MAX_FIELDS:
+        _LOGGER.warning(
+            "Ignoring query string with %d parameters because it exceeds the "
+            "%d parameter limit.",
+            num_fields,
+            _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+        )
+        return ""
+
+    return query_string
+
+
+def _parse_query_string(query_string: str) -> dict[str, list[str]]:
+    """Parse a query string into a dict, ignoring input that exceeds safe limits."""
+    query_string = sanitize_query_string(query_string)
+    if not query_string:
+        return {}
+    return parse.parse_qs(query_string, keep_blank_values=True)
 
 
 @dataclass
@@ -645,7 +685,7 @@ class QueryParams(MutableMapping[str, str]):
         query_string : str
             The URL query string (without the leading '?').
         """
-        parsed = parse.parse_qs(query_string, keep_blank_values=True)
+        parsed = _parse_query_string(query_string)
         self._initial_query_params = parsed
 
     def set_initial_query_params_from_current(self) -> None:
@@ -741,7 +781,7 @@ class QueryParams(MutableMapping[str, str]):
             Params bound to other pages are filtered out.
             If None, all params are kept (no filtering).
         """
-        parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
+        parsed_query_params = _parse_query_string(query_string)
 
         self.clear_with_no_forward_msg()
         stale_widget_ids: list[str] = []

@@ -8,7 +8,7 @@ updates:
       interval: "daily"
     # Allow a limited number of update PRs at a time
     # to keep the number of parallel dependency updates manageable.
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 8
 
     # Use cooldown to avoid updating dependencies too frequently
     # and minimize risk of supply chain attacks.
@@ -57,6 +57,9 @@ updates:
       - dependency-name: "@types/node"
         # Our types should match the version of node we're using as defined in `.nvmrc`
         versions: [">=25.0.0"]
+      - dependency-name: "color2k"
+        # Our Yarn patch only applies to color2k 2.0.3.
+        versions: [">=2.0.4"]
 
     groups:
       deck-gl:
@@ -114,6 +117,13 @@ updates:
         patterns:
           - "oxlint"
           - "oxfmt"
+      # Catch unmatched frontend minor/patch updates after the more specific groups.
+      frontend-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # Keep python dependencies up to date (via uv)
   # Root pyproject.toml contains dev/test dependency groups
@@ -123,12 +133,19 @@ updates:
       interval: "daily"
     # Allow a limited number of update PRs at a time
     # to keep the number of parallel dependency updates manageable.
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 8
+    # The published package manifest is owned by the /lib uv job below. The
+    # root uv job should only update the dev/test environment.
+    exclude-paths:
+      - "lib/pyproject.toml"
+    # Avoid raising lower-bound constraints when the latest release is already
+    # allowed; keeps the dev/test environment on broad ranges.
+    versioning-strategy: increase-if-necessary
 
     # Use cooldown to avoid updating dependencies too frequently
     # and minimize risk of supply chain attacks.
     cooldown:
-      default-days: 5
+      default-days: 4
 
     labels:
       - "change:chore"
@@ -136,16 +153,43 @@ updates:
       - "autofix"
       - "never-stale"
 
+    groups:
+      python-typing:
+        patterns:
+          - "mypy"
+          - "mypy-protobuf"
+          - "ty"
+          - "types-*"
+          - "*-stubs"
+      python-playwright:
+        patterns:
+          - "playwright"
+          - "pytest-playwright"
+          - "pixelmatch"
+      python-testing:
+        patterns:
+          - "pytest*"
+          - "hypothesis"
+          - "parameterized"
+          - "requests-mock"
+          - "testfixtures"
+
   # Keep streamlit package runtime dependencies up to date
   # lib/pyproject.toml contains the published package's dependencies
   - package-ecosystem: "uv"
     directory: "/lib"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 3
+    # Let Dependabot classify the published Streamlit package as a library, which
+    # widens supported version ranges internally. Explicit
+    # `versioning-strategy: widen` is not currently accepted for the uv ecosystem
+    # by GitHub's dependabot.yml schema (only lockfile-only, auto, increase, and
+    # increase-if-necessary are), so `auto` is used to opt into widening.
+    # Tracking issue: https://github.com/dependabot/dependabot-core/issues/15290
+    versioning-strategy: auto
 
     cooldown:
-      default-days: 5
+      default-days: 4
 
     labels:
       - "change:chore"
@@ -164,6 +208,19 @@ updates:
       - "impact:internal"
       - "autofix"
       - "never-stale"
+
+    groups:
+      github-actions-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      codeql-action:
+        patterns:
+          - "github/codeql-action/init"
+          - "github/codeql-action/analyze"
 
   # Keep pre-commit hooks up to date
   - package-ecosystem: "pre-commit"
