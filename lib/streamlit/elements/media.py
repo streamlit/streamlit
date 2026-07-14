@@ -650,6 +650,10 @@ def marshall_video(
             user_key=None,
             key_as_main_identity=False,
             dg=dg,
+            # Include the element's position in the app so that multiple
+            # video elements with identical arguments (e.g. in a loop) get
+            # distinct, stable IDs instead of colliding.
+            coordinates=coordinates,
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,
@@ -849,6 +853,10 @@ def marshall_audio(
             user_key=None,
             key_as_main_identity=False,
             dg=dg,
+            # Include the element's position in the app so that multiple
+            # audio elements with identical arguments (e.g. in a loop) get
+            # distinct, stable IDs instead of colliding.
+            coordinates=coordinates,
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,

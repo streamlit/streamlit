@@ -244,6 +244,48 @@ class MediaTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidWidthError):
             st.video("foo.mp4", "video/mp4", width=width)
 
+    def test_audio_autoplay_repeated_identical_args_does_not_raise(self):
+        """Multiple st.audio calls with identical args + autoplay=True should not
+        raise StreamlitDuplicateElementId, since each call has a distinct position
+        in the app (see GH issue #11360).
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            for _ in range(3):
+                st.audio("foo.wav", "audio/wav", autoplay=True)
+
+            ids = [
+                delta.new_element.audio.id for delta in self.get_all_deltas_from_queue()
+            ]
+            assert len(ids) == 3
+            assert len(set(ids)) == 3
+
+    def test_video_autoplay_repeated_identical_args_does_not_raise(self):
+        """Multiple st.video calls with identical args + autoplay=True should not
+        raise StreamlitDuplicateElementId, since each call has a distinct position
+        in the app (see GH issue #11360).
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            for _ in range(3):
+                st.video("foo.mp4", "video/mp4", autoplay=True, muted=True)
+
+            ids = [
+                delta.new_element.video.id for delta in self.get_all_deltas_from_queue()
+            ]
+            assert len(ids) == 3
+            assert len(set(ids)) == 3
+
 
 class _RawIOReadReturnsNone(io.RawIOBase):
     """Minimal RawIOBase whose read() returns None (non-standard but handled)."""
