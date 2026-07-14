@@ -465,7 +465,21 @@ const NumberInput: React.FC<Props> = ({
        * printf-style format strings supported by st.number_input's `format`
        * parameter (e.g. "%0.2f", "%e", "%g").
        */}
-      <TextField isDisabled={disabled} aria-label={element.label}>
+      {/*
+       * `validationBehavior="aria"` disables React Aria's native constraint
+       * validation. Otherwise React Aria reflects the input's native `min`/`max`
+       * `ValidityState` into `aria-invalid`/`data-invalid` independently of our
+       * `validationError`, which leaves the field styled red (and marked invalid
+       * for screen readers) after the user corrects an out-of-range value.
+       * Driving `isInvalid` from `validationError` makes our custom range
+       * validation the single source of truth for the invalid state.
+       */}
+      <TextField
+        isDisabled={disabled}
+        aria-label={element.label}
+        validationBehavior="aria"
+        isInvalid={!!validationError}
+      >
         <StyledInputContainer
           $isFocused={isFocused}
           $hasError={!!validationError}
@@ -495,7 +509,7 @@ const NumberInput: React.FC<Props> = ({
             max={max}
             value={formattedValue ?? ""}
             placeholder={element.placeholder}
-            aria-invalid={validationError ? true : undefined}
+            // `aria-invalid` is driven by the TextField's `isInvalid` prop.
             aria-describedby={validationError ? validationErrorId : undefined}
             onFocus={handleFocus}
             onBlur={handleBlur}

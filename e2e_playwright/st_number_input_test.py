@@ -315,8 +315,16 @@ def test_number_input_shows_range_validation_error(
     )
     reset_hovering(app)
 
-    # Editing to a valid value clears the error and commits it.
+    # Correcting to a valid value clears the invalid state immediately, before
+    # re-committing. Regression test for a bug where React Aria's native
+    # constraint validation kept `aria-invalid` set (and the text styled red)
+    # until the next commit, leaving a red value with no accompanying error.
     input_field.fill("5")
+    expect(input_field).not_to_have_attribute("aria-invalid", "true")
+    expect(number_input.get_by_role("alert")).to_have_count(0)
+    expect(number_input.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
+
+    # Committing the corrected value persists it.
     input_field.press("Enter")
     wait_for_app_run(app)
 
