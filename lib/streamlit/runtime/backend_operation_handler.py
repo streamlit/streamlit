@@ -222,15 +222,19 @@ class InstallSkillsHandler(BackendOperationHandler):
         # after a dropped connection whose first attempt already completed
         # server-side — surfacing a success as an unrecoverable error and
         # logging it as a failed install. Idempotent retry is the correct path.
-        gate_reason = (
-            "headless"
-            if config.get_option("server.headless")
-            else "no_agent"
-            if not skills.detect_installed_agents()
-            else "non_loopback"
-            if connection_locality(session_id) != "loopback"
-            else None
-        )
+        #
+        # Check the conditions in order; the first that trips names the telemetry
+        # reason. This short-circuits, so e.g. detect_installed_agents() (which
+        # touches the filesystem) isn't called in headless mode.
+        if config.get_option("server.headless"):
+            gate_reason = "headless"
+        elif not skills.detect_installed_agents():
+            gate_reason = "no_agent"
+        elif connection_locality(session_id) != "loopback":
+            gate_reason = "non_loopback"
+        else:
+            gate_reason = None
+
         if gate_reason is not None:
             return BackendOperationResponse(
                 request_id=request.request_id,
