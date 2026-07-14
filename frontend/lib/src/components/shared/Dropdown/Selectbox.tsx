@@ -97,8 +97,8 @@ const CREATABLE_ID = "__creatable__"
  *
  * Used to detect the user typing over an untouched committed label so the
  * first keystroke starts a fresh search instead of appending behind the
- * caret. Works purely from the reported input text, so it is independent of
- * caret position and browser-specific focus/selection behavior.
+ * committed label. Works from the reported input text alone, so it is
+ * independent of caret position and browser-specific focus/selection behavior.
  */
 export const getInsertedText = (
   before: string,

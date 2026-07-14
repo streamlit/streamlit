@@ -377,9 +377,9 @@ describe("Selectbox widget", () => {
 
   it("replaces the committed label when the browser appends the keystroke", async () => {
     // Some browsers (e.g. Safari/WebKit) place the caret at the end of the
-    // committed label on click-focus, so the first keystroke arrives appended
-    // to the whole label. The change handler must still strip the label and
-    // keep only the typed character(s), regardless of caret behavior.
+    // committed label on click-focus, appending the first keystroke to the
+    // whole label. The change handler must still strip the label and keep only
+    // the typed character(s), regardless of caret behavior.
     const user = userEvent.setup()
     props = getProps({
       options: ["Apple", "Banana", "Cherry"],
