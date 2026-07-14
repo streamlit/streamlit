@@ -402,7 +402,7 @@ const Selectbox: FC<Props> = ({
       // An empty insertion means no new characters were typed (e.g. RAC
       // reporting the unchanged committed label on close/revert), which must
       // not clear the input.
-      if (inserted !== null && inserted !== "" && inserted !== text) {
+      if (inserted !== null && inserted !== "") {
         nextText = inserted
       }
     }

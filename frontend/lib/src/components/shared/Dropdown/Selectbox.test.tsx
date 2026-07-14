@@ -429,6 +429,34 @@ describe("Selectbox widget", () => {
     expect(screen.queryByRole("option", { name: "b" })).not.toBeInTheDocument()
   })
 
+  it("starts a fresh search over a committed value when acceptNewOptions is true", async () => {
+    // The fresh-search strip also runs with acceptNewOptions, so typing over a
+    // committed value yields the typed text ("foo" + "bar" -> "bar", offering
+    // "Add: bar") instead of the 1.59.x append bug ("foobar"). Other
+    // acceptNewOptions tests use value: undefined, so none cover this path.
+    const user = userEvent.setup()
+    props = getProps({
+      options: ["foo", "other"],
+      value: "foo",
+      acceptNewOptions: true,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("foo")
+
+    await user.click(input)
+    act(() => {
+      // Simulate the browser appending the keystrokes behind the committed label.
+      // eslint-disable-next-line testing-library/prefer-user-event
+      fireEvent.change(input, { target: { value: "foobar" } })
+    })
+
+    expect(input).toHaveValue("bar")
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: /Add: bar/i })).toBeVisible()
+    })
+  })
+
   it("updates value if new value provided from parent", () => {
     const { rerender } = render(<Selectbox {...props} />)
     expect(screen.getByDisplayValue(props.options[0])).toBeVisible()
