@@ -39,6 +39,10 @@ export const StyledResizableContainer =
         minWidth: "100%",
         minHeight: minHeight,
         borderRadius: theme.radii.default,
+        // Clip the grid canvas (header background, cell highlights, etc.)
+        // to the rounded corners; without this, border-radius on the parent
+        // does not affect the child's painted content.
+        overflow: "hidden",
       },
 
       "& .dvn-scroller": {
