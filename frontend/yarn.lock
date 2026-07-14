@@ -3133,15 +3133,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@playwright/cli@npm:^0.1.15":
-  version: 0.1.15
-  resolution: "@playwright/cli@npm:0.1.15"
+"@playwright/cli@npm:^0.1.16":
+  version: 0.1.16
+  resolution: "@playwright/cli@npm:0.1.16"
   dependencies:
-    playwright: "npm:1.62.0-alpha-2026-06-29"
-    playwright-core: "npm:1.62.0-alpha-2026-06-29"
+    playwright: "npm:1.62.0-alpha-2026-07-08"
+    playwright-core: "npm:1.62.0-alpha-2026-07-08"
   bin:
     playwright-cli: playwright-cli.js
-  checksum: 10c0/7eb2c72acf0681c8745b8281af4634f896fa69ae1be2e0442dd062a21d400651b2a32aa88c30643f742246cb7f7f2f2a297f632ceed7f576f841e95e81b29900
+  checksum: 10c0/e47419955c79af0d6e5adf7f7621683e153be3c657cf72476791c792480051543e6f7ebb95fed5f8be332836ab3518a6ebcac6dad5364f120f76ede830be13cb
   languageName: node
   linkType: hard
 
@@ -3790,7 +3790,7 @@ __metadata:
     vitest: "npm:^4.1.10"
     vitest-canvas-mock: "npm:^1.1.4"
     vitest-fetch-mock: "npm:^0.4.5"
-    wavesurfer.js: "npm:^7.12.8"
+    wavesurfer.js: "npm:^7.12.10"
     xxhashjs: "npm:^0.2.2"
   peerDependencies:
     react: ^17.0.0 || ^18.0.0
@@ -4967,11 +4967,11 @@ __metadata:
   linkType: hard
 
 "@types/node@npm:>=24 <25":
-  version: 24.13.2
-  resolution: "@types/node@npm:24.13.2"
+  version: 24.13.3
+  resolution: "@types/node@npm:24.13.3"
   dependencies:
     undici-types: "npm:~7.18.0"
-  checksum: 10c0/d7d48a88a4feb0a6aac3cbfaf9ef3b12752b4b09447f88dd0b4c77c03b281e3d4330fe6982a99aedcd63fc16c7540a0c248b91eb2abb0b3edd884d7fe684e9ea
+  checksum: 10c0/a5bc08f49b9581dcdca90e02cd77197a3c799840807664942e5cd5161a553d4d2ae8064f7e3294410d748d7d098b5c1848be7fa50c06f29c4193ab16be4e59eb
   languageName: node
   linkType: hard
 
@@ -12241,9 +12241,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knip@npm:^6.24.0":
-  version: 6.24.0
-  resolution: "knip@npm:6.24.0"
+"knip@npm:^6.25.0":
+  version: 6.25.0
+  resolution: "knip@npm:6.25.0"
   dependencies:
     fdir: "npm:^6.5.0"
     formatly: "npm:^0.3.0"
@@ -12261,7 +12261,7 @@ __metadata:
   bin:
     knip: bin/knip.js
     knip-bun: bin/knip-bun.js
-  checksum: 10c0/fe55ed075fd240e678a0064895d5361b2758fdfbe40a53823cbb2b59f1e2a6fb67e7f6f1f12d7312c525c8c910afbe93c8368d3e61eeac876effe80f4bbd4c45
+  checksum: 10c0/4f91895d9dc6d4112f6bcaee0a22e6c5c9357907b6396d1a2f06ee36229414d3b2776a5d91be69da7fa349b6a7f8074b3df775fc1ac7db6aca46d9eded073300
   languageName: node
   linkType: hard
 
@@ -14847,27 +14847,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"playwright-core@npm:1.62.0-alpha-2026-06-29":
-  version: 1.62.0-alpha-2026-06-29
-  resolution: "playwright-core@npm:1.62.0-alpha-2026-06-29"
+"playwright-core@npm:1.62.0-alpha-2026-07-08":
+  version: 1.62.0-alpha-2026-07-08
+  resolution: "playwright-core@npm:1.62.0-alpha-2026-07-08"
   bin:
     playwright-core: cli.js
-  checksum: 10c0/31f1848d3ccce7d6b44b370b9a0e01af95d2590bb1f3a48f39c785acb562c25752b43cc6c01428ac25931a192be7b6ed473e52d2430249d9d716946a503ae345
+  checksum: 10c0/d038044e52aa483fa6ff7ac0940b9035b6c27b6b2dcf1d714bcdb7a36b59350dde33aa1229845fa3ca60e1abedb7fd6df4d064e487aa549202a171160da50a72
   languageName: node
   linkType: hard
 
-"playwright@npm:1.62.0-alpha-2026-06-29":
-  version: 1.62.0-alpha-2026-06-29
-  resolution: "playwright@npm:1.62.0-alpha-2026-06-29"
+"playwright@npm:1.62.0-alpha-2026-07-08":
+  version: 1.62.0-alpha-2026-07-08
+  resolution: "playwright@npm:1.62.0-alpha-2026-07-08"
   dependencies:
     fsevents: "npm:2.3.2"
-    playwright-core: "npm:1.62.0-alpha-2026-06-29"
+    playwright-core: "npm:1.62.0-alpha-2026-07-08"
   dependenciesMeta:
     fsevents:
       optional: true
   bin:
     playwright: cli.js
-  checksum: 10c0/e73a96f067e3a7f15aa4f7b928a7323771e90a08b0047481f9213752e2a5dd21934509e1819ce862f5bb8ae6d547b71c13e6f90c2f80f423cda4ba7efa5303d8
+  checksum: 10c0/4a24dc21d58500ee3ec35724bdeec137ba7bc5062d26f98eeca09dc572ab3b065b2b6396b7f800eb9c4ba4d93e2ebca379d677cbe28bf021d83ef027b61a7d59
   languageName: node
   linkType: hard
 
@@ -17088,7 +17088,7 @@ __metadata:
     "@eslint/compat": "npm:^2.1.0"
     "@eslint/eslintrc": "npm:^3.3.5"
     "@eslint/js": "npm:^10.0.1"
-    "@playwright/cli": "npm:^0.1.15"
+    "@playwright/cli": "npm:^0.1.16"
     "@types/eslint": "npm:^9.6.1"
     "@types/eslint-plugin-jsx-a11y": "npm:~6.10.1"
     "@types/node": "npm:>=24 <25"
@@ -17106,7 +17106,7 @@ __metadata:
     eslint-plugin-testing-library: "npm:^7.16.2"
     globals: "npm:^17.7.0"
     jiti: "npm:^2.7.0"
-    knip: "npm:^6.24.0"
+    knip: "npm:^6.25.0"
     oxfmt: "npm:^0.58.0"
     oxlint: "npm:^1.73.0"
     typescript: "npm:^6.0.3"
@@ -19306,10 +19306,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wavesurfer.js@npm:^7.12.8":
-  version: 7.12.8
-  resolution: "wavesurfer.js@npm:7.12.8"
-  checksum: 10c0/92097742f4652639e4df98e7c460fcd340779f088a91515df91933f02f973ef27031077d2e9d90c2922c61bd2a952a0c13c41e2770692e694b3dca2c53d3af70
+"wavesurfer.js@npm:^7.12.10":
+  version: 7.12.10
+  resolution: "wavesurfer.js@npm:7.12.10"
+  checksum: 10c0/ece78a38a8679d34395194f9eeca9fa2b5b9c772c1e66c81cd3103fbc62a1a365973ac9b31ceeb6448e5b9fa8c14da477eb7286ad28c42ce939998aa71e3af1f
   languageName: node
   linkType: hard
 
