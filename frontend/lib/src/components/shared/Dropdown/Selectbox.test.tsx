@@ -356,7 +356,10 @@ describe("Selectbox widget", () => {
     // With a value already committed, focusing and typing must start a fresh
     // search (replace the label) instead of appending behind it.
     const user = userEvent.setup()
-    props = getProps({ options: ["Apple", "Banana", "Cherry"], value: "Banana" })
+    props = getProps({
+      options: ["Apple", "Banana", "Cherry"],
+      value: "Banana",
+    })
     render(<Selectbox {...props} />)
     const input = screen.getByRole("combobox")
     expect(input).toHaveValue("Banana")
@@ -366,9 +369,7 @@ describe("Selectbox widget", () => {
 
     // The committed "Banana" must be replaced, not appended to ("BananaCh").
     expect(input).toHaveValue("Ch")
-    expect(
-      screen.getByRole("option", { name: "Cherry" })
-    ).toBeVisible()
+    expect(screen.getByRole("option", { name: "Cherry" })).toBeVisible()
     expect(
       screen.queryByRole("option", { name: "Banana" })
     ).not.toBeInTheDocument()
@@ -379,7 +380,10 @@ describe("Selectbox widget", () => {
     // shows the committed label, so a refocus after the first keystroke does
     // not clobber characters already typed.
     const user = userEvent.setup()
-    props = getProps({ options: ["Apple", "Banana", "Cherry"], value: "Banana" })
+    props = getProps({
+      options: ["Apple", "Banana", "Cherry"],
+      value: "Banana",
+    })
     render(<Selectbox {...props} />)
     const input = screen.getByRole("combobox")
 
