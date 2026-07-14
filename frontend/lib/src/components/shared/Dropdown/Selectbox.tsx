@@ -93,6 +93,16 @@ type ComboOption = {
 const CREATABLE_ID = "__creatable__"
 
 /**
+ * Pass-through filter for RAC's <ComboBox defaultFilter>. Streamlit's own
+ * `filterSelectOptions` runs upstream and produces `displayOptions`, so RAC
+ * must not re-filter — otherwise its built-in "contains" strategy would drop
+ * fuzzy matches like "ape" -> "Apple". See issue #16003.
+ *
+ * Defined at module scope so the prop is referentially stable across renders.
+ */
+const PASS_THROUGH_FILTER = (): boolean => true
+
+/**
  * If `after` is `before` with extra characters inserted (at any position),
  * return just those inserted characters; otherwise return null.
  *
@@ -554,6 +564,12 @@ const Selectbox: FC<Props> = ({
           onBlur={handleBlur}
           menuTrigger="manual"
           aria-label={label ?? "Selectbox"}
+          // Streamlit owns the filtering (fuzzy / contains / prefix / none),
+          // and passes the already-filtered list to <StyledListBox items=...>.
+          // Without this pass-through, RAC applies its own "contains" filter on
+          // top, dropping fuzzy matches whose query is not a contiguous
+          // substring (e.g. "ape" would not match "Apple"). See issue #16003.
+          defaultFilter={PASS_THROUGH_FILTER}
         >
           <DropdownController
             openRef={openDropdownRef}
