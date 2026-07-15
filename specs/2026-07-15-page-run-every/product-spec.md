@@ -145,8 +145,9 @@ st.set_page_config(run_every=2)                 # seconds
 ```
 
 **Dynamic control (enable/disable and change interval at runtime).** `st.set_page_config`
-can be called multiple times in a run, and later calls override earlier ones. Combined
-with widgets, this lets users pause or retune auto-refresh from the UI:
+can be called multiple times in a run; for each argument, the last call that passes it
+wins, and omitting an argument leaves it unchanged. Combined with widgets, this lets users
+pause or retune auto-refresh from the UI:
 
 ```python
 import streamlit as st
@@ -218,13 +219,26 @@ st.dataframe(get_daily_summary())     # refreshed by the page-level interval
     which resets it.)
   - *Slow apps.* If a run takes longer than `run_every`, effective cadence is bounded by
     run time — no backlog builds up (same as fragment `run_every`).
-- **Resolution / disabling.** Each full rerun re-evaluates the script, so the timer always
-  reflects the value armed during that run. A `set_page_config` call with a non-`None`
-  `run_every` arms (or re-arms) the timer at that interval; `None` (the default) does not
-  arm a timer. To stop auto-refresh at runtime, simply don't arm it — e.g. pass `None` when
-  a toggle is off (see the dynamic-control example). This makes `None` behave exactly like
-  `@st.fragment(run_every=None)` (no auto-rerun), rather than the "inherit previous value"
-  semantics of the visual `set_page_config` parameters.
+- **Open dialogs and unsubmitted forms.** A tick is a full rerun, so — exactly like
+  pressing "Rerun" — it re-executes the script and can dismiss an open `st.dialog` or reset
+  an unsubmitted `st.form`. The natural debounce above softens this for active users (each
+  interaction restarts the interval), but a tick can still interrupt a modal a user is
+  slowly filling out. For modal or multi-step flows, prefer pausing auto-refresh (pass
+  `run_every=None`) or scoping the live updates to a `@st.fragment(run_every=...)` rather
+  than refreshing the whole page. Built-in "pause while a dialog is open" behavior is out of
+  scope for v1 (see Out of Scope).
+- **Resolution / disabling (multiple `set_page_config` calls in one run).** The timer is
+  re-derived on every rerun from the value of the *last* call that **passed** `run_every`.
+  Like the visual parameters, a call that **omits** `run_every` leaves the current setting
+  untouched — a chrome-only `set_page_config(page_title=...)` after an earlier
+  `set_page_config(run_every=5)` keeps the 5-second timer; it does not silently disable it.
+  To turn auto-refresh off, pass `run_every=None` **explicitly** (e.g. when a toggle is off,
+  as in the dynamic-control example); if no call in the run passes `run_every`, no timer is
+  armed (and any timer from a previous run is cleared, since the timer is re-derived per
+  run). So an explicit `None` matches `@st.fragment(run_every=None)` (no auto-rerun), while
+  *omission* inherits like the other `set_page_config` parameters. This means the
+  implementation must distinguish "argument not passed" from an explicit `None` (via an
+  internal sentinel default); users still simply write `run_every=None` to disable.
 - **Background tabs.** Browsers throttle timers in inactive tabs (typically to ≥1s, and
   more aggressively when backgrounded). Very short intervals may therefore fire less often
   when the tab isn't focused. This is inherent to the frontend-timer approach (and matches
@@ -281,8 +295,11 @@ deferred (see Out of Scope).
   throttling, so we won't guarantee tight real-time cadence. Relaxing the floor below 1
   second (or making it configurable) can be revisited later based on demand — a non-breaking
   change.
-- **Pausing on window blur / "smart" refresh.** Beyond the browser's native background
-  throttling, we won't add explicit pause-when-hidden logic in v1.
+- **Pausing on window blur, open dialogs, or unsubmitted forms / "smart" refresh.** Beyond
+  the browser's native background throttling, v1 won't add explicit logic to pause ticks
+  when the tab is hidden, an `st.dialog` is open, or an `st.form` has unsubmitted edits.
+  Users can pause auto-refresh manually or scope live updates to a fragment; smarter
+  built-in pausing can be layered on later.
 - **Deprecating `streamlit-autorefresh`.** This is a community component; we simply provide
   a native alternative and can point to it in docs.
 
@@ -293,6 +310,6 @@ deferred (see Out of Scope).
 | Works on SiS, Cloud, etc? | ✅ Frontend-timer + standard rerun path; no server-side scheduling. Same mechanism as `@st.fragment(run_every=...)`, which already works across platforms. Background-tab throttling applies everywhere. |
 | No breaking API changes | ✅ Additive keyword-only parameter; existing `set_page_config` calls are unaffected. Introduces a `*` separator before the new arg (non-breaking). |
 | No new dependencies | ✅ Reuses `time_to_seconds` (Pandas already a dependency) and the existing `AutoRerun` frontend-timer machinery. |
-| Metrics collected | `set_page_config` is already wrapped with `@gather_metrics`. Track `run_every` usage (e.g. whether it was set) to measure adoption vs. the component. |
+| Metrics collected | `set_page_config` is already wrapped with `@gather_metrics`. Track `run_every` adoption vs. the component — not just whether it was set, but the interval value distribution, to inform whether the 1-second minimum should later be relaxed or raised. |
 | Any security/legal impact? | Auto-rerun increases request volume; the 1-second minimum interval bounds worst-case full-page rerun frequency (mitigating DoS-adjacent risk from very short intervals). No new data exposure. |
 | Any docs changes needed? | ✅ Document the new parameter on the `st.set_page_config` API page (the docstring should recommend `@st.fragment(run_every=...)` for more targeted updates), add a "Auto-refresh your app" how-to, and mention it as the native alternative to `streamlit-autorefresh`. |
