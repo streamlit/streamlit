@@ -302,10 +302,9 @@ describe("NumberInput widget", () => {
       await user.keyboard("{enter}")
 
       expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
-      // The freshly typed value (8) must be submitted...
+      // The freshly typed value (8) must be submitted, not the previously
+      // committed value (5).
       expect(valueAtSubmit).toBe(8)
-      // ...and NOT the previously committed value (5).
-      expect(valueAtSubmit).not.toBe(5)
     })
 
     it("submits the freshly typed FLOAT value on the first Enter", async () => {
@@ -331,8 +330,9 @@ describe("NumberInput widget", () => {
       await user.keyboard("{enter}")
 
       expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
+      // The freshly typed float value (8.5) must be submitted, not the
+      // previously committed value (5.0).
       expect(valueAtSubmit).toBe(8.5)
-      expect(valueAtSubmit).not.toBe(5.0)
     })
   })
 
