@@ -133,6 +133,7 @@ def test_single_row_select(app: Page):
 
 
 def test_single_row_select_with_sorted_column(app: Page):
+    """Test that sorting preserves the row selection in single-row mode (#8851)."""
     canvas = _get_single_row_select_df(app)
     expect_canvas_to_be_visible(canvas)
 
@@ -144,25 +145,28 @@ def test_single_row_select_with_sorted_column(app: Page):
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
-    # Sort the first column
-    # this is expected to clear the previous row selection:
+    # Sort the first column ascending. The row selection should be preserved
+    # and keep pointing at the same underlying data row (original index 0),
+    # even though its display position changed.
     sort_column(canvas, 1, has_row_marker_col=True)
     wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row selection:",
+        "{'selection': {'rows': [0], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
 
-    # The dataframe selection should be cleared
-    expected = "Dataframe single-row selection: {'selection': {'rows': [], 'columns': [], 'cells': []}}"
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
-    expect(selection_text).to_have_count(1)
-
-    # select first row again:
+    # Selecting the first *display* row now selects a different original row,
+    # since the column is sorted (original row 4 sorts to the top for this data).
     select_row(canvas, 1)
     wait_for_app_run(app)
-
-    # The first row got selected, but the real numerical row index
-    # should be different since the first column is sorted
-    expected = "Dataframe single-row selection: {'selection': {'rows': [4], 'columns': [], 'cells': []}}"
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
-    expect(selection_text).to_have_count(1)
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row selection:",
+        "{'selection': {'rows': [4], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
 
 
 def test_single_row_required_selection(
@@ -412,31 +416,32 @@ def test_multi_row_and_multi_column_select(app: Page):
     _expect_multi_row_multi_column_selection(app)
 
 
-def test_single_row_select_and_sort(app: Page):
-    canvas = _get_single_row_select_df(app)
+def test_multi_row_select_and_sort(app: Page):
+    """Test that sorting preserves multiple row selections in multi-row mode (#8851)."""
+    canvas = _get_multi_row_select_df(app)
     expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
 
-    # Select a single row
+    # Select two rows (original indices 0 and 2)
     select_row(canvas, 1)
+    select_row(canvas, 3)
     wait_for_app_run(app)
-
-    # The row selection should be returned
     expect_prefixed_markdown(
         app,
-        "Dataframe single-row selection:",
-        "{'selection': {'rows': [0], 'columns': [], 'cells': []}}",
+        "Dataframe multi-row selection:",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
-    # Sort the dataframe via the column header
+    # Sort the first column ascending. Both selections should be preserved and
+    # keep pointing at the same underlying data rows. The reported rows are
+    # ordered by their new display position after sorting, hence [2, 0].
     sort_column(canvas, 1, has_row_marker_col=True)
     wait_for_app_run(app)
-
-    # The row selection should be cleared
     expect_prefixed_markdown(
         app,
-        "Dataframe single-row selection:",
-        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
+        "Dataframe multi-row selection:",
+        "{'selection': {'rows': [2, 0], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
@@ -467,11 +472,11 @@ def test_single_row_and_single_column_select_and_sort(app: Page):
     app.get_by_test_id("stDataFrameColumnMenu").get_by_text("Sort ascending").click()
     wait_for_app_run(app)
 
-    # The row selection should be cleared, but the column selection should remain
+    # Both the row and column selections should be preserved after sorting (#8851).
     expect_prefixed_markdown(
         app,
         "Dataframe single-row-single-column selection:",
-        "{'selection': {'rows': [], 'columns': ['col_1'], 'cells': []}}",
+        "{'selection': {'rows': [0], 'columns': ['col_1'], 'cells': []}}",
         exact_match=True,
     )
 

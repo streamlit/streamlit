@@ -171,7 +171,8 @@ function DataFrame({
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
   // Stores original data row indices that need remapping after a sort operation.
-  // Used to preserve row selection in single-row-required mode when columns are sorted.
+  // Used to preserve row selections (single-row, multi-row, and
+  // single-row-required modes) when columns are sorted on the frontend.
   const pendingRowSelectionRemapRef = useRef<{
     originalRowIndices: number[]
     columns: CompactSelection
@@ -414,7 +415,8 @@ function DataFrame({
   )
 
   /**
-   * Remap row selection after sort in single-row-required mode.
+   * Remap row selections after sort so that they keep pointing at the same
+   * underlying data rows (single-row, multi-row, and single-row-required modes).
    * Scheduled via useTimeout to run after React applies the sort state.
    */
   const performRowSelectionRemap = useCallback(() => {
@@ -430,23 +432,23 @@ function DataFrame({
 
     // Build a Set for O(1) lookup instead of O(n²) nested loops
     const targetOriginalIndices = new Set(originalRowIndices)
-    const newDisplayIndices: number[] = []
+    let newRows = CompactSelection.empty()
 
     for (let displayIdx = 0; displayIdx < originalNumRows; displayIdx++) {
       const origIdx = currentGetOriginalIndex(displayIdx)
       if (targetOriginalIndices.has(origIdx)) {
-        newDisplayIndices.push(displayIdx)
+        newRows = newRows.add(displayIdx)
         // Early exit when all targets found
-        if (newDisplayIndices.length === targetOriginalIndices.size) {
+        if (newRows.length === targetOriginalIndices.size) {
           break
         }
       }
     }
 
-    if (newDisplayIndices.length > 0) {
+    if (newRows.length > 0) {
       const newSelection: GridSelection = {
         columns,
-        rows: CompactSelection.fromSingleSelection(newDisplayIndices[0]),
+        rows: newRows,
         current,
       }
       processSelectionChange(newSelection)
@@ -1032,10 +1034,13 @@ function DataFrame({
               setShowSearch(false)
             }
 
-            if (isRequiredRowSelectionActivated && isRowSelected) {
-              // In single-row-required mode, preserve the row selection by remapping
-              // it to the same data row after sort. Capture the original data indices
-              // and current column selection before sorting.
+            const shouldPreserveRowSelection =
+              isRowSelectionActivated && isRowSelected
+            if (shouldPreserveRowSelection) {
+              // Preserve the row selection by remapping it to the same data rows
+              // after sort (single-row, multi-row, and single-row-required modes).
+              // Capture the original data indices and current column selection
+              // before sorting.
               const originalRowIndices = gridSelection.rows
                 .toArray()
                 .map(getOriginalIndex)
@@ -1046,21 +1051,14 @@ function DataFrame({
                 // that become stale after sorting
                 current: undefined,
               }
-              // Clear cell selections but keep row and column selections
-              clearSelection(true, true)
-            } else if (isRowSelectionActivated && isRowSelected) {
-              // For other row selection modes, clear the selection before sorting.
-              // Keeping row selections when sorting columns is not supported at the moment.
-              clearSelection()
-            } else {
-              // Cell selections are kept on the old position,
-              // which can be confusing. So we clear all cell selections before sorting.
-              clearSelection(true, true)
             }
+            // Clear cell selections but keep row and column selections. Row
+            // selections are remapped to the same data rows after sorting.
+            clearSelection(true, true)
 
             sortColumn(columnIdx, "auto")
             // Schedule remap after sorting (ref was just set above)
-            if (isRequiredRowSelectionActivated && isRowSelected) {
+            if (shouldPreserveRowSelection) {
               scheduleRowSelectionRemap()
             }
           }}
@@ -1247,10 +1245,13 @@ function DataFrame({
                       setShowSearch(false)
                     }
 
-                    if (isRequiredRowSelectionActivated && isRowSelected) {
-                      // In single-row-required mode, preserve the row selection by remapping
-                      // it to the same data row after sort. Capture the original data indices
-                      // and current column selection before sorting.
+                    const shouldPreserveRowSelection =
+                      isRowSelectionActivated && isRowSelected
+                    if (shouldPreserveRowSelection) {
+                      // Preserve the row selection by remapping it to the same
+                      // data rows after sort (single-row, multi-row, and
+                      // single-row-required modes). Capture the original data
+                      // indices and current column selection before sorting.
                       const originalRowIndices = gridSelection.rows
                         .toArray()
                         .map(getOriginalIndex)
@@ -1261,23 +1262,15 @@ function DataFrame({
                         // that become stale after sorting
                         current: undefined,
                       }
-                      // Clear cell selections but keep row and column selections
-                      clearSelection(true, true)
-                    } else if (isRowSelectionActivated && isRowSelected) {
-                      // For other row selection modes, clear the selection before sorting.
-                      // Keeping row selections when sorting columns is not supported at the moment.
-                      // So we need to clear the selected rows before we do the sorting (Issue #11345).
-                      // Maintain column selections as these are not impacted.
-                      clearSelection(false, true)
-                    } else {
-                      // Cell selection are kept on the old position,
-                      // which can be confusing. So we clear all cell selections before sorting.
-                      clearSelection(true, true)
                     }
+                    // Clear cell selections but keep row and column selections.
+                    // Row selections are remapped to the same data rows after
+                    // sorting.
+                    clearSelection(true, true)
 
                     sortColumn(showMenu.columnIdx, direction, true)
                     // Schedule remap after sorting (ref was just set above)
-                    if (isRequiredRowSelectionActivated && isRowSelected) {
+                    if (shouldPreserveRowSelection) {
                       scheduleRowSelectionRemap()
                     }
                   }
