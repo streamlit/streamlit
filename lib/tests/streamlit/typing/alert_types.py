@@ -162,4 +162,4 @@ if TYPE_CHECKING:
     error("Error!", icon=123)  # type: ignore[arg-type]
 
     # Passing icon as positional argument (should be keyword-only)
-    error("Error!", "icon")  # type: ignore[misc]
+    error("Error!", "icon")  # type: ignore[call-arg]

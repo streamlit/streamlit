@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from parameterized import parameterized
 
 from streamlit import config
 from streamlit.errors import StreamlitAPIException
@@ -57,6 +58,10 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state import SessionState
+from streamlit.runtime.state.query_params import (
+    _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+    _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+)
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
     UploadFileUrlInfo,
@@ -678,6 +683,34 @@ class AppSessionTest(unittest.TestCase):
         assert rerun_data.query_string == "test_query"
         assert rerun_data.page_script_hash == "test_hash"
         assert rerun_data.is_auto_rerun is False
+
+    @parameterized.expand(
+        [
+            ("too_long", "foo=" + ("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
+            (
+                "too_many_fields",
+                "&".join(
+                    f"key_{idx}=value"
+                    for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+                ),
+            ),
+        ]
+    )
+    def test_manual_rerun_ignores_unsafe_query_string(
+        self, _name: str, query_string: str
+    ):
+        """Test manual reruns drop query strings that exceed safe limits."""
+        session = _create_test_session()
+        self.addCleanup(session.shutdown)
+
+        client_state = ClientState()
+        client_state.query_string = query_string
+
+        session._create_scriptrunner = MagicMock()
+        session.request_rerun(client_state)
+
+        rerun_data = session._create_scriptrunner.call_args[0][0]
+        assert rerun_data.query_string == ""
 
     def test_context_info_preserved_in_client_state_on_shutdown(self):
         """Test that context_info is preserved in client_state during SHUTDOWN event."""
@@ -2818,3 +2851,13 @@ def test_populate_config_msg_sidebar_navigation(
         app_session._populate_config_msg(msg)
 
     assert msg.hide_sidebar_nav is expected_hide_sidebar_nav
+
+
+@pytest.mark.parametrize("disable_data_export", [True, False])
+def test_populate_config_msg_disable_data_export(disable_data_export: bool) -> None:
+    """disable_data_export mirrors client.disableDataExport."""
+    with patch_config_options({"client.disableDataExport": disable_data_export}):
+        msg = Config()
+        app_session._populate_config_msg(msg)
+
+    assert msg.disable_data_export is disable_data_export

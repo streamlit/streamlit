@@ -51,6 +51,7 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.runtime.state.query_params import sanitize_query_string
 from streamlit.runtime.theme_util import parse_fonts_with_source
 from streamlit.string_util import to_snake_case
 from streamlit.version import STREAMLIT_VERSION_STRING
@@ -462,8 +463,9 @@ class AppSession:
             if client_state.HasField("context_info"):
                 self._client_state.context_info.CopyFrom(client_state.context_info)
 
+            query_string = sanitize_query_string(client_state.query_string)
             rerun_data = RerunData(
-                query_string=client_state.query_string,
+                query_string=query_string,
                 widget_states=client_state.widget_states,
                 page_script_hash=client_state.page_script_hash,
                 page_name=client_state.page_name,
@@ -1155,6 +1157,7 @@ def _populate_config_msg(msg: Config) -> None:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
     msg.show_error_links = _get_show_error_links()
+    msg.disable_data_export = config.get_option("client.disableDataExport")
 
 
 def _parse_and_populate_chart_colors(

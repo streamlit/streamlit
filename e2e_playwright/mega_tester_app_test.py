@@ -28,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     expect_no_skeletons,
     fill_number_input,
     get_checkbox,
+    get_element_by_key,
     get_number_input,
     get_text_input,
     open_popover,
@@ -82,6 +83,36 @@ def is_expected_error(
         and re.match(r"blob:https?://", msg.location["url"]) is not None
         and browser_name == "webkit"
         and uses_csp
+    )
+
+
+@pytest.fixture(scope="module")
+def app_server_extra_args() -> list[str]:
+    # Only used for local e2e server startup. In external SiS/host mode, the
+    # local server is not started and the platform host-config must provide the
+    # real allowed host origin.
+    return ["--client.allowedOrigins", "http://localhost"]
+
+
+def _send_host_message(
+    app_target: AppTarget, external_iframe_selector: str, message: dict[str, object]
+) -> None:
+    # stCommVersion must match the frontend HOST_COMM_VERSION constant
+    # (frontend/lib/src/hostComm/HostCommunicationManager.tsx); bump this if
+    # that version ever changes.
+    payload = {"stCommVersion": 1, **message}
+
+    if app_target.mode == "external_host":
+        iframe = app_target.page.locator(external_iframe_selector).first
+        iframe.evaluate(
+            "(iframe, payload) => iframe.contentWindow.postMessage(payload, '*')",
+            payload,
+        )
+        return
+
+    app_target.page.evaluate(
+        "payload => window.postMessage(payload, window.location.origin)",
+        payload,
     )
 
 
@@ -220,6 +251,15 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
     expect(
         app_target.get_by_role("button", name="Download data as CSV", exact=True)
     ).to_be_visible()
+    expect(
+        app_target.get_by_role("heading", name="Paginated sample rows", exact=True)
+    ).to_be_visible()
+    expect(
+        app_target.locator(".st-key-mega_sample_pagination")
+        .get_by_test_id("stPagination")
+        .first
+    ).to_be_visible()
+    expect(app_target.get_by_text("Showing page 1 of 5", exact=True)).to_be_visible()
     column_config_heading = app_target.get_by_role(
         "heading", name="Column config matrix", exact=True
     )
@@ -255,6 +295,7 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
     else:
         expect(plotly_charts).to_have_count(0)
     expect(app_target.get_by_test_id("stGraphVizChart").first).to_be_visible()
+    expect(app_target.get_by_test_id("stMermaidChart").first).to_be_visible()
 
     # Custom UI: verify HTML component iframe and unsafe markdown output.
     custom_html_iframe = app_target.locator(
@@ -279,6 +320,10 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
     expect(app_target.get_by_text("Success", exact=True)).to_be_visible()
     expect(app_target.get_by_text("Success with icon", exact=True)).to_be_visible()
     expect(
+        app_target.get_by_text("Loading generated summary...", exact=True)
+    ).to_be_visible()
+    expect(app_target.locator(".stMarkdownShimmer").first).to_be_visible()
+    expect(
         app_target.get_by_role("heading", name="Header with blue divider", exact=True)
     ).to_be_visible()
     expect(
@@ -301,6 +346,9 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
     ).to_be_visible()
     expect(
         app_target.get_by_role("button", name=re.compile(r"Button tertiary"))
+    ).to_be_visible()
+    expect(
+        app_target.get_by_test_id("stMenuButton").filter(has_text="Menu button").first
     ).to_be_visible()
     expect(app_target.get_by_text("Accept new options", exact=True)).to_be_visible()
     file_uploader_mode = app_target.get_by_text("File uploader mode", exact=True)
@@ -340,6 +388,34 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
         expect(pdf_container.locator('[data-index="0"]').first).to_be_visible(
             timeout=30000
         )
+
+
+@pytest.mark.external_test(upload_test_assets=True)
+def test_host_communication_can_disable_and_enable_inputs(
+    app_target: AppTarget, external_iframe_selector: str
+) -> None:
+    if app_target.mode == "external_direct":
+        pytest.skip(
+            "Host communication requires a host page or same-window local mode."
+        )
+
+    button = app_target.locator(".st-key-button").get_by_role("button").first
+    button.scroll_into_view_if_needed()
+    expect(button).to_be_enabled()
+
+    _send_host_message(
+        app_target,
+        external_iframe_selector,
+        {"type": "SET_INPUTS_DISABLED", "disabled": True},
+    )
+    expect(button).to_be_disabled()
+
+    _send_host_message(
+        app_target,
+        external_iframe_selector,
+        {"type": "SET_INPUTS_DISABLED", "disabled": False},
+    )
+    expect(button).to_be_enabled()
 
 
 def test_mega_tester_app_interactions_validate_behavior(app: Page) -> None:
@@ -392,6 +468,26 @@ def test_mega_tester_app_interactions_validate_behavior(app: Page) -> None:
     expect(
         app.get_by_text("You pressed the tertiary button", exact=True)
     ).to_be_visible()
+
+    menu_button = (
+        app.get_by_test_id("stMenuButton").filter(has_text="Menu button").first
+    )
+    menu_button.get_by_test_id("stMenuButtonButton").first.click()
+    menu_body = app.get_by_test_id("stMenuButtonBody")
+    expect(menu_body).to_be_visible()
+    menu_body.get_by_text("Export CSV", exact=True).click()
+    wait_for_app_run(app)
+    expect(
+        app.get_by_text("Menu button selected: Export CSV", exact=True)
+    ).to_be_visible()
+
+    pagination = get_element_by_key(app, "mega_sample_pagination").get_by_test_id(
+        "stPagination"
+    )
+    expect(pagination).to_be_visible()
+    pagination.get_by_test_id("stPaginationNext").click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("Showing page 2 of 5", exact=True)).to_be_visible()
 
     # Expander should hide content until opened.
     expect(app.get_by_text("Expander content", exact=True)).to_be_hidden()

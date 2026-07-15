@@ -31,6 +31,7 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_element_by_key,
 )
+from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 
 @dataclass
@@ -71,25 +72,19 @@ def _click(app: Page, chart: Locator, click_position: _MousePosition) -> None:
 
 
 def _get_layer_chart(app: Page) -> Locator:
-    return get_element_by_key(app, "layer_chart").locator("[role='graphics-document']")
+    return get_vega_graphics_document(get_element_by_key(app, "layer_chart"))
 
 
 def _get_hconcat_chart(app: Page) -> Locator:
-    return get_element_by_key(app, "hconcat_chart").locator(
-        "[role='graphics-document']"
-    )
+    return get_vega_graphics_document(get_element_by_key(app, "hconcat_chart"))
 
 
 def _get_vconcat_chart(app: Page) -> Locator:
-    return get_element_by_key(app, "vconcat_chart").locator(
-        "[role='graphics-document']"
-    )
+    return get_vega_graphics_document(get_element_by_key(app, "vconcat_chart"))
 
 
 def _get_hconcat_multi_chart(app: Page) -> Locator:
-    return get_element_by_key(app, "hconcat_multi_chart").locator(
-        "[role='graphics-document']"
-    )
+    return get_vega_graphics_document(get_element_by_key(app, "hconcat_multi_chart"))
 
 
 def test_layer_chart_point_selection(app: Page):

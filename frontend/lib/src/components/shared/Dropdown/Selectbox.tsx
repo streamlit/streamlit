@@ -17,6 +17,7 @@
 import {
   FC,
   memo,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -32,6 +33,8 @@ import {
   ComboBoxStateContext,
   I18nProvider,
   type Key,
+  ListLayout,
+  Virtualizer,
 } from "react-aria-components"
 
 import { streamlit } from "@streamlit/protobuf"
@@ -56,6 +59,7 @@ import {
 
 import {
   StyledClearButton,
+  StyledEmptyState,
   StyledGroup,
   StyledInput,
   StyledItemHighlight,
@@ -89,6 +93,39 @@ type ComboOption = {
 const CREATABLE_ID = "__creatable__"
 
 /**
+ * If `after` is `before` with extra characters inserted (at any position),
+ * return just those inserted characters; otherwise return null.
+ *
+ * Used to detect the user typing over an untouched committed label so the
+ * first keystroke starts a fresh search instead of appending behind the
+ * committed label. Works from the reported input text alone, so it is
+ * independent of caret position and browser-specific focus/selection behavior.
+ */
+export const getInsertedText = (
+  before: string,
+  after: string
+): string | null => {
+  const maxPrefix = Math.min(before.length, after.length)
+  let prefix = 0
+  while (prefix < maxPrefix && before[prefix] === after[prefix]) {
+    prefix++
+  }
+  const maxSuffix = Math.min(before.length - prefix, after.length - prefix)
+  let suffix = 0
+  while (
+    suffix < maxSuffix &&
+    before[before.length - 1 - suffix] === after[after.length - 1 - suffix]
+  ) {
+    suffix++
+  }
+  // A pure insertion removes none of `before`'s characters.
+  if (before.slice(prefix, before.length - suffix) !== "") {
+    return null
+  }
+  return after.slice(prefix, after.length - suffix)
+}
+
+/**
  * Null-render component mounted inside <ComboBox> to expose RAC's internal
  * open/close methods via refs. Required because ComboBox v1.x has no controlled
  * isOpen prop; we use menuTrigger="manual" and open explicitly on pointer/key
@@ -113,6 +150,37 @@ const DropdownController = memo<{
   return null
 })
 DropdownController.displayName = "DropdownController"
+
+/**
+ * Render a single option row for the virtualized ListBox collection.
+ *
+ * The item is received untyped because emotion's `styled(ListBox)` erases
+ * React Aria's generic item type, so we assert it back to `ComboOption`.
+ * Defined at module scope for a stable identity across renders.
+ */
+const renderOption = (item: unknown): ReactElement => {
+  const option = item as ComboOption
+  return (
+    <StyledListBoxItem
+      id={option.id}
+      textValue={option.label}
+      $isCreatable={option.isCreatable}
+    >
+      <StyledItemHighlight data-item-hl="">{option.label}</StyledItemHighlight>
+    </StyledListBoxItem>
+  )
+}
+
+/**
+ * Swallow paste and IME composition events so FILTER_MODE_NONE inputs stay
+ * non-editable, mirroring the character blocking in onKeyDownCapture. Paste
+ * cancellation is honored by browsers; compositionstart cancellation is
+ * best-effort (some browsers ignore preventDefault on it), so IME text may
+ * still slip in — but it is never committed as a selection.
+ */
+const preventInputEvent = (e: React.SyntheticEvent): void => {
+  e.preventDefault()
+}
 
 const Selectbox: FC<Props> = ({
   disabled,
@@ -235,6 +303,13 @@ const Selectbox: FC<Props> = ({
     [filteredOptions, creatableItem]
   )
 
+  const virtualizerLayoutOptions = useMemo(
+    () => ({
+      rowSize: convertRemToPx(theme.sizes.dropdownItemHeight),
+    }),
+    [theme.sizes.dropdownItemHeight]
+  )
+
   // Controlled selectedKey so RAC always knows the committed item and doesn't
   // revert the input to "" on blur before handleBlur can restore it.
   const localSelectedKey = useMemo<string | null>(() => {
@@ -252,9 +327,11 @@ const Selectbox: FC<Props> = ({
 
   const isFilterNone =
     filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
-  // Don't use `readOnly` for FILTER_MODE_NONE: it disables RAC's internal
-  // keyboard navigation (Arrow keys, Enter). Block character input via
-  // onKeyDown/onPaste instead.
+  // Don't use `readOnly` for FILTER_MODE_NONE: it disables React Aria's internal
+  // keyboard navigation (Arrow keys, Enter) and makes Chromium close the
+  // ComboBox during the pointer-event lifecycle. Instead, suppress the mobile
+  // software keyboard with inputMode="none" (see the input below) and block
+  // character input via onKeyDown/onPaste.
   const inputReadOnly =
     isMobile() && options.length <= 10 && !acceptNewOptions && !isFilterNone
 
@@ -326,14 +403,39 @@ const Selectbox: FC<Props> = ({
   }, [])
 
   const handleInputChange = useCallback((text: string): void => {
-    setInputValue(text)
-    // RAC calls onInputChange(committedLabel) when the dropdown closes to
-    // revert the input — don't treat that automatic revert as user filtering.
-    if (text !== (valueRef.current ?? "")) {
-      setFilterActive(true)
+    const committed = valueRef.current ?? ""
+
+    // Typing over an untouched committed label starts a fresh search: replace
+    // the label with just the newly typed characters instead of editing it in
+    // place. The ComboBox keeps the committed label in the input with the caret
+    // at the end, so without this the first keystroke would append behind it
+    // (e.g. "Banana" + "c" -> "Bananac") and match nothing.
+    let nextText = text
+    if (!filterActiveRef.current && committed !== "") {
+      const inserted = getInsertedText(committed, text)
+      // An empty insertion means no new characters were typed (e.g. RAC
+      // reporting the unchanged committed label on close/revert), which must
+      // not clear the input.
+      if (inserted !== null && inserted !== "") {
+        nextText = inserted
+      }
+    }
+
+    setInputValue(nextText)
+    // Decide filtering from the raw reported text, not from nextText: when the
+    // fresh-search diff yields a query equal to the committed label (e.g.
+    // committed "a", typing "a"), filtering must still activate. RAC reports
+    // text === committed when it reverts the input on close — that is the only
+    // case treated as a non-edit.
+    const isEdit = text !== committed
+    setFilterActive(isEdit)
+    // Update the ref synchronously, not just via setFilterActive, which
+    // refreshes it only on the next render. Otherwise a second keystroke before
+    // that render reads a stale `false` and re-strips the growing query (e.g.
+    // "ab" back to "b").
+    filterActiveRef.current = isEdit
+    if (isEdit) {
       openDropdownRef.current?.()
-    } else {
-      setFilterActive(false)
     }
   }, [])
 
@@ -474,13 +576,16 @@ const Selectbox: FC<Props> = ({
             <StyledInput
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}
+              // inputMode="none" suppresses the mobile software keyboard while
+              // keeping the input focusable (unlike readOnly — see above).
+              // $typingDisabled hides the caret and shows a pointer cursor.
+              inputMode={isFilterNone ? "none" : undefined}
+              $typingDisabled={isFilterNone}
               onPointerDown={handleInputPointerDown}
               onKeyDownCapture={handleInputKeyDownCapture}
               onKeyDown={handleInputKeyDown}
-              onPaste={isFilterNone ? e => e.preventDefault() : undefined}
-              onCompositionStart={
-                isFilterNone ? e => e.preventDefault() : undefined
-              }
+              onPaste={isFilterNone ? preventInputEvent : undefined}
+              onCompositionStart={isFilterNone ? preventInputEvent : undefined}
               $placeholderColor={
                 selectDisabled ? theme.colors.fadedText40 : undefined
               }
@@ -510,23 +615,20 @@ const Selectbox: FC<Props> = ({
             offset={0}
             style={floatingStyles}
           >
-            <StyledListBox
-              aria-label={label ?? "Selectbox options"}
-              renderEmptyState={() => <span>No results</span>}
+            <Virtualizer
+              layout={ListLayout}
+              layoutOptions={virtualizerLayoutOptions}
             >
-              {displayOptions.map(opt => (
-                <StyledListBoxItem
-                  key={opt.id}
-                  id={opt.id}
-                  textValue={opt.label}
-                  $isCreatable={opt.isCreatable}
-                >
-                  <StyledItemHighlight data-item-hl="">
-                    {opt.label}
-                  </StyledItemHighlight>
-                </StyledListBoxItem>
-              ))}
-            </StyledListBox>
+              <StyledListBox
+                aria-label={label ?? "Selectbox options"}
+                items={displayOptions}
+                renderEmptyState={() => (
+                  <StyledEmptyState>No results</StyledEmptyState>
+                )}
+              >
+                {renderOption}
+              </StyledListBox>
+            </Virtualizer>
           </StyledPopover>
         </ComboBox>
       </I18nProvider>

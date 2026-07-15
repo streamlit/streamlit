@@ -37,6 +37,20 @@ name = st.text_input("Name", key="user_name")
 # st.session_state.user_name contains the same value as `name`
 ```
 
+## Persisting widget values (`persist_state`)
+
+By default, a keyed widget's value is lost when the widget stops being rendered (for example, when it's conditionally hidden or the user switches pages). Set the keyword-only `persist_state` parameter to keep the value:
+
+- `None` (default): the value is dropped when the widget isn't rendered.
+- `"page"`: the value is preserved while the user stays on the page where the widget is defined (e.g., while it's conditionally hidden); it's discarded on a page switch.
+- `"session"`: the value is preserved for the whole session, including across page switches, so it returns when the user navigates back.
+
+```python
+st.text_input("Name", key="name", persist_state="session")
+```
+
+`persist_state` requires a `key` and is available on every widget that supports `bind="query-params"`. When both are set, `bind` takes precedence, so the value lives in the URL and persists across page switches regardless of the `persist_state` scope.
+
 ## Callbacks
 
 Callbacks execute **before** the script reruns, allowing immediate state changes. Use `on_change` or `on_click` with optional `args` and `kwargs`:
@@ -62,7 +76,7 @@ st.session_state.setdefault("filters", {})
 
 ## Multipage state
 
-Widgets are NOT stateful across pages. Their values reset when navigating between pages.
+By default, widgets are NOT stateful across pages—their values reset when navigating between pages. To keep a widget's value across page switches, set `persist_state="session"` (see [Persisting widget values](#persisting-widget-values-persist_state) above).
 
 ### Sharing state
 

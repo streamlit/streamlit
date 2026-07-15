@@ -14,9 +14,9 @@
 
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
 
 def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFunction):
     st_tabs = themed_app.get_by_test_id("stTabs")
-    expect(st_tabs).to_have_count(14)
+    expect(st_tabs).to_have_count(19)
 
     assert_snapshot(st_tabs.nth(0), name="st_tabs-sidebar")
     assert_snapshot(st_tabs.nth(1), name="st_tabs-text_input")
@@ -69,7 +69,7 @@ def test_tabs_with_html(app: Page):
 
 def test_tabs_with_code_layouts(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that tabs with code blocks and different height configurations render correctly."""
-    tabs_with_code = app.get_by_test_id("stTabs").nth(6)
+    tabs_with_code = app.get_by_test_id("stTabs").nth(8)
 
     # Test Tab 1 with container and stretched code
     tabs_with_code.scroll_into_view_if_needed()
@@ -367,3 +367,170 @@ def test_keyed_tabs_persist_active_tab_across_remount(app: Page):
     expect(keyed_tabs.get_by_role("tab", name="Details")).to_have_attribute(
         "aria-selected", "true"
     )
+
+
+def _count_laid_out(locator: Locator | Page, test_id: str) -> int:
+    """Count elements with the given test id that are actually laid out; hidden
+    elements (``display: none``) have a null offsetParent.
+    """
+    count = locator.get_by_test_id(test_id).evaluate_all(
+        "(elements) => elements.filter(el => el.offsetParent !== null).length"
+    )
+    return int(count)
+
+
+def _expect_single_visible_chart(app: Page, rerun_tabs: Locator) -> None:
+    """Only the active tab's chart should be laid out. Wrapped in wait_until
+    because Vega charts render asynchronously.
+    """
+    wait_until(app, lambda: _count_laid_out(rerun_tabs, "stVegaLiteChart") == 1)
+
+
+def _change_active_tab_selectbox(rerun_tabs: Locator, option: str) -> None:
+    """Change the selectbox in the active tab to trigger a widget rerun.
+
+    Every force-mounted tab renders a selectbox with the same label, so we scope to
+    the active tab panel. Opening the dropdown makes React Aria mark the background
+    content ``aria-hidden``, which drops any locator scoped through the panel
+    mid-interaction (inconsistently across browsers). To avoid re-resolving the
+    now-hidden input, we click it once to open the dropdown, then drive selection via
+    the page keyboard and the portaled (not-hidden) option list.
+    """
+    page = rerun_tabs.page
+    selectbox_input = (
+        rerun_tabs.get_by_role("tabpanel")
+        .get_by_test_id("stSelectbox")
+        .filter(has_text="Rerun tab select")
+        .locator("input")
+    )
+    selectbox_input.click()
+    page.keyboard.press("ArrowDown")
+    dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(dropdown).to_be_visible()
+    dropdown.get_by_role("option", name=option, exact=True).click()
+    wait_for_app_run(page)
+
+
+def _count_visible_tab_panels(locator: Locator | Page) -> int:
+    """Count tab panels that are actually laid out. Used to assert the fix keeps
+    only active panels visible.
+    """
+    return _count_laid_out(locator, "stTabPanel")
+
+
+def test_widget_rerun_keeps_inactive_tab_panels_hidden(app: Page):
+    """Regression test for #15892 and #15893.
+
+    Ordinary tabs force-mount inactive panels. A widget rerun inside the active
+    tab must not make the other panels (in these tabs, the sidebar tabs, or
+    anywhere else on the page) become visible.
+    """
+    rerun_tabs = (
+        app.get_by_test_id("stTabs")
+        .filter(has=app.get_by_role("tab", name="Rerun Fort Wayne"))
+        .first
+    )
+    sidebar = app.get_by_test_id("stSidebar")
+
+    expect(rerun_tabs.get_by_role("tab", name="Rerun All")).to_have_attribute(
+        "aria-selected", "true"
+    )
+    expect(rerun_tabs.get_by_text("Rerun All tab marker")).to_be_visible()
+    expect(rerun_tabs.get_by_text("Rerun Indy tab marker")).not_to_be_visible()
+    _expect_single_visible_chart(app, rerun_tabs)
+
+    # Sidebar tabs use the same force-mount mechanism; only the active panel shows.
+    expect(sidebar.get_by_text("I am in the sidebar", exact=True)).to_be_visible()
+    expect(
+        sidebar.get_by_text("I'm also in the sidebar", exact=True)
+    ).not_to_be_visible()
+
+    # Capture the number of visible panels across the whole page before the rerun.
+    visible_panels_before = _count_visible_tab_panels(app)
+
+    _change_active_tab_selectbox(rerun_tabs, "B")
+
+    expect(rerun_tabs.get_by_role("tablist")).to_be_visible()
+    expect(rerun_tabs.get_by_role("tab", name="Rerun All")).to_have_attribute(
+        "aria-selected", "true"
+    )
+    expect(rerun_tabs.get_by_text("Rerun All tab marker")).to_be_visible()
+    expect(rerun_tabs.get_by_text("Rerun Indy tab marker")).not_to_be_visible()
+    expect(rerun_tabs.get_by_text("Rerun Clarksville tab marker")).not_to_be_visible()
+    expect(rerun_tabs.get_by_text("Rerun Fort Wayne tab marker")).not_to_be_visible()
+    _expect_single_visible_chart(app, rerun_tabs)
+
+    # Sidebar tabs must stay collapsed after the rerun.
+    expect(sidebar.get_by_text("I am in the sidebar", exact=True)).to_be_visible()
+    expect(
+        sidebar.get_by_text("I'm also in the sidebar", exact=True)
+    ).not_to_be_visible()
+
+    # The rerun must not add visible panels anywhere (the reported bug stacked all
+    # panels down the page). wait_until guards against async re-layout.
+    wait_until(app, lambda: _count_visible_tab_panels(app) == visible_panels_before)
+
+
+def test_nested_tabs_stay_collapsed_after_rerun(app: Page):
+    """Regression guard for #15892/#15893 with nested tabs: a rerun triggered from
+    a doubly-nested widget must keep exactly the active outer + active inner panel
+    visible (2 panels), not stack every nested panel.
+    """
+    nested_tabs = (
+        app.get_by_test_id("stTabs")
+        .filter(has=app.get_by_role("tab", name="Outer A"))
+        .first
+    )
+
+    expect(nested_tabs.get_by_text("Outer A marker")).to_be_visible()
+    expect(nested_tabs.get_by_text("Inner 1 marker")).to_be_visible()
+    expect(nested_tabs.get_by_text("Inner 2 marker")).not_to_be_visible()
+    expect(nested_tabs.get_by_text("Outer B marker")).not_to_be_visible()
+    # Active outer panel + active inner panel = 2 visible panels in this group.
+    wait_until(app, lambda: _count_visible_tab_panels(nested_tabs) == 2)
+
+    click_button(app, "Nested rerun button")
+
+    expect(nested_tabs.get_by_text("Outer A marker")).to_be_visible()
+    expect(nested_tabs.get_by_text("Inner 1 marker")).to_be_visible()
+    expect(nested_tabs.get_by_text("Inner 2 marker")).not_to_be_visible()
+    expect(nested_tabs.get_by_text("Outer B marker")).not_to_be_visible()
+    wait_until(app, lambda: _count_visible_tab_panels(nested_tabs) == 2)
+
+
+def test_tabs_fixed_height_scrolls_active_panel(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """A pixel height sizes the tab container and scrolls the active panel."""
+    fixed_height_tabs = get_element_by_key(
+        app, "tabs_fixed_height_container"
+    ).get_by_test_id("stTabs")
+
+    # The container itself should have the pixel height applied inline.
+    expect(fixed_height_tabs).to_have_css("height", "200px")
+
+    # Fixed-height tabs must not be interpreted as a "content" height container;
+    # the tab list stays inside the fixed frame instead of expanding beyond it.
+    box = fixed_height_tabs.bounding_box()
+    assert box is not None
+    assert 195 <= box["height"] <= 205
+
+    fixed_height_tabs.scroll_into_view_if_needed()
+    assert_snapshot(fixed_height_tabs, name="st_tabs-fixed_pixel_height")
+
+
+def test_tabs_stretch_height_fills_parent(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """height='stretch' fills a fixed-height parent container."""
+    stretch_container = get_element_by_key(themed_app, "tabs_stretch_height_container")
+    stretch_tabs = stretch_container.get_by_test_id("stTabs")
+
+    # The parent has height=300; stretch tabs should size to fill it (minus padding).
+    box = stretch_tabs.bounding_box()
+    assert box is not None
+    # Allow padding tolerance from the surrounding container.
+    assert box["height"] >= 240
+
+    stretch_tabs.scroll_into_view_if_needed()
+    assert_snapshot(stretch_tabs, name="st_tabs-stretch_height_in_container")

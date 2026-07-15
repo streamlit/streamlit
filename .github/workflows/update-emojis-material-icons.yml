@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           persist-credentials: true
@@ -35,7 +35,7 @@ jobs:
         uses: ./.github/actions/build_info
 
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
 
@@ -45,7 +45,7 @@ jobs:
           python_version: ${{ env.PYTHON_MAX_VERSION }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
 
       - name: Install Python deps for notifications
         run: |
@@ -99,7 +99,7 @@ jobs:
       - name: Create PR to merge changes into develop
         id: create_pr_update_assets
         if: ${{ steps.check-updates.outputs.updates_needed == 'true' && inputs.dry_run != true }}
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         with:

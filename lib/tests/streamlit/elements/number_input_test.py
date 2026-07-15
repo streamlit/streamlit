@@ -26,6 +26,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
+    StreamlitMixedNumericTypesError,
     StreamlitValueAboveMaxError,
 )
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
@@ -45,17 +46,19 @@ class NumberInputTest(DeltaGeneratorTestCase):
         st.number_input("Label", value=0)
         c = self.get_delta_from_queue().new_element.number_input
         assert c.data_type == NumberInput.INT
-        assert c.has_min
+        # No user-provided bounds, so has_min/has_max are False even though the
+        # proto still carries the safe-number sentinels for the input's attrs.
+        assert not c.has_min
         assert c.min == JSNumber.MIN_SAFE_INTEGER
-        assert c.has_max
+        assert not c.has_max
         assert c.max == JSNumber.MAX_SAFE_INTEGER
 
         st.number_input("Label", value=0.5)
         c = self.get_delta_from_queue().new_element.number_input
         assert c.data_type == NumberInput.FLOAT
-        assert c.has_min
+        assert not c.has_min
         assert c.min == JSNumber.MIN_NEGATIVE_VALUE
-        assert c.has_max
+        assert not c.has_max
         assert c.max == JSNumber.MAX_VALUE
 
     def test_min_value_zero_sets_default_value(self):
@@ -137,6 +140,26 @@ class NumberInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.number_input
         assert c.label == "the label"
         assert c.default == 1
+
+    def test_mixed_numeric_types_raises(self):
+        """Mixing an int bound with a float bound raises a mixed-types error."""
+        with pytest.raises(StreamlitMixedNumericTypesError):
+            st.number_input("the label", min_value=1, max_value=2.0)
+
+    def test_default_value_is_int_zero_with_only_int_step(self):
+        """With only an int ``step`` (no value/min), the default value is int 0."""
+        st.number_input("the label", step=1)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.default == 0
+        assert c.format == "%d"
+
+    def test_default_value_is_float_zero_with_only_float_step(self):
+        """With only a float ``step`` (no value/min), the default value is float 0.0."""
+        st.number_input("the label", step=1.0)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.default == 0.0
 
     def test_value_between_range(self):
         st.number_input("the label", 0, 11, 10)
@@ -279,6 +302,35 @@ class NumberInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.number_input
         assert c.min == JSNumber.MIN_SAFE_INTEGER
         assert c.max == JSNumber.MAX_SAFE_INTEGER
+
+    def test_has_min_max_reflect_user_intent(self):
+        """has_min/has_max must reflect whether the user explicitly set bounds,
+        not the safe-number sentinels used to backfill unset bounds."""
+        # No bounds provided: both flags are False.
+        st.number_input("Label")
+        c = self.get_delta_from_queue().new_element.number_input
+        assert not c.has_min
+        assert not c.has_max
+
+        # Only min_value provided: has_min True, has_max False.
+        st.number_input("Label", min_value=0)
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.has_min
+        assert c.min == 0
+        assert not c.has_max
+
+        # Only max_value provided: has_max True, has_min False.
+        st.number_input("Label", max_value=10)
+        c = self.get_delta_from_queue().new_element.number_input
+        assert not c.has_min
+        assert c.has_max
+        assert c.max == 10
+
+        # Both bounds provided: both flags True.
+        st.number_input("Label", min_value=0, max_value=10)
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.has_min
+        assert c.has_max
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
@@ -813,3 +865,16 @@ def test_serde_resets_out_of_range_to_default(ui_value, expected):
         value=50, data_type=NumberInput.INT, min_value=0, max_value=100
     )
     assert serde.deserialize(ui_value) == expected
+
+
+@pytest.mark.parametrize(
+    "ui_value",
+    [float("nan"), float("inf"), -float("inf")],
+    ids=["nan", "positive_inf", "negative_inf"],
+)
+def test_serde_resets_non_finite_float_to_default(ui_value: float) -> None:
+    """Test that NumberInputSerde.deserialize resets non-finite floats to default."""
+    serde = NumberInputSerde(
+        value=0.5, data_type=NumberInput.FLOAT, min_value=0.0, max_value=1.0
+    )
+    assert serde.deserialize(ui_value) == 0.5

@@ -52,6 +52,7 @@ type LibConfigContextValues = {
   enforceDownloadInNewTab?: boolean
   resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
   showErrorLinks?: Config.ShowErrorLinks
+  disableDataExport?: boolean
 }
 
 type NavigationContextValues = {
@@ -121,6 +122,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   enforceDownloadInNewTab,
   resourceCrossOriginMode,
   showErrorLinks,
+  disableDataExport,
   // NavigationContext
   pageLinkBaseUrl,
   currentPageScriptHash,
@@ -162,6 +164,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
       showErrorLinks,
+      disableDataExport,
     }),
     [
       locale,
@@ -169,6 +172,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
       showErrorLinks,
+      disableDataExport,
     ]
   )
 

@@ -15,8 +15,11 @@
  */
 import { FC, PropsWithChildren, useCallback, useRef } from "react"
 
+import { createPortal } from "react-dom"
+
 import { StyledDataFrameOverlay } from "~lib/styled-components"
 
+import { DATAFRAME_PORTAL_ID } from "./constants"
 import { PortalContext } from "./PortalContext"
 
 export const PortalProvider: FC<PropsWithChildren> = ({ children }) => {
@@ -29,11 +32,16 @@ export const PortalProvider: FC<PropsWithChildren> = ({ children }) => {
   return (
     <PortalContext.Provider value={getRefElement}>
       {children}
-      <StyledDataFrameOverlay
-        data-testid="portal"
-        id="portal"
-        ref={overlayRef}
-      />
+      {createPortal(
+        <StyledDataFrameOverlay
+          data-react-aria-top-layer="true"
+          data-st-overlay-root="true"
+          data-testid="portal"
+          id={DATAFRAME_PORTAL_ID}
+          ref={overlayRef}
+        />,
+        document.body
+      )}
     </PortalContext.Provider>
   )
 }

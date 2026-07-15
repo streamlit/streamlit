@@ -184,13 +184,17 @@ export function getKeyFromId(
   return userKey === "None" ? undefined : userKey
 }
 
-export function getColumnGapSize(
+export function getColumnGapConfig(
   columnProto: BlockProto.IColumn
-): streamlit.GapSize {
-  if (columnProto.gapConfig?.gapSize) {
-    return columnProto.gapConfig.gapSize
+): streamlit.IGapConfig {
+  const gapConfig = columnProto.gapConfig
+  if (typeof gapConfig?.pixelGap === "number") {
+    return { pixelGap: gapConfig.pixelGap }
   }
-  return streamlit.GapSize.SMALL
+  if (gapConfig?.gapSize) {
+    return { gapSize: gapConfig.gapSize }
+  }
+  return { gapSize: streamlit.GapSize.SMALL }
 }
 
 export function checkFlexContainerBackwardsCompatibile(

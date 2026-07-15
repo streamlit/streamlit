@@ -17,6 +17,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import check_top_level_class, get_button
+from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 VEGA_LITE_CHART_COUNT = 12
 
@@ -27,8 +28,7 @@ def test_vega_lite_chart(app: Page):
     expect(vega_lite_charts).to_have_count(VEGA_LITE_CHART_COUNT)
 
     for idx in range(VEGA_LITE_CHART_COUNT):
-        chart = vega_lite_charts.nth(idx)
-        vega_display = chart.locator("[role='graphics-document']").nth(0)
+        vega_display = get_vega_graphics_document(vega_lite_charts.nth(idx))
         expect(vega_display).to_be_visible()
         expect(vega_display.locator("svg")).to_have_class("marks")
 

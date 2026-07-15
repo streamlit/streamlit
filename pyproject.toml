@@ -60,12 +60,12 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.51",
+  "ty==0.0.56",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.15.19",
+  "ruff==0.15.21",
   # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
-  "mypy==2.1.0",
+  "mypy==2.2.0",
   # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
   # Streamlit still type-checks as Python 3.10.
   "numpy<2.5",
@@ -125,7 +125,7 @@ test = [
   "httpx2>=2.0.0",
   # Playwright and E2E test dependencies:
   # We pin playwright to a minor version to avoid new browser versions breaking our CI.
-  "playwright==1.60.*",
+  "playwright==1.61.*",
   "pytest-playwright>=0.3.3",
   "pixelmatch>=0.3.0",
   "pytest-xdist>=3.6.1",

@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import datetime
+
 import numpy as np
 import pandas as pd
 
@@ -83,6 +85,28 @@ with st.popover("popover 18 (primary)", type="primary"):
 
 with st.popover("popover 19 (tertiary)", type="tertiary"):
     st.markdown("Dummy content")
+
+# A multiselect dropdown (still rendered via BaseWeb) opened inside a popover
+# must paint above the popover body. Regression fixture for
+# https://github.com/streamlit/streamlit/issues/15959
+with st.popover(
+    "popover 20 (multiselect stacking)", key="multiselect_stacking_popover"
+):
+    st.multiselect(
+        "Multiselect in popover",
+        ["option_1", "option_2", "option_3"],
+        key="ms_stacking",
+    )
+
+# Selecting a day in a date_input calendar opened inside a popover must not
+# dismiss the popover. Regression fixture for
+# https://github.com/streamlit/streamlit/issues/15959 (popover migration).
+with st.popover("popover 21 (date dismissal)", key="date_dismissal_popover"):
+    st.date_input(
+        "Date in popover",
+        value=datetime.date(2020, 1, 1),
+        key="date_dismissal",
+    )
 
 # Menu-style icons (chevron should be hidden)
 with st.container(key="menu_style_icons_container"):

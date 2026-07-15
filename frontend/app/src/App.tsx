@@ -148,6 +148,7 @@ import {
   ParentMessage,
   SessionEvent,
   SessionStatus,
+  StopAutoRerun,
   WidgetStates,
 } from "@streamlit/protobuf"
 import {
@@ -199,6 +200,7 @@ interface State {
   scriptFinishedHandlers: (() => void)[]
   toolbarMode: Config.ToolbarMode
   showErrorLinks: Config.ShowErrorLinks
+  disableDataExport: boolean
   themeHash: string
   gitInfo: IGitInfo | null
   formsData: FormsData
@@ -235,7 +237,6 @@ interface State {
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
-  autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
   scriptChangedOnDisk: boolean
   // Whether the framework "install skills" nudge is currently shown. Set once
@@ -310,6 +311,18 @@ export class App extends PureComponent<Props, State> {
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
 
+  // Active `run_every` auto-rerun timers, keyed by fragment id. These are
+  // imperative resources (setInterval handles), so they live outside of React
+  // state. Keying by fragment id lets us keep a single timer per fragment: we
+  // reuse the running timer when a fragment re-registers with the same interval
+  // (so frequent ancestor reruns don't reset its countdown), and only restart
+  // it when the interval changes. The stored `interval` (in seconds) is what we
+  // compare against on re-registration.
+  private readonly autoRerunIntervals: Map<
+    string,
+    { timer: ReturnType<typeof setInterval>; interval: number }
+  > = new Map()
+
   // Whether the skills-install nudge has been shown this page load.
   // `handleInitialization` re-runs on websocket reconnect, so this guards
   // against enqueuing a duplicate nudge and against logging multiple
@@ -347,6 +360,7 @@ export class App extends PureComponent<Props, State> {
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
       showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+      disableDataExport: false,
       // Initialize themeHash to empty string to ensure the first processThemeInput
       // call always processes the theme (whether null or custom theme from server).
       // This prevents the bug where a cached custom theme isn't cleared when the
@@ -385,7 +399,6 @@ export class App extends PureComponent<Props, State> {
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
-      autoReruns: [],
       inputsDisabled: false,
       navigationPosition: Navigation.Position.SIDEBAR,
       scriptChangedOnDisk: false,
@@ -922,7 +935,7 @@ export class App extends PureComponent<Props, State> {
         // Script is using fragments (fragments in last run or
         // fragment auto-reruns configured):
         this.state.fragmentIdsThisRun.length > 0 ||
-        this.state.autoReruns.length > 0
+        this.autoRerunIntervals.size > 0
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
@@ -1042,6 +1055,8 @@ export class App extends PureComponent<Props, State> {
         pageProfile: (pageProfile: PageProfile) =>
           this.handlePageProfileMsg(pageProfile),
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
+        stopAutoRerun: (stopAutoRerun: StopAutoRerun) =>
+          this.handleStopAutoRerun(stopAutoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
@@ -1231,14 +1246,47 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
-    const intervalId = setInterval(() => {
-      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId, true)
-    }, autoRerun.interval * 1000)
+    const { fragmentId } = autoRerun
 
-    this.setState((prevState: State) => {
-      return {
-        autoReruns: [...prevState.autoReruns, intervalId],
-      }
+    // Auto-reruns are always scoped to a fragment, so we expect a non-empty
+    // fragment id. Guard against an empty id (which protobuf produces when the
+    // field is unset): using it as a map key would collide, so a second empty-id
+    // registration would silently cancel the first. Skip it instead.
+    if (!fragmentId) {
+      LOG.warn("Ignoring auto-rerun message without a fragment id.")
+      return
+    }
+
+    const { interval } = autoRerun
+
+    // A `run_every` fragment re-registers its auto-rerun every time an ancestor
+    // re-renders it (a fragment-only rerun doesn't reset timers). If a timer for
+    // this fragment is already running with the same interval, leave it alone:
+    // restarting it would reset the countdown, so ancestor reruns firing more
+    // often than `run_every` could delay or starve the fragment's auto-rerun.
+    // We only (re)start the timer when there isn't one yet or the interval
+    // changed, which also avoids stacking duplicate intervals.
+    if (this.autoRerunIntervals.get(fragmentId)?.interval === interval) {
+      return
+    }
+
+    this.clearAutoRerunInterval(fragmentId)
+
+    const timer = setInterval(() => {
+      this.widgetMgr.sendUpdateWidgetsMessage(fragmentId, true)
+    }, interval * 1000)
+
+    this.autoRerunIntervals.set(fragmentId, { timer, interval })
+  }
+
+  /**
+   * Handler for ForwardMsg.stopAutoRerun messages. The server sends this when
+   * it evicts fragments (e.g. a nested ``run_every`` fragment whose ancestor
+   * stopped rendering it), so we cancel their pending auto-rerun timers.
+   */
+  handleStopAutoRerun = (stopAutoRerun: StopAutoRerun): void => {
+    stopAutoRerun.fragmentIds.forEach(fragmentId => {
+      this.clearAutoRerunInterval(fragmentId)
     })
   }
 
@@ -1420,6 +1468,7 @@ export class App extends PureComponent<Props, State> {
         hideTopBar: config.hideTopBar,
         toolbarMode: config.toolbarMode,
         showErrorLinks: config.showErrorLinks,
+        disableDataExport: config.disableDataExport,
         latestRunTime: performance.now(),
         mainScriptHash,
         // If we're here, the fragmentIdsThisRun variable is always the
@@ -1966,10 +2015,21 @@ export class App extends PureComponent<Props, State> {
    * lead to issues, e.g. when a new full app-rerun session is started or the active page changed.
    */
   cleanupAutoReruns = (): void => {
-    this.state.autoReruns.forEach((value: NodeJS.Timeout) => {
-      clearInterval(value)
+    this.autoRerunIntervals.forEach(({ timer }) => {
+      clearInterval(timer)
     })
-    this.setState({ autoReruns: [] })
+    this.autoRerunIntervals.clear()
+  }
+
+  /**
+   * Clear the auto-rerun interval for a single fragment, if one exists.
+   */
+  private clearAutoRerunInterval(fragmentId: string): void {
+    const existing = this.autoRerunIntervals.get(fragmentId)
+    if (existing !== undefined) {
+      clearInterval(existing.timer)
+      this.autoRerunIntervals.delete(fragmentId)
+    }
   }
 
   /**
@@ -2620,6 +2680,7 @@ export class App extends PureComponent<Props, State> {
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
         resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
         showErrorLinks={this.state.showErrorLinks}
+        disableDataExport={this.state.disableDataExport}
         backendOperationClient={this.backendOperationClient}
       >
         <Hotkeys
