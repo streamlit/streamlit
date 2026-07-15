@@ -283,6 +283,21 @@ def test_clear_empties_cache() -> None:
     assert list(cache) == []
 
 
+def test_repr_reports_configuration_without_mutating() -> None:
+    """``repr`` summarizes configuration and must not reap expired entries."""
+    clock = _FakeClock()
+    cache: TTLCache[str, int] = TTLCache(maxsize=5, ttl=10, timer=clock)
+    cache["a"] = 1
+
+    assert repr(cache) == "TTLCache(maxsize=5, ttl=10, currsize=1)"
+
+    # Once "a" has expired but not yet been reaped, inspecting it via repr must
+    # not reap it (repr must be side-effect free).
+    clock.now = 10
+    _ = repr(cache)
+    assert "a" in cache._data
+
+
 def test_properties_expose_configuration() -> None:
     """The cache exposes its ``maxsize``, ``ttl`` and ``timer`` configuration."""
     clock = _FakeClock()

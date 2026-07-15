@@ -96,6 +96,15 @@ class TTLCache(MutableMapping[K, V]):
         """The current number of (non-expired) entries in the cache."""
         return len(self)
 
+    def __repr__(self) -> str:
+        # Report the raw number of stored entries rather than currsize/len(),
+        # which would reap expired entries (and, in TTLCleanupCache, fire
+        # release hooks) as a side effect. __repr__ must never mutate the cache.
+        return (
+            f"{type(self).__name__}(maxsize={self._maxsize!r}, "
+            f"ttl={self._ttl!r}, currsize={len(self._data)!r})"
+        )
+
     def __contains__(self, key: object) -> bool:
         # Membership never reorders entries and never reaps expired ones, which
         # matches cachetools (and keeps `in` checks free of LRU side effects).
