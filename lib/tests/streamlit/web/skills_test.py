@@ -2282,6 +2282,52 @@ class TestMetaSkillPackaging:
             in matched
         )
 
+    @pytest.mark.slow
+    def test_built_wheel_contains_vendored_meta_skill(self, tmp_path: Path) -> None:
+        """A real built wheel must contain SKILL.md AND scripts/discover.py.
+
+        The glob-match test above checks the declared package-data patterns
+        against on-disk files, but not that the build backend actually ships
+        them in the wheel (MANIFEST/include-package-data/backend quirks could
+        still drop a file). A missing ``discover.py`` would break every global
+        install deterministically — the exact failure this change removes — so
+        build the wheel and assert both files are inside it.
+        """
+        import zipfile
+
+        lib_dir = Path(__file__).resolve().parents[3]  # .../lib
+        if not (lib_dir / "pyproject.toml").is_file():  # pragma: no cover
+            pytest.skip("lib/pyproject.toml not found in this layout")
+
+        out_dir = tmp_path / "dist"
+        # --no-isolation reuses the current env's build backend (setuptools is
+        # already installed), so this is a fast file-copy+zip, not a full env
+        # bootstrap. Skip gracefully if the build tooling is unavailable.
+        build = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                str(out_dir),
+                str(lib_dir),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:  # pragma: no cover - env-dependent
+            pytest.skip(f"wheel build unavailable here: {build.stderr[-400:]}")
+
+        wheels = list(out_dir.glob("*.whl"))
+        assert wheels, "no wheel was produced"
+        names = zipfile.ZipFile(wheels[0]).namelist()
+        meta = "streamlit/.agents/meta-skill/developing-with-streamlit"
+        assert f"{meta}/SKILL.md" in names
+        assert f"{meta}/scripts/discover.py" in names
+
 
 class TestVendoredMetaSkillDiscovery:
     """Compatibility contract: the vendored discover.py resolves bundled content."""
