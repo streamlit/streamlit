@@ -1124,7 +1124,7 @@ export class App extends PureComponent<Props, State> {
       this.onPageIconChanged(favicon)
     }
 
-    if (lang != null) {
+    if (lang) {
       document.documentElement.lang = lang
     }
 
