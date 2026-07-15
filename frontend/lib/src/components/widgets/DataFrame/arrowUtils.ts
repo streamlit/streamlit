@@ -42,6 +42,7 @@ import {
   isDatetimeType,
   isDateType,
   isDecimalType,
+  isDurationType,
   isEmptyType,
   isListType,
   isNumericType,
@@ -206,14 +207,14 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
   if (isDateType(arrowType)) {
     return DateColumn
   }
+  if (isNumericType(arrowType) || isDurationType(arrowType)) {
+    return NumberColumn
+  }
   if (isObjectType(arrowType) || isBytesType(arrowType)) {
     return ObjectColumn
   }
   if (isBooleanType(arrowType)) {
     return CheckboxColumn
-  }
-  if (isNumericType(arrowType)) {
-    return NumberColumn
   }
   if (isCategoricalType(arrowType)) {
     return SelectboxColumn

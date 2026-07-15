@@ -19,6 +19,7 @@ import {
   Bool as BoolType,
   Decimal,
   Dictionary,
+  Duration,
   Field,
   Float64,
   Int,
@@ -1244,6 +1245,21 @@ describe("getColumnTypeFromArrow", () => {
         categoricalOptions: undefined,
       },
       ObjectColumn,
+    ],
+    [
+      {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("test", new Duration(TimeUnit.NANOSECOND), true),
+        pandasType: {
+          field_name: "test",
+          name: "test",
+          pandas_type: "timedelta64[ns]",
+          numpy_type: "timedelta64[ns]",
+          metadata: null,
+        },
+        categoricalOptions: undefined,
+      },
+      NumberColumn,
     ],
   ])(
     "interprets %s as column type: %s",
