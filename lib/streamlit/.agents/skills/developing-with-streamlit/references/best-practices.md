@@ -53,7 +53,7 @@ query = st.text_input(
 
 ## HTML and iframes
 
-Prefer native Streamlit elements over recreating UI with custom HTML. Use custom HTML only when no native element provides the required UI or behavior.
+Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
 
 Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` commands.
 
