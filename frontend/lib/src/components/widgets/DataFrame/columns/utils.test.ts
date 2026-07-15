@@ -21,6 +21,7 @@ import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import JsonColumn from "./JsonColumn"
 import {
   arrayToCopyValue,
+  arrayValuesEqual,
   BaseColumnProps,
   countDecimals,
   getEmptyCell,
@@ -161,6 +162,22 @@ describe("valuesEqual", () => {
   })
 })
 
+describe("arrayValuesEqual", () => {
+  it.each([
+    [["a", "b"], ["a", "b"], true],
+    [[], [], true],
+    [["a", "b"], ["a", "c"], false],
+    [["a"], ["a", "b"], false],
+    // Non-array inputs are never considered equal
+    ["not-an-array", ["a"], false],
+    [["a"], "not-an-array", false],
+    [null, ["a"], false],
+    [["a"], undefined, false],
+  ])("compares %s and %s and returns %s", (a, b, expected) => {
+    expect(arrayValuesEqual(a, b)).toBe(expected)
+  })
+})
+
 describe("getEmptyCell", () => {
   it("creates a valid empty cell", () => {
     const emptyCell = getEmptyCell()
@@ -200,6 +217,8 @@ describe("toSafeArray", () => {
     ["foo,bar,,", ["foo", "bar", "", ""]],
     // JSON Array syntax
     [`["foo","bar"]`, ["foo", "bar"]],
+    // Malformed JSON array falls back to the raw string
+    ["[foo]", ["[foo]"]],
     // non-string values
     [0, [0]],
     [1, [1]],
@@ -213,8 +232,17 @@ describe("toSafeArray", () => {
       [true, false],
       [true, false],
     ],
+    // Plain objects are serialized into a single stringified element
+    [{ foo: "bar" }, ["[object Object]"]],
   ])("converts %s to a valid array: %s", (input, expected) => {
     expect(toSafeArray(input)).toEqual(expected)
+  })
+
+  it("returns a stringified fallback when the value cannot be JSON serialized", () => {
+    const circular: Record<string, unknown> = {}
+    circular.self = circular
+
+    expect(toSafeArray(circular)).toEqual(["[object Object]"])
   })
 })
 
@@ -349,6 +377,8 @@ describe("toSafeNumber", () => {
     [".1312314", 0.1312314],
     [true, 1],
     [false, 0],
+    // Int32Array values are read from the first element
+    [Int32Array.from([42, 7]), 42],
   ])("converts %s to a valid number: %s", (input, expected) => {
     expect(toSafeNumber(input)).toEqual(expected)
   })
@@ -425,6 +455,8 @@ describe("toSafeDate", () => {
   it.each([
     // valid date object
     [new Date("2023-04-25"), new Date("2023-04-25")],
+    // invalid date object
+    [new Date("not-a-real-date"), undefined],
     // undefined value
     [undefined, null],
     // null value
@@ -523,12 +555,19 @@ describe("truncateDecimals", () => {
     [0.1 + 0.2, 2, 0.3],
     [4.52, 2, 4.52],
     [0.0099999, 2, 0.0],
+    // Non-finite values are returned unchanged
+    [Infinity, 2, Infinity],
+    [-Infinity, 2, -Infinity],
   ])(
     "truncates value %f to %i decimal places, resulting in %f",
     (value, decimals, expected) => {
       expect(truncateDecimals(value, decimals)).toBe(expected)
     }
   )
+
+  it("returns NaN unchanged", () => {
+    expect(truncateDecimals(NaN, 2)).toBeNaN()
+  })
 })
 
 it("removeLineBreaks should remove line breaks", () => {

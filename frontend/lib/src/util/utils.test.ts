@@ -1422,6 +1422,81 @@ describe("getIFrameEnclosingApp", () => {
 
     expect(getIFrameEnclosingApp("parent-only")).toBe(iframe)
   })
+
+  it("treats an iframe as inaccessible when reading contentWindow throws", () => {
+    const fakeParent = { document: window.document } as Window &
+      typeof globalThis
+    setWindowParent(fakeParent)
+
+    const iframe = makeIframeWithEmbeddingClass(document, "throws", {
+      title: "streamlitApp",
+    })
+    Object.defineProperty(iframe, "contentWindow", {
+      get() {
+        throw new Error("cross-origin access denied")
+      },
+      configurable: true,
+    })
+
+    expect(getIFrameEnclosingApp("throws")).toBeNull()
+  })
+
+  it("returns null when a titled iframe on the parent document is inaccessible", () => {
+    const parentDocument = document.implementation.createHTMLDocument("parent")
+    makeIframeWithEmbeddingClass(parentDocument, "parent-blocked", {
+      title: "streamlitApp",
+      contentWindow: null,
+    })
+
+    const fakeParent = {
+      document: parentDocument,
+    } as Window & typeof globalThis
+    setWindowParent(fakeParent)
+
+    expect(getIFrameEnclosingApp("parent-blocked")).toBeNull()
+  })
+
+  it("returns null when an untitled iframe in the current document is inaccessible", () => {
+    const fakeParent = { document: window.document } as Window &
+      typeof globalThis
+    setWindowParent(fakeParent)
+
+    makeIframeWithEmbeddingClass(document, "current-blocked", {
+      contentWindow: null,
+    })
+
+    expect(getIFrameEnclosingApp("current-blocked")).toBeNull()
+  })
+
+  it("finds an untitled iframe on the parent document via getElementsByTagName", () => {
+    const parentDocument = document.implementation.createHTMLDocument("parent")
+    const iframe = makeIframeWithEmbeddingClass(
+      parentDocument,
+      "parent-tag",
+      {}
+    )
+
+    const fakeParent = {
+      document: parentDocument,
+    } as Window & typeof globalThis
+    setWindowParent(fakeParent)
+
+    expect(getIFrameEnclosingApp("parent-tag")).toBe(iframe)
+  })
+
+  it("returns null when the only parent iframe found by tag name is inaccessible", () => {
+    const parentDocument = document.implementation.createHTMLDocument("parent")
+    makeIframeWithEmbeddingClass(parentDocument, "parent-tag-blocked", {
+      contentWindow: null,
+    })
+
+    const fakeParent = {
+      document: parentDocument,
+    } as Window & typeof globalThis
+    setWindowParent(fakeParent)
+
+    expect(getIFrameEnclosingApp("parent-tag-blocked")).toBeNull()
+  })
 })
 
 describe("getTimezone", () => {
