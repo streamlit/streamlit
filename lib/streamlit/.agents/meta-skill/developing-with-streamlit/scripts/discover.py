@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Discover the Streamlit package's bundled agent-skills SKILL.md.
 
 Usage:
@@ -21,6 +20,7 @@ Exit codes:
 
 On non-zero exit, a human-readable "ERROR:" block is printed on stderr.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -29,10 +29,9 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 
-def find_venv_python(venv_root: Path) -> Optional[Path]:
+def find_venv_python(venv_root: Path) -> Path | None:
     """Return the venv's Python executable, cross-platform.
 
     POSIX venvs put it at bin/python; Windows venvs put it at Scripts/python.exe.
@@ -46,7 +45,7 @@ def find_venv_python(venv_root: Path) -> Optional[Path]:
     return None
 
 
-def find_git_root(start: Path) -> Optional[Path]:
+def find_git_root(start: Path) -> Path | None:
     """Walk up from `start` looking for a `.git` directory or file.
 
     Returns the directory containing `.git` (the repo root), or None if no
@@ -59,7 +58,7 @@ def find_git_root(start: Path) -> Optional[Path]:
     return None
 
 
-def detect_interpreter(project_dir: Path) -> Optional[Tuple[List[str], str]]:
+def detect_interpreter(project_dir: Path) -> tuple[list[str], str] | None:
     """Pick the right Python interpreter, in documented priority order.
 
     Returns ``(cmd, tag)`` where ``cmd`` is the command for ``subprocess.run``
@@ -87,11 +86,7 @@ def detect_interpreter(project_dir: Path) -> Optional[Tuple[List[str], str]]:
     # monorepos where the project's venv lives at repo root but the agent's
     # cwd / --project-dir points deep into a subdirectory.
     git_root = find_git_root(project_dir)
-    if (
-        git_root is not None
-        and git_root != project_dir
-        and git_root != project_dir.parent
-    ):
+    if git_root is not None and git_root not in {project_dir, project_dir.parent}:
         py = find_venv_python(git_root / ".venv")
         if py:
             return [str(py)], "venv-git-root"
@@ -121,7 +116,7 @@ def detect_interpreter(project_dir: Path) -> Optional[Tuple[List[str], str]]:
     return None
 
 
-def install_advice(cmd: List[str], tag: str) -> str:
+def install_advice(cmd: list[str], tag: str) -> str:
     """Return the package-manager-appropriate install command for the
     detected interpreter.
 
@@ -199,6 +194,7 @@ def main() -> int:
             text=True,
             cwd=project_dir,
             timeout=30,
+            check=False,
         )
     except subprocess.TimeoutExpired:
         print(

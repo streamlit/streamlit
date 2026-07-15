@@ -314,6 +314,15 @@ extend-safe-fixes = ["TC002", "TC003"]
   # misrepresent them as importable modules.
   "INP",
 ]
+"lib/streamlit/.agents/meta-skill/**" = [
+  # The meta-skill's discover.py is a standalone CLI script: it prints its
+  # result to stdout/stderr and shells out to probe the project's Python
+  # interpreter. Same relaxations as scripts/** (INP is already covered above).
+  "T20",
+  "S",
+  "PERF",
+  "TRY002",
+]
 
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.

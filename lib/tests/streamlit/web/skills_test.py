@@ -19,7 +19,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-from typing import TYPE_CHECKING
+from pathlib import Path
 from unittest.mock import patch
 
 import click
@@ -27,9 +27,6 @@ import pytest
 from click.testing import CliRunner
 
 from streamlit.web import cli, skills
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _skip_if_symlinks_not_supported(tmp_path: Path) -> None:
@@ -960,13 +957,15 @@ class TestInstallSkillsCli:
         self, runner: CliRunner, tmp_path: Path
     ) -> None:
         """Fails when bundled skills directory doesn't exist."""
-        with patch.object(
-            skills, "_get_source_skills_dir", return_value=tmp_path / "nonexistent"
-        ):
+        missing = tmp_path / "nonexistent"
+        with patch.object(skills, "_get_source_skills_dir", return_value=missing):
             result = runner.invoke(cli.main, ["skills", "--yes"])
 
         assert result.exit_code != 0
         assert "not found" in result.output
+        # The absolute server path must not leak into the error (the same message
+        # is shown verbatim in the in-app nudge toast).
+        assert str(missing) not in result.output
 
     def test_skills_installs_to_agents_skills(
         self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
@@ -2157,6 +2156,75 @@ class TestInstallGlobalSkillsMetaSkill:
         assert "was not found" in result.output
         # The server-side absolute path must not leak into the user-facing error.
         assert str(missing) not in result.output
+
+    def test_global_install_requires_discover_py_not_just_skill_md(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        """SKILL.md alone is not enough — discover.py must be present too.
+
+        The meta-skill's SKILL.md is inert without scripts/discover.py (it just
+        routes the agent into that script). If a stripped wheel or a too-narrow
+        package-data glob shipped SKILL.md only, the install must error rather
+        than report success for a skill that fails the moment an agent runs it.
+        """
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+        # Meta-skill dir with SKILL.md but NO scripts/discover.py.
+        meta_dir = tmp_path / "meta-skill"
+        (meta_dir / "developing-with-streamlit").mkdir(parents=True)
+        (meta_dir / "developing-with-streamlit" / "SKILL.md").write_text(
+            "# Meta Skill\n", encoding="utf-8"
+        )
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(skills, "_get_meta_skill_dir", return_value=meta_dir),
+        ):
+            result = runner.invoke(cli.main, ["skills", "-g", "-y"])
+
+        assert result.exit_code != 0
+        assert "was not found" in result.output
+        # Nothing should have been copied to the global target.
+        assert not (home / ".agents" / "skills" / "developing-with-streamlit").exists()
+
+
+class TestMetaSkillPackaging:
+    """Guards that the vendored meta-skill files actually ship in the wheel."""
+
+    def test_package_data_globs_cover_vendored_meta_skill(self) -> None:
+        """The setuptools ``package-data`` globs must match both vendored files.
+
+        Every other test reads the vendored files straight from the on-disk
+        checkout, so they stay green even if the ``package-data`` globs were
+        wrong or removed — the failure would only surface for real pip-installed
+        users, exactly the "global install broken on a real machine" class this
+        change exists to prevent. This asserts the declared globs, applied to the
+        real package dir, include ``SKILL.md`` and ``scripts/discover.py``.
+        """
+        import glob as globmod
+
+        import toml
+
+        pyproject = Path(__file__).resolve().parents[3] / "pyproject.toml"
+        if not pyproject.is_file():  # pragma: no cover - unusual layout
+            pytest.skip("lib/pyproject.toml not found in this layout")
+
+        globs = toml.load(pyproject)["tool"]["setuptools"]["package-data"]["streamlit"]
+        # <streamlit pkg>/.agents/skills -> <streamlit pkg>
+        pkg_dir = skills._get_source_skills_dir().parents[1]
+
+        matched: set[str] = set()
+        for pattern in globs:
+            matched.update(
+                Path(hit).as_posix()
+                for hit in globmod.glob(pattern, root_dir=pkg_dir, recursive=True)
+            )
+
+        assert ".agents/meta-skill/developing-with-streamlit/SKILL.md" in matched
+        assert (
+            ".agents/meta-skill/developing-with-streamlit/scripts/discover.py"
+            in matched
+        )
 
 
 class TestVendoredMetaSkillDiscovery:

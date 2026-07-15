@@ -585,8 +585,12 @@ def _install_project_skills(
     # Discover bundled skills
     source_skills_dir = _get_source_skills_dir()
     if not source_skills_dir.is_dir():
+        # Keep the absolute path in the server log only - this message is shown
+        # verbatim in the in-app nudge, so it must not leak a server path.
+        _LOGGER.warning("Bundled skills directory not found at %s", source_skills_dir)
         raise click.ClickException(
-            f"Bundled skills directory not found: {source_skills_dir}"
+            "Bundled skills were not found in your Streamlit installation. "
+            "Reinstall Streamlit and try again."
         )
 
     skills = _discover_skills(source_skills_dir)
@@ -723,11 +727,20 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
 
     # The meta-skill ships in the wheel; copy it from local disk (no network).
     meta_skill_dir = _get_meta_skill_dir()
-    if not (meta_skill_dir / _GLOBAL_SKILL_NAME / "SKILL.md").is_file():
+    meta_skill = meta_skill_dir / _GLOBAL_SKILL_NAME
+    # The meta-skill is a router (SKILL.md) plus the discover.py it points the
+    # agent at; SKILL.md alone is inert. Require BOTH so a stripped wheel or a
+    # too-narrow package-data glob surfaces as an error instead of a "successful"
+    # install of a skill that fails the moment an agent runs discover.py.
+    if not (
+        (meta_skill / "SKILL.md").is_file()
+        and (meta_skill / "scripts" / "discover.py").is_file()
+    ):
         # Keep the absolute path in the server log only - this message is shown
         # verbatim in the in-app nudge, so it must not leak a server path.
         _LOGGER.warning(
-            "Bundled meta-skill %r not found under %s",
+            "Bundled meta-skill %r is incomplete under %s "
+            "(need SKILL.md + scripts/discover.py)",
             _GLOBAL_SKILL_NAME,
             meta_skill_dir,
         )
