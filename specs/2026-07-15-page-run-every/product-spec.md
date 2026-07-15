@@ -117,7 +117,9 @@ sub-second *full-page* reruns are disproportionately expensive (and DoS-adjacent
 Browsers also throttle background-tab timers to ≥1 second, so a sub-second value is
 unreliable regardless. We start with a floor because tightening it later would be breaking
 while relaxing it is not; the difference from fragment is documented rather than silent.
-Pass `None` to disable.
+`0`, negative values, and any interval that resolves to less than 1 second raise
+`StreamlitAPIException` rather than silently disabling — pass `None` (not `0`) to turn
+auto-rerun off.
 
 ### Examples
 
@@ -186,7 +188,10 @@ st.dataframe(get_daily_summary())     # refreshed by the page-level interval
 > wasteful when only one section changes on a schedule. Users should reach for page-level
 > `run_every` when the whole page genuinely needs to refresh, and prefer wrapping the
 > live section in a fragment otherwise. The docstring will link to `@st.fragment` and
-> show the composition pattern above.
+> show the composition pattern above. It should also warn that, because each tick is a full
+> rerun, page-level `run_every` dismisses an open `st.dialog` and resets an unsubmitted
+> `st.form` — another reason to prefer a fragment (or to pause auto-refresh) for modal or
+> multi-step flows.
 
 ### Behavior
 
@@ -237,8 +242,10 @@ st.dataframe(get_daily_summary())     # refreshed by the page-level interval
   armed (and any timer from a previous run is cleared, since the timer is re-derived per
   run). So an explicit `None` matches `@st.fragment(run_every=None)` (no auto-rerun), while
   *omission* inherits like the other `set_page_config` parameters. This means the
-  implementation must distinguish "argument not passed" from an explicit `None` (via an
-  internal sentinel default); users still simply write `run_every=None` to disable.
+  implementation must distinguish "argument not passed" from an explicit `None` — via an
+  internal sentinel default (the standard Streamlit pattern for telling an unset keyword
+  argument apart from an explicit `None`); users still simply write `run_every=None` to
+  disable.
 - **Background tabs.** Browsers throttle timers in inactive tabs (typically to ≥1s, and
   more aggressively when backgrounded). Very short intervals may therefore fire less often
   when the tab isn't focused. This is inherent to the frontend-timer approach (and matches
