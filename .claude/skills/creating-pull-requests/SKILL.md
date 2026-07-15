@@ -150,3 +150,5 @@ rm work-tmp/pr_description.md work-tmp/pr_body.md
 ## Reference
 
 For full details on writing principles, labeling, branch naming, and testing plans, see the [Pull requests wiki](../../../wiki/pull-requests.md).
+
+To review whether a PR's title and description read clearly and concisely, use the `reviewing-pr-description` skill and apply its proposed rewrites.

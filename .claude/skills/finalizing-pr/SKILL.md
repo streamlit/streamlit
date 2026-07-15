@@ -13,7 +13,7 @@ Prepares the current branch for merge by running quality checks, simplifying cod
 
 Follow these steps in order. **Run all subagents in foreground** (not background) unless otherwise specified—wait for each to complete before proceeding.
 
-> **Note:** For small changes (documentation tweaks, test-only tweaks, one-liners, or other mini-changes), you can skip steps 1, 2, 3, 6, 7, and 8.
+> **Note:** For small changes (documentation tweaks, test-only tweaks, one-liners, or other mini-changes), you can skip steps 1, 2, 3, 4, 7, 8, and 9.
 
 ### 1. Build and install
 
@@ -31,7 +31,11 @@ Run the `/updating-internal-docs` skill in a background subagent to auto-fix int
 
 Run the `simplifying-local-changes` subagent to clean up and simplify the code changes. Wait for completion before proceeding.
 
-### 4. Run autofix
+### 4. Review readability
+
+Read and follow the `reviewing-readability` skill to evaluate comments, docstrings, and naming in the changed code, then apply its proposed rewrites. (This covers the code only; the PR title and description are reviewed in step 10.)
+
+### 5. Run autofix
 
 Run autofix in a subagent to fix formatting and linting issues. Wait for completion before proceeding.
 
@@ -39,26 +43,26 @@ Run autofix in a subagent to fix formatting and linting issues. Wait for complet
 make autofix
 ```
 
-### 5. Run checks (first pass)
+### 6. Run checks (first pass)
 
 Run the /checking-changes skill in a subagent (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
 
-### 6. Review changes
+### 7. Review changes
 
 Run the `reviewing-local-changes` subagent to review the changes. Wait for completion and read the review output.
 
-### 7. Address review feedback
+### 8. Address review feedback
 
-Review the recommendations from step 6. For each recommendation:
+Review the recommendations from step 7. For each recommendation:
 
 - If valid and improves code quality: implement the change
 - If not applicable or would over-engineer: skip with brief reasoning
 
-### 8. Run checks (second pass)
+### 9. Run checks (second pass)
 
 Run the /checking-changes skill in a subagent with `E2E_CHECK=true make check` to also run changed e2e tests. Wait for completion, then fix any issues found before proceeding. Snapshot mismatches can be ignored (they require manual updates).
 
-### 9. Create or update PR
+### 10. Create or update PR
 
 > **Note:** If currently on `develop`, create a new branch first following the naming conventions in `wiki/pull-requests.md`.
 
@@ -105,11 +109,13 @@ EOF
 
 **If PR exists**, check if description needs updating based on current changes.
 
-### 10. Upload intermediate files
+**Review the PR title and description:** Once the PR exists (or its title/description are drafted), read and follow the `reviewing-pr-description` skill to evaluate the title and description, then apply its proposed rewrites.
+
+### 11. Upload intermediate files
 
 If relevant intermediate files exist (specs, plans, implementation notes in `work-tmp/` or untracked in `specs/`), run the `/sharing-pr-agent-artifacts` skill to push them to the wiki and comment on the PR with links.
 
-### 11. AI review and fix loop
+### 12. AI review and fix loop
 
 Iterate through AI review and fixes until the review passes (max 5 iterations):
 
@@ -153,7 +159,7 @@ The verdict section contains a bold keyword indicating the result:
 
 **Important:** After each `fixing-pr` run, re-check if changes were made. If changes were pushed, the AI review will be stale and needs re-triggering. Continue iterating until the review verdict is "approved" or max iterations reached.
 
-### 12. Post agent metrics
+### 13. Post agent metrics
 
 Post the agent metrics to the PR body:
 

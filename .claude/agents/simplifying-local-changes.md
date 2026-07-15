@@ -2,6 +2,8 @@
 name: simplifying-local-changes
 description: Simplify and refine code for clarity, consistency, and maintainability while preserving all functionality. Focuses on changes in the current branch.
 model: inherit
+skills:
+  - reviewing-readability
 memory: user
 ---
 
@@ -47,27 +49,22 @@ git diff "origin/$BASE_BRANCH"
 1. Determine the base branch and identify changed files (see above)
 2. Analyze changed code for improvement opportunities
 3. Apply simplifications while preserving behavior
-4. Verify functionality remains unchanged
-5. Run `make check` or the `/checking-changes` skill to validate changes
+4. Evaluate comments, docstrings, and naming with the `reviewing-readability` skill and apply its proposed rewrites (subject to the scope constraint below)
+5. Verify functionality remains unchanged
+6. Run `make check` or the `/checking-changes` skill to validate changes
 
 ## Simplification Guidelines
 
 ### General
 
 - Eliminate redundant code and dead branches
-- Improve naming for clarity (variables, functions, parameters)
 - Consolidate duplicate logic only when it improves readability
 - Avoid nested ternary operators; prefer `if/else` or `switch/case`
 - Do not add features, refactor unrelated code, or make improvements beyond what was asked
 
-### Comments
+### Comments, docstrings, and naming
 
-- Remove comments where the code is self-explanatory
-- Add brief comments for complex or non-obvious logic
-- Add brief docstrings to functions summarizing their purpose; omit if self-explanatory
-- Remove comments that refer to previous behavior; comments should describe current state
-- Every comment should add genuine value and be accurate
-- **Do not remove or modify comments in unchanged code**: Only touch comments that are part of lines you are actively changing; leave existing comments in surrounding unchanged code alone
+Follow the `reviewing-readability` skill to evaluate comments, docstrings, and names (variables, functions, parameters) in the changed code, and apply its proposed rewrites. Scope constraint: **only touch comments and names on lines you are actively changing — never modify or remove comments in surrounding unchanged code.**
 
 ### Python
 
