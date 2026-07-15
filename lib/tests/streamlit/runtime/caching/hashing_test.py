@@ -463,6 +463,42 @@ class HashTest(unittest.TestCase):
 
         assert get_hash(series4) == get_hash(series5)
 
+    def test_pandas_dataframe_with_unhashable_column_hashes_without_traceback(self):
+        """A DataFrame holding unhashable cells still hashes via the pickle
+        fallback and warns without dumping a traceback (gh-10957)."""
+        df = pd.DataFrame({"col": [[1, 2]]}, index=[1])
+
+        with self.assertLogs(
+            "streamlit.runtime.caching.hashing", level="WARNING"
+        ) as logs:
+            first = get_hash(df)
+            second = get_hash(df)
+
+        # The fallback still yields a stable, non-empty hash.
+        assert first
+        assert first == second
+        # A warning is emitted, but never with an exception traceback: users
+        # were being shown a scary pandas stack trace for a handled fallback.
+        assert logs.records
+        assert all(record.exc_info is None for record in logs.records)
+        assert all(
+            "unhashable" in record.getMessage().lower() for record in logs.records
+        )
+
+    def test_pandas_series_with_unhashable_value_hashes_without_traceback(self):
+        """A Series holding unhashable values still hashes via the pickle
+        fallback and warns without dumping a traceback (gh-10957)."""
+        series = pd.Series([[1, 2], [3, 4]])
+
+        with self.assertLogs(
+            "streamlit.runtime.caching.hashing", level="WARNING"
+        ) as logs:
+            digest = get_hash(series)
+
+        assert digest
+        assert logs.records
+        assert all(record.exc_info is None for record in logs.records)
+
     @pytest.mark.require_integration
     def test_polars_series(self):
         import polars as pl

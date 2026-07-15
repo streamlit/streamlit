@@ -434,8 +434,10 @@ class _CacheFuncHasher:
                 return h.digest()
             except TypeError:
                 _LOGGER.warning(
-                    "Pandas Series hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Failed to hash a pandas Series because it contains values "
+                    "that cannot be hashed (for example, cells holding lists or "
+                    "other unhashable objects). Falling back to pickling the "
+                    "object for caching."
                 )
 
                 # Use pickle if pandas cannot hash the object for example if
@@ -460,8 +462,10 @@ class _CacheFuncHasher:
 
             except TypeError:
                 _LOGGER.warning(
-                    "Pandas DataFrame hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Failed to hash a pandas DataFrame because it contains values "
+                    "that cannot be hashed (for example, cells holding lists or "
+                    "other unhashable objects). Falling back to pickling the "
+                    "object for caching."
                 )
 
                 # Use pickle if pandas cannot hash the object for example if
@@ -484,8 +488,10 @@ class _CacheFuncHasher:
 
             except TypeError:
                 _LOGGER.warning(
-                    "Polars Series hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Failed to hash a polars Series because it contains values "
+                    "that cannot be hashed (for example, cells holding lists or "
+                    "other unhashable objects). Falling back to pickling the "
+                    "object for caching."
                 )
 
                 # Use pickle if polars cannot hash the object for example if
@@ -514,8 +520,10 @@ class _CacheFuncHasher:
 
             except TypeError:
                 _LOGGER.warning(
-                    "Polars DataFrame hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Failed to hash a polars DataFrame because it contains values "
+                    "that cannot be hashed (for example, cells holding lists or "
+                    "other unhashable objects). Falling back to pickling the "
+                    "object for caching."
                 )
 
                 # Use pickle if polars cannot hash the object for example if
