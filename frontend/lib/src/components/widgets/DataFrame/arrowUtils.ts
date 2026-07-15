@@ -368,7 +368,11 @@ export function initColumnFromArrow(
     id: `_column-${title}-${columnPosition}`,
     indexNumber: columnPosition,
     name: title,
-    isEditable: true,
+    // Duration columns are displayed via NumberColumn using raw nanosecond
+    // values (see arrowUtils.ts getColumnTypeFromArrow / NumberColumn's
+    // useArrowFormatting). Editing that raw value directly is not
+    // meaningful to users, so keep duration columns read-only.
+    isEditable: !isDurationType(arrowType),
     title,
     arrowType,
     group,
