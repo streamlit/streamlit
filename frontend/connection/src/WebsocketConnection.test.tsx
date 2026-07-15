@@ -25,7 +25,6 @@ vi.mock("@streamlit/utils", async () => {
   }
 })
 
-import { zip } from "lodash-es"
 import { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
@@ -677,6 +676,8 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   it("has increasing but capped retry backoff", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+
     globalThis.fetch = vi
       .fn()
       // First Connection attempt
@@ -728,18 +729,11 @@ If you are trying to access a Streamlit app running on another server, this coul
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
     await promise
+    randomSpy.mockRestore()
 
-    expect(timeouts.length).toEqual(5)
-    expect(timeouts[0]).toEqual(10)
-    expect(timeouts[4]).toBeGreaterThanOrEqual(70)
-    expect(timeouts[4]).toBeLessThanOrEqual(100)
-    // timeouts should be monotonically increasing until they hit the cap
-    expect(
-      zip(timeouts.slice(0, -1), timeouts.slice(1)).every(
-        // @ts-expect-error
-        timePair => timePair[0] < timePair[1] || timePair[0] === 100
-      )
-    ).toEqual(true)
+    // With a fixed jitter factor of 0.85, the exponential backoff windows are
+    // 10, 20, 40, 80, and 100 ms. The final window is capped from 160 ms.
+    expect(timeouts).toEqual([10, 17, 34, 68, 85])
   })
 
   it("backs off independently for each target url", async () => {
