@@ -124,7 +124,7 @@
     "vega-embed": "^7.1.0",
     "vega-interpreter": "^2.2.1",
     "vega-lite": "6.4.3",
-    "wavesurfer.js": "^7.12.8",
+    "wavesurfer.js": "^7.12.10",
     "xxhashjs": "^0.2.2"
   },
   "peerDependencies": {
