@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Final
 
-from streamlit import config, errors, logger, runtime
+from streamlit import errors, logger, runtime
 from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.errors import (
     StreamlitAPIWarning,
@@ -52,25 +52,17 @@ def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -
         raise StreamlitInvalidFormCallbackError()
 
 
-_shown_default_value_warning: bool = False
-
-
 def check_session_state_rules(
     default_value: Any, key: str | None, writes_allowed: bool = True
 ) -> None:
     """Ensures that no values are set for widgets with the given key when writing
     is not allowed.
 
-    Additionally, if `global.disableWidgetStateDuplicationWarning` is False, logs a
-    warning when a widget has a default value but its value is also set via session state.
-
     Raises
     ------
     StreamlitValueAssignmentNotAllowedError:
         Raised when writing is not allowed but session state contains a new value.
     """
-    global _shown_default_value_warning  # noqa: PLW0603
-
     if key is None or not runtime.exists():
         return
 
@@ -80,19 +72,6 @@ def check_session_state_rules(
 
     if not writes_allowed:
         raise StreamlitValueAssignmentNotAllowedError(key=key)
-
-    if (
-        default_value is not None
-        and not _shown_default_value_warning
-        and not config.get_option("global.disableWidgetStateDuplicationWarning")
-    ):
-        _LOGGER.warning(
-            'The widget with key "%s" was created with a default value but also had '
-            "its value set via the Session State API.",
-            key,
-            stack_info=True,
-        )
-        _shown_default_value_warning = True
 
 
 class CachedWidgetWarning(StreamlitAPIWarning):

@@ -99,22 +99,6 @@ class CheckSessionStateRules(ElementPoliciesTest):
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     @patch("streamlit.elements.lib.policies.get_session_state")
-    @patch("streamlit.elements.lib.policies._LOGGER")
-    def test_check_session_state_rules_hide_warning_if_state_duplication_disabled(
-        self, patched_logger, patched_get_session_state
-    ):
-        config._set_option("global.disableWidgetStateDuplicationWarning", True, "test")
-
-        mock_session_state = MagicMock()
-        mock_session_state.is_new_state_value.return_value = True
-        patched_get_session_state.return_value = mock_session_state
-
-        check_session_state_rules(5, key=_KEY)
-
-        patched_logger.warning.assert_not_called()
-
-    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    @patch("streamlit.elements.lib.policies.get_session_state")
     def test_check_session_state_rules_writes_not_allowed(
         self, patched_get_session_state
     ):
@@ -153,29 +137,6 @@ class SpecialSessionStatesTest(ElementPoliciesTest):
             p.stop()
 
         config._delete_option("_test.tomlTest")
-
-    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    @patch("streamlit.elements.lib.policies.get_session_state")
-    @patch("streamlit.elements.lib.policies._LOGGER")
-    def test_check_session_state_rules_prints_warning(
-        self, patched_logger, patched_get_session_state
-    ):
-        import streamlit.elements.lib.policies as policies_module
-
-        mock_session_state = MagicMock()
-        mock_session_state.is_new_state_value.return_value = True
-        patched_get_session_state.return_value = mock_session_state
-        # Reset global flag:
-        policies_module._shown_default_value_warning = False
-
-        check_session_state_rules(5, key=_KEY)
-
-        patched_logger.warning.assert_called_once()
-        args, kwargs = patched_logger.warning.call_args
-        warning_msg = args[0]
-        assert 'The widget with key "%s"' in warning_msg
-        assert args[1] == _KEY
-        assert kwargs.get("stack_info") is True
 
 
 class CheckCacheReplayTest(ElementPoliciesTest):

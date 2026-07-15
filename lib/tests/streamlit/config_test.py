@@ -768,7 +768,6 @@ class ConfigTest(unittest.TestCase):
                 *dark_sidebar_config_options,
                 "global.appTest",
                 "global.developmentMode",
-                "global.disableWidgetStateDuplicationWarning",
                 "global.e2eTest",
                 "global.maxCachedMessageAge",
                 "global.minCachedMessageSize",

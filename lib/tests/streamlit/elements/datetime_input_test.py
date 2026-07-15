@@ -424,7 +424,6 @@ def test_datetime_input_callback():
     assert at.session_state.dt == new_value
 
 
-@patch("streamlit.elements.lib.policies._shown_default_value_warning", new=False)
 def test_session_state_takes_precedence():
     """Test that session state value takes precedence over default value."""
 
