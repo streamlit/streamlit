@@ -318,3 +318,43 @@ def test_navigation_resets_pages_manager_state():
         assert "Page content" in at.markdown.values
     finally:
         PagesManager.uses_pages_directory = original_value
+
+
+def test_dynamic_widget_does_not_duplicate_on_rerun():
+    """Dynamically adding an element before an existing widget should not
+    leave stale widgets in the AppTest tree after a rerun.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/12566
+    """
+
+    def script():
+        import streamlit as st
+
+        if "_string_value" not in st.session_state:
+            st.session_state._string_value = "string1"
+
+        if st.session_state.get("_bool_value", False):
+            with st.container(key="k_container"):
+                st.html("<style>color: red;</style>")
+
+        with st.container():
+            st.text_input("Text", value=st.session_state._string_value)
+
+            if st.button("Button", key="k_button"):
+                st.session_state._string_value = "string2"
+                st.session_state._bool_value = True
+                st.rerun()
+
+    at = AppTest.from_function(script).run()
+    assert len(at.text_input) == 1
+    assert at.text_input[0].value == "string1"
+
+    at = at.button(key="k_button").click().run()
+    assert len(at.text_input) == 1
+    assert at.text_input[0].value == "string2"
+
+    # A subsequent run with no interaction should not raise KeyError because
+    # of stale widget ids left over from the prererun tree.
+    at.run()
+    assert len(at.text_input) == 1
+    assert at.text_input[0].value == "string2"

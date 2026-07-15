@@ -85,6 +85,15 @@ class LocalScriptRunner(ScriptRunner):
             self.events.append(event)
             self.event_data.append(kwargs)
 
+            if event == ScriptRunnerEvent.SCRIPT_STARTED:
+                # Each script run starts a fresh render, so clear any stale
+                # deltas from previous runs/iterations. Lifecycle messages are
+                # retained to match AppSession behavior.
+                self.forward_msg_queue.clear(
+                    retain_lifecycle_msgs=True,
+                    fragment_ids_this_run=kwargs.get("fragment_ids_this_run"),
+                )
+
             # Send ENQUEUE_FORWARD_MSGs to our queue
             if event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
                 forward_msg = kwargs["forward_msg"]
