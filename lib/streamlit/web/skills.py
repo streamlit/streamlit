@@ -188,16 +188,27 @@ def _get_project_target_dirs(project_root: Path) -> list[Path]:
 def _get_global_target_dirs() -> list[Path]:
     """Get target directories for global skill installation.
 
-    Always targets ~/.agents/skills/. Also targets ~/.claude/skills/
-    when ~/.claude exists (Claude Code is installed).
+    Always targets ``~/.agents/skills/`` (the harness-agnostic convention many
+    agents read). Also targets the home skills directory of every other agent
+    harness whose home config directory exists (e.g. ``~/.claude/skills``,
+    ``~/.gemini/skills``, ``~/.codex/skills``), so a one-click global install
+    lands where the harness the developer actually runs looks for skills — not
+    only in ``~/.agents/skills``, which some harnesses do not read. The harness
+    set and the "installed if its home config dir exists" rule mirror the nudge's
+    :func:`detect_installed_agents`/:func:`detect_installed_skills`, so an install
+    is both visible to the harness and detected as installed (no re-nudge loop).
     """
     home = Path.home()
-    targets = [home / ".agents" / "skills"]
-
-    claude_home = home / ".claude"
-    if claude_home.exists():
-        targets.append(claude_home / "skills")
-
+    targets: list[Path] = []
+    for _harness, _project_dir, home_skills_dir, agent_home_dir in _HARNESSES:
+        # ``.agents`` is the generic convention: always install there. Every
+        # other harness only when its home config dir exists (i.e. it is
+        # installed) — the same test detect_installed_agents uses.
+        if agent_home_dir != ".agents" and not (home / agent_home_dir).is_dir():
+            continue
+        target = home / home_skills_dir
+        if target not in targets:
+            targets.append(target)
     return targets
 
 
