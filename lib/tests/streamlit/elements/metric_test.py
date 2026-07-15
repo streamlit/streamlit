@@ -207,6 +207,9 @@ class MetricTest(DeltaGeneratorTestCase):
             # Leading whitespace is dedented before rendering, so " 0" must be
             # treated the same as "0" (neutral) instead of a positive delta.
             (" 0", "0"),
+            # Numeric negative zero equals 0, so it is neutral even though it
+            # still renders with a leading minus (str(-0.0) == "-0.0").
+            (-0.0, "-0.0"),
         ]
     )
     def test_zero_delta_color_and_direction(self, delta, expected_delta):
@@ -227,7 +230,7 @@ class MetricTest(DeltaGeneratorTestCase):
         ]
     )
     def test_zero_delta_color_modes(self, delta_color_value):
-        """Test that zero deltas are gray for computed color modes."""
+        """Zero deltas are gray for the normal, inverse, and off color modes."""
         st.metric("label_test", "123", 0, delta_color=delta_color_value)
 
         c = self.get_delta_from_queue().new_element.metric
@@ -265,6 +268,20 @@ class MetricTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.metric
         assert c.color == MetricProto.MetricColor.GREEN
         assert c.direction == MetricProto.MetricDirection.UP
+
+    def test_negative_zero_string_is_negative(self):
+        """The string '-0' is negative, unlike the numeric -0.0 neutral case.
+
+        Strings are matched as opaque display text (a leading '-' looks
+        negative), while numbers are compared numerically (-0.0 == 0), so the
+        two intentionally diverge.
+        """
+        st.metric("label_test", "123", "-0")
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.delta == "-0"
+        assert c.color == MetricProto.MetricColor.RED
+        assert c.direction == MetricProto.MetricDirection.DOWN
 
     def test_delta_arrow_default(self):
         """Test that metric delta arrow defaults to auto."""

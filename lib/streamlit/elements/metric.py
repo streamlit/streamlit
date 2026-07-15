@@ -487,7 +487,7 @@ def _determine_delta_color_and_direction(
             direction=MetricProto.MetricDirection.NONE,
         )
 
-    # Determine direction based on delta sign
+    # Determine direction: neutral for zero, down for negative, up otherwise
     if _is_zero_delta(delta):
         cd_direction = MetricProto.MetricDirection.NONE
     elif _is_negative_delta(delta):
@@ -532,10 +532,9 @@ def _is_negative_delta(delta: Delta) -> bool:
 
 
 def _is_zero_delta(delta: Delta) -> bool:
-    # Only the literal string "0" counts as a zero delta; other numeric-looking
-    # strings (e.g. "0.0", "0%") are treated as regular positive deltas. String
-    # deltas are dedented first so the check matches the value that is actually
-    # rendered (see _parse_delta), e.g. " 0" is treated the same as "0".
+    # Only the literal string "0" is a zero delta; other numeric-looking strings
+    # (e.g. "0.0", "0%") stay positive. String deltas are dedented first to match
+    # the rendered value (see _parse_delta), so " 0" is treated the same as "0".
     if isinstance(delta, str):
         return dedent(delta) == "0"
     return bool(delta == 0)
