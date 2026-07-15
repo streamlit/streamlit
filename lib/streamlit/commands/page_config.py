@@ -116,6 +116,7 @@ def set_page_config(
     layout: Layout | None = None,
     initial_sidebar_state: InitialSideBarState | None = None,
     menu_items: MenuItems | None = None,
+    page_lang: str | None = None,
 ) -> None:
     """
     Configure the default settings of the page.
@@ -218,6 +219,18 @@ def set_page_config(
         item that was specified in a previous call to ``st.set_page_config``,
         set its value to ``None`` in the dictionary.
 
+    page_lang: str or None
+        The page language, set as the ``lang`` attribute on the root
+        ``<html>`` element. This is used by browsers for translation prompts
+        and by screen readers for pronunciation. If ``None`` (default), the
+        language is inherited from the previous call of ``st.set_page_config``.
+        If no previous call exists, the value defaults to ``"en"``.
+
+        Must be a valid `BCP 47 language tag`_ (e.g. ``"en"``, ``"ja"``,
+        ``"fr"``, ``"zh-CN"``).
+
+        .. _BCP 47 language tag: https://tools.ietf.org/html/bcp47
+
     Examples
     --------
     >>> import streamlit as st
@@ -292,6 +305,9 @@ def set_page_config(
         validate_menu_items(lowercase_menu_items)
         menu_items_proto = msg.page_config_changed.menu_items
         set_menu_items_proto(lowercase_menu_items, menu_items_proto)
+
+    if page_lang is not None:
+        msg.page_config_changed.lang = page_lang
 
     ctx = get_script_run_ctx()
     if ctx is None:
