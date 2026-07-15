@@ -306,7 +306,7 @@ def set_page_config(
         menu_items_proto = msg.page_config_changed.menu_items
         set_menu_items_proto(lowercase_menu_items, menu_items_proto)
 
-    if page_lang is not None:
+    if page_lang is not None and page_lang != "":
         msg.page_config_changed.lang = page_lang
 
     ctx = get_script_run_ctx()
