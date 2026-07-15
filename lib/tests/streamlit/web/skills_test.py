@@ -474,6 +474,54 @@ class TestGetGlobalTargetDirs:
         assert home / ".cursor" / "skills" not in result
 
 
+class TestHarnessSkillSubdirs:
+    """Tests for the shared harness->skills-dir derivation used by both the
+    nudge's skill detection and the global installer's target resolution."""
+
+    def test_home_scope_returns_only_present_harnesses(self, tmp_path: Path) -> None:
+        """At home scope, only harnesses whose config dir exists are returned."""
+        (tmp_path / ".gemini").mkdir()
+        (tmp_path / ".claude").mkdir()
+        # ~/.cursor deliberately absent.
+
+        result = dict(skills._harness_skill_subdirs(str(tmp_path), home_scope=True))
+
+        assert result.get("gemini") == ".gemini/skills"
+        assert result.get("claude") == ".claude/skills"
+        assert "cursor" not in result
+
+    def test_project_scope_returns_all_harnesses_ungated(self, tmp_path: Path) -> None:
+        """At project scope every harness's project dir is returned, no presence
+        gate — and the project dir can differ from the home dir (e.g. copilot)."""
+        result = dict(skills._harness_skill_subdirs(str(tmp_path), home_scope=False))
+
+        assert len(result) == len(skills._HARNESSES)
+        assert result["cursor"] == ".cursor/skills"
+        # Copilot's project dir (.github/skills) differs from its home dir.
+        assert result["copilot"] == ".github/skills"
+
+    def test_global_targets_match_detection_home_dirs(self, tmp_path: Path) -> None:
+        """Symmetry guard: every non-generic global target is a home dir that the
+        detection derivation also yields — install writes where the toast looks."""
+        home = tmp_path
+        (home / ".gemini").mkdir()
+        (home / ".codex").mkdir()
+
+        with patch("pathlib.Path.home", return_value=home):
+            targets = skills._get_global_target_dirs()
+        detected = {
+            home / subdir
+            for _harness, subdir in skills._harness_skill_subdirs(
+                str(home), home_scope=True
+            )
+        }
+        # Base ~/.agents/skills is always present; every other target must be a
+        # dir detection scans (no install target the toast can't see).
+        extras = set(targets) - {home / ".agents" / "skills"}
+        assert extras <= detected
+        assert home / ".gemini" / "skills" in extras
+
+
 class TestAreSkillsInstalled:
     """Tests for are_skills_installed."""
 
