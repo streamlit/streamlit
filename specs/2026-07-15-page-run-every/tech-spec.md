@@ -160,6 +160,26 @@ this.autoRerunIntervals.set(key, { timer, interval })
 - **Interaction with fragment `run_every`.** Independent timers keyed separately; both fire
   as configured. A page-level auto-rerun (full rerun) naturally supersedes in-flight
   fragment timers because `handleNewSession` clears and re-registers everything.
+- **Concurrent reruns (tick coinciding with a user rerun).** No new coordination code is
+  required; existing behavior covers it:
+  - The frontend always sends the current full widget-state snapshot, and
+    [`ScriptRequests`](../../lib/streamlit/runtime/scriptrunner_utils/script_requests.py)
+    coalesces successive `RERUN` requests (`_coalesce_widget_states`) — the newest widget
+    states win, so a tick can't drop a pending user edit.
+  - A full-rerun request preempts an in-flight run (`_fragment_run_should_not_preempt_script`
+    returns `False` for non-fragment reruns), and multiple pending requests coalesce into
+    one, so overlap yields at most one extra, deterministic run rather than an unbounded
+    queue.
+  - `cleanupAutoReruns()` runs on every full rerun (`handleNewSession` with empty
+    `fragmentIdsThisRun`), so the app-level timer is cleared and re-armed each run —
+    interactions reset the countdown (a "debounce" for free). This means the app-scoped
+    timer, unlike a fragment timer, does not rely on the "same interval → don't reset"
+    short-circuit (that path still applies to fragment timers, which survive fragment-only
+    reruns).
+  - *Optional refinement (not required for correctness):* skip a timer tick when a run is
+    already in flight (e.g. gate on the app's connection/script state) to avoid the rare
+    redundant preemption. Deferred — server-side coalescing already bounds the cost, and
+    fragment `run_every` doesn't do this today either, so we keep behavior consistent.
 - **`AppTest`.** Because the signal is a `ForwardMsg`, `AppTest` can assert that an
   `auto_rerun` message with an empty `fragment_id` and the expected `interval` was enqueued
   (mirrors existing fragment `run_every` unit tests in

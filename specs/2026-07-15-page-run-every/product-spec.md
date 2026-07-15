@@ -11,9 +11,8 @@ Add a `run_every` parameter to `st.set_page_config` that reruns the entire page 
 fixed interval, without any user interaction. This brings `@st.fragment`'s `run_every`
 behavior to the whole page and provides a first-class, native replacement for the popular
 [`streamlit-autorefresh`](https://github.com/kmcgrady/streamlit-autorefresh) component —
-currently the #1 downloaded third-party Streamlit component — so live dashboards and
-monitoring apps no longer need an external dependency or a blocking `while True: sleep()`
-loop.
+the #1 used third-party Streamlit component — so live dashboards and monitoring apps no
+longer need an external dependency or a blocking `while True: sleep()` loop.
 
 ```python
 import streamlit as st
@@ -44,9 +43,9 @@ while True:
     st.rerun()  # never reached cleanly; fragile and blocks the session
 ```
 
-**2. Third-party `streamlit-autorefresh` component.** The most popular workaround (223
-stars, ~#1 component), used in **~3% of all Streamlit apps**. It adds a frontend timer
-that pings the server to rerun. It works well, but:
+**2. Third-party `streamlit-autorefresh` component.** The most popular workaround, used in
+**~3% of all Streamlit apps** (#1 used component). It adds a frontend timer that pings the
+server to rerun. It works well, but:
 
 - It's an **external dependency** users must discover, install, and trust for something
   this fundamental.
@@ -201,10 +200,24 @@ st.dataframe(get_daily_summary())     # refreshed by the page-level interval
   multipage navigation (`st.navigation` / `st.switch_page`), the timer is cleared; the
   destination page re-establishes its own timer if it sets `run_every`. This mirrors how
   fragment auto-reruns are cleared on page change.
-- **Interaction does not disrupt the cadence.** A widget interaction triggers its own
-  rerun and re-registers the timer at the same interval; an already-running timer with an
-  unchanged interval is *not* reset (reusing the existing fragment `run_every` timer
-  logic), so frequent interactions don't starve or double-fire the auto-rerun.
+- **Concurrent reruns (a tick coinciding with a user interaction, `st.rerun`, or a
+  fragment rerun).** No special handling is needed — page-level auto-rerun uses the same
+  rerun request path as everything else, and the existing machinery resolves overlaps:
+  - *No lost input.* Every rerun request (auto or user) carries the browser's latest full
+    widget-state snapshot, and the server coalesces pending rerun requests, so the newest
+    state always wins — a concurrent tick never drops a user's edit.
+  - *Bounded work.* A tick that arrives while a run is in flight is coalesced/preempted by
+    the server rather than queued without limit (at most one extra run). Full reruns are
+    deterministic for the same state, so a preempted or duplicated run simply restarts —
+    correct, at worst slightly redundant.
+  - *Natural debounce.* Every full rerun (including user-triggered ones) clears and re-arms
+    the page timer, so the interval countdown restarts after each interaction. Active users
+    effectively reset the timer instead of stacking a tick on top of their own rerun —
+    matching `streamlit-autorefresh`'s default `debounce=True`. (This differs from fragment
+    `run_every`, whose timer survives fragment-only reruns; a page tick is a full rerun,
+    which resets it.)
+  - *Slow apps.* If a run takes longer than `run_every`, effective cadence is bounded by
+    run time — no backlog builds up (same as fragment `run_every`).
 - **Resolution / disabling.** Each full rerun re-evaluates the script, so the timer always
   reflects the value armed during that run. A `set_page_config` call with a non-`None`
   `run_every` arms (or re-arms) the timer at that interval; `None` (the default) does not
