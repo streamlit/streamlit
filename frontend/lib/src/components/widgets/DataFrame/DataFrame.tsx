@@ -190,7 +190,8 @@ function DataFrame({
     useRowHover(gridTheme)
 
   // Default to false, if no libConfig, e.g. for tests
-  const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
+  const { enforceDownloadInNewTab = false, disableDataExport = false } =
+    useContext(LibConfigContext)
 
   const [isFocused, setIsFocused] = useState<boolean>(true)
   const [showSearch, setShowSearch] = useState(false)
@@ -222,6 +223,8 @@ function DataFrame({
   // editingMode field defined.
   const editingMode =
     element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
+  const isReadOnly = editingMode === DataframeProto.EditingMode.READ_ONLY
+  const isClipboardCopyDisabled = disableDataExport && isReadOnly
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
@@ -247,6 +250,7 @@ function DataFrame({
     disabled,
     numDataRows: originalNumRows,
     numDataColumns: dataDimensions.numDataColumns,
+    disableDataExport,
   })
 
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)
@@ -987,6 +991,7 @@ function DataFrame({
           // Activate keybindings:
           keybindings={{
             downFill: true,
+            copy: !isClipboardCopyDisabled,
             ...(isCellSelectionActivated || isLargeTable
               ? {
                   // Deactivate select all to prevent potential performance issues

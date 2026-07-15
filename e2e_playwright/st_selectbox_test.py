@@ -212,6 +212,37 @@ def test_shows_correct_options_via_fuzzy_search(
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
 
 
+def test_type_to_search_replaces_committed_value(app: Page):
+    """Regression test for https://github.com/streamlit/streamlit/issues/15985.
+
+    With a value already committed, focusing the selectbox and typing must start
+    a fresh search (replacing the committed label) instead of appending the typed
+    characters behind it (which matched nothing).
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 1 (default)")
+    expect(selectbox_input).to_have_value("male")
+
+    # Click to focus, then type character-by-character to exercise the
+    # append-vs-replace behavior (fill() would replace the value wholesale).
+    selectbox_input.click()
+    selectbox_input.press_sequentially("fem")
+
+    # The committed "male" must be replaced by the query, not become "malefem".
+    expect(selectbox_input).to_have_value("fem")
+
+    # The dropdown filters to the matching option and hides the previous one.
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(1)
+    expect(options.first).to_have_text("female")
+    expect(
+        selection_dropdown.get_by_role("option", name="male", exact=True)
+    ).to_have_count(0)
+
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 1: female")
+
+
 def test_empty_selectbox_behaves_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -533,30 +564,61 @@ def test_selectbox_contains_filter_mode_matches_substrings(app: Page):
 
 
 def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Page):
-    """Test that filter_mode=None blocks typing while leaving the dropdown usable.
+    """Test that filter_mode=None blocks typing while keeping the dropdown and
+    keyboard navigation usable.
 
-    With filter_mode=None, the input is not marked readOnly (to allow the
-    ComboBox to open on click/focus), but character input is blocked via
-    onKeyDown so options always show the full unfiltered list.
+    The input uses inputmode="none" (not readonly) so the mobile software
+    keyboard stays hidden while the input remains focusable: clicking opens the
+    dropdown and Arrow/Enter navigation keeps working right afterwards.
     """
     selectbox_input = get_selectbox_input(app, "selectbox 23 (filter_mode=None)")
+    # inputmode="none" suppresses the mobile software keyboard. readonly is NOT
+    # used because it breaks focus-on-click and React Aria keyboard navigation.
+    expect(selectbox_input).to_have_attribute("inputmode", "none")
+    expect(selectbox_input).not_to_have_attribute("readonly", "")
+    # The text caret is hidden so the input looks non-editable (like a plain
+    # select) even though it stays focusable for keyboard navigation.
+    expect(selectbox_input).to_have_css("caret-color", "rgba(0, 0, 0, 0)")
 
-    # The input should NOT block dropdown opening — click + ArrowDown opens reliably.
-    # (ArrowDown navigates but does NOT commit for non-readonly inputs.)
+    # Clicking must focus the input. An earlier readonly + preventDefault approach
+    # dropped focus and broke the click-then-keyboard flow; this assertion guards
+    # that regression.
     selectbox_input.click()
+    expect(selectbox_input).to_be_focused()
+
+    # ArrowDown reliably opens the dropdown (backup for pointer-triggered open,
+    # matching select_selectbox_option) and highlights the first option.
     selectbox_input.press("ArrowDown")
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     expect(selection_dropdown).to_be_visible()
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(3)
 
-    options.nth(1).click()
+    # Typing must NOT filter the list: character input is blocked, so all
+    # options stay visible.
+    selectbox_input.press("n")
+    selectbox_input.press("o")
+    expect(options).to_have_count(3)
+    # The count above stays 3 even without blocking, since filter_mode=None
+    # disables filtering regardless. The real regression guard is that the
+    # blocked keystrokes entered no visible text (mirrors the unit test's
+    # toHaveValue("")).
+    expect(selectbox_input).to_have_value("")
+
+    # Keyboard navigation still selects: a second ArrowDown reaches "No" and
+    # Enter commits it, proving Arrow/Enter work after focusing via click.
+    selectbox_input.press("ArrowDown")
+    selectbox_input.press("Enter")
     expect_markdown(app, "value 23: No")
 
 
-def test_selectbox_virtualizes_large_option_list(app: Page):
+def test_selectbox_virtualizes_large_option_list(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test that a selectbox with many options only renders a small window of
-    option rows (virtualization) while keeping far-down options selectable.
+    option rows (virtualization) while keeping far-down options selectable, and
+    that filtering to an unmatched value shows the styled "No results" empty
+    state.
     """
     selectbox_input = get_selectbox_input(app, "selectbox 25 (large virtualized list)")
     selectbox_input.click()
@@ -581,6 +643,16 @@ def test_selectbox_virtualizes_large_option_list(app: Page):
     expect(
         selection_dropdown.get_by_role("option", name="Option 999", exact=True)
     ).to_have_count(0)
+
+    # Filtering to an unmatched value shows the styled empty-state popover.
+    selectbox_input.fill("No matching option")
+    expect(
+        selection_dropdown.get_by_role("option", name="No results", exact=True)
+    ).to_be_visible()
+    expect(
+        selection_dropdown.get_by_role("option", name="Option 0", exact=True)
+    ).to_have_count(0)
+    assert_snapshot(selection_dropdown, name="st_selectbox-no_results_popover")
 
     # A far-down option can still be selected by typing to filter for it.
     selectbox_input.fill("Option 987")

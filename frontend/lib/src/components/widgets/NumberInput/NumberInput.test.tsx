@@ -16,6 +16,7 @@
 
 import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { setInteractionModality } from "react-aria/private/interactions/useFocusVisible"
 
 import {
   LabelVisibility as LabelVisibilityProto,
@@ -71,6 +72,10 @@ describe("NumberInput widget", () => {
       elementRef: { current: null },
       values: [250],
     })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it("renders without crashing", () => {
@@ -1110,27 +1115,264 @@ describe("NumberInput widget", () => {
         expect(input).toHaveDisplayValue("42")
       })
 
-      it("handles out-of-range values by not updating formatted value", async () => {
+      it("handles out-of-range values with custom validation UI", async () => {
         const user = userEvent.setup()
         const props = getIntProps({ default: 10, min: 0, max: 50 })
-
-        // Mock reportValidity to track if it's called
-        const mockReportValidity = vi.fn()
-        HTMLInputElement.prototype.reportValidity = mockReportValidity
+        const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+        const reportValiditySpy = vi
+          .spyOn(HTMLInputElement.prototype, "reportValidity")
+          .mockReturnValue(true)
 
         render(<NumberInput {...props} />)
+        setIntValueSpy.mockClear()
 
         const input = screen.getByTestId("stNumberInputField")
         await user.clear(input)
         await user.type(input, "100") // Above max
         await user.keyboard("{enter}")
 
-        // Should not change the formatted value and call reportValidity
+        // Should keep the invalid value visible, block commit, and avoid the
+        // native browser validation popup.
         expect(input).toHaveDisplayValue("100") // Still shows the invalid input
-        expect(mockReportValidity).toHaveBeenCalled()
+        expect(setIntValueSpy).not.toHaveBeenCalled()
+        expect(reportValiditySpy).not.toHaveBeenCalled()
 
-        // Cleanup
-        HTMLInputElement.prototype.reportValidity = () => true
+        const expectedError =
+          "Number is outside the allowed range. Please enter a value between 0 and 50."
+        const alert = screen.getByRole("alert")
+        expect(input).toHaveAttribute("aria-invalid", "true")
+        expect(input).toHaveAttribute("aria-describedby", alert.id)
+        expect(alert).toHaveTextContent(`Error: ${expectedError}`)
+
+        const errorIcon = screen.getByTestId("stTooltipErrorHoverTarget")
+        expect(errorIcon).toBeVisible()
+
+        act(() => setInteractionModality("pointer"))
+        await user.hover(errorIcon)
+
+        const tooltip = await screen.findByTestId("stTooltipErrorContent")
+        expect(tooltip).toHaveTextContent(`Error: ${expectedError}`)
+
+        reportValiditySpy.mockRestore()
+      })
+
+      it("clears range validation error when user edits value", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({ default: 10, min: 0, max: 50 })
+
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "100")
+        await user.keyboard("{enter}")
+
+        expect(screen.getByRole("alert")).toBeInTheDocument()
+
+        await user.clear(input)
+        await user.type(input, "25")
+
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+        expect(input).not.toHaveAttribute("aria-invalid")
+        expect(
+          screen.queryByTestId("stTooltipErrorHoverTarget")
+        ).not.toBeInTheDocument()
+      })
+
+      it("clears a stale validation error when a new value arrives from the backend", async () => {
+        const user = userEvent.setup()
+        // The backend value (5) is below the min (10) — such an out-of-range
+        // value can arrive via session_state. Stepping up keeps it out of
+        // range and sets a validation error while the widget is NOT dirty
+        // (the user never typed).
+        const props = getIntProps({ default: 5, min: 10, max: 100, step: 1 })
+        const { rerender } = render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.click(screen.getByTestId("stNumberInputStepUp"))
+
+        // The out-of-range step surfaces the validation error even though the
+        // widget is not dirty.
+        expect(screen.getByRole("alert")).toBeInTheDocument()
+        expect(input).toHaveAttribute("aria-invalid", "true")
+
+        // A rerun delivers a valid value from the backend (session_state update).
+        const updatedProps = getIntProps({
+          default: 5,
+          min: 10,
+          max: 100,
+          step: 1,
+          value: 50,
+          setValue: true,
+        })
+        updatedProps.widgetMgr = props.widgetMgr
+        rerender(<NumberInput {...updatedProps} />)
+
+        // The displayed value syncs to the backend value and the stale error
+        // must be cleared (no lingering red styling / alert / aria-invalid).
+        expect(input).toHaveDisplayValue("50")
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+        expect(input).not.toHaveAttribute("aria-invalid")
+        expect(
+          screen.queryByTestId("stTooltipErrorHoverTarget")
+        ).not.toBeInTheDocument()
+      })
+
+      it("does not submit form via Enter when range validation fails", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({
+          default: 10,
+          formId: "form",
+          min: 0,
+          max: 50,
+        })
+        vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+          true
+        )
+        vi.spyOn(props.widgetMgr, "submitForm")
+
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "100")
+        await user.keyboard("{enter}")
+
+        expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+        expect(screen.getByRole("alert")).toBeInTheDocument()
+      })
+
+      it("does not submit form via Enter while a validation error is shown but the widget is not dirty", async () => {
+        const user = userEvent.setup()
+        // The backend value (5) is below the min (10). Stepping up keeps it
+        // out of range and sets a validation error while dirty stays false
+        // (commitValue is not called from the Enter handler in this state).
+        const props = getIntProps({
+          default: 5,
+          min: 10,
+          max: 100,
+          step: 1,
+          formId: "form",
+        })
+        vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+          true
+        )
+        vi.spyOn(props.widgetMgr, "submitForm")
+
+        render(<NumberInput {...props} />)
+
+        await user.click(screen.getByTestId("stNumberInputStepUp"))
+        expect(screen.getByRole("alert")).toBeInTheDocument()
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.click(input)
+        await user.keyboard("{enter}")
+
+        // The visible validation error must block form submission even though
+        // the widget is not dirty.
+        expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+        expect(screen.getByRole("alert")).toBeInTheDocument()
+      })
+
+      it("shows the validation error and blocks commit when blurring an invalid value", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({ default: 10, min: 0, max: 50 })
+        const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+        render(<NumberInput {...props} />)
+        setIntValueSpy.mockClear()
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "100") // Above max
+        // Blur (tab away) rather than pressing Enter.
+        await user.tab()
+
+        expect(input).toHaveDisplayValue("100")
+        expect(setIntValueSpy).not.toHaveBeenCalled()
+        const alert = screen.getByRole("alert")
+        expect(alert).toHaveTextContent(
+          "Error: Number is outside the allowed range. Please enter a value between 0 and 50."
+        )
+        expect(input).toHaveAttribute("aria-invalid", "true")
+      })
+
+      it("shows a below-range message when only min_value is set", async () => {
+        const user = userEvent.setup()
+        // Only min is user-provided; max is the safe-integer sentinel.
+        const props = getIntProps({
+          default: 10,
+          min: 0,
+          max: Number.MAX_SAFE_INTEGER,
+          hasMin: true,
+          hasMax: false,
+        })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "-5")
+        await user.keyboard("{enter}")
+
+        const alert = screen.getByRole("alert")
+        expect(alert).toHaveTextContent(
+          "Error: Number is below the allowed range. Please enter a value greater than or equal to 0."
+        )
+        // The sentinel max must not leak into the message.
+        expect(alert).not.toHaveTextContent("between")
+        expect(alert).not.toHaveTextContent(String(Number.MAX_SAFE_INTEGER))
+      })
+
+      it("shows an above-range message when only max_value is set", async () => {
+        const user = userEvent.setup()
+        // Only max is user-provided; min is the safe-integer sentinel.
+        const props = getIntProps({
+          default: 10,
+          min: Number.MIN_SAFE_INTEGER,
+          max: 50,
+          hasMin: false,
+          hasMax: true,
+        })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "100")
+        await user.keyboard("{enter}")
+
+        const alert = screen.getByRole("alert")
+        expect(alert).toHaveTextContent(
+          "Error: Number is above the allowed range. Please enter a value less than or equal to 50."
+        )
+        expect(alert).not.toHaveTextContent("between")
+        expect(alert).not.toHaveTextContent(String(Number.MIN_SAFE_INTEGER))
+      })
+
+      it("does not leak the float sentinel bound into the message", async () => {
+        const user = userEvent.setup()
+        // Float input with only max_value set; min is the float sentinel,
+        // which would render as a ~300-digit number if leaked.
+        const props = getFloatProps({
+          default: 1.0,
+          min: -Number.MAX_VALUE,
+          max: 10.5,
+          format: "%0.1f",
+          hasMin: false,
+          hasMax: true,
+        })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "20")
+        await user.keyboard("{enter}")
+
+        const alert = screen.getByRole("alert")
+        expect(alert).toHaveTextContent(
+          "Error: Number is above the allowed range. Please enter a value less than or equal to 10.5."
+        )
+        // A 30+ digit run would indicate the sentinel leaked into the message.
+        expect(alert.textContent).not.toMatch(/\d{30,}/)
       })
 
       it.each([

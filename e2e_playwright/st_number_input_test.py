@@ -300,6 +300,84 @@ def test_number_input_in_form_submits_typed_value_on_single_enter(app: Page):
     expect(input_field).to_have_value("8")
 
 
+def test_number_input_shows_range_validation_error(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Out-of-range values show a custom validation error instead of committing.
+
+    Regression test replacing the native browser validation popup with a
+    Streamlit-styled error (red styling, error icon + tooltip, screen-reader
+    alert) and blocking the commit while invalid.
+    """
+    number_input = get_number_input(app, "number input 3 (min & max)")
+    input_field = number_input.get_by_test_id("stNumberInputField")
+
+    # Type a value above the max (10) and commit with Enter.
+    input_field.fill("20")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    # The invalid value stays visible, is flagged invalid, and is NOT committed.
+    expect(input_field).to_have_value("20")
+    expect(input_field).to_have_attribute("aria-invalid", "true")
+    expect_prefixed_markdown(app, "number input 3 (min & max) - value:", "1")
+
+    # The screen-reader alert carries the range message.
+    expect(number_input.get_by_role("alert")).to_have_text(
+        "Error: Number is outside the allowed range. "
+        "Please enter a value between 1 and 10."
+    )
+
+    error_icon = number_input.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+
+    assert_snapshot(number_input, name="st_number_input-range_validation_error")
+
+    # Hovering the error icon reveals the message in a tooltip.
+    error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_contain_text(
+        "Number is outside the allowed range. Please enter a value between 1 and 10."
+    )
+    reset_hovering(app)
+
+    # Correcting to a valid value clears the invalid state immediately, before
+    # re-committing. Regression test for a bug where React Aria's native
+    # constraint validation kept `aria-invalid` set (and the text styled red)
+    # until the next commit, leaving a red value with no accompanying error.
+    input_field.fill("5")
+    expect(input_field).not_to_have_attribute("aria-invalid", "true")
+    expect(number_input.get_by_role("alert")).to_have_count(0)
+    expect(number_input.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
+
+    # Committing the corrected value persists it.
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect(input_field).not_to_have_attribute("aria-invalid", "true")
+    expect(number_input.get_by_role("alert")).to_have_count(0)
+    expect(number_input.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
+    expect_prefixed_markdown(app, "number input 3 (min & max) - value:", "5")
+
+
+def test_number_input_range_validation_single_bound_message(app: Page):
+    """A single-bound input shows a bound-specific message without sentinel leakage."""
+    number_input = get_number_input(app, "number input 5 (max=10)")
+    input_field = number_input.get_by_test_id("stNumberInputField")
+
+    input_field.fill("20")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    alert = number_input.get_by_role("alert")
+    expect(alert).to_have_text(
+        "Error: Number is above the allowed range. "
+        "Please enter a value less than or equal to 10."
+    )
+    # Only max_value is set, so the unset (sentinel) min bound must not leak in.
+    expect(alert).not_to_contain_text("between")
+    expect(alert).not_to_contain_text("9007199254740991")
+
+
 def test_number_input_does_not_allow_wheel_events(app: Page):
     """Test that st.number_input does not allow wheel events."""
     number_input = (

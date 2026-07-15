@@ -63,6 +63,7 @@ from typing_extensions import Self
 from watchdog import events
 from watchdog.observers import Observer
 
+from streamlit import env_util
 from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.logger import get_logger
 from streamlit.util import repr_
@@ -443,6 +444,17 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             # First check if the exact path is being watched
             changed_path_info = self._watched_paths.get(abs_changed_path, None)
 
+            # Windows can report the same path with an extended-length prefix
+            # (``\\?\``), which does not compare equal to the standard spelling.
+            # On other platforms path comparison is exact, so the dict lookup
+            # above already covers every equivalent spelling and this fallback
+            # scan can be skipped.
+            if changed_path_info is None and env_util.IS_WINDOWS:
+                for path, info in self._watched_paths.items():
+                    if util.paths_are_same(path, abs_changed_path):
+                        changed_path_info = info
+                        break
+
             # If the exact path isn't found, check if it's inside any watched
             # directories. This is necessary for the folder watching feature to
             # detect changes to files within watched directories, not just the
@@ -451,21 +463,9 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                 for path, info in self._watched_paths.items():
                     if not os.path.isdir(path):
                         continue
-                    try:
-                        if os.path.commonpath([path, abs_changed_path]) == path:
-                            changed_path_info = info
-                            break
-                    except ValueError as ex:
-                        # On Windows, os.path.commonpath raises ValueError when paths
-                        # are on different drives. In that case, the changed path
-                        # cannot be inside the watched directory.
-                        _LOGGER.debug(
-                            "Ignoring changed path %s.\nWatched_paths: %s",
-                            abs_changed_path,
-                            self._watched_paths,
-                            exc_info=ex,
-                        )
-                        continue
+                    if util.path_is_in_directory(abs_changed_path, path):
+                        changed_path_info = info
+                        break
 
         # If we still haven't found a matching path, ignore this event
         if changed_path_info is None:
@@ -510,11 +510,6 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             # briefly and re-read the file. If the hash reverts to the original
             # value, this was likely a spurious event and we should ignore it.
             # See: https://github.com/streamlit/streamlit/issues/13954
-            # Import at function level to avoid circular imports and
-            # because this code path is rarely executed (only on Windows
-            # after a hash change is detected)
-            from streamlit import env_util
-
             if env_util.IS_WINDOWS:
                 import time
 
