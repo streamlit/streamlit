@@ -224,13 +224,15 @@ st.dataframe(get_daily_summary())     # refreshed by the page-level interval
     which resets it.)
   - *Slow apps.* If a run takes longer than `run_every`, effective cadence is bounded by
     run time — no backlog builds up (same as fragment `run_every`).
-- **Pauses while a dialog is open.** A full-page rerun disrupts an open modal, so auto-rerun
-  ticks are skipped while any dialog is open (`st.dialog`, or an app dialog such as
-  *About*/*Deploy*); the normal cadence resumes once it closes. This is low-effort and
-  frontend-only — the timer lives in the app frontend, which already knows a dialog is open
-  (it's the same signal used to suppress the keyboard *rerun* shortcut while a
+- **Pauses while an `st.dialog` is open.** A full-page rerun re-renders the script's element
+  tree, which disrupts an open `st.dialog` (it can close or lose in-progress input), so
+  auto-rerun ticks are skipped while an `st.dialog` is open and resume once it closes. This
+  is low-effort and frontend-only — the app frontend already knows when an `st.dialog` is
+  open (the same signal used to suppress the keyboard *rerun* shortcut while a
   non-dismissible dialog is open). Auto-rerun is not user-initiated, so it skips for *any*
-  open dialog (unlike the manual rerun shortcut, which only guards non-dismissible ones).
+  open `st.dialog` (unlike the manual rerun shortcut, which only guards non-dismissible
+  ones). This is specific to `st.dialog`: app-chrome dialogs (*About*, *Deploy*, *Settings*)
+  are app-shell state, not part of the script's element tree, so reruns don't disrupt them.
   Fragment `run_every` reruns are scoped and aren't affected.
 - **Open dialogs and unsubmitted forms.** A tick is a full rerun, so — exactly like
   pressing "Rerun" — it re-executes the script and can dismiss an open `st.dialog` or reset
