@@ -673,9 +673,7 @@ class ResourceCache(Cache[R]):
 
     @property
     def ttl_seconds(self) -> float:
-        # Wrap in float() so this type-checks across types-cachetools versions:
-        # 6.x types .ttl as float, while 7.0.0+ types it as Any.
-        return float(self._mem_cache.ttl)
+        return self._mem_cache.ttl
 
     def read_result(self, key: str) -> CachedResult[R]:
         """Read a value and associated messages from the cache.

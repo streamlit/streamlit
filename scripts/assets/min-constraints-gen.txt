@@ -1,7 +1,6 @@
 altair==4.0
 anyio==4.0.0
 blinker==1.5.0
-cachetools==5.5
 click==7.0
 gitpython==3.0.7
 httptools==0.6.3

@@ -17,8 +17,6 @@ import math
 import threading
 from typing import TYPE_CHECKING
 
-from cachetools import TTLCache
-
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
@@ -26,6 +24,7 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorageContext,
     CacheStorageKeyNotFoundError,
 )
+from streamlit.runtime.caching.ttl_cache import TTLCache
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 
 if TYPE_CHECKING:
