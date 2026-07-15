@@ -434,14 +434,15 @@ def test_multi_row_select_and_sort(app: Page):
     )
 
     # Sort the first column ascending. Both selections should be preserved and
-    # keep pointing at the same underlying data rows. The reported rows are
-    # ordered by their new display position after sorting, hence [2, 0].
+    # keep pointing at the same underlying data rows. Sorting is frontend-only:
+    # the reported original row indices stay [0, 2] (no reordering) and no extra
+    # rerun is triggered, since the underlying selected data rows are unchanged.
     sort_column(canvas, 1, has_row_marker_col=True)
     wait_for_app_run(app)
     expect_prefixed_markdown(
         app,
         "Dataframe multi-row selection:",
-        "{'selection': {'rows': [2, 0], 'columns': [], 'cells': []}}",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 

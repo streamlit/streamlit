@@ -451,7 +451,13 @@ function DataFrame({
         rows: newRows,
         current,
       }
-      processSelectionChange(newSelection)
+      // Only update the display selection without syncing to the widget
+      // manager/backend. Sorting is a frontend-only operation and the backend
+      // already holds the correct original row indices. Re-syncing would only
+      // reorder the reported rows (e.g. [0, 2] -> [2, 0] in multi-row mode) and
+      // trigger an unnecessary rerun / on_select callback even though the
+      // underlying selected data rows are unchanged.
+      processSelectionChange(newSelection, { shouldSync: false })
     }
   }, [originalNumRows, processSelectionChange])
 
