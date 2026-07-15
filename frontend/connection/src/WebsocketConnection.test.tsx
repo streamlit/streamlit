@@ -235,6 +235,9 @@ describe("doInitPings", () => {
     vi.useRealTimers()
     globalThis.fetch = originalFetch
     globalThis.__mockStreamlitConfig = {}
+    // Restore any spies (e.g. Math.random) so a test that throws before its
+    // own restore call can't leak a mocked implementation into later tests.
+    vi.restoreAllMocks()
   })
 
   it("uses fast-path to connect immediately when enableBypass is true", () => {
@@ -676,7 +679,10 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   it("has increasing but capped retry backoff", async () => {
-    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+    // Pin Math.random so the backoff jitter is deterministic. The spy is
+    // restored in afterEach via vi.restoreAllMocks() so it can't leak into
+    // other tests even if an await below throws.
+    vi.spyOn(Math, "random").mockReturnValue(0.5)
 
     globalThis.fetch = vi
       .fn()
@@ -729,10 +735,11 @@ If you are trying to access a Streamlit app running on another server, this coul
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
     await promise
-    randomSpy.mockRestore()
 
-    // With a fixed jitter factor of 0.85, the exponential backoff windows are
-    // 10, 20, 40, 80, and 100 ms. The final window is capped from 160 ms.
+    // With Math.random() pinned to 0.5 the jitter multiplier is
+    // 0.7 + 0.5 * 0.3 = 0.85. The capped windows are 10, 20, 40, 80, and 100 ms
+    // (the last capped down from 160 ms). The first attempt is not jittered; the
+    // rest are floored after the 0.85 multiplier -> [10, 17, 34, 68, 85].
     expect(timeouts).toEqual([10, 17, 34, 68, 85])
   })
 
