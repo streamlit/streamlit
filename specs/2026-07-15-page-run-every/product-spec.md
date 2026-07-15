@@ -179,6 +179,15 @@ live_ticker()
 st.dataframe(get_daily_summary())     # refreshed by the page-level interval
 ```
 
+> [!NOTE]
+> The `st.set_page_config` docstring should explicitly recommend
+> `@st.fragment(run_every=...)` for more targeted updates. A page-level `run_every`
+> re-executes the whole script and re-renders the entire page on every tick, which is
+> wasteful when only one section changes on a schedule. Users should reach for page-level
+> `run_every` when the whole page genuinely needs to refresh, and prefer wrapping the
+> live section in a fragment otherwise. The docstring will link to `@st.fragment` and
+> show the composition pattern above.
+
 ### Behavior
 
 - **Frontend-driven, non-blocking.** Like `@st.fragment(run_every=...)` (and
@@ -273,4 +282,4 @@ deferred (see Out of Scope).
 | No new dependencies | ✅ Reuses `time_to_seconds` (Pandas already a dependency) and the existing `AutoRerun` frontend-timer machinery. |
 | Metrics collected | `set_page_config` is already wrapped with `@gather_metrics`. Track `run_every` usage (e.g. whether it was set) to measure adoption vs. the component. |
 | Any security/legal impact? | Auto-rerun increases request volume; the 1-second minimum interval bounds worst-case full-page rerun frequency (mitigating DoS-adjacent risk from very short intervals). No new data exposure. |
-| Any docs changes needed? | ✅ Document the new parameter on the `st.set_page_config` API page, add a "Auto-refresh your app" how-to, and mention it as the native alternative to `streamlit-autorefresh`. |
+| Any docs changes needed? | ✅ Document the new parameter on the `st.set_page_config` API page (the docstring should recommend `@st.fragment(run_every=...)` for more targeted updates), add a "Auto-refresh your app" how-to, and mention it as the native alternative to `streamlit-autorefresh`. |
