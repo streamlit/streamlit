@@ -188,10 +188,10 @@ st.dataframe(get_daily_summary())     # refreshed by the page-level interval
 > wasteful when only one section changes on a schedule. Users should reach for page-level
 > `run_every` when the whole page genuinely needs to refresh, and prefer wrapping the
 > live section in a fragment otherwise. The docstring will link to `@st.fragment` and
-> show the composition pattern above. It should also warn that, because each tick is a full
-> rerun, page-level `run_every` dismisses an open `st.dialog` and resets an unsubmitted
-> `st.form` — another reason to prefer a fragment (or to pause auto-refresh) for modal or
-> multi-step flows.
+> show the composition pattern above. It should also note that auto-rerun ticks pause while
+> an `st.dialog` is open (so a modal isn't dismissed mid-interaction) but that, because each
+> tick is otherwise a full rerun, a tick still resets an unsubmitted `st.form` — a reason to
+> prefer a fragment (or to pause auto-refresh) for multi-step form flows.
 
 ### Behavior
 
@@ -234,14 +234,13 @@ st.dataframe(get_daily_summary())     # refreshed by the page-level interval
   ones). This is specific to `st.dialog`: app-chrome dialogs (*About*, *Deploy*, *Settings*)
   are app-shell state, not part of the script's element tree, so reruns don't disrupt them.
   Fragment `run_every` reruns are scoped and aren't affected.
-- **Open dialogs and unsubmitted forms.** A tick is a full rerun, so — exactly like
-  pressing "Rerun" — it re-executes the script and can dismiss an open `st.dialog` or reset
-  an unsubmitted `st.form`. The natural debounce above softens this for active users (each
-  interaction restarts the interval), but a tick can still interrupt a modal a user is
-  slowly filling out. For modal or multi-step flows, prefer pausing auto-refresh (pass
-  `run_every=None`) or scoping the live updates to a `@st.fragment(run_every=...)` rather
-  than refreshing the whole page. Built-in "pause while a dialog is open" behavior is out of
-  scope for v1 (see Out of Scope).
+- **Unsubmitted forms.** Unlike an open `st.dialog` (which pauses ticks, see above), an
+  `st.form` does not pause auto-rerun: a tick is a full rerun, so — exactly like pressing
+  "Rerun" — it re-executes the script and resets an unsubmitted `st.form`. The natural
+  debounce above softens this for active users (each interaction restarts the interval), but
+  a tick can still interrupt a form a user is slowly filling out. For multi-step form flows,
+  prefer pausing auto-refresh (pass `run_every=None`) or scoping the live updates to a
+  `@st.fragment(run_every=...)` rather than refreshing the whole page.
 - **Resolution / disabling (multiple `set_page_config` calls in one run).** The timer is
   re-derived on every rerun from the value of the *last* call that **passed** `run_every`.
   Like the visual parameters, a call that **omits** `run_every` leaves the current setting
@@ -312,11 +311,11 @@ deferred (see Out of Scope).
   throttling, so we won't guarantee tight real-time cadence. Relaxing the floor below 1
   second (or making it configurable) can be revisited later based on demand — a non-breaking
   change.
-- **Pausing on window blur, open dialogs, or unsubmitted forms / "smart" refresh.** Beyond
-  the browser's native background throttling, v1 won't add explicit logic to pause ticks
-  when the tab is hidden, an `st.dialog` is open, or an `st.form` has unsubmitted edits.
-  Users can pause auto-refresh manually or scope live updates to a fragment; smarter
-  built-in pausing can be layered on later.
+- **Pausing on window blur or unsubmitted forms / "smart" refresh.** v1 pauses ticks while
+  an `st.dialog` is open (see Behavior), but beyond that and the browser's native background
+  throttling, it won't add explicit logic to pause ticks when the tab is hidden or an
+  `st.form` has unsubmitted edits. Users can pause auto-refresh manually or scope live
+  updates to a fragment; smarter built-in pausing can be layered on later.
 - **Deprecating `streamlit-autorefresh`.** This is a community component; we simply provide
   a native alternative and can point to it in docs.
 
