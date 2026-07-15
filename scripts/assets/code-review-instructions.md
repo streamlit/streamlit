@@ -69,7 +69,7 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 
 ## Readability
 
-[Findings from the `reviewing-readability` skill (comments, docstrings, naming) and, if a PR exists, the `reviewing-pr-description` skill (title/description). Group by file; give the location, the issue, and the proposed rewrite. Prefix minor items with `[nit]`.]
+[Findings from the `reviewing-readability` skill (comments, docstrings, naming) and, if a PR exists, the `reviewing-pr-description` skill (title/description). Group by file; give the location, the issue, and the proposed rewrite.]
 
 ## Recommendations
 
