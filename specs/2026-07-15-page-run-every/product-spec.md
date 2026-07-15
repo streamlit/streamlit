@@ -234,12 +234,14 @@ st.dataframe(get_daily_summary())     # refreshed by the page-level interval
   ones). This is specific to `st.dialog`: app-chrome dialogs (*About*, *Deploy*, *Settings*)
   are app-shell state, not part of the script's element tree, so reruns don't disrupt them.
   Fragment `run_every` reruns are scoped and aren't affected.
-- **Unsubmitted forms.** Unlike an open `st.dialog` (which pauses ticks, see above), an
-  `st.form` does not pause auto-rerun: a tick is a full rerun, so — exactly like pressing
-  "Rerun" — it re-executes the script and resets an unsubmitted `st.form`. The natural
-  debounce above softens this for active users (each interaction restarts the interval), but
-  a tick can still interrupt a form a user is slowly filling out. For multi-step form flows,
-  prefer pausing auto-refresh (pass `run_every=None`) or scoping the live updates to a
+- **Unsubmitted forms.** Unlike an open `st.dialog` (which pauses ticks, see above), a
+  top-level `st.form` does not pause auto-rerun: a tick is a full rerun, so — exactly like
+  pressing "Rerun" — it re-executes the script and resets an unsubmitted `st.form`. (A form
+  rendered *inside* an open `st.dialog` is protected, since ticks pause while the dialog is
+  open; this bullet is about a top-level form outside any dialog.) The natural debounce
+  above softens this for active users (each interaction restarts the interval), but a tick
+  can still interrupt a form a user is slowly filling out. For multi-step form flows, prefer
+  pausing auto-refresh (pass `run_every=None`) or scoping the live updates to a
   `@st.fragment(run_every=...)` rather than refreshing the whole page.
 - **Resolution / disabling (multiple `set_page_config` calls in one run).** The timer is
   re-derived on every rerun from the value of the *last* call that **passed** `run_every`.
