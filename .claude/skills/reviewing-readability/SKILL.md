@@ -46,11 +46,10 @@ Readability fixes are cheap — a comment reword or a rename takes seconds, so d
 
 - **Flag everything that makes the code clearer or more concise.** The only thing you skip is a change where it's genuinely ambiguous whether it improves readability (a lateral rewrite that's just a matter of taste). If a change is a clear improvement, include it no matter how small.
 - **Don't categorize by priority or severity.** Leave alone only what's already clear and concise.
-- **Mark minor items with a `[nit]` prefix** to soften the feedback and signal it's low-stakes and optional — but still include it. `[nit]` is how you communicate "this is minor," *not* a reason to drop the item. Reserve un-prefixed feedback for things that are actually misleading or confusing (e.g. a comment that describes deleted behavior).
 
 ## Output Format
 
-Produce findings, grouped by file. For each item, give the location (file and line or symbol), the issue, and a concrete proposed rewrite (or, for missing documentation, the comment/docstring to add). Prefix minor/optional items with `[nit]`.
+Produce findings, grouped by file. For each item, give the location (file and line or symbol), the issue, and a concrete proposed rewrite (or, for missing documentation, the comment/docstring to add).
 
 ## Common Patterns to Flag
 
