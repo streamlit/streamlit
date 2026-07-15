@@ -264,6 +264,73 @@ describe("NumberInput widget", () => {
     )
   })
 
+  describe("form submission via Enter", () => {
+    it("submits the freshly typed value on the first Enter (not the previous value)", async () => {
+      // Regression test: a number_input inside st.form used to submit the
+      // *previously committed* value on the first Enter, because commitValue
+      // wrote to the WidgetStateManager asynchronously (in an effect) while
+      // submitForm ran synchronously in the same event handler. The committed
+      // value must be written before the form is submitted.
+      const user = userEvent.setup()
+      const props = getIntProps({
+        formId: "form",
+        default: 5,
+        min: 1,
+        max: 10,
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+
+      // Capture the value present in widget state at the moment the form is
+      // submitted. getIntValue reads the form's pending value first, so this
+      // reflects exactly what would be sent to the backend.
+      let valueAtSubmit: number | undefined
+      vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => {
+        valueAtSubmit = props.widgetMgr.getIntValue(props.element)
+      })
+
+      render(<NumberInput {...props} />)
+      const input = screen.getByTestId("stNumberInputField")
+
+      await user.clear(input)
+      await user.type(input, "8")
+      // Press Enter exactly once.
+      await user.keyboard("{enter}")
+
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
+      // The freshly typed value (8) must be submitted...
+      expect(valueAtSubmit).toBe(8)
+      // ...and NOT the previously committed value (5).
+      expect(valueAtSubmit).not.toBe(5)
+    })
+
+    it("submits the freshly typed FLOAT value on the first Enter", async () => {
+      const user = userEvent.setup()
+      const props = getFloatProps({
+        formId: "form",
+        default: 5.0,
+        min: 1,
+        max: 10,
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+
+      let valueAtSubmit: number | undefined
+      vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => {
+        valueAtSubmit = props.widgetMgr.getDoubleValue(props.element)
+      })
+
+      render(<NumberInput {...props} />)
+      const input = screen.getByTestId("stNumberInputField")
+
+      await user.clear(input)
+      await user.type(input, "8.5")
+      await user.keyboard("{enter}")
+
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
+      expect(valueAtSubmit).toBe(8.5)
+      expect(valueAtSubmit).not.toBe(5.0)
+    })
+  })
+
   it("shows Input Instructions on dirty state when not in form (by default)", async () => {
     const user = userEvent.setup()
     const props = getIntProps()

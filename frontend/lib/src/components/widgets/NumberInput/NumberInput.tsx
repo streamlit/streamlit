@@ -208,10 +208,36 @@ const NumberInput: React.FC<Props> = ({
 
       setValueWithSource({ value: newValue, fromUi })
 
+      // When inside a form, also write the committed value to the
+      // WidgetStateManager synchronously. `setValueWithSource` only defers the
+      // write to an effect, but the Enter key handler submits the form
+      // synchronously in the same event. Without this synchronous write, the
+      // form would be submitted with the previously committed value because the
+      // deferred effect runs *after* `submitForm`. Writing to a form's widget
+      // state does not schedule a rerun, so this does not cause an extra rerun.
+      if (inForm) {
+        updateWidgetMgrState(
+          element,
+          widgetMgr,
+          { value: newValue, fromUi },
+          fragmentId
+        )
+      }
+
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
     },
-    [min, max, elementDefault, formatCurrentValue, setValueWithSource]
+    [
+      min,
+      max,
+      elementDefault,
+      formatCurrentValue,
+      setValueWithSource,
+      inForm,
+      element,
+      widgetMgr,
+      fragmentId,
+    ]
   )
 
   // When the widget has no default, the user can clear the value to null.

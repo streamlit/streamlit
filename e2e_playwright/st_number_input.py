@@ -203,3 +203,19 @@ v22 = st.number_input(
     bind="query-params",
 )
 st.write("bound minmax value:", v22)
+
+# --- Number input inside a form ---
+# Regression test for a bug where the first Enter submitted the previously
+# committed value instead of the freshly typed one (the committed value was
+# written to widget state asynchronously while the form was submitted
+# synchronously in the same event).
+with st.form("number_input_form"):
+    form_num = st.number_input(
+        "number input in form",
+        min_value=1,
+        max_value=10,
+        value=5,
+        key="number_input_in_form",
+    )
+    st.form_submit_button("Submit number input form")
+st.write("number input in form - value: ", form_num)

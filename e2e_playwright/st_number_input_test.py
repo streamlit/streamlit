@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUMBER_INPUT_COUNT = 23
+NUMBER_INPUT_COUNT = 24
 
 
 def test_number_input_widget_display(
@@ -273,6 +273,31 @@ def test_empty_number_input_behaves_correctly(
     expect_prefixed_markdown(
         app, "number input 12 (value from state & min=1) - value:", "15"
     )
+
+
+def test_number_input_in_form_submits_typed_value_on_single_enter(app: Page):
+    """A number_input inside st.form must submit the freshly typed value on the
+    FIRST Enter press, not the previously committed value.
+
+    Regression test: the committed value used to be written to widget state
+    asynchronously (in an effect) while the form was submitted synchronously in
+    the same keydown event, so the first Enter submitted the stale value.
+    """
+    number_input = get_element_by_key(app, "number_input_in_form")
+    input_field = number_input.get_by_test_id("stNumberInputField")
+
+    # The form initially submits the default value (5).
+    expect_prefixed_markdown(app, "number input in form - value:", "5")
+
+    # Type a new value and press Enter exactly once.
+    input_field.fill("8")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    # The form must submit the freshly typed value (8) on the first Enter...
+    expect_prefixed_markdown(app, "number input in form - value:", "8")
+    # ...and the input keeps showing the typed value.
+    expect(input_field).to_have_value("8")
 
 
 def test_number_input_does_not_allow_wheel_events(app: Page):
