@@ -141,6 +141,7 @@ class MetricMixin:
             to the delta, oriented according to its sign:
 
             - If the delta is ``None`` or an empty string, no arrow is shown.
+            - If the delta is zero, no arrow is shown and the delta is gray.
             - If the delta is a negative number or starts with a minus sign,
               the arrow points down and the delta is red.
             - Otherwise, the arrow points up and the delta is green.
@@ -155,10 +156,10 @@ class MetricMixin:
             The color of the delta and chart. This can be one of the following:
 
             - ``"normal"`` (default): The color is red when the delta is
-              negative and green otherwise.
+              negative, green when positive, and gray when zero.
             - ``"inverse"``: The color is green when the delta is negative and
-              red otherwise. This is useful when a negative change is
-              considered good, like a decrease in cost.
+              red when positive. Zero deltas are gray. This is useful when a
+              negative change is considered good, like a decrease in cost.
             - ``"off"``: The color is gray regardless of the delta.
             - A named color from the basic palette: The chart and delta are the
               specified color regardless of their value. This can be one of the
@@ -235,7 +236,7 @@ class MetricMixin:
             one of the following strings:
 
             - ``"auto"`` (default): The arrow direction follows the sign of
-              ``delta``.
+              ``delta``, and no arrow is shown if ``delta`` is zero.
             - ``"up"`` or ``"down"``: The arrow is forced to point in the
               specified direction.
             - ``"off"``: No arrow is shown, but the delta value remains
@@ -486,12 +487,13 @@ def _determine_delta_color_and_direction(
             direction=MetricProto.MetricDirection.NONE,
         )
 
-    # Determine direction based on delta sign
-    cd_direction = (
-        MetricProto.MetricDirection.DOWN
-        if _is_negative_delta(delta)
-        else MetricProto.MetricDirection.UP
-    )
+    # Determine direction: neutral for zero, down for negative, up otherwise
+    if _is_zero_delta(delta):
+        cd_direction = MetricProto.MetricDirection.NONE
+    elif _is_negative_delta(delta):
+        cd_direction = MetricProto.MetricDirection.DOWN
+    else:
+        cd_direction = MetricProto.MetricDirection.UP
 
     # Handle explicit color names
     if delta_color in _DELTA_COLOR_TO_PROTO:
@@ -502,7 +504,9 @@ def _determine_delta_color_and_direction(
 
     # Handle "normal", "inverse", "off" modes
     is_negative = cd_direction == MetricProto.MetricDirection.DOWN
-    if delta_color == "normal":
+    if cd_direction == MetricProto.MetricDirection.NONE:
+        cd_color = MetricProto.MetricColor.GRAY
+    elif delta_color == "normal":
         cd_color = (
             MetricProto.MetricColor.RED
             if is_negative
@@ -525,3 +529,12 @@ def _determine_delta_color_and_direction(
 
 def _is_negative_delta(delta: Delta) -> bool:
     return dedent(str(delta)).startswith("-")
+
+
+def _is_zero_delta(delta: Delta) -> bool:
+    # Only the literal string "0" is a zero delta; other numeric-looking strings
+    # (e.g. "0.0", "0%") stay positive. String deltas are dedented first to match
+    # the rendered value (see _parse_delta), so " 0" is treated the same as "0".
+    if isinstance(delta, str):
+        return dedent(delta) == "0"
+    return bool(delta == 0)

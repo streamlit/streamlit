@@ -73,31 +73,40 @@ export const StyledGroup = styled(Group)(({ theme }) => ({
 /**
  * The text input inside the ComboBox. Grows to fill available space and
  * shows `$placeholderColor` when disabled (faded vs. normal faded text).
+ *
+ * `$typingDisabled` (FILTER_MODE_NONE) hides the text caret and shows a pointer
+ * cursor so the input looks non-editable — like a plain select — even though it
+ * stays focusable for keyboard navigation.
  */
 export const StyledInput = styled(Input, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<{ $placeholderColor?: string }>(({ theme, $placeholderColor }) => ({
-  flexGrow: 1,
-  flexShrink: 1,
-  minWidth: theme.spacing.threeXS,
-  padding: theme.spacing.sm,
-  border: "none",
-  outline: "none",
-  background: "transparent",
-  fontSize: theme.fontSizes.sm,
-  lineHeight: theme.lineHeights.inputWidget,
-  fontWeight: theme.fontWeights.normal,
-  color: theme.colors.bodyText,
-  caretColor: theme.colors.bodyText,
-  boxSizing: "border-box",
-  "&::placeholder": {
-    color: $placeholderColor ?? theme.colors.fadedText60,
-  },
-  "&[data-disabled]": {
-    cursor: "not-allowed",
-    color: theme.colors.fadedText40,
-  },
-}))
+})<{ $placeholderColor?: string; $typingDisabled?: boolean }>(
+  ({ theme, $placeholderColor, $typingDisabled }) => ({
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: theme.spacing.threeXS,
+    padding: theme.spacing.sm,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    fontSize: theme.fontSizes.sm,
+    lineHeight: theme.lineHeights.inputWidget,
+    fontWeight: theme.fontWeights.normal,
+    color: theme.colors.bodyText,
+    caretColor: $typingDisabled ? "transparent" : theme.colors.bodyText,
+    cursor: $typingDisabled ? "pointer" : undefined,
+    // Non-selectable text reinforces the non-editable, plain-select feel.
+    userSelect: $typingDisabled ? "none" : undefined,
+    boxSizing: "border-box",
+    "&::placeholder": {
+      color: $placeholderColor ?? theme.colors.fadedText60,
+    },
+    "&[data-disabled]": {
+      cursor: "not-allowed",
+      color: theme.colors.fadedText40,
+    },
+  })
+)
 
 /** Chevron button that opens/closes the dropdown list. */
 export const StyledOpenButton = styled(Button)(({ theme }) => ({
@@ -187,6 +196,26 @@ export const StyledListBox = styled(ListBox)(({ theme }) => ({
   paddingRight: theme.spacing.none,
   listStyle: "none",
   margin: theme.spacing.none,
+}))
+
+/**
+ * Message shown when filtering leaves the dropdown without any options.
+ * Matches the empty state used by the Multiselect dropdown.
+ */
+export const StyledEmptyState = styled.span(({ theme }) => ({
+  boxSizing: "border-box",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+  height: theme.sizes.emptyDropdownHeight,
+  padding: theme.spacing.sm,
+  color: theme.colors.fadedText60,
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.normal,
+  lineHeight: theme.lineHeights.base,
+  textAlign: "center",
+  cursor: "not-allowed",
 }))
 
 interface StyledListBoxItemProps {

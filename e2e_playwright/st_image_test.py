@@ -30,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 42
+IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 43
 
 
 def check_image_source_error_count(messages: list[str], expected_count: int):
@@ -371,3 +371,16 @@ def test_image_link_parameter(app: Page):
     # Test image WITHOUT link does not have a link wrapper
     unlinked_image = get_image(app, "Black Square as JPEG.")
     expect(unlinked_image.get_by_test_id("stImageLink")).to_have_count(0)
+
+
+def test_image_sanitizes_dangerous_link(app: Page):
+    """Test that a dangerous javascript: link URL is neutralized to '#'.
+
+    This relies on real-browser URL normalization that jsdom cannot fully
+    replicate, so it complements the frontend unit tests.
+    """
+    dangerous_image = get_image(app, "Image with dangerous link.")
+    link = dangerous_image.get_by_test_id("stImageLink")
+
+    expect(link).to_have_attribute("href", "#")
+    expect(link).to_have_attribute("target", "_self")

@@ -769,10 +769,22 @@ class ScriptRunner:
                                         registration_sequence_before
                                     )
                                 )
-                                self._fragment_storage.clear_stale_descendants(
-                                    fragment_id,
-                                    registered_ids,
+                                removed_fragment_ids = (
+                                    self._fragment_storage.clear_stale_descendants(
+                                        fragment_id,
+                                        registered_ids,
+                                    )
                                 )
+                                # Tell the frontend to cancel auto-rerun timers for
+                                # fragments that were evicted (e.g. a nested
+                                # ``run_every`` child that is no longer rendered), so
+                                # they don't keep sending stale rerun requests.
+                                if removed_fragment_ids:
+                                    stop_msg = ForwardMsg()
+                                    stop_msg.stop_auto_rerun.fragment_ids.extend(
+                                        removed_fragment_ids
+                                    )
+                                    ctx.enqueue(stop_msg)
 
                     else:
                         # Drop wrappers from the previous run before the main

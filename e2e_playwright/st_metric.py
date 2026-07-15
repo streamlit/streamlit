@@ -96,6 +96,8 @@ with arrow_off_col:
         delta_arrow="off",
     )
 
+st.metric("Zero delta", 100, 0, border=True)
+
 with col1:
     st.metric("Test 3", -4.56, 1.23, label_visibility="visible")
 with col2:

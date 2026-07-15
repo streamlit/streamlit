@@ -159,6 +159,7 @@ def set_user_option(key: str, value: Any) -> None:
     script itself:
 
         - ``client.showErrorDetails``
+        - ``client.disableDataExport``
         - ``client.showSidebarNavigation``
         - ``client.toolbarMode``
 
@@ -627,6 +628,27 @@ _create_option(
     """,
     default_val="auto",
     type_=str,
+    scriptable=True,
+)
+
+_create_option(
+    "client.disableDataExport",
+    description="""
+        When true, hides the built-in controls for exporting data from
+        components that support it:
+
+        - Hides the CSV download button for st.dataframe, st.data_editor,
+          and chart table views.
+        - Disables clipboard copy for read-only tables (st.dataframe and
+          chart table views), while keeping st.data_editor copy/paste enabled.
+
+        This only hides the built-in export and copy controls. It does not
+        prevent users from otherwise accessing the underlying data (e.g. via
+        screenshots, browser developer tools, or network inspection), so it
+        should not be relied upon as a security or data-protection control.
+    """,
+    default_val=False,
+    type_=bool,
     scriptable=True,
 )
 

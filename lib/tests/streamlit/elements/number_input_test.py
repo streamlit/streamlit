@@ -46,17 +46,19 @@ class NumberInputTest(DeltaGeneratorTestCase):
         st.number_input("Label", value=0)
         c = self.get_delta_from_queue().new_element.number_input
         assert c.data_type == NumberInput.INT
-        assert c.has_min
+        # No user-provided bounds, so has_min/has_max are False even though the
+        # proto still carries the safe-number sentinels for the input's attrs.
+        assert not c.has_min
         assert c.min == JSNumber.MIN_SAFE_INTEGER
-        assert c.has_max
+        assert not c.has_max
         assert c.max == JSNumber.MAX_SAFE_INTEGER
 
         st.number_input("Label", value=0.5)
         c = self.get_delta_from_queue().new_element.number_input
         assert c.data_type == NumberInput.FLOAT
-        assert c.has_min
+        assert not c.has_min
         assert c.min == JSNumber.MIN_NEGATIVE_VALUE
-        assert c.has_max
+        assert not c.has_max
         assert c.max == JSNumber.MAX_VALUE
 
     def test_min_value_zero_sets_default_value(self):
@@ -300,6 +302,35 @@ class NumberInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.number_input
         assert c.min == JSNumber.MIN_SAFE_INTEGER
         assert c.max == JSNumber.MAX_SAFE_INTEGER
+
+    def test_has_min_max_reflect_user_intent(self):
+        """has_min/has_max must reflect whether the user explicitly set bounds,
+        not the safe-number sentinels used to backfill unset bounds."""
+        # No bounds provided: both flags are False.
+        st.number_input("Label")
+        c = self.get_delta_from_queue().new_element.number_input
+        assert not c.has_min
+        assert not c.has_max
+
+        # Only min_value provided: has_min True, has_max False.
+        st.number_input("Label", min_value=0)
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.has_min
+        assert c.min == 0
+        assert not c.has_max
+
+        # Only max_value provided: has_max True, has_min False.
+        st.number_input("Label", max_value=10)
+        c = self.get_delta_from_queue().new_element.number_input
+        assert not c.has_min
+        assert c.has_max
+        assert c.max == 10
+
+        # Both bounds provided: both flags True.
+        st.number_input("Label", min_value=0, max_value=10)
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.has_min
+        assert c.has_max
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""

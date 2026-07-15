@@ -21,6 +21,7 @@ import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   arrayToCopyValue,
+  arrayValuesEqual,
   BaseColumn,
   BaseColumnProps,
   isEditableArrayValue,
@@ -96,6 +97,7 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
 
       return cell.data.values
     },
+    valuesEqual: arrayValuesEqual,
   }
 }
 

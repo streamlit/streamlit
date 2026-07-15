@@ -28,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     expect_no_skeletons,
     fill_number_input,
     get_checkbox,
+    get_element_by_key,
     get_number_input,
     get_text_input,
     open_popover,
@@ -250,6 +251,15 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
     expect(
         app_target.get_by_role("button", name="Download data as CSV", exact=True)
     ).to_be_visible()
+    expect(
+        app_target.get_by_role("heading", name="Paginated sample rows", exact=True)
+    ).to_be_visible()
+    expect(
+        app_target.locator(".st-key-mega_sample_pagination")
+        .get_by_test_id("stPagination")
+        .first
+    ).to_be_visible()
+    expect(app_target.get_by_text("Showing page 1 of 5", exact=True)).to_be_visible()
     column_config_heading = app_target.get_by_role(
         "heading", name="Column config matrix", exact=True
     )
@@ -285,6 +295,7 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
     else:
         expect(plotly_charts).to_have_count(0)
     expect(app_target.get_by_test_id("stGraphVizChart").first).to_be_visible()
+    expect(app_target.get_by_test_id("stMermaidChart").first).to_be_visible()
 
     # Custom UI: verify HTML component iframe and unsafe markdown output.
     custom_html_iframe = app_target.locator(
@@ -309,6 +320,10 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
     expect(app_target.get_by_text("Success", exact=True)).to_be_visible()
     expect(app_target.get_by_text("Success with icon", exact=True)).to_be_visible()
     expect(
+        app_target.get_by_text("Loading generated summary...", exact=True)
+    ).to_be_visible()
+    expect(app_target.locator(".stMarkdownShimmer").first).to_be_visible()
+    expect(
         app_target.get_by_role("heading", name="Header with blue divider", exact=True)
     ).to_be_visible()
     expect(
@@ -331,6 +346,9 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
     ).to_be_visible()
     expect(
         app_target.get_by_role("button", name=re.compile(r"Button tertiary"))
+    ).to_be_visible()
+    expect(
+        app_target.get_by_test_id("stMenuButton").filter(has_text="Menu button").first
     ).to_be_visible()
     expect(app_target.get_by_text("Accept new options", exact=True)).to_be_visible()
     file_uploader_mode = app_target.get_by_text("File uploader mode", exact=True)
@@ -450,6 +468,26 @@ def test_mega_tester_app_interactions_validate_behavior(app: Page) -> None:
     expect(
         app.get_by_text("You pressed the tertiary button", exact=True)
     ).to_be_visible()
+
+    menu_button = (
+        app.get_by_test_id("stMenuButton").filter(has_text="Menu button").first
+    )
+    menu_button.get_by_test_id("stMenuButtonButton").first.click()
+    menu_body = app.get_by_test_id("stMenuButtonBody")
+    expect(menu_body).to_be_visible()
+    menu_body.get_by_text("Export CSV", exact=True).click()
+    wait_for_app_run(app)
+    expect(
+        app.get_by_text("Menu button selected: Export CSV", exact=True)
+    ).to_be_visible()
+
+    pagination = get_element_by_key(app, "mega_sample_pagination").get_by_test_id(
+        "stPagination"
+    )
+    expect(pagination).to_be_visible()
+    pagination.get_by_test_id("stPaginationNext").click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("Showing page 2 of 5", exact=True)).to_be_visible()
 
     # Expander should hide content until opened.
     expect(app.get_by_text("Expander content", exact=True)).to_be_hidden()
