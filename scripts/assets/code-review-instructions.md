@@ -30,8 +30,9 @@
 3. Read and analyze the changed files to understand the full context.
 4. Important: Read the relevant sub-directory `AGENTS.md` files based on changed files (see checklist above).
 5. Run an explicit external-test risk assessment using `/assessing-external-test-risk` and determine whether this branch should include `@pytest.mark.external_test` coverage.
-6. Perform a thorough code review based on the checklist above.
-7. Write your review following the output format below.
+6. Evaluate readability: run the `reviewing-readability` skill on the changed code (comments, docstrings, naming) and the `reviewing-pr-description` skill on the PR title/description if a PR exists, and include their findings and proposed rewrites in your review.
+7. Perform a thorough code review based on the checklist above.
+8. Write your review following the output format below.
 
 ## Output Format
 
@@ -65,6 +66,10 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 ## Accessibility
 
 [Assessment of accessibility considerations for frontend changes.]
+
+## Readability
+
+[Findings from the `reviewing-readability` skill (comments, docstrings, naming) and, if a PR exists, the `reviewing-pr-description` skill (title/description). Group by file; give the location, the issue, and the proposed rewrite. Prefix minor items with `[nit]`.]
 
 ## Recommendations
 
