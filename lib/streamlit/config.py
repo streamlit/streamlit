@@ -395,6 +395,18 @@ _create_section("global", "Global options that apply across all of Streamlit.")
 
 
 _create_option(
+    "global.disableWidgetStateDuplicationWarning",
+    description="""
+        No longer has any effect. The widget state duplication warning was
+        removed since setting both a default value and a session state value
+        is valid usage.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
+
+_create_option(
     "global.showWarningOnDirectExecution",
     description="""
         If True, will show a warning when you run a Streamlit-enabled script
