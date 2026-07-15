@@ -492,11 +492,15 @@ function DataFrame({
       const shouldPreserveRowSelection =
         isRowSelectionActivated && isRowSelected
       if (shouldPreserveRowSelection) {
-        // Capture the original data indices and current column selection before
-        // sorting so they can be remapped to the new display positions after.
-        const originalRowIndices = gridSelection.rows
-          .toArray()
-          .map(getOriginalIndex)
+        // Capture the selected original row indices before sorting so they can
+        // be remapped to their new display positions afterwards. If a remap
+        // from a previous sort is still pending (e.g. back-to-back sorts before
+        // the deferred remap runs), its captured indices are authoritative:
+        // gridSelection still holds the stale pre-remap display rows, which
+        // would map to the wrong original rows under the new sort order.
+        const originalRowIndices =
+          pendingRowSelectionRemapRef.current?.originalRowIndices ??
+          gridSelection.rows.toArray().map(getOriginalIndex)
         pendingRowSelectionRemapRef.current = {
           originalRowIndices,
           columns: gridSelection.columns,
