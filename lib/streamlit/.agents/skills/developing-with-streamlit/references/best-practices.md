@@ -51,6 +51,15 @@ query = st.text_input(
 )
 ```
 
+## HTML and iframes
+
+Prefer native Streamlit elements over recreating UI with custom HTML. Use custom HTML only when no native element provides the required UI or behavior.
+
+Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` commands.
+
+- Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command.
+- Use `st.html` for static HTML or CSS that should render directly in the app instead of inside an iframe. JavaScript is ignored by default; only enable it with `unsafe_allow_javascript=True` when necessary, and never enable it for untrusted content.
+
 ## Layout
 
 Use `width` instead of deprecated `use_container_width`.
