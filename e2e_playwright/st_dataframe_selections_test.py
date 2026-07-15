@@ -433,10 +433,17 @@ def test_multi_row_select_and_sort(app: Page):
         exact_match=True,
     )
 
+    # Capture the run counter before sorting to verify that sorting is
+    # frontend-only and does not trigger an extra rerun (the reported selection
+    # value is unchanged, so no on_select / rerun should fire).
+    runs_element = app.get_by_test_id("stMarkdownContainer").filter(has_text="Runs:")
+    runs_before_sort = runs_element.inner_text()
+
     # Sort the first column ascending. Both selections should be preserved and
     # keep pointing at the same underlying data rows. Sorting is frontend-only:
-    # the reported original row indices stay [0, 2] (no reordering) and no extra
-    # rerun is triggered, since the underlying selected data rows are unchanged.
+    # the reported original row indices stay [0, 2] (stable ascending order,
+    # independent of the display order) and no extra rerun is triggered, since
+    # the underlying selected data rows are unchanged.
     sort_column(canvas, 1, has_row_marker_col=True)
     wait_for_app_run(app)
     expect_prefixed_markdown(
@@ -445,6 +452,8 @@ def test_multi_row_select_and_sort(app: Page):
         "{'selection': {'rows': [0, 2], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
+    # The sort must NOT trigger an additional rerun (frontend-only operation).
+    expect(runs_element).to_have_text(runs_before_sort)
 
 
 # Issue #11345: Test for behavior consistency with sorting via column menu

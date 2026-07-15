@@ -389,6 +389,12 @@ function useWidgetState({
         selectionState.selection.rows = newSelection.rows
           .toArray()
           .map(row => getOriginalIndex(row))
+          // Report row indices in a stable ascending order so the serialized
+          // selection is independent of the current sort/display order. This
+          // keeps the widget value unchanged when only the display order
+          // changes (e.g. after sorting), avoiding spurious reruns / on_select
+          // callbacks.
+          .sort((a, b) => a - b)
         selectionState.selection.columns = newSelection.columns
           .toArray()
           .map(columnIdx => getColumnName(columns[columnIdx]))

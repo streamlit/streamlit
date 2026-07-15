@@ -331,10 +331,10 @@ function DataFrame({
   )
 
   // Use a debounce to prevent rapid updates to the widget state.
-  const { debouncedCallback: syncSelectionState } = useDebouncedCallback(
-    innerSyncSelectionState,
-    DEBOUNCE_TIME_MS
-  )
+  const {
+    debouncedCallback: syncSelectionState,
+    cancel: cancelSelectionSync,
+  } = useDebouncedCallback(innerSyncSelectionState, DEBOUNCE_TIME_MS)
 
   const {
     gridSelection,
@@ -433,31 +433,35 @@ function DataFrame({
     // Build a Set for O(1) lookup instead of O(n²) nested loops
     const targetOriginalIndices = new Set(originalRowIndices)
     let newRows = CompactSelection.empty()
+    // Track matches with a local counter to avoid repeatedly walking
+    // CompactSelection's internal ranges via `.length` on every match.
+    let foundCount = 0
 
     for (let displayIdx = 0; displayIdx < originalNumRows; displayIdx++) {
       const origIdx = currentGetOriginalIndex(displayIdx)
       if (targetOriginalIndices.has(origIdx)) {
         newRows = newRows.add(displayIdx)
+        foundCount += 1
         // Early exit when all targets found
-        if (newRows.length === targetOriginalIndices.size) {
+        if (foundCount === targetOriginalIndices.size) {
           break
         }
       }
     }
 
-    if (newRows.length > 0) {
+    if (foundCount > 0) {
       const newSelection: GridSelection = {
         columns,
         rows: newRows,
         current,
       }
-      // Only update the display selection without syncing to the widget
-      // manager/backend. Sorting is a frontend-only operation and the backend
-      // already holds the correct original row indices. Re-syncing would only
-      // reorder the reported rows (e.g. [0, 2] -> [2, 0] in multi-row mode) and
-      // trigger an unnecessary rerun / on_select callback even though the
-      // underlying selected data rows are unchanged.
-      processSelectionChange(newSelection, { shouldSync: false })
+      // Re-sync the preserved selection so the backend keeps the correct
+      // original row indices, and so any debounced sync queued before the sort
+      // is replaced by this correctly-mapped one. Because reported rows use a
+      // stable ascending order (see createSyncSelectionState), the serialized
+      // value is unchanged when the underlying selection is unchanged, so this
+      // is deduplicated and triggers no extra rerun / on_select callback.
+      processSelectionChange(newSelection)
     }
   }, [originalNumRows, processSelectionChange])
 
@@ -469,6 +473,64 @@ function DataFrame({
     performRowSelectionRemap,
     0,
     { autoStart: false }
+  )
+
+  /**
+   * Handle a column sort while preserving the current row selection.
+   *
+   * Sorting is a frontend-only operation, so selected rows should keep pointing
+   * at the same underlying data rows even as their display positions change.
+   * The selected original row indices are captured before sorting and remapped
+   * to their new display positions afterwards (single-row, multi-row, and
+   * single-row-required modes). Cell selections are cleared because their
+   * display coordinates become stale after sorting.
+   *
+   * @param performSort - Callback that applies the actual column sort.
+   */
+  const handleSortWithSelectionPreservation = useCallback(
+    (performSort: () => void) => {
+      const shouldPreserveRowSelection =
+        isRowSelectionActivated && isRowSelected
+      if (shouldPreserveRowSelection) {
+        // Capture the original data indices and current column selection before
+        // sorting so they can be remapped to the new display positions after.
+        const originalRowIndices = gridSelection.rows
+          .toArray()
+          .map(getOriginalIndex)
+        pendingRowSelectionRemapRef.current = {
+          originalRowIndices,
+          columns: gridSelection.columns,
+          // Cell selections use display coordinates that become stale after
+          // sorting, so we don't preserve them.
+          current: undefined,
+        }
+        // Cancel any pending debounced selection sync queued by the initial row
+        // selection. Otherwise it could fire after the sort and serialize the
+        // pre-sort display rows through the post-sort index mapping, sending
+        // wrong row ids to the backend. The scheduled remap re-syncs the
+        // correct value.
+        cancelSelectionSync()
+      }
+      // Clear cell selections but keep row and column selections. Row selections
+      // are remapped to the same data rows after sorting.
+      clearSelection(true, true)
+
+      performSort()
+
+      // Schedule remap after sorting (ref was just set above).
+      if (shouldPreserveRowSelection) {
+        scheduleRowSelectionRemap()
+      }
+    },
+    [
+      isRowSelectionActivated,
+      isRowSelected,
+      gridSelection,
+      getOriginalIndex,
+      cancelSelectionSync,
+      clearSelection,
+      scheduleRowSelectionRemap,
+    ]
   )
 
   /**
@@ -1040,33 +1102,9 @@ function DataFrame({
               setShowSearch(false)
             }
 
-            const shouldPreserveRowSelection =
-              isRowSelectionActivated && isRowSelected
-            if (shouldPreserveRowSelection) {
-              // Preserve the row selection by remapping it to the same data rows
-              // after sort (single-row, multi-row, and single-row-required modes).
-              // Capture the original data indices and current column selection
-              // before sorting.
-              const originalRowIndices = gridSelection.rows
-                .toArray()
-                .map(getOriginalIndex)
-              pendingRowSelectionRemapRef.current = {
-                originalRowIndices,
-                columns: gridSelection.columns,
-                // Don't capture current cell selection - it uses display coordinates
-                // that become stale after sorting
-                current: undefined,
-              }
-            }
-            // Clear cell selections but keep row and column selections. Row
-            // selections are remapped to the same data rows after sorting.
-            clearSelection(true, true)
-
-            sortColumn(columnIdx, "auto")
-            // Schedule remap after sorting (ref was just set above)
-            if (shouldPreserveRowSelection) {
-              scheduleRowSelectionRemap()
-            }
+            handleSortWithSelectionPreservation(() =>
+              sortColumn(columnIdx, "auto")
+            )
           }}
           gridSelection={gridSelection}
           // We don't have to react to "onSelectionCleared" since
@@ -1251,34 +1289,9 @@ function DataFrame({
                       setShowSearch(false)
                     }
 
-                    const shouldPreserveRowSelection =
-                      isRowSelectionActivated && isRowSelected
-                    if (shouldPreserveRowSelection) {
-                      // Preserve the row selection by remapping it to the same
-                      // data rows after sort (single-row, multi-row, and
-                      // single-row-required modes). Capture the original data
-                      // indices and current column selection before sorting.
-                      const originalRowIndices = gridSelection.rows
-                        .toArray()
-                        .map(getOriginalIndex)
-                      pendingRowSelectionRemapRef.current = {
-                        originalRowIndices,
-                        columns: gridSelection.columns,
-                        // Don't capture current cell selection - it uses display coordinates
-                        // that become stale after sorting
-                        current: undefined,
-                      }
-                    }
-                    // Clear cell selections but keep row and column selections.
-                    // Row selections are remapped to the same data rows after
-                    // sorting.
-                    clearSelection(true, true)
-
-                    sortColumn(showMenu.columnIdx, direction, true)
-                    // Schedule remap after sorting (ref was just set above)
-                    if (shouldPreserveRowSelection) {
-                      scheduleRowSelectionRemap()
-                    }
+                    handleSortWithSelectionPreservation(() =>
+                      sortColumn(showMenu.columnIdx, direction, true)
+                    )
                   }
                 : undefined
             }
