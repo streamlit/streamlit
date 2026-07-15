@@ -108,6 +108,8 @@ Read `.github/pull_request_template.md` for the required sections, then fill the
 
 Check the matching boxes in the PR template. If no test files changed, explain why. Leave "manual testing" unchecked (user fills in).
 
+**Review title and description:** Before writing the PR for user review, run the `reviewing-pr-description` skill on the drafted title and description and apply its proposed rewrites.
+
 ### 3.4 Write PR for user review
 
 Write complete PR details to `work-tmp/pr_description.md`:
@@ -150,5 +152,3 @@ rm work-tmp/pr_description.md work-tmp/pr_body.md
 ## Reference
 
 For full details on writing principles, labeling, branch naming, and testing plans, see the [Pull requests wiki](../../../wiki/pull-requests.md).
-
-To review whether a PR's title and description read clearly and concisely, use the `reviewing-pr-description` skill and apply its proposed rewrites.

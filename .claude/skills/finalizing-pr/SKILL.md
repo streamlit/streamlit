@@ -13,7 +13,7 @@ Prepares the current branch for merge by running quality checks, simplifying cod
 
 Follow these steps in order. **Run all subagents in foreground** (not background) unless otherwise specified—wait for each to complete before proceeding.
 
-> **Note:** For small changes (documentation tweaks, test-only tweaks, one-liners, or other mini-changes), you can skip steps 1, 2, 3, 4, 7, 8, and 9.
+> **Note:** For small changes (documentation tweaks, test-only tweaks, one-liners, or other mini-changes), you can skip steps 1, 2, 3, 7, 8, and 9. Still run step 4 (readability), since it is cheap and often the main concern for these changes.
 
 ### 1. Build and install
 
