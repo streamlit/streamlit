@@ -19,7 +19,7 @@ This folder contains all GitHub Actions workflows for the Streamlit repository. 
 1. **Use existing approved actions**: `actions/*`, `github/*`, `pypa/*`, `astral-sh/setup-uv`, `snowflakedb/reusable-workflows`
 2. **Use `actions/github-script`** for GitHub API interactions instead of third-party actions
 3. **Use bash/shell scripts** for general automation tasks
-4. **Pin action versions** using SHA hashes for security-critical actions (e.g., `pypa/gh-action-pypi-publish@ed0c53...`)
+4. **Pin every external action and reusable workflow** to a full-length commit SHA, followed by a version comment (e.g., `actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0`)
 
 Avoid adding new external actions unless absolutely necessary. This reduces supply chain risk and makes workflows easier to audit.
 
@@ -69,7 +69,7 @@ Reusable composite actions in `.github/actions/` encapsulate common setup steps.
 
 ```yaml
 steps:
-  - uses: actions/checkout@v6
+  - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
   - uses: ./.github/actions/build_info        # Get Python versions
   - uses: ./.github/actions/make_init         # Setup dev environment
     with:

@@ -196,8 +196,8 @@ breaking changes roll out to users.
   snippet:
   ```
   # Streamlit agent skills (environment-specific symlinks)
-  .agents/skills/developing-with-streamlit/
-  .claude/skills/developing-with-streamlit/
+  .agents/skills/developing-with-streamlit
+  .claude/skills/developing-with-streamlit
   ```
 
 ## Follow-Up Work

@@ -195,6 +195,30 @@ describe("st.tabs", () => {
     expect(screen.queryByTestId("stTabsScrollRight")).not.toBeInTheDocument()
   })
 
+  describe("height configuration", () => {
+    it("applies a pixel height when a number is passed", () => {
+      render(<Tabs {...getProps({ height: "300px" })} />)
+
+      const container = screen.getByTestId("stTabs")
+      expect(container).toHaveStyle({ height: "300px" })
+    })
+
+    it("applies a stretch height when '100%' is passed", () => {
+      render(<Tabs {...getProps({ height: "100%" })} />)
+
+      const container = screen.getByTestId("stTabs")
+      expect(container).toHaveStyle({ height: "100%" })
+    })
+
+    it("does not apply a height when height is omitted", () => {
+      render(<Tabs {...getProps()} />)
+
+      const container = screen.getByTestId("stTabs")
+      // No inline height should be set when height is not configured.
+      expect(container.style.height).toBe("")
+    })
+  })
+
   describe("CSS key class", () => {
     it("applies st-key-* class when blockId is a valid element id", () => {
       const node = makeTabsNode(3, { blockId: "$$ID-abc123-my_tabs" })

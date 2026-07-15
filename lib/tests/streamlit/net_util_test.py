@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import socket
 import unittest
 from unittest.mock import MagicMock
 
@@ -128,3 +129,21 @@ def test_get_external_ip_https_fallback_uses_short_timeout(monkeypatch) -> None:
     assert second_call_kwargs.get("timeout") == 1, (
         f"HTTPS fallback: Expected timeout=1, got {second_call_kwargs.get('timeout')}"
     )
+
+
+def test_looks_like_an_ip_address_ipv6() -> None:
+    """An IPv6 address is recognized as an IP address."""
+    assert net_util._looks_like_an_ip_address("::1")
+
+
+def test_get_internal_ip_falls_back_to_loopback(monkeypatch) -> None:
+    """When the outbound socket connection fails, the internal IP is loopback."""
+    monkeypatch.setattr(net_util, "_internal_ip", None)
+
+    mock_socket = MagicMock()
+    mock_socket.__enter__.return_value.connect.side_effect = OSError(
+        "network unreachable"
+    )
+    monkeypatch.setattr(socket, "socket", lambda *args, **kwargs: mock_socket)
+
+    assert net_util.get_internal_ip() == "127.0.0.1"

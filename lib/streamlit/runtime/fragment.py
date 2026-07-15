@@ -130,12 +130,13 @@ class FragmentStorage(Protocol):
         self,
         root_fragment_id: str,
         newly_registered_ids: frozenset[str],
-    ) -> None:
+    ) -> list[str]:
         """Remove stored fragments that are strict descendants of ``root_fragment_id``
         but were not re-registered during the latest run of that root.
 
         Used after a fragment-only rerun so orphaned nested fragments (e.g. from a
-        removed ``run_every`` child) do not keep stale closures in storage.
+        removed ``run_every`` child) do not keep stale closures in storage. Returns
+        the list of removed fragment IDs.
         """
         raise NotImplementedError
 
@@ -293,8 +294,12 @@ class MemoryFragmentStorage(FragmentStorage):
         self,
         root_fragment_id: str,
         newly_registered_ids: frozenset[str],
-    ) -> None:
-        """Drop descendant fragments under ``root_fragment_id`` not seen this run."""
+    ) -> list[str]:
+        """Drop descendant fragments under ``root_fragment_id`` not seen this run.
+
+        Returns the list of fragment IDs that were removed so the caller can, for
+        example, tell the frontend to cancel their auto-rerun timers.
+        """
 
         with self._lock:
             to_remove = [
@@ -306,6 +311,7 @@ class MemoryFragmentStorage(FragmentStorage):
             ]
             for fragment_id in to_remove:
                 self._remove(fragment_id)
+            return to_remove
 
     def registration_sequence(self) -> int:
         with self._lock:

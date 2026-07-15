@@ -76,6 +76,15 @@ export interface LibConfigContextProps extends Omit<
    * @see ExceptionElement
    */
   showErrorLinks?: Config.ShowErrorLinks
+
+  /**
+   * Whether data export actions should be disabled for components that support
+   * exporting data. Defaults to false.
+   *
+   * Consumed by:
+   * @see DataFrame
+   */
+  disableDataExport?: boolean
 }
 
 /**
@@ -97,6 +106,7 @@ export const LibConfigContext = createContext<LibConfigContextProps>({
   enforceDownloadInNewTab: undefined,
   resourceCrossOriginMode: undefined,
   showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+  disableDataExport: false,
 })
 
 // Set the context display name for React DevTools
