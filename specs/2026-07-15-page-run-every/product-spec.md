@@ -93,11 +93,11 @@ def set_page_config(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `run_every` | `int \| float \| timedelta \| str \| None` | `None` | The time interval between automatic full-page reruns. `None` disables auto-rerun. |
+| `run_every` | `int \| float \| timedelta \| str \| None` | `None` | The time interval between automatic full-page reruns. `None` disables auto-rerun. Minimum 1 second. |
 
-`run_every` intentionally **matches `@st.fragment(run_every=...)` exactly** in name,
-accepted types, and meaning (API principles #7 Standardized Vocabulary and #10 Same Name,
-Same Behavior). Accepted values:
+`run_every` intentionally **matches `@st.fragment(run_every=...)`** in name, accepted
+types, and meaning (API principles #7 Standardized Vocabulary and #10 Same Name, Same
+Behavior). Accepted values:
 
 - `None` (default) — no auto-rerun.
 - `int` or `float` — interval in seconds (e.g. `5`, `2.5`).
@@ -109,6 +109,16 @@ Same Behavior). Accepted values:
 It is keyword-only. `st.set_page_config` currently has no `*` separator, so we introduce
 one before `run_every` (non-breaking — the existing five parameters remain positional).
 This follows API principle #17 (enhancing arguments are keyword-only).
+
+**Minimum interval (1 second).** Intervals below 1 second raise a `StreamlitAPIException`.
+This is the one place page-level `run_every` intentionally diverges from
+`@st.fragment(run_every=...)`, which allows sub-second reruns: a fragment tick re-runs one
+section, whereas a page tick re-executes the whole script and re-renders the whole page, so
+sub-second *full-page* reruns are disproportionately expensive (and DoS-adjacent at scale).
+Browsers also throttle background-tab timers to ≥1 second, so a sub-second value is
+unreliable regardless. We start with a floor because tightening it later would be breaking
+while relaxing it is not; the difference from fragment is documented rather than silent.
+Pass `None` to disable.
 
 ### Examples
 
@@ -199,8 +209,9 @@ st.dataframe(get_daily_summary())     # refreshed by the page-level interval
   both fragment `run_every` and `streamlit-autorefresh`); it will be documented, not
   worked around.
 - **Validation.** Invalid interval strings raise the same `StreamlitBadTimeStringError`
-  as `@st.fragment(run_every=...)`, via the shared `time_to_seconds` helper (API principle
-  #23 Fail Fast, Fail Helpfully).
+  as `@st.fragment(run_every=...)`, via the shared `time_to_seconds` helper. Intervals that
+  resolve to less than 1 second raise a `StreamlitAPIException` naming the offending value
+  and pointing at the 1-second minimum (API principle #23 Fail Fast, Fail Helpfully).
 
 ### API location: options considered
 
@@ -243,8 +254,11 @@ deferred (see Out of Scope).
 - **`run_every` on `st.navigation` / app-wide across all pages.** v1 is per-page via
   `set_page_config`. A single global interval for a whole multipage app can be layered on
   later.
-- **Sub-second / high-precision guarantees.** Intervals are best-effort browser timers,
-  subject to background-tab throttling; we won't guarantee tight real-time cadence.
+- **Sub-second intervals / high-precision guarantees.** v1 enforces a 1-second minimum
+  (see Minimum interval). Intervals are best-effort browser timers subject to background-tab
+  throttling, so we won't guarantee tight real-time cadence. Relaxing the floor below 1
+  second (or making it configurable) can be revisited later based on demand — a non-breaking
+  change.
 - **Pausing on window blur / "smart" refresh.** Beyond the browser's native background
   throttling, we won't add explicit pause-when-hidden logic in v1.
 - **Deprecating `streamlit-autorefresh`.** This is a community component; we simply provide
@@ -258,5 +272,5 @@ deferred (see Out of Scope).
 | No breaking API changes | ✅ Additive keyword-only parameter; existing `set_page_config` calls are unaffected. Introduces a `*` separator before the new arg (non-breaking). |
 | No new dependencies | ✅ Reuses `time_to_seconds` (Pandas already a dependency) and the existing `AutoRerun` frontend-timer machinery. |
 | Metrics collected | `set_page_config` is already wrapped with `@gather_metrics`. Track `run_every` usage (e.g. whether it was set) to measure adoption vs. the component. |
-| Any security/legal impact? | Auto-rerun increases request volume; note DoS-adjacent considerations for very short intervals (same as the component and fragment `run_every`). No new data exposure. |
+| Any security/legal impact? | Auto-rerun increases request volume; the 1-second minimum interval bounds worst-case full-page rerun frequency (mitigating DoS-adjacent risk from very short intervals). No new data exposure. |
 | Any docs changes needed? | ✅ Document the new parameter on the `st.set_page_config` API page, add a "Auto-refresh your app" how-to, and mention it as the native alternative to `streamlit-autorefresh`. |

@@ -74,11 +74,18 @@ In [`lib/streamlit/commands/page_config.py`](../../lib/streamlit/commands/page_c
 ```python
 from streamlit.time_util import time_to_seconds
 
+_MIN_RUN_EVERY_SECONDS: Final = 1.0
+
 if run_every is not None:
+    interval_seconds = time_to_seconds(run_every, coerce_none_to_inf=False)
+    if interval_seconds is None or interval_seconds < _MIN_RUN_EVERY_SECONDS:
+        raise StreamlitAPIException(
+            f"`run_every` must be at least {_MIN_RUN_EVERY_SECONDS:g} second "
+            f"(got {interval_seconds:g}s). Pass `run_every=None` to disable "
+            "auto-rerun."
+        )
     auto_rerun_msg = ForwardProto()
-    auto_rerun_msg.auto_rerun.interval = time_to_seconds(
-        run_every, coerce_none_to_inf=False
-    )
+    auto_rerun_msg.auto_rerun.interval = interval_seconds
     # fragment_id left empty -> app-scoped (full-page) auto-rerun.
     ctx.enqueue(auto_rerun_msg)
 ```
@@ -87,6 +94,12 @@ Notes:
 
 - `time_to_seconds(..., coerce_none_to_inf=False)` is the same helper fragment `run_every`
   uses; invalid strings raise `StreamlitBadTimeStringError` (fail fast, consistent errors).
+- **Minimum interval (1 second).** Intervals below 1 second raise a `StreamlitAPIException`.
+  This is the deliberate one-place divergence from `@st.fragment(run_every=...)` (which has
+  no floor), justified by the higher cost of full-page vs. fragment reruns and browser
+  background-tab throttling (product spec → Minimum interval). The floor is a module-level
+  constant so it can be relaxed later without an API change. We do *not* retrofit a floor
+  onto fragment `run_every` (that would be a breaking change and is out of scope).
 - `run_every` is a **separate `ForwardMsg`** from `page_config_changed`, not a field on the
   `PageConfig` proto. This decouples the auto-rerun signal from the additive page-chrome
   merge and lets us reuse the frontend timer wholesale. It also means `run_every` is
@@ -156,7 +169,9 @@ this.autoRerunIntervals.set(key, { timer, interval })
 
 - **Python unit tests** (`page_config_test.py`): interval parsing for `int`/`float`/`str`/
   `timedelta`, `None` enqueues nothing, invalid string raises `StreamlitBadTimeStringError`,
-  empty `fragment_id` on the enqueued `AutoRerun`, and last-call-wins across multiple calls.
+  intervals `< 1s` (e.g. `0`, `0.5`, `"500ms"`) raise `StreamlitAPIException` while `1s` is
+  accepted (boundary), empty `fragment_id` on the enqueued `AutoRerun`, and last-call-wins
+  across multiple calls.
 - **Typing test** (`set_page_config_types.py`): assert the accepted `run_every` union type.
 - **Frontend unit tests** (`App.test.tsx`): app-scoped `handleAutoRerun` starts a timer
   that calls `sendUpdateWidgetsMessage(undefined, true)`; same-interval re-registration
