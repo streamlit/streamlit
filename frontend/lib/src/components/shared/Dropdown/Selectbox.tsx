@@ -495,6 +495,19 @@ const Selectbox: FC<Props> = ({
         e.preventDefault()
         commitSelection(null)
       }
+      if (
+        e.key === "Escape" &&
+        !clearable
+      ) {
+        // Restore the input text to the committed value instead of leaving
+        // the typed query visible (regression from BaseWeb → react-aria
+        // ComboBox migration in 1.59.0).
+        const target = valueRef.current ?? ""
+        if (inputValueRef.current !== target) {
+          setInputValue(target)
+        }
+        setFilterActive(false)
+      }
     },
     [clearable, commitSelection, isFilterNone, selectDisabled]
   )
