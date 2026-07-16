@@ -36,6 +36,9 @@ const CSV_ESCAPE_CHAR = '"'
 const CSV_ROW_DELIMITER = "\n"
 // Used to indicate Unicode encoding of a text file (for excel compatibility)
 const CSV_UTF8_BOM = "\ufeff"
+// Separator used to join multi-level header names into the `group` property.
+// Must match the separator used in `parseColumnHeaderNames` (arrowUtils.ts).
+const GROUP_HEADER_SEPARATOR = " / "
 // Regex to check if a value contains special characters that need to be escaped
 const CSV_SPECIAL_CHARS_REGEX = new RegExp(
   `[${[CSV_DELIMITER, CSV_QUOTE_CHAR, CSV_ROW_DELIMITER].join("")}]`
@@ -105,8 +108,21 @@ async function writeCsv(
   await writable.write(textEncoder.encode(CSV_UTF8_BOM))
 
   // Write headers:
-  const headers: string[] = columns.map(column => column.name)
-  await writable.write(textEncoder.encode(toCsvRow(headers)))
+  // For MultiIndex columns, each column may have a `group` property containing
+  // parent-level header names joined with GROUP_HEADER_SEPARATOR. We write one
+  // header row per group level, then a final row with the leaf-level names.
+  const groupParts = columns.map(col =>
+    col.group ? col.group.split(GROUP_HEADER_SEPARATOR) : []
+  )
+  const maxGroupDepth = Math.max(0, ...groupParts.map(parts => parts.length))
+  for (let level = 0; level < maxGroupDepth; level++) {
+    const headerRow = groupParts.map(parts =>
+      level < parts.length ? parts[level] : ""
+    )
+    await writable.write(textEncoder.encode(toCsvRow(headerRow)))
+  }
+  const leafHeaders: string[] = columns.map(column => column.name)
+  await writable.write(textEncoder.encode(toCsvRow(leafHeaders)))
 
   for (let row = 0; row < numRows; row++) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

@@ -93,6 +93,37 @@ const MOCK_COLUMNS: BaseColumn[] = [
   }),
 ]
 
+function createMockNumberColumn(
+  id: string,
+  name: string,
+  indexNumber: number,
+  group?: string
+): BaseColumn {
+  return NumberColumn({
+    id,
+    name,
+    title: name,
+    group,
+    indexNumber,
+    arrowType: {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field(name, new Int64(), true),
+      pandasType: {
+        field_name: name,
+        name,
+        pandas_type: "int64",
+        numpy_type: "int64",
+        metadata: null,
+      },
+    },
+    isEditable: false,
+    isHidden: false,
+    isIndex: false,
+    isPinned: false,
+    isStretched: false,
+  })
+}
+
 const NUM_ROWS = 5
 
 const getCellContentMock = vi
@@ -312,5 +343,156 @@ describe("useDataExporter hook", () => {
 
     // Should handle null values gracefully (empty string in CSV)
     expect(mockWrite).toBeCalledWith(textEncoder.encode(",foo\n"))
+  })
+})
+
+describe("useDataExporter MultiIndex header export", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("writes two header rows for a two-level MultiIndex", async () => {
+    const multiIndexColumns: BaseColumn[] = [
+      createMockNumberColumn("col_0", "Q1", 0, "2022"),
+      createMockNumberColumn("col_1", "Q2", 1, "2022"),
+      createMockNumberColumn("col_2", "Q1", 2, "2023"),
+      createMockNumberColumn("col_3", "Q2", 3, "2023"),
+    ]
+
+    const getCellContentMulti = vi
+      .fn()
+      .mockImplementation(([col]: readonly [number]) => {
+        return multiIndexColumns[col].getCell(1)
+      })
+
+    const { result } = renderHook(() => {
+      return useDataExporter(getCellContentMulti, multiIndexColumns, 1, false)
+    })
+
+    result.current.exportToCsv()
+
+    const textEncoder = new TextEncoder()
+
+    await waitFor(() => {
+      expect(getCellContentMulti).toHaveBeenCalled()
+    })
+
+    // Writes: BOM + parent header row + leaf header row + 1 data row
+    expect(mockWrite).toBeCalledTimes(4)
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("\ufeff"))
+    // Parent-level header row:
+    expect(mockWrite).toBeCalledWith(
+      textEncoder.encode("2022,2022,2023,2023\n")
+    )
+    // Leaf-level header row:
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("Q1,Q2,Q1,Q2\n"))
+    // Data row:
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("1,1,1,1\n"))
+    expect(mockClose).toBeCalledTimes(1)
+  })
+
+  it("writes three header rows for a three-level MultiIndex", async () => {
+    const threeLevelColumns: BaseColumn[] = [
+      createMockNumberColumn("col_0", "1", 0, "A / X"),
+      createMockNumberColumn("col_1", "2", 1, "A / X"),
+      createMockNumberColumn("col_2", "1", 2, "B / Y"),
+      createMockNumberColumn("col_3", "2", 3, "B / Y"),
+    ]
+
+    const getCellContentThreeLevel = vi
+      .fn()
+      .mockImplementation(([col]: readonly [number]) => {
+        return threeLevelColumns[col].getCell(1)
+      })
+
+    const { result } = renderHook(() => {
+      return useDataExporter(
+        getCellContentThreeLevel,
+        threeLevelColumns,
+        1,
+        false
+      )
+    })
+
+    result.current.exportToCsv()
+
+    const textEncoder = new TextEncoder()
+
+    await waitFor(() => {
+      expect(getCellContentThreeLevel).toHaveBeenCalled()
+    })
+
+    // Writes: BOM + grandparent header + parent header + leaf header + 1 data row
+    expect(mockWrite).toBeCalledTimes(5)
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("\ufeff"))
+    // Grandparent-level header row:
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("A,A,B,B\n"))
+    // Parent-level header row:
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("X,X,Y,Y\n"))
+    // Leaf-level header row:
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("1,2,1,2\n"))
+    // Data row:
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("1,1,1,1\n"))
+    expect(mockClose).toBeCalledTimes(1)
+  })
+
+  it("writes single header row when no columns have groups", async () => {
+    // This is a regression test: normal columns should produce a single header row
+    const { result } = renderHook(() => {
+      return useDataExporter(getCellContentMock, MOCK_COLUMNS, NUM_ROWS, false)
+    })
+
+    result.current.exportToCsv()
+
+    const textEncoder = new TextEncoder()
+
+    await waitFor(() => {
+      expect(getCellContentMock).toHaveBeenCalled()
+    })
+
+    // Writes: BOM + single header row + NUM_ROWS data rows
+    expect(mockWrite).toBeCalledTimes(NUM_ROWS + 2)
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("\ufeff"))
+    // Single header row:
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("column_1,column_2\n"))
+    expect(mockClose).toBeCalledTimes(1)
+  })
+
+  it("pads with empty strings when columns have different group depths", async () => {
+    const mixedDepthColumns: BaseColumn[] = [
+      createMockNumberColumn("col_0", "val1", 0, "A / X"),
+      createMockNumberColumn("col_1", "val2", 1, "B"),
+    ]
+
+    const getCellContentMixed = vi
+      .fn()
+      .mockImplementation(([col]: readonly [number]) => {
+        return mixedDepthColumns[col].getCell(1)
+      })
+
+    const { result } = renderHook(() => {
+      return useDataExporter(getCellContentMixed, mixedDepthColumns, 1, false)
+    })
+
+    result.current.exportToCsv()
+
+    const textEncoder = new TextEncoder()
+
+    await waitFor(() => {
+      expect(getCellContentMixed).toHaveBeenCalled()
+    })
+
+    // Writes: BOM + level 0 header + level 1 header + leaf header + 1 data row
+    expect(mockWrite).toBeCalledTimes(5)
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("\ufeff"))
+    // Level 0 header row (col 0 -> "A", col 1 -> "B"):
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("A,B\n"))
+    // Level 1 header row (col 0 -> "X", col 1 -> "" since "B" has only 1 level):
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("X,\n"))
+    // Leaf-level header row:
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("val1,val2\n"))
+    // Data row:
+    expect(mockWrite).toBeCalledWith(textEncoder.encode("1,1\n"))
+    expect(mockClose).toBeCalledTimes(1)
   })
 })
