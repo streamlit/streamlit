@@ -78,11 +78,17 @@ def change_widget_values(app: Page):
     # Change the text input value.
     form_1.get_by_test_id("stTextInput").locator("input").fill("bar")
 
-    # Change the time input value by clicking the hour spinbutton and typing digits.
-    form_1.get_by_test_id("stTimeInput").get_by_test_id(
-        "stTimeInputTimeDisplay"
-    ).locator("[role='spinbutton']").first.click()
-    app.keyboard.type("0000")
+    # Change the time input value. Explicitly click each spinbutton rather than
+    # relying on react-aria auto-advance between segments, which is racy in Chromium.
+    _time_spinbuttons = (
+        form_1.get_by_test_id("stTimeInput")
+        .get_by_test_id("stTimeInputTimeDisplay")
+        .locator("[role='spinbutton']")
+    )
+    _time_spinbuttons.first.click()
+    app.keyboard.type("00")  # hour
+    _time_spinbuttons.last.click()  # explicitly focus minute before typing
+    app.keyboard.type("00")  # minute
 
     # Change the toggle value.
     click_toggle(app, "Toggle Input")

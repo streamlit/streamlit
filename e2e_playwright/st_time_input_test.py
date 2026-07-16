@@ -181,9 +181,14 @@ def test_empty_time_input_behaves_correctly(
     empty_time_input = get_time_input(app, "Time input 8 (empty)")
     time_display = empty_time_input.get_by_test_id("stTimeInputTimeDisplay")
 
-    # Enter a time via segments:
-    time_display.locator("[role='spinbutton']").first.click()
-    app.keyboard.type("0015")
+    # Enter a time via segments. Explicitly click each spinbutton rather than
+    # relying on react-aria auto-advance, which is racy in Chromium when the
+    # minute segment is in placeholder state (starts as "--").
+    spinbuttons = time_display.locator("[role='spinbutton']")
+    spinbuttons.first.click()
+    app.keyboard.type("00")  # hour
+    spinbuttons.last.click()  # explicitly focus minute before typing
+    app.keyboard.type("15")  # minute
     wait_for_app_run(app)
     expect_markdown(app, "Value 8: 00:15:00")
 
