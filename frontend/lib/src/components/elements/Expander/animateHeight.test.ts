@@ -21,9 +21,12 @@ describe("animateHeight", () => {
   let mockAnimation: {
     addEventListener: ReturnType<typeof vi.fn>
     cancel: ReturnType<typeof vi.fn>
+    finish: ReturnType<typeof vi.fn>
+    playState: AnimationPlayState
   }
 
   beforeEach(() => {
+    vi.useFakeTimers()
     element = document.createElement("div")
     document.body.appendChild(element)
 
@@ -31,13 +34,22 @@ describe("animateHeight", () => {
     mockAnimation = {
       addEventListener: vi.fn(),
       cancel: vi.fn(),
+      finish: vi.fn(),
+      playState: "running",
     }
     element.animate = vi.fn().mockReturnValue(mockAnimation)
   })
 
   afterEach(() => {
     document.body.removeChild(element)
+    vi.useRealTimers()
   })
+
+  /** Look up an event listener registered on the mock animation. */
+  const getListener = (event: string): (() => void) | undefined =>
+    mockAnimation.addEventListener.mock.calls.find(
+      call => call[0] === event
+    )?.[1]
 
   describe("animation creation", () => {
     it("calls element.animate with height keyframes", () => {
@@ -170,6 +182,59 @@ describe("animateHeight", () => {
 
       // Should resolve without throwing
       await expect(handle.finished).resolves.toBeUndefined()
+    })
+  })
+
+  describe("stall guard (issue #16027)", () => {
+    it("force-finishes an animation still running well past its duration", () => {
+      animateHeight(element, 0, 100, { duration: 500 })
+
+      expect(mockAnimation.finish).not.toHaveBeenCalled()
+
+      // Advance past duration + guard buffer.
+      vi.advanceTimersByTime(1500)
+
+      expect(mockAnimation.finish).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not force-finish before the guard elapses", () => {
+      animateHeight(element, 0, 100, { duration: 500 })
+
+      // Just past the animation duration but before the guard fires.
+      vi.advanceTimersByTime(600)
+
+      expect(mockAnimation.finish).not.toHaveBeenCalled()
+    })
+
+    it.each<AnimationPlayState>(["finished", "idle"])(
+      "does not force-finish an animation already in %s state",
+      state => {
+        animateHeight(element, 0, 100)
+        mockAnimation.playState = state
+
+        vi.advanceTimersByTime(1500)
+
+        expect(mockAnimation.finish).not.toHaveBeenCalled()
+      }
+    )
+
+    it("clears the guard when the animation finishes normally", () => {
+      animateHeight(element, 0, 100)
+
+      getListener("finish")?.()
+      vi.advanceTimersByTime(1500)
+
+      // finish() came from the browser event, not the guard force-finishing.
+      expect(mockAnimation.finish).not.toHaveBeenCalled()
+    })
+
+    it("clears the guard when the animation is cancelled", () => {
+      animateHeight(element, 0, 100)
+
+      getListener("cancel")?.()
+      vi.advanceTimersByTime(1500)
+
+      expect(mockAnimation.finish).not.toHaveBeenCalled()
     })
   })
 })

@@ -32,13 +32,30 @@ const DEFAULT_DURATION = 500
 const DEFAULT_EASING = "cubic-bezier(0.23, 1, 0.32, 1)"
 
 /**
+ * Extra time (ms) to wait past the animation duration before treating a still-
+ * running animation as stalled and force-finishing it.
+ *
+ * After certain rapid open/close + resize interruption sequences a Web-Animations
+ * effect can end up "running" but stalled — never advancing and never firing its
+ * `finish` event — which permanently holds the element at a clipped height while
+ * the inline `overflow: hidden` lock stays in place (issue #16027). This guard is
+ * a safety net that clears such a stall by force-finishing the animation, which
+ * runs the normal `finish` cleanup. The buffer is generous so it can never fire
+ * for a healthy animation, which always finishes at ~`duration`.
+ */
+const STALL_GUARD_BUFFER_MS = 1000
+
+/**
  * Animate an element's height using the Web Animations API.
  *
  * IMPORTANT: On cancel, styles are NOT cleared. The caller is responsible
  * for setting new styles after cancelling (typically to lock at current height
  * before starting a new animation).
  *
- * On finish, styles ARE cleared to allow natural layout.
+ * On finish, styles ARE cleared to allow natural layout. A stall guard force-
+ * finishes the animation if it is still active well past its duration, so a
+ * stuck Web-Animations effect can never leave the element permanently clipped
+ * (issue #16027).
  *
  * @param element - The HTML element to animate
  * @param from - Starting height in pixels
@@ -67,8 +84,23 @@ export function animateHeight(
     { duration, easing }
   )
 
+  /**
+   * Safety net for stalled animations (issue #16027). If the animation is still
+   * active well past its duration, force it to finish so the `finish` handler
+   * below clears the inline height/overflow lock instead of leaving the element
+   * permanently clipped. Cleared as soon as the animation finishes or is
+   * cancelled, so it never affects a healthy or interrupted animation.
+   */
+  // eslint-disable-next-line no-restricted-globals -- Framework-agnostic animation utility manages its own timer; useTimeout is React-only.
+  const stallGuard = setTimeout(() => {
+    if (animation.playState !== "finished" && animation.playState !== "idle") {
+      animation.finish()
+    }
+  }, duration + STALL_GUARD_BUFFER_MS)
+
   const finished = new Promise<void>(resolve => {
     animation.addEventListener("finish", () => {
+      clearTimeout(stallGuard)
       // Clean up styles on successful finish
       element.style.height = ""
       element.style.overflow = ""
@@ -77,6 +109,7 @@ export function animateHeight(
     })
 
     animation.addEventListener("cancel", () => {
+      clearTimeout(stallGuard)
       // DON'T clean up on cancel - caller will set new styles
       resolve()
     })
