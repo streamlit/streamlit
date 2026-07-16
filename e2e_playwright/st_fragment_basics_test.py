@@ -244,9 +244,13 @@ def test_text_input_in_fragment(app: Page):
 def test_time_input_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    time_input_field = app.get_by_test_id("stTimeInput").locator("input")
-    time_input_field.type("00:15")
-    time_input_field.press("Enter")
+    # React-aria's TimeField renders segments rather than a free-text input.
+    # Click the hour spinbutton directly (clicking the wrapper centers on the
+    # literal ":" separator which has no focus handling).
+    app.get_by_test_id("stTimeInput").get_by_test_id("stTimeInputTimeDisplay").locator(
+        "[role='spinbutton']"
+    ).first.click()
+    app.keyboard.type("0015")
     wait_for_app_run(app)
 
     expect_only_fragment_uuid_changed(

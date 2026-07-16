@@ -78,9 +78,11 @@ def change_widget_values(app: Page):
     # Change the text input value.
     form_1.get_by_test_id("stTextInput").locator("input").fill("bar")
 
-    # Change the time input value.
-    form_1.get_by_test_id("stTimeInput").locator("input").click()
-    app.locator('[data-baseweb="popover"]').locator("li").nth(0).click()
+    # Change the time input value by clicking the hour spinbutton and typing digits.
+    form_1.get_by_test_id("stTimeInput").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    ).locator("[role='spinbutton']").first.click()
+    app.keyboard.type("0000")
 
     # Change the toggle value.
     click_toggle(app, "Toggle Input")

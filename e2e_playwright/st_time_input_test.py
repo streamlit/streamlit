@@ -120,7 +120,9 @@ def test_handles_time_selection(app: Page):
     time_display = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
         "stTimeInputTimeDisplay"
     )
-    time_display.click()
+    # Click the hour spinbutton directly — clicking the wrapper centers on the
+    # literal ":" separator which has no focus handling.
+    time_display.locator("[role='spinbutton']").first.click()
     # Type 00:00 into the segmented hour + minute input:
     app.keyboard.type("0000")
     wait_for_app_run(app)
@@ -134,7 +136,7 @@ def test_focused_segment_colors(
     """Test that the focused segment uses the correct theme colors."""
     time_input = get_time_input(themed_app, "Time input 1 (8:45)")
     time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
-    time_display.click()
+    time_display.locator("[role='spinbutton']").first.click()
 
     # Take a screenshot of the time input with its segment focused:
     assert_snapshot(time_input, name="st_time_input-focused_segment")
@@ -145,7 +147,7 @@ def test_handles_step_correctly(app: Page):
     time_display = get_time_input(app, "Time input 7 (step=60)").get_by_test_id(
         "stTimeInputTimeDisplay"
     )
-    time_display.click()
+    time_display.locator("[role='spinbutton']").first.click()
     # Enter 00:01 into the segmented hour + minute input:
     app.keyboard.type("0001")
     wait_for_app_run(app)
@@ -158,15 +160,15 @@ def test_handles_time_selection_via_typing(app: Page):
     time_display = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
         "stTimeInputTimeDisplay"
     )
-    time_display.click()
+    time_display.locator("[role='spinbutton']").first.click()
 
     # Type 00:15 using digit keys:
     app.keyboard.type("0015")
     wait_for_app_run(app)
     expect_markdown(app, "Value 1: 00:15:00")
 
-    # Tab back to re-focus the hour segment, then type a different value:
-    time_display.click()
+    # Re-focus the hour segment, then type a different value:
+    time_display.locator("[role='spinbutton']").first.click()
     app.keyboard.type("0016")
     wait_for_app_run(app)
     expect_markdown(app, "Value 1: 00:16:00")
@@ -180,7 +182,7 @@ def test_empty_time_input_behaves_correctly(
     time_display = empty_time_input.get_by_test_id("stTimeInputTimeDisplay")
 
     # Enter a time via segments:
-    time_display.click()
+    time_display.locator("[role='spinbutton']").first.click()
     app.keyboard.type("0015")
     wait_for_app_run(app)
     expect_markdown(app, "Value 8: 00:15:00")
@@ -216,7 +218,7 @@ def test_handles_callback_on_change_correctly(app: Page):
     callback_input = get_time_input(app, "Time input 6 (with callback)").get_by_test_id(
         "stTimeInputTimeDisplay"
     )
-    callback_input.click()
+    callback_input.locator("[role='spinbutton']").first.click()
     # Enter 00:00 via segments:
     app.keyboard.type("0000")
     # Wait for app to process the change before checking values:
@@ -230,7 +232,7 @@ def test_handles_callback_on_change_correctly(app: Page):
     other_input = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
         "stTimeInputTimeDisplay"
     )
-    other_input.click()
+    other_input.locator("[role='spinbutton']").first.click()
     app.keyboard.type("0015")
     # Wait for app to process the change before checking values:
     wait_for_app_run(app)
@@ -266,7 +268,7 @@ def test_dynamic_time_input_props(app: Page, assert_snapshot: ImageCompareFuncti
 
     # Type a new time via the segmented input:
     time_display = dynamic_time_input.get_by_test_id("stTimeInputTimeDisplay")
-    time_display.click()
+    time_display.locator("[role='spinbutton']").first.click()
     app.keyboard.type("0015")
     wait_for_app_loaded(app)
 
@@ -312,8 +314,10 @@ def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFu
     # Take a snapshot of the time input with the custom theme:
     assert_snapshot(time_input, name="st_time_input-custom-theme")
 
-    # Click to focus a segment and snapshot the active/focused state:
-    time_input.get_by_test_id("stTimeInputTimeDisplay").click()
+    # Click the hour spinbutton to focus it and snapshot the active/focused state:
+    time_input.get_by_test_id("stTimeInputTimeDisplay").locator(
+        "[role='spinbutton']"
+    ).first.click()
     assert_snapshot(time_input, name="st_time_input-focused-custom-theme")
 
 
