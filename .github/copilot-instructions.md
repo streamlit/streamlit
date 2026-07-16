@@ -101,3 +101,10 @@ Selection of `make` commands for development (run in the repo root):
 - **E2E Tests**: Test the entire app logic end-to-end with Playwright. Located at `e2e_playwright/<name>_test.py` with app code in `e2e_playwright/<name>.py`. User-facing features should be covered by E2E tests (e.g., parameters and commands in the public `st.` API).
 - **(Python) Type Tests**: Verify public API typing with mypy `assert_type`. Located at `lib/tests/streamlit/typing/<command>_types.py`.
 - Prefer running specific tests / test scripts for newly added tests instead the entire test suite.
+
+## Cursor Cloud specific instructions
+
+- The environment ships with the toolchain already provisioned (Node 24 matching `.nvmrc`, `uv`, `protoc`, `rsync`), and the startup update script runs `make init INSTALL_PLAYWRIGHT=false` to refresh Python deps, frontend deps, and protobufs. Playwright browsers are pre-installed, so e2e/debug screenshots work without extra setup.
+- Non-obvious gotcha: `make frontend-lint`, `make frontend-types`, `make frontend-knip`, and any frontend unit test that imports `@streamlit/*` packages require the frontend workspace libraries to be built first. Otherwise imports like `@streamlit/utils` fail with `import-x/no-unresolved`. Build them once with `cd frontend && yarn workspaces foreach --recursive --topological --from @streamlit/lib run build` (or run `make frontend` / `make frontend-fast`, which additionally bundle the static assets into `lib/streamlit/static/`). `make debug` builds them automatically on first run.
+- If `import-x/no-unresolved` errors persist even after building the workspace libs, delete stale `.eslintcache` files under `frontend/` and re-run the lint.
+- To run the app in dev mode, use `make debug <script.py>` (see the "Debugging backend & frontend" section above); the app is served at `http://localhost:3001` and the backend at `http://localhost:8501`.
