@@ -936,6 +936,7 @@ def test_pandas_series_hash_pickle_fallback_on_type_error() -> None:
     # The traceback must not be attached anymore (``exc_info`` was removed).
     assert "exc_info" not in mock_warning.call_args.kwargs
     logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert "failed for a pandas Series" in logged_message
     assert "falling back to pickling the object" in logged_message
     assert "unhashable type: 'list'" in logged_message
 
@@ -953,6 +954,7 @@ def test_pandas_dataframe_hash_pickle_fallback_on_type_error() -> None:
     # The traceback must not be attached anymore (``exc_info`` was removed).
     assert "exc_info" not in mock_warning.call_args.kwargs
     logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert "failed for a pandas DataFrame" in logged_message
     assert "falling back to pickling the object" in logged_message
     assert "unhashable type: 'list'" in logged_message
 
