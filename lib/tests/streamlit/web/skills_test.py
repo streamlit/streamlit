@@ -450,77 +450,6 @@ class TestGetGlobalTargetDirs:
 
         assert (home / ".claude" / "skills" in result) == expected_in_result
 
-    def test_includes_detected_harness_home_dirs(self, tmp_path: Path) -> None:
-        """Targets each detected harness's home skills dir, not only agents/claude.
-
-        The nudge fires for any of several harnesses, but the old global install
-        only wrote ~/.agents and ~/.claude — so a Gemini/Codex-only user could
-        get an installed-but-invisible skill. Global targets now follow the same
-        harness set the nudge detects.
-        """
-        home = tmp_path / "home"
-        (home / ".gemini").mkdir(parents=True)  # gemini installed
-        (home / ".codex").mkdir()  # codex installed
-        # cursor is NOT installed (no ~/.cursor).
-
-        with patch("pathlib.Path.home", return_value=home):
-            result = skills._get_global_target_dirs()
-
-        # Always the generic convention, plus each detected harness's home dir.
-        assert home / ".agents" / "skills" in result
-        assert home / ".gemini" / "skills" in result
-        assert home / ".codex" / "skills" in result
-        # An undetected harness must not be targeted.
-        assert home / ".cursor" / "skills" not in result
-
-
-class TestHarnessSkillSubdirs:
-    """Tests for the shared harness->skills-dir derivation used by both the
-    nudge's skill detection and the global installer's target resolution."""
-
-    def test_home_scope_returns_only_present_harnesses(self, tmp_path: Path) -> None:
-        """At home scope, only harnesses whose config dir exists are returned."""
-        (tmp_path / ".gemini").mkdir()
-        (tmp_path / ".claude").mkdir()
-        # ~/.cursor deliberately absent.
-
-        result = dict(skills._harness_skill_subdirs(str(tmp_path), home_scope=True))
-
-        assert result.get("gemini") == ".gemini/skills"
-        assert result.get("claude") == ".claude/skills"
-        assert "cursor" not in result
-
-    def test_project_scope_returns_all_harnesses_ungated(self, tmp_path: Path) -> None:
-        """At project scope every harness's project dir is returned, no presence
-        gate — and the project dir can differ from the home dir (e.g. copilot)."""
-        result = dict(skills._harness_skill_subdirs(str(tmp_path), home_scope=False))
-
-        assert len(result) == len(skills._HARNESSES)
-        assert result["cursor"] == ".cursor/skills"
-        # Copilot's project dir (.github/skills) differs from its home dir.
-        assert result["copilot"] == ".github/skills"
-
-    def test_global_targets_match_detection_home_dirs(self, tmp_path: Path) -> None:
-        """Symmetry guard: every non-generic global target is a home dir that the
-        detection derivation also yields — install writes where the toast looks."""
-        home = tmp_path
-        (home / ".gemini").mkdir()
-        (home / ".codex").mkdir()
-
-        with patch("pathlib.Path.home", return_value=home):
-            targets = skills._get_global_target_dirs()
-        detected = {
-            home / subdir
-            for _harness, subdir in skills._harness_skill_subdirs(
-                str(home), home_scope=True
-            )
-        }
-        # Base ~/.agents/skills is always present; every other target must be a
-        # dir detection scans (no install target the toast can't see).
-        extras = set(targets) - {home / ".agents" / "skills"}
-        assert extras <= detected
-        assert home / ".gemini" / "skills" in extras
-
 
 class TestAreSkillsInstalled:
     """Tests for are_skills_installed."""
@@ -2263,34 +2192,6 @@ class TestInstallGlobalSkillsMetaSkill:
         # Nothing should have been copied to the global target.
         assert not (home / ".agents" / "skills" / "developing-with-streamlit").exists()
 
-    def test_global_install_lands_in_detected_harness_dir(
-        self, runner: CliRunner, tmp_path: Path, mock_meta_skill_dir: Path
-    ) -> None:
-        """Global install reaches a detected non-Claude harness's home dir.
-
-        A Windows user whose project symlink fails falls back to the global
-        install; if they only run e.g. Gemini, the skill must land in
-        ``~/.gemini/skills`` (which the harness reads), not only in
-        ``~/.agents/skills``.
-        """
-        home = tmp_path / "home"
-        (home / ".gemini").mkdir(parents=True)  # gemini installed, no ~/.claude
-
-        with (
-            patch("pathlib.Path.home", return_value=home),
-            patch.object(
-                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
-            ),
-        ):
-            result = runner.invoke(cli.main, ["skills", "-g", "-y"])
-
-        assert result.exit_code == 0
-        agents_skill = home / ".agents" / "skills" / "developing-with-streamlit"
-        gemini_skill = home / ".gemini" / "skills" / "developing-with-streamlit"
-        assert (agents_skill / "SKILL.md").is_file()
-        assert (gemini_skill / "SKILL.md").is_file()
-        assert (gemini_skill / "scripts" / "discover.py").is_file()
-
 
 class TestMetaSkillPackaging:
     """Guards that the vendored meta-skill files actually ship in the wheel."""
@@ -2404,12 +2305,20 @@ class TestVendoredMetaSkillDiscovery:
                 "vendored meta-skill or bundled content not present in this install"
             )
 
+        # Pin discover.py's interpreter detection to this test's own interpreter
+        # (which has Streamlit) by pointing VIRTUAL_ENV at its venv root. discover.py
+        # re-detects the project interpreter from VIRTUAL_ENV/PATH rather than
+        # reusing the launching sys.executable, so without this the test would fail
+        # (not skip) whenever the first python on PATH lacks Streamlit — e.g. when
+        # run outside ``uv``.
+        venv_root = os.path.dirname(os.path.dirname(sys.executable))
         result = subprocess.run(
             [sys.executable, str(discover_py), "--project-dir", str(tmp_path)],
             capture_output=True,
             text=True,
             timeout=60,
             check=False,
+            env={**os.environ, "VIRTUAL_ENV": venv_root},
         )
 
         assert result.returncode == 0, result.stderr

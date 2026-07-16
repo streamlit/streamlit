@@ -175,13 +175,6 @@ def _get_project_target_dirs(project_root: Path) -> list[Path]:
 
     Always targets .agents/skills/. Also targets .claude/skills/
     when ~/.claude exists (Claude Code is installed).
-
-    Unlike :func:`_get_global_target_dirs`, this intentionally does NOT fan out
-    to every harness's project dir: a project-level ``.agents/skills`` is read by
-    all supported harnesses, so one symlink there suffices and we avoid littering
-    the repo with per-harness ``.cursor``/``.gemini``/… directories. The global
-    case differs because ``~/.agents/skills`` at home scope is not universally
-    read, so it must reach each harness's own home dir.
     """
     targets = [project_root / ".agents" / "skills"]
 
@@ -195,23 +188,16 @@ def _get_project_target_dirs(project_root: Path) -> list[Path]:
 def _get_global_target_dirs() -> list[Path]:
     """Get target directories for global skill installation.
 
-    Mirrors where the nudge's skill detection LOOKS at home scope: always
-    ``~/.agents/skills`` (the harness-agnostic convention, so ``streamlit skills
-    --global`` still has a target when no harness is installed), plus the home
-    skills directory of every detected harness. Derives those from the same
-    :func:`_harness_skill_subdirs` that :func:`detect_installed_skills` scans, so
-    the installer writes exactly where the toast looks — the two stay symmetrical
-    and cannot drift.
+    Always targets ~/.agents/skills/. Also targets ~/.claude/skills/
+    when ~/.claude exists (Claude Code is installed).
     """
     home = Path.home()
-    # Always include the generic convention. Detection only scans ``~/.agents``
-    # once it exists, but the CLI needs a target even with zero harnesses
-    # installed, so seed it here and let the shared derivation add the rest.
     targets = [home / ".agents" / "skills"]
-    for _harness, skills_subdir in _harness_skill_subdirs(str(home), home_scope=True):
-        target = home / skills_subdir
-        if target not in targets:
-            targets.append(target)
+
+    claude_home = home / ".claude"
+    if claude_home.exists():
+        targets.append(claude_home / "skills")
+
     return targets
 
 
@@ -534,7 +520,7 @@ def _confirm_project_installation(
 def _confirm_global_installation(target_dirs: list[Path]) -> bool:
     """Show global installation plan and confirm with user."""
     click.echo()
-    click.echo("Installing globally from your local Streamlit install (no download)")
+    click.echo("Installing globally")
 
     click.secho("\nSource:", bold=True)
     click.echo(
@@ -936,31 +922,6 @@ _HARNESSES: Final = (
 )
 
 
-def _harness_skill_subdirs(root: str, *, home_scope: bool) -> list[tuple[str, str]]:
-    """Return ``(harness, skills_subdir)`` for each agent harness under ``root``.
-
-    Single source of truth for *which directory each agent harness keeps its
-    skills in*, shared by the nudge's skill detection (:func:`detect_installed_skills`,
-    where it LOOKS for an installed marker) and the global installer's target
-    resolution (:func:`_get_global_target_dirs`, where it WRITES the skill). The
-    two derive from the same list so the toast and the install path stay
-    symmetrical — the installer writes exactly where detection scans, and neither
-    can drift from the other as harnesses are added.
-
-    ``skills_subdir`` is relative to ``root`` (the caller joins it). At home scope
-    a harness is included only when its home config dir exists (e.g. ``~/.claude``)
-    and its *home* skills dir is used; at project scope every harness's *project*
-    skills dir is returned. ``root`` is a string so the hot detection path stays
-    on ``os.path`` without ``Path`` overhead.
-    """
-    subdirs: list[tuple[str, str]] = []
-    for harness, project_dir, home_skills_dir, agent_home_dir in _HARNESSES:
-        if home_scope and not os.path.isdir(os.path.join(root, agent_home_dir)):
-            continue
-        subdirs.append((harness, home_skills_dir if home_scope else project_dir))
-    return subdirs
-
-
 # Max directory levels to walk when searching for a ``.git`` ancestor. Bounded
 # to avoid scanning the entire filesystem on pathological layouts.
 _MAX_REPO_ROOT_WALK_DEPTH: Final = 20
@@ -1037,12 +998,15 @@ def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
 
         tokens: set[str] = set()
         for location, root in roots.items():
-            # Same harness->skills-dir derivation the global installer writes to,
-            # so detection scans exactly where the install lands (see
-            # _harness_skill_subdirs). At home scope absent harnesses are skipped.
-            for harness, harness_dir in _harness_skill_subdirs(
-                root, home_scope=location == "home"
-            ):
+            for harness, project_dir, home_skills_dir, agent_home_dir in _HARNESSES:
+                # At home level, skip harnesses that aren't installed at all
+                # (saves 2 isfile calls per absent harness — common on hosted
+                # apps where no skills or harnesses exist).
+                if location == "home" and not os.path.isdir(
+                    os.path.join(root, agent_home_dir)
+                ):
+                    continue
+                harness_dir = home_skills_dir if location == "home" else project_dir
                 for skill in _STREAMLIT_SKILL_NAMES:
                     marker = os.path.join(
                         root, harness_dir, skill, _SKILL_MARKER_FILENAME
@@ -1073,16 +1037,11 @@ def detect_installed_agents() -> list[str]:
 def _detect_installed_agents_cached() -> tuple[str, ...]:
     try:
         home = os.path.expanduser("~")
-        # Same home-scope presence check the skill detection and the global
-        # installer use, so "which harnesses are present" has one definition.
-        return tuple(
-            sorted(
-                harness
-                for harness, _skills_dir in _harness_skill_subdirs(
-                    home, home_scope=True
-                )
-            )
-        )
+        tokens: set[str] = set()
+        for harness, _project_dir, _home_skills_dir, agent_home_dir in _HARNESSES:
+            if os.path.isdir(os.path.join(home, agent_home_dir)):
+                tokens.add(harness)
+        return tuple(sorted(tokens))
     except Exception as ex:  # pragma: no cover - defensive
         _LOGGER.debug("Failed to detect installed agents", exc_info=ex)
         return ()
