@@ -55,7 +55,8 @@ AppTest directly runs a `ScriptRunner`, converts emitted protobuf deltas into a 
 subsequent runs. It does not run Streamlit's React frontend or reproduce all frontend
 tree, widget, fragment, and actionability behavior.
 
-As of this spec:
+As of this spec (July 2026, Streamlit 1.58) — all counts below are point-in-time
+snapshots that will drift as the codebase evolves:
 
 - There are **13 open issues** with the
   [`feature:app-testing`](https://github.com/streamlit/streamlit/issues?q=is%3Aissue%20state%3Aopen%20label%3Afeature%3Aapp-testing)
@@ -428,7 +429,11 @@ def test_sign_in(app: StreamlitPage):
 per test module on an ephemeral localhost port, and provides an isolated browser page per
 test. The page is opened and the initial Streamlit run is idle before the test begins.
 The exact fixture-factory mechanism should be prototyped in a tech spec; the product
-requirement is the one-declaration/one-test-argument experience above.
+requirement is the one-declaration/one-test-argument experience above. If inferring the
+name from the assignment target proves to require fragile stack-frame introspection, the
+tech spec should fall back to an explicit `name` parameter (for example,
+`app_fixture("app.py", name="app")`), which is more predictable at the cost of one
+argument.
 
 #### Semantic element selection
 
@@ -702,8 +707,7 @@ semantic snapshots make the boundary teachable.
 
 Reject. Reuse proven implementation selectively behind a smaller API.
 
-### Option E: Build another driver (Selenium, Cypress, custom WebSocket client, or a
-jsdom/component-test runner)
+### Option E: Build another driver (Selenium, Cypress, custom WebSocket client, or jsdom/component-test runner)
 
 - **Pros:** A custom protocol client could be faster; component tests can isolate the
   frontend; other browser drivers have established ecosystems.
