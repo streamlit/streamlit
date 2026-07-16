@@ -56,7 +56,7 @@ Detailed feature requests help us understand community needs and prioritize our 
 
 ### Extend the Streamlit ecosystem
 
-- Build a [custom Streamlit Component](https://docs.streamlit.io/develop/concepts/custom-components)
+- Build a [custom Streamlit Component](https://docs.streamlit.io/develop/concepts/custom-components/components-v2)
   and [publish it to PyPI](https://docs.streamlit.io/develop/concepts/custom-components/publish)
   so the community can use it.
 - Contribute reusable utilities to the community-maintained
