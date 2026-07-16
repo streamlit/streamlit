@@ -44,6 +44,7 @@ from streamlit.runtime.caching import cache_data, cache_resource
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import (
+    _LOGGER,
     _NP_SIZE_LARGE,
     _PANDAS_ROWS_LARGE,
     UserHashError,
@@ -922,18 +923,36 @@ def test_hash_stack_pretty_print_handles_str_conversion_error() -> None:
     assert "<Unable to convert item to string>" in text
 
 
-def test_pandas_series_hash_pickle_fallback_on_type_error() -> None:
+def test_pandas_series_hash_pickle_fallback_on_type_error(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Series that ``hash_pandas_object`` cannot hash fall back to pickling."""
     series = pd.Series([[1, 2], [3, 4]])
-    assert get_hash(series) == get_hash(series)
-    assert get_hash(series) != get_hash(pd.Series([[1, 2], [3, 5]]))
+    with mock.patch.object(_LOGGER, "propagate", True):
+        digest = get_hash(series)
+        record = caplog.records[-1]
+
+        assert digest == get_hash(series)
+        assert digest != get_hash(pd.Series([[1, 2], [3, 5]]))
+    assert record.exc_info is None
+    assert "falling back to pickling the object" in record.getMessage()
+    assert "unhashable type: 'list'" in record.getMessage()
 
 
-def test_pandas_dataframe_hash_pickle_fallback_on_type_error() -> None:
+def test_pandas_dataframe_hash_pickle_fallback_on_type_error(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """DataFrame that ``hash_pandas_object`` cannot hash fall back to pickling."""
     df = pd.DataFrame({"col": [[1], [2]]})
-    assert get_hash(df) == get_hash(df)
-    assert get_hash(df) != get_hash(pd.DataFrame({"col": [[1], [3]]}))
+    with mock.patch.object(_LOGGER, "propagate", True):
+        digest = get_hash(df)
+        record = caplog.records[-1]
+
+        assert digest == get_hash(df)
+        assert digest != get_hash(pd.DataFrame({"col": [[1], [3]]}))
+    assert record.exc_info is None
+    assert "falling back to pickling the object" in record.getMessage()
+    assert "unhashable type: 'list'" in record.getMessage()
 
 
 def test_numpy_ufunc_hashes_by_encoded_name() -> None:
