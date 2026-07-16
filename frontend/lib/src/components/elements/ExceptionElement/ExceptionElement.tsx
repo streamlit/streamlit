@@ -131,15 +131,23 @@ function ExceptionElement({
     (showErrorLinks === Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO &&
       isLocalhost())
 
-  // Offer a one-click "install Streamlit skills" CTA on genuine errors in local
-  // development, using the same surface as the AI help links above. Warnings
-  // (st.exception of a Warning) are excluded — only real errors. At most one
-  // callout shows app-wide, enforced by claiming a single shared slot. The slot
-  // is sticky once claimed, so the callout isn't yanked when a successful
-  // install flips the recommendation off — it dismisses itself after confirming.
+  // Offer a one-click "install Streamlit skills" CTA in local development,
+  // using the same surface as the AI help links above. Scoped tightly so the
+  // nudge is only shown where the skills would actually help:
+  //   - Streamlit-raised exceptions only (`element.isStreamlitException`) —
+  //     API misuse the skills can fix, not arbitrary user errors like a
+  //     ZeroDivisionError. The broad startup toast (#15473) still covers those.
+  //   - Real errors, not warnings (`!element.isWarning`).
+  // At most one callout shows app-wide, enforced by claiming a single shared
+  // slot. The slot is sticky once claimed, so the callout isn't yanked when a
+  // successful install flips the recommendation off — it dismisses itself after
+  // confirming.
   const skillsInstall = useContext(SkillsInstallContext)
   const skillsCalloutEligible =
-    shouldShowLinks && !element.isWarning && skillsInstall.enabled
+    shouldShowLinks &&
+    !element.isWarning &&
+    element.isStreamlitException &&
+    skillsInstall.enabled
   const ownsSkillsCalloutSlot = useSkillsCalloutSlot(skillsCalloutEligible)
   const [skillsCalloutDismissed, setSkillsCalloutDismissed] = useState(false)
   const handleSkillsCalloutDismiss = useCallback(

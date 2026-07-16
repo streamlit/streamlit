@@ -343,6 +343,46 @@ def test_marshall_with_alternate_name() -> None:
     assert proto.type == "PrettyErrorName"
 
 
+@pytest.mark.parametrize(
+    ("err", "expected"),
+    [
+        (errors.Error("base"), True),
+        (StreamlitAPIException("boom"), True),
+        (errors.DuplicateWidgetID("dup"), True),
+        (StreamlitInvalidWidthError("bad"), True),
+        (ValueError("v"), False),
+        (ZeroDivisionError(), False),
+        (KeyError("k"), False),
+    ],
+)
+def test_marshall_is_streamlit_exception(err: BaseException, expected: bool) -> None:
+    """is_streamlit_exception is True only for streamlit.errors.Error subclasses.
+
+    This flag scopes the in-error "Install skills" callout to Streamlit API
+    misuse; arbitrary user/runtime errors must not set it.
+    """
+    proto = ExceptionProto()
+    exception.marshall(proto, err)
+    assert proto.is_streamlit_exception is expected
+
+
+def test_marshall_is_streamlit_exception_ignores_alternate_name() -> None:
+    """A non-Streamlit exception is not flagged even if it spoofs its type name.
+
+    The flag is computed from the class (isinstance of streamlit.errors.Error),
+    not the reported type string, so an ``alternate_name`` that mimics a
+    Streamlit type cannot make a foreign error qualify.
+    """
+
+    class DuplicateWidgetID(Exception):  # Same name as a real Streamlit error.
+        alternate_name = "DuplicateWidgetID"
+
+    proto = ExceptionProto()
+    exception.marshall(proto, DuplicateWidgetID("nope"))
+    assert proto.type == "DuplicateWidgetID"
+    assert proto.is_streamlit_exception is False
+
+
 def test_marshall_syntax_error() -> None:
     """Test that SyntaxErrors are formatted with _format_syntax_error_message."""
     err = SyntaxError(

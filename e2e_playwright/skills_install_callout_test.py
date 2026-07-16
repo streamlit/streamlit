@@ -73,28 +73,53 @@ def app_server(
     print(proc.terminate(), flush=True)
 
 
+def _dismiss_proactive_toast(app: Page) -> None:
+    """Dismiss the proactive nudge toast so the in-error callout can appear.
+
+    The two surfaces are mutually exclusive — the callout only shows once the
+    toast is gone. The toast's ✕ also snoozes it for ~24h, but the callout
+    intentionally ignores that snooze (an error is a higher-intent moment than a
+    snoozed proactive nudge).
+    """
+    toast = app.get_by_test_id("stSkillsNudge")
+    expect(toast).to_be_visible()
+    toast.get_by_role("button", name="Close").click()
+    expect(toast).not_to_be_visible()
+
+
 def test_skills_install_callout_shows_in_one_error_box(
     app: Page, assert_snapshot: ImageCompareFunction
 ) -> None:
-    """In local dev (agent present, no skills) the in-error callout shows inside
-    the error box — alongside the proactive toast — is a single non-dismissable
-    Install CTA, and is deduped to one even with several errors on screen.
+    """In local dev (agent present, no skills) the in-error callout appears once
+    the proactive toast is dismissed (the two are mutually exclusive), is a
+    single non-dismissable Install CTA scoped to Streamlit-raised errors, and is
+    deduped to one even with several eligible errors on screen.
     """
-    # The proactive nudge toast and the in-error callout coexist (visually
-    # distinct; the in-context offer at the error is worth the small overlap).
+    # Mutual exclusion: while the proactive toast is up, the callout is
+    # suppressed — even though eligible errors are already on screen.
     expect(app.get_by_test_id("stSkillsNudge")).to_be_visible()
+    expect(app.get_by_test_id("stException")).to_have_count(3)
+    expect(app.get_by_test_id("stSkillsInstallCallout")).to_have_count(0)
 
-    # Both error boxes render...
-    expect(app.get_by_test_id("stException")).to_have_count(2)
+    # Dismiss the toast; the callout then takes over.
+    _dismiss_proactive_toast(app)
 
-    # ...but the install callout is deduped to exactly one (the first error box
-    # claims the single shared slot).
+    # Deduped to exactly one (the first eligible error box claims the single
+    # shared slot)...
     callout = app.get_by_test_id("stSkillsInstallCallout")
     expect(callout).to_have_count(1)
     expect(callout).to_be_visible()
 
-    # It sits inside an error box, not floating elsewhere on the page.
+    # ...and it sits inside an error box, not floating elsewhere on the page.
     expect(app.get_by_test_id("stException").filter(has=callout)).to_have_count(1)
+
+    # Scoping: the plain (non-Streamlit) ValueError box gets NO callout —
+    # installing skills won't fix a bug in the developer's own logic.
+    expect(
+        app.get_by_test_id("stException")
+        .filter(has_text="user-code error")
+        .get_by_test_id("stSkillsInstallCallout")
+    ).to_have_count(0)
 
     # A single Install CTA — deliberately NOT dismissable: no ✕ / snooze /
     # "don't show again" on this surface.
@@ -115,6 +140,9 @@ def test_skills_install_callout_installs_end_to_end(app: Page) -> None:
     Runs after the render test (and mutates the temp project by installing the
     skills), so it is intentionally the last test in this module.
     """
+    # Dismiss the proactive toast so the mutually-exclusive callout appears.
+    _dismiss_proactive_toast(app)
+
     callout = app.get_by_test_id("stSkillsInstallCallout")
     expect(callout).to_be_visible()
 

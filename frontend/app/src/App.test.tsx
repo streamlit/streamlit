@@ -95,6 +95,7 @@ import {
 } from "@streamlit/protobuf"
 
 import { App, LOG, Props } from "./App"
+import { SKILLS_NUDGE_SNOOZED_AT_KEY } from "./components/SkillsNudgeToast/skillsNudge"
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
@@ -7414,78 +7415,6 @@ describe("Skills install nudge", () => {
     expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
   })
 
-  it("shows the in-error callout alongside the toast and tracks the errorCallout surface", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const installSpy = vi
-      .spyOn(BackendOperationClient.prototype, "requestInstallSkills")
-      .mockResolvedValue({ detail: "Installed to .agents/skills" })
-    renderApp(getProps())
-    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
-
-    act(() => {
-      getMockConnectionManagerProp("connectionStateChanged")(
-        ConnectionState.CONNECTED
-      )
-    })
-    sendForwardMessage("sessionStatusChanged", {
-      runOnSave: false,
-      scriptIsRunning: true,
-    })
-    sendRecommendingNewSession()
-    sendForwardMessage("navigation", {
-      appPages: [
-        {
-          pageScriptHash: "page_script_hash",
-          pageName: "streamlit app",
-          urlPathname: "streamlit_app",
-          isDefault: true,
-        },
-      ],
-      pageScriptHash: "page_script_hash",
-      position: Navigation.Position.SIDEBAR,
-      sections: [],
-    })
-
-    // Render an error in the app body (an uncaught-style exception element).
-    sendForwardMessage(
-      "delta",
-      {
-        type: "newElement",
-        newElement: {
-          type: "exception",
-          exception: {
-            type: "RuntimeError",
-            message: "boom",
-            stackTrace: ["line 1", "line 2"],
-            isWarning: false,
-          },
-        },
-      },
-      { deltaPath: [0, 0], activeScriptHash: "hash1" }
-    )
-
-    // The proactive toast and the in-error callout coexist — they are visually
-    // distinct and the in-context offer at the error is worth the small overlap.
-    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
-    const callout = await screen.findByTestId("stSkillsInstallCallout")
-    expect(callout).toBeVisible()
-    // The callout's impression is attributed to the error-callout surface.
-    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
-      label: "skillsNudgeShown",
-      surface: "errorCallout",
-    })
-
-    await user.click(
-      within(callout).getByRole("button", { name: "Install skills" })
-    )
-    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
-      label: "skillsNudgeInstall",
-      surface: "errorCallout",
-    })
-    expect(installSpy).toHaveBeenCalledTimes(1)
-  })
-
   /** Connect, mark the script running, recommend skills, and select a page. */
   const connectRunRecommendNavigate = (): void => {
     act(() => {
@@ -7522,16 +7451,82 @@ describe("Skills install nudge", () => {
         newElement: {
           type: "exception",
           exception: {
-            type: "RuntimeError",
+            type: "StreamlitAPIException",
             message: "boom",
             stackTrace: ["line 1"],
             isWarning: false,
+            // Streamlit-raised error: this is what scopes the callout in.
+            isStreamlitException: true,
           },
         },
       },
       { deltaPath, activeScriptHash: "hash1" }
     )
   }
+
+  /**
+   * Snooze the proactive toast so the in-error callout becomes the active
+   * surface. With the toast snoozed it stays hidden (mutual exclusion), while
+   * the callout intentionally ignores the snooze — mirroring the spec: an
+   * error is a higher-intent moment than a snoozed proactive nudge. Call
+   * before renderApp; the snooze is read during session initialization.
+   */
+  const snoozeToastSoCalloutShows = (): void => {
+    window.localStorage.setItem(
+      SKILLS_NUDGE_SNOOZED_AT_KEY,
+      String(Date.now())
+    )
+  }
+
+  it("keeps the callout mutually exclusive with the toast, showing it only once the toast is dismissed", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const installSpy = vi
+      .spyOn(BackendOperationClient.prototype, "requestInstallSkills")
+      .mockResolvedValue({ detail: "Installed to .agents/skills" })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    connectRunRecommendNavigate()
+    sendErrorElement()
+
+    // The proactive toast owns the screen; while it's up the in-error callout
+    // is suppressed (mutual exclusion), even on a Streamlit-raised error...
+    const nudge = await screen.findByTestId("stSkillsNudge")
+    expect(nudge).toBeVisible()
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+    // ...and no errorCallout impression is logged while it's hidden.
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+      surface: "errorCallout",
+    })
+
+    // Dismiss the toast (its ✕ snoozes + closes it). An error is a
+    // higher-intent moment than a snoozed proactive nudge, so — with the toast
+    // gone — the callout now takes over. The 24h snooze does not gate it.
+    await user.click(within(nudge).getByRole("button", { name: "Close" }))
+    const callout = await screen.findByTestId("stSkillsInstallCallout")
+    expect(callout).toBeVisible()
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    // The callout's impression is attributed to the error-callout surface.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+      surface: "errorCallout",
+    })
+
+    // Installing from the callout is likewise attributed to errorCallout.
+    await user.click(
+      within(callout).getByRole("button", { name: "Install skills" })
+    )
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstall",
+      surface: "errorCallout",
+    })
+    expect(installSpy).toHaveBeenCalledTimes(1)
+  })
 
   it("does not show the in-error callout in an embedded app", async () => {
     // Embedded (?embed=true) apps are chromeless; neither surface should show
@@ -7568,11 +7563,12 @@ describe("Skills install nudge", () => {
       BackendOperationClient.prototype,
       "requestInstallSkills"
     ).mockResolvedValue({ detail: "Installed to .agents/skills" })
+    snoozeToastSoCalloutShows()
     renderApp(getProps())
     connectRunRecommendNavigate()
     sendErrorElement([0, 0])
 
-    // Install from the callout (which shows alongside the toast).
+    // Install from the callout (the toast is snoozed, so it's the live surface).
     const callout = await screen.findByTestId("stSkillsInstallCallout")
     await user.click(
       within(callout).getByRole("button", { name: "Install skills" })
@@ -7601,6 +7597,7 @@ describe("Skills install nudge", () => {
 
   it("logs the errorCallout impression only once even when the error remounts", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
+    snoozeToastSoCalloutShows()
     renderApp(getProps())
     const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
     connectRunRecommendNavigate()

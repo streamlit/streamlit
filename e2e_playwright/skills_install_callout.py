@@ -13,11 +13,19 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 
 st.title("Skills install callout e2e")
 st.write("App used to e2e-test the in-error install-skills callout.")
 
-# Render two error boxes: this exercises the single-callout dedup — both
-# exceptions render, but the install callout must appear in only one of them.
-st.exception(RuntimeError("Something broke (first error)"))
-st.exception(ValueError("Something else broke (second error)"))
+# The callout is scoped to Streamlit-raised exceptions (subclasses of
+# streamlit.errors.Error) — the class of mistake the skills can actually fix.
+# Render two of them: this exercises the single-callout dedup — both exceptions
+# render, but the install callout must appear in only one of them.
+st.exception(StreamlitAPIException("Something broke (first error)"))
+st.exception(StreamlitAPIException("Something else broke (second error)"))
+
+# A plain (non-Streamlit) error must NOT get the callout — installing Streamlit
+# skills won't fix a bug in the developer's own logic. It still renders as an
+# error box, so the dedup count above stays at exactly one callout.
+st.exception(ValueError("A user-code error the skills can't help with"))

@@ -134,8 +134,16 @@ describe("ExceptionElement Element", () => {
   describe("Skills install callout", () => {
     const SHOW_LINKS = Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
 
+    // The callout is scoped to Streamlit-raised exceptions, so every
+    // show-case starts from a Streamlit exception; individual tests then vary
+    // the one gate they exercise.
+    const getStreamlitProps = (
+      elementProps: Partial<ExceptionProto> = {}
+    ): ExceptionElementProps =>
+      getProps({ isStreamlitException: true, ...elementProps })
+
     it("shows the callout on an error when enabled and links are shown", () => {
-      renderWithContexts(<ExceptionElement {...getProps()} />, {
+      renderWithContexts(<ExceptionElement {...getStreamlitProps()} />, {
         libConfigContext: { showErrorLinks: SHOW_LINKS },
         skillsInstallContext: { enabled: true },
       })
@@ -144,7 +152,7 @@ describe("ExceptionElement Element", () => {
 
     it("records the impression once when shown", () => {
       const onShown = vi.fn()
-      renderWithContexts(<ExceptionElement {...getProps()} />, {
+      renderWithContexts(<ExceptionElement {...getStreamlitProps()} />, {
         libConfigContext: { showErrorLinks: SHOW_LINKS },
         skillsInstallContext: { enabled: true, onShown },
       })
@@ -152,7 +160,7 @@ describe("ExceptionElement Element", () => {
     })
 
     it("hides the callout when not enabled", () => {
-      renderWithContexts(<ExceptionElement {...getProps()} />, {
+      renderWithContexts(<ExceptionElement {...getStreamlitProps()} />, {
         libConfigContext: { showErrorLinks: SHOW_LINKS },
         skillsInstallContext: { enabled: false },
       })
@@ -163,7 +171,7 @@ describe("ExceptionElement Element", () => {
 
     it("hides the callout for warnings even when enabled", () => {
       renderWithContexts(
-        <ExceptionElement {...getProps({ isWarning: true })} />,
+        <ExceptionElement {...getStreamlitProps({ isWarning: true })} />,
         {
           libConfigContext: { showErrorLinks: SHOW_LINKS },
           skillsInstallContext: { enabled: true },
@@ -174,8 +182,28 @@ describe("ExceptionElement Element", () => {
       ).not.toBeInTheDocument()
     })
 
+    it("hides the callout for non-Streamlit exceptions even when enabled", () => {
+      // A ZeroDivisionError in the user's own logic won't be fixed by
+      // installing Streamlit skills, so the callout must not appear even when
+      // links are shown and the install is enabled.
+      renderWithContexts(
+        <ExceptionElement {...getProps({ isStreamlitException: false })} />,
+        {
+          libConfigContext: { showErrorLinks: SHOW_LINKS },
+          skillsInstallContext: { enabled: true },
+        }
+      )
+      // The error box and its AI-help links still render...
+      expect(screen.getByTestId("stException")).toBeVisible()
+      expect(screen.getByText("Ask ChatGPT")).toBeInTheDocument()
+      // ...but the skills callout is gated out.
+      expect(
+        screen.queryByTestId("stSkillsInstallCallout")
+      ).not.toBeInTheDocument()
+    })
+
     it("hides the callout when error links are suppressed", () => {
-      renderWithContexts(<ExceptionElement {...getProps()} />, {
+      renderWithContexts(<ExceptionElement {...getStreamlitProps()} />, {
         libConfigContext: {
           showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE,
         },
@@ -189,8 +217,8 @@ describe("ExceptionElement Element", () => {
     it("shows at most one callout when several errors are on screen", () => {
       renderWithContexts(
         <>
-          <ExceptionElement {...getProps()} />
-          <ExceptionElement {...getProps()} />
+          <ExceptionElement {...getStreamlitProps()} />
+          <ExceptionElement {...getStreamlitProps()} />
         </>,
         {
           libConfigContext: { showErrorLinks: SHOW_LINKS },
@@ -207,7 +235,7 @@ describe("ExceptionElement Element", () => {
       const onInstall = vi
         .fn()
         .mockResolvedValue("Installed to .agents/skills")
-      renderWithContexts(<ExceptionElement {...getProps()} />, {
+      renderWithContexts(<ExceptionElement {...getStreamlitProps()} />, {
         libConfigContext: { showErrorLinks: SHOW_LINKS },
         skillsInstallContext: { enabled: true, onInstall },
       })
@@ -223,7 +251,7 @@ describe("ExceptionElement Element", () => {
         const onInstall = vi
           .fn()
           .mockResolvedValue("Installed to .agents/skills")
-        renderWithContexts(<ExceptionElement {...getProps()} />, {
+        renderWithContexts(<ExceptionElement {...getStreamlitProps()} />, {
           libConfigContext: { showErrorLinks: SHOW_LINKS },
           skillsInstallContext: { enabled: true, onInstall },
         })
@@ -257,7 +285,7 @@ describe("ExceptionElement Element", () => {
 
     it("frees the single slot on unmount so a later error box can claim it", () => {
       const { rerenderWithContexts } = renderWithContexts(
-        <ExceptionElement {...getProps()} />,
+        <ExceptionElement {...getStreamlitProps()} />,
         {
           libConfigContext: { showErrorLinks: SHOW_LINKS },
           skillsInstallContext: { enabled: true },
@@ -272,7 +300,7 @@ describe("ExceptionElement Element", () => {
       ).not.toBeInTheDocument()
 
       // A fresh error box can then claim the freed slot (no permanent lock-out).
-      rerenderWithContexts(<ExceptionElement {...getProps()} />)
+      rerenderWithContexts(<ExceptionElement {...getStreamlitProps()} />)
       expect(screen.getAllByTestId("stSkillsInstallCallout")).toHaveLength(1)
     })
   })

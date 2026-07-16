@@ -2754,18 +2754,22 @@ export class App extends PureComponent<Props, State> {
         // box's own AI-links gate), not-yet-installed-this-session, and not
         // permanently dismissed. `localStorageAvailable()` matches the toast's
         // fail-closed behavior: without storage we can't remember a dismissal,
-        // so don't offer something the user can't make stick. It may show
-        // ALONGSIDE the proactive nudge toast: the two are visually distinct,
-        // an unaddressed toast coinciding with an error is rare, and the
-        // in-context offer at the error is worth the small redundancy.
-        // Installing or "don't show again" from either surface suppresses both.
+        // so don't offer something the user can't make stick.
+        //
+        // Mutually exclusive with the proactive nudge toast (`!showSkillsNudge`):
+        // the two never show at once. The 24h snooze is intentionally NOT checked
+        // here — once the toast is snoozed/closed (`showSkillsNudge` flips false),
+        // an error is a higher-intent moment than a snoozed proactive nudge, so
+        // the callout may then appear. A permanent "don't show again" (or an
+        // install) from either surface suppresses both.
         skillsInstallEnabled={
           this.state.recommendSkillsInstall &&
           isLocalhost() &&
           !isEmbed() &&
           localStorageAvailable() &&
           !this.state.skillsInstalledThisSession &&
-          !isSkillsNudgeDismissed()
+          !isSkillsNudgeDismissed() &&
+          !this.state.showSkillsNudge
         }
         onInstallSkills={this.handleErrorCalloutInstall}
         onSkillsCalloutShown={this.handleErrorCalloutShown}
