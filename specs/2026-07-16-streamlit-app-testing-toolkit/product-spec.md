@@ -610,6 +610,13 @@ On failure, the pytest integration collects:
 - Streamlit server stdout/stderr; and
 - app startup/config metadata with known secrets redacted.
 
+Because a test app runs arbitrary code and can emit an inherited credential under any
+name, best-effort redaction of *known* secrets is not sufficient on its own. The fixture
+must not inherit the full ambient (CI) environment by default; it passes an explicit
+`env` mapping, and artifact collection treats app-produced output (logs, console,
+snapshots, screenshots, traces) as potentially sensitive rather than assuming it is safe
+once known secrets are masked.
+
 Server-startup failures and unexpected exits surface the command, exit status, URL, and
 tail of the server log in the pytest error. Artifacts use predictable paths and are
 reported in the terminal, so a human or agent can inspect them without CI-specific
@@ -647,7 +654,9 @@ injection just like page text or screenshots.
 
 Extract, rather than copy, the reusable parts of the internal suite:
 
-- subprocess/server lifecycle and ephemeral ports;
+- subprocess/server lifecycle bound to loopback on ephemeral ports (the extraction
+  contract must set loopback binding explicitly rather than inheriting the internal
+  launcher's wildcard-bind default);
 - local/direct-external app targets;
 - initial-load and idle detection;
 - semantic element/container selection and capability dispatch;
@@ -838,5 +847,5 @@ not as the primary user app-testing API.
 | No breaking API changes | ✅ Existing AppTest APIs remain. Semantic queries and E2E are additive. Some incorrect AppTests may fail after production-parity checks are enforced; document these correctness changes. |
 | No new dependencies | No new base dependency. The developer-only `streamlit[testing]` extra adds pytest-playwright/Playwright; browser binaries are installed separately. |
 | Metrics collected | No telemetry should be emitted by user test runs. Measure labeled issues, docs feedback, optional-extra support volume, internal adoption/flake/runtime, and the agent benchmark. |
-| Any security/legal impact? | Bind local servers to loopback, use ephemeral ports, redact known secrets from logs/artifacts, and warn that test apps execute arbitrary code. User-provided keys and labels are already visible app metadata and must not contain secrets. Playwright is already an internal dependency, but legal should confirm optional dependency and browser-binary distribution guidance. Browser-agent docs must cover untrusted-page prompt injection. |
+| Any security/legal impact? | Bind local servers to loopback (explicitly, not the internal launcher's wildcard-bind default), use ephemeral ports, and warn that test apps execute arbitrary code. Do not inherit the full ambient/CI environment into the app process by default; pass an explicit `env` and treat app-produced artifacts as sensitive, since known-secret redaction alone cannot sanitize an arbitrary credential the app emits under any name. For the deployed-URL mode, apply a default-deny network policy that rejects private/link-local targets and cross-origin redirects into them, so a test/agent-supplied URL cannot exfiltrate internal services into snapshots or artifacts. User-provided keys and labels are already visible app metadata and must not contain secrets. Playwright is already an internal dependency, but legal should confirm optional dependency and browser-binary distribution guidance. Browser-agent docs must cover untrusted-page prompt injection. |
 | Any docs changes needed? | Replace the stale capability list with generated docs; add a testing strategy guide, AppTest semantic-query/snapshot reference, E2E install/API/CI guide, locator best practices, deployed-app guidance, troubleshooting/artifacts, and agent-skill guidance. |
