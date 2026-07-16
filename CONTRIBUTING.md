@@ -1,37 +1,70 @@
+# Contributing to Streamlit
+
 Thanks for your interest in helping improve Streamlit! 🎉
 
 **If you are looking for Streamlit's documentation, go here instead: <https://docs.streamlit.io>**
 
-This wiki is for people who want to contribute code to Streamlit. There are also other ways to contribute, such as [reporting bugs](https://github.com/streamlit/streamlit/issues/new?template=bug_report.yml), creating [feature requests](https://github.com/streamlit/streamlit/issues/new?template=feature_request.yml), helping other users [in our forums](https://discuss.streamlit.io), Stack Overflow, etc., or just being an awesome member of the community!
+> [!IMPORTANT]
+> We have paused accepting pull requests from outside the Streamlit maintainer team.
+> AI coding tools have increased PR volume beyond what we can review sustainably, while detailed
+> issues give maintainers a more effective starting point for improving Streamlit.
 
-## Before contributing
+There are still many valuable ways to contribute to Streamlit and help shape what we build next.
 
-**If your contribution is more than a few lines of code, then prior to starting to code on it please post in the issue saying you want to volunteer, and then wait for a positive response.** And if there is no issue for it yet, create it first.
+## Ways to contribute
 
-This helps make sure:
+### Report a bug
 
-1. Two people aren't working on the same thing
-2. This is something Streamlit's maintainers believe should be implemented/fixed
-3. Any API, UI, or deeper architectural changes that need to be implemented have been fully thought through by Streamlit's maintainers
-4. Your time is well spent!
+[Search existing issues](https://github.com/streamlit/streamlit/issues) first. If the bug has not
+already been reported, [open a bug report](https://github.com/streamlit/streamlit/issues/new?template=bug_report.yml)
+that includes:
 
-> [!TIP]
-> To be clear: if you open a PR that adds a new feature (and isn't just a bug fix or similar) _without_ prior support from the Streamlit team, the chances of getting it merged are _extremely low_. Adding a new feature comes with a lot of baggage, such as thinking through the exact API, making sure it fulfills our standards, and maintaining it in the future – even if it's just a small parameter.
+1. A clear, descriptive title.
+2. What you expected to happen and what happened instead.
+3. Numbered, specific steps that reproduce the problem.
+4. The smallest self-contained Streamlit app that demonstrates the problem, when possible.
+5. Your Streamlit and Python versions, operating system, and browser for frontend issues.
+6. Relevant tracebacks, logs, screenshots, or screen recordings.
 
-## Pull request expectations
+Minimal, reproducible examples help maintainers investigate bugs much more quickly.
+For security vulnerabilities, follow our [security policy](./SECURITY.md) instead of opening a
+public issue.
 
-These expectations apply to all contributors and all pull requests.
+### Request a feature
 
-### Expectations for all contributions
+[Search existing feature requests](https://github.com/streamlit/streamlit/issues?q=is%3Aissue+label%3Atype%3Aenhancement)
+first. If your idea has not already been suggested,
+[open a feature request](https://github.com/streamlit/streamlit/issues/new?template=feature_request.yml)
+that includes:
 
-- Properly fill out the [PR template](./.github/pull_request_template.md) with concrete details (not placeholders).
-- Keep PRs narrowly scoped. If your changes are broad, split them into smaller, reviewable PRs.
-- Address prior review feedback before requesting another review cycle.
-- Please respond to requested changes or maintainer questions within 14 days. If you need more time, leave a short status comment.
-- If you open additional PRs while prior feedback remains unaddressed, maintainers may pause or close review of newer PRs until earlier feedback is handled.
-- Repeated non-response may result in newer PRs being deprioritized or closed.
+1. The problem or use case you want to solve.
+2. The outcome you would like, including an example API or mockup when useful.
+3. Alternatives and workarounds you have tried.
+4. Any examples, references, or other context that clarify the request.
 
-### Issue and pull request discussion expectations
+Detailed feature requests help us understand community needs and prioritize our roadmap.
+
+### Help improve existing issues and specs
+
+- Add relevant details to existing issues, such as a new reproduction, environment information,
+  use case, or workaround.
+- Answer open questions from maintainers when you have firsthand knowledge that can help.
+- React with a 👍 to the initial post of bugs and feature requests that matter to you. Please use
+  reactions instead of adding "+1" or "same" comments.
+- Review [open spec pull requests](https://github.com/streamlit/streamlit/pulls?q=is%3Apr+is%3Aopen+%5Bspec%5D+in%3Atitle)
+  and comment with concrete feedback about the use case, proposed API, design, or tradeoffs.
+
+### Extend the Streamlit ecosystem
+
+- Build a [custom Streamlit Component](https://docs.streamlit.io/develop/concepts/custom-components)
+  and [publish it to PyPI](https://docs.streamlit.io/develop/concepts/custom-components/publish)
+  so the community can use it.
+- Contribute reusable utilities to the community-maintained
+  [streamlit-extras project](https://github.com/arnaudmiribel/streamlit-extras).
+- Help other users in the [Streamlit community forum](https://discuss.streamlit.io) or on
+  [Stack Overflow](https://stackoverflow.com/questions/tagged/streamlit).
+
+## Community discussion expectations
 
 Help us keep GitHub issues and PR threads readable and actionable.
 
@@ -41,6 +74,20 @@ Help us keep GitHub issues and PR threads readable and actionable.
 - Avoid duplicate comments that only restate existing points (including copy/paste or light paraphrasing). If you have nothing new to add, consider using a reaction instead of commenting.
 
 Maintainers may hide, edit, or delete comments that don’t contribute to the discussion, lock threads, limit interactions, and take other moderation actions when needed. Repeated or severe abuse may result in restrictions or bans. See our [Code of Conduct](./CODE_OF_CONDUCT.md).
+
+## Development guide for maintainers
+
+The rest of this guide covers local development, testing, and pull requests for the Streamlit
+maintainer team.
+
+### Pull request expectations
+
+- Properly fill out the [PR template](./.github/pull_request_template.md) with concrete details (not placeholders).
+- Keep PRs narrowly scoped. If your changes are broad, split them into smaller, reviewable PRs.
+- Address prior review feedback before requesting another review cycle.
+- Please respond to requested changes or maintainer questions within 14 days. If you need more time, leave a short status comment.
+- If you open additional PRs while prior feedback remains unaddressed, maintainers may pause or close review of newer PRs until earlier feedback is handled.
+- Repeated non-response may result in newer PRs being deprioritized or closed.
 
 ### Expectations for AI-assisted contributions
 

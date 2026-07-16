@@ -133,7 +133,13 @@ Deploy, manage and share your apps for free using our [Community Cloud](https://
 
 🎉 Thanks for your interest in helping improve Streamlit! 🎉
 
-Before contributing, please read our guidelines here: https://github.com/streamlit/streamlit/blob/develop/CONTRIBUTING.md
+We have paused accepting pull requests from outside the Streamlit maintainer team. You can still
+make a valuable contribution by reporting bugs, requesting features, improving or upvoting
+existing issues, commenting on open specs, creating custom components, and contributing to
+[streamlit-extras](https://github.com/arnaudmiribel/streamlit-extras).
+
+Read our [contribution guide](https://github.com/streamlit/streamlit/blob/develop/CONTRIBUTING.md)
+for details.
 
 ## License
 
