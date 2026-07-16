@@ -456,12 +456,16 @@ function DataFrame({
         current,
       }
       // Re-sync the preserved selection so the backend keeps the correct
-      // original row indices, and so any debounced sync queued before the sort
-      // is replaced by this correctly-mapped one. Because reported rows use a
-      // stable ascending order (see createSyncSelectionState), the serialized
-      // value is unchanged when the underlying selection is unchanged, so this
-      // is deduplicated and triggers no extra rerun / on_select callback.
-      processSelectionChange(newSelection)
+      // original row indices. We force the sync (`forceSync: true`) because the
+      // sort handler cancels any pending debounced sync: if the initial
+      // selection hadn't been synced yet and the preserved row keeps the same
+      // display index after sorting, the default change-detection would skip the
+      // sync and the backend would never receive the selection. Because reported
+      // rows use a stable ascending order (see createSyncSelectionState), the
+      // serialized value is unchanged when the underlying selection is
+      // unchanged, so the forced sync is still deduplicated at the widget-state
+      // level and triggers no extra rerun / on_select callback.
+      processSelectionChange(newSelection, { forceSync: true })
     }
   }, [originalNumRows, processSelectionChange])
 
