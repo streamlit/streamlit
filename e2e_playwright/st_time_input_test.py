@@ -155,6 +155,44 @@ def test_handles_step_correctly(app: Page):
     expect_markdown(app, "Value 7: 00:01:00")
 
 
+def test_arrow_keys_respect_step(app: Page):
+    """Test that ArrowUp/Down snap to step boundaries on the minute segment.
+
+    step=900 (15 min, the default): ArrowUp from 08:45 → 09:00 (next 15-min
+    boundary above), ArrowDown → 08:45 again.
+    step=60  (1 min): ArrowUp gives the react-aria default of ±1 minute.
+    """
+    # --- step=900 (default, Time input 1 starts at 08:45) ---
+    minute_sp = (
+        get_time_input(app, "Time input 1 (8:45)")
+        .get_by_test_id("stTimeInputTimeDisplay")
+        .locator("[role='spinbutton']")
+        .last  # minute segment
+    )
+    minute_sp.click()
+    minute_sp.press("ArrowUp")
+    wait_for_app_run(app)
+    # floor(525/15)*15 + 15 = 525 + 15 = 540 → 09:00
+    expect_markdown(app, "Value 1: 09:00:00")
+
+    minute_sp.press("ArrowDown")
+    wait_for_app_run(app)
+    # ceil(540/15)*15 - 15 = 540 - 15 = 525 → 08:45
+    expect_markdown(app, "Value 1: 08:45:00")
+
+    # --- step=60 (Time input 7 starts at 08:45): react-aria default ±1 min ---
+    minute_sp_60 = (
+        get_time_input(app, "Time input 7 (step=60)")
+        .get_by_test_id("stTimeInputTimeDisplay")
+        .locator("[role='spinbutton']")
+        .last
+    )
+    minute_sp_60.click()
+    minute_sp_60.press("ArrowUp")
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 7: 08:46:00")
+
+
 def test_handles_time_selection_via_typing(app: Page):
     """Test that entering a time via keyboard works correctly."""
     time_display = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(

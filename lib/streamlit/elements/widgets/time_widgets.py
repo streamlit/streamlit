@@ -811,8 +811,10 @@ class TimeWidgetsMixin:
               component is shown.
             - Otherwise, both the hour and minute components are shown.
 
-            Any valid time may be entered regardless of the step value. Step
-            does not restrict or snap the entered value.
+            Arrow keys on the minute segment snap to the nearest step
+            boundary in the pressed direction (e.g. ``step=900`` → ±15 min
+            increments; ``step=60`` → ±1 min). Any valid time may be typed
+            regardless of the step value.
 
         width : "stretch" or int
             The width of the time input widget. This can be one of the following:
@@ -1196,8 +1198,10 @@ class TimeWidgetsMixin:
               component is shown.
             - Otherwise, both the hour and minute components are shown.
 
-            Any valid time may be entered regardless of the step value. Step
-            does not restrict or snap the entered value.
+            Arrow keys on the minute segment snap to the nearest step
+            boundary in the pressed direction (e.g. ``step=900`` → ±15 min
+            increments; ``step=60`` → ±1 min). Any valid time may be typed
+            regardless of the step value.
 
         disabled : bool
             An optional boolean that disables the widget if set to ``True``.

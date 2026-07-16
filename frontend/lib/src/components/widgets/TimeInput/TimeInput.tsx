@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, useCallback, useMemo } from "react"
 
 import { Cancel } from "@emotion-icons/material-rounded"
 import { Time } from "@internationalized/date"
@@ -55,6 +55,10 @@ export interface Props {
  *
  * Only "hour" and "minute" granularities are used because the wire format
  * is always HH:MM — seconds have never been stored or displayed.
+ *
+ * Note: `step` also controls arrow-key behaviour via `handleArrowKeyCapture`.
+ * A step divisible by 3600 shows only the hour segment; otherwise both hour
+ * and minute segments are shown.
  */
 function stepToGranularity(stepSeconds: number): "hour" | "minute" {
   return stepSeconds % 3600 === 0 ? "hour" : "minute"
@@ -104,6 +108,10 @@ function TimeInput({
   const step = element.step ? Number(element.step) : 900
   const clearable = isNullOrUndefined(element.default) && !disabled
 
+  // Derived step sizes — memoised so the arrow-key handler stays stable.
+  const stepMins = useMemo(() => step / 60, [step])
+  const stepHours = useMemo(() => step / 3600, [step])
+
   const handleChange = useCallback(
     (newTime: Time | null): void => {
       // Suppress null mid-edit events for non-clearable widgets to avoid
@@ -120,6 +128,67 @@ function TimeInput({
   const handleClear = useCallback((): void => {
     setValueWithSource({ value: null, fromUi: true })
   }, [setValueWithSource])
+
+  /**
+   * Intercept ArrowUp/Down on the spinbutton segments (capture phase, before
+   * react-aria's own handler) so the minute/hour increments honour `step`.
+   *
+   * Without this, react-aria always increments by ±1 unit regardless of step.
+   * The capture phase + stopImmediatePropagation prevents react-aria from also
+   * applying its own ±1 change on top of ours.
+   *
+   * Formula:
+   *   ArrowUp   → floor(current / step) * step + step  (next boundary above)
+   *   ArrowDown → ceil(current / step)  * step - step  (next boundary below)
+   * This ensures that an off-step value always moves toward the nearest valid
+   * boundary in the pressed direction, matching the original widget behaviour.
+   */
+  const handleArrowKeyCapture = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>): void => {
+      if (!value || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return
+      const target = e.target as HTMLElement
+      if (target.getAttribute("role") !== "spinbutton") return
+
+      const label = (target.getAttribute("aria-label") ?? "").toLowerCase()
+      const up = e.key === "ArrowUp"
+      // value is stored as "HH:MM" string; parse to Time for arithmetic.
+      const current = stringToTime(value)
+
+      if (label.startsWith("minute")) {
+        // Guard: step must divide evenly into whole minutes and be > 1 min.
+        // For step=60 (stepMins=1) react-aria's default ±1 is already correct.
+        if (!Number.isInteger(stepMins) || stepMins <= 1) return
+
+        e.preventDefault()
+        // Stop both React synthetic propagation and the underlying native event
+        // so react-aria's onKeyDown on the spinbutton cannot also fire.
+        e.stopPropagation()
+        e.nativeEvent.stopImmediatePropagation()
+
+        const totalMins = current.hour * 60 + current.minute
+        const next = up
+          ? Math.floor(totalMins / stepMins) * stepMins + stepMins
+          : Math.ceil(totalMins / stepMins) * stepMins - stepMins
+        const wrapped = ((next % 1440) + 1440) % 1440
+        handleChange(new Time(Math.floor(wrapped / 60), wrapped % 60))
+      } else if (label.startsWith("hour") && step % 3600 === 0) {
+        // Hour-only mode. React-aria defaults to ±1 h; only intercept when the
+        // step is a multiple of hours greater than 1.
+        if (!Number.isInteger(stepHours) || stepHours <= 1) return
+
+        e.preventDefault()
+        e.stopPropagation()
+        e.nativeEvent.stopImmediatePropagation()
+
+        const next = up
+          ? Math.floor(current.hour / stepHours) * stepHours + stepHours
+          : Math.ceil(current.hour / stepHours) * stepHours - stepHours
+        const wrapped = ((next % 24) + 24) % 24
+        handleChange(new Time(wrapped, 0))
+      }
+    },
+    [value, step, stepMins, stepHours, handleChange]
+  )
 
   return (
     <div className="stTimeInput" data-testid="stTimeInput">
@@ -138,6 +207,7 @@ function TimeInput({
         <StyledTimeInputWrapper
           data-testid="stTimeInputTimeDisplay"
           data-disabled={disabled || undefined}
+          onKeyDownCapture={handleArrowKeyCapture}
         >
           <TimeField
             aria-label={element.label}
