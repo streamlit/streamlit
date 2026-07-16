@@ -969,26 +969,36 @@ def test_module_hashes_via_module_name() -> None:
 
 @pytest.mark.require_integration
 @pytest.mark.parametrize(
-    ("make_obj", "method_name"),
+    ("make_obj", "method_name", "expected_obj_type"),
     [
-        (lambda pl: pl.Series([1, 2, 3]), "hash"),
-        (lambda pl: pl.DataFrame({"a": [1, 2]}), "hash_rows"),
+        (lambda pl: pl.Series([1, 2, 3]), "hash", "polars Series"),
+        (lambda pl: pl.DataFrame({"a": [1, 2]}), "hash_rows", "polars DataFrame"),
     ],
     ids=["series", "dataframe"],
 )
 def test_polars_pickle_fallback_when_hash_raises_typeerror(
     make_obj: Callable[..., Any],
     method_name: str,
+    expected_obj_type: str,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Polars objects fall back to pickle when native hashing raises ``TypeError``."""
     import polars as pl
 
     obj = make_obj(pl)
     cls = type(obj)
-    with mock.patch.object(cls, method_name, side_effect=TypeError("forced")):
+    with (
+        mock.patch.object(cls, method_name, side_effect=TypeError("forced")),
+        mock.patch.object(_LOGGER, "propagate", True),
+    ):
         digest = get_hash(obj)
+        record = caplog.records[-1]
     with mock.patch.object(cls, method_name, side_effect=TypeError("forced")):
         assert get_hash(obj) == digest
+    assert record.exc_info is None
+    assert "falling back to pickling the object" in record.getMessage()
+    assert f"failed for a {expected_obj_type}" in record.getMessage()
+    assert "forced" in record.getMessage()
 
 
 @pytest.mark.require_integration
