@@ -52,7 +52,7 @@
     "@emotion/is-prop-valid": "^1.4.0",
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.14.1",
-    "@floating-ui/react": "^0.27.19",
+    "@floating-ui/react": "^0.27.20",
     "@glideapps/glide-data-grid": "6.0.4-alpha24",
     "@glideapps/glide-data-grid-cells": "6.0.4-alpha24",
     "@glideapps/glide-data-grid-source": "6.0.4-alpha24",
@@ -124,7 +124,7 @@
     "vega-embed": "^7.1.0",
     "vega-interpreter": "^2.2.1",
     "vega-lite": "6.4.3",
-    "wavesurfer.js": "^7.12.8",
+    "wavesurfer.js": "^7.12.10",
     "xxhashjs": "^0.2.2"
   },
   "peerDependencies": {
