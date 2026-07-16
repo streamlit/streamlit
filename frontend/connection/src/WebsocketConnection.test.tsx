@@ -25,7 +25,6 @@ vi.mock("@streamlit/utils", async () => {
   }
 })
 
-import { zip } from "lodash-es"
 import { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
@@ -236,6 +235,9 @@ describe("doInitPings", () => {
     vi.useRealTimers()
     globalThis.fetch = originalFetch
     globalThis.__mockStreamlitConfig = {}
+    // Restore any spies (e.g. Math.random) so a test that throws before its
+    // own restore call can't leak a mocked implementation into later tests.
+    vi.restoreAllMocks()
   })
 
   it("uses fast-path to connect immediately when enableBypass is true", () => {
@@ -677,6 +679,11 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   it("has increasing but capped retry backoff", async () => {
+    // Pin Math.random so the backoff jitter is deterministic. The spy is
+    // restored in afterEach via vi.restoreAllMocks() so it can't leak into
+    // other tests even if an await below throws.
+    vi.spyOn(Math, "random").mockReturnValue(0.5)
+
     globalThis.fetch = vi
       .fn()
       // First Connection attempt
@@ -729,17 +736,11 @@ If you are trying to access a Streamlit app running on another server, this coul
     await vi.runAllTimersAsync()
     await promise
 
-    expect(timeouts.length).toEqual(5)
-    expect(timeouts[0]).toEqual(10)
-    expect(timeouts[4]).toBeGreaterThanOrEqual(70)
-    expect(timeouts[4]).toBeLessThanOrEqual(100)
-    // timeouts should be monotonically increasing until they hit the cap
-    expect(
-      zip(timeouts.slice(0, -1), timeouts.slice(1)).every(
-        // @ts-expect-error
-        timePair => timePair[0] < timePair[1] || timePair[0] === 100
-      )
-    ).toEqual(true)
+    // With Math.random() pinned to 0.5 the jitter multiplier is
+    // 0.7 + 0.5 * 0.3 = 0.85. The capped windows are 10, 20, 40, 80, and 100 ms
+    // (the last capped down from 160 ms). The first attempt is not jittered; the
+    // rest are floored after the 0.85 multiplier -> [10, 17, 34, 68, 85].
+    expect(timeouts).toEqual([10, 17, 34, 68, 85])
   })
 
   it("backs off independently for each target url", async () => {

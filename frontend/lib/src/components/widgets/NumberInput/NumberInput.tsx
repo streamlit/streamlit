@@ -253,6 +253,21 @@ const NumberInput: React.FC<Props> = ({
       setValidationError(null)
       setValueWithSource({ value: newValue, fromUi })
 
+      // Inside a form, write the committed value to the WidgetStateManager
+      // synchronously. `setValueWithSource` only defers the write to an effect,
+      // but the Enter key handler submits the form synchronously in the same
+      // event, so without this the form would submit the *previously* committed
+      // value (the effect runs after `submitForm`). Writing a form's widget
+      // state doesn't schedule a rerun, so this adds no extra rerun.
+      if (inForm) {
+        updateWidgetMgrState(
+          element,
+          widgetMgr,
+          { value: newValue, fromUi },
+          fragmentId
+        )
+      }
+
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
       return true
@@ -262,6 +277,10 @@ const NumberInput: React.FC<Props> = ({
       formatCurrentValue,
       getRangeValidationMessage,
       setValueWithSource,
+      inForm,
+      element,
+      widgetMgr,
+      fragmentId,
     ]
   )
 
