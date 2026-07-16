@@ -58,7 +58,7 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.56",
+  "ty==0.0.58",
   # We fix ruff to a version to be in sync with the pre-commit hook:
   "ruff==0.15.21",
   # We fix mypy to a version to avoid breaking our CI on updates,
@@ -67,7 +67,7 @@ dev = [
   # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
   # Streamlit still type-checks as Python 3.10.
   "numpy<2.5",
-  "mypy-protobuf>=3.2",
+  "mypy-protobuf>=5.1.0",
   "semver>=3",
   "setuptools>=65.5.1",
   "build",
@@ -137,7 +137,7 @@ test = [
   "pytest-timeout>=2.3.1",
   # Used for memory tracking in E2E test statistics:
   "psutil>=5.9.0",
-  "types-psutil>=5.9.0",
+  "types-psutil>=7.2.2.20260518",
 ]
 
 # Integration test dependencies
