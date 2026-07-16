@@ -277,11 +277,11 @@ def test_empty_number_input_behaves_correctly(
 
 def test_number_input_in_form_submits_typed_value_on_single_enter(app: Page):
     """A number_input inside st.form must submit the freshly typed value on the
-    FIRST Enter press, not the previously committed value.
+    first Enter press, not the previously committed value.
 
-    Regression test: the committed value used to be written to widget state
-    asynchronously (in an effect) while the form was submitted synchronously in
-    the same keydown event, so the first Enter submitted the stale value.
+    Regression test: the frontend used to write the committed value to widget
+    state asynchronously (in an effect) while submitting the form synchronously
+    in the same keydown event, so the first Enter submitted the stale value.
     """
     number_input = get_element_by_key(app, "number_input_in_form")
     input_field = number_input.get_by_test_id("stNumberInputField")

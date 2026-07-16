@@ -298,7 +298,7 @@ describe("NumberInput widget", () => {
 
       await user.clear(input)
       await user.type(input, "8")
-      // Press Enter exactly once.
+      // A single Enter must be enough to submit the typed value.
       await user.keyboard("{enter}")
 
       expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
@@ -307,7 +307,7 @@ describe("NumberInput widget", () => {
       expect(valueAtSubmit).toBe(8)
     })
 
-    it("submits the freshly typed FLOAT value on the first Enter", async () => {
+    it("submits the freshly typed float value on the first Enter (not the previous value)", async () => {
       const user = userEvent.setup()
       const props = getFloatProps({
         formId: "form",
@@ -334,6 +334,74 @@ describe("NumberInput widget", () => {
       // previously committed value (5.0).
       expect(valueAtSubmit).toBe(8.5)
     })
+
+    it("does NOT submit the form on Enter when the typed value is out of range", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({
+        formId: "form",
+        default: 5,
+        min: 1,
+        max: 10,
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      const submitFormSpy = vi.spyOn(props.widgetMgr, "submitForm")
+      const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+      render(<NumberInput {...props} />)
+      const input = screen.getByTestId("stNumberInputField")
+      setIntValueSpy.mockClear() // ignore the initial mount write
+
+      await user.clear(input)
+      await user.type(input, "99") // above max
+      await user.keyboard("{enter}")
+
+      // commitValue returns false on an out-of-range value, so the form must
+      // not submit...
+      expect(submitFormSpy).not.toHaveBeenCalled()
+      // ...and the invalid value must never be written to widget state.
+      expect(setIntValueSpy).not.toHaveBeenCalled()
+      expect(screen.getByRole("alert")).toBeInTheDocument()
+    })
+
+    it("does NOT submit the form on Enter while a validation error from a step is showing", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({
+        formId: "form",
+        default: 100,
+        min: 0,
+        max: 50,
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      const submitFormSpy = vi.spyOn(props.widgetMgr, "submitForm")
+
+      render(<NumberInput {...props} />)
+      const input = screen.getByTestId("stNumberInputField")
+      await user.click(input)
+      // 100 -> 99, still > max: sets the error without marking the input dirty.
+      await user.keyboard("{ArrowDown}")
+      expect(screen.getByRole("alert")).toBeInTheDocument()
+
+      await user.keyboard("{enter}")
+      expect(submitFormSpy).not.toHaveBeenCalled()
+    })
+  })
+
+  it("does not write the value twice on Enter when NOT in a form", async () => {
+    const user = userEvent.setup()
+    // No formId -> inForm is false, so the synchronous form write is skipped
+    // and only the deferred effect writes the value.
+    const props = getIntProps({ default: 5, min: 1, max: 10 })
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    const input = screen.getByTestId("stNumberInputField")
+    setIntValueSpy.mockClear() // ignore the initial mount write
+
+    await user.clear(input)
+    await user.type(input, "8")
+    await user.keyboard("{enter}")
+
+    expect(setIntValueSpy).toHaveBeenCalledTimes(1) // deferred effect only
   })
 
   it("shows Input Instructions on dirty state when not in form (by default)", async () => {

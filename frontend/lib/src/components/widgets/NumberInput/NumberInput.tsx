@@ -253,13 +253,12 @@ const NumberInput: React.FC<Props> = ({
       setValidationError(null)
       setValueWithSource({ value: newValue, fromUi })
 
-      // When inside a form, also write the committed value to the
-      // WidgetStateManager synchronously. `setValueWithSource` only defers the
-      // write to an effect, but the Enter key handler submits the form
-      // synchronously in the same event. Without this synchronous write, the
-      // form would be submitted with the previously committed value because the
-      // deferred effect runs *after* `submitForm`. Writing to a form's widget
-      // state does not schedule a rerun, so this does not cause an extra rerun.
+      // Inside a form, write the committed value to the WidgetStateManager
+      // synchronously. `setValueWithSource` only defers the write to an effect,
+      // but the Enter key handler submits the form synchronously in the same
+      // event, so without this the form would submit the *previously* committed
+      // value (the effect runs after `submitForm`). Writing a form's widget
+      // state doesn't schedule a rerun, so this adds no extra rerun.
       if (inForm) {
         updateWidgetMgrState(
           element,

@@ -206,9 +206,9 @@ st.write("bound minmax value:", v22)
 
 # --- Number input inside a form ---
 # Regression test for a bug where the first Enter submitted the previously
-# committed value instead of the freshly typed one (the committed value was
-# written to widget state asynchronously while the form was submitted
-# synchronously in the same event).
+# committed value instead of the freshly typed one: the frontend wrote the
+# committed value to widget state asynchronously while submitting the form
+# synchronously in the same event.
 with st.form("number_input_form"):
     form_num = st.number_input(
         "number input in form",
