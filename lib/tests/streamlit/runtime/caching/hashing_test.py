@@ -923,36 +923,38 @@ def test_hash_stack_pretty_print_handles_str_conversion_error() -> None:
     assert "<Unable to convert item to string>" in text
 
 
-def test_pandas_series_hash_pickle_fallback_on_type_error(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_pandas_series_hash_pickle_fallback_on_type_error() -> None:
     """Series that ``hash_pandas_object`` cannot hash fall back to pickling."""
     series = pd.Series([[1, 2], [3, 4]])
-    with mock.patch.object(_LOGGER, "propagate", True):
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
         digest = get_hash(series)
-        record = caplog.records[-1]
 
-        assert digest == get_hash(series)
-        assert digest != get_hash(pd.Series([[1, 2], [3, 5]]))
-    assert record.exc_info is None
-    assert "falling back to pickling the object" in record.getMessage()
-    assert "unhashable type: 'list'" in record.getMessage()
+    assert digest == get_hash(series)
+    assert digest != get_hash(pd.Series([[1, 2], [3, 5]]))
+
+    mock_warning.assert_called_once()
+    # The traceback must not be attached anymore (``exc_info`` was removed).
+    assert "exc_info" not in mock_warning.call_args.kwargs
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert "falling back to pickling the object" in logged_message
+    assert "unhashable type: 'list'" in logged_message
 
 
-def test_pandas_dataframe_hash_pickle_fallback_on_type_error(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_pandas_dataframe_hash_pickle_fallback_on_type_error() -> None:
     """DataFrame that ``hash_pandas_object`` cannot hash fall back to pickling."""
     df = pd.DataFrame({"col": [[1], [2]]})
-    with mock.patch.object(_LOGGER, "propagate", True):
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
         digest = get_hash(df)
-        record = caplog.records[-1]
 
-        assert digest == get_hash(df)
-        assert digest != get_hash(pd.DataFrame({"col": [[1], [3]]}))
-    assert record.exc_info is None
-    assert "falling back to pickling the object" in record.getMessage()
-    assert "unhashable type: 'list'" in record.getMessage()
+    assert digest == get_hash(df)
+    assert digest != get_hash(pd.DataFrame({"col": [[1], [3]]}))
+
+    mock_warning.assert_called_once()
+    # The traceback must not be attached anymore (``exc_info`` was removed).
+    assert "exc_info" not in mock_warning.call_args.kwargs
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert "falling back to pickling the object" in logged_message
+    assert "unhashable type: 'list'" in logged_message
 
 
 def test_numpy_ufunc_hashes_by_encoded_name() -> None:
@@ -980,7 +982,6 @@ def test_polars_pickle_fallback_when_hash_raises_typeerror(
     make_obj: Callable[..., Any],
     method_name: str,
     expected_obj_type: str,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Polars objects fall back to pickle when native hashing raises ``TypeError``."""
     import polars as pl
@@ -989,16 +990,19 @@ def test_polars_pickle_fallback_when_hash_raises_typeerror(
     cls = type(obj)
     with (
         mock.patch.object(cls, method_name, side_effect=TypeError("forced")),
-        mock.patch.object(_LOGGER, "propagate", True),
+        mock.patch.object(_LOGGER, "warning") as mock_warning,
     ):
         digest = get_hash(obj)
-        record = caplog.records[-1]
     with mock.patch.object(cls, method_name, side_effect=TypeError("forced")):
         assert get_hash(obj) == digest
-    assert record.exc_info is None
-    assert "falling back to pickling the object" in record.getMessage()
-    assert f"failed for a {expected_obj_type}" in record.getMessage()
-    assert "forced" in record.getMessage()
+
+    mock_warning.assert_called_once()
+    # The traceback must not be attached anymore (``exc_info`` was removed).
+    assert "exc_info" not in mock_warning.call_args.kwargs
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert "falling back to pickling the object" in logged_message
+    assert f"failed for a {expected_obj_type}" in logged_message
+    assert "forced" in logged_message
 
 
 @pytest.mark.require_integration
