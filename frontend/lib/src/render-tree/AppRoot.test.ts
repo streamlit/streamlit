@@ -336,12 +336,27 @@ describe("AppRoot", () => {
         addBlock: { expandable: { expanded: true, label: "label", icon: "" } },
       })
 
+      // Reserve an `st.empty()` slot at `deltaPath` in `scriptRunId` and then
+      // fill it with `delta`. The resulting node is flagged as empty-slot
+      // content, mirroring how a real `placeholder = st.empty()` /
+      // `placeholder.foo()` (or a `with st.empty():` block) produces content.
+      const fillEmptySlot = (
+        root: AppRoot,
+        scriptRunId: string,
+        delta: DeltaProto,
+        deltaPath: number[]
+      ): AppRoot =>
+        root
+          .applyDelta(scriptRunId, emptyDelta, forwardMsgMetadata(deltaPath))
+          .applyDelta(scriptRunId, delta, forwardMsgMetadata(deltaPath))
+
       it("keeps existing element content when the empty is from a newer run", () => {
-        // Fill [1, 1] with real content during "run_1".
-        const filled = ROOT.applyDelta(
+        // Fill an `st.empty()` slot at [1, 1] with real content during "run_1".
+        const filled = fillEmptySlot(
+          ROOT,
           "run_1",
           textDelta("hello"),
-          forwardMsgMetadata([0, 1, 1])
+          [0, 1, 1]
         )
 
         // A later run re-sends the empty placeholder over that content.
@@ -360,16 +375,46 @@ describe("AppRoot", () => {
         ) as ElementNode
         expect(node).toBeTextNode("hello")
         expect(node.scriptRunId).toBe("run_1")
+        expect(node.isEmptySlotContent).toBe(true)
         // The root is returned unchanged.
         expect(afterEmpty).toBe(filled)
       })
 
-      it("keeps existing block content when the empty is from a newer run", () => {
+      it("does not keep content that did not originate from an empty slot", () => {
+        // Content written directly at [1, 1] (no `st.empty()` slot) - e.g. an
+        // element that only lands here because a conditional block above it
+        // shifted the delta path. It must NOT be preserved by a re-sent empty.
         const filled = ROOT.applyDelta(
           "run_1",
-          expandableDelta,
+          textDelta("shifted"),
           forwardMsgMetadata([0, 1, 1])
         )
+        expect(
+          (
+            GetNodeByDeltaPathVisitor.getNodeAtPath(
+              filled.main,
+              [1, 1]
+            ) as ElementNode
+          ).isEmptySlotContent
+        ).toBe(false)
+
+        const afterEmpty = filled.applyDelta(
+          "run_2",
+          emptyDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          afterEmpty.main,
+          [1, 1]
+        ) as ElementNode
+        expect(node.element.type).toBe("empty")
+        expect(node.scriptRunId).toBe("run_2")
+        expect(afterEmpty).not.toBe(filled)
+      })
+
+      it("keeps existing block content when the empty is from a newer run", () => {
+        const filled = fillEmptySlot(ROOT, "run_1", expandableDelta, [0, 1, 1])
 
         const afterEmpty = filled.applyDelta(
           "run_2",
@@ -384,14 +429,16 @@ describe("AppRoot", () => {
         expect(node).toBeInstanceOf(BlockNode)
         expect(node.deltaBlock.type).toBe("expandable")
         expect(node.scriptRunId).toBe("run_1")
+        expect(node.isEmptySlotContent).toBe(true)
         expect(afterEmpty).toBe(filled)
       })
 
       it("clears content when the empty is written in the same run (explicit clear)", () => {
-        const filled = ROOT.applyDelta(
+        const filled = fillEmptySlot(
+          ROOT,
           "run_1",
           textDelta("hello"),
-          forwardMsgMetadata([0, 1, 1])
+          [0, 1, 1]
         )
 
         const afterEmpty = filled.applyDelta(
@@ -432,10 +479,11 @@ describe("AppRoot", () => {
       })
 
       it("applies a later same-run fill over the kept content", () => {
-        const run1 = ROOT.applyDelta(
+        const run1 = fillEmptySlot(
+          ROOT,
           "run_1",
           textDelta("hello"),
-          forwardMsgMetadata([0, 1, 1])
+          [0, 1, 1]
         )
         // run_2: empty placeholder re-sent first (slow fill) ...
         const afterEmpty = run1.applyDelta(
@@ -456,14 +504,17 @@ describe("AppRoot", () => {
         ) as ElementNode
         expect(node).toBeTextNode("world")
         expect(node.scriptRunId).toBe("run_2")
+        // The refilled node still tracks that it lives in an empty slot.
+        expect(node.isEmptySlotContent).toBe(true)
       })
 
       it("clears never-refilled kept content at end of run via stale clearing", () => {
-        // run_1: fill [1, 1] with content.
-        const filled = ROOT.applyDelta(
+        // run_1: fill an `st.empty()` slot at [1, 1] with content.
+        const filled = fillEmptySlot(
+          ROOT,
           "run_1",
           textDelta("hello"),
-          forwardMsgMetadata([0, 1, 1])
+          [0, 1, 1]
         )
         // run_2: a sibling at [1, 0] bumps the ancestors to run_2, and the
         // empty placeholder is re-sent over [1, 1] (kept as run_1).
@@ -491,6 +542,13 @@ describe("AppRoot", () => {
 
       it("keeps existing content when a fragment re-sends the empty in a newer run", () => {
         const filled = ROOT.applyDelta(
+          "run_1",
+          makeProto(DeltaProto, {
+            newElement: { empty: {} },
+            fragmentId: "frag",
+          }),
+          forwardMsgMetadata([0, 1, 1])
+        ).applyDelta(
           "run_1",
           makeProto(DeltaProto, {
             newElement: { text: { body: "hello" } },

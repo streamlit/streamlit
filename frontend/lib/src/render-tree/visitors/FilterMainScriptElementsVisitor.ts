@@ -77,7 +77,8 @@ export class FilterMainScriptElementsVisitor implements AppNodeVisitor<
       node.deltaBlock,
       node.scriptRunId,
       node.fragmentId,
-      node.deltaMsgReceivedAt
+      node.deltaMsgReceivedAt,
+      node.isEmptySlotContent
     )
   }
 

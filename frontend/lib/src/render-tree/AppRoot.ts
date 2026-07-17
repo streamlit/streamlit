@@ -80,6 +80,44 @@ function isRealContentNode(node: AppNode): boolean {
   return node instanceof BlockNode
 }
 
+/**
+ * Returns true if the node is content that was written into an `st.empty()`
+ * slot (its `isEmptySlotContent` flag is set). Only such content should be
+ * preserved when a re-sent `empty` overwrites it, so that unrelated content
+ * that merely shares the same delta path (e.g. after a positional shift caused
+ * by a conditional block) is not incorrectly kept.
+ */
+function isEmptySlotContentNode(node: AppNode): boolean {
+  if (node instanceof ElementNode || node instanceof BlockNode) {
+    return node.isEmptySlotContent
+  }
+  return false
+}
+
+/**
+ * Returns true if writing over `existingNode` means the new node fills a slot
+ * reserved by an `st.empty()` placeholder. This is the case when the existing
+ * node is an `empty` element, is itself empty-slot content, or is a transient
+ * whose anchor satisfies either condition.
+ */
+function fillsEmptySlot(existingNode: AppNode | undefined): boolean {
+  if (existingNode === undefined) {
+    return false
+  }
+  if (existingNode instanceof ElementNode) {
+    return (
+      existingNode.element.type === "empty" || existingNode.isEmptySlotContent
+    )
+  }
+  if (existingNode instanceof BlockNode) {
+    return existingNode.isEmptySlotContent
+  }
+  if (existingNode instanceof TransientNode) {
+    return fillsEmptySlot(existingNode.anchor)
+  }
+  return false
+}
+
 interface LogoMetadata {
   // Associated scriptHash that created the logo
   activeScriptHash: string
@@ -267,20 +305,27 @@ export class AppRoot {
           deltaPath
         )
 
-        // When an `st.empty()` placeholder is re-sent over content that
-        // already exists from a *previous* run, keep the existing node
-        // mounted instead of overwriting it with the empty placeholder. A
-        // fill later in the same run then reconciles in place (preserving
-        // widget and React state, e.g. a dataframe's scroll/sort/selection),
-        // and the normal stale-node clearing removes the content at the end
-        // of the run if it is never refilled - mirroring how container
-        // children behave. Content written earlier in the *current* run
-        // (e.g. an explicit `placeholder.empty()`) still clears immediately.
+        // When an `st.empty()` placeholder is re-sent over content that fills
+        // its slot from a *previous* run, keep the existing node mounted
+        // instead of overwriting it with the empty placeholder. A fill later
+        // in the same run then reconciles in place (preserving widget and
+        // React state, e.g. a dataframe's scroll/sort/selection), and the
+        // normal stale-node clearing removes the content at the end of the run
+        // if it is never refilled - mirroring how container children behave.
+        //
+        // This is gated on `isEmptySlotContent` so we only preserve content
+        // that genuinely originated from an `st.empty()` slot. Unrelated
+        // content that merely shares the same delta path (e.g. after a
+        // positional shift caused by a conditional block above the
+        // placeholder) is still overwritten. Content written earlier in the
+        // *current* run (e.g. an explicit `placeholder.empty()`) also still
+        // clears immediately.
         if (
           nextElement.type === "empty" &&
           existingNode !== undefined &&
           existingNode.scriptRunId !== scriptRunId &&
-          isRealContentNode(existingNode)
+          isRealContentNode(existingNode) &&
+          isEmptySlotContentNode(existingNode)
         ) {
           return this
         }
@@ -299,7 +344,8 @@ export class AppRoot {
           metadata,
           activeScriptHash,
           delta.fragmentId,
-          elementHash
+          elementHash,
+          fillsEmptySlot(existingNode)
         )
       }
 
@@ -451,7 +497,8 @@ export class AppRoot {
     metadata: ForwardMsgMetadata,
     activeScriptHash: string,
     fragmentId?: string,
-    elementHash?: string
+    elementHash?: string,
+    isEmptySlotContent = false
   ): AppRoot {
     const elementNode = new ElementNode(
       element,
@@ -459,7 +506,8 @@ export class AppRoot {
       scriptRunId,
       activeScriptHash,
       fragmentId,
-      elementHash
+      elementHash,
+      isEmptySlotContent
     )
     return new AppRoot(
       this.mainScriptHash,
@@ -521,7 +569,8 @@ export class AppRoot {
       block,
       scriptRunId,
       fragmentId,
-      deltaMsgReceivedAt
+      deltaMsgReceivedAt,
+      fillsEmptySlot(existingNodeAtPath)
     )
     return new AppRoot(
       this.mainScriptHash,

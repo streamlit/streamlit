@@ -40,6 +40,16 @@ export class ElementNode implements AppNode {
   // The hash of this element's payload for content-based deduplication.
   public readonly elementHash?: string
 
+  /**
+   * Whether this node occupies a slot that was reserved by an `st.empty()`
+   * placeholder (i.e. it was written into an `empty` element). This is used to
+   * decide whether a re-sent `empty` from a later run should preserve this node
+   * instead of overwriting it. It is only true for content that genuinely fills
+   * an `st.empty()` slot, so unrelated content that merely shares the same delta
+   * path (e.g. after a positional shift) is not preserved.
+   */
+  public readonly isEmptySlotContent: boolean
+
   /** Create a new ElementNode. */
   public constructor(
     element: Element,
@@ -47,7 +57,8 @@ export class ElementNode implements AppNode {
     scriptRunId: string,
     activeScriptHash: string,
     fragmentId?: string,
-    elementHash?: string
+    elementHash?: string,
+    isEmptySlotContent = false
   ) {
     this.element = element
     this.metadata = metadata
@@ -55,6 +66,7 @@ export class ElementNode implements AppNode {
     this.activeScriptHash = activeScriptHash
     this.fragmentId = fragmentId
     this.elementHash = elementHash
+    this.isEmptySlotContent = isEmptySlotContent
   }
 
   /**

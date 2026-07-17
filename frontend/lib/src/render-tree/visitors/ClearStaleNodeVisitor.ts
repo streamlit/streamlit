@@ -118,7 +118,8 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
       node.deltaBlock,
       this.currentScriptRunId,
       node.fragmentId,
-      node.deltaMsgReceivedAt
+      node.deltaMsgReceivedAt,
+      node.isEmptySlotContent
     )
   }
 
