@@ -7,7 +7,7 @@ created: 2026-04-08
 
 ## Summary
 
-Add a `refresh` parameter to `st.cache_data` and `st.cache_resource` that enables expired
+Add a `refresh_mode` parameter to `st.cache_data` and `st.cache_resource` that enables expired
 cache entries to be refreshed in the background while immediately returning stale data. This
 eliminates blocking waits for users hitting expired cache entries, providing a significantly
 better experience for slow functions (expensive database queries, ML model predictions, API
@@ -40,17 +40,17 @@ stuck waiting while the cache refreshes.
 
 ### API
 
-Add a `refresh_type` parameter to both `st.cache_data` and `st.cache_resource`:
+Add a `refresh_mode` parameter to both `st.cache_data` and `st.cache_resource`:
 
 ```python
 st.cache_data(
     ...,
-    refresh_type: Literal["foreground", "background"] = "foreground",
+    refresh_mode: Literal["foreground", "background"] = "foreground",
 )
 
 st.cache_resource(
     ...,
-    refresh_type: Literal["foreground", "background"] = "foreground",
+    refresh_mode: Literal["foreground", "background"] = "foreground",
 )
 ```
 
@@ -58,17 +58,17 @@ st.cache_resource(
 
 | Parameter      | Type                                     | Default        | Description                                                   |
 |----------------|------------------------------------------|----------------|---------------------------------------------------------------|
-| `refresh_type` | `Literal["foreground", "background"]`    | `"foreground"` | How to handle cache refresh when TTL expires                  |
+| `refresh_mode` | `Literal["foreground", "background"]`    | `"foreground"` | How to handle cache refresh when TTL expires                  |
 
 ### Behavior
 
-**`refresh_type="foreground"` (default, current behavior):**
+**`refresh_mode="foreground"` (default, current behavior):**
 
 1. TTL expires -> entry is treated as expired on the next access
 2. Next call detects the expiration and blocks while the function re-executes
 3. New value is cached and returned
 
-**`refresh_type="background"` (lazy background refresh):**
+**`refresh_mode="background"` (lazy background refresh):**
 
 1. TTL expires -> entry remains in cache (stale but valid)
 2. Next call detects expiration:
@@ -117,7 +117,7 @@ Time=1h+2s    : Next call:
 - **No st.* replay**: `st.*` element calls inside cached functions won't replay after
   background refresh since there's no `ScriptRunContext` in background threads. This is
   consistent with current behavior when calling cached functions from non-script contexts.
-- **Spinner behavior**: When `refresh_type="background"` and the cached entry is stale,
+- **Spinner behavior**: When `refresh_mode="background"` and the cached entry is stale,
   the stale value is returned immediately without showing a spinner, since there's no
   blocking wait. The `show_spinner` parameter only applies to foreground execution (cache
   miss or foreground refresh mode).
@@ -126,17 +126,17 @@ Time=1h+2s    : Next call:
 
 ```python
 # Valid:
-@st.cache_data(ttl="1h", refresh_type="background")  # Background refresh at TTL
-@st.cache_data(ttl="1h", refresh_type="foreground")  # Explicit foreground
+@st.cache_data(ttl="1h", refresh_mode="background")  # Background refresh at TTL
+@st.cache_data(ttl="1h", refresh_mode="foreground")  # Explicit foreground
 @st.cache_data(ttl="1h")                             # Defaults to foreground
 @st.cache_data()                                     # No TTL, no refresh needed
 
 # Invalid:
-@st.cache_data(refresh_type="background")            # ERROR: requires ttl
-@st.cache_data(ttl=None, refresh_type="background")  # ERROR: requires ttl
+@st.cache_data(refresh_mode="background")            # ERROR: requires ttl
+@st.cache_data(ttl=None, refresh_mode="background")  # ERROR: requires ttl
 ```
 
-The `refresh_type="background"` option requires a `ttl` parameter since background refresh
+The `refresh_mode="background"` option requires a `ttl` parameter since background refresh
 only makes sense when entries can expire. Using it without `ttl` raises a
 `StreamlitAPIException`.
 
@@ -144,9 +144,9 @@ only makes sense when entries can expire. Using it without `ttl` raises a
 
 When `persist="disk"` (or `persist=True`) is used with `st.cache_data`, entries are
 stored on disk and currently do not respect `ttl` for eviction. Using
-`refresh_type="background"` with `persist` mode will raise a `StreamlitAPIException` since
+`refresh_mode="background"` with `persist` mode will raise a `StreamlitAPIException` since
 background refresh requires TTL-based expiration. Users needing both persistence and
-background refresh should use `persist=False` (the default) with `refresh_type="background"`.
+background refresh should use `persist=False` (the default) with `refresh_mode="background"`.
 
 ### Examples
 
@@ -155,7 +155,7 @@ background refresh should use `persist=False` (the default) with `refresh_type="
 ```python
 import streamlit as st
 
-@st.cache_data(ttl="1h", refresh_type="background")
+@st.cache_data(ttl="1h", refresh_mode="background")
 def fetch_stock_prices(symbol: str):
     """Fetch stock prices - users never wait after first call."""
     return expensive_api_call(symbol)
@@ -170,7 +170,7 @@ prices = fetch_stock_prices("AAPL")
 **Database connection:**
 
 ```python
-@st.cache_resource(ttl="30m", refresh_type="background")
+@st.cache_resource(ttl="30m", refresh_mode="background")
 def get_database_connection():
     """Connection refreshed in background to avoid stale connections."""
     return psycopg2.connect(host="localhost", database="mydb")
@@ -183,7 +183,7 @@ conn = get_database_connection()
 ```python
 import streamlit as st
 
-@st.cache_data(ttl="6h", refresh_type="background")
+@st.cache_data(ttl="6h", refresh_mode="background")
 def fetch_daily_report():
     """
     Data updates at 6am daily. Background refresh ensures users
@@ -206,7 +206,7 @@ def slow_query_foreground():
     return fetch_data()
 
 # Users never wait (after first call)
-@st.cache_data(ttl="1h", refresh_type="background")
+@st.cache_data(ttl="1h", refresh_mode="background")
 def slow_query_background():
     time.sleep(5)  # Runs in background
     return fetch_data()
@@ -216,16 +216,16 @@ def slow_query_background():
 
 ### Parameter Name Alternatives
 
-#### Option A: `refresh_type` (Recommended)
+#### Option A: `refresh_mode` (Recommended)
 
 ```python
-@st.cache_data(ttl="1h", refresh_type="background")
+@st.cache_data(ttl="1h", refresh_mode="background")
 ```
 
 **Pros:**
 
 - Clear, explicit naming that describes what's being configured
-- Consistent with other `*_type` parameters in Python APIs
+- Consistent with parameters like `selection_mode` in other Streamlit APIs
 - Extensible for future modes
 
 **Cons:**
@@ -248,20 +248,20 @@ def slow_query_background():
 - Could be confused with a verb/action rather than a configuration
 - Less explicit about what's being configured
 
-#### Option C: `refresh_mode`
+#### Option C: `refresh_type`
 
 ```python
-@st.cache_data(ttl="1h", refresh_mode="background")
+@st.cache_data(ttl="1h", refresh_type="background")
 ```
 
 **Pros:**
 
-- Clear naming with `*_mode` suffix
-- Consistent with parameters like `selection_mode` in other Streamlit APIs
+- Clear naming with `*_type` suffix
+- Consistent with other `*_type` parameters in Python APIs
 
 **Cons:**
 
-- `mode` typically implies switching between operational modes rather than strategies
+- `type` is less natural for selecting between operational modes
 
 #### Option D: Boolean parameter
 
@@ -295,7 +295,7 @@ def slow_query_background():
 - Doesn't clearly convey foreground vs background distinction
 - Less intuitive naming
 
-**Recommendation:** Option A (`refresh_type`) provides the best balance of clarity and
+**Recommendation:** Option A (`refresh_mode`) provides the best balance of clarity and
 explicitness.
 
 ### Value Alternatives
@@ -404,4 +404,4 @@ fetch_stock_prices.warm("AAPL", "GOOGL", "MSFT")
 | No new dependencies        | ✅ Uses stdlib `concurrent.futures`                                  |
 | Metrics collected          | ✅ Parameter usage tracked via the `gather_metrics` decorator        |
 | Any security/legal impact? | ✅ No new security concerns                                          |
-| Any docs changes needed?   | ✅ Document `refresh_type` param, note about `st.*` calls not replaying |
+| Any docs changes needed?   | ✅ Document `refresh_mode` param, note about `st.*` calls not replaying |
