@@ -3753,7 +3753,7 @@ __metadata:
     re-resizable: "npm:^6.11.2"
     react-aria-components: "npm:^1.19.0"
     react-color: "npm:^2.18.1"
-    react-dropzone: "npm:^15.0.0"
+    react-dropzone: "npm:^16.0.0"
     react-feather: "npm:^2.0.10"
     react-map-gl: "npm:^5.3.21"
     react-markdown: "npm:^10.1.0"
@@ -6335,7 +6335,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"attr-accept@npm:^2.2.4":
+"attr-accept@npm:^2.2.5":
   version: 2.2.5
   resolution: "attr-accept@npm:2.2.5"
   checksum: 10c0/9b4cb82213925cab2d568f71b3f1c7a7778f9192829aac39a281e5418cd00c04a88f873eb89f187e0bf786fa34f8d52936f178e62cbefb9254d57ecd88ada99b
@@ -15548,16 +15548,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dropzone@npm:^15.0.0":
-  version: 15.0.0
-  resolution: "react-dropzone@npm:15.0.0"
+"react-dropzone@npm:^16.0.0":
+  version: 16.0.0
+  resolution: "react-dropzone@npm:16.0.0"
   dependencies:
-    attr-accept: "npm:^2.2.4"
+    attr-accept: "npm:^2.2.5"
     file-selector: "npm:^2.1.0"
     prop-types: "npm:^15.8.1"
   peerDependencies:
     react: ">= 16.8 || 18.0.0"
-  checksum: 10c0/fb7b48a709fdd26273707f7aca5c0e77fce2b9c9201122645d3ecfb07ecfbb89e2495273ea141994f0ed0838ee79f27832c0855b2c598b377b342c3965608b54
+  checksum: 10c0/48bdddf947c3d286cba793002ef0b08c8cb237d5a00311828140d3e191a58b869869f3b56378ae74ab5a55d44153b869bb61664cfad17ed6bfe6c89239040434
   languageName: node
   linkType: hard
 
