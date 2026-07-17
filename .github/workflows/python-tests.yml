@@ -198,24 +198,27 @@ jobs:
         run: |
           uv run python - <<'PY'
           from importlib.metadata import version
+          from pathlib import Path
 
+          from packaging.requirements import Requirement
           from packaging.version import Version
 
-          expected = {
-              "altair": "5.0.0",
-              "numpy": "1.23",
-              "pandas": "1.4.0",
-              "pillow": "7.1.0",
-              "protobuf": "3.20",
-              "pyarrow": "7.0",
-              "starlette": "0.46.0",
-          }
-          for package, expected_version in expected.items():
-              actual_version = version(package)
-              assert Version(actual_version) == Version(expected_version), (
-                  f"{package}: expected {expected_version}, found {actual_version}"
+          constraints = Path("scripts/assets/min-constraints-gen.txt")
+          for line in constraints.read_text().splitlines():
+              line = line.strip()
+              if not line or line.startswith("#"):
+                  continue
+
+              requirement = Requirement(line)
+              if requirement.marker and not requirement.marker.evaluate():
+                  continue
+
+              actual_version = Version(version(requirement.name))
+              assert actual_version in requirement.specifier, (
+                  f"{requirement.name}: expected {requirement.specifier}, "
+                  f"found {actual_version}"
               )
-              print(f"{package}=={actual_version}")
+              print(f"{requirement.name}=={actual_version}")
           PY
       - name: Install minimum-compatible protoc
         env:
