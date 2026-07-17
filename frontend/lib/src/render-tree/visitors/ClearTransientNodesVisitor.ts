@@ -68,7 +68,8 @@ export class ClearTransientNodesVisitor implements AppNodeVisitor<
       node.deltaBlock,
       node.scriptRunId,
       node.fragmentId,
-      node.deltaMsgReceivedAt
+      node.deltaMsgReceivedAt,
+      node.isEmptySlotContent
     )
   }
 

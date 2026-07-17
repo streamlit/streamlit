@@ -64,6 +64,32 @@ describe("ClearTransientNodesVisitor", () => {
     expect(result).toBe(blockNode)
   })
 
+  it("preserves isEmptySlotContent when clearing transient children", () => {
+    // A block that fills an st.empty() slot and holds a transient child. When
+    // the transient is cleared the recreated block must keep its empty-slot
+    // flag; otherwise a re-sent empty from a later run would fail to preserve
+    // the block (see AppRoot.applyDelta).
+    const emptySlotBlock = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [TRANSIENT_NODE],
+      makeProto(DeltaProto, {}).addBlock as BlockProto,
+      "script_run_id",
+      undefined,
+      Date.now(),
+      true
+    )
+    expect(emptySlotBlock.isEmptySlotContent).toBe(true)
+
+    const visitor = new ClearTransientNodesVisitor([])
+    const result = visitor.visitBlockNode(emptySlotBlock) as BlockNode
+
+    // The block was recreated (transient cleared to its anchor) ...
+    expect(result).not.toBe(emptySlotBlock)
+    expect(result.children[0]).toBe(TEXT_NODE)
+    // ... but the empty-slot flag is preserved.
+    expect(result.isEmptySlotContent).toBe(true)
+  })
+
   it("respects fragmentIdsThisRun", () => {
     // If fragmentIdsThisRun is set, and the block has a fragmentId NOT in the list,
     // it should not be traversed/cleared.
