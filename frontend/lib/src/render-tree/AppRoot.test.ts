@@ -595,6 +595,135 @@ describe("AppRoot", () => {
       })
     })
 
+    describe("with a standalone 'skeleton' placeholder over existing content", () => {
+      const skeletonDelta = makeProto(DeltaProto, {
+        newElement: { skeleton: {} },
+      })
+      const emptyDelta = makeProto(DeltaProto, { newElement: { empty: {} } })
+      const textDelta = (body: string): DeltaProto =>
+        makeProto(DeltaProto, { newElement: { text: { body } } })
+
+      // Reserve a standalone `st.skeleton()` slot and fill it, mirroring
+      // `placeholder = st.skeleton(); placeholder.foo()`.
+      const fillSkeletonSlot = (
+        root: AppRoot,
+        scriptRunId: string,
+        delta: DeltaProto,
+        deltaPath: number[]
+      ): AppRoot =>
+        root
+          .applyDelta(
+            scriptRunId,
+            skeletonDelta,
+            forwardMsgMetadata(deltaPath)
+          )
+          .applyDelta(scriptRunId, delta, forwardMsgMetadata(deltaPath))
+
+      it("keeps existing content when the skeleton is re-sent from a newer run", () => {
+        const filled = fillSkeletonSlot(
+          ROOT,
+          "run_1",
+          textDelta("hello"),
+          [0, 1, 1]
+        )
+
+        const afterSkeleton = filled.applyDelta(
+          "run_2",
+          skeletonDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          afterSkeleton.main,
+          [1, 1]
+        ) as ElementNode
+        expect(node).toBeTextNode("hello")
+        expect(node.scriptRunId).toBe("run_1")
+        expect(node.isEmptySlotContent).toBe(true)
+        expect(afterSkeleton).toBe(filled)
+      })
+
+      it("does not keep content that did not originate from a placeholder slot", () => {
+        // Content that only lands here because a conditional block above it
+        // shifted the delta path must NOT be preserved by a re-sent skeleton.
+        const filled = ROOT.applyDelta(
+          "run_1",
+          textDelta("shifted"),
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const afterSkeleton = filled.applyDelta(
+          "run_2",
+          skeletonDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          afterSkeleton.main,
+          [1, 1]
+        ) as ElementNode
+        expect(node.element.type).toBe("skeleton")
+        expect(node.scriptRunId).toBe("run_2")
+        expect(afterSkeleton).not.toBe(filled)
+      })
+
+      it("preserves slot content across placeholder types (empty <-> skeleton)", () => {
+        // Filled via an `st.empty()` slot, then a skeleton is re-sent over it.
+        const emptyFilled = ROOT.applyDelta(
+          "run_1",
+          emptyDelta,
+          forwardMsgMetadata([0, 1, 1])
+        ).applyDelta(
+          "run_1",
+          textDelta("hello"),
+          forwardMsgMetadata([0, 1, 1])
+        )
+        const afterSkeleton = emptyFilled.applyDelta(
+          "run_2",
+          skeletonDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+        expect(
+          GetNodeByDeltaPathVisitor.getNodeAtPath(afterSkeleton.main, [1, 1])
+        ).toBeTextNode("hello")
+
+        // Filled via a skeleton slot, then an `st.empty()` is re-sent over it.
+        const skeletonFilled = fillSkeletonSlot(
+          ROOT,
+          "run_1",
+          textDelta("world"),
+          [0, 1, 1]
+        )
+        const afterEmpty = skeletonFilled.applyDelta(
+          "run_2",
+          emptyDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+        expect(
+          GetNodeByDeltaPathVisitor.getNodeAtPath(afterEmpty.main, [1, 1])
+        ).toBeTextNode("world")
+      })
+
+      it("refreshes an unfilled skeleton placeholder from a previous run", () => {
+        const first = ROOT.applyDelta(
+          "run_1",
+          skeletonDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+        const second = first.applyDelta(
+          "run_2",
+          skeletonDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+        const node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          second.main,
+          [1, 1]
+        ) as ElementNode
+        expect(node.element.type).toBe("skeleton")
+        expect(node.scriptRunId).toBe("run_2")
+      })
+    })
+
     it("removes a block's children if the block type changes for the same delta path", () => {
       const newRoot = ROOT.applyDelta(
         "script_run_id",

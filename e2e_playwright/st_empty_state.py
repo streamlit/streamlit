@@ -18,12 +18,17 @@ import streamlit as st
 
 st.button("rerun")
 
-placeholder = st.empty()
+# Standalone st.skeleton() behaves like st.empty() (single-element placeholder
+# filled later); select which one to test via a query param.
+if st.query_params.get("placeholder") == "skeleton":
+    placeholder = st.skeleton()
+else:
+    placeholder = st.empty()
 
 # Simulate slow work between creating the placeholder and filling it. This
-# ensures the Empty delta is flushed to the browser before the fill delta on
-# every rerun (instead of being coalesced away), which is the scenario where a
-# standalone st.empty() would previously unmount and remount its element.
+# ensures the placeholder delta is flushed to the browser before the fill delta
+# on every rerun (instead of being coalesced away), which is the scenario where
+# a standalone placeholder would previously unmount and remount its element.
 time.sleep(1)
 
 placeholder.text_input("persisted", key="persisted")

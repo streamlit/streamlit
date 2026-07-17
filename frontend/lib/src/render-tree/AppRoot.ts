@@ -66,26 +66,37 @@ function canReuseElementPayload(
 }
 
 /**
+ * Returns true if the element type is a single-element placeholder that
+ * reserves a slot and is filled later - `empty` (`st.empty()`) or a standalone
+ * `skeleton` (`st.skeleton()`). Both are re-sent at the top of every rerun and
+ * should preserve, rather than unmount, the content that filled them.
+ */
+function isPlaceholderElementType(type: string | undefined): boolean {
+  return type === "empty" || type === "skeleton"
+}
+
+/**
  * Returns true if the node holds "real" (non-placeholder) content that should
- * be preserved rather than overwritten by an incoming `empty` element.
+ * be preserved rather than overwritten by an incoming placeholder element.
  *
- * This is any element other than an `empty` placeholder, or any block. A
- * `TransientNode` (e.g. an in-progress skeleton/spinner) is intentionally
- * excluded so its own lifecycle logic is left untouched.
+ * This is any element that is not itself a placeholder (`empty`/`skeleton`), or
+ * any block. A `TransientNode` (e.g. an in-progress skeleton/spinner) is
+ * intentionally excluded so its own lifecycle logic is left untouched.
  */
 function isRealContentNode(node: AppNode): boolean {
   if (node instanceof ElementNode) {
-    return node.element.type !== "empty"
+    return !isPlaceholderElementType(node.element.type)
   }
   return node instanceof BlockNode
 }
 
 /**
- * Returns true if the node is content that was written into an `st.empty()`
- * slot (its `isEmptySlotContent` flag is set). Only such content should be
- * preserved when a re-sent `empty` overwrites it, so that unrelated content
- * that merely shares the same delta path (e.g. after a positional shift caused
- * by a conditional block) is not incorrectly kept.
+ * Returns true if the node is content that was written into a placeholder slot
+ * (`st.empty()` or standalone `st.skeleton()`) - i.e. its `isEmptySlotContent`
+ * flag is set. Only such content should be preserved when a re-sent placeholder
+ * overwrites it, so that unrelated content that merely shares the same delta
+ * path (e.g. after a positional shift caused by a conditional block) is not
+ * incorrectly kept.
  */
 function isEmptySlotContentNode(node: AppNode): boolean {
   if (node instanceof ElementNode || node instanceof BlockNode) {
@@ -96,9 +107,10 @@ function isEmptySlotContentNode(node: AppNode): boolean {
 
 /**
  * Returns true if writing over `existingNode` means the new node fills a slot
- * reserved by an `st.empty()` placeholder. This is the case when the existing
- * node is an `empty` element, is itself empty-slot content, or is a transient
- * whose anchor satisfies either condition.
+ * reserved by a placeholder (`st.empty()` or standalone `st.skeleton()`). This
+ * is the case when the existing node is a placeholder element, is itself
+ * empty-slot content, or is a transient whose anchor satisfies either
+ * condition.
  */
 function fillsEmptySlot(existingNode: AppNode | undefined): boolean {
   if (existingNode === undefined) {
@@ -106,7 +118,8 @@ function fillsEmptySlot(existingNode: AppNode | undefined): boolean {
   }
   if (existingNode instanceof ElementNode) {
     return (
-      existingNode.element.type === "empty" || existingNode.isEmptySlotContent
+      isPlaceholderElementType(existingNode.element.type) ||
+      existingNode.isEmptySlotContent
     )
   }
   if (existingNode instanceof BlockNode) {
@@ -305,23 +318,23 @@ export class AppRoot {
           deltaPath
         )
 
-        // When an `st.empty()` placeholder is re-sent over content that fills
-        // its slot from a *previous* run, keep the existing node mounted
-        // instead of overwriting it with the empty placeholder. A fill later
-        // in the same run then reconciles in place (preserving widget and
-        // React state, e.g. a dataframe's scroll/sort/selection), and the
-        // normal stale-node clearing removes the content at the end of the run
-        // if it is never refilled - mirroring how container children behave.
+        // When a placeholder (`st.empty()` or standalone `st.skeleton()`) is
+        // re-sent over content that fills its slot from a *previous* run, keep
+        // the existing node mounted instead of overwriting it with the
+        // placeholder. A fill later in the same run then reconciles in place
+        // (preserving widget and React state, e.g. a dataframe's
+        // scroll/sort/selection), and the normal stale-node clearing removes
+        // the content at the end of the run if it is never refilled -
+        // mirroring how container children behave.
         //
         // This is gated on `isEmptySlotContent` so we only preserve content
-        // that genuinely originated from an `st.empty()` slot. Unrelated
-        // content that merely shares the same delta path (e.g. after a
-        // positional shift caused by a conditional block above the
-        // placeholder) is still overwritten. Content written earlier in the
-        // *current* run (e.g. an explicit `placeholder.empty()`) also still
-        // clears immediately.
+        // that genuinely originated from a placeholder slot. Unrelated content
+        // that merely shares the same delta path (e.g. after a positional
+        // shift caused by a conditional block above the placeholder) is still
+        // overwritten. Content written earlier in the *current* run (e.g. an
+        // explicit `placeholder.empty()`) also still clears immediately.
         if (
-          nextElement.type === "empty" &&
+          isPlaceholderElementType(nextElement.type) &&
           existingNode !== undefined &&
           existingNode.scriptRunId !== scriptRunId &&
           isRealContentNode(existingNode) &&
