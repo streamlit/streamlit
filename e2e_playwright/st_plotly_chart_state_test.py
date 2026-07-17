@@ -25,7 +25,8 @@ from e2e_playwright.shared.app_utils import (
 def test_identical_passive_unkeyed_charts_render(app: Page):
     charts = app.get_by_test_id("stPlotlyChart")
 
-    # Three unkeyed passive charts plus the keyed restore chart.
+    # Two identical unkeyed charts plus one updated unkeyed chart (three
+    # unkeyed passive charts) plus the keyed restore chart.
     expect(charts).to_have_count(4)
     for index in range(4):
         expect(charts.nth(index)).to_be_visible()
