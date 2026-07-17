@@ -164,6 +164,8 @@ no third-party changes. Details belong in the tech spec.
 # Invalid:
 @st.cache_data(refresh_mode="background")            # ERROR: requires ttl
 @st.cache_data(ttl=None, refresh_mode="background")  # ERROR: requires ttl
+@st.cache_data(ttl="1h", persist="disk", refresh_mode="background")  # ERROR: persist incompatible with background refresh
+@st.cache_data(ttl="1h", persist=True, refresh_mode="background")    # ERROR: persist incompatible with background refresh
 ```
 
 The `refresh_mode="background"` option requires a `ttl` parameter since background refresh
@@ -485,9 +487,9 @@ fetch_stock_prices.warm("AAPL", "GOOGL", "MSFT")
 
 | Item                       | ✅ or comment                                                        |
 |----------------------------|----------------------------------------------------------------------|
-| Works on SiS, Cloud, etc?  | ✅ Uses standard Python threading (`concurrent.futures.ThreadPoolExecutor`). SiS/Snowflake environments support stdlib threading; if thread creation is restricted, refreshes will execute synchronously in the foreground as a graceful fallback. |
+| Works on SiS, Cloud, etc?  | ✅ Uses standard Python threading (`concurrent.futures.ThreadPoolExecutor`), supported on SiS/Snowflake and Cloud. If a runtime restricts thread creation, background refresh degrades safely without breaking the stale-first contract: the stale value is still returned immediately (never blocking on the stale-hit path), the background refresh is simply skipped, and the entry is only recomputed via a normal blocking foreground call at hard expiry (`2 × ttl`) — identical to `refresh_mode="foreground"`. |
 | No breaking API changes    | ✅ New optional parameter with backward-compatible default           |
 | No new dependencies        | ✅ Uses stdlib `concurrent.futures`; builds on the internal `TTLCache` introduced in [#16014](https://github.com/streamlit/streamlit/pull/16014) |
-| Metrics collected          | ✅ Parameter usage tracked via the `gather_metrics` decorator        |
+| Metrics collected          | ✅ Cache API usage is already tracked via the existing `gather_metrics` decorator. Distinguishing `refresh_mode="background"` adoption specifically needs explicit instrumentation — `gather_metrics` records argument names/types but not string values (and `"background"`/`"foreground"` even share the same length) — added as part of the tech spec. |
 | Any security/legal impact? | ✅ No new security concerns                                          |
 | Any docs changes needed?   | ✅ Document `refresh_mode` param, note about `st.*` calls not replaying |
