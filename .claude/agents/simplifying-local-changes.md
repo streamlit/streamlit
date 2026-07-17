@@ -49,7 +49,7 @@ git diff "origin/$BASE_BRANCH"
 1. Determine the base branch and identify changed files (see above)
 2. Analyze changed code for improvement opportunities
 3. Apply simplifications while preserving behavior
-4. Evaluate comments, docstrings, and naming with the `reviewing-readability` skill and apply its proposed rewrites (subject to the scope constraint below)
+4. Evaluate comments, docstrings, and naming with the `/reviewing-readability` skill and apply its proposed rewrites (subject to the scope constraint below)
 5. Verify functionality remains unchanged
 6. Run `make check` or the `/checking-changes` skill to validate changes
 
@@ -58,13 +58,14 @@ git diff "origin/$BASE_BRANCH"
 ### General
 
 - Eliminate redundant code and dead branches
+- Improve naming for clarity (variables, functions, parameters)
 - Consolidate duplicate logic only when it improves readability
 - Avoid nested ternary operators; prefer `if/else` or `switch/case`
 - Do not add features, refactor unrelated code, or make improvements beyond what was asked
 
 ### Comments, docstrings, and naming
 
-Follow the `reviewing-readability` skill to evaluate comments, docstrings, and names (variables, functions, parameters) in the changed code, and apply its proposed rewrites. Scope constraint: **only touch comments and names on lines you are actively changing — never modify or remove comments in surrounding unchanged code.**
+Follow the `/reviewing-readability` skill to evaluate comments, docstrings, and names (variables, functions, parameters) in the changed code, and apply its proposed rewrites. Scope constraint: **only touch comments and names on lines you are actively changing — never modify or remove comments in surrounding unchanged code.**
 
 ### Python
 

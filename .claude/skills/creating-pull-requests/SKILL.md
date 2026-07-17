@@ -59,6 +59,8 @@ Examples: `Add height parameter to plotly charts`, `Fix memory leak in dataframe
 
 ## Step 3: Compose and create PR
 
+When drafting the title and description below, follow the title/description guidance in the `/reviewing-pr-description` skill so they are clear and concise from the start.
+
 ### 3.1 Determine labels
 
 All PRs require these labels:
@@ -107,8 +109,6 @@ Read `.github/pull_request_template.md` for the required sections, then fill the
 | `e2e_playwright/**/*_test.py` | E2E tests |
 
 Check the matching boxes in the PR template. If no test files changed, explain why. Leave "manual testing" unchecked (user fills in).
-
-**Review title and description:** Before writing the PR for user review, run the `reviewing-pr-description` skill on the drafted title and description and apply its proposed rewrites.
 
 ### 3.4 Write PR for user review
 
