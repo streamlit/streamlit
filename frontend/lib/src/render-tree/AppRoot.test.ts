@@ -328,6 +328,215 @@ describe("AppRoot", () => {
       expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     })
 
+    describe("with an 'empty' element over existing content", () => {
+      const emptyDelta = makeProto(DeltaProto, { newElement: { empty: {} } })
+      const textDelta = (body: string): DeltaProto =>
+        makeProto(DeltaProto, { newElement: { text: { body } } })
+      const expandableDelta = makeProto(DeltaProto, {
+        addBlock: { expandable: { expanded: true, label: "label", icon: "" } },
+      })
+
+      it("keeps existing element content when the empty is from a newer run", () => {
+        // Fill [1, 1] with real content during "run_1".
+        const filled = ROOT.applyDelta(
+          "run_1",
+          textDelta("hello"),
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        // A later run re-sends the empty placeholder over that content.
+        const afterEmpty = filled.applyDelta(
+          "run_2",
+          emptyDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        // The existing node is preserved (not overwritten with the empty
+        // placeholder) so that a same-position fill can reconcile in place,
+        // and stale clearing removes it at end of run if never refilled.
+        const node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          afterEmpty.main,
+          [1, 1]
+        ) as ElementNode
+        expect(node).toBeTextNode("hello")
+        expect(node.scriptRunId).toBe("run_1")
+        // The root is returned unchanged.
+        expect(afterEmpty).toBe(filled)
+      })
+
+      it("keeps existing block content when the empty is from a newer run", () => {
+        const filled = ROOT.applyDelta(
+          "run_1",
+          expandableDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const afterEmpty = filled.applyDelta(
+          "run_2",
+          emptyDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          afterEmpty.main,
+          [1, 1]
+        ) as BlockNode
+        expect(node).toBeInstanceOf(BlockNode)
+        expect(node.deltaBlock.type).toBe("expandable")
+        expect(node.scriptRunId).toBe("run_1")
+        expect(afterEmpty).toBe(filled)
+      })
+
+      it("clears content when the empty is written in the same run (explicit clear)", () => {
+        const filled = ROOT.applyDelta(
+          "run_1",
+          textDelta("hello"),
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const afterEmpty = filled.applyDelta(
+          "run_1",
+          emptyDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          afterEmpty.main,
+          [1, 1]
+        ) as ElementNode
+        expect(node.element.type).toBe("empty")
+        expect(node.scriptRunId).toBe("run_1")
+      })
+
+      it("refreshes an existing empty placeholder from a previous run", () => {
+        const firstEmpty = ROOT.applyDelta(
+          "run_1",
+          emptyDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const secondEmpty = firstEmpty.applyDelta(
+          "run_2",
+          emptyDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          secondEmpty.main,
+          [1, 1]
+        ) as ElementNode
+        expect(node.element.type).toBe("empty")
+        // A placeholder that is still empty is refreshed to the current run so
+        // it is not cleared as stale.
+        expect(node.scriptRunId).toBe("run_2")
+      })
+
+      it("applies a later same-run fill over the kept content", () => {
+        const run1 = ROOT.applyDelta(
+          "run_1",
+          textDelta("hello"),
+          forwardMsgMetadata([0, 1, 1])
+        )
+        // run_2: empty placeholder re-sent first (slow fill) ...
+        const afterEmpty = run1.applyDelta(
+          "run_2",
+          emptyDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+        // ... then the real fill arrives at the same path.
+        const refilled = afterEmpty.applyDelta(
+          "run_2",
+          textDelta("world"),
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          refilled.main,
+          [1, 1]
+        ) as ElementNode
+        expect(node).toBeTextNode("world")
+        expect(node.scriptRunId).toBe("run_2")
+      })
+
+      it("clears never-refilled kept content at end of run via stale clearing", () => {
+        // run_1: fill [1, 1] with content.
+        const filled = ROOT.applyDelta(
+          "run_1",
+          textDelta("hello"),
+          forwardMsgMetadata([0, 1, 1])
+        )
+        // run_2: a sibling at [1, 0] bumps the ancestors to run_2, and the
+        // empty placeholder is re-sent over [1, 1] (kept as run_1).
+        const run2 = filled
+          .applyDelta(
+            "run_2",
+            textDelta("sibling"),
+            forwardMsgMetadata([0, 1, 0])
+          )
+          .applyDelta("run_2", emptyDelta, forwardMsgMetadata([0, 1, 1]))
+
+        // The kept content is still present during the run.
+        expect(
+          GetNodeByDeltaPathVisitor.getNodeAtPath(run2.main, [1, 1])
+        ).toBeTextNode("hello")
+
+        // At end of run_2, stale clearing removes the never-refilled orphan
+        // while keeping the current-run sibling. (Stale clearing compacts the
+        // tree, so assert on element presence rather than fixed paths.)
+        const cleared = run2.clearStaleNodes("run_2")
+        const bodies = [...cleared.getElements()].map(el => el.text?.body)
+        expect(bodies).toContain("sibling")
+        expect(bodies).not.toContain("hello")
+      })
+
+      it("keeps existing content when a fragment re-sends the empty in a newer run", () => {
+        const filled = ROOT.applyDelta(
+          "run_1",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "hello" } },
+            fragmentId: "frag",
+          }),
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const afterEmpty = filled.applyDelta(
+          "run_2",
+          makeProto(DeltaProto, {
+            newElement: { empty: {} },
+            fragmentId: "frag",
+          }),
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        expect(
+          GetNodeByDeltaPathVisitor.getNodeAtPath(afterEmpty.main, [1, 1])
+        ).toBeTextNode("hello")
+        expect(afterEmpty).toBe(filled)
+      })
+
+      it("overwrites a transient node with the empty (transients are excluded)", () => {
+        const withTransient = ROOT.applyDelta(
+          "run_1",
+          makeProto(DeltaProto, {
+            newTransient: { elements: [{ text: { body: "loading" } }] },
+          }),
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const afterEmpty = withTransient.applyDelta(
+          "run_2",
+          emptyDelta,
+          forwardMsgMetadata([0, 1, 1])
+        )
+
+        const node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          afterEmpty.main,
+          [1, 1]
+        ) as ElementNode
+        expect(node.element.type).toBe("empty")
+      })
+    })
+
     it("removes a block's children if the block type changes for the same delta path", () => {
       const newRoot = ROOT.applyDelta(
         "script_run_id",

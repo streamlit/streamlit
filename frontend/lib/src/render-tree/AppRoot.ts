@@ -65,6 +65,21 @@ function canReuseElementPayload(
   )
 }
 
+/**
+ * Returns true if the node holds "real" (non-placeholder) content that should
+ * be preserved rather than overwritten by an incoming `empty` element.
+ *
+ * This is any element other than an `empty` placeholder, or any block. A
+ * `TransientNode` (e.g. an in-progress skeleton/spinner) is intentionally
+ * excluded so its own lifecycle logic is left untouched.
+ */
+function isRealContentNode(node: AppNode): boolean {
+  if (node instanceof ElementNode) {
+    return node.element.type !== "empty"
+  }
+  return node instanceof BlockNode
+}
+
 interface LogoMetadata {
   // Associated scriptHash that created the logo
   activeScriptHash: string
@@ -251,6 +266,24 @@ export class AppRoot {
           this.root,
           deltaPath
         )
+
+        // When an `st.empty()` placeholder is re-sent over content that
+        // already exists from a *previous* run, keep the existing node
+        // mounted instead of overwriting it with the empty placeholder. A
+        // fill later in the same run then reconciles in place (preserving
+        // widget and React state, e.g. a dataframe's scroll/sort/selection),
+        // and the normal stale-node clearing removes the content at the end
+        // of the run if it is never refilled - mirroring how container
+        // children behave. Content written earlier in the *current* run
+        // (e.g. an explicit `placeholder.empty()`) still clears immediately.
+        if (
+          nextElement.type === "empty" &&
+          existingNode !== undefined &&
+          existingNode.scriptRunId !== scriptRunId &&
+          isRealContentNode(existingNode)
+        ) {
+          return this
+        }
 
         // Check if we can reuse the payload from an existing node
         const canReuse = canReuseElementPayload(
