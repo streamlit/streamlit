@@ -572,6 +572,54 @@ describe("AppRoot", () => {
         expect(afterEmpty).toBe(filled)
       })
 
+      it("clears never-refilled kept content in a fragment rerun via stale clearing", () => {
+        const fragBlockDelta = makeProto(DeltaProto, {
+          addBlock: { allowEmpty: true },
+          fragmentId: "frag",
+        })
+        const fragEmptyDelta = makeProto(DeltaProto, {
+          newElement: { empty: {} },
+          fragmentId: "frag",
+        })
+
+        // run_1: a fragment owns the block at [1] and fills an `st.empty()`
+        // slot inside it at [1, 0] with content.
+        const filled = ROOT.applyDelta(
+          "run_1",
+          fragBlockDelta,
+          forwardMsgMetadata([0, 1])
+        )
+          .applyDelta("run_1", fragEmptyDelta, forwardMsgMetadata([0, 1, 0]))
+          .applyDelta(
+            "run_1",
+            makeProto(DeltaProto, {
+              newElement: { text: { body: "hello" } },
+              fragmentId: "frag",
+            }),
+            forwardMsgMetadata([0, 1, 0])
+          )
+
+        // run_2 (fragment rerun): the fragment block is re-sent (advancing it to
+        // run_2 and inheriting its children), then the empty placeholder is
+        // re-sent over [1, 0] and kept as run_1, with no refill following.
+        const run2 = filled
+          .applyDelta("run_2", fragBlockDelta, forwardMsgMetadata([0, 1]))
+          .applyDelta("run_2", fragEmptyDelta, forwardMsgMetadata([0, 1, 0]))
+
+        // The kept content is still present during the run.
+        expect(
+          GetNodeByDeltaPathVisitor.getNodeAtPath(run2.main, [1, 0])
+        ).toBeTextNode("hello")
+
+        // At end of the fragment run, stale clearing removes the never-refilled
+        // content (the fragment block advanced to run_2 while the kept node
+        // stayed at run_1) while leaving nodes outside the fragment untouched.
+        const cleared = run2.clearStaleNodes("run_2", ["frag"])
+        const bodies = [...cleared.getElements()].map(el => el.text?.body)
+        expect(bodies).toContain("1")
+        expect(bodies).not.toContain("hello")
+      })
+
       it("overwrites a transient node with the empty (transients are excluded)", () => {
         const withTransient = ROOT.applyDelta(
           "run_1",
