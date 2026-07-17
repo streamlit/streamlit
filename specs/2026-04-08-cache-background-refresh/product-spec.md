@@ -135,6 +135,19 @@ Time=2h+1s    : Call -> cache miss -> blocking foreground compute (errors surfac
 - **Cleanup guarantee**: A stale entry is removed either by a successful refresh
   (replaced with the fresh value) or at hard expiry (`2 × ttl`), whichever comes first —
   including entries that are never requested again after turning stale.
+- **Late / orphaned refreshes**: A refresh that finishes *after* its entry was already
+  hard-evicted (`2 × ttl`), cleared via `.clear()`, or otherwise invalidated (cache
+  generation changed, or the owning session ended for `scope="session"`) is discarded
+  rather than written back — the next access is a normal blocking cache miss. This keeps a
+  slow refresh from repopulating a cache the user deliberately cleared or that no longer
+  exists. For `st.cache_resource`, the freshly produced (but discarded) resource is
+  released via its `on_release` handler, if configured, so resources opened by an orphaned
+  refresh don't leak.
+- **Platform degradation**: On runtimes that restrict thread creation, background mode
+  degrades gracefully to foreground semantics without breaking the stale-first contract:
+  stale hits are still returned immediately (non-blocking), the background refresh is
+  skipped, and recomputation happens via a blocking foreground call only at hard expiry
+  (`2 × ttl`) — never on the stale-hit path.
 - **Error surfacing**: Background refresh errors log a warning but don't crash the app
   and don't evict the stale entry. Users keep seeing (bounded) stale data while
   refreshes fail; the error only surfaces to a user after hard expiry, when the next
@@ -180,6 +193,25 @@ stored on disk and currently do not respect `ttl` for eviction. Using
 background refresh requires TTL-based expiration. Users needing both persistence and
 background refresh should use `persist=False` (the default) with `refresh_mode="background"`.
 
+**Interaction with `validate` (`st.cache_resource`):**
+
+The `validate` callable still runs on every access and gates stale serving: a stale entry
+is only returned if it passes `validate`. If a stale resource fails validation (e.g., a
+dead DB connection), it is treated as a hard miss and recomputed in the foreground
+(blocking) — background mode never serves an invalid resource, matching today's
+discard-and-recompute behavior. When a background refresh replaces a stale resource, the
+previous resource is handled exactly as under foreground eviction (released via
+`on_release` when it is no longer referenced).
+
+**Interaction with `scope`:**
+
+Background refresh is supported for both `scope="global"` and `scope="session"` caches.
+The refresh runs in the shared process-level executor and writes back to the originating
+cache. If the owning session ends (or the entry is otherwise invalidated) before the
+refresh completes, the result is discarded per the *Late / orphaned refreshes* rule above
+rather than repopulating a detached cache. (Capturing the originating session for the
+write-back is an implementation detail for the tech spec.)
+
 ### Examples
 
 **Basic usage:**
@@ -218,12 +250,15 @@ import streamlit as st
 @st.cache_data(ttl="6h", refresh_mode="background")
 def fetch_daily_report():
     """
-    Data updates at 6am daily. Background refresh ensures users
-    always get instant responses even right after the update.
+    Data updates at 6am daily. As long as the app is accessed at least
+    once per 2 x ttl, background refresh keeps responses instant right
+    after the update. After a longer idle gap (> 2 x ttl) the entry
+    hard-expires, so the next access blocks on a foreground recompute
+    (see the out-of-scope `max_stale` option for bridging long idle gaps).
     """
     return download_and_process_csv()  # Takes 60+ seconds
 
-# Users always see data instantly (possibly from yesterday until refresh completes)
+# Instant responses while the app is used at least once per 2 x ttl
 report = fetch_daily_report()
 st.dataframe(report)
 ```
