@@ -26,7 +26,11 @@ from streamlit.elements.plotly_chart import (
     _resolve_content_height,
     _resolve_content_width,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementId,
+    StreamlitDuplicateElementKey,
+)
 from streamlit.runtime.caching import cached_message_replay
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -41,6 +45,78 @@ class PyDeckTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.plotly_chart.spec != ""
         assert el.plotly_chart.config != ""
+
+    def test_passive_unkeyed_chart_has_no_id(self):
+        """Test that a passive unkeyed chart uses positional identity."""
+        st.plotly_chart(px.line(x=[1, 2], y=[3, 4]))
+
+        plotly_chart = self.get_delta_from_queue().new_element.plotly_chart
+        assert plotly_chart.id == ""
+
+    def test_identical_passive_unkeyed_charts_are_allowed(self):
+        """Test that identical passive charts don't cause duplicate IDs."""
+        figure = px.line(x=[1, 2], y=[3, 4])
+
+        st.plotly_chart(figure)
+        st.plotly_chart(figure)
+
+        plotly_charts = [
+            delta.new_element.plotly_chart for delta in self.get_all_deltas_from_queue()
+        ]
+        assert len(plotly_charts) == 2
+        assert all(chart.id == "" for chart in plotly_charts)
+
+    def test_passive_keyed_chart_has_id(self):
+        """Test that a keyed passive chart has stable element identity."""
+        st.plotly_chart(px.line(x=[1, 2], y=[3, 4]), key="passive_chart")
+
+        plotly_chart = self.get_delta_from_queue().new_element.plotly_chart
+        assert plotly_chart.id.startswith("$$ID-")
+        assert plotly_chart.id.endswith("-passive_chart")
+
+    def test_passive_keyed_chart_id_is_stable_across_content_changes(self):
+        """Test that passive keyed identity is independent of mutable content."""
+        st.plotly_chart(
+            px.line(x=[1, 2], y=[3, 4]),
+            key="stable_chart",
+            config={"displayModeBar": False},
+            theme="streamlit",
+            width=300,
+            height=400,
+        )
+        first_id = self.get_delta_from_queue().new_element.plotly_chart.id
+
+        # Simulate a separate script run so the same key can be registered again.
+        self.script_run_ctx.shared.widget_ids_this_run.clear()
+        self.script_run_ctx.shared.widget_user_keys_this_run.clear()
+
+        st.plotly_chart(
+            px.bar(x=[10, 20, 30], y=[40, 50, 60]),
+            key="stable_chart",
+            config={"scrollZoom": False},
+            theme=None,
+            width="stretch",
+            height=600,
+        )
+        second_id = self.get_delta_from_queue().new_element.plotly_chart.id
+
+        assert first_id == second_id
+
+    def test_duplicate_passive_keys_raise(self):
+        """Test that passive chart keys still need to be unique per run."""
+        figure = px.line(x=[1, 2], y=[3, 4])
+        st.plotly_chart(figure, key="duplicate_chart")
+
+        with pytest.raises(StreamlitDuplicateElementKey):
+            st.plotly_chart(figure, key="duplicate_chart")
+
+    def test_identical_interactive_unkeyed_charts_still_raise(self):
+        """Test that interactive widget identity behavior is unchanged."""
+        figure = px.line(x=[1, 2], y=[3, 4])
+        st.plotly_chart(figure, on_select="rerun")
+
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.plotly_chart(figure, on_select="rerun")
 
     @parameterized.expand(
         [

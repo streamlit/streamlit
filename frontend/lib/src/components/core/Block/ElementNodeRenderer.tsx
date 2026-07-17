@@ -1100,7 +1100,11 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           <PlotlyChart
-            key={plotlyProto.id}
+            // Plotly charts only have an id when they are interactive
+            // (selections activated) or explicitly keyed. Passive unkeyed
+            // charts have an empty id, so fall back to positional keying like
+            // other elements that can be used without an id.
+            key={plotlyProto.id || undefined}
             element={plotlyProto}
             {...widgetProps}
           />

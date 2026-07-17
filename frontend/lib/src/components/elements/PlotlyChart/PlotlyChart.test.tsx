@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { ReactElement } from "react"
+
 import { act, render, screen } from "@testing-library/react"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
@@ -92,10 +94,10 @@ describe("PlotlyChart Component", () => {
   // Create fresh widgetMgr for each test to avoid shared state
   let widgetMgr: WidgetStateManager
 
-  const renderComponent = (
+  const getComponent = (
     props: Partial<React.ComponentProps<typeof PlotlyChart>> = {},
     contextValue: Record<string, unknown> = {}
-  ): ReturnType<typeof render> => {
+  ): ReactElement => {
     const finalContext = {
       expanded: false,
       width: 600,
@@ -105,14 +107,8 @@ describe("PlotlyChart Component", () => {
       ...contextValue,
     }
 
-    return render(
-      <ElementFullscreenContext.Provider
-        value={
-          finalContext as React.ComponentProps<
-            typeof ElementFullscreenContext.Provider
-          >["value"]
-        }
-      >
+    return (
+      <ElementFullscreenContext.Provider value={finalContext}>
         <PlotlyChart
           element={DEFAULT_ELEMENT}
           widgetMgr={widgetMgr}
@@ -123,6 +119,11 @@ describe("PlotlyChart Component", () => {
       </ElementFullscreenContext.Provider>
     )
   }
+
+  const renderComponent = (
+    props: Partial<React.ComponentProps<typeof PlotlyChart>> = {},
+    contextValue: Record<string, unknown> = {}
+  ): ReturnType<typeof render> => render(getComponent(props, contextValue))
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -148,12 +149,143 @@ describe("PlotlyChart Component", () => {
 
   it("recovers state from widgetMgr if available", () => {
     const savedFigure = { data: [], layout: { title: "Recovered" } }
-    vi.mocked(widgetMgr.getElementState).mockReturnValue(savedFigure)
+    vi.mocked(widgetMgr.getElementState).mockImplementation((_id, stateKey) =>
+      stateKey === "figure" ? savedFigure : DEFAULT_ELEMENT.spec
+    )
 
     renderComponent()
 
     const lastCallProps = getLastPlotProps()
     expect(lastCallProps.layout.title).toBe("Recovered")
+  })
+
+  it("does not access element state for an id-less chart", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      id: "",
+    })
+
+    renderComponent({ element })
+    expect(widgetMgr.getElementState).not.toHaveBeenCalled()
+
+    const figure = { data: [], layout: {}, frames: null }
+    let lastCallProps = getLastPlotProps()
+    act(() => {
+      lastCallProps.onInitialized?.(figure, document.createElement("div"))
+    })
+
+    lastCallProps = getLastPlotProps()
+    act(() => {
+      lastCallProps.onUpdate?.(figure, document.createElement("div"))
+    })
+
+    expect(widgetMgr.setElementState).not.toHaveBeenCalled()
+  })
+
+  it("preserves recovered state when its source spec is unchanged", () => {
+    const savedFigure = { data: [], layout: { title: "Recovered" } }
+    vi.mocked(widgetMgr.getElementState).mockImplementation((_id, stateKey) =>
+      stateKey === "figure" ? savedFigure : DEFAULT_ELEMENT.spec
+    )
+
+    renderComponent()
+
+    expect(getLastPlotProps().layout.title).toBe("Recovered")
+    expect(
+      MockPlot.mock.calls.some(
+        ([props]) =>
+          ((props as PlotParams).layout as { title?: string }).title ===
+          "Test Chart"
+      )
+    ).toBe(false)
+  })
+
+  it("synchronizes the current spec after recovering an older spec", () => {
+    const savedFigure = {
+      data: [],
+      layout: { title: { text: "Recovered" } },
+      frames: null,
+    }
+    const previousSpec = "previous backend spec"
+    vi.mocked(widgetMgr.getElementState).mockImplementation((_id, stateKey) =>
+      stateKey === "figure" ? savedFigure : previousSpec
+    )
+
+    renderComponent()
+
+    const recoveredPlotProps = MockPlot.mock.calls
+      .map(([props]) => props as PlotParams)
+      .find(props => props.layout.title?.text === "Recovered")
+    expect(recoveredPlotProps).toBeDefined()
+    expect(getLastPlotProps().layout.title).toBe("Test Chart")
+
+    act(() => {
+      recoveredPlotProps?.onInitialized?.(
+        savedFigure,
+        document.createElement("div")
+      )
+    })
+    expect(widgetMgr.setElementState).toHaveBeenCalledWith(
+      DEFAULT_ELEMENT.id,
+      "spec",
+      previousSpec
+    )
+  })
+
+  it("applies changed specs to an id-less chart", () => {
+    const element = new PlotlyChartProto({ ...DEFAULT_ELEMENT, id: "" })
+    const { rerender } = renderComponent({ element })
+    const updatedElement = new PlotlyChartProto({
+      ...element,
+      spec: JSON.stringify({
+        data: [{ type: "bar", x: [3, 4], y: [5, 6] }],
+        layout: { title: "Updated Chart" },
+        frames: [{ name: "updated" }],
+      }),
+    })
+
+    rerender(getComponent({ element: updatedElement }))
+
+    const lastCallProps = getLastPlotProps()
+    expect(lastCallProps.data[0].type).toBe("bar")
+    expect(lastCallProps.layout.title).toBe("Updated Chart")
+    expect(lastCallProps.frames).toEqual([{ name: "updated" }])
+  })
+
+  it("applies changed specs to a keyed chart with stable identity", () => {
+    const { rerender } = renderComponent()
+    const updatedElement = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      spec: JSON.stringify({
+        data: [{ type: "scatter", x: [10], y: [20] }],
+        layout: { title: "Updated Keyed Chart" },
+      }),
+    })
+
+    rerender(getComponent({ element: updatedElement }))
+
+    expect(getLastPlotProps().data[0]).toMatchObject({ x: [10] })
+    expect(getLastPlotProps().layout.title).toBe("Updated Keyed Chart")
+  })
+
+  it("recomputes interaction modes when the backend spec changes", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
+    })
+    const { rerender } = renderComponent({ element })
+    expect(getLastPlotProps().layout.dragmode).toBe("pan")
+
+    const updatedElement = new PlotlyChartProto({
+      ...element,
+      spec: JSON.stringify({
+        data: [{ type: "scatter", x: [1, 2], y: [1, 2] }],
+        layout: { dragmode: "zoom" },
+      }),
+    })
+    rerender(getComponent({ element: updatedElement }))
+
+    expect(getLastPlotProps().layout.dragmode).toBe("zoom")
   })
 
   it("updates dimensions based on context", () => {
@@ -349,6 +481,11 @@ describe("PlotlyChart Component", () => {
       DEFAULT_ELEMENT.id,
       "figure",
       newFigure
+    )
+    expect(widgetMgr.setElementState).toHaveBeenCalledWith(
+      DEFAULT_ELEMENT.id,
+      "spec",
+      DEFAULT_ELEMENT.spec
     )
   })
 

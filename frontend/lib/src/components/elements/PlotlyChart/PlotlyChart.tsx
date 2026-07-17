@@ -21,6 +21,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -59,6 +60,8 @@ const MIN_WIDTH = 150
 const RESET_SELECTION_TIMEOUT_MS = 50
 // Default height for Plotly charts when no height is specified
 const DEFAULT_PLOTLY_HEIGHT = 450
+const FIGURE_STATE_KEY = "figure"
+const SPEC_STATE_KEY = "spec"
 
 // Custom icon used in the fullscreen expand toolbar button:
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values */
@@ -118,23 +121,38 @@ export function PlotlyChart({
     }
 
     return JSON.parse(element.spec)
-    // We want to reload the initialFigureSpec object whenever the element id changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-  }, [element.id, element.spec])
+  }, [element.spec])
+
+  // Tracks which backend spec the current figure state was derived from. A
+  // recovered figure can intentionally be older than the incoming spec for one
+  // render so Plotly can reconcile the update and honor layout.uirevision.
+  const lastAppliedSpecRef = useRef(element.spec)
 
   const [plotlyFigure, setPlotlyFigure] = useState<PlotlyFigureType>(() => {
     // If there was already a state with a figure using the same id,
     // use that to recover the state. This happens in some situations
     // where a component un-mounts and mounts again.
-    const initialFigureState = widgetMgr.getElementState<PlotlyFigureType>(
-      element.id,
-      "figure"
-    )
-    if (initialFigureState) {
-      return initialFigureState
+    if (element.id) {
+      const initialFigureState = widgetMgr.getElementState<PlotlyFigureType>(
+        element.id,
+        FIGURE_STATE_KEY
+      )
+      if (initialFigureState) {
+        const savedSpec = widgetMgr.getElementState<string>(
+          element.id,
+          SPEC_STATE_KEY
+        )
+        // Older saved state has no source spec. Its content-derived ID meant it
+        // could only belong to this same spec, so preserve that behavior.
+        lastAppliedSpecRef.current = savedSpec ?? element.spec
+        return initialFigureState
+      }
     }
     return applyTheming(initialFigureSpec, element.theme, theme)
   })
+  // Capture the source spec for this render so asynchronous Plotly callbacks
+  // cannot associate an older rendered figure with a newer backend spec.
+  const plotlyFigureSourceSpec = lastAppliedSpecRef.current
 
   const isSelectionActivated = element.selectionMode.length > 0 && !disabled
   const isLassoSelectionActivated =
@@ -203,10 +221,7 @@ export function PlotlyChart({
       config.modeBarButtonsToRemove = modeBarButtonsToRemove
     }
     return config
-    // We want to reload the plotlyConfig object whenever the element id changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [
-    element.id,
     element.config,
     isFullScreen,
     disableFullscreenMode,
@@ -223,6 +238,17 @@ export function PlotlyChart({
       return applyTheming(prevState, element.theme, theme)
     })
   }, [element.id, theme, element.theme])
+
+  useEffect(() => {
+    if (lastAppliedSpecRef.current === element.spec) {
+      return
+    }
+
+    // Apply changed backend data to the existing Plotly instance. Plotly.react
+    // can then preserve or reset UI state according to layout.uirevision.
+    lastAppliedSpecRef.current = element.spec
+    setPlotlyFigure(applyTheming(initialFigureSpec, element.theme, theme))
+  }, [element.spec, element.theme, initialFigureSpec, theme])
 
   useEffect(() => {
     let updatedClickMode: typeof initialFigureSpec.layout.clickmode =
@@ -292,11 +318,8 @@ export function PlotlyChart({
         },
       }
     })
-    // We want to reload these options whenever the element id changes
-    // or the selection modes change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [
-    element.id,
+    initialFigureSpec,
     isSelectionActivated,
     isPointsSelectionActivated,
     isBoxSelectionActivated,
@@ -480,6 +503,21 @@ export function PlotlyChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [plotlyFigure.layout?.dragmode])
 
+  // Persist the figure together with the spec it was derived from so the state
+  // can be recovered and correctly reconciled after the chart remounts. Charts
+  // without an id (passive and unkeyed) are not persisted.
+  const persistFigureState = (figure: Readonly<PlotlyFigureType>): void => {
+    if (!element.id) {
+      return
+    }
+    widgetMgr.setElementState(element.id, FIGURE_STATE_KEY, figure)
+    widgetMgr.setElementState(
+      element.id,
+      SPEC_STATE_KEY,
+      plotlyFigureSourceSpec
+    )
+  }
+
   return (
     <StyledPlotlyChartContainer
       ref={containerRef}
@@ -520,13 +558,10 @@ export function PlotlyChart({
               }
             : undefined
         }
-        onInitialized={figure => {
-          widgetMgr.setElementState(element.id, "figure", figure)
-        }}
+        onInitialized={persistFigureState}
         // Update the figure state on every change to the figure itself:
         onUpdate={figure => {
-          // Save the updated figure state to allow it to be recovered
-          widgetMgr.setElementState(element.id, "figure", figure)
+          persistFigureState(figure)
           setPlotlyFigure(figure)
         }}
       />
