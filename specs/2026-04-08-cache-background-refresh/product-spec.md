@@ -160,13 +160,23 @@ Time=2h+1s    : Call -> cache miss -> blocking foreground compute (errors surfac
   and don't evict the stale entry. Users keep seeing (bounded) stale data while
   refreshes fail; the error only surfaces to a user after hard expiry, when the next
   call re-executes the function in the foreground.
-- **No st.* replay after refresh**: On a stale hit, the element output captured when the
-  entry was first computed still replays as it does today. But a background refresh runs
-  without a `ScriptRunContext`, so it captures **no** `st.*` messages; after a successful
-  refresh, subsequent hits replay nothing — silently dropping element output for apps that
-  rely on cached `st.*` replay. Such apps should avoid `refresh_mode="background"` (or move
-  display calls outside the cached function); this is consistent with current behavior when
-  calling cached functions from non-script contexts and will be called out in the docstring.
+- **No st.* replay in background mode**: For `refresh_mode="background"`, cached `st.*`
+  replay is disabled entirely — from the start, not just after the first refresh. Display
+  commands inside the function still render live during the actual miss/refresh execution
+  (the function really runs in that script run), but their captured output is **not**
+  re-enqueued on later cache *hits*. So display output appears on the initial miss and then
+  no longer appears on the next rerun — a consistent, deterministic behavior that surfaces
+  immediately in development. This deliberately avoids the confusing alternative where output
+  replays on every hit until the first background refresh and then silently disappears (a
+  change that could surface hours later in production). To avoid a silent surprise, Streamlit
+  emits a warning when a background-mode cached function issues display commands — consistent
+  with the existing cached-widget warning — and this is called out in the docstring. Apps that
+  rely on cached `st.*` replay should use `refresh_mode="foreground"` or move display calls
+  outside the cached function. (A hard error was considered and rejected: `st.*` usage is only
+  reliably detectable at first compute, so raising would fail late and non-deterministically,
+  break the "just add a parameter" migration path, and discard a correctly refreshed value —
+  all inconsistent with Streamlit's warn-and-degrade handling of `st.*` in cached/non-script
+  contexts.)
 - **Spinner behavior**: When `refresh_mode="background"` and the cached entry is stale,
   the stale value is returned immediately without showing a spinner, since there's no
   blocking wait. The `show_spinner` parameter only applies to foreground execution (cache
@@ -405,6 +415,31 @@ natural pair.
 
 ## Alternative Solutions
 
+### The Refresh Trilemma
+
+Any cache refresh strategy has to trade off three guarantees and cannot deliver all of
+them at once — every strategy sacrifices at least one:
+
+1. **Never block**: a request never waits for the function to execute
+2. **Bounded staleness**: served data is never older than a known limit
+3. **Bounded resources**: memory and compute stay proportional to what users actually
+   request
+
+| Strategy                              | Blocking                        | Staleness   | Extra compute         | Extra memory      |
+|---------------------------------------|---------------------------------|-------------|-----------------------|-------------------|
+| Foreground (today)                    | Every expiry                    | ≤ `ttl`     | None                  | None              |
+| **Bounded stale-while-revalidate (chosen)** | Only after idle gap > `2 × ttl` | ≤ `2 × ttl` | None                  | ≤ one extra `ttl` |
+| Unbounded stale retention             | Never                           | Unbounded   | None                  | Unbounded         |
+| Refresh-ahead (`ttl` hard limit)      | After idle gaps                 | ≤ `ttl`     | Up to 2× for hot keys | None              |
+| Eager/proactive refresh               | Never                           | ≤ `ttl`     | Unbounded (refreshes keys nobody requests) | High (tracks all keys) |
+
+The chosen design keeps everything bounded and relaxes "never block" only minimally:
+requests block solely after an idle gap longer than `2 × ttl` — exactly the case where
+blocking is also today's behavior. Notably, it adds **zero compute** over foreground
+mode: background refreshes fire at precisely the moments a foreground miss would have
+executed the function; the work just moves off the user's thread. The sections below
+detail the rejected strategies.
+
 ### Eager Background Refresh (Proactive)
 
 Instead of waiting for the next access after TTL expires, proactively refresh cache entries
@@ -476,9 +511,7 @@ entry is accessed in the second half of its fresh window (Guava/Caffeine's
   the refresh window, so the entry expires normally and the first morning user still
   blocks
 - Multiplies compute for frequently accessed keys: a continuously accessed key refreshes
-  every `0.5 × ttl` instead of every `ttl` (worse with fragments/autorefresh). The
-  chosen stale-while-revalidate design adds no compute over foreground mode — refreshes
-  fire exactly when a foreground miss would have
+  every `0.5 × ttl` instead of every `ttl` (worse with fragments/autorefresh)
 
 Could be added later as an additional `refresh_mode` for apps where data accuracy
 matters more than compute cost.
@@ -540,4 +573,4 @@ fetch_stock_prices.warm("AAPL", "GOOGL", "MSFT")
 | No new dependencies        | ✅ Uses stdlib `concurrent.futures`; builds on the internal `TTLCache` introduced in [#16014](https://github.com/streamlit/streamlit/pull/16014) |
 | Metrics collected          | ✅ Cache API usage is already tracked via the existing `gather_metrics` decorator. Distinguishing `refresh_mode="background"` adoption specifically needs explicit instrumentation — `gather_metrics` records argument names/types but not string values (and `"background"`/`"foreground"` even share the same length) — added as part of the tech spec. |
 | Any security/legal impact? | ✅ No new security concerns                                          |
-| Any docs changes needed?   | ✅ Document `refresh_mode` param, note about `st.*` calls not replaying |
+| Any docs changes needed?   | ✅ Document `refresh_mode` param, note that `st.*` display output isn't replayed on cache hits in background mode (and that Streamlit warns when display commands are used) |
