@@ -147,8 +147,8 @@ preserved. The only discipline this requires is that data shared across fragment
 - **`key=`** — rejected: ambiguous on `st.rerun` ("the key of what?"), and reserving `key` at call
   time collides with the `@st.fragment(key=...)` decorator name.
 - **Overloading `scope`** (chosen) — one parameter answers "what does this rerun cover?"; the reserved
-  literals `"app"`/`"fragment"` and any fragment key never conflict in practice (see "Addressing
-  fragments" for the key-naming rule that guarantees this).
+  literals `"app"`/`"fragment"` and any fragment key never conflict, because those two strings are
+  disallowed as fragment keys (see "Addressing fragments" for this reserved-key rule).
 
 ### Limiting targeted reruns to callbacks
 
@@ -201,6 +201,12 @@ def charts():
 charts()                          # any number of call sites; all rerun together on target
 st.button("Refresh", on_click=lambda: st.rerun("charts"))  # reruns every call site
 ```
+
+**`"app"` and `"fragment"` are reserved keys.** Since `st.rerun(scope=...)` reads any value other than
+the level literals `"app"` and `"fragment"` as a fragment key, those two strings cannot themselves be
+fragment keys — declaring `@st.fragment(key="app")` or `@st.fragment(key="fragment")` raises a
+`StreamlitAPIException`. This is the naming rule that keeps a fragment key from ever colliding with a
+reserved level name, so `st.rerun("app")` and `st.rerun("fragment")` are always unambiguous.
 
 Why this shape:
 
