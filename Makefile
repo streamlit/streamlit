@@ -180,36 +180,6 @@ python-init:
 		fi; \
 	fi
 
-.PHONY: python-init-runtime
-# Install the locked runtime-only Python environment.
-python-init-runtime: PYTHON_DEPENDENCY_GROUP=runtime
-python-init-runtime: python-init
-
-.PHONY: python-init-test
-# Install the locked Python test environment.
-python-init-test: PYTHON_DEPENDENCY_GROUP=test
-python-init-test: python-init
-
-.PHONY: python-init-dev
-# Install the locked Python development environment.
-python-init-dev: PYTHON_DEPENDENCY_GROUP=dev
-python-init-dev: python-init
-
-.PHONY: python-init-integration
-# Install the locked Python integration environment.
-python-init-integration: PYTHON_DEPENDENCY_GROUP=integration
-python-init-integration: python-init
-
-.PHONY: check-python-lock
-# Check that Python dependency manifests agree with uv.lock.
-check-python-lock:
-	uv lock --check
-
-.PHONY: update-python-lock
-# Upgrade all Python dependencies recorded in uv.lock.
-update-python-lock:
-	env -u UV_LOCKED uv lock --upgrade
-
 .PHONY: python-lint
 # Lint and check formatting of Python files.
 python-lint:
@@ -245,7 +215,7 @@ python-performance-tests:
 		lib/tests/
 
 .PHONY: python-integration-tests
-# Run Python integration tests. Requires `make python-init-integration` first.
+# Run Python integration tests. Requires `PYTHON_DEPENDENCY_GROUP=integration make python-init` first.
 python-integration-tests:
 	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
 	MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v -l \
@@ -578,7 +548,7 @@ update-headers:
 .PHONY: update-min-deps
 # Update minimum dependency constraints file.
 update-min-deps:
-	INSTALL_PLAYWRIGHT=false $(MAKE) python-init-dev >/dev/null
+	INSTALL_PLAYWRIGHT=false PYTHON_DEPENDENCY_GROUP=dev $(MAKE) python-init >/dev/null
 	uv run --no-sync python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
 
 .PHONY: debug-e2e-test

@@ -198,14 +198,11 @@ The supported selections are:
 | Development | `uv sync --locked --no-default-groups --group dev` |
 | Integration | `uv sync --locked --no-default-groups --group integration` |
 
-Expose these through discoverable Make targets (`python-init`, `python-init-test`,
-`python-init-integration`) or a validated `PYTHON_DEPENDENCY_GROUP` value. `make all-dev`
-continues to select `dev` by default.
+Expose these through the existing `python-init` target and a validated
+`PYTHON_DEPENDENCY_GROUP` value. `make all-dev` continues to select `dev` by default.
 
-Add:
-
-- `make check-python-lock` -> `uv lock --check`
-- `make update-python-lock` -> `uv lock --upgrade`
+Use `uv lock --check` to validate the lock and `uv lock --upgrade` to perform a full
+compatible upgrade.
 
 Targeted upgrades remain:
 
@@ -614,8 +611,8 @@ review to surface its changes.
 3. **Protobuf lower bound:** Generate min-compatible code in the minimum job, or raise the
    published protobuf minimum. Preferred: preserve 3.20 by generating with a compatible
    protoc (3.x / early 4.x series, not the pinned protoc 26.1) in that job.
-4. **Environment command interface:** Separate Make targets versus one validated
-   `PYTHON_DEPENDENCY_GROUP` variable. Both must use explicit no-default-group semantics.
+4. **Environment command interface:** Use the existing `python-init` target with one
+   validated `PYTHON_DEPENDENCY_GROUP` variable and explicit no-default-group semantics.
 5. **Root development Python range:** Optionally restrict lock resolution to the currently
    supported 3.10-3.14 range through the dev project or `tool.uv.environments`; this can
    reduce future-Python resolution churn but requires an update whenever support expands.

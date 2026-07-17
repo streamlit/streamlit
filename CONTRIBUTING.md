@@ -214,10 +214,10 @@ You can also install one explicit final environment:
 
 | Environment | Command |
 |---|---|
-| Runtime only | `make python-init-runtime` |
-| Unit/E2E tests | `make python-init-test` |
-| Development (tests plus lint, types, and release tools) | `make python-init-dev` |
-| Integration tests | `make python-init-integration` |
+| Runtime only | `PYTHON_DEPENDENCY_GROUP=runtime make python-init` |
+| Unit/E2E tests | `PYTHON_DEPENDENCY_GROUP=test make python-init` |
+| Development (tests plus lint, types, and release tools) | `make python-init` |
+| Integration tests | `PYTHON_DEPENDENCY_GROUP=integration make python-init` |
 
 These commands exact-sync the same `.venv`, so switching selections mutates it. Set a distinct `UV_PROJECT_ENVIRONMENT` path for each selection if you need simultaneous environments.
 
@@ -287,7 +287,7 @@ make init
 > [!IMPORTANT]
 > If your change updates `frontend/yarn.lock` (for example, after adding or upgrading dependencies), run `cd frontend && yarn dedupe` before committing. Our `scripts/check_yarn_dedupe.sh` hook enforces this locally (via pre-commit) and in CI, so handling it upfront keeps your PR green.
 
-For Python dependencies, edit the relevant `pyproject.toml`, run `uv lock`, review the generated lock diff, and commit both files. Use `uv lock --upgrade-package <package>` for a targeted upgrade, `make update-python-lock` for a full compatible upgrade, and `make check-python-lock` to verify manifest consistency. Do not hand-edit `uv.lock`.
+For Python dependencies, edit the relevant `pyproject.toml`, run `uv lock`, review the generated lock diff, and commit both files. Use `uv lock --upgrade-package <package>` for a targeted upgrade, `uv lock --upgrade` for a full compatible upgrade, and `uv lock --check` to verify manifest consistency. Do not hand-edit `uv.lock`.
 
 ### 6. Running tests
 
@@ -451,7 +451,7 @@ def test_streamlit_version(self):
       ?      ^
 ```
 
-To fix this make sure your Python environment is set up correctly. Try running `make python-init-dev` to reinstall locked dependencies, or delete the `.venv` directory and run `make all-dev` again to recreate the environment.
+To fix this make sure your Python environment is set up correctly. Try running `make python-init` to reinstall locked development dependencies, or delete the `.venv` directory and run `make all-dev` again to recreate the environment.
 
 #### `protoc` command fails because of version mismatch
 

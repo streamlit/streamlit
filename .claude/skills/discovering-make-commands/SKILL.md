@@ -17,17 +17,11 @@ protobuf                  Recompile Protobufs for Python and the frontend.
 protobuf-lint             Lint and check formatting of protobuf files (buf).
 protobuf-format           Format protobuf files (buf).
 python-init               Install Python dependencies and Streamlit in editable mode.
-python-init-runtime       Install the locked runtime-only Python environment.
-python-init-test          Install the locked Python test environment.
-python-init-dev           Install the locked Python development environment.
-python-init-integration   Install the locked Python integration environment.
-check-python-lock         Check that Python dependency manifests agree with uv.lock.
-update-python-lock        Upgrade all Python dependencies recorded in uv.lock.
 python-lint               Lint and check formatting of Python files.
 python-format             Format Python files.
 python-tests              Run Python unit tests.
 python-performance-tests  Run Python performance tests.
-python-integration-tests  Run Python integration tests. Requires `make python-init-integration` first.
+python-integration-tests  Run Python integration tests. Requires `PYTHON_DEPENDENCY_GROUP=integration make python-init` first.
 python-types              Run the Python type checker.
 frontend-init             Install all frontend dependencies.
 frontend                  Build the frontend.
