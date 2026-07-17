@@ -15,18 +15,17 @@ GitHub Actions job.
 
 ## Inputs
 
-Inputs are read from environment variables so the same flow works locally and in CI.
-Sensible local defaults are provided.
+Locally, the agent already knows which issue it's working on — substitute the number
+directly as `<N>` in the commands below (resolve a URL to its number first). Don't rely
+on a persisted or exported `ISSUE`. In CI, a workflow provides these as environment
+variables instead. Either way, the defaults below apply when a value isn't given.
 
-| Variable | Required | Default | Description |
+| Input | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `ISSUE` | yes | — | Issue number (e.g. `16003`) or full URL. |
+| `<N>` (`ISSUE` in CI) | yes | — | Issue number (e.g. `16003`) or full URL — resolve a URL to its number first. |
 | `OUT_DIR` | no | `work-tmp/debug` | Staging directory for the repro bundle and working files. |
 | `REPORTED_VERSION` | no | parsed from issue | Streamlit version to confirm the bug on. |
 | `STREAMLIT_APP_URL` | no | see Step 3 | URL the Playwright script connects to. |
-
-If `ISSUE` is not set, the invoking caller (command or workflow) is expected to pass
-the issue as an argument; resolve it to a number `<N>` before proceeding.
 
 ## Outputs
 

@@ -6,9 +6,10 @@ Reproduce GitHub issue **$ARGUMENTS** end-to-end for local triage.
 
 This command orchestrates two skills. Run them in order:
 
-1. **Investigate** — follow the `reproducing-issues` skill with `ISSUE=$ARGUMENTS`.
-   Use the local default (`OUT_DIR=work-tmp/debug`). The skill is non-interactive and
-   writes a repro bundle to `work-tmp/debug/gh-<N>/`, including `result.json`.
+1. **Investigate** — follow the `reproducing-issues` skill for issue `$ARGUMENTS` (use
+   the number directly as `<N>` — no need to export it). The skill is non-interactive
+   and writes a repro bundle to the default `work-tmp/debug/gh-<N>/`, including
+   `result.json`.
 
 2. **Review the verdict** in `result.json`, then act based on it (this is the
    interactive part the skill deliberately leaves to the caller):
@@ -26,8 +27,7 @@ This command orchestrates two skills. Run them in order:
    and screenshots.
 
 4. **Ask whether to publish.** Only if I confirm, follow the `publishing-issue-repros`
-   skill with `ISSUE` set to the **numeric** issue number from `result.json` (not the
-   raw URL, so the `gh-<N>` paths resolve correctly), plus the same
-   `OUT_DIR`/`ST_ISSUES_DIR`, to copy the bundle into st-issues, commit, and push. If a
-   repro for this issue already exists there, tell me it's a refresh and confirm before
-   overwriting. Never publish without my confirmation.
+   skill for the **numeric** issue number from `result.json` (not the raw URL, so the
+   `gh-<N>` paths resolve correctly) to copy the bundle into st-issues, commit, and
+   push. If a repro for this issue already exists there, tell me it's a refresh and
+   confirm before overwriting. Never publish without my confirmation.

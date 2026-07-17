@@ -16,9 +16,13 @@ publishable, but record it in the commit message.
 
 ## Inputs
 
-| Variable | Required | Default | Description |
+This skill runs locally. Substitute the issue number directly as `<N>` in the commands
+below (numeric only — normalize a URL to its number first). `OUT_DIR` and
+`ST_ISSUES_DIR` are optional paths with the defaults shown.
+
+| Input | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `ISSUE` | yes | — | Issue number `<N>` (numeric only — normalize a URL to its number first). |
+| `<N>` | yes | — | Issue number (numeric only). |
 | `OUT_DIR` | no | `work-tmp/debug` | Where the bundle was written by the investigate phase. |
 | `ST_ISSUES_DIR` | no | `~/dev/st-issues` | Local st-issues checkout to publish into. |
 
@@ -38,11 +42,10 @@ repro — proceed, but say so in the commit message.
 ## Publish
 
 ```bash
-N="${ISSUE}"
-SRC="${OUT_DIR:-work-tmp/debug}/gh-${N}"
-DEST="${ST_ISSUES_DIR:-$HOME/dev/st-issues}/issues/gh-${N}"
+SRC="${OUT_DIR:-work-tmp/debug}/gh-<N>"
+DEST="${ST_ISSUES_DIR:-$HOME/dev/st-issues}/issues/gh-<N>"
 
-[ -d "$DEST" ] && echo "Refreshing existing repro for gh-${N}"
+[ -d "$DEST" ] && echo "Refreshing existing repro for gh-<N>"
 mkdir -p "$DEST"
 cp "$SRC/app.py" "$SRC/NOTES.md" "$DEST/"
 if [ -f "$SRC/requirements.txt" ]; then
@@ -52,9 +55,9 @@ else
 fi
 
 cd "${ST_ISSUES_DIR:-$HOME/dev/st-issues}"
-python -m py_compile "issues/gh-${N}/app.py"
-git add "issues/gh-${N}/"
-git commit -m "Add reproduction for issue #${N}: <Short Title>"
+python -m py_compile "issues/gh-<N>/app.py"
+git add "issues/gh-<N>/"
+git commit -m "Add reproduction for issue #<N>: <Short Title>"
 git push origin main
 ```
 
