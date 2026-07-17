@@ -163,6 +163,7 @@ streamlit = [
     ".agents/**/*.md",
     ".agents/skills/**/assets/templates/**/*.py",
     ".agents/skills/**/assets/templates/**/*.toml",
+    ".agents/meta-skill/**/*.py",
     "hello/**/*.py",
 ]
 
