@@ -106,6 +106,23 @@ with st.expander("Vertical alignment - top", expanded=True):
     col3.checkbox("Checkbox 1 (top)")
     col3.checkbox("Checkbox 2 (top)")
 
+with st.expander(
+    "Vertical alignment - top with nested horizontal container", expanded=True
+):
+    # Regression coverage for #13162: checkboxes nested inside a horizontal
+    # container within a TOP-aligned column should NOT receive the
+    # alignment margin-top — only direct-child checkboxes of the column
+    # should.
+    col1, col2 = st.columns(2, vertical_alignment="top")
+    with col1:
+        st.button("Button 1 (nested)", width="stretch")
+        st.button("Button 2 (nested)", width="stretch")
+    with col2:
+        with st.container(horizontal=True):
+            st.checkbox("Nested checkbox 1", key="cb_nested_1")
+            st.checkbox("Nested checkbox 2", key="cb_nested_2")
+            st.checkbox("Nested checkbox 3", key="cb_nested_3")
+
 with st.expander("Vertical alignment - center", expanded=True):
     col1, col2, col3 = st.columns(3, vertical_alignment="center")
     col1.text_input("Text input (center)")

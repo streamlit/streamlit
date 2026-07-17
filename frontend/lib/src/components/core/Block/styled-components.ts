@@ -172,18 +172,24 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       },
       ...(verticalAlignment === VerticalAlignment.BOTTOM && {
         marginTop: "auto",
-        // Add margin to the first checkbox/toggle within the column to align it
-        // better with other input widgets.
-        [`& ${StyledElementContainer}:last-of-type > ${StyledCheckbox}`]: {
-          marginBottom: theme.spacing.sm,
-        },
+        // Align the last direct-child checkbox/toggle with other input widgets.
+        // Scoped to the column's own stVerticalBlock so nested containers
+        // (e.g. horizontal containers of checkboxes) do not also get matched
+        // (issue #13162).
+        [`& > [data-testid="stVerticalBlock"] > ${StyledElementContainer}:last-of-type > ${StyledCheckbox}`]:
+          {
+            marginBottom: theme.spacing.sm,
+          },
       }),
       ...(verticalAlignment === VerticalAlignment.TOP && {
-        // Add margin to the first checkbox/toggle within the column to align it
-        // better with other input widgets.
-        [`& ${StyledElementContainer}:first-of-type > ${StyledCheckbox}`]: {
-          marginTop: theme.spacing.sm,
-        },
+        // Align the first direct-child checkbox/toggle with other input
+        // widgets. Scoped to the column's own stVerticalBlock so nested
+        // containers (e.g. horizontal containers of checkboxes) do not also
+        // get matched (issue #13162).
+        [`& > [data-testid="stVerticalBlock"] > ${StyledElementContainer}:first-of-type > ${StyledCheckbox}`]:
+          {
+            marginTop: theme.spacing.sm,
+          },
       }),
       ...(verticalAlignment === VerticalAlignment.CENTER && {
         marginTop: "auto",
