@@ -63,6 +63,9 @@ export function ToolbarAction({
         // The default tooltip delay (== how fast the tooltip is triggered) of 200ms
         // is a bit too fast for the toolbar use case. Therefore, we are setting it to 1000ms.
         onMouseEnterDelay={1000}
+        closeDelay={0}
+        dismissOnClick
+        interactive={false}
         inline
       >
         <Button

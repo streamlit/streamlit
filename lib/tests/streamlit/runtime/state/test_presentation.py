@@ -81,6 +81,17 @@ def test_apply_presenter_swallows_presenter_errors() -> None:
     assert out is base
 
 
+def test_apply_presenter_non_callable_presenter() -> None:
+    """Return base value unchanged when presenter is not callable."""
+    ss = _FakeSession()
+    ss._new_widget_state.widget_metadata["wid"] = SimpleNamespace(
+        presenter="not-callable"
+    )
+    base = {"value": 42}
+    out = apply_presenter(ss, "wid", base)
+    assert out is base
+
+
 def test_presenter_applied_once_via_getitem_and_filtered_state() -> None:
     """Presenter must be applied exactly once for both __getitem__ and filtered_state.
 

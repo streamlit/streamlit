@@ -51,7 +51,7 @@ const enforceMemo = createRule<[], MessageIds>({
     const componentsUsedInHOCs = new Map<string, string | boolean>() // Maps component name to HOC variable name or true if memoized
     const hocWrappedComponents = new Set<string>() // Set of HOC-wrapped component variable names
     const exportedComponents = new Set<string>() // Set of component names that are exported
-    const sourceCode = context.getSourceCode()
+    const sourceCode = context.sourceCode
     const sourceText = sourceCode.getText()
 
     // Cache for HOC pattern matching to avoid recompiling regex on every call
@@ -274,11 +274,11 @@ const enforceMemo = createRule<[], MessageIds>({
         if (Array.isArray(node.body)) {
           node.body.forEach(child => {
             if (child && typeof child === "object" && "type" in child) {
-              findReturnStatements(child as TSESTree.Node, results)
+              findReturnStatements(child, results)
             }
           })
         } else if (typeof node.body === "object" && "type" in node.body) {
-          findReturnStatements(node.body as TSESTree.Node, results)
+          findReturnStatements(node.body, results)
         }
       }
 
@@ -289,7 +289,7 @@ const enforceMemo = createRule<[], MessageIds>({
         typeof node.consequent === "object" &&
         "type" in node.consequent
       ) {
-        findReturnStatements(node.consequent as TSESTree.Node, results)
+        findReturnStatements(node.consequent, results)
       }
       if (
         "alternate" in node &&
@@ -297,12 +297,12 @@ const enforceMemo = createRule<[], MessageIds>({
         typeof node.alternate === "object" &&
         "type" in node.alternate
       ) {
-        findReturnStatements(node.alternate as TSESTree.Node, results)
+        findReturnStatements(node.alternate, results)
       }
       if ("cases" in node && node.cases && Array.isArray(node.cases)) {
         node.cases.forEach(c => {
           if (c && typeof c === "object" && "type" in c) {
-            findReturnStatements(c as TSESTree.Node, results)
+            findReturnStatements(c, results)
           }
         })
       }
@@ -322,9 +322,7 @@ const enforceMemo = createRule<[], MessageIds>({
         node.body.type === AST_NODE_TYPES.BlockStatement
       ) {
         // Check function body for JSX in return statements
-        const returnStatements = findReturnStatements(
-          node.body as TSESTree.Node
-        )
+        const returnStatements = findReturnStatements(node.body)
         return returnStatements.some(
           stmt =>
             stmt.argument?.type === AST_NODE_TYPES.JSXElement ||

@@ -1,8 +1,8 @@
 # TypeScript Development Guide
 
-- TypeScript: v6
-- Linters: oxlint v1 + eslint v9
-- Formatter: oxfmt v0.43
+- TypeScript: v7 for type-checking (native `tsc`, run via the `typescript-v7` alias); v6 stays for `.d.ts` emit (vite-plugin-dts) and typed linting (typescript-eslint), which need the v6 compiler API
+- Linters: oxlint v1 + eslint v10
+- Formatter: oxfmt v0.x
 - Framework: React v18
 - Styling: @emotion/styled v11
 - Build tool: vite v8

@@ -16,7 +16,7 @@
 
 import { MockInstance } from "vitest"
 
-import { ForwardMsgList } from "@streamlit/protobuf"
+import { ForwardMsg, ForwardMsgList } from "@streamlit/protobuf"
 
 import { ConnectionState } from "./ConnectionState"
 import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
@@ -170,8 +170,11 @@ describe("StaticConnection", () => {
         })
       )
 
-      const mockForwardMsgList = new ForwardMsgList({
-        messages: [{ hash: "string1" }, { hash: "string2" }],
+      const mockForwardMsgList = ForwardMsgList.create({
+        messages: [
+          ForwardMsg.create({ hash: "string1" }),
+          ForwardMsg.create({ hash: "string2" }),
+        ],
       })
       const decodeSpy = vi
         .spyOn(ForwardMsgList, "decode")
@@ -224,6 +227,10 @@ describe("StaticConnection", () => {
     })
 
     beforeEach(() => {
+      const encodedForwardMsgList = ForwardMsgList.encode(
+        ForwardMsgList.create({ messages: [] })
+      ).finish()
+
       // Handles getStaticConfig
       // eslint-disable-next-line no-proto
       vi.spyOn(window.localStorage.__proto__, "getItem").mockReturnValue(
@@ -235,7 +242,14 @@ describe("StaticConnection", () => {
       global.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
-          arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+          arrayBuffer: () =>
+            Promise.resolve(
+              encodedForwardMsgList.buffer.slice(
+                encodedForwardMsgList.byteOffset,
+                encodedForwardMsgList.byteOffset +
+                  encodedForwardMsgList.byteLength
+              )
+            ),
         })
       )
     })

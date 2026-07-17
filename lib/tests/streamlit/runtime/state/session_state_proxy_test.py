@@ -17,17 +17,28 @@
 from __future__ import annotations
 
 import unittest
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.state import SafeSessionState, SessionState, SessionStateProxy
+from streamlit.runtime.state import (
+    SafeSessionState,
+    SessionState,
+    SessionStateProxy,
+)
+from streamlit.runtime.state import (
+    session_state_proxy as session_state_proxy_module,
+)
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
     require_valid_user_key,
 )
+from streamlit.runtime.state.session_state_proxy import get_session_state
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 def _create_mock_session_state(
@@ -136,3 +147,67 @@ class SessionStateProxyAttributeTests(unittest.TestCase):
     def test_setattr(self):
         self.session_state_proxy.corge = "grault2"
         assert self.session_state_proxy.corge == "grault2"
+
+    @patch(
+        "streamlit.runtime.state.session_state_proxy.get_session_state",
+        MagicMock(return_value=SessionState(_new_session_state={"foo": "bar"})),
+    )
+    def test_getattr_missing_key_raises_attribute_error(self):
+        """``getattr`` for a missing key raises ``AttributeError`` (not ``KeyError``)."""
+        with pytest.raises(AttributeError, match="has no attribute"):
+            _ = self.session_state_proxy.missing_attr
+
+
+@patch(
+    "streamlit.runtime.state.session_state_proxy.get_session_state",
+    MagicMock(return_value=_create_mock_session_state({"foo": "bar"})),
+)
+def test_session_state_proxy_str_returns_filtered_state_string() -> None:
+    """``str(session_state_proxy)`` returns the string repr of the filtered state."""
+    assert str(SessionStateProxy()) == str({"foo": "bar"})
+
+
+@pytest.fixture
+def _reset_mock_session_state() -> Iterator[None]:
+    """Reset module-level mock session state singletons before and after the test."""
+    session_state_proxy_module._mock_session_state = None
+    session_state_proxy_module._state_use_warning_already_displayed = False
+    yield
+    session_state_proxy_module._mock_session_state = None
+    session_state_proxy_module._state_use_warning_already_displayed = False
+
+
+@pytest.mark.usefixtures("_reset_mock_session_state")
+@patch(
+    "streamlit.runtime.scriptrunner_utils.script_run_context.get_script_run_ctx",
+    MagicMock(return_value=None),
+)
+@patch("streamlit.runtime.exists", MagicMock(return_value=False))
+def test_get_session_state_falls_back_to_mock_when_no_ctx() -> None:
+    """When ``get_script_run_ctx`` returns ``None``, ``get_session_state`` returns a
+    lazily-initialized mock ``SafeSessionState`` and warns once.
+    """
+    with patch("streamlit.runtime.state.session_state_proxy._LOGGER") as mock_logger:
+        first = get_session_state()
+        # Repeated invocations should reuse the same mock instance and not
+        # re-emit the warning.
+        second = get_session_state()
+
+    assert isinstance(first, SafeSessionState)
+    assert first is second
+    mock_logger.warning.assert_called_once()
+
+
+@pytest.mark.usefixtures("_reset_mock_session_state")
+@patch(
+    "streamlit.runtime.scriptrunner_utils.script_run_context.get_script_run_ctx",
+    MagicMock(return_value=None),
+)
+@patch("streamlit.runtime.exists", MagicMock(return_value=True))
+def test_get_session_state_skips_warning_when_runtime_exists() -> None:
+    """When a runtime exists but ``ctx`` is ``None``, no warning is emitted."""
+    with patch("streamlit.runtime.state.session_state_proxy._LOGGER") as mock_logger:
+        result = get_session_state()
+
+    assert isinstance(result, SafeSessionState)
+    mock_logger.warning.assert_not_called()

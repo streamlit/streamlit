@@ -16,7 +16,7 @@
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 // @ts-check
-// eslint-disable-next-line import/no-extraneous-dependencies
+// eslint-disable-next-line import-x/no-extraneous-dependencies
 import { defaultConfig, desktopConfig } from "lighthouse"
 
 import path from "path"

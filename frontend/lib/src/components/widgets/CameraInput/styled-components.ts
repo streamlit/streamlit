@@ -115,7 +115,7 @@ export const StyledSwitchFacingModeButton = styled.div(({ theme }) => ({
   zIndex: theme.zIndices.priority,
   color: theme.colors.fadedText40,
   mixBlendMode: "difference",
-  opacity: 0.6,
+  opacity: theme.opacities.secondary,
 }))
 
 export const StyledProgressBar = styled.div({

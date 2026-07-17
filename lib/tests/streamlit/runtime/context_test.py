@@ -15,12 +15,10 @@
 from __future__ import annotations
 
 import unittest
-from http.cookies import Morsel
 from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
-from tornado.httputil import HTTPHeaders
 
 import streamlit as st
 from streamlit.runtime.context import (
@@ -193,14 +191,6 @@ class StreamlitHeadersTest(unittest.TestCase):
         with pytest.raises(KeyError, match="non-existent"):
             _ = headers["non-existent"]
 
-    def test_headers_from_tornado(self):
-        """Test creating StreamlitHeaders from Tornado HTTPHeaders."""
-        tornado_headers = HTTPHeaders()
-        tornado_headers.add("Content-Type", "text/html")
-        tornado_headers.add("Content-Type", "text/plain")
-        headers = StreamlitHeaders.from_tornado_headers(tornado_headers)
-        assert headers.get_all("content-type") == ["text/html", "text/plain"]
-
 
 class StreamlitCookiesTest(unittest.TestCase):
     """Test StreamlitCookies class methods."""
@@ -221,16 +211,6 @@ class StreamlitCookiesTest(unittest.TestCase):
         cookies = StreamlitCookies({"session_id": "abc123", "user_id": "456"})
         cookie_keys = list(cookies)
         assert sorted(cookie_keys) == ["session_id", "user_id"]
-
-    def test_cookies_from_tornado(self):
-        """Test creating StreamlitCookies from Tornado cookies."""
-        morsel1 = Morsel()
-        morsel1.set("session_id", "abc123", "abc123")
-        morsel2 = Morsel()
-        morsel2.set("user_id", "456", "456")
-        tornado_cookies = {"session_id": morsel1, "user_id": morsel2}
-        cookies = StreamlitCookies.from_tornado_cookies(tornado_cookies)
-        assert cookies.to_dict() == {"session_id": "abc123", "user_id": "456"}
 
 
 class StreamlitThemeTest(unittest.TestCase):

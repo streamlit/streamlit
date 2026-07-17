@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, useContext } from "react"
+import { FC, ReactNode, useContext } from "react"
 
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
@@ -22,27 +22,47 @@ import { describe, expect, it } from "vitest"
 import { FlexContext, FlexContextProvider, IFlexContext } from "./FlexContext"
 import { Direction } from "./utils"
 
-describe("FlexContextProvider", () => {
-  // Helper component to consume and display context values
-  const ContextConsumer: FC = () => {
-    const context = useContext(FlexContext)
-    return (
-      <div data-testid="context-consumer">
-        <div data-testid="direction">{context?.direction}</div>
-        <div data-testid="isInHorizontalLayout">
-          {String(context?.isInHorizontalLayout)}
-        </div>
-        <div data-testid="isInRoot">{String(context?.isInRoot)}</div>
-        <div data-testid="parentWidth">
-          {context?.parentWidth ?? "undefined"}
-        </div>
-        <div data-testid="isInContentWidthContainer">
-          {String(context?.isInContentWidthContainer)}
-        </div>
+/** Helper component to consume and display context values. */
+const ContextConsumer: FC = () => {
+  const context = useContext(FlexContext)
+  return (
+    <div data-testid="context-consumer">
+      <div data-testid="direction">{context?.direction}</div>
+      <div data-testid="isInHorizontalLayout">
+        {String(context?.isInHorizontalLayout)}
       </div>
-    )
-  }
+      <div data-testid="isInRoot">{String(context?.isInRoot)}</div>
+      <div data-testid="parentWidth">
+        {context?.parentWidth ?? "undefined"}
+      </div>
+      <div data-testid="isInContentWidthContainer">
+        {String(context?.isInContentWidthContainer)}
+      </div>
+    </div>
+  )
+}
 
+/** Helper component that reads parent context and passes it to a nested provider. */
+const NestedProvider: FC<{
+  direction: Direction
+  hasContentWidth?: boolean
+  hasFixedWidth?: boolean
+  children: ReactNode
+}> = ({ direction, hasContentWidth, hasFixedWidth, children }) => {
+  const parentContext = useContext(FlexContext)
+  return (
+    <FlexContextProvider
+      direction={direction}
+      hasContentWidth={hasContentWidth}
+      hasFixedWidth={hasFixedWidth}
+      parentContext={parentContext}
+    >
+      {children}
+    </FlexContextProvider>
+  )
+}
+
+describe("FlexContextProvider", () => {
   describe("basic context values", () => {
     it("should provide correct values for horizontal layout", () => {
       render(
@@ -238,26 +258,6 @@ describe("FlexContextProvider", () => {
   })
 
   describe("nested contexts", () => {
-    // Helper component that reads parent context and passes it to a nested provider
-    const NestedProvider: FC<{
-      direction: Direction
-      hasContentWidth?: boolean
-      hasFixedWidth?: boolean
-      children: React.ReactNode
-    }> = ({ direction, hasContentWidth, hasFixedWidth, children }) => {
-      const parentContext = useContext(FlexContext)
-      return (
-        <FlexContextProvider
-          direction={direction}
-          hasContentWidth={hasContentWidth}
-          hasFixedWidth={hasFixedWidth}
-          parentContext={parentContext}
-        >
-          {children}
-        </FlexContextProvider>
-      )
-    }
-
     it("should handle multiple levels of nesting with content-width propagation", () => {
       render(
         <FlexContextProvider

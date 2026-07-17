@@ -20,6 +20,12 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.plotly_chart import (
+    PlotlyChartSelectionSerde,
+    PlotlyMixin,
+    _resolve_content_height,
+    _resolve_content_width,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cached_message_replay
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -258,19 +264,17 @@ class PyDeckTest(DeltaGeneratorTestCase):
         assert '"displayModeBar": false' in el.plotly_chart.config
         assert '"responsive": true' in el.plotly_chart.config
 
-    def test_show_deprecation_warning_for_kwargs(self):
+    def test_kwargs_raises_type_error(self):
+        """Test that passing unexpected kwargs raises TypeError after kwargs removal."""
         import plotly.graph_objs as go
 
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
         data = [trace0]
 
-        st.plotly_chart(data, sharing="streamlit")
-        # Get the second to last element, which should be deprecation warning
-        el = self.get_delta_from_queue(-2).new_element
-        assert (
-            "have been deprecated and will be removed in a future release"
-            in el.alert.body
-        )
+        # Passing kwargs that were previously supported (like `sharing`) should now
+        # raise a TypeError since **kwargs support was removed.
+        with pytest.raises(TypeError):
+            st.plotly_chart(data, sharing="streamlit")  # type: ignore[call-overload]
 
 
 class PlotlyChartWidthTest(DeltaGeneratorTestCase):
@@ -643,3 +647,73 @@ class PlotlyChartHeightTest(DeltaGeneratorTestCase):
                 el.height_config.pixel_height == 450
             )  # Content height defaults to 450px
             assert len(el.plotly_chart.selection_mode) > 0  # Selections are activated
+
+
+def test_resolve_content_width_returns_original_when_not_content() -> None:
+    """Non-`content` widths pass through unchanged."""
+    assert _resolve_content_width("stretch", figure={"layout": {"width": 100}}) == (
+        "stretch"
+    )
+    assert _resolve_content_width(500, figure={"layout": {"width": 100}}) == 500
+
+
+def test_resolve_content_width_handles_invalid_figure() -> None:
+    """If the figure has no layout/width access, fall back to plotly default (700)."""
+
+    class _BadFigure:
+        # Accessing .layout raises AttributeError; the helper should swallow it.
+        @property
+        def layout(self):
+            raise AttributeError("no layout")
+
+    assert _resolve_content_width("content", figure=_BadFigure()) == 700
+
+
+def test_resolve_content_height_returns_original_when_not_content() -> None:
+    """Non-`content` heights pass through unchanged."""
+    assert (
+        _resolve_content_height("stretch", figure={"layout": {"height": 100}})
+        == "stretch"
+    )
+    assert _resolve_content_height(500, figure={"layout": {"height": 100}}) == 500
+
+
+def test_resolve_content_height_handles_invalid_figure() -> None:
+    """If the figure has no layout/height access, fall back to plotly default (450)."""
+
+    class _BadFigure:
+        @property
+        def layout(self):
+            raise TypeError("not subscriptable")
+
+    assert _resolve_content_height("content", figure=_BadFigure()) == 450
+
+
+def test_resolve_content_width_uses_figure_layout_width() -> None:
+    """When width is `content`, an explicit figure layout width is used."""
+    assert _resolve_content_width("content", figure={"layout": {"width": 320}}) == 320
+
+
+def test_resolve_content_height_uses_figure_layout_height() -> None:
+    """When height is `content`, an explicit figure layout height is used."""
+    assert _resolve_content_height("content", figure={"layout": {"height": 240}}) == 240
+
+
+def test_plotly_mixin_dg_returns_self() -> None:
+    """``PlotlyMixin.dg`` returns the mixin instance."""
+
+    class _OnlyPlotly(PlotlyMixin):
+        pass
+
+    plotly_mixin = _OnlyPlotly()
+    assert plotly_mixin.dg is plotly_mixin
+
+
+def test_plotly_serde_serialize_returns_json_string() -> None:
+    """``PlotlyChartSelectionSerde.serialize`` returns a JSON string for selection state."""
+
+    serde = PlotlyChartSelectionSerde()
+    payload = serde.serialize({"selection": {"points": [], "box": [], "lasso": []}})
+
+    assert isinstance(payload, str)
+    assert "selection" in payload

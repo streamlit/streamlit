@@ -50,10 +50,8 @@ df = pd.DataFrame(np.random.randn(20, 4), columns=["A", "B", "C", "D"])
 
 
 # Passing style values w/ all color formats to test css-style-string parsing robustness.
-styled_df = df.style.map(
-    lambda v: "color:#FF0000;" if v < 0 else None  # type: ignore[operator]
-).map(
-    lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None  # type: ignore[operator]
+styled_df = df.style.map(lambda v: "color:#FF0000;" if v < 0 else None).map(
+    lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
 )
 
 styled_df.apply(  # type: ignore[call-overload] # ty: ignore[no-matching-overload]

@@ -16,16 +16,10 @@
 
 import { ReactElement } from "react"
 
-import {
-  act,
-  RenderResult,
-  screen,
-  waitForElementToBeRemoved,
-  within,
-} from "@testing-library/react"
+import { act, RenderResult, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { PLACEMENT, toaster, ToasterContainer } from "baseui/toast"
-import { vi } from "vitest"
+import { UNSTABLE_ToastRegion as ToastRegion } from "react-aria-components/Toast"
+import { MockInstance, vi } from "vitest"
 
 import { Toast as ToastProto } from "@streamlit/protobuf"
 
@@ -33,23 +27,18 @@ import ThemeProvider from "~lib/components/core/ThemeProvider"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 
-import Toast, { shortenMessage, ToastProps } from "./Toast"
+import { StreamlitToastItem } from "./StreamlitToastItem"
+import Toast, { ToastProps } from "./Toast"
+import { toastQueue } from "./toastQueue"
 
-// A Toaster Container is required to render Toasts
-// Don't import the actual one from EventContainer as that lives on app side
 const createContainer = (): ReactElement => (
-  <ToasterContainer
-    placement={PLACEMENT.bottomRight}
-    // increasing autoHideDuration to 10s to avoid test flakiness
-    autoHideDuration={10000}
-    overrides={{
-      Root: {
-        props: {
-          "data-testid": "stToastContainer",
-        },
-      },
-    }}
-  />
+  <ToastRegion
+    queue={toastQueue}
+    aria-label="Notifications"
+    data-testid="stToastContainer"
+  >
+    {({ toast }) => <StreamlitToastItem toast={toast} />}
+  </ToastRegion>
 )
 
 const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
@@ -70,20 +59,29 @@ const renderComponent = (props: ToastProps): RenderResult =>
     </>
   )
 
+const LONG_MESSAGE =
+  "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit"
+
 describe("Toast Component", () => {
+  let scrollHeightSpy: MockInstance | undefined
+  let getComputedStyleSpy: MockInstance | undefined
+
   beforeEach(() => {
-    // Use fake timers across tests to control and flush BaseWeb internal timeouts
+    // Use fake timers across tests to control and flush internal timeouts
     vi.useFakeTimers()
   })
 
-  afterEach(async () => {
+  afterEach(() => {
+    scrollHeightSpy?.mockRestore()
+    scrollHeightSpy = undefined
+    getComputedStyleSpy?.mockRestore()
+    getComputedStyleSpy = undefined
     // Clear all toasts and flush timers to avoid updates after test teardown
-    // eslint-disable-next-line @typescript-eslint/require-await
-    await act(async () => {
-      toaster.clear()
+    act(() => {
+      toastQueue.visibleToasts.forEach(t => toastQueue.close(t.key))
     })
 
-    // Ensure any pending BaseWeb toast timers are executed and then cleared
+    // Ensure any pending toast timers are executed and then cleared
     act(() => {
       vi.runOnlyPendingTimers()
     })
@@ -91,11 +89,31 @@ describe("Toast Component", () => {
     vi.useRealTimers()
   })
 
+  function simulateOverflow(): void {
+    scrollHeightSpy = vi
+      .spyOn(HTMLElement.prototype, "scrollHeight", "get")
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.dataset.testid === "stToastText") {
+          return 100
+        }
+        return 0
+      })
+    const realGetComputedStyle = window.getComputedStyle.bind(window)
+    getComputedStyleSpy = vi
+      .spyOn(window, "getComputedStyle")
+      .mockImplementation((el, pseudoElt) => {
+        if (el instanceof HTMLElement && el.dataset.testid === "stToastText") {
+          return { lineHeight: "20px" } as CSSStyleDeclaration
+        }
+        return realGetComputedStyle(el, pseudoElt)
+      })
+  }
+
   it("renders default toast", () => {
     const props = getProps()
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
+    const toast = screen.getByRole("alertdialog")
     const closeButton = screen.getByRole("button", { name: "Close" })
     const expandButton = screen.queryByRole("button", { name: "view more" })
 
@@ -110,40 +128,32 @@ describe("Toast Component", () => {
     expect(toastElement).toHaveClass("stToast")
   })
 
-  it("renders long toast messages with expand option", () => {
-    const props = getProps({
-      icon: "",
-      body: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
-    })
+  it("renders long toast messages with expand option when overflowing", () => {
+    simulateOverflow()
+    const props = getProps({ icon: "", body: LONG_MESSAGE })
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
-    const toastText = within(toast).getByTestId("stMarkdownContainer")
+    const toast = screen.getByRole("alertdialog")
+    const expandButton = within(toast).getByRole("button", {
+      name: "view more",
+    })
 
-    const expandButton = screen.getByRole("button", { name: "view more" })
     expect(toast).toBeInTheDocument()
-    expect(toastText).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long"
-    )
-    expect(toast).toContainElement(expandButton)
+    // Full text is always in the DOM — CSS line-clamp handles visual truncation
+    expect(toast).toHaveTextContent(LONG_MESSAGE)
+    expect(expandButton).toBeVisible()
   })
 
-  it("can expand to see the full toast message & collapse to truncate", async () => {
+  it("can expand to see the full toast message & collapse", async () => {
+    simulateOverflow()
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const props = getProps({
-      icon: "",
-      body: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
-    })
+    const props = getProps({ icon: "", body: LONG_MESSAGE })
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
-    const toastText = within(toast).getByTestId("stMarkdownContainer")
-    const expandButton = screen.getByRole("button", { name: "view more" })
-    // Initial state
-    expect(toast).toBeInTheDocument()
-    expect(toastText).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long"
-    )
+    const toast = screen.getByRole("alertdialog")
+    const expandButton = within(toast).getByRole("button", {
+      name: "view more",
+    })
     expect(toast).toContainElement(expandButton)
 
     // Click view more button & expand the message
@@ -151,21 +161,20 @@ describe("Toast Component", () => {
     act(() => {
       vi.runOnlyPendingTimers()
     })
-    expect(toast).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit"
-    )
+    expect(toast).toHaveTextContent(LONG_MESSAGE)
+    const collapseButton = within(toast).getByRole("button", {
+      name: "view less",
+    })
+    expect(collapseButton).toBeVisible()
 
     // Click view less button & collapse the message
-    const collapseButton = screen.getByRole("button", { name: "view less" })
-    expect(toast).toContainElement(collapseButton)
     await user.click(collapseButton)
     act(() => {
       vi.runOnlyPendingTimers()
     })
-    expect(toastText).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long"
-    )
-    expect(toast).toContainElement(expandButton)
+    expect(
+      within(toast).getByRole("button", { name: "view more" })
+    ).toBeVisible()
   })
 
   it("can close toast", async () => {
@@ -173,7 +182,7 @@ describe("Toast Component", () => {
     const props = getProps()
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
+    const toast = screen.getByRole("alertdialog")
     const closeButton = screen.getByRole("button", { name: "Close" })
     expect(toast).toBeInTheDocument()
     expect(closeButton).toBeInTheDocument()
@@ -182,29 +191,30 @@ describe("Toast Component", () => {
     act(() => {
       vi.runOnlyPendingTimers()
     })
-    // Toast may be removed synchronously when timers are flushed
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    // Toast is removed synchronously after timer flush
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
   })
 
-  it("auto hides based on duration seconds", async () => {
+  it("auto hides based on duration seconds", () => {
     const props = getProps({ duration: 1 })
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
+    const toast = screen.getByRole("alertdialog")
     expect(toast).toBeVisible()
 
     // Advance time just before auto hide
     act(() => {
       vi.advanceTimersByTime(900)
     })
-    expect(screen.getByRole("alert")).toBeVisible()
+    expect(screen.getByRole("alertdialog")).toBeVisible()
 
     // Cross the 1s threshold (Toast multiplies seconds by 1000)
     act(() => {
       vi.advanceTimersByTime(200)
     })
 
-    await waitForElementToBeRemoved(toast)
+    // Toast is removed synchronously after timer flush
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
   })
 
   it("throws an error when called via st.sidebar.toast", () => {
@@ -222,75 +232,19 @@ describe("Toast Component", () => {
     const toastError = screen.getByRole("alert")
     expect(toastError).toBeInTheDocument()
     expect(toastError).toHaveTextContent("Streamlit API Error")
+    // Should not add toast to queue when in sidebar
+    expect(toastQueue.visibleToasts).toHaveLength(0)
   })
 
-  it("shortenMessage does not truncate messages under the character limit", () => {
+  it("does not show expand button for short messages", () => {
     const shortMessage = "This message should not be truncated."
     const props = getProps({ body: shortMessage })
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
+    const toast = screen.getByRole("alertdialog")
     expect(toast).toHaveTextContent(shortMessage)
-  })
-
-  it("shortenMessage truncates messages over the character limit without cutting words", () => {
-    const longMessage =
-      "This is a very long message meant to test the functionality of the shortenMessage function, ensuring it truncates properly without cutting words and respects the character limit."
-    const expectedTruncatedMessage = shortenMessage(longMessage)
-    const props = getProps({ icon: "", body: longMessage })
-    renderComponent(props)
-
-    // Get the text content of the toast, excluding the "view more" and "Close" buttons
-    const toastText = screen
-      .getByRole("alert")
-      ?.textContent?.replace("view moreClose", "")
-
-    expect(toastText).toEqual(expectedTruncatedMessage)
-    expect(toastText).toHaveLength(expectedTruncatedMessage.length)
-  })
-
-  it("shortenMessage handles explicit line breaks correctly", () => {
-    const messageWithBreaks =
-      "First line of the message.\nSecond line of the message, which is meant to test how explicit line breaks are handled.\nThird line, which should not be visible."
-    const expectedTruncatedMessage = shortenMessage(messageWithBreaks)
-    const props = getProps({ icon: "", body: messageWithBreaks })
-    renderComponent(props)
-
-    const toastText = screen
-      .getByRole("alert")
-      ?.textContent?.replace("view moreClose", "")
-    expect(toastText).toEqual(expectedTruncatedMessage)
-    expect(toastText).toHaveLength(expectedTruncatedMessage.length)
-  })
-
-  it("expands and collapses long messages with explicit line breaks correctly", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const messageWithBreaks =
-      "First line of the message.\nSecond line of the message, which is very long and meant to test the expand and collapse functionality.\nThird line, which should initially be hidden."
-    const expectedTruncatedMessage = shortenMessage(messageWithBreaks)
-    const props = getProps({ icon: "", body: messageWithBreaks })
-    renderComponent(props)
-
-    const expandButton = screen.getByRole("button", { name: "view more" })
-    await user.click(expandButton) // Expand
-    act(() => {
-      vi.runOnlyPendingTimers()
-    })
-
-    const toastExpanded = screen
-      .getByRole("alert")
-      ?.textContent?.replace("view lessClose", "")
-    expect(toastExpanded).toEqual(messageWithBreaks) // Check full message is displayed
-
-    const collapseButton = screen.getByRole("button", { name: "view less" })
-    await user.click(collapseButton) // Collapse
-    act(() => {
-      vi.runOnlyPendingTimers()
-    })
-
-    const toastCollapsed = screen
-      .getByRole("alert")
-      ?.textContent?.replace("view moreClose", "")
-    expect(toastCollapsed).toEqual(expectedTruncatedMessage) // Check message is truncated again
+    expect(
+      within(toast).queryByRole("button", { name: "view more" })
+    ).not.toBeInTheDocument()
   })
 })

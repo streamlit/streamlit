@@ -38,7 +38,7 @@ Run the fetch script to extract PR numbers from `git log` and batch-fetch metada
 uv run python scripts/changelog_fetch_prs.py <prev-tag> <new-tag>
 ```
 
-This produces `work-tmp/pr-data.json` — a JSON array of `{number, title, labels, author, related_issues, related_issues_truncated}` objects sorted by PR number.
+This produces `work-tmp/pr-data.json` — a JSON array of `{number, title, body, labels, author, related_issues, related_issues_truncated}` objects sorted by PR number. The `body` field contains the first 2500 characters of the PR description.
 
 `related_issues` is sourced from the same batched GraphQL query (no per-PR N+1 requests) and includes linked issue numbers plus 👍 counts:
 
@@ -96,7 +96,11 @@ Note: Internal-only feature PRs (e.g., e2e infra, CI workflows, agent skills) ar
 
 Do NOT proceed to Step 6 until the user confirms.
 
-## Step 6: Rewrite descriptions and generate output
+## Step 6: Read PR descriptions and generate output
+
+For each user-facing PR in `work-tmp/pr-categorized.json`, read its `body` field before writing the changelog entry. Use the PR description as the primary source of truth for what actually changed — the title alone can be imprecise. Focus on the opening summary paragraph(s) of the body; ignore checklists, reviewer notes, and screenshot sections.
+
+**Entry length:** Keep every entry to **one sentence, two at most**. Capture the high-level idea only — what changed and why it matters to the user. Do not enumerate sub-features, implementation details, parameter lists, or edge-case behaviors. Those details live in the API docs.
 
 Generate the file in the `work-tmp/` directory: `work-tmp/changelog-website-<new-tag>.md`
 
@@ -138,7 +142,7 @@ Generate the file in the `work-tmp/` directory: `work-tmp/changelog-website-<new
 - **`st.*` command references**: Use backtick formatting and link to the specific API doc subcategory path: [`st.image`](/develop/api-reference/media/st.image), [`st.dataframe`](/develop/api-reference/data/st.dataframe). Only link the first/primary mention of a command. Links are more common in Notable Changes than Other Changes.
 - **PR and issue links**: Include both PR links and related issue links when applicable. Format: `([#14139](https://github.com/streamlit/streamlit/pull/14139), [#9836](https://github.com/streamlit/streamlit/issues/9836))`. Use `/pull/` for PRs and `/issues/` for issues.
 - **Punctuation**: Every entry ends with a period after the closing parenthesis of PR/issue links.
-- **Contributor attribution**: Attribute external (non-Snowflake) contributors. Use `[username]` (no `@` prefix) in link text, placed after the closing paren and period: `([#NNNNN](https://github.com/streamlit/streamlit/pull/NNNNN)). Thanks, [username](https://github.com/username)!`
+- **Contributor attribution**: Attribute external (non-Snowflake) contributors. Use `[username]` (no `@` prefix) in link text, placed after the closing paren and period: `([#NNNNN](https://github.com/streamlit/streamlit/pull/NNNNN)). Thanks, [username](https://github.com/username)`!
 - **Multi-PR grouped entries**: For complex multi-PR features, use a parent bullet with a colon, then indented sub-bullets:
   ```
   - 🎨 Main feature description:

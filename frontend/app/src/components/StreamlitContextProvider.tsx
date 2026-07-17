@@ -17,8 +17,9 @@
 import { memo, PropsWithChildren, RefObject, useMemo } from "react"
 
 import {
-  DownloadContext,
-  DownloadContextProps,
+  BackendOperationClient,
+  BackendOperationContext,
+  BackendOperationContextProps,
   FormsContext,
   FormsContextProps,
   FormsData,
@@ -37,13 +38,7 @@ import {
   ViewStateContext,
   ViewStateContextProps,
 } from "@streamlit/lib"
-import {
-  Config,
-  DeferredFileResponse,
-  IAppPage,
-  Logo,
-  PageConfig,
-} from "@streamlit/protobuf"
+import { Config, IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
 
 type ViewStateContextValues = {
   isFullScreen: boolean
@@ -57,6 +52,7 @@ type LibConfigContextValues = {
   enforceDownloadInNewTab?: boolean
   resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
   showErrorLinks?: Config.ShowErrorLinks
+  disableDataExport?: boolean
 }
 
 type NavigationContextValues = {
@@ -85,17 +81,20 @@ type ThemeContextValues = {
 }
 
 type ScriptRunContextValues = {
+  stopScript: () => void
   scriptRunState: ScriptRunState
   scriptRunId: string
   fragmentIdsThisRun: Array<string>
+  scriptRunFinishedSequence: number
+  scriptRunFinishedFragmentIds: Array<string>
 }
 
 type FormsContextValues = {
   formsData: FormsData
 }
 
-type DownloadContextValues = {
-  requestDeferredFile?: (fileId: string) => Promise<DeferredFileResponse>
+type BackendOperationContextValues = {
+  backendOperationClient?: BackendOperationClient
 }
 
 type StreamlitContextProviderProps = PropsWithChildren<
@@ -106,7 +105,7 @@ type StreamlitContextProviderProps = PropsWithChildren<
     ThemeContextValues &
     ScriptRunContextValues &
     FormsContextValues &
-    DownloadContextValues
+    BackendOperationContextValues
 >
 
 /**
@@ -123,6 +122,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   enforceDownloadInNewTab,
   resourceCrossOriginMode,
   showErrorLinks,
+  disableDataExport,
   // NavigationContext
   pageLinkBaseUrl,
   currentPageScriptHash,
@@ -143,13 +143,16 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   setTheme,
   availableThemes,
   // ScriptRunContext
+  stopScript,
   scriptRunState,
   scriptRunId,
   fragmentIdsThisRun,
+  scriptRunFinishedSequence,
+  scriptRunFinishedFragmentIds,
   // FormsContext
   formsData,
-  // DownloadContext
-  requestDeferredFile,
+  // BackendOperationContext
+  backendOperationClient,
   // Children passed through
   children,
 }: StreamlitContextProviderProps) => {
@@ -161,6 +164,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
       showErrorLinks,
+      disableDataExport,
     }),
     [
       locale,
@@ -168,6 +172,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
       showErrorLinks,
+      disableDataExport,
     ]
   )
 
@@ -182,6 +187,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       sidebarNavVisibleItems,
       hideSidebarNav,
       appRootRef,
+      isSidebarLocked: initialSidebarState === PageConfig.SidebarState.LOCKED,
     }),
     [
       initialSidebarState,
@@ -235,11 +241,21 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // Memoized object for ScriptRunContext values
   const scriptRunContextProps = useMemo<ScriptRunContextProps>(
     () => ({
+      stopScript,
       scriptRunState,
       scriptRunId,
       fragmentIdsThisRun,
+      scriptRunFinishedSequence,
+      scriptRunFinishedFragmentIds,
     }),
-    [scriptRunState, scriptRunId, fragmentIdsThisRun]
+    [
+      stopScript,
+      scriptRunState,
+      scriptRunId,
+      fragmentIdsThisRun,
+      scriptRunFinishedSequence,
+      scriptRunFinishedFragmentIds,
+    ]
   )
 
   const formsContextProps: FormsContextProps = useMemo(
@@ -249,12 +265,12 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     [formsData]
   )
 
-  const downloadContextProps: DownloadContextProps =
-    useMemo<DownloadContextProps>(
+  const backendOperationContextProps: BackendOperationContextProps =
+    useMemo<BackendOperationContextProps>(
       () => ({
-        requestDeferredFile,
+        backendOperationClient,
       }),
-      [requestDeferredFile]
+      [backendOperationClient]
     )
 
   /**
@@ -271,7 +287,9 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       <SidebarConfigContext.Provider value={sidebarConfigContextProps}>
         <ThemeContext.Provider value={themeContextProps}>
           <NavigationContext.Provider value={navigationContextProps}>
-            <DownloadContext.Provider value={downloadContextProps}>
+            <BackendOperationContext.Provider
+              value={backendOperationContextProps}
+            >
               <ViewStateContext.Provider value={viewStateContextProps}>
                 <ScriptRunContext.Provider value={scriptRunContextProps}>
                   <FormsContext.Provider value={formsContextProps}>
@@ -279,7 +297,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
                   </FormsContext.Provider>
                 </ScriptRunContext.Provider>
               </ViewStateContext.Provider>
-            </DownloadContext.Provider>
+            </BackendOperationContext.Provider>
           </NavigationContext.Provider>
         </ThemeContext.Provider>
       </SidebarConfigContext.Provider>

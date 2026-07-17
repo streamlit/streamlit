@@ -69,8 +69,8 @@ def make_bidi_component_presenter(
             if ctx is not None and component_id is not None:
                 user_key = session_state._key_id_mapper.get_key_from_id(component_id)
                 if (
-                    component_id in ctx.widget_ids_this_run
-                    or user_key in ctx.form_ids_this_run
+                    component_id in ctx.shared.widget_ids_this_run
+                    or user_key in ctx.shared.form_ids_this_run
                 ):
                     raise StreamlitAPIException(
                         f"`st.session_state.{user_key}.{k}` cannot be modified after the component"

@@ -22,11 +22,14 @@ from typing import TYPE_CHECKING, Any, Final, cast
 from urllib import parse
 
 from streamlit.errors import StreamlitAPIException, StreamlitQueryParamDictValueError
+from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 if TYPE_CHECKING:
     from _typeshed import SupportsKeysAndGetItem
+
+_LOGGER: Final = get_logger(__name__)
 
 QueryParamValue = str | Iterable[str]
 QueryParamsInput = Mapping[str, QueryParamValue] | Iterable[tuple[str, QueryParamValue]]
@@ -43,6 +46,43 @@ EMBED_QUERY_PARAMS_KEYS: Final[list[str]] = [
 PROTECTED_QUERY_PARAMS: Final[frozenset[str]] = frozenset(
     [EMBED_QUERY_PARAM, EMBED_OPTIONS_QUERY_PARAM]
 )
+_CLIENT_STATE_QUERY_STRING_MAX_LENGTH: Final[int] = 512 * 1024  # 512Ki characters
+_CLIENT_STATE_QUERY_STRING_MAX_FIELDS: Final[int] = 1000
+
+
+def sanitize_query_string(query_string: str) -> str:
+    """Return an empty query string when client input exceeds safe limits."""
+    if not query_string:
+        return ""
+
+    if len(query_string) > _CLIENT_STATE_QUERY_STRING_MAX_LENGTH:
+        _LOGGER.warning(
+            "Ignoring query string with %d characters because it exceeds the "
+            "%d character limit.",
+            len(query_string),
+            _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+        )
+        return ""
+
+    num_fields = query_string.count("&") + 1
+    if num_fields > _CLIENT_STATE_QUERY_STRING_MAX_FIELDS:
+        _LOGGER.warning(
+            "Ignoring query string with %d parameters because it exceeds the "
+            "%d parameter limit.",
+            num_fields,
+            _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+        )
+        return ""
+
+    return query_string
+
+
+def _parse_query_string(query_string: str) -> dict[str, list[str]]:
+    """Parse a query string into a dict, ignoring input that exceeds safe limits."""
+    query_string = sanitize_query_string(query_string)
+    if not query_string:
+        return {}
+    return parse.parse_qs(query_string, keep_blank_values=True)
 
 
 @dataclass
@@ -241,6 +281,41 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
             return val
 
 
+def _format_number_for_query_url(v: Any) -> str:
+    """Format a number for the query string (matches set_corrected_value rules).
+
+    Examples: 5.0 -> "5", 5.5 -> "5.5", 5 -> "5".
+    NaN and Inf are returned via str() without int coercion.
+    """
+    if isinstance(v, float) and math.isfinite(v) and v == int(v):
+        return str(int(v))
+    return str(v)
+
+
+def _coerce_value_for_query_url(value: Any, value_type: str) -> str | list[str]:
+    """Convert a widget/serializer value to the form stored in ``_query_params``."""
+    if value_type in {
+        "string_array_value",
+        "int_array_value",
+        "double_array_value",
+    }:
+        if isinstance(value, (list, tuple)):
+            return [
+                _format_number_for_query_url(v)
+                if value_type == "double_array_value"
+                else str(v)
+                for v in value
+            ]
+        return (
+            _format_number_for_query_url(value)
+            if value_type == "double_array_value"
+            else str(value)
+        )
+    if value_type == "bool_value" and isinstance(value, bool):
+        return str(value).lower()
+    return str(value)
+
+
 @dataclass
 class QueryParams(MutableMapping[str, str]):
     """A lightweight wrapper of a dict that sends forwardMsgs when state changes.
@@ -278,8 +353,7 @@ class QueryParams(MutableMapping[str, str]):
             if isinstance(value, list):
                 if len(value) == 0:
                     return ""
-                # Return the last value to mimic Tornado's behavior
-                # https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.get_query_argument
+                # Return the last value when multiple values exist
                 return value[-1]
             return value
         except KeyError:
@@ -611,7 +685,7 @@ class QueryParams(MutableMapping[str, str]):
         query_string : str
             The URL query string (without the leading '?').
         """
-        parsed = parse.parse_qs(query_string, keep_blank_values=True)
+        parsed = _parse_query_string(query_string)
         self._initial_query_params = parsed
 
     def set_initial_query_params_from_current(self) -> None:
@@ -650,6 +724,19 @@ class QueryParams(MutableMapping[str, str]):
             return values[0]
         return values
 
+    def stored_param_matches_corrected_value(
+        self, param_key: str, value: Any, value_type: str
+    ) -> bool:
+        """Return True if the stored URL param equals ``set_corrected_value`` output.
+
+        Used to skip redundant ``page_info_changed`` messages when programmatic
+        session state already matches the backend query-param snapshot.
+        """
+        if param_key not in self._query_params:
+            return False
+        coerced = _coerce_value_for_query_url(value, value_type)
+        return coerced == self._query_params[param_key]
+
     def set_corrected_value(self, param_key: str, value: Any, value_type: str) -> None:
         """Set a corrected value for a query parameter.
 
@@ -666,45 +753,7 @@ class QueryParams(MutableMapping[str, str]):
         value_type : str
             The WidgetState value type (e.g., "double_value", "int_value").
         """
-
-        def format_number(v: Any) -> str:
-            """Format a number, using integer format if value is a whole number.
-
-            Examples: 5.0 -> "5", 5.5 -> "5.5", 5 -> "5"
-            Handles special float values (NaN, Inf) by returning them as-is.
-            """
-            # math.isfinite returns False for NaN, inf, -inf
-            # which would raise ValueError/OverflowError when converting to int
-            if isinstance(v, float) and math.isfinite(v) and v == int(v):
-                return str(int(v))
-            return str(v)
-
-        # Convert the value to a string representation for the URL
-        # All array types use repeated params: ?foo=a&foo=b
-        if value_type in {
-            "string_array_value",
-            "int_array_value",
-            "double_array_value",
-        }:
-            if isinstance(value, (list, tuple)):
-                # Store as list for repeated params
-                self._query_params[param_key] = [
-                    format_number(v) if value_type == "double_array_value" else str(v)
-                    for v in value
-                ]
-                self._send_query_param_msg()
-                return
-            str_value = (
-                format_number(value)
-                if value_type == "double_array_value"
-                else str(value)
-            )
-        elif value_type == "bool_value" and isinstance(value, bool):
-            str_value = str(value).lower()
-        else:
-            str_value = str(value)
-
-        self._query_params[param_key] = str_value
+        self._query_params[param_key] = _coerce_value_for_query_url(value, value_type)
         self._send_query_param_msg()
 
     # Keep alias for compatibility with existing internal call sites/tests.
@@ -732,7 +781,7 @@ class QueryParams(MutableMapping[str, str]):
             Params bound to other pages are filtered out.
             If None, all params are kept (no filtering).
         """
-        parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
+        parsed_query_params = _parse_query_string(query_string)
 
         self.clear_with_no_forward_msg()
         stale_widget_ids: list[str] = []
@@ -769,7 +818,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def remove_stale_bindings(
         self,
-        active_widget_ids: set[str],
+        active_widget_ids: frozenset[str],
         fragment_ids_this_run: list[str] | None = None,
         widget_metadata: dict[str, Any] | None = None,
     ) -> None:
@@ -783,7 +832,7 @@ class QueryParams(MutableMapping[str, str]):
 
         Parameters
         ----------
-        active_widget_ids : set[str]
+        active_widget_ids : frozenset[str]
             Set of widget IDs that are currently active/rendered.
         fragment_ids_this_run : list[str] | None
             List of fragment IDs being run, or None for full script runs.

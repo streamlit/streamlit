@@ -26,7 +26,10 @@ from streamlit import config
 from streamlit.auth_util import get_cookie_with_chunks, get_expose_tokens_config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
-from streamlit.runtime.runtime_util import serialize_forward_msg
+from streamlit.runtime.runtime_util import (
+    get_max_widget_state_size_bytes,
+    serialize_forward_msg,
+)
 from streamlit.runtime.session_manager import (
     ClientContext,
     SessionClient,
@@ -104,9 +107,8 @@ def _gather_user_info(headers: Headers) -> dict[str, str | bool | None]:
 def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
     """Check if the WebSocket Origin header is allowed.
 
-    This mirrors Tornado's WebSocketHandler.check_origin behavior, which allows
-    same-origin connections by default and delegates to is_url_from_allowed_origins
-    for cross-origin requests.
+    Allows same-origin connections by default and delegates to
+    is_url_from_allowed_origins for cross-origin requests.
 
     Parameters
     ----------
@@ -126,7 +128,7 @@ def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
     """
     # If no Origin header is present, allow the connection.
     # Per the WebSocket spec, browsers should always send Origin, but non-browser
-    # clients may not. Tornado allows connections without Origin by default.
+    # clients may not. Connections without Origin are allowed by default.
     if origin is None:
         return True
 
@@ -145,10 +147,7 @@ def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
 def _parse_user_cookie_signed(cookie_value: str | bytes, origin: str) -> dict[str, Any]:
     """Parse and validate a signed user cookie.
 
-    Note: This only understands cookies signed with itsdangerous (Starlette).
-    Cookies signed by Tornado's set_secure_cookie will fail to decode and
-    return an empty dict, requiring users to re-authenticate after switching
-    backends. This is expected behavior when switching between Tornado and Starlette backends.
+    The cookie is signed with itsdangerous.
     """
     secret = get_cookie_secret()
     signed_value = cookie_value
@@ -221,8 +220,7 @@ def _get_signed_cookie_with_chunks(
 
     Notes
     -----
-    Uses itsdangerous signing which is NOT compatible with Tornado's format.
-    Cookies signed by Tornado will fail to decode.
+    Uses itsdangerous for cookie signing.
     """
     secret = get_cookie_secret()
 
@@ -346,7 +344,7 @@ class StarletteSessionClient(SessionClient):
 
     @property
     def client_context(self) -> ClientContext:
-        """Return the client's connection context."""
+        """The client's connection context."""
         return self._client_context
 
     async def aclose(self) -> None:
@@ -386,11 +384,9 @@ def create_websocket_handler(runtime: Runtime) -> Any:
     """
     from starlette.websockets import WebSocketDisconnect
 
-    expose_tokens = get_expose_tokens_config()
-
     async def _websocket_endpoint(websocket: WebSocket) -> None:
         # Validate origin before accepting the connection to prevent
-        # cross-site WebSocket hijacking (mirrors Tornado's check_origin).
+        # cross-site WebSocket hijacking.
         origin = websocket.headers.get("Origin")
         host = websocket.headers.get("Host")
         if not _is_origin_allowed(origin, host):
@@ -418,6 +414,16 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                 if origin_header and starlette_app_utils.validate_xsrf_token(
                     xsrf_token, xsrf_cookie
                 ):
+                    # Read expose_tokens lazily on connect (rather than once at
+                    # handler creation) so programmatic secrets from
+                    # ``st.App(secrets=...)``, which are merged during the ASGI
+                    # lifespan after routes are built, are honored. Resolve it
+                    # outside the defensive cookie-parsing block below so an
+                    # invalid ``expose_tokens`` config surfaces as a clear error
+                    # instead of being silently swallowed as a cookie-parsing
+                    # failure.
+                    expose_tokens = get_expose_tokens_config()
+
                     try:
                         raw_auth_cookie = _get_signed_cookie_with_chunks(
                             websocket.cookies, USER_COOKIE_NAME
@@ -472,6 +478,22 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                         "WebSocket text frames are not supported; connection closed. "
                         "Expected binary protobufs."
                     )
+
+                # The same config value bounds both the raw inbound frame here and
+                # the parsed aggregate widget state in the runtime layer. Applied to
+                # the raw BackMsg frame, this transport check is slightly stricter
+                # than the runtime check (the frame includes the BackMsg envelope),
+                # which is an intentional defense-in-depth tradeoff.
+                max_client_msg_size = get_max_widget_state_size_bytes()
+                if len(data) > max_client_msg_size:
+                    _LOGGER.warning(
+                        "Client WebSocket message size %s bytes exceeds the limit of "
+                        "%s bytes; closing connection.",
+                        len(data),
+                        max_client_msg_size,
+                    )
+                    await websocket.close(code=1009)  # 1009 = Message Too Big
+                    break
 
                 back_msg = BackMsg()
                 try:

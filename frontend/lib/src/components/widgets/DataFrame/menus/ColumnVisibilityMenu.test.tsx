@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import type { ReactElement } from "react"
-
-import { screen, waitFor } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { Field, Int64, Utf8 } from "apache-arrow"
 
@@ -31,25 +29,6 @@ import { render } from "~lib/test_util"
 import ColumnVisibilityMenu, {
   ColumnVisibilityMenuProps,
 } from "./ColumnVisibilityMenu"
-
-/**
- * Renders the ColumnVisibilityMenu and waits for the popover to fully mount.
- * Baseui's Popover performs internal async state updates (focus/positioning),
- * which can cause act() warnings if not awaited.
- */
-async function renderAndWaitForPopover(
-  ui: ReactElement
-): Promise<ReturnType<typeof render>> {
-  const result = render(ui)
-  // Wait for the popover's async state updates to complete
-  await waitFor(() => {
-    // The popover content should be visible when isOpen=true
-    expect(
-      screen.queryByTestId("stDataFrameColumnVisibilityMenu")
-    ).toBeVisible()
-  })
-  return result
-}
 
 const MOCK_COLUMNS: BaseColumn[] = [
   TextColumn({
@@ -121,13 +100,14 @@ const MOCK_COLUMNS: BaseColumn[] = [
 ]
 
 describe("DataFrame ColumnVisibilityMenu", () => {
-  const defaultProps: ColumnVisibilityMenuProps = {
+  const defaultChildren = <button type="button">Toggle Visibility</button>
+
+  const defaultProps: Omit<ColumnVisibilityMenuProps, "children"> = {
     columns: MOCK_COLUMNS,
     columnOrder: [],
     setColumnOrder: vi.fn(),
     hideColumn: vi.fn(),
     showColumn: vi.fn(),
-    children: <button type="button">Toggle Visibility</button>,
     isOpen: true,
     onClose: vi.fn(),
   }
@@ -136,8 +116,12 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     vi.clearAllMocks()
   })
 
-  it("renders the visibility menu with all columns", async () => {
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...defaultProps} />)
+  it("renders the visibility menu with all columns", () => {
+    render(
+      <ColumnVisibilityMenu {...defaultProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     expect(screen.getByTestId("stDataFrameColumnVisibilityMenu")).toBeVisible()
     expect(screen.getByText("Column 1")).toBeVisible()
@@ -146,8 +130,12 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     expect(screen.getByText("Select all")).toBeVisible()
   })
 
-  it("shows correct checkbox states based on column visibility", async () => {
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...defaultProps} />)
+  it("shows correct checkbox states based on column visibility", () => {
+    render(
+      <ColumnVisibilityMenu {...defaultProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     const checkboxes = screen.getAllByRole("checkbox")
     expect(checkboxes[0]).not.toBeChecked() // Select All (visible but indeterminate)
@@ -156,42 +144,80 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     expect(checkboxes[3]).not.toBeChecked() // Column 2 (hidden)
   })
 
+  it("closes the menu when the Escape key is pressed", async () => {
+    const onClose = vi.fn()
+
+    render(
+      <ColumnVisibilityMenu {...defaultProps} onClose={onClose}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
+
+    expect(screen.getByTestId("stDataFrameColumnVisibilityMenu")).toBeVisible()
+
+    // Capture-phase keydown fires regardless of where focus is
+    await userEvent.keyboard("{Escape}")
+
+    expect(onClose).toHaveBeenCalled()
+    // Escape should dismiss the menu, not trigger a column visibility change:
+    expect(defaultProps.hideColumn).not.toHaveBeenCalled()
+    expect(defaultProps.showColumn).not.toHaveBeenCalled()
+  })
+
   it("calls hideColumn when unchecking a visible column", async () => {
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...defaultProps} />)
+    render(
+      <ColumnVisibilityMenu {...defaultProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     await userEvent.click(screen.getByLabelText("Column 1"))
     expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-1")
   })
 
   it("calls showColumn when checking a hidden column", async () => {
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...defaultProps} />)
+    render(
+      <ColumnVisibilityMenu {...defaultProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     await userEvent.click(screen.getByLabelText("Column 2"))
     expect(defaultProps.showColumn).toHaveBeenCalledWith("_column-2")
   })
 
-  it("renders children component", async () => {
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...defaultProps} />)
+  it("renders children component", () => {
+    render(
+      <ColumnVisibilityMenu {...defaultProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     expect(screen.getByText("Toggle Visibility")).toBeInTheDocument()
   })
 
   it("doesn't render menu content when closed", () => {
-    render(<ColumnVisibilityMenu {...defaultProps} isOpen={false} />)
+    render(
+      <ColumnVisibilityMenu {...defaultProps} isOpen={false}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     expect(
       screen.queryByTestId("stDataFrameColumnVisibilityMenu")
     ).not.toBeInTheDocument()
   })
 
-  it("considers columns not in columnOrder as hidden", async () => {
+  it("considers columns not in columnOrder as hidden", () => {
     const propsWithColumnOrder = {
       ...defaultProps,
       columnOrder: ["_column-2"], // Only column 2 is in the order
     }
 
-    await renderAndWaitForPopover(
-      <ColumnVisibilityMenu {...propsWithColumnOrder} />
+    render(
+      <ColumnVisibilityMenu {...propsWithColumnOrder}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
     )
 
     const checkboxes = screen.getAllByRole("checkbox")
@@ -207,8 +233,10 @@ describe("DataFrame ColumnVisibilityMenu", () => {
       columnOrder: ["_column-2"],
     }
 
-    await renderAndWaitForPopover(
-      <ColumnVisibilityMenu {...propsWithColumnOrder} />
+    render(
+      <ColumnVisibilityMenu {...propsWithColumnOrder}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
     )
 
     await userEvent.click(screen.getByLabelText("Column 1"))
@@ -222,8 +250,10 @@ describe("DataFrame ColumnVisibilityMenu", () => {
       columnOrder: [],
     }
 
-    await renderAndWaitForPopover(
-      <ColumnVisibilityMenu {...propsWithColumnOrder} />
+    render(
+      <ColumnVisibilityMenu {...propsWithColumnOrder}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
     )
 
     await userEvent.click(screen.getByLabelText("Column 2"))
@@ -232,7 +262,11 @@ describe("DataFrame ColumnVisibilityMenu", () => {
   })
 
   it("calls showColumn on all columns when selecting an indeterminate select all", async () => {
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...defaultProps} />)
+    render(
+      <ColumnVisibilityMenu {...defaultProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     await userEvent.click(screen.getByLabelText("Select all")) // (Indeterminate, column 2 is hidden)
     expect(defaultProps.showColumn).toHaveBeenCalledWith("index-0")
@@ -246,7 +280,11 @@ describe("DataFrame ColumnVisibilityMenu", () => {
       columns: MOCK_COLUMNS.map(c => ({ ...c, isHidden: true })),
     }
 
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...allHiddenProps} />)
+    render(
+      <ColumnVisibilityMenu {...allHiddenProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     await userEvent.click(screen.getByLabelText("Select all"))
     expect(defaultProps.showColumn).toHaveBeenCalledWith("index-0")
@@ -260,8 +298,10 @@ describe("DataFrame ColumnVisibilityMenu", () => {
       columns: MOCK_COLUMNS.map(c => ({ ...c, isHidden: false })),
     }
 
-    await renderAndWaitForPopover(
-      <ColumnVisibilityMenu {...allVisibleProps} />
+    render(
+      <ColumnVisibilityMenu {...allVisibleProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
     )
 
     await userEvent.click(screen.getByLabelText("Select all"))
@@ -270,18 +310,20 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-2")
   })
 
-  it("select all reflects columnOrder-hidden columns when none are explicitly hidden", async () => {
+  it("select all reflects columnOrder-hidden columns when none are explicitly hidden", () => {
     const props = {
       ...defaultProps,
       columns: MOCK_COLUMNS.map(c => ({ ...c, isHidden: false })),
       columnOrder: ["index-0", "_column-1"], // exclude _column-2 via order
     }
 
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...props} />)
+    render(
+      <ColumnVisibilityMenu {...props}>{defaultChildren}</ColumnVisibilityMenu>
+    )
 
     const selectAll = screen.getByLabelText("Select all")
     expect(selectAll).not.toBeChecked()
-    // Indeterminate state should be reflected via aria-checked="mixed" if supported
+    // Indeterminate state should be reflected via aria-checked="mixed"
     expect(selectAll).toHaveAttribute("aria-checked", "mixed")
   })
 })

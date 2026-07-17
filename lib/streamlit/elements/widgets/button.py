@@ -33,7 +33,7 @@ from typing import (
 
 from streamlit import runtime
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
-from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
+from streamlit.elements.lib.layout_utils import Width, create_layout_config
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.shortcut_utils import normalize_shortcut
 from streamlit.elements.lib.utils import (
@@ -48,7 +48,7 @@ from streamlit.errors import (
     StreamlitPageNotFoundError,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import StreamlitPage, _validate_registered_page
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
@@ -283,7 +283,10 @@ class ButtonMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             The following special keys are supported: Backspace, Delete, Down,
             End, Enter, Esc, Home, Left, PageDown, PageUp, Right, Space, Tab,
@@ -610,7 +613,10 @@ class ButtonMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             For a list of supported keys and modifiers, see the documentation
             for |st.button|_.
@@ -1020,7 +1026,10 @@ class ButtonMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             For a list of supported keys and modifiers, see the documentation
             for |st.button|_.
@@ -1395,8 +1404,10 @@ class ButtonMixin:
             value_type="trigger_value",
         )
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        if ctx:
+            save_for_app_testing(ctx, element_id, button_state.value)
+
+        layout_config = create_layout_config(width=width, allow_content_width=True)
         self.dg._enqueue(
             "download_button", download_button_proto, layout_config=layout_config
         )
@@ -1493,8 +1504,7 @@ class ButtonMixin:
                 value_type="trigger_value",
             )
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
         link_button_dg = self.dg._enqueue(
             "link_button", link_button_proto, layout_config=layout_config
         )
@@ -1519,14 +1529,13 @@ class ButtonMixin:
         if query_params:
             page_link_proto.query_string = process_query_params(query_params)
 
-        validate_width(width, allow_content=True)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         # Set icon_position early so it's set even in early return paths
         page_link_proto.icon_position = _icon_position_to_proto(icon_position)
 
         ctx = get_script_run_ctx()
         if not ctx:
-            layout_config = LayoutConfig(width=width)
             return self.dg._enqueue(
                 "page_link", page_link_proto, layout_config=layout_config
             )
@@ -1553,11 +1562,11 @@ class ButtonMixin:
             if page.is_external:
                 page_link_proto.page = page.external_url or ""
                 page_link_proto.external = True
-                layout_config = LayoutConfig(width=width)
                 return self.dg._enqueue(
                     "page_link", page_link_proto, layout_config=layout_config
                 )
 
+            _validate_registered_page(page)
             page_link_proto.page_script_hash = page._script_hash
             page_link_proto.page = page.url_path
         else:
@@ -1571,7 +1580,6 @@ class ButtonMixin:
                     raise StreamlitMissingPageLabelError()
                 page_link_proto.page = page
                 page_link_proto.external = True
-                layout_config = LayoutConfig(width=width)
                 return self.dg._enqueue(
                     "page_link", page_link_proto, layout_config=layout_config
                 )
@@ -1605,7 +1613,6 @@ class ButtonMixin:
                     uses_pages_directory=bool(PagesManager.uses_pages_directory),
                 )
 
-        layout_config = LayoutConfig(width=width)
         return self.dg._enqueue(
             "page_link", page_link_proto, layout_config=layout_config
         )
@@ -1668,7 +1675,9 @@ class ButtonMixin:
         if runtime.exists():
             if is_in_form(self.dg) and not is_form_submitter:
                 raise StreamlitAPIException(
-                    f"`st.button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
+                    "`st.button()` can't be used in an `st.form()`. Use "
+                    "`st.form_submit_button()` instead to submit the form."
+                    f"{FORM_DOCS_INFO}"
                 )
             if not is_in_form(self.dg) and is_form_submitter:
                 raise StreamlitAPIException(
@@ -1710,15 +1719,14 @@ class ButtonMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, button_state.value)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
         self.dg._enqueue("button", button_proto, layout_config=layout_config)
 
         return button_state.value
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 

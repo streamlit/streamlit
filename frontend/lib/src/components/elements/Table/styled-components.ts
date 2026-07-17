@@ -72,6 +72,8 @@ export const StyledTableBorder = styled.div<{
   position: "relative",
   // Use block display with hidden vertical overflow to eliminate inline-table baseline gap
   display: "block",
+  // This prevents accidental overscrolling that triggers the browser's Back button.
+  overscrollBehaviorX: "contain",
 }))
 
 export const StyledTable = styled.table<{

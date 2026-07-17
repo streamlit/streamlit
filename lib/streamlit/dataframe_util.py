@@ -21,6 +21,7 @@ import dataclasses
 import inspect
 import math
 import re
+import warnings
 from collections import ChainMap, UserDict, UserList, deque
 from collections.abc import ItemsView, Iterable, Mapping, Sequence
 from enum import Enum, EnumMeta, auto
@@ -166,11 +167,26 @@ class DataframeInterchangeCompatible(Protocol):
     def __dataframe__(self, allow_copy: bool) -> Any: ...
 
 
+class ArrowStreamExportable(Protocol):
+    """Protocol for objects implementing the Arrow PyCapsule Interface.
+
+    Objects implementing this protocol can export their data as an Arrow stream
+    via the C Data Interface using PyCapsules. This is the recommended way for
+    cross-library Arrow data exchange, replacing the deprecated DataFrame
+    Interchange Protocol.
+
+    https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html
+    """
+
+    def __arrow_c_stream__(self, requested_schema: Any = None) -> Any: ...
+
+
 OptionSequence: TypeAlias = (
     Iterable[V_co]
     | DataFrameGenericAlias[V_co]
     | PandasCompatible
     | DataframeInterchangeCompatible
+    | ArrowStreamExportable
 )
 
 # Various data types supported by our dataframe processing
@@ -189,6 +205,7 @@ Data: TypeAlias = Union[
     DBAPICursor,
     PandasCompatible,
     DataframeInterchangeCompatible,
+    ArrowStreamExportable,
     CustomDict,
     None,
 ]
@@ -254,6 +271,18 @@ def is_pyarrow_version_less_than(v: str) -> bool:
     import pyarrow as pa
 
     return is_version_less_than(pa.__version__, v)
+
+
+# Minimum PyArrow version that supports consuming PyCapsule Interface via from_stream.
+# While the PyCapsule Interface dunder methods (__arrow_c_stream__, etc.) were added in
+# PyArrow 14.0.0, RecordBatchReader.from_stream() was introduced in PyArrow 15.0.0.
+# https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html
+_MIN_PYARROW_PYCAPSULE_VERSION: Final = "15.0.0"
+
+
+def _is_arrow_pycapsule_supported() -> bool:
+    """Return True if PyArrow supports the Arrow PyCapsule Interface."""
+    return not is_pyarrow_version_less_than(_MIN_PYARROW_PYCAPSULE_VERSION)
 
 
 def is_pandas_version_less_than(v: str) -> bool:
@@ -696,14 +725,35 @@ def convert_anything_to_pandas_df(
     if has_callable_attr(data, "to_pandas"):
         return pd.DataFrame(data.to_pandas())
 
-    # Check for dataframe interchange protocol
+    # Check for Arrow PyCapsule Interface (__arrow_c_stream__). Preferred over
+    # the deprecated DataFrame Interchange Protocol for cross-library data exchange.
+    # https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html
+    if (
+        has_callable_attr(data, "__arrow_c_stream__")
+        and _is_arrow_pycapsule_supported()
+    ):
+        import pyarrow as pa
+
+        try:
+            table = pa.RecordBatchReader.from_stream(data).read_all()
+            data_df = cast("pd.DataFrame", table.to_pandas())
+            return data_df.copy() if ensure_copy else data_df
+        except (pa.ArrowInvalid, pa.ArrowTypeError, pa.ArrowNotImplementedError):
+            # Object exports a non-struct type (e.g., pandas Series) or has a
+            # partial __arrow_c_stream__ implementation. Fall back to other methods.
+            pass
+
+    # Check for dataframe interchange protocol (deprecated, prefer PyCapsule above)
     # Only available in pandas >= 1.5.0
     # https://pandas.pydata.org/docs/whatsnew/v1.5.0.html#dataframe-interchange-protocol-implementation
     if (
         has_callable_attr(data, "__dataframe__")
         and is_pandas_version_less_than("1.5.0") is False
     ):
-        data_df = pd.api.interchange.from_dataframe(data)
+        # Suppress the Pandas4Warning about deprecated interchange protocol
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "The Dataframe Interchange Protocol")
+            data_df = pd.api.interchange.from_dataframe(data)
         return data_df.copy() if ensure_copy else data_df
 
     # Support for generator functions
@@ -764,6 +814,83 @@ Offending object:
         ) from ex
 
 
+def _downcast_large_type(arrow_type: pa.DataType) -> pa.DataType:
+    """Recursively downcast a single Arrow type to its standard counterpart.
+
+    Handles ``large_string`` -> ``string``, ``large_binary`` -> ``binary``,
+    and ``large_list`` -> ``list`` (with recursive value-type downcasting).
+    Returns the type unchanged if no downcasting is needed.
+    """
+    import pyarrow as pa
+
+    large_type_map: dict[pa.DataType, pa.DataType] = {
+        pa.large_string(): pa.string(),
+        pa.large_binary(): pa.binary(),
+    }
+
+    if isinstance(arrow_type, pa.LargeListType):
+        return pa.list_(_downcast_large_type(arrow_type.value_type))
+    if arrow_type in large_type_map:
+        return large_type_map[arrow_type]
+    return arrow_type
+
+
+def _downcast_large_arrow_types(table: pa.Table) -> pa.Table:
+    """Downcast large Arrow types to their standard counterparts.
+
+    Pandas 3.x defaults to StringDtype backed by ``large_string`` in Arrow.
+    Third-party custom components that bundle older Arrow JS libraries cannot
+    decode ``LargeUtf8`` / ``LargeBinary`` / ``LargeList`` type codes, so we
+    convert them to the standard-width variants before serializing.
+    """
+    import pyarrow as pa
+
+    new_fields: list[pa.Field] = []
+    needs_cast = False
+    for field in table.schema:
+        downcast = _downcast_large_type(field.type)
+        if downcast != field.type:
+            new_fields.append(field.with_type(downcast))
+            needs_cast = True
+        else:
+            new_fields.append(field)
+
+    if not needs_cast:
+        return table
+
+    return table.cast(pa.schema(new_fields, metadata=table.schema.metadata))
+
+
+def _has_large_list_type(schema: pa.Schema) -> bool:
+    """Check if schema contains any large_list types (including nested)."""
+    import pyarrow as pa
+
+    def _check_type(arrow_type: pa.DataType) -> bool:
+        if isinstance(arrow_type, pa.LargeListType):
+            return True
+        if hasattr(arrow_type, "value_type"):
+            return _check_type(arrow_type.value_type)
+        return False
+
+    return any(_check_type(f.type) for f in schema)
+
+
+def _downcast_large_list_schema(schema: pa.Schema) -> pa.Schema:
+    """Build a new schema with large_list types downcast to list.
+
+    Preserves field metadata and schema metadata.
+    """
+    import pyarrow as pa
+
+    def _downcast_type(arrow_type: pa.DataType) -> pa.DataType:
+        if isinstance(arrow_type, pa.LargeListType):
+            return pa.list_(_downcast_type(arrow_type.value_type))
+        return arrow_type
+
+    new_fields = [f.with_type(_downcast_type(f.type)) for f in schema]
+    return pa.schema(new_fields, metadata=schema.metadata)
+
+
 def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     """Serialize pyarrow.Table to Arrow IPC bytes.
 
@@ -792,6 +919,10 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
 
     import pyarrow as pa
 
+    # Downcast large_list -> list if needed (Arrow JS doesn't support large_list)
+    if _has_large_list_type(table.schema):
+        table = table.cast(_downcast_large_list_schema(table.schema))
+
     # Convert table to bytes
     sink = pa.BufferOutputStream()
     writer = pa.RecordBatchStreamWriter(sink, table.schema)
@@ -800,13 +931,24 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     return cast("bytes", sink.getvalue().to_pybytes())
 
 
-def convert_pandas_df_to_arrow_bytes(df: DataFrame) -> bytes:
+def convert_pandas_df_to_arrow_bytes(
+    df: DataFrame,
+    *,
+    downcast_large_types: bool = False,
+) -> bytes:
     """Serialize pandas.DataFrame to Arrow IPC bytes.
 
     Parameters
     ----------
     df : pandas.DataFrame
         A dataframe to convert.
+
+    downcast_large_types : bool
+        If ``True``, downcast ``large_string``, ``large_binary``, and
+        ``large_list`` Arrow types to their standard-width counterparts
+        before serializing. This is needed for consumers that bundle older
+        Arrow libraries which cannot decode the large type codes
+        (e.g. custom components v1).
 
     Returns
     -------
@@ -826,6 +968,10 @@ def convert_pandas_df_to_arrow_bytes(df: DataFrame) -> bytes:
         )
         df = fix_arrow_incompatible_column_types(df)
         table = pa.Table.from_pandas(df)
+
+    if downcast_large_types:
+        table = _downcast_large_arrow_types(table)
+
     return convert_arrow_table_to_arrow_bytes(table)
 
 
@@ -861,6 +1007,15 @@ def _show_data_information(msg: str) -> None:
     get_dg_singleton_instance().main_dg.caption(msg)
 
 
+def _convert_polars_to_arrow_bytes(data: Any) -> bytes:
+    """Convert Polars DataFrame to Arrow IPC bytes via to_arrow().
+
+    This bypasses Pandas conversion for ~100-400x faster performance.
+    """
+    table = data.to_arrow()
+    return convert_arrow_table_to_arrow_bytes(table)
+
+
 def convert_anything_to_arrow_bytes(
     data: Any,
     max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS,
@@ -891,7 +1046,47 @@ def convert_anything_to_arrow_bytes(
     if isinstance(data, pa.Table):
         return convert_arrow_table_to_arrow_bytes(data)
 
-    # TODO(lukasmasuch): Add direct conversion to Arrow for supported formats here
+    # Fast path: Polars DataFrame - use direct Arrow conversion
+    if is_polars_dataframe(data):
+        try:
+            return _convert_polars_to_arrow_bytes(data)
+        except Exception:
+            _LOGGER.debug(
+                "Direct Polars→Arrow IPC failed, falling back to Pandas path",
+                exc_info=True,
+            )
+            # Fall through to Pandas conversion
+
+    # Fast path: Polars Series - convert to single-column DataFrame first
+    if is_polars_series(data):
+        try:
+            return _convert_polars_to_arrow_bytes(data.to_frame())
+        except Exception:
+            _LOGGER.debug(
+                "Direct Polars Series→Arrow IPC failed, falling back to Pandas path",
+                exc_info=True,
+            )
+            # Fall through to Pandas conversion
+
+    # Fast path: Polars LazyFrame - must collect first with row limit
+    if is_polars_lazyframe(data):
+        # Collect one extra row to detect truncation accurately
+        collected = data.limit(max_unevaluated_rows + 1).collect()
+        truncated = collected.height > max_unevaluated_rows
+        if truncated:
+            collected = collected.head(max_unevaluated_rows)
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `collect()` on the dataframe to show more."
+            )
+        try:
+            return _convert_polars_to_arrow_bytes(collected)
+        except Exception:
+            _LOGGER.debug(
+                "Direct Polars LazyFrame→Arrow IPC failed, falling back to Pandas path",
+                exc_info=True,
+            )
+            # Fall through to Pandas conversion
 
     # Fallback: try to convert to pandas DataFrame
     # and then to Arrow bytes.
@@ -1285,16 +1480,23 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
 
     Pandas uses a variety of values to represent missing values, including np.nan,
     NaT, None, and pd.NA. This function replaces all of these values with None,
-    which is the only missing value type that is supported by all data
+    which is the only missing value type that is supported by all data types
+    when serializing to JSON-compatible formats.
     """
     import numpy as np
     import pandas as pd
 
-    # Replace all recognized nulls (np.nan, pd.NA, NaT) with None
-    # then infer objects without creating a separate copy:
-    # For performance reasons, we could use copy=False here.
-    # However, this is only available in pandas >=2.
-    return df.replace([pd.NA, pd.NaT, np.nan], None).infer_objects()  # type: ignore
+    # Replace all recognized nulls (np.nan, pd.NA, NaT) with None.
+    result = df.replace([pd.NA, pd.NaT, np.nan], None)  # type: ignore[list-item] # ty: ignore[invalid-argument-type]
+
+    # infer_objects() improves column type correctness (e.g., int instead of float,
+    # string instead of object). However, in pandas 3.0+ it converts None back to
+    # np.nan, which defeats the purpose of this function. Only call it for older
+    # pandas versions. See: https://github.com/streamlit/streamlit/issues/14693
+    if is_pandas_version_less_than("3.0.0"):
+        result = result.infer_objects()
+
+    return result
 
 
 def _pandas_df_to_series(df: DataFrame) -> Series[Any]:
@@ -1389,7 +1591,7 @@ def convert_pandas_df_to_data_format(
 
         return pl.from_pandas(_pandas_df_to_series(df))
     if data_format == DataFormat.XARRAY_DATASET:
-        import xarray as xr  # type: ignore[import-not-found]
+        import xarray as xr  # type: ignore[import-not-found, unused-ignore]
 
         return xr.Dataset.from_dataframe(df)
     if data_format == DataFormat.XARRAY_DATA_ARRAY:

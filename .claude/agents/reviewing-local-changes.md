@@ -128,6 +128,10 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 
 **[APPROVED / CHANGES REQUESTED]**: [One sentence summary of the overall assessment.]
 
+Verdict criteria:
+- **APPROVED**: If there are no critical/merge-blocking issues. Minor suggestions or optional improvements should not block approval — those can be addressed in follow-up PRs.
+- **CHANGES REQUESTED**: Only use this for merge-blocking issues such as: bugs, security vulnerabilities, breaking changes, missing required tests, or violations of documented patterns. Optional improvements, style preferences, and "nice to have" suggestions should NOT result in CHANGES REQUESTED.
+
 ---
 *This is an automated AI review. Please verify the feedback and use your judgment.*
 ```

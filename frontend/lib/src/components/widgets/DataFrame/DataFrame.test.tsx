@@ -16,14 +16,14 @@
 
 import { forwardRef } from "react"
 
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
-import { Quiver } from "~lib/dataframes/Quiver"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { EMPTY } from "~lib/mocks/arrow/empty"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 // Track DataEditor calls for assertions - separate from the component so we can use forwardRef
@@ -48,25 +48,23 @@ vi.mock("native-file-system-adapter", () => ({}))
 import DataFrame, { DataFrameProps } from "./DataFrame"
 
 const getProps = (
-  data: Quiver,
+  data: Uint8Array,
   editingMode: DataframeProto.EditingMode = DataframeProto.EditingMode
     .READ_ONLY
 ): DataFrameProps => ({
   element: DataframeProto.create({
-    arrowData: { data: new Uint8Array() },
+    arrowData: { data },
     editingMode,
   }),
-  data,
+  elementHash: "test-hash",
   disabled: false,
   widgetMgr: {
     getStringValue: vi.fn(),
   } as unknown as WidgetStateManager,
 })
 
-const { ResizeObserver } = window
-
 describe("DataFrame widget", () => {
-  const props = getProps(new Quiver({ data: TEN_BY_TEN }))
+  const props = getProps(TEN_BY_TEN)
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -78,7 +76,6 @@ describe("DataFrame widget", () => {
   })
 
   afterEach(() => {
-    window.ResizeObserver = ResizeObserver
     vi.restoreAllMocks()
   })
 
@@ -89,7 +86,7 @@ describe("DataFrame widget", () => {
 
   it("renders when widgetMgr is undefined", () => {
     const propsWithoutWidgetMgr = {
-      ...getProps(new Quiver({ data: TEN_BY_TEN })),
+      ...getProps(TEN_BY_TEN),
       widgetMgr: undefined,
     }
 
@@ -119,6 +116,167 @@ describe("DataFrame widget", () => {
     expect(toolbarButtons).toHaveLength(4)
   })
 
+  it("hides CSV export when data export is disabled", () => {
+    renderWithContexts(<DataFrame {...props} />, {
+      libConfigContext: { disableDataExport: true },
+    })
+
+    expect(screen.queryByLabelText("Download as CSV")).not.toBeInTheDocument()
+    expect(screen.getByLabelText("Search")).toBeInTheDocument()
+    expect(screen.getByLabelText("Show/hide columns")).toBeInTheDocument()
+  })
+
+  it("disables clipboard copy for read-only dataframes when data export is disabled", () => {
+    renderWithContexts(<DataFrame {...props} />, {
+      libConfigContext: { disableDataExport: true },
+    })
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        getCellsForSelection: true,
+        keybindings: expect.objectContaining({
+          copy: false,
+        }),
+      })
+    )
+  })
+
+  it("keeps clipboard editing enabled for data editors when data export is disabled", () => {
+    renderWithContexts(
+      <DataFrame
+        {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.DYNAMIC)}
+      />,
+      {
+        libConfigContext: { disableDataExport: true },
+      }
+    )
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        getCellsForSelection: true,
+        keybindings: expect.objectContaining({
+          copy: true,
+        }),
+        onPaste: expect.any(Function),
+      })
+    )
+  })
+
+  it("shows search when Ctrl+F is pressed and search is enabled", () => {
+    render(<DataFrame {...props} />)
+
+    const event = {
+      ctrlKey: true,
+      metaKey: false,
+      key: "f",
+      stopPropagation: vi.fn(),
+      preventDefault: vi.fn(),
+    }
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: false,
+      })
+    )
+
+    act(() => {
+      dataEditorMockFn.mock.lastCall?.[0].onKeyDown(event)
+    })
+
+    expect(event.stopPropagation).toHaveBeenCalled()
+    expect(event.preventDefault).toHaveBeenCalled()
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: true,
+      })
+    )
+  })
+
+  it("shows search when Cmd+F is pressed and search is enabled", () => {
+    render(<DataFrame {...props} />)
+
+    const event = {
+      ctrlKey: false,
+      metaKey: true,
+      key: "f",
+      stopPropagation: vi.fn(),
+      preventDefault: vi.fn(),
+    }
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: false,
+      })
+    )
+
+    act(() => {
+      dataEditorMockFn.mock.lastCall?.[0].onKeyDown(event)
+    })
+
+    expect(event.stopPropagation).toHaveBeenCalled()
+    expect(event.preventDefault).toHaveBeenCalled()
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: true,
+      })
+    )
+  })
+
+  it("does not handle Ctrl+F when search is disabled", () => {
+    render(<DataFrame {...getProps(EMPTY)} />)
+
+    const event = {
+      ctrlKey: true,
+      metaKey: false,
+      key: "f",
+      stopPropagation: vi.fn(),
+      preventDefault: vi.fn(),
+    }
+
+    act(() => {
+      dataEditorMockFn.mock.lastCall?.[0].onKeyDown(event)
+    })
+
+    expect(event.stopPropagation).not.toHaveBeenCalled()
+    expect(event.preventDefault).not.toHaveBeenCalled()
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: false,
+      })
+    )
+  })
+
+  it("hides the search overlay when search becomes disabled while open", () => {
+    const { rerender } = render(<DataFrame {...props} />)
+
+    act(() => {
+      dataEditorMockFn.mock.lastCall?.[0].onKeyDown({
+        ctrlKey: true,
+        metaKey: false,
+        key: "f",
+        stopPropagation: vi.fn(),
+        preventDefault: vi.fn(),
+      })
+    })
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: true,
+      })
+    )
+
+    // The dataframe becomes empty, which disables search. The overlay must
+    // not stay stuck open since both the toolbar button and the keyboard
+    // shortcut are disabled in that case.
+    rerender(<DataFrame {...getProps(EMPTY)} />)
+
+    expect(dataEditorMockFn.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        showSearch: false,
+      })
+    )
+  })
+
   it("should show column visibility button when all columns are visible", () => {
     render(<DataFrame {...props} />)
 
@@ -134,12 +292,7 @@ describe("DataFrame widget", () => {
     }))
 
     render(
-      <DataFrame
-        {...getProps(
-          new Quiver({ data: TEN_BY_TEN }),
-          DataframeProto.EditingMode.FIXED
-        )}
-      />
+      <DataFrame {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.FIXED)} />
     )
     // Check the mock was called with the expected props
     expect(dataEditorMockFn).toHaveBeenCalledWith(
@@ -155,10 +308,7 @@ describe("DataFrame widget", () => {
   it("enables trailing row for ADD_ONLY editing mode", () => {
     render(
       <DataFrame
-        {...getProps(
-          new Quiver({ data: TEN_BY_TEN }),
-          DataframeProto.EditingMode.ADD_ONLY
-        )}
+        {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.ADD_ONLY)}
       />
     )
 
@@ -186,10 +336,7 @@ describe("DataFrame widget", () => {
   it("enables row selection for DELETE_ONLY editing mode", () => {
     render(
       <DataFrame
-        {...getProps(
-          new Quiver({ data: TEN_BY_TEN }),
-          DataframeProto.EditingMode.DELETE_ONLY
-        )}
+        {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.DELETE_ONLY)}
       />
     )
 
@@ -214,10 +361,7 @@ describe("DataFrame widget", () => {
   it("enables both trailing row and row selection for DYNAMIC editing mode", () => {
     render(
       <DataFrame
-        {...getProps(
-          new Quiver({ data: TEN_BY_TEN }),
-          DataframeProto.EditingMode.DYNAMIC
-        )}
+        {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.DYNAMIC)}
       />
     )
 

@@ -84,7 +84,7 @@ const loadAndRunModule = async <T extends FrontendState>({
     name: string,
     value: T[keyof T]
   ): void => {
-    let newValue: T = {} as T
+    let newValue: T
 
     try {
       const existingValue = getWidgetValue()

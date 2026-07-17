@@ -15,12 +15,17 @@
  */
 
 import isPropValid from "@emotion/is-prop-valid"
+import { keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
-import { Spinner } from "baseui/spinner"
 
 import type { IconSize } from "~lib/theme/types"
 import { computeSpacingStyle } from "~lib/theme/utils"
+
+const spinKeyframe = keyframes({
+  from: { transform: "rotate(0deg)" },
+  to: { transform: "rotate(360deg)" },
+})
 
 interface StyledSpinnerIconProps {
   size?: IconSize
@@ -28,7 +33,7 @@ interface StyledSpinnerIconProps {
   padding?: string
 }
 
-export const StyledSpinnerIcon = styled(Spinner, {
+export const StyledSpinnerIcon = styled("span", {
   shouldForwardProp: (prop: string) =>
     isPropValid(prop) && !["size"].includes(prop),
 })<StyledSpinnerIconProps>(({
@@ -41,10 +46,16 @@ export const StyledSpinnerIcon = styled(Spinner, {
   const adjustedSpinnerSize = `calc(${theme.iconSizes[size]} * 0.80)`
 
   return {
+    display: "block",
+    animationName: spinKeyframe,
+    animationDuration: "1000ms",
+    animationIterationCount: "infinite",
+    animationTimingFunction: "linear",
+    borderStyle: "solid",
+    borderRadius: "50%",
+    cursor: "wait",
     width: adjustedSpinnerSize,
     height: adjustedSpinnerSize,
-    fontSize: adjustedSpinnerSize,
-    justifyContent: "center",
     margin: computeSpacingStyle(margin, theme),
     padding: computeSpacingStyle(padding, theme),
     borderColor: theme.colors.fadedText10,
@@ -52,6 +63,9 @@ export const StyledSpinnerIcon = styled(Spinner, {
     borderWidth: theme.sizes.spinnerThickness,
     flexGrow: 0,
     flexShrink: 0,
+    "@media (prefers-reduced-motion: reduce)": {
+      animation: "none",
+    },
   }
 })
 

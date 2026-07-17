@@ -295,7 +295,7 @@ class MediaMixin:
             When provided, subtitles are displayed by default. For multiple
             tracks, the first one is displayed by default. If you don't want any
             subtitles displayed by default, use an empty string for the value
-            in a dictrionary's first pair: ``{"None": "", "English": "path/to/english.vtt"}``
+            in a dictionary's first pair: ``{"None": "", "English": "path/to/english.vtt"}``
 
             Not supported for YouTube videos.
         end_time : int, float, timedelta, str, or None
@@ -408,7 +408,7 @@ class MediaMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 
@@ -458,7 +458,7 @@ def _marshall_av_media(
     Otherwise assume strings are filenames and let any OS errors raise.
 
     Load data either from file or through bytes-processing methods into a
-    MediaFile object.  Pack proto with generated Tornado-based URL.
+    MediaFile object.  Pack proto with generated media URL.
 
     (When running in "raw" mode, we won't actually load data into the
     MediaFileManager, and we'll return an empty URL.)

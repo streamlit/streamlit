@@ -12,6 +12,7 @@ Review internal documentation files against the actual codebase state and propos
 - After significant codebase changes (new features, refactors, tooling updates)
 - When documentation drift is suspected
 - After updating make targets, folder structure, dependencies, skills, or workflows
+- **When a PR adds or modifies Streamlit features** — check if bundled skills (`lib/streamlit/.agents/skills/`) need updates
 
 ## Key files to check
 
@@ -19,10 +20,12 @@ Priority files (most likely to contain codebase-specific instructions):
 
 - `**/AGENTS.md` - AI agent instructions
 - `**/README.md` - Package/directory documentation
-- `.claude/skills/*/SKILL.md` - Skill definitions
+- `.claude/skills/*/SKILL.md` - Skill definitions for Streamlit library development
 - `.claude/agents/*.md` - Subagent definitions
 - `wiki/**/*.md` - Developer wiki
 - `CONTRIBUTING.md` - Contributor guide
+- `lib/streamlit/.agents/skills/*/SKILL.md` - **Bundled skills for Streamlit app development** (shipped with the library)
+- `lib/streamlit/.agents/skills/*/references/*.md` - Reference docs for bundled skills
 
 **Files to skip** (synced copies, updated separately):
 
@@ -42,6 +45,20 @@ Priority files (most likely to contain codebase-specific instructions):
 - [ ] Skill/agent cross-references use current names
 - [ ] `.github/workflows/AGENTS.md` reflects actual workflow files
 - [ ] `CONTRIBUTING.md` skill/agent overview matches `.claude/skills/*/` and `.claude/agents/`
+- [ ] **Bundled skills** (`lib/streamlit/.agents/skills/`) reflect current Streamlit API and features
+
+### Bundled skills and feature changes
+
+When a PR **adds or changes a Streamlit feature** (new widget, API change, deprecation, new capability), check if the bundled skills need updates:
+
+- **Reference docs** in `lib/streamlit/.agents/skills/developing-with-streamlit/references/` — update the relevant existing reference to document the new feature or API change
+
+Common triggers for bundled skill updates:
+- New `st.*` commands or widgets
+- Parameter changes to existing commands
+- Deprecated APIs or patterns (add warnings, remove outdated examples)
+- New layout or theming capabilities
+- Performance-related changes (caching, fragments)
 
 ### Quick verification commands
 

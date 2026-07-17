@@ -56,6 +56,7 @@ _PREFERRED_APP_NAMES: Final[tuple[str, ...]] = ("app", "streamlit_app")
 # to use `streamlit run` for any ASGI application.
 _KNOWN_ASGI_APP_CLASSES: Final[tuple[str, ...]] = (
     # Streamlit App
+    "streamlit.App",
     "streamlit.starlette.App",
     "streamlit.web.server.starlette.App",
     "streamlit.web.server.starlette.starlette_app.App",
@@ -325,7 +326,9 @@ def discover_asgi_app(
 
     Supported import patterns:
     - `from streamlit.starlette import App`
+    - `from streamlit import App`
     - `import streamlit` (for `streamlit.starlette.App`)
+    - `import streamlit as st` (for `st.App`)
     - `from fastapi import FastAPI`
     - `from starlette.applications import Starlette`
 

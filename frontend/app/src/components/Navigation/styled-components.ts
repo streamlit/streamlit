@@ -17,7 +17,12 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
+import {
+  EmotionTheme,
+  getOverlayZIndex,
+  getPopoverContainerStyle,
+  hasLightBackgroundColor,
+} from "@streamlit/lib"
 
 /**
  * Returns the color of the text in the sidebar nav.
@@ -275,12 +280,17 @@ interface StyledNavSectionProps {
   isOpen: boolean
 }
 
-export const StyledNavSection = styled.div<StyledNavSectionProps>(
+export const StyledNavSection = styled.button<StyledNavSectionProps>(
   ({ theme, isOpen }) => ({
+    // Button CSS reset
+    border: "none",
+    background: "none",
+    font: "inherit",
+    cursor: "pointer",
+
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    cursor: "pointer",
     position: "relative",
     lineHeight: theme.lineHeights.menuItem,
     fontSize: theme.fontSizes.sm,
@@ -295,8 +305,25 @@ export const StyledNavSection = styled.div<StyledNavSectionProps>(
     "&:hover": {
       backgroundColor: theme.colors.darkenedBgMix15,
     },
+    "&:focus-visible": {
+      outline: "none",
+      boxShadow: theme.shadows.focusRingMuted,
+    },
   })
 )
+
+export const StyledTopNavPopoverBody = styled.div(({ theme }) => ({
+  ...getPopoverContainerStyle(theme),
+  backgroundColor: theme.colors.bgColor,
+  zIndex: getOverlayZIndex(theme),
+  maxHeight: "70vh",
+  minWidth: "8rem",
+  overflow: "auto",
+  maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
+  [`@media (max-width: ${theme.breakpoints.sm})`]: {
+    maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
+  },
+}))
 
 export const StyledTopNavLinkContainer = styled.div(({ theme }) => ({
   marginRight: theme.spacing.twoXS,

@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Final, Generic, Literal, TypeVar, cast
 from streamlit import runtime
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import is_in_form
-from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
+from streamlit.elements.lib.layout_utils import Width, create_layout_config
 from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
@@ -329,8 +329,7 @@ class MenuButtonMixin:
                 "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         opt = convert_anything_to_list(options)
 
@@ -416,5 +415,5 @@ class MenuButtonMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

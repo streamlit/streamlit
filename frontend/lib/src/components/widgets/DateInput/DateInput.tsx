@@ -329,10 +329,10 @@ function DateInput({
           CalendarContainer: {
             style: {
               fontSize: fontSizes.sm,
-              paddingRight: spacing.sm,
-              paddingLeft: spacing.sm,
-              paddingBottom: spacing.sm,
-              paddingTop: spacing.sm,
+              paddingRight: spacing.xs,
+              paddingLeft: spacing.xs,
+              paddingBottom: spacing.xs,
+              paddingTop: spacing.xs,
               // Remove default border
               borderWidth: theme.spacing.none,
             },
@@ -349,10 +349,18 @@ function DateInput({
               // $pseudoSelected: Styles when a range was selected, click outide, and click the calendar again.
               // $selected: Styles the background below the red circle from the start and end dates.
               // $isHovered: Styles the background below the end date when hovered.
+              // $isHighlighted: Day is highlighted via mouse hover or keyboard navigation.
               $pseudoHighlighted,
               $pseudoSelected,
               $selected,
               $isHovered,
+              $isHighlighted,
+            }: {
+              $pseudoHighlighted: boolean
+              $pseudoSelected: boolean
+              $selected: boolean
+              $isHovered: boolean
+              $isHighlighted: boolean
             }) => ({
               fontSize: fontSizes.sm,
               lineHeight: lineHeights.base,
@@ -368,7 +376,12 @@ function DateInput({
               },
 
               "::after": {
-                borderColor: colors.transparent,
+                // BaseWeb renders a ring border on ::after for all days by default.
+                // Suppress it normally; restore it only when the day is highlighted
+                // (hovered or keyboard-navigated) to show the hover ring indicator.
+                borderColor: $isHighlighted
+                  ? colors.primary
+                  : colors.transparent,
               },
               //Apply background color only when hovering over a date in the range in light theme
               ...(hasLightBackgroundColor(theme) &&
@@ -429,7 +442,7 @@ function DateInput({
                   placement={Placement.TOP_RIGHT}
                   error
                 >
-                  <Icon content={ErrorOutline} size="lg" />
+                  <Icon content={ErrorOutline} size="base" />
                 </Tooltip>
               ),
 

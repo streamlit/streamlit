@@ -79,7 +79,7 @@ export class WaveSurferRecordBackend {
       const err = error instanceof Error ? error : new Error(String(error))
       if (isPermissionDeniedError(err)) {
         this.events.onPermissionDenied?.()
-        throw new Error("Microphone permission denied")
+        throw new Error("Microphone permission denied", { cause: error })
       }
       this.events.onError?.(err)
       throw err
@@ -165,7 +165,7 @@ export class WaveSurferRecordBackend {
 
       if (isPermissionDeniedError(err)) {
         this.events.onPermissionDenied?.()
-        throw new Error("Microphone permission denied")
+        throw new Error("Microphone permission denied", { cause: error })
       }
 
       const isConstraintError =

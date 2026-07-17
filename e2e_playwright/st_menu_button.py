@@ -169,6 +169,28 @@ st.menu_button(
     key="short_options_button",
 )
 
+# Menu-style icons (chevron should be hidden)
+with st.container(key="menu_style_icons_container"):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.menu_button(
+            ":material/menu:",
+            options=["Option A", "Option B"],
+            key="menu_icon_button",
+        )
+    with col2:
+        st.menu_button(
+            ":material/more_vert:",
+            options=["Option A", "Option B"],
+            key="more_vert_icon_button",
+        )
+    with col3:
+        st.menu_button(
+            ":material/more_horiz:",
+            options=["Option A", "Option B"],
+            key="more_horiz_icon_button",
+        )
+
 
 # Fragment test
 @st.fragment

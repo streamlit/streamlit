@@ -24,21 +24,33 @@ import { mockTheme } from "~lib/mocks/mockTheme"
 
 import { useWindowDimensionsContext } from "./useWindowDimensionsContext"
 
+/** Test component that displays window dimensions. */
+const DimensionsConsumer: FC = () => {
+  const dimensions = useWindowDimensionsContext()
+  return <div>{`${dimensions.fullWidth}x${dimensions.fullHeight}`}</div>
+}
+
+/** Test component that nests two WindowDimensionsProviders to verify error. */
+const DoubleProvider: FC = () => (
+  <ThemeProvider theme={mockTheme.emotion}>
+    <WindowDimensionsProvider>
+      <WindowDimensionsProvider>
+        <div>Children content</div>
+      </WindowDimensionsProvider>
+    </WindowDimensionsProvider>
+  </ThemeProvider>
+)
+
 describe("WindowDimensionsProvider", () => {
   it("should provide the width and height of the window and take into account the theme padding", () => {
     vi.spyOn(window, "getComputedStyle").mockReturnValue({
       fontSize: "16px",
     } as CSSStyleDeclaration)
 
-    const MyComponent: FC = () => {
-      const dimensions = useWindowDimensionsContext()
-      return <div>{`${dimensions.fullWidth}x${dimensions.fullHeight}`}</div>
-    }
-
     render(
       <ThemeProvider theme={mockTheme.emotion}>
         <WindowDimensionsProvider>
-          <MyComponent />
+          <DimensionsConsumer />
         </WindowDimensionsProvider>
       </ThemeProvider>
     )
@@ -51,17 +63,7 @@ describe("WindowDimensionsProvider", () => {
       .spyOn(console, "error")
       .mockImplementation(() => {})
 
-    const Provider: FC = () => (
-      <ThemeProvider theme={mockTheme.emotion}>
-        <WindowDimensionsProvider>
-          <WindowDimensionsProvider>
-            <div>Children content</div>
-          </WindowDimensionsProvider>
-        </WindowDimensionsProvider>
-      </ThemeProvider>
-    )
-
-    expect(() => render(<Provider />)).toThrowError(
+    expect(() => render(<DoubleProvider />)).toThrowError(
       "WindowDimensionsProvider should only be used once per app. If you need to read window dimensions, utilize `useWindowDimensionsContext()` instead."
     )
     consoleError.mockRestore()

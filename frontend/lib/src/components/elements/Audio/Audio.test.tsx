@@ -206,7 +206,7 @@ describe("Audio Element", () => {
   it("loops to startTime and plays when endTime is reached and loop is true", () => {
     const playSpy = vi
       .spyOn(HTMLMediaElement.prototype, "play")
-      .mockResolvedValue(undefined as never)
+      .mockResolvedValue(undefined)
     render(
       <Audio
         {...getProps({
@@ -240,7 +240,7 @@ describe("Audio Element", () => {
   it("loops on ended when loop is true, using startTime 0 when startTime is unset", () => {
     const playSpy = vi
       .spyOn(HTMLMediaElement.prototype, "play")
-      .mockResolvedValue(undefined as never)
+      .mockResolvedValue(undefined)
     render(<Audio {...getProps({ loop: true, startTime: 0 })} />)
     const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
     audioElement.currentTime = 8
@@ -253,7 +253,7 @@ describe("Audio Element", () => {
   it("does not seek or play on ended when loop is false", () => {
     const playSpy = vi
       .spyOn(HTMLMediaElement.prototype, "play")
-      .mockResolvedValue(undefined as never)
+      .mockResolvedValue(undefined)
     render(<Audio {...getProps({ loop: false, startTime: 3 })} />)
     const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
     audioElement.currentTime = 8

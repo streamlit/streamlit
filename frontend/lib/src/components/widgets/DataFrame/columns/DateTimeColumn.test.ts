@@ -782,4 +782,19 @@ describe("TimeColumn", () => {
     const newCell = mockColumn.getCell(EXAMPLE_DATE)
     expect((newCell as DatePickerType).data.displayDate).toBe("10:30")
   })
+
+  it("adapts default format to include milliseconds when step < 1", () => {
+    const MOCK_TIME_COLUMN_WITH_MS_STEP: BaseColumnProps = {
+      ...MOCK_TIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        step: 0.001,
+      },
+    }
+
+    const mockColumn = TimeColumn(MOCK_TIME_COLUMN_WITH_MS_STEP)
+    const newCell = mockColumn.getCell(EXAMPLE_DATE)
+    expect((newCell as DatePickerType).data.displayDate).toMatch(
+      /^\d{2}:\d{2}:\d{2}\.\d{3}$/
+    )
+  })
 })

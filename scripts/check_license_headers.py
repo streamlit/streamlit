@@ -71,8 +71,9 @@ IGNORE_PATTERN = re.compile(
     r"|\.gitignore$"
     # Excluding test files, because adding headers may cause tests to fail.
     r"|/(fixtures|__snapshots__|test_data|data|test)/"
-    # Exclude vendored files.
+    # Exclude vendored files and bundled skill assets.
     r"|/vendor/|^vendor/|^frontend/component-lib/declarations/apache-arrow"
+    r"|^lib/streamlit/\.agents/"
     r"|proto/streamlit/proto/openmetrics_data_model\.proto"
     # Exclude patch files.
     r"|\.patch$",

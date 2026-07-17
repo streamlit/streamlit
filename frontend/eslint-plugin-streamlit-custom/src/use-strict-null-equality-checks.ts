@@ -57,7 +57,7 @@ const useStrictNullEqualityChecks = createRule<[], MessageIds>({
                 const replacement = isNegated
                   ? "notNullOrUndefined"
                   : "isNullOrUndefined"
-                const sourceCode = context.getSourceCode()
+                const sourceCode = context.sourceCode
                 const leftText = sourceCode.getText(node.left)
                 return fixer.replaceText(node, `${replacement}(${leftText})`)
               },

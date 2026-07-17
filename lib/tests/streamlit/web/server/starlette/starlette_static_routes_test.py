@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 import pytest
@@ -23,9 +24,9 @@ from starlette.applications import Starlette
 from starlette.routing import Mount
 from starlette.testclient import TestClient
 
-from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
 from streamlit.web.server.starlette.starlette_static_routes import (
     _RESERVED_STATIC_PATH_SUFFIXES,
+    STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
     create_streamlit_static_handler,
 )
 
@@ -158,23 +159,22 @@ class TestReservedPaths:
     ) -> None:
         """Test that paths ending with reserved suffixes return 404.
 
-        This matches Tornado's behavior where endswith() is used for reserved
-        path matching. Paths like /my_stcore/health return 404 because they
-        end with '_stcore/health'.
+        Uses endswith() for reserved path matching. Paths like /my_stcore/health
+        return 404 because they end with '_stcore/health'.
 
         TODO: Consider making this path-segment-aware in the future to avoid
         false positives.
         """
         response = static_app.get("/my_stcore/health")
 
-        # Matches Tornado: endswith check treats this as reserved
+        # endswith check treats this as reserved
         assert response.status_code == 404
 
     def test_user_path_custom_stcore_returns_404(self, static_app: TestClient) -> None:
-        """Test that /custom_stcore/host-config returns 404 (matches Tornado)."""
+        """Test that /custom_stcore/host-config returns 404."""
         response = static_app.get("/custom_stcore/host-config")
 
-        # Matches Tornado: endswith check treats this as reserved
+        # endswith check treats this as reserved
         assert response.status_code == 404
 
     def test_nested_reserved_path_returns_404(self, static_app: TestClient) -> None:
@@ -528,3 +528,79 @@ class TestCacheHeadersOnRedirects:
         assert response.status_code == 200
         expected = f"public, immutable, max-age={STATIC_ASSET_CACHE_MAX_AGE_SECONDS}"
         assert response.headers["Cache-Control"] == expected
+
+
+class TestSymlinkSupport:
+    """Tests for symlink support in static file serving.
+
+    Verifies that follow_symlink=True is working correctly, which is required
+    for Bazel/Nix-style deployments where the static directory may contain
+    or be a symlink.
+    """
+
+    @pytest.mark.skipif(
+        not hasattr(os, "symlink"),
+        reason="Symlinks not supported on this platform",
+    )
+    def test_serves_symlinked_file(self, tmp_path: Path) -> None:
+        """Test that symlinked files are served correctly."""
+        # Create static directory
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Home</html>")
+
+        # Create a real file outside the static directory
+        external_file = tmp_path / "external.js"
+        external_file.write_text("console.log('external')")
+
+        # Create a symlink to the external file inside the static directory
+        symlink_path = static_dir / "linked.js"
+        try:
+            symlink_path.symlink_to(external_file)
+        except OSError:
+            pytest.skip("Unable to create symlinks (requires privileges on Windows)")
+
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url=None
+        )
+        app = Starlette(routes=[Mount("/", app=static_files)])
+
+        with TestClient(app) as client:
+            response = client.get("/linked.js")
+
+            assert response.status_code == 200
+            assert response.text == "console.log('external')"
+
+    @pytest.mark.skipif(
+        not hasattr(os, "symlink"),
+        reason="Symlinks not supported on this platform",
+    )
+    def test_serves_symlinked_directory(self, tmp_path: Path) -> None:
+        """Test that symlinked directories are served correctly."""
+        # Create static directory
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Home</html>")
+
+        # Create an external directory with files
+        external_dir = tmp_path / "external_assets"
+        external_dir.mkdir()
+        (external_dir / "asset.css").write_text("body { color: red; }")
+
+        # Create a symlink to the external directory inside the static directory
+        symlink_dir = static_dir / "assets"
+        try:
+            symlink_dir.symlink_to(external_dir)
+        except OSError:
+            pytest.skip("Unable to create symlinks (requires privileges on Windows)")
+
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url=None
+        )
+        app = Starlette(routes=[Mount("/", app=static_files)])
+
+        with TestClient(app) as client:
+            response = client.get("/assets/asset.css")
+
+            assert response.status_code == 200
+            assert response.text == "body { color: red; }"

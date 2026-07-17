@@ -16,11 +16,7 @@
 
 import { fireEvent, screen } from "@testing-library/react"
 
-import {
-  type IImage,
-  ImageList as ImageListProto,
-  streamlit,
-} from "@streamlit/protobuf"
+import { ImageList as ImageListProto, streamlit } from "@streamlit/protobuf"
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
@@ -138,6 +134,24 @@ describe("ImageList Element", () => {
 
       const caption = screen.getByTestId("stImageCaption")
       expect(caption).toHaveTextContent("Test caption")
+    })
+
+    it.each([
+      "javascript:alert(1)",
+      "JAVASCRIPT:alert(1)",
+      "java\nscript:alert(1)",
+      "vbscript:msgbox(1)",
+    ])("blocks dangerous link URLs: %s", linkUrl => {
+      const props = getProps({
+        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+        link: linkUrl,
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("href", "#")
+      expect(link).toHaveAttribute("target", "_self")
+      expect(link).toHaveAttribute("rel", "noreferrer")
     })
   })
 
@@ -339,7 +353,7 @@ describe("ImageList Element", () => {
       ])(
         "sets crossOrigin to $expected when $scenario",
         ({ expected, resourceCrossOriginMode, imgs }) => {
-          const props = getProps({ imgs: imgs as IImage[] })
+          const props = getProps({ imgs: imgs })
           renderWithContexts(<ImageList {...props} />, {
             libConfigContext: {
               resourceCrossOriginMode,
@@ -421,7 +435,7 @@ describe("ImageList Element", () => {
       ])(
         "does not set crossOrigin when $scenario",
         ({ resourceCrossOriginMode, imgs }) => {
-          const props = getProps({ imgs: imgs as IImage[] })
+          const props = getProps({ imgs: imgs })
           renderWithContexts(<ImageList {...props} />, {
             libConfigContext: {
               resourceCrossOriginMode,

@@ -166,7 +166,7 @@ class BidiComponentDefinition:
 
     @property
     def is_placeholder(self) -> bool:
-        """Return True if this definition is a placeholder (no content).
+        """Whether this definition is a placeholder (no content).
 
         Placeholders are typically created during the manifest scanning phase
         when we discover a component's existence but haven't yet loaded its
@@ -176,7 +176,7 @@ class BidiComponentDefinition:
 
     @property
     def css_url(self) -> str | None:
-        """Return the asset-dir-relative URL path for CSS when file-backed.
+        """The asset-dir-relative URL path for CSS when file-backed.
 
         When present, servers construct
         ``/_stcore/bidi-components/<component>/<css_url>`` using this value. If
@@ -191,7 +191,7 @@ class BidiComponentDefinition:
 
     @property
     def js_url(self) -> str | None:
-        """Return the asset-dir-relative URL path for JS when file-backed.
+        """The asset-dir-relative URL path for JS when file-backed.
 
         When present, servers construct
         ``/_stcore/bidi-components/<component>/<js_url>`` using this value. If
@@ -231,16 +231,22 @@ class BidiComponentDefinition:
         # Fallback: preserve relative subpath if the provided path is relative;
         # otherwise default to the basename for absolute paths. Normalize
         # leading "./" to avoid awkward prefixes in URLs.
+        # Note: `__post_init__` only accepts absolute paths, so the relative
+        # branch below is a defensive fallback for callers that bypass that
+        # validation.
         path_str = str(value)
         if os.path.isabs(path_str):
             return os.path.basename(path_str)
-        norm = path_str.replace("\\", "/").removeprefix("./")
-        # If there's a subpath remaining, preserve it; otherwise use basename
-        return norm if "/" in norm else os.path.basename(norm)
+        norm = path_str.replace("\\", "/").removeprefix(
+            "./"
+        )  # pragma: no cover - defensive
+        return (
+            norm if "/" in norm else os.path.basename(norm)
+        )  # pragma: no cover - defensive
 
     @property
     def css_content(self) -> str | None:
-        """Return inline CSS content or ``None`` if file-backed or missing."""
+        """Inline CSS content or ``None`` if file-backed or missing."""
         if self._has_css_path or self.css is None:
             return None
         # Return as string if it's not a path
@@ -248,7 +254,7 @@ class BidiComponentDefinition:
 
     @property
     def js_content(self) -> str | None:
-        """Return inline JavaScript content or ``None`` if file-backed or missing."""
+        """Inline JavaScript content or ``None`` if file-backed or missing."""
         if self._has_js_path or self.js is None:
             return None
         # Return as string if it's not a path
@@ -256,12 +262,12 @@ class BidiComponentDefinition:
 
     @property
     def html_content(self) -> str | None:
-        """Return inline HTML content or ``None`` if not provided."""
+        """Inline HTML content or ``None`` if not provided."""
         return self.html
 
     @property
     def source_paths(self) -> dict[str, str]:
-        """Return source directories for file-backed CSS/JS content.
+        """Source directories for file-backed CSS/JS content.
 
         The returned mapping contains keys like ``"js"`` and ``"css"`` with the
         directory path from which each was loaded.

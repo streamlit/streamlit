@@ -21,9 +21,8 @@ from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -42,6 +41,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -97,6 +97,7 @@ class ColorPickerMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str:
         r"""Display a color picker widget.
 
@@ -201,6 +202,21 @@ class ColorPickerMixin:
             ``st.query_params``; it can only be programmatically changed
             through ``st.session_state``.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         str
@@ -231,6 +247,7 @@ class ColorPickerMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -248,6 +265,7 @@ class ColorPickerMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str:
         key = to_key(key)
@@ -266,9 +284,7 @@ class ColorPickerMixin:
         if isinstance(width, int) and width < min_width_px:
             width = min_width_px
 
-        validate_width(width, allow_content=True)
-
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         element_id = compute_and_register_element_id(
             "color_picker",
@@ -328,6 +344,7 @@ like '#00FFAA' or '#000'.
             ctx=ctx,
             value_type="string_value",
             bind=bind,
+            persist_state=persist_state,
             # Color picker is not clearable (defaults to black)
             clearable=False,
         )
@@ -337,11 +354,14 @@ like '#00FFAA' or '#000'.
             color_picker_proto.set_value = True
 
         self.dg._enqueue(
-            "color_picker", color_picker_proto, layout_config=layout_config
+            "color_picker",
+            color_picker_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
         )
         return widget_state.value
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

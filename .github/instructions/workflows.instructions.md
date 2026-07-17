@@ -19,7 +19,7 @@ This folder contains all GitHub Actions workflows for the Streamlit repository. 
 1. **Use existing approved actions**: `actions/*`, `github/*`, `pypa/*`, `astral-sh/setup-uv`, `snowflakedb/reusable-workflows`
 2. **Use `actions/github-script`** for GitHub API interactions instead of third-party actions
 3. **Use bash/shell scripts** for general automation tasks
-4. **Pin action versions** using SHA hashes for security-critical actions (e.g., `pypa/gh-action-pypi-publish@ed0c53...`)
+4. **Pin every external action and reusable workflow** to a full-length commit SHA, followed by a version comment (e.g., `actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0`)
 
 Avoid adding new external actions unless absolutely necessary. This reduces supply chain risk and makes workflows easier to audit.
 
@@ -69,7 +69,7 @@ Reusable composite actions in `.github/actions/` encapsulate common setup steps.
 
 ```yaml
 steps:
-  - uses: actions/checkout@v6
+  - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
   - uses: ./.github/actions/build_info        # Get Python versions
   - uses: ./.github/actions/make_init         # Setup dev environment
     with:
@@ -89,7 +89,6 @@ steps:
 | `playwright.yml` | Push/PR to `develop` | Full E2E test suite across webkit, chromium, and firefox |
 | `playwright-changed-files.yml` | PR | Runs E2E tests only for changed test files (faster feedback) |
 | `playwright-custom-components.yml` | Push/PR to `develop` | E2E tests specifically for custom components |
-| `playwright-starlette.yml` | Push to `develop`, labeled PR | E2E tests using experimental Starlette server backend |
 | `cli-regression.yml` | Push/PR to `develop` | CLI regression tests (builds package and runs CLI tests) |
 | `performance.yml` | Push to `develop`, `run-performance` label on PR | Performance benchmarks (Playwright, Python, Lighthouse) |
 | `load-testing.yml` | `run-load-testing` label or manual | Server load testing with concurrent Playwright sessions |
@@ -119,7 +118,7 @@ steps:
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `nightly.yml` | Daily schedule (6:30 UTC) | Creates nightly tag, runs full test suite, publishes to PyPI |
+| `nightly.yml` | Daily schedule (4:30 UTC) | Creates nightly tag, runs full test suite, publishes to PyPI |
 | `release.yml` | Manual (on tag) | Builds and publishes official releases to PyPI and GitHub |
 | `release-branch-creation.yml` | Manual | Creates release branch from a nightly tag |
 | `release-tag-and-pr-creation.yml` | Manual | Creates release tag and PR to merge back to develop |
@@ -142,7 +141,8 @@ steps:
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `ai-pr-review.yml` | `ai-review` label or manual | AI-powered code review using Cursor CLI |
+| `ai-pr-review.yml` | `ai-review`/`ai-final-review` label or manual | AI-powered code review using Cursor CLI |
+| `ai-qa-testing.yml` | `ai-qa-test` label or manual | AI-powered QA testing on PR branches |
 | `ai-issue-triage.yml` | `ai-review` label on issue or manual | AI-powered issue triage (duplicates, labels) |
 | `ai-update-docs.yml` | Weekly (Tuesdays) or manual | AI-powered documentation review and updates |
 | `ai-fix-flaky-e2e-tests.yml` | Weekly (Fridays) or manual | AI-powered flaky E2E test diagnosis and fixing |

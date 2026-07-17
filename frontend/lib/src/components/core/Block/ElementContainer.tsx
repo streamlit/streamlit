@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-import { FC, ReactNode, Suspense, useContext } from "react"
+import { memo, ReactElement, ReactNode, Suspense, useContext } from "react"
 
 import classNames from "classnames"
 
-import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
-
 import { ElementNode } from "~lib/AppNode"
 import { ViewStateContext } from "~lib/components/core/ViewStateContext"
-import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { getElementId } from "~lib/util/utils"
 
@@ -65,12 +63,12 @@ export interface ElementContainerProps {
  * }
  * ```
  */
-export const ElementContainer: FC<ElementContainerProps> = ({
+export const ElementContainer = memo(function ElementContainer({
   node,
   config,
   isStale,
   children,
-}) => {
+}: ElementContainerProps): ReactElement {
   const { isFullScreen } = useContext(ViewStateContext)
 
   const elementType = node.element.type || ""
@@ -94,11 +92,7 @@ export const ElementContainer: FC<ElementContainerProps> = ({
       <ErrorBoundary>
         <Suspense
           fallback={
-            <Skeleton
-              element={SkeletonProto.create({
-                style: SkeletonProto.SkeletonStyle.ELEMENT,
-              })}
-            />
+            <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
           }
         >
           {children}
@@ -106,4 +100,4 @@ export const ElementContainer: FC<ElementContainerProps> = ({
       </ErrorBoundary>
     </StyledElementContainerLayoutWrapper>
   )
-}
+})

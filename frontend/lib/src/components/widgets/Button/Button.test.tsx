@@ -182,4 +182,16 @@ describe("Button widget", () => {
 
     expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
   })
+
+  it.each([
+    ["primary", "stBaseButton-primary"],
+    ["tertiary", "stBaseButton-tertiary"],
+    ["secondary", "stBaseButton-secondary"],
+  ])("applies the correct button kind for the %s type", (type, testId) => {
+    const props = getProps({ type })
+    render(<Button {...props} />)
+    const matches = screen.getAllByTestId(testId)
+    expect(matches.length).toBeGreaterThan(0)
+    expect(matches[0]).toBeVisible()
+  })
 })

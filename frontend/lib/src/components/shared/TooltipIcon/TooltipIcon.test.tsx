@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import { act, screen, waitFor } from "@testing-library/react"
+import { act, renderHook, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { useFocusVisible } from "react-aria"
 import { vi } from "vitest"
 
 import ThemeProvider from "~lib/components/core/ThemeProvider"
@@ -28,6 +29,12 @@ import TooltipIcon, {
 } from "./TooltipIcon"
 
 describe("TooltipIcon element", () => {
+  // Register React Aria's global pointer/keyboard modality listeners so that
+  // hover-triggered tooltip tests can work.  See Tooltip.test.tsx for a full
+  // explanation of this setup.
+  beforeAll(() => {
+    renderHook(() => useFocusVisible())
+  })
   it("renders a TooltipIcon", () => {
     render(
       <ThemeProvider
@@ -72,10 +79,14 @@ describe("TooltipIcon element", () => {
   describe("InlineTooltipIcon prop forwarding", () => {
     beforeEach(() => {
       vi.useFakeTimers()
+      // Prime interaction modality to 'pointer' for hover tests.
+      // See Tooltip.test.tsx for full explanation.
+      document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }))
     })
 
     afterEach(() => {
       vi.useRealTimers()
+      vi.restoreAllMocks()
     })
 
     it("forwards containerWidth and onMouseEnterDelay to TooltipIcon", async () => {

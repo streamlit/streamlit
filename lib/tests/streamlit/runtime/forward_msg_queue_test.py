@@ -54,12 +54,6 @@ arrow.marshall(
 )
 DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
-ADD_ROWS_MSG = ForwardMsg()
-arrow.marshall(
-    ADD_ROWS_MSG.delta.arrow_add_rows.data, {"col1": [3, 4, 5], "col2": [13, 14, 15]}
-)
-ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
-
 
 class ForwardMsgQueueTest(unittest.TestCase):
     def test_simple_enqueue(self):
@@ -188,10 +182,6 @@ class ForwardMsgQueueTest(unittest.TestCase):
             msg.metadata.delta_path[:] = make_delta_path(container, path, 1)
             fmq.enqueue(msg)
 
-            msg = copy.deepcopy(ADD_ROWS_MSG)
-            msg.metadata.delta_path[:] = make_delta_path(container, path, 1)
-            fmq.enqueue(msg)
-
         enqueue_deltas(RootContainer.MAIN, ())
         enqueue_deltas(RootContainer.SIDEBAR, (0, 0, 1))
 
@@ -201,10 +191,10 @@ class ForwardMsgQueueTest(unittest.TestCase):
             assert queue[idx].delta.new_element.text.body == "text1"
 
         queue = fmq.flush()
-        assert len(queue) == 7
+        assert len(queue) == 5
 
         assert_deltas(RootContainer.MAIN, (), 1)
-        assert_deltas(RootContainer.SIDEBAR, (0, 0, 1), 4)
+        assert_deltas(RootContainer.SIDEBAR, (0, 0, 1), 3)
 
     def test_clear_retain_lifecycle_msgs(self):
         fmq = ForwardMsgQueue()

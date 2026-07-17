@@ -96,10 +96,10 @@ export const createDateTimePickerOverrides = ({
     CalendarContainer: {
       style: {
         fontSize: theme.fontSizes.sm,
-        paddingRight: theme.spacing.sm,
-        paddingLeft: theme.spacing.sm,
+        paddingRight: theme.spacing.xs,
+        paddingLeft: theme.spacing.xs,
         paddingBottom: theme.spacing.none,
-        paddingTop: theme.spacing.sm,
+        paddingTop: theme.spacing.xs,
         // Remove default border
         borderWidth: theme.spacing.none,
       },
@@ -115,11 +115,13 @@ export const createDateTimePickerOverrides = ({
         $pseudoSelected,
         $selected,
         $isHovered,
+        $isHighlighted,
       }: {
         $pseudoHighlighted: boolean
         $pseudoSelected: boolean
         $selected: boolean
         $isHovered: boolean
+        $isHighlighted: boolean
       }) => ({
         fontSize: theme.fontSizes.sm,
         lineHeight: theme.lineHeights.base,
@@ -130,7 +132,12 @@ export const createDateTimePickerOverrides = ({
               : theme.colors.transparent,
         },
         "::after": {
-          borderColor: theme.colors.transparent,
+          // BaseWeb renders a ring border on ::after for all days by default.
+          // Suppress it normally; restore it only when the day is highlighted
+          // (hovered or keyboard-navigated) to show the hover ring indicator.
+          borderColor: $isHighlighted
+            ? theme.colors.primary
+            : theme.colors.transparent,
         },
         ...(hasLightBackgroundColor(theme) &&
         $isHovered &&
@@ -179,7 +186,7 @@ export const createDateTimePickerOverrides = ({
             placement={Placement.TOP_RIGHT}
             error
           >
-            <Icon content={ErrorOutline} size="lg" />
+            <Icon content={ErrorOutline} size="base" />
           </Tooltip>
         ),
         overrides: {
@@ -390,8 +397,8 @@ export const createDateTimePickerOverrides = ({
                     overrides: {
                       Svg: {
                         style: () => ({
-                          width: theme.iconSizes.xl,
-                          height: theme.iconSizes.xl,
+                          width: theme.iconSizes.lg,
+                          height: theme.iconSizes.lg,
                         }),
                       },
                     },

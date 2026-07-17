@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_checkbox, goto_app
+from e2e_playwright.shared.app_utils import (
+    click_checkbox,
+    goto_app,
+    reset_hovering,
+)
 
 
 def test_desktop_top_nav(app: Page):
@@ -293,6 +297,11 @@ def test_top_nav_with_logo(app: Page, assert_snapshot: ImageCompareFunction):
     logo = app.get_by_test_id("stHeaderLogo")
     expect(logo).to_be_visible()
 
+    # Reset hovering so the mouse cursor doesn't trigger hover styles on top
+    # nav links after the sidebar collapses (otherwise the snapshot can flake
+    # depending on where the close button ended up).
+    reset_hovering(app)
+
     # Take snapshot of the header with logo at full width
     header = app.locator("header").first
     assert_snapshot(header, name="st_navigation-top_nav_with_logo")
@@ -303,6 +312,7 @@ def test_top_nav_with_logo(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Logo should still be visible and maintain its size
     expect(logo).to_be_visible()
+    reset_hovering(app)
     assert_snapshot(header, name="st_navigation-top_nav_with_logo_narrow_viewport")
 
 
@@ -440,6 +450,36 @@ def test_mixed_empty_and_named_sections(app: Page):
     home_nav.click()
     wait_for_app_run(app)
     expect(app.get_by_test_id("stHeading").filter(has_text="Page 1")).to_be_visible()
+
+
+def test_top_nav_section_keyboard_and_aria(app: Page):
+    """Test keyboard dismissal and ARIA state for top nav section popovers.
+
+    Covers behavior introduced when replacing BaseWeb's popover with a custom
+    FloatingPortal + useEffect dismissal handler: Escape closes the popover and
+    returns focus to the trigger, and aria-expanded reflects open/closed state.
+    """
+    app.set_viewport_size({"width": 1280, "height": 800})
+
+    click_checkbox(app, "Test Sections")
+    wait_for_app_run(app)
+
+    section_trigger = app.get_by_test_id("stTopNavSection").first
+
+    # Trigger starts closed with correct ARIA state
+    expect(section_trigger).to_have_attribute("aria-expanded", "false")
+    expect(app.get_by_test_id("stTopNavPopover")).not_to_be_visible()
+
+    # Click to open — aria-expanded updates and popover appears
+    section_trigger.click()
+    expect(section_trigger).to_have_attribute("aria-expanded", "true")
+    expect(app.get_by_test_id("stTopNavPopover").first).to_be_visible()
+
+    # Escape closes the popover and returns focus to the trigger
+    app.keyboard.press("Escape")
+    expect(section_trigger).to_have_attribute("aria-expanded", "false")
+    expect(app.get_by_test_id("stTopNavPopover")).not_to_be_visible()
+    expect(section_trigger).to_be_focused()
 
 
 def test_mixed_sections_visual_regression(

@@ -107,6 +107,8 @@ export interface BaseColumn extends BaseColumnProps {
   getCell(data?: unknown, validate?: boolean): GridCell
   // Get the raw value of the given cell:
   getCellValue(cell: GridCell): unknown
+  // Compare two raw cell values for equality:
+  valuesEqual?(a: unknown, b: unknown): boolean
 }
 
 /**
@@ -194,6 +196,47 @@ export function isMissingValueCell(
 }
 
 /**
+ * Returns `true` if both values are arrays with strictly equal items in the same order.
+ */
+export function arrayValuesEqual(a: unknown, b: unknown): boolean {
+  if (!Array.isArray(a) || !Array.isArray(b)) {
+    return false
+  }
+
+  return a.length === b.length && a.every((value, index) => value === b[index])
+}
+
+/**
+ * Returns `true` if two raw values should be treated as equal for the column.
+ */
+export function valuesEqual(
+  a: unknown,
+  b: unknown,
+  column: BaseColumn
+): boolean {
+  if (isNullOrUndefined(a) && isNullOrUndefined(b)) {
+    return true
+  }
+
+  if (isNullOrUndefined(a) || isNullOrUndefined(b)) {
+    return false
+  }
+
+  if (column.valuesEqual) {
+    try {
+      return column.valuesEqual(a, b)
+    } catch {
+      // Column comparators may coerce or serialize values (e.g. Number(),
+      // JSON.stringify()), which can throw on unexpected inputs. Fall back to
+      // an identity check so equality checks never break the data editor.
+      return Object.is(a, b)
+    }
+  }
+
+  return Object.is(a, b)
+}
+
+/**
  * Returns an empty cell.
  */
 export function getEmptyCell(missingCell = false): LoadingCell {
@@ -210,7 +253,7 @@ export function getEmptyCell(missingCell = false): LoadingCell {
     kind: GridCellKind.Loading,
     allowOverlay: false,
     copyData: "",
-  } as LoadingCell
+  }
 }
 
 /**
@@ -230,7 +273,7 @@ export function getTextCell(readonly: boolean, faded: boolean): TextCell {
     allowOverlay: true,
     readonly,
     style,
-  } as TextCell
+  }
 }
 
 /**
@@ -253,7 +296,7 @@ export function toGlideColumn(column: BaseColumn): GridColumn {
     ...(column.width && {
       width: column.width,
     }),
-  } as GridColumn
+  }
 }
 
 /**

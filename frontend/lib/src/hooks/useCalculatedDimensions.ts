@@ -32,6 +32,10 @@ import { useResizeObserver } from "./useResizeObserver"
  * that will cause the observer to be re-evaluated.
  * @param {number} [fallbackValue=-1] - The value to return when width or height is 0.
  * The default value is -1 which allows components to detect when dimensions aren't ready.
+ * @param {number} [throttleMs=100] - Throttle delay in milliseconds.
+ * Dimension updates are throttled to reduce the frequency of state updates
+ * during rapid resize operations while still providing visual feedback.
+ * Pass 0 to disable throttling if immediate updates are required.
  *
  * @returns An object containing:
  *   - width: The current width of the observed element in pixels (or fallbackValue if width is 0)
@@ -59,10 +63,20 @@ import { useResizeObserver } from "./useResizeObserver"
  *   // width and height will be 0 instead of -1 when not ready
  * };
  * ```
+ *
+ * @example
+ * ```tsx
+ * // Disable throttling for immediate updates
+ * const ResponsiveComponent = () => {
+ *   const { width, elementRef } = useCalculatedDimensions([], -1, 0);
+ *   // Updates immediately on every resize event
+ * };
+ * ```
  */
 export const useCalculatedDimensions = <T extends HTMLDivElement>(
   dependencies: React.DependencyList = [],
-  fallbackValue: number = -1
+  fallbackValue: number = -1,
+  throttleMs = 100
 ): {
   width: number
   height: number
@@ -73,7 +87,8 @@ export const useCalculatedDimensions = <T extends HTMLDivElement>(
     elementRef,
   } = useResizeObserver<T>(
     useMemo(() => ["width", "height"], []),
-    dependencies
+    dependencies,
+    throttleMs
   )
 
   return {

@@ -23,6 +23,7 @@ rules/*
 !rules/e2e_playwright.mdc
 !rules/overview.mdc
 !rules/skills.mdc
+!rules/agents.mdc
 !rules/workflows.mdc
 !rules/scripts.mdc
 !rules/specs.mdc

@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import mimetypes
 import os.path
 from typing import TYPE_CHECKING, Final, NamedTuple
@@ -34,11 +33,18 @@ from streamlit.runtime.stats import (
     StatsProvider,
     group_cache_stats,
 )
+from streamlit.util import create_fast_hasher
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
 _LOGGER: Final = get_logger(__name__)
+
+# Threshold for partial hashing. Files larger than this use head+middle+tail
+# fingerprinting instead of hashing the entire content, providing ~50-100x speedup
+# for large files.
+_PARTIAL_HASH_THRESHOLD: Final = 1_048_576  # 1 MiB
+_PARTIAL_HASH_SAMPLE_SIZE: Final = 65_536  # 64 KiB for head, middle, and tail
 
 # Mimetype -> filename extension map for the `get_extension_for_mimetype`
 # function. We use Python's `mimetypes.guess_extension` for most mimetypes,
@@ -53,6 +59,13 @@ PREFERRED_MIMETYPE_EXTENSION_MAP: Final = {
 def _calculate_file_id(data: bytes, mimetype: str, filename: str | None = None) -> str:
     """Hash data, mimetype, and an optional filename to generate a stable file ID.
 
+    For large files (>1 MiB), uses partial hashing (length + head + middle + tail)
+    for performance. This provides ~50-100x speedup for large files. Note that for
+    files above the threshold, this is a fingerprint, not a cryptographic hash:
+    two files with identical length, head, middle, and tail but different bytes
+    elsewhere will produce the same ID. This tradeoff is acceptable for media file
+    caching where such collisions are extremely rare in practice.
+
     Parameters
     ----------
     data
@@ -62,12 +75,28 @@ def _calculate_file_id(data: bytes, mimetype: str, filename: str | None = None) 
     filename
         Any string. Will be converted to bytes and used to compute a hash.
     """
-    filehash = hashlib.new("sha224", usedforsecurity=False)
-    filehash.update(data)
-    filehash.update(bytes(mimetype.encode()))
+    filehash = create_fast_hasher()
+
+    # Always include length prefix to:
+    # 1. Prevent cross-class collisions between small files and large files
+    #    that happen to have matching content patterns.
+    # 2. Distinguish large files with identical samples but different lengths.
+    filehash.update(f"{len(data)}:".encode())
+
+    if len(data) > _PARTIAL_HASH_THRESHOLD:
+        # For large files, hash length + head + middle + tail (64 KiB each).
+        # This avoids hashing multi-MB payloads while still detecting most changes.
+        filehash.update(data[:_PARTIAL_HASH_SAMPLE_SIZE])
+        mid_start = (len(data) - _PARTIAL_HASH_SAMPLE_SIZE) // 2
+        filehash.update(data[mid_start : mid_start + _PARTIAL_HASH_SAMPLE_SIZE])
+        filehash.update(data[-_PARTIAL_HASH_SAMPLE_SIZE:])
+    else:
+        filehash.update(data)
+
+    filehash.update(mimetype.encode())
 
     if filename is not None:
-        filehash.update(bytes(filename.encode()))
+        filehash.update(filename.encode())
 
     return filehash.hexdigest()
 

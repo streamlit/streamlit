@@ -38,6 +38,7 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.session_manager import SessionManager
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.web.server.server import MEDIA_ENDPOINT, UPLOAD_FILE_ENDPOINT
@@ -70,6 +71,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             pages_manager=PagesManager(""),
         )
         add_script_run_ctx(threading.current_thread(), self.script_run_ctx)
+        ThreadState.initialize()
 
         # Create a MemoryMediaFileStorage instance, and the MediaFileManager
         # singleton.

@@ -23,7 +23,11 @@ import { GraphVizChart as GraphVizChartProto } from "@streamlit/protobuf"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 
-import GraphVizChart, { GraphVizChartProps, LOG } from "./GraphVizChart"
+import GraphVizChart, {
+  GraphVizChartProps,
+  LOG,
+  sanitizeGraphVizLinkUris,
+} from "./GraphVizChart"
 
 interface MockGraphvizChain {
   zoom: () => MockGraphvizChain
@@ -45,11 +49,43 @@ const createChainableMethods = (renderDotImpl?: Mock): MockGraphvizChain => {
     engine: () => chainable,
     renderDot:
       renderDotImpl ||
-      vi.fn().mockReturnValue({
-        on: vi.fn(),
+      vi.fn((_spec: string, callback?: () => void) => {
+        callback?.()
+
+        return {
+          on: vi.fn(),
+        }
       }),
   }
   return chainable
+}
+
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg"
+const XLINK_NAMESPACE = "http://www.w3.org/1999/xlink"
+
+const appendSvgLink = (
+  container: Element,
+  attributes: Record<string, string>
+): SVGElement => {
+  const svg = document.createElementNS(SVG_NAMESPACE, "svg")
+  const link = document.createElementNS(SVG_NAMESPACE, "a")
+
+  Object.entries(attributes).forEach(([attributeName, attributeValue]) => {
+    if (attributeName === "xlink:href") {
+      link.setAttributeNS(XLINK_NAMESPACE, attributeName, attributeValue)
+    } else {
+      link.setAttribute(attributeName, attributeValue)
+    }
+  })
+
+  svg.appendChild(link)
+  container.appendChild(svg)
+
+  return link
+}
+
+const setupMockRenderDot = (renderDotImpl: Mock): void => {
+  ;(graphviz as Mock).mockReturnValue(createChainableMethods(renderDotImpl))
 }
 
 vi.mock("d3-graphviz", () => ({
@@ -106,8 +142,7 @@ describe("GraphVizChart Element", () => {
       }
     })
 
-    // Modify the graphviz mock to use the mockRenderDot
-    ;(graphviz as Mock).mockReturnValue(createChainableMethods(mockRenderDot))
+    setupMockRenderDot(mockRenderDot)
 
     const props = getProps({
       spec: "crash",
@@ -116,7 +151,7 @@ describe("GraphVizChart Element", () => {
     render(<GraphVizChart {...props} />)
 
     expect(logErrorSpy).toHaveBeenCalledTimes(1)
-    expect(mockRenderDot).toHaveBeenCalledWith("crash")
+    expect(mockRenderDot).toHaveBeenCalledWith("crash", expect.any(Function))
     expect(graphviz).toHaveBeenCalledTimes(1)
   })
 
@@ -129,5 +164,74 @@ describe("GraphVizChart Element", () => {
     expect(screen.getByTestId("stGraphVizChart")).toHaveStyle(
       "height: auto; width: auto"
     )
+  })
+
+  const renderWithSvgLink = (
+    attributes: Record<string, string>
+  ): Element | null => {
+    const mockRenderDot = vi.fn((_spec: string, callback?: () => void) => {
+      appendSvgLink(screen.getByTestId("stGraphVizChart"), attributes)
+
+      callback?.()
+
+      return {
+        on: vi.fn(),
+      }
+    })
+    setupMockRenderDot(mockRenderDot)
+
+    render(<GraphVizChart {...getProps()} />)
+
+    return screen.getByTestId("stGraphVizChart").querySelector("a")
+  }
+
+  it("sanitizes dangerous Graphviz link URLs after rendering", () => {
+    const link = renderWithSvgLink({
+      href: "vbscript:alert(1)",
+      "xlink:href": "\u0001java\nscript:alert(1)",
+    })
+
+    expect(link).not.toBeNull()
+    expect(link?.getAttribute("href")).toBe("#")
+    expect(link?.getAttributeNS(XLINK_NAMESPACE, "href")).toBe("#")
+  })
+
+  it("preserves safe Graphviz link URLs", () => {
+    const link = renderWithSvgLink({
+      href: "#details",
+      "xlink:href": "https://streamlit.io",
+    })
+
+    expect(link).not.toBeNull()
+    expect(link?.getAttribute("href")).toBe("#details")
+    expect(link?.getAttributeNS(XLINK_NAMESPACE, "href")).toBe(
+      "https://streamlit.io"
+    )
+  })
+
+  it("sanitizes rendered SVG links directly", () => {
+    const container = document.createElement("div")
+    const link = appendSvgLink(container, {
+      "xlink:href": "JAVASCRIPT:alert(1)",
+    })
+
+    sanitizeGraphVizLinkUris(container)
+
+    expect(link.getAttributeNS(XLINK_NAMESPACE, "href")).toBe("#")
+  })
+
+  it("sanitizes xlink:href set as a plain qualified attribute", () => {
+    const container = document.createElement("div")
+    const svg = document.createElementNS(SVG_NAMESPACE, "svg")
+    const link = document.createElementNS(SVG_NAMESPACE, "a")
+    // Set xlink:href by qualified name (no namespace) to exercise the
+    // getAttribute("xlink:href") branch.
+    link.setAttribute("xlink:href", "javascript:alert(1)")
+    svg.appendChild(link)
+    container.appendChild(svg)
+
+    sanitizeGraphVizLinkUris(container)
+
+    expect(link.getAttribute("xlink:href")).toBe("#")
   })
 })

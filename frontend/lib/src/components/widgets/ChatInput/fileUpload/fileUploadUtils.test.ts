@@ -22,6 +22,7 @@ import { AcceptFileValue } from "~lib/util/utils"
 
 import {
   configureFileInputProps,
+  getPastedFiles,
   getUploadDescription,
   validateFileType,
 } from "./fileUploadUtils"
@@ -185,6 +186,55 @@ describe("fileUploadUtils", () => {
       [AcceptFileValue.None, "a file"],
     ])("returns correct description for %s", (acceptFile, expected) => {
       expect(getUploadDescription(acceptFile)).toBe(expected)
+    })
+  })
+
+  describe("getPastedFiles", () => {
+    it("returns files from clipboard data", () => {
+      const file = createTestFile("pasted.txt")
+      const clipboardData = {
+        files: [file],
+        items: [],
+      } as unknown as DataTransfer
+
+      expect(getPastedFiles(clipboardData)).toEqual([file])
+    })
+
+    it("falls back to file items when files are unavailable", () => {
+      const file = createTestFile("clipboard.png")
+      const clipboardData = {
+        files: [],
+        items: [
+          {
+            kind: "string",
+            getAsFile: vi.fn(),
+          },
+          {
+            kind: "file",
+            getAsFile: vi.fn(() => file),
+          },
+        ],
+      } as unknown as DataTransfer
+
+      expect(getPastedFiles(clipboardData)).toEqual([file])
+    })
+
+    it("ignores clipboard items without files", () => {
+      const clipboardData = {
+        files: [],
+        items: [
+          {
+            kind: "string",
+            getAsFile: vi.fn(),
+          },
+          {
+            kind: "file",
+            getAsFile: vi.fn(() => null),
+          },
+        ],
+      } as unknown as DataTransfer
+
+      expect(getPastedFiles(clipboardData)).toEqual([])
     })
   })
 

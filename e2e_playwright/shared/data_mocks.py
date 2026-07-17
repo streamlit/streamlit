@@ -281,7 +281,7 @@ DATETIME_TYPES_DF = pd.DataFrame(
                 [
                     pd.Timestamp(random_date()),
                     np.datetime64("2022-03-11T17:13:00")
-                    - np.random.randint(400000, 1500000),
+                    - np.timedelta64(np.random.randint(400000, 1500000), "s"),
                     pd.to_datetime(10, unit="s"),
                 ]
             )

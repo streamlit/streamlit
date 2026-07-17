@@ -211,23 +211,6 @@ class ServerUtilTest(unittest.TestCase):
         ):
             assert server_util.get_url("localhost") == "http://localhost:3000"
 
-    def test_make_url_path_regex(self):
-        assert (
-            server_util.make_url_path_regex("foo") == r"^/foo/?$"
-        )  # defaults to optional
-        assert (
-            server_util.make_url_path_regex("foo", trailing_slash="optional")
-            == r"^/foo/?$"
-        )
-        assert (
-            server_util.make_url_path_regex("foo", trailing_slash="required")
-            == r"^/foo/$"
-        )
-        assert (
-            server_util.make_url_path_regex("foo", trailing_slash="prohibited")
-            == r"^/foo$"
-        )
-
     @parameterized.expand(
         [
             ("0.0.0.0", "localhost"),

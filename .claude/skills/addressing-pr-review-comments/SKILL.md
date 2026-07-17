@@ -52,6 +52,7 @@ gh api graphql -f query="
     pullRequest(number: {PR_NUMBER}) {
       reviewThreads(first: 100) {
         nodes {
+          id
           isResolved
           path
           line
@@ -73,7 +74,7 @@ Issue comments (from `issues/{PR_NUMBER}/comments`) do not have a "resolved" fla
 
 **Include:** Unresolved threads (inline), general PR comments from `issues/{PR}/comments`, `issue`/`todo`/`chore` comments, maintainer feedback, `CHANGES_REQUESTED` reviews. Include the PR author's comments when present. They can help clarify the problem space.
 
-**Exclude:** Resolved threads, `praise`/`thought`/`note` comments
+**Exclude:** Resolved threads, `praise`/`thought`/`note` comments (unless the caller explicitly requests responding to ALL comments, in which case acknowledge these with a brief reply)
 
 **Skip status-only automated comments.** Ignore comments that are only status or check notifications with no actionable feedback. Examples: Snyk ("Snyk checks have passed. No issues have been found so far.") and comments from `.github/workflows/pr-preview.yml` that only say the PR is building or the preview is ready.
 
@@ -216,6 +217,14 @@ gh api repos/streamlit/streamlit/pulls/{PR_NUMBER}/comments/{COMMENT_ID}/replies
 gh api repos/streamlit/streamlit/issues/{PR_NUMBER}/comments \
   -f body="@{reviewer} Re: {brief context} - {reply text}"
 ```
+
+To resolve an inline review thread after addressing it (use the thread `id` from the GraphQL query above):
+
+```bash
+gh api graphql -f query='mutation { resolveReviewThread(input: { threadId: "<THREAD_NODE_ID>" }) { thread { isResolved } } }'
+```
+
+Note: Only inline review threads can be resolved. General PR (issue) comments do not have a resolvable state. Do not resolve threads that were deferred to human input - let the reviewer resolve those once satisfied.
 
 ## Rules
 

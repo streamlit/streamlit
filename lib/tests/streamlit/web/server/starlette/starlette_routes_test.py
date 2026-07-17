@@ -207,6 +207,7 @@ class TestEnsureXsrfCookie:
         ]
         assert len(cookie_headers) == 1
         assert cookie_headers[0].startswith(f"{XSRF_COOKIE_NAME}=2|")
+        assert "SameSite=Lax" in cookie_headers[0]
         assert "Secure" not in cookie_headers[0]
 
     @patch_config_options(
@@ -255,6 +256,110 @@ class TestEnsureXsrfCookie:
         mock_decode.assert_called_once_with("existing_cookie_value")
         mock_generate.assert_called_once_with(existing_token, existing_timestamp)
 
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.sslCertFile": None,
+            "server.xsrfCookieSameSite": "none",
+        }
+    )
+    def test_same_site_none_forces_secure(self) -> None:
+        """SameSite=None must force the Secure flag even without SSL configured.
+
+        Browsers reject ``SameSite=None`` cookies that are not also ``Secure``,
+        so omitting Secure here would silently break cross-origin embedding.
+        """
+        request = MagicMock()
+        request.cookies = {}
+        response = Response()
+
+        _ensure_xsrf_cookie(request, response)
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 1
+        assert "SameSite=None" in cookie_headers[0]
+        assert "Secure" in cookie_headers[0]
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.sslCertFile": "/path/to/cert",
+            "server.xsrfCookieSameSite": "none",
+        }
+    )
+    def test_same_site_none_with_ssl_is_secure(self) -> None:
+        """SameSite=None combined with SSL still yields a single Secure flag."""
+        request = MagicMock()
+        request.cookies = {}
+        response = Response()
+
+        _ensure_xsrf_cookie(request, response)
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 1
+        assert "SameSite=None" in cookie_headers[0]
+        assert cookie_headers[0].count("Secure") == 1
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.sslCertFile": None,
+            "server.xsrfCookieSameSite": "strict",
+        }
+    )
+    def test_same_site_strict_does_not_force_secure(self) -> None:
+        """SameSite=Strict is reflected in the cookie without forcing Secure."""
+        request = MagicMock()
+        request.cookies = {}
+        response = Response()
+
+        _ensure_xsrf_cookie(request, response)
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 1
+        assert "SameSite=Strict" in cookie_headers[0]
+        assert "Secure" not in cookie_headers[0]
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.sslCertFile": None,
+            "server.xsrfCookieSameSite": None,
+        }
+    )
+    def test_non_string_same_site_falls_back_to_lax(self) -> None:
+        """A non-string SameSite value falls back to Lax without forcing Secure.
+
+        This guards against a None config (e.g. TOML null) being coerced into
+        SameSite=None with a forced Secure flag.
+        """
+        request = MagicMock()
+        request.cookies = {}
+        response = Response()
+
+        _ensure_xsrf_cookie(request, response)
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 1
+        assert "SameSite=Lax" in cookie_headers[0]
+        assert "Secure" not in cookie_headers[0]
+
 
 class TestSetUnquotedCookie:
     """Tests for _set_unquoted_cookie function."""
@@ -277,6 +382,24 @@ class TestSetUnquotedCookie:
         assert "Path=/" in cookie_headers[0]
         assert "SameSite=Lax" in cookie_headers[0]
         assert "Secure" not in cookie_headers[0]
+
+    def test_sets_custom_same_site(self) -> None:
+        """A custom SameSite value is reflected in the Set-Cookie header."""
+
+        response = Response()
+
+        _set_unquoted_cookie(
+            response, "test_cookie", "value", same_site="None", secure=True
+        )
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 1
+        assert "SameSite=None" in cookie_headers[0]
+        assert "Secure" in cookie_headers[0]
 
     def test_sets_secure_flag_when_requested(self) -> None:
         """Test that Secure flag is added when secure=True."""

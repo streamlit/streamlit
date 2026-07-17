@@ -15,13 +15,33 @@
  */
 
 import "@testing-library/jest-dom/vitest"
-import { configure } from "@testing-library/react"
-import { vi } from "vitest"
+import { act, configure } from "@testing-library/react"
+// FRAGILE: setInteractionModality has no public export today, so we import from a
+// private react-aria path. This may break on minor/patch upgrades — migrate to the
+// public API if React Aria ever exposes it.
+import { setInteractionModality } from "react-aria/private/interactions/useFocusVisible"
+import { beforeEach, vi } from "vitest"
 import "vitest-canvas-mock"
 
 // Bump the default timeout for async utilities to 5 seconds (default is 1000ms)
 // due to the slower machine speeds in our CI environment.
 configure({ asyncUtilTimeout: 5_000 })
+
+// React Aria's useTooltipTrigger only opens a hover tooltip when
+// getInteractionModality() === "pointer". JSDOM has no real mouse movement, so the
+// modality is never "pointer" on its own — set it before each test. We call
+// setInteractionModality directly (renderHook interferes with React.lazy/Suspense)
+// and wrap it in act() since it can trigger state updates in mounted
+// useFocusVisible hooks.
+//
+// This is safe to apply globally: it only affects React Aria's internal modality
+// variable (which gates hover-triggered tooltip opening), NOT the browser's
+// :focus-visible heuristic. Tests asserting :focus-visible styling are unaffected.
+beforeEach(() => {
+  act(() => {
+    setInteractionModality("pointer")
+  })
+})
 
 // In the event a sub-library uses the jest global, we need to make sure it's
 // aliased to the vi global. An example is timers using dom testing library
@@ -138,6 +158,30 @@ console.error = (...args) => {
 Element.prototype.animate = vi
   .fn()
   .mockImplementation(() => ({ addEventListener: vi.fn(), cancel: vi.fn() }))
+
+// JSDOM does not implement the Web Animations API. RAC's SelectionIndicator uses
+// SharedElementTransition which calls getAnimations() in an async cleanup callback.
+// Returning [] prevents TypeError crashes in tests; the SelectionIndicator itself is
+// also mocked as a no-op in Tabs.test.tsx to avoid async act() warnings.
+Element.prototype.getAnimations = vi.fn().mockReturnValue([])
+
+// scrollIntoView is not implemented in JSDOM
+Element.prototype.scrollIntoView = vi.fn()
+
+// matchMedia is not implemented in JSDOM
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
 
 class ResizeObserverMock {
   public callback: (

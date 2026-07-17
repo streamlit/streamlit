@@ -23,7 +23,7 @@ def test_alerts_rendering_themed(
 ):
     """Test that alerts render correctly with theme-dependent styling."""
     alert_elements = themed_app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(34)
+    expect(alert_elements).to_have_count(36)
 
     # The first 4 alerts are super basic, no need to screenshot test those
     expect(alert_elements.nth(0)).to_have_text("This is an error")
@@ -71,7 +71,7 @@ def test_alerts_rendering_themed(
 def test_alerts_rendering_layout(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that alerts layout variations render correctly (theme-independent)."""
     alert_elements = app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(34)
+    expect(alert_elements).to_have_count(36)
 
     # Line wrapping (layout behavior)
     assert_snapshot(alert_elements.nth(8), name="st_alert-error_line_wrapping_1")
@@ -108,7 +108,7 @@ def test_material_symbol_from_latest_font_version_rendering(
 ):
     """Test that icon from latest version material symbols font renders correctly."""
     alert_elements = app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(34)
+    expect(alert_elements).to_have_count(36)
 
     assert_snapshot(
         alert_elements.nth(21),
@@ -117,3 +117,39 @@ def test_material_symbol_from_latest_font_version_rendering(
         image_threshold=0.001,
         pixel_threshold=0.025,
     )
+
+
+def test_alert_title_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that alerts with title parameter render correctly."""
+    alert_elements = themed_app.get_by_test_id("stAlert")
+    expect(alert_elements).to_have_count(36)
+
+    # Locate title alerts by their stable title text instead of fixture order.
+    success_with_title = alert_elements.filter(
+        has=themed_app.get_by_test_id("stAlertTitle").get_by_text("Success")
+    )
+    expect(success_with_title).to_have_count(1)
+    expect(success_with_title.get_by_test_id("stAlertTitle")).to_contain_text("Success")
+    assert_snapshot(success_with_title, name="st_alert-success_with_title")
+
+    # Alert with title and icon
+    info_with_title_and_icon = alert_elements.filter(
+        has=themed_app.get_by_test_id("stAlertTitle").get_by_text("Notice", exact=True)
+    )
+    expect(info_with_title_and_icon).to_have_count(1)
+    expect(info_with_title_and_icon.get_by_test_id("stAlertTitle")).to_have_text(
+        "Notice"
+    )
+    expect(
+        info_with_title_and_icon.get_by_test_id("stAlertDynamicIcon")
+    ).to_be_visible()
+    assert_snapshot(info_with_title_and_icon, name="st_alert-info_with_title_and_icon")
+
+
+def test_alert_without_title_has_no_title_element(app: Page):
+    """Test that alerts without title do not render a title element."""
+    alert_elements = app.get_by_test_id("stAlert")
+
+    # First alert has no title
+    first_alert = alert_elements.nth(0)
+    expect(first_alert.get_by_test_id("stAlertTitle")).not_to_be_attached()

@@ -23,3 +23,10 @@ message AutoRerun {
   // The fragment ID to rerun
   string fragment_id = 2;
 }
+
+// Sent when the server evicts fragments (e.g. an ancestor stopped rendering
+// them), so the client can cancel their pending auto-rerun timers.
+message StopAutoRerun {
+  // The fragment IDs whose auto-rerun timers should be cancelled.
+  repeated string fragment_ids = 1;
+}

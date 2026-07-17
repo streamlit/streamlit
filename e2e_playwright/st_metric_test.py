@@ -21,6 +21,7 @@ from e2e_playwright.shared.app_utils import (
     expect_help_tooltip,
     get_element_by_key,
     get_metric,
+    reset_hovering,
 )
 
 
@@ -69,6 +70,17 @@ def test_arrow_overrides(app: Page, assert_snapshot: ImageCompareFunction):
         get_element_by_key(app, "metric_arrow_config"),
         name="st_metric-delta_arrow_config",
     )
+
+
+def test_zero_delta_has_no_arrow(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    metric = get_metric(themed_app, "Zero delta")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("100")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("0")
+    expect(metric.get_by_test_id("stMetricDeltaIcon-Up")).to_have_count(0)
+    expect(metric.get_by_test_id("stMetricDeltaIcon-Down")).to_have_count(0)
+    assert_snapshot(metric, name="st_metric-zero_delta")
 
 
 def test_green_up_arrow_render(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -179,6 +191,11 @@ def test_code_in_help_shows_up_properly(
     tooltip_content = themed_app.get_by_test_id("stTooltipContent")
 
     expect(hover_target).to_be_visible()
+    # Prime the interaction modality to 'pointer' before hovering.
+    # React Aria requires a document-level pointermove event before pointerenter
+    # to register hover intent. Playwright teleports the cursor when the mouse
+    # starts "off-page", so we reset hovering first to ensure correct ordering.
+    reset_hovering(themed_app)
     hover_target.hover()
     expect(tooltip_content).to_have_text("Test help with code select * from table")
 

@@ -319,3 +319,60 @@ describe("TimeInput query param binding", () => {
     )
   })
 })
+
+describe("TimeInput clearable behavior", () => {
+  it("clears the value when clear button is clicked", async () => {
+    const user = userEvent.setup()
+    // The clear button only renders when `clearable` (i.e. no default) and a
+    // value has been selected, so we pick one via the combobox first.
+    const props = getProps({ default: undefined })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+
+    expect(screen.queryByTestId("stTimeInputClearButton")).toBeNull()
+
+    await user.click(screen.getByRole("combobox"))
+    await user.keyboard("{ArrowDown}{Enter}")
+
+    const clearButton = await screen.findByTestId("stTimeInputClearButton")
+    expect(clearButton).toBeVisible()
+
+    await user.click(clearButton)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      null,
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("does not render clear button when widget has a default", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "10:30" })
+    render(<TimeInput {...props} />)
+
+    // Clear button should not be present at initial render
+    expect(screen.queryByTestId("stTimeInputClearButton")).toBeNull()
+
+    // Open the combobox and select a different value
+    await user.click(screen.getByRole("combobox"))
+    await user.keyboard("{ArrowDown}{Enter}")
+
+    // Clear button should still not be present after interaction
+    // (clearable is false when a default is set)
+    expect(screen.queryByTestId("stTimeInputClearButton")).toBeNull()
+  })
+
+  it("reads value from element when set_value flag is true", () => {
+    const props = getProps({
+      default: "10:30",
+      value: "16:00",
+      setValue: true,
+    })
+    render(<TimeInput {...props} />)
+
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
+    expect(timeDisplay).toHaveTextContent("16:00")
+  })
+})

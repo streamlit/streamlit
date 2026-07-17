@@ -30,6 +30,8 @@ from streamlit.elements import exception
 from streamlit.elements.exception import (
     _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
     _format_syntax_error_message,
+    _get_stack_trace_str_list,
+    _split_internal_streamlit_frames,
     _split_list,
 )
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
@@ -327,6 +329,73 @@ class StExceptionAPITest(DeltaGeneratorTestCase):
             # We will test stack_trace when testing
             # streamlit.elements.exception_element
             assert el.exception.stack_trace == []
+
+
+def test_marshall_with_alternate_name() -> None:
+    """Test that alternate_name attribute is used as the exception type."""
+
+    class CustomException(Exception):
+        alternate_name = "PrettyErrorName"
+
+    err = CustomException("something went wrong")
+    proto = ExceptionProto()
+    exception.marshall(proto, err)
+    assert proto.type == "PrettyErrorName"
+
+
+def test_marshall_syntax_error() -> None:
+    """Test that SyntaxErrors are formatted with _format_syntax_error_message."""
+    err = SyntaxError(
+        "unexpected EOF",
+        ("myfile.py", 10, 5, "print(\n"),
+    )
+    proto = ExceptionProto()
+    exception.marshall(proto, err)
+    assert "SyntaxError" in proto.message
+    assert "myfile.py" in proto.message
+
+
+def test_marshall_str_exception_raises() -> None:
+    """Test that marshall handles exceptions whose __str__ raises."""
+
+    class BadStrException(Exception):
+        def __str__(self) -> str:
+            raise RuntimeError("cannot convert to string")
+
+    err = BadStrException()
+    proto = ExceptionProto()
+    exception.marshall(proto, err)
+    assert proto.message == ""
+
+
+def test_format_syntax_error_without_text() -> None:
+    """Test _format_syntax_error_message fallback when text is None."""
+    err = SyntaxError("encoding declaration in Unicode string")
+    err.text = None
+    result = _format_syntax_error_message(err)
+    assert "encoding declaration" in result
+
+
+def test_get_stack_trace_no_traceback() -> None:
+    """Test _get_stack_trace_str_list when __traceback__ is None.
+
+    When __traceback__ is None, extract_tb returns an empty StackSummary,
+    so _split_internal_streamlit_frames runs and yields empty lists.
+    """
+    err = RuntimeError("no traceback")
+    err.__traceback__ = None
+    result = _get_stack_trace_str_list(err)
+    assert result == []
+
+
+@patch("streamlit.elements.exception.get_script_run_ctx")
+def test_split_internal_frames_no_ctx(mock_ctx: MagicMock) -> None:
+    """Test _split_internal_streamlit_frames returns all frames when no ctx."""
+    mock_ctx.return_value = None
+    tb = traceback.StackSummary.from_list([("file.py", 1, "func", "code")])
+    internal, external = _split_internal_streamlit_frames(tb)
+    assert internal == []
+    assert len(external) == 1
 
 
 class SplitListTest(unittest.TestCase):

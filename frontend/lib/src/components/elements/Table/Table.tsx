@@ -46,7 +46,7 @@ import {
 
 export interface TableProps {
   element: TableProto
-  data: Quiver
+  elementHash?: string
   widthConfig?: streamlit.IWidthConfig | null
   heightConfig?: streamlit.IHeightConfig | null
 }
@@ -78,7 +78,20 @@ function getStickyType(stickyTop: boolean, stickyLeft: boolean): StickyType {
 }
 
 export function Table(props: Readonly<TableProps>): ReactElement {
-  const table = props.data
+  const { element, elementHash } = props
+
+  // Construct Quiver from the proto's arrowData. The elementHash serves as the
+  // primary memoization key to avoid unnecessary re-parsing when the payload
+  // hasn't changed.
+  const table = useMemo(() => {
+    if (!element.arrowData) {
+      throw new Error("Table element is missing arrowData")
+    }
+    return new Quiver(element.arrowData)
+    // elementHash is intentionally included as a stability anchor for memoization
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elementHash, element.arrowData])
+
   const { cssId, cssStyles, caption } = table.styler ?? {}
   const { numHeaderRows, numDataRows, numColumns, numIndexColumns } =
     table.dimensions

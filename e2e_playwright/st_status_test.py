@@ -24,7 +24,7 @@ def test_status_container_rendering(
 ):
     """Test that st.status renders correctly via screenshots."""
     status_containers = themed_app.get_by_test_id("stExpander")
-    expect(status_containers).to_have_count(11)
+    expect(status_containers).to_have_count(14)
 
     # Note that animations are disabled in snapshots, so we can reliably screenshot the
     # spinner
@@ -39,6 +39,9 @@ def test_status_container_rendering(
     assert_snapshot(status_containers.nth(8), name="st_status-uncaught_exception")
     assert_snapshot(status_containers.nth(9), name="st_status-fixed_pixel_width")
     assert_snapshot(status_containers.nth(10), name="st_status-stretch_width")
+    assert_snapshot(status_containers.nth(11), name="st_status-compact_running")
+    assert_snapshot(status_containers.nth(12), name="st_status-compact_complete")
+    assert_snapshot(status_containers.nth(13), name="st_status-compact_expanded")
 
 
 def test_running_state(app: Page):
@@ -63,3 +66,19 @@ def test_status_collapses_and_expands(app: Page):
     # Collapse:
     expander_header.click()
     expect(running_status.get_by_text(expander_content)).not_to_be_visible()
+
+
+def test_compact_status_collapses_and_expands(app: Page):
+    """Test that a compact status collapses and expands."""
+    compact_status = get_expander(app, "Compact expanded")
+    # Starts expanded:
+    expect(compact_status.get_by_text("Compact content visible")).to_be_visible()
+
+    # Collapse:
+    expander_header = compact_status.locator("summary")
+    expander_header.click()
+    expect(compact_status.get_by_text("Compact content visible")).not_to_be_visible()
+
+    # Expand again:
+    expander_header.click()
+    expect(compact_status.get_by_text("Compact content visible")).to_be_visible()

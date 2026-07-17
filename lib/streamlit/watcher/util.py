@@ -20,35 +20,90 @@ functions that use streamlit.config can go here to avoid a dependency cycle.
 
 from __future__ import annotations
 
+import ntpath
 import os
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
 
+from streamlit import env_util
 from streamlit.errors import StreamlitMaxRetriesError
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
-# How many times to try to grab the MD5 hash.
+# How many times to try to grab the content hash.
 _MAX_RETRIES = 5
 
 # How long to wait between retries.
 _RETRY_WAIT_SECS = 0.1
 
+_WINDOWS_EXTENDED_PATH_PREFIX = "\\\\?\\"
+_WINDOWS_EXTENDED_UNC_PATH_PREFIX = "\\\\?\\UNC\\"
 
-def calc_md5_with_blocking_retries(
+
+def _normalize_path_for_comparison(path: str) -> str:
+    """Normalize an already-absolute path for comparisons."""
+    if not env_util.IS_WINDOWS:
+        return os.path.normcase(path)
+
+    # Windows APIs can represent the same path as either ``C:\\...`` or
+    # ``\\\\?\\C:\\...``. Python's ntpath treats those as different drives, so
+    # convert extended drive and UNC paths to their standard spelling before
+    # comparing them. Other device namespace paths (neither drive nor UNC) are
+    # left unchanged.
+    if path.casefold().startswith(_WINDOWS_EXTENDED_UNC_PATH_PREFIX.casefold()):
+        # ``\\\\?\\UNC\\server\\share`` -> ``\\\\server\\share``
+        path = "\\\\" + path[len(_WINDOWS_EXTENDED_UNC_PATH_PREFIX) :]
+    elif path.startswith(_WINDOWS_EXTENDED_PATH_PREFIX):
+        remainder = path[len(_WINDOWS_EXTENDED_PATH_PREFIX) :]
+        # ``\\\\?\\C:\\...`` -> ``C:\\...``, but only for drive-letter paths.
+        if (
+            len(remainder) >= 3
+            and remainder[0].isalpha()
+            and remainder[1] == ":"
+            and remainder[2] in "\\/"
+        ):
+            path = remainder
+
+    return ntpath.normcase(path)
+
+
+def paths_are_same(path1: str, path2: str) -> bool:
+    """Return whether two paths have the same canonical representation."""
+    return _normalize_path_for_comparison(path1) == _normalize_path_for_comparison(
+        path2
+    )
+
+
+def path_is_in_directory(path: str, directory: str) -> bool:
+    """Return whether a path is inside a directory without raising on drives."""
+    normalized_path = _normalize_path_for_comparison(path)
+    normalized_directory = _normalize_path_for_comparison(directory)
+    commonpath = ntpath.commonpath if env_util.IS_WINDOWS else os.path.commonpath
+
+    try:
+        return (
+            commonpath([normalized_directory, normalized_path]) == normalized_directory
+        )
+    except ValueError:
+        # commonpath raises for paths on different Windows drives, or when
+        # absolute and relative paths are mixed. Neither can be a child path.
+        return False
+
+
+def calc_hash_with_blocking_retries(
     path: str,
     *,  # keyword-only arguments:
     glob_pattern: str | None = None,
     allow_nonexistent: bool = False,
 ) -> str:
-    """Calculate the MD5 checksum of a given path.
+    """Calculate the hash of a given path.
 
-    For a file, this means calculating the md5 of the file's contents. For a
+    For a file, this means calculating the hash of the file's contents. For a
     directory, we concatenate the directory's path with the names of all the
-    files in it and calculate the md5 of that.
+    files in it and calculate the hash of that.
 
     IMPORTANT: This method calls time.sleep(), which blocks execution. So you
     should only use this outside the main thread.
@@ -77,7 +132,7 @@ def calc_md5_with_blocking_retries(
             else:
                 raise
 
-    return calc_md5(content)
+    return calc_hash(content)
 
 
 def path_modification_time(path: str, allow_nonexistent: bool = False) -> float:
@@ -122,7 +177,13 @@ def _get_file_content(file_path: str) -> bytes:
 def _dirfiles(dir_path: str, glob_pattern: str) -> str:
     p = Path(dir_path)
     filenames = sorted(
-        [f.name for f in p.glob(glob_pattern) if not f.name.startswith(".")]
+        [
+            f.name
+            for f in p.glob(glob_pattern)
+            if not f.name.startswith(".")
+            and "__pycache__" not in f.relative_to(p).parts
+            and f.suffix not in {".pyc", ".pyo"}
+        ]
     )
     return "+".join(filenames)
 

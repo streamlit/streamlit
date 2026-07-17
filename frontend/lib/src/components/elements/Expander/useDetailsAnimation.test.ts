@@ -24,6 +24,31 @@ import {
   UseDetailsAnimationOptions,
 } from "./useDetailsAnimation"
 
+/** Wrapper component that renders DOM elements wired to the hook's refs. */
+function TestHarness(
+  props: UseDetailsAnimationOptions
+): ReturnType<typeof createElement> {
+  const result = useDetailsAnimation(props)
+  return createElement(
+    "details",
+    { ref: result.detailsRef, "data-testid": "details" },
+    createElement(
+      "summary",
+      {
+        ref: result.summaryRef,
+        "data-testid": "summary",
+        onClick: result.handleToggle,
+      },
+      props.label
+    ),
+    createElement(
+      "div",
+      { ref: result.contentRef, "data-testid": "content" },
+      "Content"
+    )
+  )
+}
+
 describe("useDetailsAnimation", () => {
   describe("initial state", () => {
     it("returns isOpen=true when backendExpanded is true", () => {
@@ -322,31 +347,6 @@ describe("useDetailsAnimation", () => {
     let mockDisconnect: ReturnType<typeof vi.fn>
     const OriginalResizeObserver = globalThis.ResizeObserver
 
-    /** Wrapper component that renders DOM elements wired to the hook's refs. */
-    function TestHarness(
-      props: UseDetailsAnimationOptions
-    ): ReturnType<typeof createElement> {
-      const result = useDetailsAnimation(props)
-      return createElement(
-        "details",
-        { ref: result.detailsRef, "data-testid": "details" },
-        createElement(
-          "summary",
-          {
-            ref: result.summaryRef,
-            "data-testid": "summary",
-            onClick: result.handleToggle,
-          },
-          props.label
-        ),
-        createElement(
-          "div",
-          { ref: result.contentRef, "data-testid": "content" },
-          "Content"
-        )
-      )
-    }
-
     function mockElementHeight(element: Element, height: number): void {
       vi.spyOn(element, "getBoundingClientRect").mockReturnValue({
         x: 0,
@@ -358,7 +358,7 @@ describe("useDetailsAnimation", () => {
         bottom: 0,
         left: 0,
         toJSON: () => ({}),
-      } as DOMRect)
+      })
     }
 
     /** Assert that the ResizeObserver was constructed and fire its callback. */

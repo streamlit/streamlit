@@ -25,6 +25,7 @@ import { createShadows } from "~lib/theme/getShadows"
 import { breakpoints } from "~lib/theme/primitives/breakpoints"
 import { colors } from "~lib/theme/primitives/colors"
 import { iconSizes } from "~lib/theme/primitives/iconSizes"
+import { opacities } from "~lib/theme/primitives/opacities"
 import { radii } from "~lib/theme/primitives/radii"
 import { sizes } from "~lib/theme/primitives/sizes"
 import { spacing } from "~lib/theme/primitives/spacing"
@@ -102,6 +103,7 @@ const emotionMockTheme = {
   genericFonts,
   iconSizes,
   lineHeights,
+  opacities,
   radii,
   shadows,
   sizes,

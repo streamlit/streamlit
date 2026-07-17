@@ -41,7 +41,7 @@ function SanitizedHtml({
   return (
     <HtmlContainer
       // Note: This is an expected usage of dangerouslySetInnerHTML.
-      // eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml
+      // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
       dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
     />
   )

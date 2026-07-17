@@ -323,7 +323,7 @@ def test_safe_nested_path_resolves(root: Path) -> None:
 def test_url_decoded_paths_are_rejected(root: Path, decoded_path: str) -> None:
     """Verify that URL-decoded malicious paths are correctly rejected.
 
-    Tornado and Starlette automatically URL-decode path parameters before passing
+    Web frameworks automatically URL-decode path parameters before passing
     them to handlers. This test documents that our validation works correctly on
     the decoded paths (e.g., %2e%2e becomes .., %5c%5c becomes \\\\).
 

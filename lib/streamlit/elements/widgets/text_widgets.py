@@ -21,10 +21,8 @@ from typing import TYPE_CHECKING, Literal, cast, overload
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
-    LayoutConfig,
     WidthWithoutContent,
-    validate_height,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -44,6 +42,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -51,7 +50,6 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.string_util import validate_icon_or_emoji
-from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -109,6 +107,7 @@ class TextWidgetsMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str:
         pass
 
@@ -132,6 +131,7 @@ class TextWidgetsMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str | None:
         pass
 
@@ -155,6 +155,7 @@ class TextWidgetsMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str | None:
         r"""Display a single-line text input widget.
 
@@ -300,6 +301,24 @@ class TextWidgetsMixin:
             This can't be used with ``type="password"``. An empty
             query parameter (e.g., ``?my_key=``) clears the widget.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope. For example,
+            ``st.text_input("Name", key="name", persist_state="session")`` keeps
+            the entered text when the widget is hidden and shown again, or when
+            the user navigates to another page and back.
+
         Returns
         -------
         str or None
@@ -336,6 +355,7 @@ class TextWidgetsMixin:
             icon=icon,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -358,6 +378,7 @@ class TextWidgetsMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
@@ -456,6 +477,7 @@ class TextWidgetsMixin:
             ctx=ctx,
             value_type="string_value",
             bind=bind,
+            persist_state=persist_state,
             # Text input is clearable (empty string is a valid value)
             clearable=True,
         )
@@ -465,10 +487,14 @@ class TextWidgetsMixin:
                 text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
-        self.dg._enqueue("text_input", text_input_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "text_input",
+            text_input_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
+        )
         return widget_state.value
 
     @overload
@@ -489,6 +515,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str:
         pass
 
@@ -510,6 +537,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str | None:
         pass
 
@@ -531,6 +559,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str | None:
         r"""Display a multi-line text input widget.
 
@@ -665,6 +694,21 @@ class TextWidgetsMixin:
             An empty query parameter (e.g., ``?my_key=``) clears the
             widget.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         str or None
@@ -707,6 +751,7 @@ class TextWidgetsMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -727,6 +772,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
@@ -796,6 +842,7 @@ class TextWidgetsMixin:
             ctx=ctx,
             value_type="string_value",
             bind=bind,
+            persist_state=persist_state,
             # Text area is clearable (empty string is a valid value)
             clearable=True,
         )
@@ -805,22 +852,26 @@ class TextWidgetsMixin:
                 text_area_proto.value = widget_state.value
             text_area_proto.set_value = True
 
-        validate_width(width)
-        if height is not None:
-            validate_height(height, allow_content=True)
-        else:
+        if height is None:
             # We want to maintain the same approximately three lines of text height
             # for the text input when the label is collapsed.
             # These numbers are for the entire element including the label and
             # padding.
             height = 122 if label_visibility != "collapsed" else 94
 
-        layout_config = LayoutConfig(width=width, height=height)
+        layout_config = create_layout_config(
+            width=width, height=height, allow_content_height=True
+        )
 
-        self.dg._enqueue("text_area", text_area_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "text_area",
+            text_area_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
+        )
         return widget_state.value
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

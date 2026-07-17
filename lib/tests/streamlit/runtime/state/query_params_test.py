@@ -21,12 +21,16 @@ from parameterized import parameterized
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.query_params import (
+    _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+    _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
     QueryParams,
+    _coerce_value_for_query_url,
     _set_item_in_dict,
     _try_parse_iso_to_micros,
     is_empty_url_value,
     parse_url_param,
     process_query_params,
+    sanitize_query_string,
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -739,6 +743,9 @@ class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
             ("invalid_date", "2024-13-45"),
             ("invalid_time", "25:61"),
             ("empty_string", ""),
+            # A "T"-separated string that fails datetime parsing must also
+            # return None (rather than raising) - exercises the datetime branch.
+            ("invalid_datetime_with_t", "2024-06-15T99:99"),
         ]
     )
     def test_parse_invalid_returns_none(self, _name: str, value: str) -> None:
@@ -1406,6 +1413,48 @@ class PopulateFromQueryStringTest(DeltaGeneratorTestCase):
         self.query_params.populate_from_query_string("foo=")
         assert self.query_params._query_params["foo"] == ""
 
+    @parameterized.expand(
+        [
+            (
+                "too_many_fields",
+                "&".join(
+                    f"key_{idx}=value"
+                    for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+                ),
+            ),
+            ("too_long", "foo=" + ("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
+        ]
+    )
+    def test_populate_ignores_unsafe_query_string(
+        self, _name: str, query_string: str
+    ) -> None:
+        """Test query strings that exceed safe limits are ignored instead of parsed."""
+        self.query_params._query_params = {"old_key": "old_value"}
+
+        self.query_params.populate_from_query_string(query_string)
+
+        assert self.query_params._query_params == {}
+
+    @parameterized.expand(
+        [
+            (
+                "too_many_fields",
+                "&".join(
+                    f"key_{idx}=value"
+                    for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+                ),
+            ),
+            ("too_long", "foo=" + ("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
+        ]
+    )
+    def test_set_initial_query_params_ignores_unsafe_query_string(
+        self, _name: str, query_string: str
+    ) -> None:
+        """Test initial query params enforce the same safe limits."""
+        self.query_params.set_initial_query_params(query_string)
+
+        assert self.query_params._initial_query_params == {}
+
     def test_populate_without_filter_keeps_all_params(self) -> None:
         """Test that without valid_script_hashes, all params are kept."""
         # Bind a widget to a param
@@ -1594,3 +1643,66 @@ class RemoveStaleBindingsTest(DeltaGeneratorTestCase):
 
         # Active widget should be preserved
         assert self.query_params.is_bound("active_key")
+
+
+@pytest.mark.parametrize(
+    "query_string",
+    [
+        pytest.param("", id="empty"),
+        pytest.param("foo=bar&baz=qux", id="normal"),
+        pytest.param("x" * _CLIENT_STATE_QUERY_STRING_MAX_LENGTH, id="length_at_limit"),
+        pytest.param(
+            "&".join(
+                f"k{idx}=v" for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS)
+            ),
+            id="fields_at_limit",
+        ),
+    ],
+)
+def test_sanitize_query_string_keeps_safe_input(query_string: str) -> None:
+    """Test query strings within the safe limits are returned unchanged."""
+    assert sanitize_query_string(query_string) == query_string
+
+
+@pytest.mark.parametrize(
+    "query_string",
+    [
+        pytest.param("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1), id="too_long"),
+        pytest.param(
+            "&".join(
+                f"k{idx}=v" for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+            ),
+            id="too_many_fields",
+        ),
+    ],
+)
+def test_sanitize_query_string_rejects_unsafe_input(query_string: str) -> None:
+    """Test query strings exceeding the safe limits are dropped."""
+    assert sanitize_query_string(query_string) == ""
+
+
+@pytest.mark.parametrize(
+    ("value", "value_type", "expected"),
+    [
+        pytest.param("foo", "string_array_value", "foo", id="scalar_string_array"),
+        pytest.param(5, "int_array_value", "5", id="scalar_int_array"),
+        pytest.param(1.5, "double_array_value", "1.5", id="scalar_double_array"),
+    ],
+)
+def test_coerce_value_for_query_url_wraps_scalars_for_array_types(
+    value: object, value_type: str, expected: str
+) -> None:
+    """A scalar value for an array type is coerced to a single string, not a list."""
+    assert _coerce_value_for_query_url(value, value_type) == expected
+
+
+def test_coerce_value_for_query_url_keeps_sequences_for_array_types() -> None:
+    """A list value for an array type is coerced element-wise to a list of strings."""
+    assert _coerce_value_for_query_url([1, 2], "int_array_value") == ["1", "2"]
+
+
+def test_getitem_returns_empty_string_for_empty_list() -> None:
+    """A key mapped to an empty list resolves to an empty string, not an error."""
+    query_params = QueryParams()
+    query_params._query_params = {"empty": []}
+    assert query_params["empty"] == ""

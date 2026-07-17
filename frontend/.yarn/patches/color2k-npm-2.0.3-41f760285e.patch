@@ -1,0 +1,2100 @@
+diff --git a/dist/index.exports.import.es.mjs b/dist/index.exports.import.es.mjs
+index b688bd8ca6415f8da856301fa62441bae9bcdbd2..d33f2255d7946c136148c20c8ddbbf97685ab6ad 100644
+--- a/dist/index.exports.import.es.mjs
++++ b/dist/index.exports.import.es.mjs
+@@ -19,7 +19,7 @@ var ColorError$1 = ColorError;
+ /**
+  * Parses a color into red, gree, blue, alpha parts
+  *
+- * @param color the input color. Can be a RGB, RBGA, HSL, HSLA, or named color
++ * @param color the input color. Can be a RGB, RBGA, HSL, HSLA, HWB, lab, lch, oklab, oklch, color(), or named color
+  */
+ function parseToRgba(color) {
+   if (typeof color !== 'string') throw new ColorError$1(color);
+@@ -41,6 +41,13 @@ function parseToRgba(color) {
+     const arr = Array.from(rgbaMatch).slice(1);
+     return [...arr.slice(0, 3).map(x => parseInt(x, 10)), parseFloat(arr[3] || '1')];
+   }
++
++  // Modern space-separated rgb/rgba: rgb(255 0 0) or rgb(255 0 0 / 0.5)
++  const rgbaModernMatch = rgbaModernRegex.exec(normalizedColor);
++  if (rgbaModernMatch) {
++    const [, rs, gs, bs, alphaS] = rgbaModernMatch;
++    return [parseRgbComponent(rs), parseRgbComponent(gs), parseRgbComponent(bs), parseAlpha(alphaS)];
++  }
+   const hslaMatch = hslaRegex.exec(normalizedColor);
+   if (hslaMatch) {
+     const [h, s, l, a] = Array.from(hslaMatch).slice(1).map(parseFloat);
+@@ -48,6 +55,70 @@ function parseToRgba(color) {
+     if (guard(0, 100, l) !== l) throw new ColorError$1(color);
+     return [...hslToRgb(h, s, l), Number.isNaN(a) ? 1 : a];
+   }
++
++  // Modern space-separated hsl/hsla: hsl(120 100% 50%) or hsl(120 100% 50% / 0.5)
++  const hslaModernMatch = hslaModernRegex.exec(normalizedColor);
++  if (hslaModernMatch) {
++    const [, hs, ss, ls, alphaS] = hslaModernMatch;
++    const h = parseAngle(hs);
++    const s = parseFloat(ss);
++    const l = parseFloat(ls);
++    if (guard(0, 100, s) !== s) throw new ColorError$1(color);
++    if (guard(0, 100, l) !== l) throw new ColorError$1(color);
++    return [...hslToRgb(h, s, l), parseAlpha(alphaS)];
++  }
++
++  // hwb(H W B) or hwb(H W B / alpha)
++  const hwbMatch = hwbRegex.exec(normalizedColor);
++  if (hwbMatch) {
++    const [, hs, ws, bs, alphaS] = hwbMatch;
++    const h = parseAngle(hs);
++    const w = parseFloat(ws) / 100;
++    const b = parseFloat(bs) / 100;
++    return [...hwbToRgb(h, w, b), parseAlpha(alphaS)];
++  }
++  const labMatch = labRegex.exec(normalizedColor);
++  if (labMatch) {
++    const [, Ls, as_, bs, alphaS] = labMatch;
++    const L = Ls.endsWith('%') ? parseFloat(Ls) : parseFloat(Ls);
++    const a = as_.endsWith('%') ? parseFloat(as_) / 100 * 125 : parseFloat(as_);
++    const b = bs.endsWith('%') ? parseFloat(bs) / 100 * 125 : parseFloat(bs);
++    return labToRgba(L, a, b, parseAlpha(alphaS));
++  }
++  const lchMatch = lchRegex.exec(normalizedColor);
++  if (lchMatch) {
++    const [, Ls, Cs, Hs, alphaS] = lchMatch;
++    const L = Ls.endsWith('%') ? parseFloat(Ls) : parseFloat(Ls);
++    const C = Cs.endsWith('%') ? parseFloat(Cs) / 100 * 150 : parseFloat(Cs);
++    const H = parseAngle(Hs);
++    return lchToRgba(L, C, H, parseAlpha(alphaS));
++  }
++  const oklabMatch = oklabRegex.exec(normalizedColor);
++  if (oklabMatch) {
++    const [, Ls, as_, bs, alphaS] = oklabMatch;
++    const L = Ls.endsWith('%') ? parseFloat(Ls) / 100 : parseFloat(Ls);
++    const a = as_.endsWith('%') ? parseFloat(as_) / 100 * 0.4 : parseFloat(as_);
++    const b = bs.endsWith('%') ? parseFloat(bs) / 100 * 0.4 : parseFloat(bs);
++    return oklabToRgba(L, a, b, parseAlpha(alphaS));
++  }
++  const oklchMatch = oklchRegex.exec(normalizedColor);
++  if (oklchMatch) {
++    const [, Ls, Cs, Hs, alphaS] = oklchMatch;
++    const L = Ls.endsWith('%') ? parseFloat(Ls) / 100 : parseFloat(Ls);
++    const C = Cs.endsWith('%') ? parseFloat(Cs) / 100 * 0.4 : parseFloat(Cs);
++    const H = parseAngle(Hs);
++    return oklchToRgba(L, C, H, parseAlpha(alphaS));
++  }
++
++  // color(space r g b) or color(space r g b / alpha)
++  const colorFnMatch = colorFnRegex.exec(normalizedColor);
++  if (colorFnMatch) {
++    const [, space, rs, gs, bs, alphaS] = colorFnMatch;
++    const rc = parseColorComponent(rs);
++    const gc = parseColorComponent(gs);
++    const bc = parseColorComponent(bs);
++    return colorFnToRgba(space.toLowerCase(), rc, gc, bc, parseAlpha(alphaS));
++  }
+   throw new ColorError$1(color);
+ }
+ function hash(str) {
+@@ -92,6 +163,325 @@ const hexRegex = new RegExp(`^#${r('([a-f0-9]{2})', 3)}([a-f0-9]{2})?$`, 'i');
+ const rgbaRegex = new RegExp(`^rgba?\\(\\s*(\\d+)\\s*${r(',\\s*(\\d+)\\s*', 2)}(?:,\\s*([\\d.]+))?\\s*\\)$`, 'i');
+ const hslaRegex = /^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%(?:\s*,\s*([\d.]+))?\s*\)$/i;
+ const namedColorRegex = /^[a-z]+$/i;
++
++// Modern space-separated rgb: rgb(255 0 0) or rgb(255 0 0 / 0.5)
++// Also supports percentages: rgb(100% 0% 0% / 50%)
++const rgbaModernRegex = /^rgba?\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// Modern space-separated hsl: hsl(120 100% 50%) or hsl(120 100% 50% / 0.5)
++const hslaModernRegex = /^hsla?\(\s*([\d.]+(?:deg|rad|grad|turn)?)\s+([\d.]+)%\s+([\d.]+)%\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// hwb(H W B) or hwb(H W B / alpha)
++const hwbRegex = /^hwb\(\s*([\d.]+(?:deg|rad|grad|turn)?)\s+([\d.]+)%\s+([\d.]+)%\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// color(space r g b) or color(space r g b / alpha)
++const colorFnRegex = /^color\(\s*([\w-]+)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++
++// CSS Color Level 4: space-separated values with optional / alpha
++// lab(L a b) or lab(L a b / alpha)
++const labRegex = /^lab\(\s*([\d.]+%?)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// lch(L C H) or lch(L C H / alpha)
++const lchRegex = /^lch\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.e+-]+(?:deg|rad|grad|turn)?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// oklab(L a b) or oklab(L a b / alpha)
++const oklabRegex = /^oklab\(\s*([\d.]+%?)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// oklch(L C H) or oklch(L C H / alpha)
++const oklchRegex = /^oklch\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.e+-]+(?:deg|rad|grad|turn)?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++
++// Parse angle value supporting deg, rad, grad, turn units
++function parseAngle(value) {
++  const num = parseFloat(value);
++  if (value.endsWith('rad')) return num * 180 / Math.PI;
++  if (value.endsWith('grad')) return num * 360 / 400;
++  if (value.endsWith('turn')) return num * 360;
++  return num; // deg or unitless
++}
++
++// Parse alpha: percentage or number, default 1
++function parseAlpha(value) {
++  if (value === undefined || value === '') return 1;
++  if (value.endsWith('%')) return parseFloat(value) / 100;
++  return parseFloat(value);
++}
++
++// Parse rgb component: number (0-255) or percentage (0%-100%)
++function parseRgbComponent(value) {
++  if (value.endsWith('%')) return Math.round(parseFloat(value) / 100 * 255);
++  return parseInt(value, 10);
++}
++
++// Parse color() component: number or percentage (maps to 0-1 range)
++function parseColorComponent(value) {
++  if (value.endsWith('%')) return parseFloat(value) / 100;
++  return parseFloat(value);
++}
++
++// sRGB gamma → sRGB linear (degamma)
++function srgbToLinear(c) {
++  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
++}
++
++// sRGB linear → sRGB gamma (inverse of the function in getLuminance)
++function linearToSrgb(c) {
++  return c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
++}
++
++// Matrix-vector multiply for 3x3 (flat array)
++function mul3(m, v) {
++  return [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[4] * v[1] + m[5] * v[2], m[6] * v[0] + m[7] * v[1] + m[8] * v[2]];
++}
++
++// LMS → linear sRGB combined matrix (LMStoXYZ_D65 * XYZ_D65_to_linearSRGB)
++// prettier-ignore
++const LMS_TO_SRGB = [4.0767416621, -3.3077115913, 0.2309699292, -1.2684380046, 2.6097574011, -0.3413193965, -0.0041960863, -0.7034186147, 1.7076147010];
++
++// linear sRGB → LMS combined matrix (inverse of above)
++// prettier-ignore
++const SRGB_TO_LMS = [0.4122214708, 0.5363325363, 0.0514459929, 0.2119034982, 0.6806995451, 0.1073969566, 0.0883024619, 0.2817188376, 0.6299787005];
++
++// OKLab → LMS (cube root domain)
++function oklabToLMSg(L, a, b) {
++  return [L + 0.3963377774 * a + 0.2158037573 * b, L - 0.1055613458 * a - 0.0638541728 * b, L - 0.0894841775 * a - 1.2914855480 * b];
++}
++
++// OKLab → linear sRGB
++function oklabToLinearRgb(L, a, b) {
++  const [lg, mg, sg] = oklabToLMSg(L, a, b);
++  return mul3(LMS_TO_SRGB, [lg * lg * lg, mg * mg * mg, sg * sg * sg]);
++}
++
++// linear sRGB → OKLab
++function linearRgbToOklab(r, g, b) {
++  const [l, m, s] = mul3(SRGB_TO_LMS, [r, g, b]);
++  const lg = Math.cbrt(l),
++    mg = Math.cbrt(m),
++    sg = Math.cbrt(s);
++  return [0.2104542553 * lg + 0.7936177850 * mg - 0.0040720468 * sg, 1.9779984951 * lg - 2.4285922050 * mg + 0.4505937099 * sg, 0.0259040371 * lg + 0.7827717662 * mg - 0.8086757660 * sg];
++}
++
++// Check if linear sRGB values are in gamut (within [0, 1] with small tolerance)
++function isInGamut(rgb) {
++  const e = -0.0001;
++  return rgb[0] >= e && rgb[0] <= 1.0001 && rgb[1] >= e && rgb[1] <= 1.0001 && rgb[2] >= e && rgb[2] <= 1.0001;
++}
++
++// Clamp linear sRGB to [0, 1] and convert to gamma sRGB [0, 255]
++function linearToRgbChannel(c) {
++  return Math.round(Math.min(255, Math.max(0, linearToSrgb(Math.min(1, Math.max(0, c))) * 255)));
++}
++
++// DeltaEOK: Euclidean distance in OKLab space
++function deltaEOK(lab1, lab2) {
++  return Math.sqrt((lab1[0] - lab2[0]) ** 2 + (lab1[1] - lab2[1]) ** 2 + (lab1[2] - lab2[2]) ** 2);
++}
++
++// CSS Gamut Mapping Algorithm (per CSS Color Level 4 spec)
++// Binary search on OKLCH chroma to find the largest in-gamut chroma
++// that preserves lightness and hue.
++function gamutMapOklch(L, C, H) {
++  const JND = 0.02;
++  const EPSILON = 0.0001;
++
++  // If lightness is at extremes, return black or white
++  if (L >= 1) return [1, 1, 1];
++  if (L <= 0) return [0, 0, 0];
++
++  // If already in gamut, convert directly
++  const hRad = H * Math.PI / 180;
++  const cosH = Math.cos(hRad);
++  const sinH = Math.sin(hRad);
++  let rgb = oklabToLinearRgb(L, C * cosH, C * sinH);
++  if (isInGamut(rgb)) return rgb;
++
++  // Binary search: reduce chroma until in gamut
++  let lo = 0;
++  let hi = C;
++  let loInGamut = true;
++
++  // Clip and check initial distance
++  let clipped = [Math.min(1, Math.max(0, rgb[0])), Math.min(1, Math.max(0, rgb[1])), Math.min(1, Math.max(0, rgb[2]))];
++  let clippedLab = linearRgbToOklab(clipped[0], clipped[1], clipped[2]);
++  let currentLab = [L, C * cosH, C * sinH];
++  if (deltaEOK(clippedLab, currentLab) < JND) {
++    return clipped;
++  }
++  while (hi - lo > EPSILON) {
++    const mid = (lo + hi) / 2;
++    currentLab = [L, mid * cosH, mid * sinH];
++    rgb = oklabToLinearRgb(currentLab[0], currentLab[1], currentLab[2]);
++    if (loInGamut && isInGamut(rgb)) {
++      lo = mid;
++      continue;
++    }
++    clipped = [Math.min(1, Math.max(0, rgb[0])), Math.min(1, Math.max(0, rgb[1])), Math.min(1, Math.max(0, rgb[2]))];
++    clippedLab = linearRgbToOklab(clipped[0], clipped[1], clipped[2]);
++    const dE = deltaEOK(clippedLab, currentLab);
++    if (dE < JND) {
++      if (JND - dE < EPSILON) break;
++      loInGamut = false;
++      lo = mid;
++    } else {
++      hi = mid;
++    }
++  }
++  return clipped;
++}
++
++// Convert gamut-mapped linear sRGB to final RGBA output
++function gamutMapToRgba(L, C, H, alpha) {
++  const [lr, lg, lb] = gamutMapOklch(L, C, H);
++  return [linearToRgbChannel(lr), linearToRgbChannel(lg), linearToRgbChannel(lb), alpha];
++}
++
++// CIE Lab → XYZ-D50
++const labKappa = 24389 / 27; // 29^3/3^3
++// D50 white point
++const D50 = [0.3457 / 0.3585, 1.0, (1.0 - 0.3457 - 0.3585) / 0.3585];
++
++// CIE Lab → OKLab (via XYZ-D50 → XYZ-D65 → linear sRGB → OKLab)
++function labToOklab(L, a, b) {
++  // Lab → XYZ-D50
++  const f1 = (L + 16) / 116;
++  const f0 = a / 500 + f1;
++  const f2 = f1 - b / 200;
++  const x = (f0 > 24 / 116 ? f0 * f0 * f0 : (116 * f0 - 16) / labKappa) * D50[0];
++  const y = L > 8 ? Math.pow((L + 16) / 116, 3) : L / labKappa;
++  const z = (f2 > 24 / 116 ? f2 * f2 * f2 : (116 * f2 - 16) / labKappa) * D50[2];
++
++  // XYZ-D50 → XYZ-D65 (Bradford chromatic adaptation)
++  // prettier-ignore
++  const [xd65, yd65, zd65] = mul3([0.9554734527042182, -0.023098536874261423, 0.0632593086610217, -0.028369706963208136, 1.0099954580106629, 0.021041398966943008, 0.012314001688319899, -0.020507696433477912, 1.3303659366080753], [x, y, z]);
++
++  // XYZ-D65 → linear sRGB → OKLab
++  // prettier-ignore
++  const [lr, lg, lb] = mul3([3.2409699419045226, -1.5373831775700940, -0.4986107602930034, -0.9692436362808796, 1.8759675015077202, 0.0415550574071756, 0.0556300796969937, -0.2039769588889765, 1.0569715142428786], [xd65, yd65, zd65]);
++  return linearRgbToOklab(lr, lg, lb);
++}
++
++// Convert Lab/LCH to gamut-mapped RGBA by going through OKLab → OKLCH
++function labToRgba(L, a, b, alpha) {
++  const [okL, okA, okB] = labToOklab(L, a, b);
++  const C = Math.sqrt(okA * okA + okB * okB);
++  const H = C < 0.0001 ? 0 : (Math.atan2(okB, okA) * 180 / Math.PI + 360) % 360;
++  return gamutMapToRgba(okL, C, H, alpha);
++}
++function oklabToRgba(L, a, b, alpha) {
++  const C = Math.sqrt(a * a + b * b);
++  const H = C < 0.0001 ? 0 : (Math.atan2(b, a) * 180 / Math.PI + 360) % 360;
++  return gamutMapToRgba(L, C, H, alpha);
++}
++function lchToRgba(L, C, H, alpha) {
++  const hRad = H * Math.PI / 180;
++  return labToRgba(L, C * Math.cos(hRad), C * Math.sin(hRad), alpha);
++}
++function oklchToRgba(L, C, H, alpha) {
++  return gamutMapToRgba(L, C, H, alpha);
++}
++
++// HWB → RGB (https://www.w3.org/TR/css-color-4/#hwb-to-rgb)
++function hwbToRgb(hue, white, black) {
++  // If w + b >= 1, it's achromatic
++  if (white + black >= 1) {
++    const gray = Math.round(white / (white + black) * 255);
++    return [gray, gray, gray];
++  }
++  // Start with pure hue from HSL (s=100%, l=50%)
++  const rgb = hslToRgb(hue, 100, 50);
++  return rgb.map(c => Math.round(c / 255 * (1 - white - black) * 255 + white * 255));
++}
++
++// XYZ-D65 → linear sRGB matrix
++// prettier-ignore
++const XYZ_D65_TO_SRGB = [3.2409699419045226, -1.5373831775700940, -0.4986107602930034, -0.9692436362808796, 1.8759675015077202, 0.0415550574071756, 0.0556300796969937, -0.2039769588889765, 1.0569715142428786];
++
++// Bradford D50 → D65 chromatic adaptation
++// prettier-ignore
++const D50_TO_D65 = [0.9554734527042182, -0.023098536874261423, 0.0632593086610217, -0.028369706963208136, 1.0099954580106629, 0.021041398966943008, 0.012314001688319899, -0.020507696433477912, 1.3303659366080753];
++
++// Color space definitions for color() function
++// Each space has: toXYZ matrix (to XYZ-D65), degamma function, and white point
++
++const identity = c => c;
++const a98Degamma = c => Math.pow(Math.abs(c), 563 / 256) * Math.sign(c);
++const rec2020Degamma = c => Math.pow(Math.abs(c), 2.4) * Math.sign(c);
++const prophotoEt = 1 / 512;
++const prophotoDegamma = c => {
++  const abs = Math.abs(c);
++  return abs < 16 * prophotoEt ? c / 16 : Math.sign(c) * Math.pow(abs, 1.8);
++};
++
++// prettier-ignore
++const COLOR_SPACES = {
++  'srgb': {
++    toXYZ: [0.41239079926595934, 0.357584339383878, 0.1804807884018343, 0.21263900587151027, 0.715168678767756, 0.07219231536073371, 0.01933081871559182, 0.11919477979462598, 0.9505321522496607],
++    degamma: srgbToLinear
++  },
++  'srgb-linear': {
++    toXYZ: [0.41239079926595934, 0.357584339383878, 0.1804807884018343, 0.21263900587151027, 0.715168678767756, 0.07219231536073371, 0.01933081871559182, 0.11919477979462598, 0.9505321522496607],
++    degamma: identity
++  },
++  'display-p3': {
++    toXYZ: [0.4865709486482162, 0.26566769316909306, 0.1982172852343625, 0.2289745640697488, 0.6917385218365064, 0.079286914093745, 0.0000000000000000, 0.04511338185890264, 1.043944368900976],
++    degamma: srgbToLinear // same gamma as sRGB
++  },
++  'a98-rgb': {
++    toXYZ: [0.5766690429101305, 0.1855582379065463, 0.1882286462349947, 0.29734497525053605, 0.6273635662554661, 0.07529145849399788, 0.02703136138641234, 0.07068885253582723, 0.9913375368376388],
++    degamma: a98Degamma
++  },
++  'rec2020': {
++    toXYZ: [0.6369580483012914, 0.14461690358620832, 0.1688809751641721, 0.2627002120112671, 0.6779980715188708, 0.05930171646986196, 0.000000000000000, 0.028072693049087428, 1.060985057710791],
++    degamma: rec2020Degamma
++  },
++  'prophoto-rgb': {
++    toXYZ: [0.79776664490064230, 0.13518129740053308, 0.03134773412839220, 0.28807482881940130, 0.71183523424187300, 0.00008993693872564, 0.00000000000000000, 0.00000000000000000, 0.82510460251046020],
++    degamma: prophotoDegamma,
++    d50: true // ProPhoto uses D50
++  }
++};
++
++// Convert color() input to linear sRGB, then gamut map to RGBA
++function colorFnToRgba(space, r, g, b, alpha) {
++  // xyz-d65 and xyz are direct XYZ → linear sRGB
++  if (space === 'xyz-d65' || space === 'xyz') {
++    const lin = mul3(XYZ_D65_TO_SRGB, [r, g, b]);
++    return linearToGamutMappedRgba(lin, alpha);
++  }
++
++  // xyz-d50 needs Bradford adaptation first
++  if (space === 'xyz-d50') {
++    const d65 = mul3(D50_TO_D65, [r, g, b]);
++    const lin = mul3(XYZ_D65_TO_SRGB, d65);
++    return linearToGamutMappedRgba(lin, alpha);
++  }
++  const def = COLOR_SPACES[space];
++  if (!def) throw new ColorError$1(`color(${space} ...)`);
++
++  // Degamma the input values
++  const lr = def.degamma(r);
++  const lg = def.degamma(g);
++  const lb = def.degamma(b);
++
++  // Convert to XYZ (D65 or D50 depending on space)
++  let xyz = mul3(def.toXYZ, [lr, lg, lb]);
++
++  // If the space uses D50, adapt to D65
++  if (def.d50) {
++    xyz = mul3(D50_TO_D65, xyz);
++  }
++
++  // XYZ-D65 → linear sRGB
++  const lin = mul3(XYZ_D65_TO_SRGB, xyz);
++  return linearToGamutMappedRgba(lin, alpha);
++}
++
++// Convert linear sRGB to gamut-mapped RGBA via OKLCH
++function linearToGamutMappedRgba(lin, alpha) {
++  // If already in gamut, just convert directly (fast path)
++  if (isInGamut(lin)) {
++    return [linearToRgbChannel(lin[0]), linearToRgbChannel(lin[1]), linearToRgbChannel(lin[2]), alpha];
++  }
++  // Out of gamut — convert to OKLab → OKLCH and gamut map
++  const [okL, okA, okB] = linearRgbToOklab(lin[0], lin[1], lin[2]);
++  const C = Math.sqrt(okA * okA + okB * okB);
++  const H = C < 0.0001 ? 0 : (Math.atan2(okB, okA) * 180 / Math.PI + 360) % 360;
++  return gamutMapToRgba(okL, C, H, alpha);
++}
+ const roundColor = color => {
+   return Math.round(color * 255);
+ };
+diff --git a/dist/index.exports.require.cjs.js b/dist/index.exports.require.cjs.js
+index 93440b6a970d64913516782ea749d115d88960b0..bd19e621c74e8d35fea5158cef02b3ff01df35b1 100644
+--- a/dist/index.exports.require.cjs.js
++++ b/dist/index.exports.require.cjs.js
+@@ -21,7 +21,7 @@ var ColorError$1 = ColorError;
+ /**
+  * Parses a color into red, gree, blue, alpha parts
+  *
+- * @param color the input color. Can be a RGB, RBGA, HSL, HSLA, or named color
++ * @param color the input color. Can be a RGB, RBGA, HSL, HSLA, HWB, lab, lch, oklab, oklch, color(), or named color
+  */
+ function parseToRgba(color) {
+   if (typeof color !== 'string') throw new ColorError$1(color);
+@@ -43,6 +43,13 @@ function parseToRgba(color) {
+     const arr = Array.from(rgbaMatch).slice(1);
+     return [...arr.slice(0, 3).map(x => parseInt(x, 10)), parseFloat(arr[3] || '1')];
+   }
++
++  // Modern space-separated rgb/rgba: rgb(255 0 0) or rgb(255 0 0 / 0.5)
++  const rgbaModernMatch = rgbaModernRegex.exec(normalizedColor);
++  if (rgbaModernMatch) {
++    const [, rs, gs, bs, alphaS] = rgbaModernMatch;
++    return [parseRgbComponent(rs), parseRgbComponent(gs), parseRgbComponent(bs), parseAlpha(alphaS)];
++  }
+   const hslaMatch = hslaRegex.exec(normalizedColor);
+   if (hslaMatch) {
+     const [h, s, l, a] = Array.from(hslaMatch).slice(1).map(parseFloat);
+@@ -50,6 +57,70 @@ function parseToRgba(color) {
+     if (guard(0, 100, l) !== l) throw new ColorError$1(color);
+     return [...hslToRgb(h, s, l), Number.isNaN(a) ? 1 : a];
+   }
++
++  // Modern space-separated hsl/hsla: hsl(120 100% 50%) or hsl(120 100% 50% / 0.5)
++  const hslaModernMatch = hslaModernRegex.exec(normalizedColor);
++  if (hslaModernMatch) {
++    const [, hs, ss, ls, alphaS] = hslaModernMatch;
++    const h = parseAngle(hs);
++    const s = parseFloat(ss);
++    const l = parseFloat(ls);
++    if (guard(0, 100, s) !== s) throw new ColorError$1(color);
++    if (guard(0, 100, l) !== l) throw new ColorError$1(color);
++    return [...hslToRgb(h, s, l), parseAlpha(alphaS)];
++  }
++
++  // hwb(H W B) or hwb(H W B / alpha)
++  const hwbMatch = hwbRegex.exec(normalizedColor);
++  if (hwbMatch) {
++    const [, hs, ws, bs, alphaS] = hwbMatch;
++    const h = parseAngle(hs);
++    const w = parseFloat(ws) / 100;
++    const b = parseFloat(bs) / 100;
++    return [...hwbToRgb(h, w, b), parseAlpha(alphaS)];
++  }
++  const labMatch = labRegex.exec(normalizedColor);
++  if (labMatch) {
++    const [, Ls, as_, bs, alphaS] = labMatch;
++    const L = Ls.endsWith('%') ? parseFloat(Ls) : parseFloat(Ls);
++    const a = as_.endsWith('%') ? parseFloat(as_) / 100 * 125 : parseFloat(as_);
++    const b = bs.endsWith('%') ? parseFloat(bs) / 100 * 125 : parseFloat(bs);
++    return labToRgba(L, a, b, parseAlpha(alphaS));
++  }
++  const lchMatch = lchRegex.exec(normalizedColor);
++  if (lchMatch) {
++    const [, Ls, Cs, Hs, alphaS] = lchMatch;
++    const L = Ls.endsWith('%') ? parseFloat(Ls) : parseFloat(Ls);
++    const C = Cs.endsWith('%') ? parseFloat(Cs) / 100 * 150 : parseFloat(Cs);
++    const H = parseAngle(Hs);
++    return lchToRgba(L, C, H, parseAlpha(alphaS));
++  }
++  const oklabMatch = oklabRegex.exec(normalizedColor);
++  if (oklabMatch) {
++    const [, Ls, as_, bs, alphaS] = oklabMatch;
++    const L = Ls.endsWith('%') ? parseFloat(Ls) / 100 : parseFloat(Ls);
++    const a = as_.endsWith('%') ? parseFloat(as_) / 100 * 0.4 : parseFloat(as_);
++    const b = bs.endsWith('%') ? parseFloat(bs) / 100 * 0.4 : parseFloat(bs);
++    return oklabToRgba(L, a, b, parseAlpha(alphaS));
++  }
++  const oklchMatch = oklchRegex.exec(normalizedColor);
++  if (oklchMatch) {
++    const [, Ls, Cs, Hs, alphaS] = oklchMatch;
++    const L = Ls.endsWith('%') ? parseFloat(Ls) / 100 : parseFloat(Ls);
++    const C = Cs.endsWith('%') ? parseFloat(Cs) / 100 * 0.4 : parseFloat(Cs);
++    const H = parseAngle(Hs);
++    return oklchToRgba(L, C, H, parseAlpha(alphaS));
++  }
++
++  // color(space r g b) or color(space r g b / alpha)
++  const colorFnMatch = colorFnRegex.exec(normalizedColor);
++  if (colorFnMatch) {
++    const [, space, rs, gs, bs, alphaS] = colorFnMatch;
++    const rc = parseColorComponent(rs);
++    const gc = parseColorComponent(gs);
++    const bc = parseColorComponent(bs);
++    return colorFnToRgba(space.toLowerCase(), rc, gc, bc, parseAlpha(alphaS));
++  }
+   throw new ColorError$1(color);
+ }
+ function hash(str) {
+@@ -94,6 +165,325 @@ const hexRegex = new RegExp(`^#${r('([a-f0-9]{2})', 3)}([a-f0-9]{2})?$`, 'i');
+ const rgbaRegex = new RegExp(`^rgba?\\(\\s*(\\d+)\\s*${r(',\\s*(\\d+)\\s*', 2)}(?:,\\s*([\\d.]+))?\\s*\\)$`, 'i');
+ const hslaRegex = /^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%(?:\s*,\s*([\d.]+))?\s*\)$/i;
+ const namedColorRegex = /^[a-z]+$/i;
++
++// Modern space-separated rgb: rgb(255 0 0) or rgb(255 0 0 / 0.5)
++// Also supports percentages: rgb(100% 0% 0% / 50%)
++const rgbaModernRegex = /^rgba?\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// Modern space-separated hsl: hsl(120 100% 50%) or hsl(120 100% 50% / 0.5)
++const hslaModernRegex = /^hsla?\(\s*([\d.]+(?:deg|rad|grad|turn)?)\s+([\d.]+)%\s+([\d.]+)%\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// hwb(H W B) or hwb(H W B / alpha)
++const hwbRegex = /^hwb\(\s*([\d.]+(?:deg|rad|grad|turn)?)\s+([\d.]+)%\s+([\d.]+)%\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// color(space r g b) or color(space r g b / alpha)
++const colorFnRegex = /^color\(\s*([\w-]+)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++
++// CSS Color Level 4: space-separated values with optional / alpha
++// lab(L a b) or lab(L a b / alpha)
++const labRegex = /^lab\(\s*([\d.]+%?)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// lch(L C H) or lch(L C H / alpha)
++const lchRegex = /^lch\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.e+-]+(?:deg|rad|grad|turn)?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// oklab(L a b) or oklab(L a b / alpha)
++const oklabRegex = /^oklab\(\s*([\d.]+%?)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// oklch(L C H) or oklch(L C H / alpha)
++const oklchRegex = /^oklch\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.e+-]+(?:deg|rad|grad|turn)?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++
++// Parse angle value supporting deg, rad, grad, turn units
++function parseAngle(value) {
++  const num = parseFloat(value);
++  if (value.endsWith('rad')) return num * 180 / Math.PI;
++  if (value.endsWith('grad')) return num * 360 / 400;
++  if (value.endsWith('turn')) return num * 360;
++  return num; // deg or unitless
++}
++
++// Parse alpha: percentage or number, default 1
++function parseAlpha(value) {
++  if (value === undefined || value === '') return 1;
++  if (value.endsWith('%')) return parseFloat(value) / 100;
++  return parseFloat(value);
++}
++
++// Parse rgb component: number (0-255) or percentage (0%-100%)
++function parseRgbComponent(value) {
++  if (value.endsWith('%')) return Math.round(parseFloat(value) / 100 * 255);
++  return parseInt(value, 10);
++}
++
++// Parse color() component: number or percentage (maps to 0-1 range)
++function parseColorComponent(value) {
++  if (value.endsWith('%')) return parseFloat(value) / 100;
++  return parseFloat(value);
++}
++
++// sRGB gamma → sRGB linear (degamma)
++function srgbToLinear(c) {
++  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
++}
++
++// sRGB linear → sRGB gamma (inverse of the function in getLuminance)
++function linearToSrgb(c) {
++  return c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
++}
++
++// Matrix-vector multiply for 3x3 (flat array)
++function mul3(m, v) {
++  return [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[4] * v[1] + m[5] * v[2], m[6] * v[0] + m[7] * v[1] + m[8] * v[2]];
++}
++
++// LMS → linear sRGB combined matrix (LMStoXYZ_D65 * XYZ_D65_to_linearSRGB)
++// prettier-ignore
++const LMS_TO_SRGB = [4.0767416621, -3.3077115913, 0.2309699292, -1.2684380046, 2.6097574011, -0.3413193965, -0.0041960863, -0.7034186147, 1.7076147010];
++
++// linear sRGB → LMS combined matrix (inverse of above)
++// prettier-ignore
++const SRGB_TO_LMS = [0.4122214708, 0.5363325363, 0.0514459929, 0.2119034982, 0.6806995451, 0.1073969566, 0.0883024619, 0.2817188376, 0.6299787005];
++
++// OKLab → LMS (cube root domain)
++function oklabToLMSg(L, a, b) {
++  return [L + 0.3963377774 * a + 0.2158037573 * b, L - 0.1055613458 * a - 0.0638541728 * b, L - 0.0894841775 * a - 1.2914855480 * b];
++}
++
++// OKLab → linear sRGB
++function oklabToLinearRgb(L, a, b) {
++  const [lg, mg, sg] = oklabToLMSg(L, a, b);
++  return mul3(LMS_TO_SRGB, [lg * lg * lg, mg * mg * mg, sg * sg * sg]);
++}
++
++// linear sRGB → OKLab
++function linearRgbToOklab(r, g, b) {
++  const [l, m, s] = mul3(SRGB_TO_LMS, [r, g, b]);
++  const lg = Math.cbrt(l),
++    mg = Math.cbrt(m),
++    sg = Math.cbrt(s);
++  return [0.2104542553 * lg + 0.7936177850 * mg - 0.0040720468 * sg, 1.9779984951 * lg - 2.4285922050 * mg + 0.4505937099 * sg, 0.0259040371 * lg + 0.7827717662 * mg - 0.8086757660 * sg];
++}
++
++// Check if linear sRGB values are in gamut (within [0, 1] with small tolerance)
++function isInGamut(rgb) {
++  const e = -0.0001;
++  return rgb[0] >= e && rgb[0] <= 1.0001 && rgb[1] >= e && rgb[1] <= 1.0001 && rgb[2] >= e && rgb[2] <= 1.0001;
++}
++
++// Clamp linear sRGB to [0, 1] and convert to gamma sRGB [0, 255]
++function linearToRgbChannel(c) {
++  return Math.round(Math.min(255, Math.max(0, linearToSrgb(Math.min(1, Math.max(0, c))) * 255)));
++}
++
++// DeltaEOK: Euclidean distance in OKLab space
++function deltaEOK(lab1, lab2) {
++  return Math.sqrt((lab1[0] - lab2[0]) ** 2 + (lab1[1] - lab2[1]) ** 2 + (lab1[2] - lab2[2]) ** 2);
++}
++
++// CSS Gamut Mapping Algorithm (per CSS Color Level 4 spec)
++// Binary search on OKLCH chroma to find the largest in-gamut chroma
++// that preserves lightness and hue.
++function gamutMapOklch(L, C, H) {
++  const JND = 0.02;
++  const EPSILON = 0.0001;
++
++  // If lightness is at extremes, return black or white
++  if (L >= 1) return [1, 1, 1];
++  if (L <= 0) return [0, 0, 0];
++
++  // If already in gamut, convert directly
++  const hRad = H * Math.PI / 180;
++  const cosH = Math.cos(hRad);
++  const sinH = Math.sin(hRad);
++  let rgb = oklabToLinearRgb(L, C * cosH, C * sinH);
++  if (isInGamut(rgb)) return rgb;
++
++  // Binary search: reduce chroma until in gamut
++  let lo = 0;
++  let hi = C;
++  let loInGamut = true;
++
++  // Clip and check initial distance
++  let clipped = [Math.min(1, Math.max(0, rgb[0])), Math.min(1, Math.max(0, rgb[1])), Math.min(1, Math.max(0, rgb[2]))];
++  let clippedLab = linearRgbToOklab(clipped[0], clipped[1], clipped[2]);
++  let currentLab = [L, C * cosH, C * sinH];
++  if (deltaEOK(clippedLab, currentLab) < JND) {
++    return clipped;
++  }
++  while (hi - lo > EPSILON) {
++    const mid = (lo + hi) / 2;
++    currentLab = [L, mid * cosH, mid * sinH];
++    rgb = oklabToLinearRgb(currentLab[0], currentLab[1], currentLab[2]);
++    if (loInGamut && isInGamut(rgb)) {
++      lo = mid;
++      continue;
++    }
++    clipped = [Math.min(1, Math.max(0, rgb[0])), Math.min(1, Math.max(0, rgb[1])), Math.min(1, Math.max(0, rgb[2]))];
++    clippedLab = linearRgbToOklab(clipped[0], clipped[1], clipped[2]);
++    const dE = deltaEOK(clippedLab, currentLab);
++    if (dE < JND) {
++      if (JND - dE < EPSILON) break;
++      loInGamut = false;
++      lo = mid;
++    } else {
++      hi = mid;
++    }
++  }
++  return clipped;
++}
++
++// Convert gamut-mapped linear sRGB to final RGBA output
++function gamutMapToRgba(L, C, H, alpha) {
++  const [lr, lg, lb] = gamutMapOklch(L, C, H);
++  return [linearToRgbChannel(lr), linearToRgbChannel(lg), linearToRgbChannel(lb), alpha];
++}
++
++// CIE Lab → XYZ-D50
++const labKappa = 24389 / 27; // 29^3/3^3
++// D50 white point
++const D50 = [0.3457 / 0.3585, 1.0, (1.0 - 0.3457 - 0.3585) / 0.3585];
++
++// CIE Lab → OKLab (via XYZ-D50 → XYZ-D65 → linear sRGB → OKLab)
++function labToOklab(L, a, b) {
++  // Lab → XYZ-D50
++  const f1 = (L + 16) / 116;
++  const f0 = a / 500 + f1;
++  const f2 = f1 - b / 200;
++  const x = (f0 > 24 / 116 ? f0 * f0 * f0 : (116 * f0 - 16) / labKappa) * D50[0];
++  const y = L > 8 ? Math.pow((L + 16) / 116, 3) : L / labKappa;
++  const z = (f2 > 24 / 116 ? f2 * f2 * f2 : (116 * f2 - 16) / labKappa) * D50[2];
++
++  // XYZ-D50 → XYZ-D65 (Bradford chromatic adaptation)
++  // prettier-ignore
++  const [xd65, yd65, zd65] = mul3([0.9554734527042182, -0.023098536874261423, 0.0632593086610217, -0.028369706963208136, 1.0099954580106629, 0.021041398966943008, 0.012314001688319899, -0.020507696433477912, 1.3303659366080753], [x, y, z]);
++
++  // XYZ-D65 → linear sRGB → OKLab
++  // prettier-ignore
++  const [lr, lg, lb] = mul3([3.2409699419045226, -1.5373831775700940, -0.4986107602930034, -0.9692436362808796, 1.8759675015077202, 0.0415550574071756, 0.0556300796969937, -0.2039769588889765, 1.0569715142428786], [xd65, yd65, zd65]);
++  return linearRgbToOklab(lr, lg, lb);
++}
++
++// Convert Lab/LCH to gamut-mapped RGBA by going through OKLab → OKLCH
++function labToRgba(L, a, b, alpha) {
++  const [okL, okA, okB] = labToOklab(L, a, b);
++  const C = Math.sqrt(okA * okA + okB * okB);
++  const H = C < 0.0001 ? 0 : (Math.atan2(okB, okA) * 180 / Math.PI + 360) % 360;
++  return gamutMapToRgba(okL, C, H, alpha);
++}
++function oklabToRgba(L, a, b, alpha) {
++  const C = Math.sqrt(a * a + b * b);
++  const H = C < 0.0001 ? 0 : (Math.atan2(b, a) * 180 / Math.PI + 360) % 360;
++  return gamutMapToRgba(L, C, H, alpha);
++}
++function lchToRgba(L, C, H, alpha) {
++  const hRad = H * Math.PI / 180;
++  return labToRgba(L, C * Math.cos(hRad), C * Math.sin(hRad), alpha);
++}
++function oklchToRgba(L, C, H, alpha) {
++  return gamutMapToRgba(L, C, H, alpha);
++}
++
++// HWB → RGB (https://www.w3.org/TR/css-color-4/#hwb-to-rgb)
++function hwbToRgb(hue, white, black) {
++  // If w + b >= 1, it's achromatic
++  if (white + black >= 1) {
++    const gray = Math.round(white / (white + black) * 255);
++    return [gray, gray, gray];
++  }
++  // Start with pure hue from HSL (s=100%, l=50%)
++  const rgb = hslToRgb(hue, 100, 50);
++  return rgb.map(c => Math.round(c / 255 * (1 - white - black) * 255 + white * 255));
++}
++
++// XYZ-D65 → linear sRGB matrix
++// prettier-ignore
++const XYZ_D65_TO_SRGB = [3.2409699419045226, -1.5373831775700940, -0.4986107602930034, -0.9692436362808796, 1.8759675015077202, 0.0415550574071756, 0.0556300796969937, -0.2039769588889765, 1.0569715142428786];
++
++// Bradford D50 → D65 chromatic adaptation
++// prettier-ignore
++const D50_TO_D65 = [0.9554734527042182, -0.023098536874261423, 0.0632593086610217, -0.028369706963208136, 1.0099954580106629, 0.021041398966943008, 0.012314001688319899, -0.020507696433477912, 1.3303659366080753];
++
++// Color space definitions for color() function
++// Each space has: toXYZ matrix (to XYZ-D65), degamma function, and white point
++
++const identity = c => c;
++const a98Degamma = c => Math.pow(Math.abs(c), 563 / 256) * Math.sign(c);
++const rec2020Degamma = c => Math.pow(Math.abs(c), 2.4) * Math.sign(c);
++const prophotoEt = 1 / 512;
++const prophotoDegamma = c => {
++  const abs = Math.abs(c);
++  return abs < 16 * prophotoEt ? c / 16 : Math.sign(c) * Math.pow(abs, 1.8);
++};
++
++// prettier-ignore
++const COLOR_SPACES = {
++  'srgb': {
++    toXYZ: [0.41239079926595934, 0.357584339383878, 0.1804807884018343, 0.21263900587151027, 0.715168678767756, 0.07219231536073371, 0.01933081871559182, 0.11919477979462598, 0.9505321522496607],
++    degamma: srgbToLinear
++  },
++  'srgb-linear': {
++    toXYZ: [0.41239079926595934, 0.357584339383878, 0.1804807884018343, 0.21263900587151027, 0.715168678767756, 0.07219231536073371, 0.01933081871559182, 0.11919477979462598, 0.9505321522496607],
++    degamma: identity
++  },
++  'display-p3': {
++    toXYZ: [0.4865709486482162, 0.26566769316909306, 0.1982172852343625, 0.2289745640697488, 0.6917385218365064, 0.079286914093745, 0.0000000000000000, 0.04511338185890264, 1.043944368900976],
++    degamma: srgbToLinear // same gamma as sRGB
++  },
++  'a98-rgb': {
++    toXYZ: [0.5766690429101305, 0.1855582379065463, 0.1882286462349947, 0.29734497525053605, 0.6273635662554661, 0.07529145849399788, 0.02703136138641234, 0.07068885253582723, 0.9913375368376388],
++    degamma: a98Degamma
++  },
++  'rec2020': {
++    toXYZ: [0.6369580483012914, 0.14461690358620832, 0.1688809751641721, 0.2627002120112671, 0.6779980715188708, 0.05930171646986196, 0.000000000000000, 0.028072693049087428, 1.060985057710791],
++    degamma: rec2020Degamma
++  },
++  'prophoto-rgb': {
++    toXYZ: [0.79776664490064230, 0.13518129740053308, 0.03134773412839220, 0.28807482881940130, 0.71183523424187300, 0.00008993693872564, 0.00000000000000000, 0.00000000000000000, 0.82510460251046020],
++    degamma: prophotoDegamma,
++    d50: true // ProPhoto uses D50
++  }
++};
++
++// Convert color() input to linear sRGB, then gamut map to RGBA
++function colorFnToRgba(space, r, g, b, alpha) {
++  // xyz-d65 and xyz are direct XYZ → linear sRGB
++  if (space === 'xyz-d65' || space === 'xyz') {
++    const lin = mul3(XYZ_D65_TO_SRGB, [r, g, b]);
++    return linearToGamutMappedRgba(lin, alpha);
++  }
++
++  // xyz-d50 needs Bradford adaptation first
++  if (space === 'xyz-d50') {
++    const d65 = mul3(D50_TO_D65, [r, g, b]);
++    const lin = mul3(XYZ_D65_TO_SRGB, d65);
++    return linearToGamutMappedRgba(lin, alpha);
++  }
++  const def = COLOR_SPACES[space];
++  if (!def) throw new ColorError$1(`color(${space} ...)`);
++
++  // Degamma the input values
++  const lr = def.degamma(r);
++  const lg = def.degamma(g);
++  const lb = def.degamma(b);
++
++  // Convert to XYZ (D65 or D50 depending on space)
++  let xyz = mul3(def.toXYZ, [lr, lg, lb]);
++
++  // If the space uses D50, adapt to D65
++  if (def.d50) {
++    xyz = mul3(D50_TO_D65, xyz);
++  }
++
++  // XYZ-D65 → linear sRGB
++  const lin = mul3(XYZ_D65_TO_SRGB, xyz);
++  return linearToGamutMappedRgba(lin, alpha);
++}
++
++// Convert linear sRGB to gamut-mapped RGBA via OKLCH
++function linearToGamutMappedRgba(lin, alpha) {
++  // If already in gamut, just convert directly (fast path)
++  if (isInGamut(lin)) {
++    return [linearToRgbChannel(lin[0]), linearToRgbChannel(lin[1]), linearToRgbChannel(lin[2]), alpha];
++  }
++  // Out of gamut — convert to OKLab → OKLCH and gamut map
++  const [okL, okA, okB] = linearRgbToOklab(lin[0], lin[1], lin[2]);
++  const C = Math.sqrt(okA * okA + okB * okB);
++  const H = C < 0.0001 ? 0 : (Math.atan2(okB, okA) * 180 / Math.PI + 360) % 360;
++  return gamutMapToRgba(okL, C, H, alpha);
++}
+ const roundColor = color => {
+   return Math.round(color * 255);
+ };
+diff --git a/dist/index.main.cjs.js b/dist/index.main.cjs.js
+index 80ae9fc0117704c8412cb5425da52971b5d1cf0b..50bceeee4a7c98a6ef2e20e0822c51837ec54fb1 100644
+--- a/dist/index.main.cjs.js
++++ b/dist/index.main.cjs.js
+@@ -1,5 +1,79 @@
+ 'use strict';
+
++function _arrayLikeToArray(r, a) {
++  (null == a || a > r.length) && (a = r.length);
++  for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
++  return n;
++}
++function _arrayWithHoles(r) {
++  if (Array.isArray(r)) return r;
++}
++function _arrayWithoutHoles(r) {
++  if (Array.isArray(r)) return _arrayLikeToArray(r);
++}
++function _assertThisInitialized(e) {
++  if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
++  return e;
++}
++function _callSuper(t, o, e) {
++  return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e));
++}
++function _classCallCheck(a, n) {
++  if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function");
++}
++function _construct(t, e, r) {
++  if (_isNativeReflectConstruct()) return Reflect.construct.apply(null, arguments);
++  var o = [null];
++  o.push.apply(o, e);
++  var p = new (t.bind.apply(t, o))();
++  return r && _setPrototypeOf(p, r.prototype), p;
++}
++function _defineProperties(e, r) {
++  for (var t = 0; t < r.length; t++) {
++    var o = r[t];
++    o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o);
++  }
++}
++function _createClass(e, r, t) {
++  return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", {
++    writable: !1
++  }), e;
++}
++function _getPrototypeOf(t) {
++  return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) {
++    return t.__proto__ || Object.getPrototypeOf(t);
++  }, _getPrototypeOf(t);
++}
++function _inherits(t, e) {
++  if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function");
++  t.prototype = Object.create(e && e.prototype, {
++    constructor: {
++      value: t,
++      writable: !0,
++      configurable: !0
++    }
++  }), Object.defineProperty(t, "prototype", {
++    writable: !1
++  }), e && _setPrototypeOf(t, e);
++}
++function _isNativeFunction(t) {
++  try {
++    return -1 !== Function.toString.call(t).indexOf("[native code]");
++  } catch (n) {
++    return "function" == typeof t;
++  }
++}
++function _isNativeReflectConstruct() {
++  try {
++    var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {}));
++  } catch (t) {}
++  return (_isNativeReflectConstruct = function () {
++    return !!t;
++  })();
++}
++function _iterableToArray(r) {
++  if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r);
++}
+ function _iterableToArrayLimit(r, l) {
+   var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
+   if (null != t) {
+@@ -27,187 +101,70 @@ function _iterableToArrayLimit(r, l) {
+     return a;
+   }
+ }
+-function _classCallCheck(instance, Constructor) {
+-  if (!(instance instanceof Constructor)) {
+-    throw new TypeError("Cannot call a class as a function");
+-  }
++function _nonIterableRest() {
++  throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+ }
+-function _defineProperties(target, props) {
+-  for (var i = 0; i < props.length; i++) {
+-    var descriptor = props[i];
+-    descriptor.enumerable = descriptor.enumerable || false;
+-    descriptor.configurable = true;
+-    if ("value" in descriptor) descriptor.writable = true;
+-    Object.defineProperty(target, _toPropertyKey(descriptor.key), descriptor);
+-  }
++function _nonIterableSpread() {
++  throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+ }
+-function _createClass(Constructor, protoProps, staticProps) {
+-  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
+-  if (staticProps) _defineProperties(Constructor, staticProps);
+-  Object.defineProperty(Constructor, "prototype", {
+-    writable: false
+-  });
+-  return Constructor;
++function _possibleConstructorReturn(t, e) {
++  if (e && ("object" == typeof e || "function" == typeof e)) return e;
++  if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined");
++  return _assertThisInitialized(t);
++}
++function _setPrototypeOf(t, e) {
++  return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) {
++    return t.__proto__ = e, t;
++  }, _setPrototypeOf(t, e);
++}
++function _slicedToArray(r, e) {
++  return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest();
+ }
+-function _inherits(subClass, superClass) {
+-  if (typeof superClass !== "function" && superClass !== null) {
+-    throw new TypeError("Super expression must either be null or a function");
++function _toConsumableArray(r) {
++  return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread();
++}
++function _toPrimitive(t, r) {
++  if ("object" != typeof t || !t) return t;
++  var e = t[Symbol.toPrimitive];
++  if (void 0 !== e) {
++    var i = e.call(t, r || "default");
++    if ("object" != typeof i) return i;
++    throw new TypeError("@@toPrimitive must return a primitive value.");
+   }
+-  subClass.prototype = Object.create(superClass && superClass.prototype, {
+-    constructor: {
+-      value: subClass,
+-      writable: true,
+-      configurable: true
+-    }
+-  });
+-  Object.defineProperty(subClass, "prototype", {
+-    writable: false
+-  });
+-  if (superClass) _setPrototypeOf(subClass, superClass);
++  return ("string" === r ? String : Number)(t);
+ }
+-function _getPrototypeOf(o) {
+-  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) {
+-    return o.__proto__ || Object.getPrototypeOf(o);
+-  };
+-  return _getPrototypeOf(o);
++function _toPropertyKey(t) {
++  var i = _toPrimitive(t, "string");
++  return "symbol" == typeof i ? i : i + "";
+ }
+-function _setPrototypeOf(o, p) {
+-  _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) {
+-    o.__proto__ = p;
+-    return o;
+-  };
+-  return _setPrototypeOf(o, p);
++function _unsupportedIterableToArray(r, a) {
++  if (r) {
++    if ("string" == typeof r) return _arrayLikeToArray(r, a);
++    var t = {}.toString.call(r).slice(8, -1);
++    return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;
++  }
+ }
+-function _isNativeReflectConstruct() {
+-  if (typeof Reflect === "undefined" || !Reflect.construct) return false;
+-  if (Reflect.construct.sham) return false;
+-  if (typeof Proxy === "function") return true;
+-  try {
+-    Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {}));
+-    return true;
+-  } catch (e) {
+-    return false;
+-  }
+-}
+-function _construct(Parent, args, Class) {
+-  if (_isNativeReflectConstruct()) {
+-    _construct = Reflect.construct.bind();
+-  } else {
+-    _construct = function _construct(Parent, args, Class) {
+-      var a = [null];
+-      a.push.apply(a, args);
+-      var Constructor = Function.bind.apply(Parent, a);
+-      var instance = new Constructor();
+-      if (Class) _setPrototypeOf(instance, Class.prototype);
+-      return instance;
+-    };
+-  }
+-  return _construct.apply(null, arguments);
+-}
+-function _isNativeFunction(fn) {
+-  return Function.toString.call(fn).indexOf("[native code]") !== -1;
+-}
+-function _wrapNativeSuper(Class) {
+-  var _cache = typeof Map === "function" ? new Map() : undefined;
+-  _wrapNativeSuper = function _wrapNativeSuper(Class) {
+-    if (Class === null || !_isNativeFunction(Class)) return Class;
+-    if (typeof Class !== "function") {
+-      throw new TypeError("Super expression must either be null or a function");
+-    }
+-    if (typeof _cache !== "undefined") {
+-      if (_cache.has(Class)) return _cache.get(Class);
+-      _cache.set(Class, Wrapper);
++function _wrapNativeSuper(t) {
++  var r = "function" == typeof Map ? new Map() : void 0;
++  return _wrapNativeSuper = function (t) {
++    if (null === t || !_isNativeFunction(t)) return t;
++    if ("function" != typeof t) throw new TypeError("Super expression must either be null or a function");
++    if (void 0 !== r) {
++      if (r.has(t)) return r.get(t);
++      r.set(t, Wrapper);
+     }
+     function Wrapper() {
+-      return _construct(Class, arguments, _getPrototypeOf(this).constructor);
++      return _construct(t, arguments, _getPrototypeOf(this).constructor);
+     }
+-    Wrapper.prototype = Object.create(Class.prototype, {
++    return Wrapper.prototype = Object.create(t.prototype, {
+       constructor: {
+         value: Wrapper,
+-        enumerable: false,
+-        writable: true,
+-        configurable: true
++        enumerable: !1,
++        writable: !0,
++        configurable: !0
+       }
+-    });
+-    return _setPrototypeOf(Wrapper, Class);
+-  };
+-  return _wrapNativeSuper(Class);
+-}
+-function _assertThisInitialized(self) {
+-  if (self === void 0) {
+-    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+-  }
+-  return self;
+-}
+-function _possibleConstructorReturn(self, call) {
+-  if (call && (typeof call === "object" || typeof call === "function")) {
+-    return call;
+-  } else if (call !== void 0) {
+-    throw new TypeError("Derived constructors may only return object or undefined");
+-  }
+-  return _assertThisInitialized(self);
+-}
+-function _createSuper(Derived) {
+-  var hasNativeReflectConstruct = _isNativeReflectConstruct();
+-  return function _createSuperInternal() {
+-    var Super = _getPrototypeOf(Derived),
+-      result;
+-    if (hasNativeReflectConstruct) {
+-      var NewTarget = _getPrototypeOf(this).constructor;
+-      result = Reflect.construct(Super, arguments, NewTarget);
+-    } else {
+-      result = Super.apply(this, arguments);
+-    }
+-    return _possibleConstructorReturn(this, result);
+-  };
+-}
+-function _slicedToArray(arr, i) {
+-  return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
+-}
+-function _toConsumableArray(arr) {
+-  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
+-}
+-function _arrayWithoutHoles(arr) {
+-  if (Array.isArray(arr)) return _arrayLikeToArray(arr);
+-}
+-function _arrayWithHoles(arr) {
+-  if (Array.isArray(arr)) return arr;
+-}
+-function _iterableToArray(iter) {
+-  if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
+-}
+-function _unsupportedIterableToArray(o, minLen) {
+-  if (!o) return;
+-  if (typeof o === "string") return _arrayLikeToArray(o, minLen);
+-  var n = Object.prototype.toString.call(o).slice(8, -1);
+-  if (n === "Object" && o.constructor) n = o.constructor.name;
+-  if (n === "Map" || n === "Set") return Array.from(o);
+-  if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+-}
+-function _arrayLikeToArray(arr, len) {
+-  if (len == null || len > arr.length) len = arr.length;
+-  for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
+-  return arr2;
+-}
+-function _nonIterableSpread() {
+-  throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+-}
+-function _nonIterableRest() {
+-  throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+-}
+-function _toPrimitive(input, hint) {
+-  if (typeof input !== "object" || input === null) return input;
+-  var prim = input[Symbol.toPrimitive];
+-  if (prim !== undefined) {
+-    var res = prim.call(input, hint || "default");
+-    if (typeof res !== "object") return res;
+-    throw new TypeError("@@toPrimitive must return a primitive value.");
+-  }
+-  return (hint === "string" ? String : Number)(input);
+-}
+-function _toPropertyKey(arg) {
+-  var key = _toPrimitive(arg, "string");
+-  return typeof key === "symbol" ? key : String(key);
++    }), _setPrototypeOf(Wrapper, t);
++  }, _wrapNativeSuper(t);
+ }
+
+ /**
+@@ -222,20 +179,19 @@ function guard(low, high, value) {
+ }
+
+ var ColorError = /*#__PURE__*/function (_Error) {
+-  _inherits(ColorError, _Error);
+-  var _super = _createSuper(ColorError);
+   function ColorError(color) {
+     _classCallCheck(this, ColorError);
+-    return _super.call(this, `Failed to parse color: "${color}"`);
++    return _callSuper(this, ColorError, [`Failed to parse color: "${color}"`]);
+   }
++  _inherits(ColorError, _Error);
+   return _createClass(ColorError);
+-}( /*#__PURE__*/_wrapNativeSuper(Error));
++}(/*#__PURE__*/_wrapNativeSuper(Error));
+ var ColorError$1 = ColorError;
+
+ /**
+  * Parses a color into red, gree, blue, alpha parts
+  *
+- * @param color the input color. Can be a RGB, RBGA, HSL, HSLA, or named color
++ * @param color the input color. Can be a RGB, RBGA, HSL, HSLA, HWB, lab, lch, oklab, oklch, color(), or named color
+  */
+ function parseToRgba(color) {
+   if (typeof color !== 'string') throw new ColorError$1(color);
+@@ -263,6 +219,17 @@ function parseToRgba(color) {
+       return parseInt(x, 10);
+     })), [parseFloat(_arr2[3] || '1')]);
+   }
++
++  // Modern space-separated rgb/rgba: rgb(255 0 0) or rgb(255 0 0 / 0.5)
++  var rgbaModernMatch = rgbaModernRegex.exec(normalizedColor);
++  if (rgbaModernMatch) {
++    var _rgbaModernMatch = _slicedToArray(rgbaModernMatch, 5),
++      rs = _rgbaModernMatch[1],
++      gs = _rgbaModernMatch[2],
++      bs = _rgbaModernMatch[3],
++      alphaS = _rgbaModernMatch[4];
++    return [parseRgbComponent(rs), parseRgbComponent(gs), parseRgbComponent(bs), parseAlpha(alphaS)];
++  }
+   var hslaMatch = hslaRegex.exec(normalizedColor);
+   if (hslaMatch) {
+     var _Array$from$slice$map = Array.from(hslaMatch).slice(1).map(parseFloat),
+@@ -275,6 +242,99 @@ function parseToRgba(color) {
+     if (guard(0, 100, l) !== l) throw new ColorError$1(color);
+     return [].concat(_toConsumableArray(hslToRgb(h, s, l)), [Number.isNaN(a) ? 1 : a]);
+   }
++
++  // Modern space-separated hsl/hsla: hsl(120 100% 50%) or hsl(120 100% 50% / 0.5)
++  var hslaModernMatch = hslaModernRegex.exec(normalizedColor);
++  if (hslaModernMatch) {
++    var _hslaModernMatch = _slicedToArray(hslaModernMatch, 5),
++      hs = _hslaModernMatch[1],
++      ss = _hslaModernMatch[2],
++      ls = _hslaModernMatch[3],
++      _alphaS = _hslaModernMatch[4];
++    var _h = parseAngle(hs);
++    var _s = parseFloat(ss);
++    var _l = parseFloat(ls);
++    if (guard(0, 100, _s) !== _s) throw new ColorError$1(color);
++    if (guard(0, 100, _l) !== _l) throw new ColorError$1(color);
++    return [].concat(_toConsumableArray(hslToRgb(_h, _s, _l)), [parseAlpha(_alphaS)]);
++  }
++
++  // hwb(H W B) or hwb(H W B / alpha)
++  var hwbMatch = hwbRegex.exec(normalizedColor);
++  if (hwbMatch) {
++    var _hwbMatch = _slicedToArray(hwbMatch, 5),
++      _hs = _hwbMatch[1],
++      ws = _hwbMatch[2],
++      _bs = _hwbMatch[3],
++      _alphaS2 = _hwbMatch[4];
++    var _h2 = parseAngle(_hs);
++    var w = parseFloat(ws) / 100;
++    var b = parseFloat(_bs) / 100;
++    return [].concat(_toConsumableArray(hwbToRgb(_h2, w, b)), [parseAlpha(_alphaS2)]);
++  }
++  var labMatch = labRegex.exec(normalizedColor);
++  if (labMatch) {
++    var _labMatch = _slicedToArray(labMatch, 5),
++      Ls = _labMatch[1],
++      as_ = _labMatch[2],
++      _bs2 = _labMatch[3],
++      _alphaS3 = _labMatch[4];
++    var L = Ls.endsWith('%') ? parseFloat(Ls) : parseFloat(Ls);
++    var _a = as_.endsWith('%') ? parseFloat(as_) / 100 * 125 : parseFloat(as_);
++    var _b = _bs2.endsWith('%') ? parseFloat(_bs2) / 100 * 125 : parseFloat(_bs2);
++    return labToRgba(L, _a, _b, parseAlpha(_alphaS3));
++  }
++  var lchMatch = lchRegex.exec(normalizedColor);
++  if (lchMatch) {
++    var _lchMatch = _slicedToArray(lchMatch, 5),
++      _Ls = _lchMatch[1],
++      Cs = _lchMatch[2],
++      Hs = _lchMatch[3],
++      _alphaS4 = _lchMatch[4];
++    var _L = _Ls.endsWith('%') ? parseFloat(_Ls) : parseFloat(_Ls);
++    var C = Cs.endsWith('%') ? parseFloat(Cs) / 100 * 150 : parseFloat(Cs);
++    var H = parseAngle(Hs);
++    return lchToRgba(_L, C, H, parseAlpha(_alphaS4));
++  }
++  var oklabMatch = oklabRegex.exec(normalizedColor);
++  if (oklabMatch) {
++    var _oklabMatch = _slicedToArray(oklabMatch, 5),
++      _Ls2 = _oklabMatch[1],
++      _as_ = _oklabMatch[2],
++      _bs3 = _oklabMatch[3],
++      _alphaS5 = _oklabMatch[4];
++    var _L2 = _Ls2.endsWith('%') ? parseFloat(_Ls2) / 100 : parseFloat(_Ls2);
++    var _a2 = _as_.endsWith('%') ? parseFloat(_as_) / 100 * 0.4 : parseFloat(_as_);
++    var _b2 = _bs3.endsWith('%') ? parseFloat(_bs3) / 100 * 0.4 : parseFloat(_bs3);
++    return oklabToRgba(_L2, _a2, _b2, parseAlpha(_alphaS5));
++  }
++  var oklchMatch = oklchRegex.exec(normalizedColor);
++  if (oklchMatch) {
++    var _oklchMatch = _slicedToArray(oklchMatch, 5),
++      _Ls3 = _oklchMatch[1],
++      _Cs = _oklchMatch[2],
++      _Hs = _oklchMatch[3],
++      _alphaS6 = _oklchMatch[4];
++    var _L3 = _Ls3.endsWith('%') ? parseFloat(_Ls3) / 100 : parseFloat(_Ls3);
++    var _C = _Cs.endsWith('%') ? parseFloat(_Cs) / 100 * 0.4 : parseFloat(_Cs);
++    var _H = parseAngle(_Hs);
++    return oklchToRgba(_L3, _C, _H, parseAlpha(_alphaS6));
++  }
++
++  // color(space r g b) or color(space r g b / alpha)
++  var colorFnMatch = colorFnRegex.exec(normalizedColor);
++  if (colorFnMatch) {
++    var _colorFnMatch = _slicedToArray(colorFnMatch, 6),
++      space = _colorFnMatch[1],
++      _rs = _colorFnMatch[2],
++      _gs = _colorFnMatch[3],
++      _bs4 = _colorFnMatch[4],
++      _alphaS7 = _colorFnMatch[5];
++    var rc = parseColorComponent(_rs);
++    var gc = parseColorComponent(_gs);
++    var bc = parseColorComponent(_bs4);
++    return colorFnToRgba(space.toLowerCase(), rc, gc, bc, parseAlpha(_alphaS7));
++  }
+   throw new ColorError$1(color);
+ }
+ function hash(str) {
+@@ -325,6 +385,361 @@ var hexRegex = new RegExp(`^#${r('([a-f0-9]{2})', 3)}([a-f0-9]{2})?$`, 'i');
+ var rgbaRegex = new RegExp(`^rgba?\\(\\s*(\\d+)\\s*${r(',\\s*(\\d+)\\s*', 2)}(?:,\\s*([\\d.]+))?\\s*\\)$`, 'i');
+ var hslaRegex = /^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%(?:\s*,\s*([\d.]+))?\s*\)$/i;
+ var namedColorRegex = /^[a-z]+$/i;
++
++// Modern space-separated rgb: rgb(255 0 0) or rgb(255 0 0 / 0.5)
++// Also supports percentages: rgb(100% 0% 0% / 50%)
++var rgbaModernRegex = /^rgba?\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// Modern space-separated hsl: hsl(120 100% 50%) or hsl(120 100% 50% / 0.5)
++var hslaModernRegex = /^hsla?\(\s*([\d.]+(?:deg|rad|grad|turn)?)\s+([\d.]+)%\s+([\d.]+)%\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// hwb(H W B) or hwb(H W B / alpha)
++var hwbRegex = /^hwb\(\s*([\d.]+(?:deg|rad|grad|turn)?)\s+([\d.]+)%\s+([\d.]+)%\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// color(space r g b) or color(space r g b / alpha)
++var colorFnRegex = /^color\(\s*([\w-]+)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++
++// CSS Color Level 4: space-separated values with optional / alpha
++// lab(L a b) or lab(L a b / alpha)
++var labRegex = /^lab\(\s*([\d.]+%?)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// lch(L C H) or lch(L C H / alpha)
++var lchRegex = /^lch\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.e+-]+(?:deg|rad|grad|turn)?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// oklab(L a b) or oklab(L a b / alpha)
++var oklabRegex = /^oklab\(\s*([\d.]+%?)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// oklch(L C H) or oklch(L C H / alpha)
++var oklchRegex = /^oklch\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.e+-]+(?:deg|rad|grad|turn)?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++
++// Parse angle value supporting deg, rad, grad, turn units
++function parseAngle(value) {
++  var num = parseFloat(value);
++  if (value.endsWith('rad')) return num * 180 / Math.PI;
++  if (value.endsWith('grad')) return num * 360 / 400;
++  if (value.endsWith('turn')) return num * 360;
++  return num; // deg or unitless
++}
++
++// Parse alpha: percentage or number, default 1
++function parseAlpha(value) {
++  if (value === undefined || value === '') return 1;
++  if (value.endsWith('%')) return parseFloat(value) / 100;
++  return parseFloat(value);
++}
++
++// Parse rgb component: number (0-255) or percentage (0%-100%)
++function parseRgbComponent(value) {
++  if (value.endsWith('%')) return Math.round(parseFloat(value) / 100 * 255);
++  return parseInt(value, 10);
++}
++
++// Parse color() component: number or percentage (maps to 0-1 range)
++function parseColorComponent(value) {
++  if (value.endsWith('%')) return parseFloat(value) / 100;
++  return parseFloat(value);
++}
++
++// sRGB gamma → sRGB linear (degamma)
++function srgbToLinear(c) {
++  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
++}
++
++// sRGB linear → sRGB gamma (inverse of the function in getLuminance)
++function linearToSrgb(c) {
++  return c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
++}
++
++// Matrix-vector multiply for 3x3 (flat array)
++function mul3(m, v) {
++  return [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[4] * v[1] + m[5] * v[2], m[6] * v[0] + m[7] * v[1] + m[8] * v[2]];
++}
++
++// LMS → linear sRGB combined matrix (LMStoXYZ_D65 * XYZ_D65_to_linearSRGB)
++// prettier-ignore
++var LMS_TO_SRGB = [4.0767416621, -3.3077115913, 0.2309699292, -1.2684380046, 2.6097574011, -0.3413193965, -0.0041960863, -0.7034186147, 1.7076147010];
++
++// linear sRGB → LMS combined matrix (inverse of above)
++// prettier-ignore
++var SRGB_TO_LMS = [0.4122214708, 0.5363325363, 0.0514459929, 0.2119034982, 0.6806995451, 0.1073969566, 0.0883024619, 0.2817188376, 0.6299787005];
++
++// OKLab → LMS (cube root domain)
++function oklabToLMSg(L, a, b) {
++  return [L + 0.3963377774 * a + 0.2158037573 * b, L - 0.1055613458 * a - 0.0638541728 * b, L - 0.0894841775 * a - 1.2914855480 * b];
++}
++
++// OKLab → linear sRGB
++function oklabToLinearRgb(L, a, b) {
++  var _oklabToLMSg = oklabToLMSg(L, a, b),
++    _oklabToLMSg2 = _slicedToArray(_oklabToLMSg, 3),
++    lg = _oklabToLMSg2[0],
++    mg = _oklabToLMSg2[1],
++    sg = _oklabToLMSg2[2];
++  return mul3(LMS_TO_SRGB, [lg * lg * lg, mg * mg * mg, sg * sg * sg]);
++}
++
++// linear sRGB → OKLab
++function linearRgbToOklab(r, g, b) {
++  var _mul = mul3(SRGB_TO_LMS, [r, g, b]),
++    _mul2 = _slicedToArray(_mul, 3),
++    l = _mul2[0],
++    m = _mul2[1],
++    s = _mul2[2];
++  var lg = Math.cbrt(l),
++    mg = Math.cbrt(m),
++    sg = Math.cbrt(s);
++  return [0.2104542553 * lg + 0.7936177850 * mg - 0.0040720468 * sg, 1.9779984951 * lg - 2.4285922050 * mg + 0.4505937099 * sg, 0.0259040371 * lg + 0.7827717662 * mg - 0.8086757660 * sg];
++}
++
++// Check if linear sRGB values are in gamut (within [0, 1] with small tolerance)
++function isInGamut(rgb) {
++  var e = -0.0001;
++  return rgb[0] >= e && rgb[0] <= 1.0001 && rgb[1] >= e && rgb[1] <= 1.0001 && rgb[2] >= e && rgb[2] <= 1.0001;
++}
++
++// Clamp linear sRGB to [0, 1] and convert to gamma sRGB [0, 255]
++function linearToRgbChannel(c) {
++  return Math.round(Math.min(255, Math.max(0, linearToSrgb(Math.min(1, Math.max(0, c))) * 255)));
++}
++
++// DeltaEOK: Euclidean distance in OKLab space
++function deltaEOK(lab1, lab2) {
++  return Math.sqrt(Math.pow(lab1[0] - lab2[0], 2) + Math.pow(lab1[1] - lab2[1], 2) + Math.pow(lab1[2] - lab2[2], 2));
++}
++
++// CSS Gamut Mapping Algorithm (per CSS Color Level 4 spec)
++// Binary search on OKLCH chroma to find the largest in-gamut chroma
++// that preserves lightness and hue.
++function gamutMapOklch(L, C, H) {
++  var JND = 0.02;
++  var EPSILON = 0.0001;
++
++  // If lightness is at extremes, return black or white
++  if (L >= 1) return [1, 1, 1];
++  if (L <= 0) return [0, 0, 0];
++
++  // If already in gamut, convert directly
++  var hRad = H * Math.PI / 180;
++  var cosH = Math.cos(hRad);
++  var sinH = Math.sin(hRad);
++  var rgb = oklabToLinearRgb(L, C * cosH, C * sinH);
++  if (isInGamut(rgb)) return rgb;
++
++  // Binary search: reduce chroma until in gamut
++  var lo = 0;
++  var hi = C;
++  var loInGamut = true;
++
++  // Clip and check initial distance
++  var clipped = [Math.min(1, Math.max(0, rgb[0])), Math.min(1, Math.max(0, rgb[1])), Math.min(1, Math.max(0, rgb[2]))];
++  var clippedLab = linearRgbToOklab(clipped[0], clipped[1], clipped[2]);
++  var currentLab = [L, C * cosH, C * sinH];
++  if (deltaEOK(clippedLab, currentLab) < JND) {
++    return clipped;
++  }
++  while (hi - lo > EPSILON) {
++    var mid = (lo + hi) / 2;
++    currentLab = [L, mid * cosH, mid * sinH];
++    rgb = oklabToLinearRgb(currentLab[0], currentLab[1], currentLab[2]);
++    if (loInGamut && isInGamut(rgb)) {
++      lo = mid;
++      continue;
++    }
++    clipped = [Math.min(1, Math.max(0, rgb[0])), Math.min(1, Math.max(0, rgb[1])), Math.min(1, Math.max(0, rgb[2]))];
++    clippedLab = linearRgbToOklab(clipped[0], clipped[1], clipped[2]);
++    var dE = deltaEOK(clippedLab, currentLab);
++    if (dE < JND) {
++      if (JND - dE < EPSILON) break;
++      loInGamut = false;
++      lo = mid;
++    } else {
++      hi = mid;
++    }
++  }
++  return clipped;
++}
++
++// Convert gamut-mapped linear sRGB to final RGBA output
++function gamutMapToRgba(L, C, H, alpha) {
++  var _gamutMapOklch = gamutMapOklch(L, C, H),
++    _gamutMapOklch2 = _slicedToArray(_gamutMapOklch, 3),
++    lr = _gamutMapOklch2[0],
++    lg = _gamutMapOklch2[1],
++    lb = _gamutMapOklch2[2];
++  return [linearToRgbChannel(lr), linearToRgbChannel(lg), linearToRgbChannel(lb), alpha];
++}
++
++// CIE Lab → XYZ-D50
++var labKappa = 24389 / 27; // 29^3/3^3
++// D50 white point
++var D50 = [0.3457 / 0.3585, 1.0, (1.0 - 0.3457 - 0.3585) / 0.3585];
++
++// CIE Lab → OKLab (via XYZ-D50 → XYZ-D65 → linear sRGB → OKLab)
++function labToOklab(L, a, b) {
++  // Lab → XYZ-D50
++  var f1 = (L + 16) / 116;
++  var f0 = a / 500 + f1;
++  var f2 = f1 - b / 200;
++  var x = (f0 > 24 / 116 ? f0 * f0 * f0 : (116 * f0 - 16) / labKappa) * D50[0];
++  var y = L > 8 ? Math.pow((L + 16) / 116, 3) : L / labKappa;
++  var z = (f2 > 24 / 116 ? f2 * f2 * f2 : (116 * f2 - 16) / labKappa) * D50[2];
++
++  // XYZ-D50 → XYZ-D65 (Bradford chromatic adaptation)
++  // prettier-ignore
++  var _mul3 = mul3([0.9554734527042182, -0.023098536874261423, 0.0632593086610217, -0.028369706963208136, 1.0099954580106629, 0.021041398966943008, 0.012314001688319899, -0.020507696433477912, 1.3303659366080753], [x, y, z]),
++    _mul4 = _slicedToArray(_mul3, 3),
++    xd65 = _mul4[0],
++    yd65 = _mul4[1],
++    zd65 = _mul4[2];
++
++  // XYZ-D65 → linear sRGB → OKLab
++  // prettier-ignore
++  var _mul5 = mul3([3.2409699419045226, -1.5373831775700940, -0.4986107602930034, -0.9692436362808796, 1.8759675015077202, 0.0415550574071756, 0.0556300796969937, -0.2039769588889765, 1.0569715142428786], [xd65, yd65, zd65]),
++    _mul6 = _slicedToArray(_mul5, 3),
++    lr = _mul6[0],
++    lg = _mul6[1],
++    lb = _mul6[2];
++  return linearRgbToOklab(lr, lg, lb);
++}
++
++// Convert Lab/LCH to gamut-mapped RGBA by going through OKLab → OKLCH
++function labToRgba(L, a, b, alpha) {
++  var _labToOklab = labToOklab(L, a, b),
++    _labToOklab2 = _slicedToArray(_labToOklab, 3),
++    okL = _labToOklab2[0],
++    okA = _labToOklab2[1],
++    okB = _labToOklab2[2];
++  var C = Math.sqrt(okA * okA + okB * okB);
++  var H = C < 0.0001 ? 0 : (Math.atan2(okB, okA) * 180 / Math.PI + 360) % 360;
++  return gamutMapToRgba(okL, C, H, alpha);
++}
++function oklabToRgba(L, a, b, alpha) {
++  var C = Math.sqrt(a * a + b * b);
++  var H = C < 0.0001 ? 0 : (Math.atan2(b, a) * 180 / Math.PI + 360) % 360;
++  return gamutMapToRgba(L, C, H, alpha);
++}
++function lchToRgba(L, C, H, alpha) {
++  var hRad = H * Math.PI / 180;
++  return labToRgba(L, C * Math.cos(hRad), C * Math.sin(hRad), alpha);
++}
++function oklchToRgba(L, C, H, alpha) {
++  return gamutMapToRgba(L, C, H, alpha);
++}
++
++// HWB → RGB (https://www.w3.org/TR/css-color-4/#hwb-to-rgb)
++function hwbToRgb(hue, white, black) {
++  // If w + b >= 1, it's achromatic
++  if (white + black >= 1) {
++    var gray = Math.round(white / (white + black) * 255);
++    return [gray, gray, gray];
++  }
++  // Start with pure hue from HSL (s=100%, l=50%)
++  var rgb = hslToRgb(hue, 100, 50);
++  return rgb.map(function (c) {
++    return Math.round(c / 255 * (1 - white - black) * 255 + white * 255);
++  });
++}
++
++// XYZ-D65 → linear sRGB matrix
++// prettier-ignore
++var XYZ_D65_TO_SRGB = [3.2409699419045226, -1.5373831775700940, -0.4986107602930034, -0.9692436362808796, 1.8759675015077202, 0.0415550574071756, 0.0556300796969937, -0.2039769588889765, 1.0569715142428786];
++
++// Bradford D50 → D65 chromatic adaptation
++// prettier-ignore
++var D50_TO_D65 = [0.9554734527042182, -0.023098536874261423, 0.0632593086610217, -0.028369706963208136, 1.0099954580106629, 0.021041398966943008, 0.012314001688319899, -0.020507696433477912, 1.3303659366080753];
++
++// Color space definitions for color() function
++// Each space has: toXYZ matrix (to XYZ-D65), degamma function, and white point
++
++var identity = function identity(c) {
++  return c;
++};
++var a98Degamma = function a98Degamma(c) {
++  return Math.pow(Math.abs(c), 563 / 256) * Math.sign(c);
++};
++var rec2020Degamma = function rec2020Degamma(c) {
++  return Math.pow(Math.abs(c), 2.4) * Math.sign(c);
++};
++var prophotoEt = 1 / 512;
++var prophotoDegamma = function prophotoDegamma(c) {
++  var abs = Math.abs(c);
++  return abs < 16 * prophotoEt ? c / 16 : Math.sign(c) * Math.pow(abs, 1.8);
++};
++
++// prettier-ignore
++var COLOR_SPACES = {
++  'srgb': {
++    toXYZ: [0.41239079926595934, 0.357584339383878, 0.1804807884018343, 0.21263900587151027, 0.715168678767756, 0.07219231536073371, 0.01933081871559182, 0.11919477979462598, 0.9505321522496607],
++    degamma: srgbToLinear
++  },
++  'srgb-linear': {
++    toXYZ: [0.41239079926595934, 0.357584339383878, 0.1804807884018343, 0.21263900587151027, 0.715168678767756, 0.07219231536073371, 0.01933081871559182, 0.11919477979462598, 0.9505321522496607],
++    degamma: identity
++  },
++  'display-p3': {
++    toXYZ: [0.4865709486482162, 0.26566769316909306, 0.1982172852343625, 0.2289745640697488, 0.6917385218365064, 0.079286914093745, 0.0000000000000000, 0.04511338185890264, 1.043944368900976],
++    degamma: srgbToLinear // same gamma as sRGB
++  },
++  'a98-rgb': {
++    toXYZ: [0.5766690429101305, 0.1855582379065463, 0.1882286462349947, 0.29734497525053605, 0.6273635662554661, 0.07529145849399788, 0.02703136138641234, 0.07068885253582723, 0.9913375368376388],
++    degamma: a98Degamma
++  },
++  'rec2020': {
++    toXYZ: [0.6369580483012914, 0.14461690358620832, 0.1688809751641721, 0.2627002120112671, 0.6779980715188708, 0.05930171646986196, 0.000000000000000, 0.028072693049087428, 1.060985057710791],
++    degamma: rec2020Degamma
++  },
++  'prophoto-rgb': {
++    toXYZ: [0.79776664490064230, 0.13518129740053308, 0.03134773412839220, 0.28807482881940130, 0.71183523424187300, 0.00008993693872564, 0.00000000000000000, 0.00000000000000000, 0.82510460251046020],
++    degamma: prophotoDegamma,
++    d50: true // ProPhoto uses D50
++  }
++};
++
++// Convert color() input to linear sRGB, then gamut map to RGBA
++function colorFnToRgba(space, r, g, b, alpha) {
++  // xyz-d65 and xyz are direct XYZ → linear sRGB
++  if (space === 'xyz-d65' || space === 'xyz') {
++    var _lin = mul3(XYZ_D65_TO_SRGB, [r, g, b]);
++    return linearToGamutMappedRgba(_lin, alpha);
++  }
++
++  // xyz-d50 needs Bradford adaptation first
++  if (space === 'xyz-d50') {
++    var d65 = mul3(D50_TO_D65, [r, g, b]);
++    var _lin2 = mul3(XYZ_D65_TO_SRGB, d65);
++    return linearToGamutMappedRgba(_lin2, alpha);
++  }
++  var def = COLOR_SPACES[space];
++  if (!def) throw new ColorError$1(`color(${space} ...)`);
++
++  // Degamma the input values
++  var lr = def.degamma(r);
++  var lg = def.degamma(g);
++  var lb = def.degamma(b);
++
++  // Convert to XYZ (D65 or D50 depending on space)
++  var xyz = mul3(def.toXYZ, [lr, lg, lb]);
++
++  // If the space uses D50, adapt to D65
++  if (def.d50) {
++    xyz = mul3(D50_TO_D65, xyz);
++  }
++
++  // XYZ-D65 → linear sRGB
++  var lin = mul3(XYZ_D65_TO_SRGB, xyz);
++  return linearToGamutMappedRgba(lin, alpha);
++}
++
++// Convert linear sRGB to gamut-mapped RGBA via OKLCH
++function linearToGamutMappedRgba(lin, alpha) {
++  // If already in gamut, just convert directly (fast path)
++  if (isInGamut(lin)) {
++    return [linearToRgbChannel(lin[0]), linearToRgbChannel(lin[1]), linearToRgbChannel(lin[2]), alpha];
++  }
++  // Out of gamut — convert to OKLab → OKLCH and gamut map
++  var _linearRgbToOklab = linearRgbToOklab(lin[0], lin[1], lin[2]),
++    _linearRgbToOklab2 = _slicedToArray(_linearRgbToOklab, 3),
++    okL = _linearRgbToOklab2[0],
++    okA = _linearRgbToOklab2[1],
++    okB = _linearRgbToOklab2[2];
++  var C = Math.sqrt(okA * okA + okB * okB);
++  var H = C < 0.0001 ? 0 : (Math.atan2(okB, okA) * 180 / Math.PI + 360) % 360;
++  return gamutMapToRgba(okL, C, H, alpha);
++}
+ var roundColor = function roundColor(color) {
+   return Math.round(color * 255);
+ };
+diff --git a/dist/index.module.es.js b/dist/index.module.es.js
+index 05f7425d77603808cb414cfe644410947566e8f7..c57a06450c5c3cd4b0ecf6e50d50fe21e4e6e620 100644
+--- a/dist/index.module.es.js
++++ b/dist/index.module.es.js
+@@ -19,7 +19,7 @@ var ColorError$1 = ColorError;
+ /**
+  * Parses a color into red, gree, blue, alpha parts
+  *
+- * @param color the input color. Can be a RGB, RBGA, HSL, HSLA, or named color
++ * @param color the input color. Can be a RGB, RBGA, HSL, HSLA, HWB, lab, lch, oklab, oklch, color(), or named color
+  */
+ function parseToRgba(color) {
+   if (typeof color !== 'string') throw new ColorError$1(color);
+@@ -41,6 +41,13 @@ function parseToRgba(color) {
+     const arr = Array.from(rgbaMatch).slice(1);
+     return [...arr.slice(0, 3).map(x => parseInt(x, 10)), parseFloat(arr[3] || '1')];
+   }
++
++  // Modern space-separated rgb/rgba: rgb(255 0 0) or rgb(255 0 0 / 0.5)
++  const rgbaModernMatch = rgbaModernRegex.exec(normalizedColor);
++  if (rgbaModernMatch) {
++    const [, rs, gs, bs, alphaS] = rgbaModernMatch;
++    return [parseRgbComponent(rs), parseRgbComponent(gs), parseRgbComponent(bs), parseAlpha(alphaS)];
++  }
+   const hslaMatch = hslaRegex.exec(normalizedColor);
+   if (hslaMatch) {
+     const [h, s, l, a] = Array.from(hslaMatch).slice(1).map(parseFloat);
+@@ -48,6 +55,70 @@ function parseToRgba(color) {
+     if (guard(0, 100, l) !== l) throw new ColorError$1(color);
+     return [...hslToRgb(h, s, l), Number.isNaN(a) ? 1 : a];
+   }
++
++  // Modern space-separated hsl/hsla: hsl(120 100% 50%) or hsl(120 100% 50% / 0.5)
++  const hslaModernMatch = hslaModernRegex.exec(normalizedColor);
++  if (hslaModernMatch) {
++    const [, hs, ss, ls, alphaS] = hslaModernMatch;
++    const h = parseAngle(hs);
++    const s = parseFloat(ss);
++    const l = parseFloat(ls);
++    if (guard(0, 100, s) !== s) throw new ColorError$1(color);
++    if (guard(0, 100, l) !== l) throw new ColorError$1(color);
++    return [...hslToRgb(h, s, l), parseAlpha(alphaS)];
++  }
++
++  // hwb(H W B) or hwb(H W B / alpha)
++  const hwbMatch = hwbRegex.exec(normalizedColor);
++  if (hwbMatch) {
++    const [, hs, ws, bs, alphaS] = hwbMatch;
++    const h = parseAngle(hs);
++    const w = parseFloat(ws) / 100;
++    const b = parseFloat(bs) / 100;
++    return [...hwbToRgb(h, w, b), parseAlpha(alphaS)];
++  }
++  const labMatch = labRegex.exec(normalizedColor);
++  if (labMatch) {
++    const [, Ls, as_, bs, alphaS] = labMatch;
++    const L = Ls.endsWith('%') ? parseFloat(Ls) : parseFloat(Ls);
++    const a = as_.endsWith('%') ? parseFloat(as_) / 100 * 125 : parseFloat(as_);
++    const b = bs.endsWith('%') ? parseFloat(bs) / 100 * 125 : parseFloat(bs);
++    return labToRgba(L, a, b, parseAlpha(alphaS));
++  }
++  const lchMatch = lchRegex.exec(normalizedColor);
++  if (lchMatch) {
++    const [, Ls, Cs, Hs, alphaS] = lchMatch;
++    const L = Ls.endsWith('%') ? parseFloat(Ls) : parseFloat(Ls);
++    const C = Cs.endsWith('%') ? parseFloat(Cs) / 100 * 150 : parseFloat(Cs);
++    const H = parseAngle(Hs);
++    return lchToRgba(L, C, H, parseAlpha(alphaS));
++  }
++  const oklabMatch = oklabRegex.exec(normalizedColor);
++  if (oklabMatch) {
++    const [, Ls, as_, bs, alphaS] = oklabMatch;
++    const L = Ls.endsWith('%') ? parseFloat(Ls) / 100 : parseFloat(Ls);
++    const a = as_.endsWith('%') ? parseFloat(as_) / 100 * 0.4 : parseFloat(as_);
++    const b = bs.endsWith('%') ? parseFloat(bs) / 100 * 0.4 : parseFloat(bs);
++    return oklabToRgba(L, a, b, parseAlpha(alphaS));
++  }
++  const oklchMatch = oklchRegex.exec(normalizedColor);
++  if (oklchMatch) {
++    const [, Ls, Cs, Hs, alphaS] = oklchMatch;
++    const L = Ls.endsWith('%') ? parseFloat(Ls) / 100 : parseFloat(Ls);
++    const C = Cs.endsWith('%') ? parseFloat(Cs) / 100 * 0.4 : parseFloat(Cs);
++    const H = parseAngle(Hs);
++    return oklchToRgba(L, C, H, parseAlpha(alphaS));
++  }
++
++  // color(space r g b) or color(space r g b / alpha)
++  const colorFnMatch = colorFnRegex.exec(normalizedColor);
++  if (colorFnMatch) {
++    const [, space, rs, gs, bs, alphaS] = colorFnMatch;
++    const rc = parseColorComponent(rs);
++    const gc = parseColorComponent(gs);
++    const bc = parseColorComponent(bs);
++    return colorFnToRgba(space.toLowerCase(), rc, gc, bc, parseAlpha(alphaS));
++  }
+   throw new ColorError$1(color);
+ }
+ function hash(str) {
+@@ -92,6 +163,325 @@ const hexRegex = new RegExp(`^#${r('([a-f0-9]{2})', 3)}([a-f0-9]{2})?$`, 'i');
+ const rgbaRegex = new RegExp(`^rgba?\\(\\s*(\\d+)\\s*${r(',\\s*(\\d+)\\s*', 2)}(?:,\\s*([\\d.]+))?\\s*\\)$`, 'i');
+ const hslaRegex = /^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%(?:\s*,\s*([\d.]+))?\s*\)$/i;
+ const namedColorRegex = /^[a-z]+$/i;
++
++// Modern space-separated rgb: rgb(255 0 0) or rgb(255 0 0 / 0.5)
++// Also supports percentages: rgb(100% 0% 0% / 50%)
++const rgbaModernRegex = /^rgba?\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// Modern space-separated hsl: hsl(120 100% 50%) or hsl(120 100% 50% / 0.5)
++const hslaModernRegex = /^hsla?\(\s*([\d.]+(?:deg|rad|grad|turn)?)\s+([\d.]+)%\s+([\d.]+)%\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// hwb(H W B) or hwb(H W B / alpha)
++const hwbRegex = /^hwb\(\s*([\d.]+(?:deg|rad|grad|turn)?)\s+([\d.]+)%\s+([\d.]+)%\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// color(space r g b) or color(space r g b / alpha)
++const colorFnRegex = /^color\(\s*([\w-]+)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++
++// CSS Color Level 4: space-separated values with optional / alpha
++// lab(L a b) or lab(L a b / alpha)
++const labRegex = /^lab\(\s*([\d.]+%?)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// lch(L C H) or lch(L C H / alpha)
++const lchRegex = /^lch\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.e+-]+(?:deg|rad|grad|turn)?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// oklab(L a b) or oklab(L a b / alpha)
++const oklabRegex = /^oklab\(\s*([\d.]+%?)\s+([\d.e+-]+%?)\s+([\d.e+-]+%?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++// oklch(L C H) or oklch(L C H / alpha)
++const oklchRegex = /^oklch\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.e+-]+(?:deg|rad|grad|turn)?)\s*(?:\/\s*([\d.]+%?))?\s*\)$/i;
++
++// Parse angle value supporting deg, rad, grad, turn units
++function parseAngle(value) {
++  const num = parseFloat(value);
++  if (value.endsWith('rad')) return num * 180 / Math.PI;
++  if (value.endsWith('grad')) return num * 360 / 400;
++  if (value.endsWith('turn')) return num * 360;
++  return num; // deg or unitless
++}
++
++// Parse alpha: percentage or number, default 1
++function parseAlpha(value) {
++  if (value === undefined || value === '') return 1;
++  if (value.endsWith('%')) return parseFloat(value) / 100;
++  return parseFloat(value);
++}
++
++// Parse rgb component: number (0-255) or percentage (0%-100%)
++function parseRgbComponent(value) {
++  if (value.endsWith('%')) return Math.round(parseFloat(value) / 100 * 255);
++  return parseInt(value, 10);
++}
++
++// Parse color() component: number or percentage (maps to 0-1 range)
++function parseColorComponent(value) {
++  if (value.endsWith('%')) return parseFloat(value) / 100;
++  return parseFloat(value);
++}
++
++// sRGB gamma → sRGB linear (degamma)
++function srgbToLinear(c) {
++  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
++}
++
++// sRGB linear → sRGB gamma (inverse of the function in getLuminance)
++function linearToSrgb(c) {
++  return c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
++}
++
++// Matrix-vector multiply for 3x3 (flat array)
++function mul3(m, v) {
++  return [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[4] * v[1] + m[5] * v[2], m[6] * v[0] + m[7] * v[1] + m[8] * v[2]];
++}
++
++// LMS → linear sRGB combined matrix (LMStoXYZ_D65 * XYZ_D65_to_linearSRGB)
++// prettier-ignore
++const LMS_TO_SRGB = [4.0767416621, -3.3077115913, 0.2309699292, -1.2684380046, 2.6097574011, -0.3413193965, -0.0041960863, -0.7034186147, 1.7076147010];
++
++// linear sRGB → LMS combined matrix (inverse of above)
++// prettier-ignore
++const SRGB_TO_LMS = [0.4122214708, 0.5363325363, 0.0514459929, 0.2119034982, 0.6806995451, 0.1073969566, 0.0883024619, 0.2817188376, 0.6299787005];
++
++// OKLab → LMS (cube root domain)
++function oklabToLMSg(L, a, b) {
++  return [L + 0.3963377774 * a + 0.2158037573 * b, L - 0.1055613458 * a - 0.0638541728 * b, L - 0.0894841775 * a - 1.2914855480 * b];
++}
++
++// OKLab → linear sRGB
++function oklabToLinearRgb(L, a, b) {
++  const [lg, mg, sg] = oklabToLMSg(L, a, b);
++  return mul3(LMS_TO_SRGB, [lg * lg * lg, mg * mg * mg, sg * sg * sg]);
++}
++
++// linear sRGB → OKLab
++function linearRgbToOklab(r, g, b) {
++  const [l, m, s] = mul3(SRGB_TO_LMS, [r, g, b]);
++  const lg = Math.cbrt(l),
++    mg = Math.cbrt(m),
++    sg = Math.cbrt(s);
++  return [0.2104542553 * lg + 0.7936177850 * mg - 0.0040720468 * sg, 1.9779984951 * lg - 2.4285922050 * mg + 0.4505937099 * sg, 0.0259040371 * lg + 0.7827717662 * mg - 0.8086757660 * sg];
++}
++
++// Check if linear sRGB values are in gamut (within [0, 1] with small tolerance)
++function isInGamut(rgb) {
++  const e = -0.0001;
++  return rgb[0] >= e && rgb[0] <= 1.0001 && rgb[1] >= e && rgb[1] <= 1.0001 && rgb[2] >= e && rgb[2] <= 1.0001;
++}
++
++// Clamp linear sRGB to [0, 1] and convert to gamma sRGB [0, 255]
++function linearToRgbChannel(c) {
++  return Math.round(Math.min(255, Math.max(0, linearToSrgb(Math.min(1, Math.max(0, c))) * 255)));
++}
++
++// DeltaEOK: Euclidean distance in OKLab space
++function deltaEOK(lab1, lab2) {
++  return Math.sqrt(Math.pow(lab1[0] - lab2[0], 2) + Math.pow(lab1[1] - lab2[1], 2) + Math.pow(lab1[2] - lab2[2], 2));
++}
++
++// CSS Gamut Mapping Algorithm (per CSS Color Level 4 spec)
++// Binary search on OKLCH chroma to find the largest in-gamut chroma
++// that preserves lightness and hue.
++function gamutMapOklch(L, C, H) {
++  const JND = 0.02;
++  const EPSILON = 0.0001;
++
++  // If lightness is at extremes, return black or white
++  if (L >= 1) return [1, 1, 1];
++  if (L <= 0) return [0, 0, 0];
++
++  // If already in gamut, convert directly
++  const hRad = H * Math.PI / 180;
++  const cosH = Math.cos(hRad);
++  const sinH = Math.sin(hRad);
++  let rgb = oklabToLinearRgb(L, C * cosH, C * sinH);
++  if (isInGamut(rgb)) return rgb;
++
++  // Binary search: reduce chroma until in gamut
++  let lo = 0;
++  let hi = C;
++  let loInGamut = true;
++
++  // Clip and check initial distance
++  let clipped = [Math.min(1, Math.max(0, rgb[0])), Math.min(1, Math.max(0, rgb[1])), Math.min(1, Math.max(0, rgb[2]))];
++  let clippedLab = linearRgbToOklab(clipped[0], clipped[1], clipped[2]);
++  let currentLab = [L, C * cosH, C * sinH];
++  if (deltaEOK(clippedLab, currentLab) < JND) {
++    return clipped;
++  }
++  while (hi - lo > EPSILON) {
++    const mid = (lo + hi) / 2;
++    currentLab = [L, mid * cosH, mid * sinH];
++    rgb = oklabToLinearRgb(currentLab[0], currentLab[1], currentLab[2]);
++    if (loInGamut && isInGamut(rgb)) {
++      lo = mid;
++      continue;
++    }
++    clipped = [Math.min(1, Math.max(0, rgb[0])), Math.min(1, Math.max(0, rgb[1])), Math.min(1, Math.max(0, rgb[2]))];
++    clippedLab = linearRgbToOklab(clipped[0], clipped[1], clipped[2]);
++    const dE = deltaEOK(clippedLab, currentLab);
++    if (dE < JND) {
++      if (JND - dE < EPSILON) break;
++      loInGamut = false;
++      lo = mid;
++    } else {
++      hi = mid;
++    }
++  }
++  return clipped;
++}
++
++// Convert gamut-mapped linear sRGB to final RGBA output
++function gamutMapToRgba(L, C, H, alpha) {
++  const [lr, lg, lb] = gamutMapOklch(L, C, H);
++  return [linearToRgbChannel(lr), linearToRgbChannel(lg), linearToRgbChannel(lb), alpha];
++}
++
++// CIE Lab → XYZ-D50
++const labKappa = 24389 / 27; // 29^3/3^3
++// D50 white point
++const D50 = [0.3457 / 0.3585, 1.0, (1.0 - 0.3457 - 0.3585) / 0.3585];
++
++// CIE Lab → OKLab (via XYZ-D50 → XYZ-D65 → linear sRGB → OKLab)
++function labToOklab(L, a, b) {
++  // Lab → XYZ-D50
++  const f1 = (L + 16) / 116;
++  const f0 = a / 500 + f1;
++  const f2 = f1 - b / 200;
++  const x = (f0 > 24 / 116 ? f0 * f0 * f0 : (116 * f0 - 16) / labKappa) * D50[0];
++  const y = L > 8 ? Math.pow((L + 16) / 116, 3) : L / labKappa;
++  const z = (f2 > 24 / 116 ? f2 * f2 * f2 : (116 * f2 - 16) / labKappa) * D50[2];
++
++  // XYZ-D50 → XYZ-D65 (Bradford chromatic adaptation)
++  // prettier-ignore
++  const [xd65, yd65, zd65] = mul3([0.9554734527042182, -0.023098536874261423, 0.0632593086610217, -0.028369706963208136, 1.0099954580106629, 0.021041398966943008, 0.012314001688319899, -0.020507696433477912, 1.3303659366080753], [x, y, z]);
++
++  // XYZ-D65 → linear sRGB → OKLab
++  // prettier-ignore
++  const [lr, lg, lb] = mul3([3.2409699419045226, -1.5373831775700940, -0.4986107602930034, -0.9692436362808796, 1.8759675015077202, 0.0415550574071756, 0.0556300796969937, -0.2039769588889765, 1.0569715142428786], [xd65, yd65, zd65]);
++  return linearRgbToOklab(lr, lg, lb);
++}
++
++// Convert Lab/LCH to gamut-mapped RGBA by going through OKLab → OKLCH
++function labToRgba(L, a, b, alpha) {
++  const [okL, okA, okB] = labToOklab(L, a, b);
++  const C = Math.sqrt(okA * okA + okB * okB);
++  const H = C < 0.0001 ? 0 : (Math.atan2(okB, okA) * 180 / Math.PI + 360) % 360;
++  return gamutMapToRgba(okL, C, H, alpha);
++}
++function oklabToRgba(L, a, b, alpha) {
++  const C = Math.sqrt(a * a + b * b);
++  const H = C < 0.0001 ? 0 : (Math.atan2(b, a) * 180 / Math.PI + 360) % 360;
++  return gamutMapToRgba(L, C, H, alpha);
++}
++function lchToRgba(L, C, H, alpha) {
++  const hRad = H * Math.PI / 180;
++  return labToRgba(L, C * Math.cos(hRad), C * Math.sin(hRad), alpha);
++}
++function oklchToRgba(L, C, H, alpha) {
++  return gamutMapToRgba(L, C, H, alpha);
++}
++
++// HWB → RGB (https://www.w3.org/TR/css-color-4/#hwb-to-rgb)
++function hwbToRgb(hue, white, black) {
++  // If w + b >= 1, it's achromatic
++  if (white + black >= 1) {
++    const gray = Math.round(white / (white + black) * 255);
++    return [gray, gray, gray];
++  }
++  // Start with pure hue from HSL (s=100%, l=50%)
++  const rgb = hslToRgb(hue, 100, 50);
++  return rgb.map(c => Math.round(c / 255 * (1 - white - black) * 255 + white * 255));
++}
++
++// XYZ-D65 → linear sRGB matrix
++// prettier-ignore
++const XYZ_D65_TO_SRGB = [3.2409699419045226, -1.5373831775700940, -0.4986107602930034, -0.9692436362808796, 1.8759675015077202, 0.0415550574071756, 0.0556300796969937, -0.2039769588889765, 1.0569715142428786];
++
++// Bradford D50 → D65 chromatic adaptation
++// prettier-ignore
++const D50_TO_D65 = [0.9554734527042182, -0.023098536874261423, 0.0632593086610217, -0.028369706963208136, 1.0099954580106629, 0.021041398966943008, 0.012314001688319899, -0.020507696433477912, 1.3303659366080753];
++
++// Color space definitions for color() function
++// Each space has: toXYZ matrix (to XYZ-D65), degamma function, and white point
++
++const identity = c => c;
++const a98Degamma = c => Math.pow(Math.abs(c), 563 / 256) * Math.sign(c);
++const rec2020Degamma = c => Math.pow(Math.abs(c), 2.4) * Math.sign(c);
++const prophotoEt = 1 / 512;
++const prophotoDegamma = c => {
++  const abs = Math.abs(c);
++  return abs < 16 * prophotoEt ? c / 16 : Math.sign(c) * Math.pow(abs, 1.8);
++};
++
++// prettier-ignore
++const COLOR_SPACES = {
++  'srgb': {
++    toXYZ: [0.41239079926595934, 0.357584339383878, 0.1804807884018343, 0.21263900587151027, 0.715168678767756, 0.07219231536073371, 0.01933081871559182, 0.11919477979462598, 0.9505321522496607],
++    degamma: srgbToLinear
++  },
++  'srgb-linear': {
++    toXYZ: [0.41239079926595934, 0.357584339383878, 0.1804807884018343, 0.21263900587151027, 0.715168678767756, 0.07219231536073371, 0.01933081871559182, 0.11919477979462598, 0.9505321522496607],
++    degamma: identity
++  },
++  'display-p3': {
++    toXYZ: [0.4865709486482162, 0.26566769316909306, 0.1982172852343625, 0.2289745640697488, 0.6917385218365064, 0.079286914093745, 0.0000000000000000, 0.04511338185890264, 1.043944368900976],
++    degamma: srgbToLinear // same gamma as sRGB
++  },
++  'a98-rgb': {
++    toXYZ: [0.5766690429101305, 0.1855582379065463, 0.1882286462349947, 0.29734497525053605, 0.6273635662554661, 0.07529145849399788, 0.02703136138641234, 0.07068885253582723, 0.9913375368376388],
++    degamma: a98Degamma
++  },
++  'rec2020': {
++    toXYZ: [0.6369580483012914, 0.14461690358620832, 0.1688809751641721, 0.2627002120112671, 0.6779980715188708, 0.05930171646986196, 0.000000000000000, 0.028072693049087428, 1.060985057710791],
++    degamma: rec2020Degamma
++  },
++  'prophoto-rgb': {
++    toXYZ: [0.79776664490064230, 0.13518129740053308, 0.03134773412839220, 0.28807482881940130, 0.71183523424187300, 0.00008993693872564, 0.00000000000000000, 0.00000000000000000, 0.82510460251046020],
++    degamma: prophotoDegamma,
++    d50: true // ProPhoto uses D50
++  }
++};
++
++// Convert color() input to linear sRGB, then gamut map to RGBA
++function colorFnToRgba(space, r, g, b, alpha) {
++  // xyz-d65 and xyz are direct XYZ → linear sRGB
++  if (space === 'xyz-d65' || space === 'xyz') {
++    const lin = mul3(XYZ_D65_TO_SRGB, [r, g, b]);
++    return linearToGamutMappedRgba(lin, alpha);
++  }
++
++  // xyz-d50 needs Bradford adaptation first
++  if (space === 'xyz-d50') {
++    const d65 = mul3(D50_TO_D65, [r, g, b]);
++    const lin = mul3(XYZ_D65_TO_SRGB, d65);
++    return linearToGamutMappedRgba(lin, alpha);
++  }
++  const def = COLOR_SPACES[space];
++  if (!def) throw new ColorError$1(`color(${space} ...)`);
++
++  // Degamma the input values
++  const lr = def.degamma(r);
++  const lg = def.degamma(g);
++  const lb = def.degamma(b);
++
++  // Convert to XYZ (D65 or D50 depending on space)
++  let xyz = mul3(def.toXYZ, [lr, lg, lb]);
++
++  // If the space uses D50, adapt to D65
++  if (def.d50) {
++    xyz = mul3(D50_TO_D65, xyz);
++  }
++
++  // XYZ-D65 → linear sRGB
++  const lin = mul3(XYZ_D65_TO_SRGB, xyz);
++  return linearToGamutMappedRgba(lin, alpha);
++}
++
++// Convert linear sRGB to gamut-mapped RGBA via OKLCH
++function linearToGamutMappedRgba(lin, alpha) {
++  // If already in gamut, just convert directly (fast path)
++  if (isInGamut(lin)) {
++    return [linearToRgbChannel(lin[0]), linearToRgbChannel(lin[1]), linearToRgbChannel(lin[2]), alpha];
++  }
++  // Out of gamut — convert to OKLab → OKLCH and gamut map
++  const [okL, okA, okB] = linearRgbToOklab(lin[0], lin[1], lin[2]);
++  const C = Math.sqrt(okA * okA + okB * okB);
++  const H = C < 0.0001 ? 0 : (Math.atan2(okB, okA) * 180 / Math.PI + 360) % 360;
++  return gamutMapToRgba(okL, C, H, alpha);
++}
+ const roundColor = color => {
+   return Math.round(color * 255);
+ };

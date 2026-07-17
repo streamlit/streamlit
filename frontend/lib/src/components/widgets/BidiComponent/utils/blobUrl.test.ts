@@ -34,7 +34,7 @@ describe("BlobUrlManager", () => {
     vi.stubGlobal("URL", {
       ...(globalThis.URL as unknown as object),
       createObjectURL: vi.fn(() => `blob:mock-${counter++}`),
-    } as unknown as typeof URL)
+    })
   })
 
   afterEach(() => {

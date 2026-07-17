@@ -22,7 +22,7 @@ from streamlit.delta_generator_singletons import (
     context_dg_stack,
     get_default_dg_stack_value,
 )
-from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import FragmentHandledException
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
@@ -155,8 +155,8 @@ def exec_func_with_error_handling(
     except Exception as ex:
         run_without_errors = False
         premature_stop = True
-        handle_uncaught_app_exception(ex)
         uncaught_exception = ex
+        handle_user_script_exception(ex, ctx.on_script_error)
 
     return (
         result,

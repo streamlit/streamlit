@@ -27,7 +27,7 @@ from typing import (
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
     index_,
@@ -54,6 +54,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -174,6 +175,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> tuple[T, T]: ...
 
     @overload
@@ -193,6 +195,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T: ...
 
     @gather_metrics("select_slider")
@@ -212,6 +215,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | tuple[T, T]:
         r"""
         Display a slider widget to select items from a list.
@@ -343,6 +347,21 @@ class SelectSliderMixin:
             from the URL. Range select sliders use repeated parameters
             (e.g., ``?color=red&color=blue``).
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         any value or tuple of any value
@@ -409,6 +428,7 @@ class SelectSliderMixin:
             ctx=ctx,
             width=width,
             bind=bind,
+            persist_state=persist_state,
         )
 
     def _select_slider(
@@ -427,6 +447,7 @@ class SelectSliderMixin:
         ctx: ScriptRunContext | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | tuple[T, T]:
         key = to_key(key)
 
@@ -502,8 +523,7 @@ class SelectSliderMixin:
         if bind and key:
             slider_proto.query_param_key = str(key)
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         serde = SelectSliderSerde(
             opt,
@@ -522,6 +542,7 @@ class SelectSliderMixin:
             ctx=ctx,
             value_type="string_array_value",
             bind=bind,
+            persist_state=persist_state,
             # Select sliders always have a value (no empty/cleared state in
             # the UI), so disallow empty URL params (e.g., ?key=).
             clearable=False,
@@ -578,10 +599,15 @@ class SelectSliderMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue("slider", slider_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "slider",
+            slider_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+        )
         return current_value
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

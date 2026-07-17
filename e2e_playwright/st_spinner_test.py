@@ -245,13 +245,21 @@ def test_spinner_before_tabs_preserves_active_tab_and_increments_number_input(
     """
     get_button(app, "Enable spinner before tabs scenario").click()
 
-    # Spinner appears while the scenario is initializing.
-    expect(app.get_by_test_id("stSpinner")).to_be_visible()
+    # A spinner ("Starting up...") shows before the tabs, but only for a short
+    # window: st.spinner delays rendering by ~0.5s, so it appears for roughly the
+    # back half of the app's 1s sleep and is then immediately replaced by the
+    # tabs. That window can close before Playwright polls it, causing flakiness
+    # (especially on Firefox). Wait for the run to finish and assert on the
+    # resulting tabs instead.
     wait_for_app_run(app)
 
     tab_one = app.get_by_role("tab", name="tab_one")
     tab_two = app.get_by_role("tab", name="tab_two")
     number_input = app.get_by_role("spinbutton", name="number in tab")
+
+    # Tabs (rendered after the spinner context) should be present after the rerun.
+    expect(tab_one).to_be_visible()
+    expect(tab_two).to_be_visible()
 
     tab_two.click()
     expect(tab_two).to_have_attribute("aria-selected", "true")
@@ -267,3 +275,48 @@ def test_spinner_before_tabs_preserves_active_tab_and_increments_number_input(
     expect(tab_one).to_have_attribute("aria-selected", "false")
     updated_value = float(number_input.input_value())
     assert updated_value > initial_value
+
+
+def test_spinner_time_resets_on_new_run(app: Page):
+    """Test that spinner elapsed time resets correctly on new runs.
+
+    Verifies that the spinner with show_time=True displays updating time
+    and doesn't show frozen/stale values from previous runs.
+    """
+    get_button(app, "Run spinner with time").click()
+
+    spinner = app.get_by_test_id("stSpinner")
+    expect(spinner).to_be_visible()
+    expect(spinner).to_contain_text("Loading...")
+    expect(spinner).to_contain_text("seconds")
+
+    # Capture initial time text
+    initial_text = spinner.text_content()
+
+    # Wait a bit and verify time updates (not frozen)
+    app.wait_for_timeout(300)
+    updated_text = spinner.text_content()
+    assert initial_text != updated_text, "Spinner time should be updating"
+
+    # Wait for spinner to complete
+    wait_for_app_run(app)
+    expect(spinner).to_have_count(0)
+
+    # Start spinner again via button click
+    get_button(app, "Run spinner with time").click()
+
+    # Spinner should appear with fresh timing
+    expect(spinner).to_be_visible()
+    expect(spinner).to_contain_text("Loading...")
+
+    # The time display should be present and updating
+    new_spinner_text = spinner.text_content()
+    assert new_spinner_text is not None, "Spinner should have text content"
+    assert "seconds" in new_spinner_text, "Spinner should show time"
+
+    # Wait and verify it's still updating (not frozen from previous run)
+    app.wait_for_timeout(300)
+    newer_text = spinner.text_content()
+    assert new_spinner_text != newer_text, (
+        "Spinner time should continue updating on new run"
+    )

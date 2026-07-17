@@ -137,6 +137,26 @@ export const createDropHandler =
       }
     }
 
+    // When uploads bypass react-dropzone (e.g. pasting multiple files), more
+    // than one valid file can reach here even in single-file mode. Keep the
+    // first file and reject the rest, mirroring the drag-and-drop behavior.
+    if (!acceptMultipleFiles && acceptedFiles.length > 1) {
+      const [firstFile, ...extraFiles] = acceptedFiles
+      acceptedFiles = [firstFile]
+      rejectedFiles = [
+        ...rejectedFiles,
+        ...extraFiles.map(file => ({
+          file,
+          errors: [
+            {
+              code: FileErrorCode.TooManyFiles,
+              message: "Only one file is allowed.",
+            },
+          ],
+        })),
+      ]
+    }
+
     if (!acceptMultipleFiles && acceptedFiles.length > 0) {
       deleteExistingFiles()
     }

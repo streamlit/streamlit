@@ -114,6 +114,42 @@ describe("Checkbox widget", () => {
     expect(screen.getByRole("checkbox")).not.toBeChecked()
   })
 
+  it("is checked when default is true", () => {
+    const props = getProps({ default: true })
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByRole("checkbox")).toBeChecked()
+  })
+
+  it("has an accessible name matching the label", () => {
+    const props = getProps()
+    render(<Checkbox {...props} />)
+
+    expect(
+      screen.getByRole("checkbox", { name: props.element.label })
+    ).toBeVisible()
+  })
+
+  it("toggles via keyboard Space key", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setBoolValue")
+    render(<Checkbox {...props} />)
+
+    act(() => {
+      screen.getByRole("checkbox").focus()
+    })
+    await user.keyboard(" ")
+
+    expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
+      props.element,
+      true,
+      { fromUi: true },
+      undefined
+    )
+    expect(screen.getByRole("checkbox")).toBeChecked()
+  })
+
   it("is not disabled by default", () => {
     const props = getProps()
     render(<Checkbox {...props} />)
@@ -192,6 +228,163 @@ describe("Checkbox widget", () => {
       },
       undefined
     )
+  })
+})
+
+describe("Checkbox TOGGLE type", () => {
+  const getToggleProps = (
+    elementProps: Partial<CheckboxProto> = {},
+    widgetProps: Partial<Props> = {}
+  ): Props =>
+    getProps(
+      { type: CheckboxProto.StyleType.TOGGLE, ...elementProps },
+      widgetProps
+    )
+
+  it("renders with ARIA role switch", () => {
+    const props = getToggleProps()
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByRole("switch")).toBeVisible()
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
+  })
+
+  it("is off by default", () => {
+    const props = getToggleProps()
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByRole("switch")).not.toBeChecked()
+  })
+
+  it("is on when default is true", () => {
+    const props = getToggleProps({ default: true })
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByRole("switch")).toBeChecked()
+  })
+
+  it("has an accessible name matching the label", () => {
+    const props = getToggleProps()
+    render(<Checkbox {...props} />)
+
+    expect(
+      screen.getByRole("switch", { name: props.element.label })
+    ).toBeVisible()
+  })
+
+  it("toggles via keyboard Space key", async () => {
+    const user = userEvent.setup()
+    const props = getToggleProps()
+    vi.spyOn(props.widgetMgr, "setBoolValue")
+    render(<Checkbox {...props} />)
+
+    act(() => {
+      screen.getByRole("switch").focus()
+    })
+    await user.keyboard(" ")
+
+    expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
+      props.element,
+      true,
+      { fromUi: true },
+      undefined
+    )
+    expect(screen.getByRole("switch")).toBeChecked()
+  })
+
+  it("sets widget value on mount", () => {
+    const props = getToggleProps()
+    vi.spyOn(props.widgetMgr, "setBoolValue")
+
+    render(<Checkbox {...props} />)
+
+    expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
+      props.element,
+      props.element.default,
+      { fromUi: false },
+      undefined
+    )
+  })
+
+  it("is not disabled by default", () => {
+    const props = getToggleProps()
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByRole("switch")).not.toBeDisabled()
+  })
+
+  it("is disabled when disabled prop is true", () => {
+    const props = getToggleProps({}, { disabled: true })
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByRole("switch")).toBeDisabled()
+  })
+
+  it("handles toggling on", async () => {
+    const user = userEvent.setup()
+    const props = getToggleProps()
+    vi.spyOn(props.widgetMgr, "setBoolValue")
+
+    render(<Checkbox {...props} />)
+
+    await user.click(screen.getByRole("switch"))
+
+    expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
+      props.element,
+      true,
+      { fromUi: true },
+      undefined
+    )
+    expect(screen.getByRole("switch")).toBeChecked()
+  })
+
+  it("does not toggle when disabled", async () => {
+    const user = userEvent.setup()
+    const props = getToggleProps({}, { disabled: true })
+    vi.spyOn(props.widgetMgr, "setBoolValue")
+
+    render(<Checkbox {...props} />)
+
+    // Clear initial mount call
+    vi.mocked(props.widgetMgr.setBoolValue).mockClear()
+
+    await user.click(screen.getByRole("switch"))
+
+    expect(props.widgetMgr.setBoolValue).not.toHaveBeenCalled()
+    expect(screen.getByRole("switch")).not.toBeChecked()
+  })
+
+  it("renders a label", () => {
+    const props = getToggleProps()
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByText(props.element.label)).toBeInTheDocument()
+  })
+
+  it("applies hidden label visibility to stWidgetLabel", () => {
+    const props = getToggleProps({
+      labelVisibility: {
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
+      },
+    })
+
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+      "visibility: hidden"
+    )
+  })
+
+  it("applies collapsed label visibility to stWidgetLabel", () => {
+    const props = getToggleProps({
+      labelVisibility: {
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 })
 

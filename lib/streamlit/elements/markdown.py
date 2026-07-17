@@ -17,11 +17,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     TextAlignment,
     Width,
     WidthWithoutContent,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -46,6 +45,7 @@ class MarkdownMixin:
         width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
         unterminated_parsing: bool = False,
+        anchors: bool = True,
     ) -> DeltaGenerator:
         """Internal markdown method with extended options."""
         markdown_proto = MarkdownProto()
@@ -54,14 +54,18 @@ class MarkdownMixin:
         markdown_proto.allow_html = unsafe_allow_html
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
         markdown_proto.unterminated_parsing = unterminated_parsing
+        markdown_proto.hide_anchors = not anchors
         if help:
             markdown_proto.help = help
 
         if width != "auto":
-            validate_width(width, allow_content=True)
-            layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+            layout_config = create_layout_config(
+                width=width,
+                text_alignment=text_alignment,
+                allow_content_width=True,
+            )
         else:
-            layout_config = LayoutConfig(text_alignment=text_alignment)
+            layout_config = create_layout_config(text_alignment=text_alignment)
 
         return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
 
@@ -74,6 +78,7 @@ class MarkdownMixin:
         help: str | None = None,
         width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
+        anchors: bool = True,
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
@@ -141,6 +146,10 @@ class MarkdownMixin:
               For example, you can use ``:orange-badge[your text here]`` or
               ``:blue-badge[your text here]``.
 
+            - Shimmer effect for loading or in-progress text, using the syntax
+              ``:shimmer[text to shimmer]``. The text fades in and out to indicate
+              ongoing activity. This respects the user's reduced motion preferences.
+
             - Small text, using the syntax ``:small[text to show small]``.
 
 
@@ -197,6 +206,17 @@ class MarkdownMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        anchors : bool
+            Whether to show clickable anchor link icons next to Markdown
+            headings (h1-h6). If this is ``True`` (default), each heading
+            gets a visible link icon on hover. If this is ``False``, the
+            link icon is not rendered. Headings still receive an ``id``
+            attribute in either case, so URL fragment deep links (e.g.,
+            ``https://example.com/#my-heading``) continue to work.
+
+            This is useful when Markdown headings are used purely for
+            styling and the anchor link icons would be visual noise.
+
         Examples
         --------
         >>> import streamlit as st
@@ -226,6 +246,7 @@ class MarkdownMixin:
             help=help,
             width=width,
             text_alignment=text_alignment,
+            anchors=anchors,
         )
 
     @gather_metrics("caption")
@@ -319,8 +340,9 @@ class MarkdownMixin:
         if help:
             caption_proto.help = help
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width, text_alignment=text_alignment, allow_content_width=True
+        )
 
         return self.dg._enqueue("markdown", caption_proto, layout_config=layout_config)
 
@@ -389,8 +411,7 @@ class MarkdownMixin:
         if help:
             latex_proto.help = help
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         return self.dg._enqueue("markdown", latex_proto, layout_config=layout_config)
 
@@ -426,8 +447,7 @@ class MarkdownMixin:
         divider_proto.body = MARKDOWN_HORIZONTAL_RULE_EXPRESSION
         divider_proto.element_type = MarkdownProto.Type.DIVIDER
 
-        validate_width(width, allow_content=False)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         return self.dg._enqueue("markdown", divider_proto, layout_config=layout_config)
 
@@ -557,12 +577,11 @@ class MarkdownMixin:
         if help is not None:
             badge_proto.help = help
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         return self.dg._enqueue("markdown", badge_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

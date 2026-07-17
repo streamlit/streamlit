@@ -590,6 +590,67 @@ describe("Multi Select Editor", () => {
       data: { ...mockCell.data, values: [] },
     })
   })
+
+  it.each(["Enter", "Tab"])(
+    "calls onFinishedEditing on %s with empty input",
+    key => {
+      const mockCell = getMockCell({ data: { values: [] } })
+      const Editor = getEditor(mockCell)
+
+      const onFinishedEditing = vi.fn()
+      render(
+        <Editor
+          isHighlighted={false}
+          value={mockCell}
+          onChange={vi.fn()}
+          onFinishedEditing={onFinishedEditing}
+        />
+      )
+
+      // eslint-disable-next-line testing-library/prefer-user-event -- react-select requires fireEvent for keydown
+      fireEvent.keyDown(screen.getByRole("combobox"), { key })
+      expect(onFinishedEditing).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it("submits typed value as new entry when allowCreation+allowDuplicates is true", () => {
+    const mockCell = getMockCell({
+      data: {
+        allowCreation: true,
+        allowDuplicates: true,
+        options: [],
+        values: [],
+      },
+    })
+    const Editor = getEditor(mockCell)
+
+    const onChange = vi.fn()
+    const onFinishedEditing = vi.fn()
+    render(
+      <Editor
+        isHighlighted={false}
+        value={mockCell}
+        onChange={onChange}
+        onFinishedEditing={onFinishedEditing}
+      />
+    )
+
+    const inputElement = screen.getByRole("combobox")
+    // eslint-disable-next-line testing-library/prefer-user-event -- react-select uses controlled input
+    fireEvent.change(inputElement, { target: { value: "new-value" } })
+    // eslint-disable-next-line testing-library/prefer-user-event -- react-select requires fireEvent for keydown
+    fireEvent.keyDown(inputElement, { key: "Enter" })
+
+    // Enter with text + allowCreation + allowDuplicates falls into the
+    // inline-create path: the new value is added and editing stays open.
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ values: ["new-value"] }),
+      })
+    )
+    expect(onFinishedEditing).not.toHaveBeenCalled()
+  })
 })
 
 describe("MultiSelectCell renderer", () => {
@@ -683,5 +744,37 @@ describe("MultiSelectCell renderer", () => {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- renderer.measure is defined for this cell type
     const width = renderer.measure!(ctx, cell, mockTheme as MeasureTheme)
     expect(width).toBe(mockTheme.cellHorizontalPadding * 2)
+  })
+
+  it("provideEditor().deletedValue clears values while preserving other data", () => {
+    const cell = {
+      kind: GridCellKind.Custom,
+      data: {
+        kind: "multi-select-cell",
+        values: ["option1", "option2"],
+        options: [
+          { value: "option1", label: "Option 1" },
+          { value: "option2", label: "Option 2" },
+        ],
+        allowCreation: true,
+      },
+      allowOverlay: true,
+      copyData: "option1,option2",
+      readonly: false,
+    } as MultiSelectCell
+
+    const result = renderer.provideEditor?.({
+      ...cell,
+      location: [0, 0] as Item,
+    })
+    if (!result || !("deletedValue" in result) || !result.deletedValue) {
+      throw new Error("deletedValue not defined")
+    }
+
+    const deleted = result.deletedValue(cell)
+    expect(deleted.copyData).toBe("")
+    expect(deleted.data.values).toEqual([])
+    expect(deleted.data.allowCreation).toBe(true)
+    expect(deleted.data.options).toHaveLength(2)
   })
 })

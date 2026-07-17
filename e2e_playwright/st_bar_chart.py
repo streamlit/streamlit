@@ -96,25 +96,3 @@ st.bar_chart(df, x="b", y="a", sort="a", horizontal=True)  # horizontal, sort by
 st.bar_chart(
     df, x="a", y=["b", "c"], sort="-a"
 )  # sort by x column with multiple y columns (regression test)
-
-# Test that add_rows maintains original styling params:
-# color, width, height, horizontal, stack
-bar_data = pd.DataFrame({"Bar 1": [], "Bar 2": []})
-
-empty_bar = st.bar_chart(
-    bar_data,
-    y=["Bar 1", "Bar 2"],
-    color=["#800080", "#0000FF"],  # Purple and Blue
-    width=600,
-    height=300,
-    stack=False,
-    horizontal=True,
-)
-
-if st.button("Add data to Bar Chart"):
-    new_data = pd.DataFrame(
-        {"Bar 1": np.random.rand(5) * 100, "Bar 2": np.random.rand(5) * 100},
-        index=["A", "B", "C", "D", "E"],
-    )
-
-    empty_bar.add_rows(new_data)

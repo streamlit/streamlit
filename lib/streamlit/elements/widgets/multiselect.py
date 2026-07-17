@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -29,9 +28,8 @@ from typing import (
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     WidthWithoutContent,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.options_selector_utils import (
     SelectWidgetFilterMode,
@@ -61,7 +59,7 @@ from streamlit.errors import (
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import BindOption, register_widget
+from streamlit.runtime.state import BindOption, PersistStateOption, register_widget
 from streamlit.type_util import (
     is_iterable,
 )
@@ -69,7 +67,6 @@ from streamlit.type_util import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from streamlit.dataframe_util import OptionSequence
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import (
         WidgetArgs,
@@ -214,6 +211,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[T]: ...
 
     @overload
@@ -237,6 +235,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[T | str]: ...
 
     @overload
@@ -260,6 +259,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[T] | list[T | str]: ...
 
     @gather_metrics("multiselect")
@@ -283,6 +283,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[T] | list[T | str]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -452,6 +453,21 @@ class MultiSelectMixin:
             are truncated. When ``accept_new_options`` is ``True``, any
             value is accepted.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         list
@@ -529,6 +545,7 @@ class MultiSelectMixin:
             filter_mode=filter_mode,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -552,6 +569,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)
@@ -654,6 +672,7 @@ class MultiSelectMixin:
             ctx=ctx,
             value_type="string_array_value",
             bind=bind,
+            persist_state=persist_state,
             # Multiselect is always clearable: users can always remove all
             # selections, so ?key= (empty URL param) should clear to [].
             clearable=True,
@@ -691,17 +710,21 @@ class MultiSelectMixin:
             proto.raw_values[:] = serde.serialize(current_values)
             proto.set_value = True
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue(widget_name, proto, layout_config=layout_config)
+        self.dg._enqueue(
+            widget_name,
+            proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+        )
 
         return current_values
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

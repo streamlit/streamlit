@@ -17,7 +17,11 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -26,6 +30,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_popover,
     open_popover,
+    reset_hovering,
 )
 
 
@@ -34,7 +39,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(22)
+    expect(popover_elements).to_have_count(29)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -200,7 +205,7 @@ def test_show_tooltip_on_hover(app: Page):
         .get_by_test_id("stPopoverButton")
         .first
     )
-    # Click the button to open it:
+    reset_hovering(app)
     popover_button.hover()
 
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
@@ -389,3 +394,172 @@ def test_keyed_popover_css_key_class(app: Page):
     """Keyed popover should have the st-key-* CSS class on the outermost element."""
     keyed_popover = get_element_by_key(app, "persist_popover")
     expect(keyed_popover).to_have_class(re.compile(r"st-key-persist_popover"))
+
+
+def test_popover_menu_style_icons_hide_chevron(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that menu-style icon labels hide the chevron (expand/collapse icon)."""
+    container = get_element_by_key(app, "menu_style_icons_container")
+
+    # Verify all three popovers are visible
+    popovers = container.get_by_test_id("stPopover")
+    expect(popovers).to_have_count(3)
+
+    # Check that chevron icons are NOT present in these buttons
+    # The chevron uses expand_more/expand_less material icons
+    menu_icon_popover = get_element_by_key(app, "menu_icon_popover")
+    more_vert_popover = get_element_by_key(app, "more_vert_icon_popover")
+    more_horiz_popover = get_element_by_key(app, "more_horiz_icon_popover")
+
+    # None of these buttons should have expand_more or expand_less icons
+    expect(menu_icon_popover.get_by_text("expand_more")).not_to_be_visible()
+    expect(more_vert_popover.get_by_text("expand_more")).not_to_be_visible()
+    expect(more_horiz_popover.get_by_text("expand_more")).not_to_be_visible()
+
+    # Verify that regular popovers DO have the chevron (for contrast)
+    regular_popover = get_popover(app, "popover 3 (with widgets)")
+    expect(regular_popover.get_by_text("expand_more")).to_be_visible()
+
+    # Snapshot the container with all three menu-style icon popovers
+    assert_snapshot(container, name="st_popover-menu_style_icons")
+
+
+def test_multiselect_dropdown_renders_above_popover_body(app: Page):
+    """A BaseWeb dropdown (multiselect) opened inside a popover must render above
+    the popover body, not behind it.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15959: the
+    floating-ui popover body and the BaseWeb overlay layer host both resolved to
+    the `popup` z-index, so the popover body (mounted later) painted over the
+    dropdown and hid the options.
+    """
+    popover_container = open_popover(app, "popover 20 (multiselect stacking)")
+    multiselect = popover_container.get_by_test_id("stMultiSelect")
+    expect(multiselect).to_be_visible()
+
+    # Open the multiselect dropdown.
+    multiselect.locator("input").first.click()
+    first_option = app.get_by_role("option", name="option_1", exact=True)
+    expect(first_option).to_be_visible()
+
+    # The option must be the top-most element at its own center. If the popover
+    # body painted over it (the bug), elementFromPoint returns the popover body
+    # instead of the option.
+    def option_is_on_top() -> bool:
+        return bool(
+            first_option.evaluate(
+                """(el) => {
+                const rect = el.getBoundingClientRect();
+                const topEl = document.elementFromPoint(
+                    rect.left + rect.width / 2,
+                    rect.top + rect.height / 2
+                );
+                return el === topEl || el.contains(topEl);
+            }"""
+            )
+        )
+
+    wait_until(app, lambda: option_is_on_top() is True)
+
+    # Selecting the option must work (would fail the click hit-test if occluded).
+    first_option.click()
+    wait_for_app_run(app)
+    expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(1)
+
+
+def test_date_input_selection_does_not_dismiss_popover(app: Page):
+    """Selecting a day in a date_input calendar opened inside a popover must not
+    dismiss the popover.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15959: the
+    popover read the click target at `click` time, but BaseWeb closes the
+    calendar synchronously on selection, detaching the clicked day before the
+    handler ran — so the popover treated it as an outside click and closed.
+    """
+    popover_container = open_popover(app, "popover 21 (date dismissal)")
+    date_input = popover_container.get_by_test_id("stDateInput")
+    expect(date_input).to_be_visible()
+
+    # Open the calendar.
+    date_input.locator("input").first.click()
+    calendar = app.locator('[data-baseweb="calendar"]')
+    expect(calendar).to_be_visible()
+
+    # Select a different day.
+    calendar.get_by_text("15", exact=True).first.click()
+    wait_for_app_run(app)
+
+    # The popover must still be open after the day selection.
+    expect(popover_container).to_be_visible()
+    expect(date_input).to_be_visible()
+
+
+def test_selectbox_selection_does_not_dismiss_popover(app: Page):
+    """Selecting an option in a React Aria selectbox opened inside a popover must
+    not dismiss the popover.
+
+    The selectbox dropdown (migrated to React Aria Components) portals to
+    document.body and is not tagged as a Streamlit overlay root, so it is not
+    matched by the popover's outside-click exclusions. It still does not dismiss
+    the popover because React Aria commits the selection via press events and
+    closes its own dropdown without an outside `click` reaching the popover's
+    document-level handler. This guards that contract for
+    https://github.com/streamlit/streamlit/issues/15959.
+    """
+    popover_container = open_popover(app, "popover 3 (with widgets)")
+    selectbox = popover_container.get_by_test_id("stSelectbox")
+    expect(selectbox).to_be_visible()
+
+    # Open the dropdown and select an option.
+    selectbox.locator("input").first.click()
+    option = app.get_by_role("option", name="b", exact=True)
+    expect(option).to_be_visible()
+    option.click()
+    wait_for_app_run(app)
+
+    # The popover must still be open, with the selection committed.
+    expect(popover_container).to_be_visible()
+    expect(selectbox.locator("input")).to_have_value("b")
+
+
+def test_programmatic_close_does_not_reopen_other_popover(app: Page):
+    """Test that programmatically closing one popover does not cause it to
+    reopen when another stateful popover is interacted with.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/14943
+    """
+    # Open popover A
+    open_popover(app, "Multi pop A")
+    expect(app.get_by_text("Close A")).to_be_visible()
+
+    # Wait for the open rerun to finish before clicking "Close A". open_popover
+    # only waits for the (optimistically rendered) body to appear, not for the
+    # backend rerun that commits open=True. If we click "Close A" while that
+    # rerun is still in flight, the close rerun interrupts it before popover A's
+    # open=True delta is sent. The close rerun then renders open=False, which
+    # matches the cached initial False, so no delta is sent and the frontend's
+    # optimistic open state is never corrected — leaving the body stuck open.
+    wait_for_app_run(app)
+
+    # Programmatically close it via the button inside
+    click_button(app, "Close A")
+
+    # Popover A should be closed — the body should no longer be visible
+    expect(app.get_by_text("Close A")).not_to_be_visible()
+
+    # Open popover B
+    open_popover(app, "Multi pop B")
+
+    # Popover B should be open
+    expect(app.get_by_text("Close B")).to_be_visible()
+
+    # Wait for popover B's open rerun to finish so that, if the #14943 bug were
+    # present, popover A would have had the chance to reopen by now. Without this
+    # wait the assertion below could pass simply because B's rerun hasn't
+    # completed yet, weakening the regression guard.
+    wait_for_app_run(app)
+
+    # Popover A must NOT have reopened (the bug from #14943).
+    # If it did, "Close A" would be visible in a second popover body.
+    expect(app.get_by_text("Close A")).not_to_be_visible()

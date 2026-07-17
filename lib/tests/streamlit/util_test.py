@@ -49,8 +49,41 @@ class UtilTest(unittest.TestCase):
 
         assert hasattr(f, "__wrapped__")
 
-    def test_calc_md5_can_handle_bytes_and_strings(self):
-        assert util.calc_md5("eventually bytes") == util.calc_md5(b"eventually bytes")
+    def test_calc_hash_can_handle_bytes_and_strings(self):
+        assert util.calc_hash("eventually bytes") == util.calc_hash(b"eventually bytes")
+
+    def test_calc_hash_returns_consistent_hex_string(self):
+        """Test that calc_hash returns a consistent hexadecimal string."""
+        result = util.calc_hash("test input")
+        assert isinstance(result, str)
+        assert all(c in "0123456789abcdef" for c in result)
+        assert util.calc_hash("test input") == result
+
+    def test_create_fast_hasher_returns_hasher_protocol(self):
+        """Test that create_fast_hasher returns an object matching Hasher protocol."""
+        hasher = util.create_fast_hasher()
+        assert hasattr(hasher, "update")
+        assert hasattr(hasher, "hexdigest")
+        assert hasattr(hasher, "digest")
+
+    def test_create_fast_hasher_produces_consistent_results(self):
+        """Test that create_fast_hasher produces consistent hash results."""
+        h1 = util.create_fast_hasher()
+        h1.update(b"test data")
+        result1 = h1.hexdigest()
+
+        h2 = util.create_fast_hasher()
+        h2.update(b"test data")
+        result2 = h2.hexdigest()
+
+        assert result1 == result2
+
+    def test_create_fast_hasher_matches_calc_hash(self):
+        """Test that create_fast_hasher produces same result as calc_hash."""
+        data = b"test data"
+        h = util.create_fast_hasher()
+        h.update(data)
+        assert h.hexdigest() == util.calc_hash(data)
 
 
 # Pytest-style tests for ReadOnlyAttributeDictionary
@@ -161,3 +194,40 @@ class TestReadOnlyAttributeDictionary:
         serialized = json.dumps(d)
         deserialized = json.loads(serialized)
         assert deserialized == {"selection": {"rows": [1, 2], "columns": ["a"]}}
+
+    def test_attribute_access_raises_attribute_error_for_missing_key(self) -> None:
+        """Attribute-style access to a missing key raises a helpful AttributeError."""
+        d = ReadOnlyAttributeDictionary({"a": 1})
+        with pytest.raises(
+            AttributeError,
+            match=r"'ReadOnlyAttributeDictionary' object has no attribute 'missing'",
+        ):
+            _ = d.missing
+
+
+class TestAttributeDictionary:
+    """Test AttributeDictionary class."""
+
+    def test_setattr_updates_dict_value(self) -> None:
+        """Assigning a new attribute mutates the underlying dict storage."""
+        d = AttributeDictionary({"a": 1})
+        d.b = 2
+
+        assert d["b"] == 2
+        assert d.b == 2
+
+    def test_setattr_overwrites_existing_value(self) -> None:
+        """Setting an existing attribute updates the value rather than shadowing it."""
+        d = AttributeDictionary({"a": 1})
+        d.a = 99
+
+        assert d["a"] == 99
+
+    def test_attribute_access_raises_attribute_error_for_missing_key(self) -> None:
+        """Accessing a missing attribute raises AttributeError instead of KeyError."""
+        d = AttributeDictionary({"a": 1})
+        with pytest.raises(
+            AttributeError,
+            match=r"'AttributeDictionary' object has no attribute 'missing'",
+        ):
+            _ = d.missing

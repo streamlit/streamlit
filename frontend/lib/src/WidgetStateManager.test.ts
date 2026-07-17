@@ -1726,6 +1726,29 @@ describe("Trigger JSON payloads (aggregated)", () => {
         expect(window.history.replaceState).toHaveBeenCalled()
         expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
       })
+
+      it("encodes spaces as + in URL, not %20", () => {
+        const widget = { id: "widget1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "name",
+          "string_value",
+          "",
+          false
+        )
+
+        widgetMgr.setStringValue(
+          widget,
+          "hello world",
+          { fromUi: true },
+          undefined
+        )
+
+        expect(window.history.replaceState).toHaveBeenCalled()
+        const url = (window.history.replaceState as Mock).mock.calls[0][2]
+        expect(url).toContain("name=hello+world")
+        expect(url).not.toContain("%20")
+      })
     })
 
     describe("URL sync for array values", () => {
@@ -2442,6 +2465,28 @@ describe("Trigger JSON payloads (aggregated)", () => {
         const result = widgetMgr.filterParamsForPageChange("")
         expect(result).toContain("name=test")
         expect(result).toContain("count=42")
+      })
+
+      it("encodes spaces as + in filterParamsForPageChange, not %20", () => {
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "q",
+          "string_value",
+          "",
+          false
+        )
+
+        const widget = { id: "widget1", formId: "" }
+        widgetMgr.setStringValue(
+          widget,
+          "hello world",
+          { fromUi: true },
+          undefined
+        )
+
+        const result = widgetMgr.filterParamsForPageChange("")
+        expect(result).toBe("q=hello+world")
+        expect(result).not.toContain("%20")
       })
     })
   })

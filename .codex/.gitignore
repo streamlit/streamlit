@@ -4,3 +4,6 @@
 # Allow specific files
 !.gitignore
 !skills
+!config.toml
+!agents/
+!agents/*.toml

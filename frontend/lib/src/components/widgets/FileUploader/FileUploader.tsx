@@ -170,7 +170,7 @@ const FileUploader = ({
    * Set the files immediately.
    */
   const setFilesImmediate = useCallback((updater: FilesUpdater): void => {
-    /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+    /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
      * Using flushSync here because we need the state to be immediately updated
      * before any subsequent file upload operations occur. Without this, React
      * can defer the commit and our upload callbacks (completion or abort) may
@@ -189,7 +189,7 @@ const FileUploader = ({
 
   const setForceUpdatingStatus = useCallback(
     (value: boolean): void => {
-      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+      /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
        * We need the status flag to update synchronously so that subsequent
        * renders treat the widget as updating. Otherwise, the status could
        * briefly report as ready and trigger widget state propagation while

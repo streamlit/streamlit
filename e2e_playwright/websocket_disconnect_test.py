@@ -72,8 +72,15 @@ def _check_expected_elements_disabled(app: Page):
     tabs = app.get_by_test_id("stTabs")
     tab_button = app.get_by_test_id("stTab").nth(1)
     expect(tab_button).to_contain_text("Tab 2")
-    tab_button.click()
-    tab_panel = tabs.get_by_test_id("stElementContainer").nth(1)
+    # focus() + press("Enter") is reliable across all browsers including webkit,
+    # where synthetic pointer clicks on div[role=tab] can fail during reconnect.
+    tab_button.focus()
+    tab_button.press("Enter")
+    expect(tab_button).to_have_attribute("aria-selected", "true")
+    # With shouldForceMount all panels stay in the DOM; inactive panels become inert
+    # and lose their role="tabpanel". Scope to the active panel to avoid matching
+    # inert sibling panels.
+    tab_panel = tabs.get_by_role("tabpanel").get_by_test_id("stElementContainer")
     expect(tab_panel).to_be_visible()
     expect(tab_panel).to_have_text("World")
     # Expander

@@ -88,16 +88,23 @@ def update_formatter() -> None:
         setup_formatter(log)
 
 
-def init_tornado_logs() -> None:
-    """Set Tornado log levels.
+def init_uvicorn_logs() -> None:
+    """Set Uvicorn and related server log levels.
 
-    This function does not import any Tornado code, so it's safe to call even
-    when Server is not running.
+    This function sets up loggers for Uvicorn, websockets, and related components
+    so they respect Streamlit's logger.level config option.
+    It does not import any server code, so it's safe to call even when the server
+    is not running.
     """
-    # http://www.tornadoweb.org/en/stable/log.html
-    for log in ("access", "application", "general"):
+    for log in (
+        "uvicorn",
+        "uvicorn.access",
+        "uvicorn.asgi",
+        "uvicorn.error",
+        "websockets",
+    ):
         # get_logger will set the log level for the logger with the given name.
-        get_logger(f"tornado.{log}")
+        get_logger(log)
 
 
 def get_logger(name: str) -> logging.Logger:
