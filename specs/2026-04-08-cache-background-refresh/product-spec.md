@@ -89,12 +89,17 @@ Background refresh separates *freshness* from *eviction* — a bounded variant o
      refresh
 3. When the background refresh completes:
    - **Success:** New value replaces the stale entry; both clocks reset (fresh again
-     for `ttl`). For `cache_resource`, replacing the entry removes the previous resource
-     from the cache, so its `on_release` handler (if configured) is invoked exactly as
-     under foreground TTL eviction. There is no reference counting: callers that still
-     hold the previous object keep using it even after `on_release` runs — the same
-     in-use-while-evicted behavior that already exists today for foreground eviction,
-     not something new introduced by background refresh.
+     for `ttl`). For `cache_resource`, the previous resource's `on_release` handler (if
+     configured) fires when it is replaced, matching foreground TTL eviction. Note that
+     the internal cache fires release hooks only on eviction, not on a plain overwrite,
+     so the implementation must explicitly release the replaced resource before writing
+     the new value (e.g. via `safe_del`); the same explicit release applies to the
+     freshly produced resource of a discarded orphaned refresh or a validate-failure
+     (see below). This is an implementation detail for the tech spec. There is no
+     reference counting: callers that still hold the previous object keep using it even
+     after `on_release` runs — the same in-use-while-evicted behavior that already
+     exists today for foreground eviction, not something new introduced by background
+     refresh.
    - **Failure:** Log warning, keep serving the stale value, and retry on a later
      access with a per-key cooldown (so a failing upstream isn't retried on every
      rerun)
@@ -119,13 +124,17 @@ Time=2h+1s    : Call -> cache miss -> blocking foreground compute (errors surfac
 
 **Key behaviors:**
 
-- **Bounded staleness & memory**: Users never see data older than `2 × ttl`, and a stale
-  entry occupies memory for at most one extra `ttl` period — entries that are never
-  requested again are still hard-evicted at `2 × ttl`. Stale entries count against
-  `max_entries` and follow the same LRU eviction as fresh entries. The grace window
-  equals `ttl` (mirroring the equal fresh/stale windows in the RFC 5861 example): it is
-  easy to explain and scales automatically with the freshness requirement the user
-  already expressed via `ttl`.
+- **Bounded staleness & memory**: Users never see data older than `2 × ttl` — past hard
+  expiry a stale entry is treated as absent (a miss) on the next access, exactly like an
+  expired foreground entry. Memory stays bounded too, but reclamation is lazy: the
+  internal cache reaps expired entries on the next write, `expire()`, or size query
+  rather than via a background timer, so an entry that is never requested again is only
+  freed the next time some cache operation touches it. A lightweight periodic sweep to
+  bound that worst case is an implementation detail for the tech spec. Stale entries
+  count against `max_entries` and follow the same LRU eviction as fresh entries. The
+  grace window equals `ttl` (mirroring the equal fresh/stale windows in the RFC 5861
+  example): it is easy to explain and scales automatically with the freshness
+  requirement the user already expressed via `ttl`.
 - **Deduplicated refreshes**: Only one background refresh runs per cache key at a time
   (reusing the existing per-key computation locks). Concurrent requests for the same
   stale key all receive stale data while a single background refresh runs. Deduplication
@@ -139,10 +148,13 @@ Time=2h+1s    : Call -> cache miss -> blocking foreground compute (errors surfac
   (pool size) will be determined in the tech spec.
 - **Cleanup guarantee**: A stale entry is removed by whichever comes first: a successful
   refresh (replaced with the fresh value), hard expiry (`2 × ttl`), or `max_entries` LRU
-  eviction — including entries that are never requested again after turning stale. Since
-  stale entries participate in LRU eviction like any other entry, a stale key can be
-  evicted before hard expiry under memory pressure; the next access is then a normal
-  blocking cache miss rather than a stale serve.
+  eviction. Past `2 × ttl` an untouched entry is already treated as a miss on read; its
+  memory is reclaimed lazily on the next cache operation that reaps expired entries (or a
+  periodic sweep), since the internal cache has no timer-driven reaper — so a
+  never-again-requested entry may briefly linger in memory past `2 × ttl` even though it
+  is never served again. Since stale entries participate in LRU eviction like any other
+  entry, a stale key can also be evicted before hard expiry under memory pressure; the
+  next access is then a normal blocking cache miss rather than a stale serve.
 - **Late / orphaned refreshes**: A refresh that finishes *after* its entry was already
   hard-evicted (`2 × ttl`), cleared via `.clear()`, or otherwise invalidated (cache
   generation changed, or the owning session ended for `scope="session"`) is discarded
@@ -234,6 +246,18 @@ cache. If the owning session ends (or the entry is otherwise invalidated) before
 refresh completes, the result is discarded per the *Late / orphaned refreshes* rule above
 rather than repopulating a detached cache. (Capturing the originating session for the
 write-back is an implementation detail for the tech spec.)
+
+Because the refresh runs on a background thread **without** a `ScriptRunContext`, cached
+functions used with `refresh_mode="background"` must be **context-free**: session-bound
+Streamlit APIs are unavailable during the refresh. Reading `st.session_state` falls back
+to a process-global mock state, and other session-scoped calls (including `st.*` display
+commands — see *No st.\* replay in background mode* above) don't resolve to the
+originating session. This holds for `scope="session"` too: the per-session cache entry is
+refreshed, but the refresh body itself cannot read that session's state. This is the same
+limitation that already applies when a cached function is called from a non-script context.
+Functions that need session values should pass them in as explicit arguments (so they
+become part of the cache key) or use `refresh_mode="foreground"`; this caveat will be
+called out in the docstring.
 
 ### Examples
 
@@ -573,4 +597,4 @@ fetch_stock_prices.warm("AAPL", "GOOGL", "MSFT")
 | No new dependencies        | ✅ Uses stdlib `concurrent.futures`; builds on the internal `TTLCache` introduced in [#16014](https://github.com/streamlit/streamlit/pull/16014) |
 | Metrics collected          | ✅ Cache API usage is already tracked via the existing `gather_metrics` decorator. Distinguishing `refresh_mode="background"` adoption specifically needs explicit instrumentation — `gather_metrics` records argument names/types but not string values (and `"background"`/`"foreground"` even share the same length) — added as part of the tech spec. |
 | Any security/legal impact? | ✅ No new security concerns                                          |
-| Any docs changes needed?   | ✅ Document `refresh_mode` param, note that `st.*` display output isn't replayed on cache hits in background mode (and that Streamlit warns when display commands are used) |
+| Any docs changes needed?   | ✅ Document `refresh_mode` param, note that `st.*` display output isn't replayed on cache hits in background mode (and that Streamlit warns when display commands are used), and that background-refreshed functions must be context-free (no `st.session_state` or other session-bound APIs during refresh) |
