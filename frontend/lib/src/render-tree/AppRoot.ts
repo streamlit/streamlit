@@ -111,6 +111,15 @@ function isEmptySlotContentNode(node: AppNode): boolean {
  * is the case when the existing node is a placeholder element, is itself
  * empty-slot content, or is a transient whose anchor satisfies either
  * condition.
+ *
+ * The `isEmptySlotContent` check is deliberately "sticky": once a filled node
+ * carries the flag, it is propagated to each subsequent refill so that state is
+ * preserved across *repeated* reruns, not just the first refill. Do not drop
+ * this branch as a "simplification" - without it, the third and later reruns
+ * would stop preserving the filled element's state. The only side effect (a
+ * normal element that positionally shifts onto a path previously held by
+ * empty-slot content inherits the flag) is harmless, since end-of-run stale
+ * clearing still corrects the final output.
  */
 function fillsEmptySlot(existingNode: AppNode | undefined): boolean {
   if (existingNode === undefined) {

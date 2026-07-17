@@ -19,11 +19,11 @@ import streamlit as st
 st.button("rerun")
 
 # Standalone st.skeleton() behaves like st.empty() (single-element placeholder
-# filled later); select which one to test via a query param.
-if st.query_params.get("placeholder") == "skeleton":
-    placeholder = st.skeleton()
-else:
-    placeholder = st.empty()
+# filled later); select which one to test via a query param. The conditional
+# expression makes both branches resolve to the common DeltaGenerator type.
+placeholder = (
+    st.skeleton() if st.query_params.get("placeholder") == "skeleton" else st.empty()
+)
 
 # Simulate slow work between creating the placeholder and filling it. This
 # ensures the placeholder delta is flushed to the browser before the fill delta
