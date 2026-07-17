@@ -92,6 +92,7 @@ if __name__ == "__main__":
 
 ```bash
 # Ensure the app under test is running first, then:
+OUT_DIR="${OUT_DIR:-work-tmp/debug}" \
 STREAMLIT_APP_URL="${STREAMLIT_APP_URL:-http://localhost:8600}" \
 PYTHONPATH=. uv run python "$OUT_DIR/gh-<N>/verify_gh_<N>.py"
 ```

@@ -132,6 +132,7 @@ testing a released wheel, keep the script self-contained (no `streamlit` or
 
 Run it:
 ```bash
+OUT_DIR="${OUT_DIR:-work-tmp/debug}" \
 STREAMLIT_APP_URL="${STREAMLIT_APP_URL:-http://localhost:8600}" \
 PYTHONPATH=. uv run python "$OUT_DIR/gh-<N>/verify_gh_<N>.py"
 ```

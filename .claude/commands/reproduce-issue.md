@@ -26,6 +26,8 @@ This command orchestrates two skills. Run them in order:
    and screenshots.
 
 4. **Ask whether to publish.** Only if I confirm, follow the `publishing-issue-repros`
-   skill with the same `ISSUE`/`OUT_DIR`/`ST_ISSUES_DIR` to copy the bundle into
-   st-issues, commit, and push. If a repro for this issue already exists there, tell me
-   it's a refresh and confirm before overwriting. Never publish without my confirmation.
+   skill with `ISSUE` set to the **numeric** issue number from `result.json` (not the
+   raw URL, so the `gh-<N>` paths resolve correctly), plus the same
+   `OUT_DIR`/`ST_ISSUES_DIR`, to copy the bundle into st-issues, commit, and push. If a
+   repro for this issue already exists there, tell me it's a refresh and confirm before
+   overwriting. Never publish without my confirmation.

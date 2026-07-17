@@ -18,7 +18,7 @@ publishable, but record it in the commit message.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `ISSUE` | yes | — | Issue number `<N>`. |
+| `ISSUE` | yes | — | Issue number `<N>` (numeric only — normalize a URL to its number first). |
 | `OUT_DIR` | no | `work-tmp/debug` | Where the bundle was written by the investigate phase. |
 | `ST_ISSUES_DIR` | no | `~/dev/st-issues` | Local st-issues checkout to publish into. |
 
@@ -45,7 +45,11 @@ DEST="${ST_ISSUES_DIR:-$HOME/dev/st-issues}/issues/gh-${N}"
 [ -d "$DEST" ] && echo "Refreshing existing repro for gh-${N}"
 mkdir -p "$DEST"
 cp "$SRC/app.py" "$SRC/NOTES.md" "$DEST/"
-[ -f "$SRC/requirements.txt" ] && cp "$SRC/requirements.txt" "$DEST/"
+if [ -f "$SRC/requirements.txt" ]; then
+  cp "$SRC/requirements.txt" "$DEST/"
+else
+  rm -f "$DEST/requirements.txt"  # drop stale deps when refreshing
+fi
 
 cd "${ST_ISSUES_DIR:-$HOME/dev/st-issues}"
 python -m py_compile "issues/gh-${N}/app.py"
