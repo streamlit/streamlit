@@ -105,20 +105,7 @@ clean:
 
 .PHONY: protobuf
 # Recompile Protobufs for Python and the frontend.
-protobuf: protobuf-python protobuf-frontend
-
-.PHONY: protobuf-python
-# Recompile Python Protobufs.
-protobuf-python:
-	@$(MAKE) _protobuf-python PROTOBUF_PYTHON_MYPY_OUTPUT=--mypy_out=lib
-
-.PHONY: protobuf-python-runtime
-# Recompile runtime Python Protobuf modules without mypy stubs.
-protobuf-python-runtime:
-	@$(MAKE) _protobuf-python PROTOBUF_PYTHON_MYPY_OUTPUT=
-
-.PHONY: _protobuf-python
-_protobuf-python:
+protobuf:
   # Ensure protoc is installed and is >= MIN_PROTOC_VERSION.
 	@if ! command -v protoc &> /dev/null ; then \
 		echo "protoc not installed."; \
@@ -136,12 +123,9 @@ _protobuf-python:
 	uv run protoc \
 		--proto_path=proto \
 		--python_out=lib \
-		$(PROTOBUF_PYTHON_MYPY_OUTPUT) \
+		--mypy_out=lib \
 		proto/streamlit/proto/*.proto
 
-.PHONY: protobuf-frontend
-# Recompile frontend Protobufs.
-protobuf-frontend:
 	@# JS/TS protobuf generation
 	@if [ ! -d "frontend/node_modules" ]; then \
 		echo "frontend/node_modules not found. Running 'make frontend-init' first..."; \

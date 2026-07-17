@@ -229,10 +229,19 @@ jobs:
           echo "$RUNNER_TEMP/protoc-min/bin" >> "$GITHUB_PATH"
       - name: Generate and import minimum-compatible Python protobufs
         env:
+          PROTOC_VERSION: "3.20.0"
           UV_NO_SYNC: 1
         run: |
-          protoc --version
-          make protobuf-python-runtime
+          actual_version="$(protoc --version)"
+          if [[ "$actual_version" != "libprotoc $PROTOC_VERSION" ]]; then
+            echo "::error::Expected libprotoc $PROTOC_VERSION, found $actual_version"
+            exit 1
+          fi
+          echo "$actual_version"
+          protoc \
+            --proto_path=proto \
+            --python_out=lib \
+            proto/streamlit/proto/*.proto
           uv run python - <<'PY'
           import importlib
           from pathlib import Path
