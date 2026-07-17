@@ -67,8 +67,8 @@ class TTLCleanupCache(TTLCache[K, V]):
         return key, value
 
     @override
-    def expire(self, time: float | None = None) -> list[tuple[K, V]]:
-        items = super().expire(time)
+    def expire(self, at_time: float | None = None) -> list[tuple[K, V]]:
+        items = super().expire(at_time)
         for _, value in items:
             self._on_release(value)
 

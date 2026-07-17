@@ -33,6 +33,24 @@ class _FakeClock:
         return self.now
 
 
+class _SteppingClock:
+    """A timer that advances by ``step`` seconds on every call.
+
+    Used to reproduce the "an entry expires between two timer reads" race that a
+    naive ``values()``/``items()`` (which re-reads the timer once per
+    ``__getitem__``) would hit.
+    """
+
+    def __init__(self, start: float = 0.0, step: float = 0.0) -> None:
+        self.now = start
+        self.step = step
+
+    def __call__(self) -> float:
+        current = self.now
+        self.now += self.step
+        return current
+
+
 def test_basic_mapping_operations() -> None:
     """The cache supports the core get/set/contains/delete/len operations."""
     cache: TTLCache[str, int] = TTLCache(maxsize=10, ttl=100, timer=_FakeClock())
@@ -111,6 +129,27 @@ def test_overwrite_existing_key_does_not_evict() -> None:
     assert cache["c"] == 3
 
 
+def test_overwrite_refreshes_expiry_ordering() -> None:
+    """Overwriting a key re-sorts ``_expirations`` so ``expire`` reaps correctly."""
+    clock = _FakeClock()
+    cache: TTLCache[str, int] = TTLCache(maxsize=10, ttl=100, timer=clock)
+
+    cache["a"] = 1  # expires at 100
+    clock.now = 10
+    cache["b"] = 2  # expires at 110
+    clock.now = 20
+    cache["a"] = 11  # overwrite: expiry refreshed to 120 and moved after "b"
+
+    # At t=115, "b" (expires 110) is expired but the refreshed "a" (expires 120)
+    # is still valid. expire() relies on _expirations being sorted by expiry and
+    # stops at the first still-valid entry; if the overwrite had not moved "a" to
+    # the end, expire() would stop early at "a" and never reap the expired "b".
+    clock.now = 115
+    assert cache.expire() == [("b", 2)]
+    assert cache["a"] == 11
+    assert "b" not in cache
+
+
 def test_unbounded_maxsize_never_evicts() -> None:
     """A cache with ``math.inf`` maxsize never evicts on size."""
     cache: TTLCache[int, int] = TTLCache(maxsize=math.inf, ttl=100, timer=_FakeClock())
@@ -178,7 +217,7 @@ def test_expire_with_explicit_time() -> None:
     cache["a"] = 1  # expires at 10
 
     # Timer still reads 0, but we force expiry using an explicit time.
-    assert cache.expire(time=10) == [("a", 1)]
+    assert cache.expire(at_time=10) == [("a", 1)]
     assert len(cache) == 0
 
 
@@ -210,6 +249,51 @@ def test_iteration_skips_expired_entries() -> None:
     clock.now = 12
     # "a" is expired, "b" is not.
     assert list(cache) == ["b"]
+
+
+def test_values_uses_consistent_time_snapshot() -> None:
+    """``values()`` reads every entry against one timestamp, never mid-expiring."""
+    clock = _SteppingClock(start=0.0)
+    cache: TTLCache[str, int] = TTLCache(maxsize=10, ttl=100, timer=clock)
+
+    cache["a"] = 1
+    cache["b"] = 2
+
+    # Position the clock just before expiry and make each timer read advance by
+    # 1s. A naive values() reads the timer once per __getitem__, so the second
+    # entry would be seen as expired and raise KeyError mid-iteration.
+    clock.now = 99.0
+    clock.step = 1.0
+    assert list(cache.values()) == [1, 2]
+
+
+def test_items_uses_consistent_time_snapshot() -> None:
+    """``items()`` reads every entry against one timestamp, never mid-expiring."""
+    clock = _SteppingClock(start=0.0)
+    cache: TTLCache[str, int] = TTLCache(maxsize=10, ttl=100, timer=clock)
+
+    cache["a"] = 1
+    cache["b"] = 2
+
+    clock.now = 99.0
+    clock.step = 1.0
+    assert list(cache.items()) == [("a", 1), ("b", 2)]
+
+
+def test_values_and_items_skip_expired_entries() -> None:
+    """``values()``/``items()`` omit expired entries without reaping them."""
+    clock = _FakeClock()
+    cache: TTLCache[str, int] = TTLCache(maxsize=10, ttl=10, timer=clock)
+
+    cache["a"] = 1  # expires at 10
+    clock.now = 5
+    cache["b"] = 2  # expires at 15
+
+    clock.now = 12
+    # "a" is expired, "b" is not, and the expired entry is not physically reaped.
+    assert list(cache.values()) == [2]
+    assert list(cache.items()) == [("b", 2)]
+    assert "a" in cache._data
 
 
 def test_popitem_removes_least_recently_used() -> None:

@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import time
 from collections import OrderedDict
-from collections.abc import Callable, Iterator, MutableMapping
+from collections.abc import Callable, ItemsView, Iterator, MutableMapping, ValuesView
 from typing import Final, TypeVar, overload
 
 K = TypeVar("K")
@@ -160,6 +160,28 @@ class TTLCache(MutableMapping[K, V]):
             if now < expires:
                 yield key
 
+    def _live_snapshot(self) -> dict[K, V]:
+        # Capture the non-expired entries against a single timer reading. The
+        # default MutableMapping items()/values() views re-read the timer via
+        # __getitem__ for every key, so an entry that expires between __iter__
+        # yielding it and the follow-up __getitem__ would raise KeyError mid-
+        # iteration. cachetools avoids this by freezing its timer for the
+        # duration of iteration; reading everything against one timestamp gives
+        # the same consistent view. Entries are returned in expiry (write) order,
+        # matching __iter__.
+        now = self._timer()
+        return {
+            key: self._data[key]
+            for key, expires in list(self._expirations.items())
+            if now < expires
+        }
+
+    def items(self) -> ItemsView[K, V]:
+        return self._live_snapshot().items()
+
+    def values(self) -> ValuesView[V]:
+        return self._live_snapshot().values()
+
     def __len__(self) -> int:
         # Matches cachetools: querying the length reaps expired entries first.
         self.expire()
@@ -196,9 +218,9 @@ class TTLCache(MutableMapping[K, V]):
         del self._expirations[key]
         return key, value
 
-    def expire(self, time: float | None = None) -> list[tuple[K, V]]:
+    def expire(self, at_time: float | None = None) -> list[tuple[K, V]]:
         """Remove expired entries and return the removed ``(key, value)`` pairs."""
-        now = self._timer() if time is None else time
+        now = self._timer() if at_time is None else at_time
         expired_keys: list[K] = []
         for key, expires in self._expirations.items():
             if now < expires:
