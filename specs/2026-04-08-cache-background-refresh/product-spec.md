@@ -83,13 +83,18 @@ Background refresh separates *freshness* from *eviction* — a bounded variant o
 1. Before `ttl`: cache hit -> return the fresh value (unchanged behavior)
 2. Between `ttl` and `2 × ttl` (stale grace window), a call:
    - Returns the stale value immediately (no blocking)
-   - Triggers a single background refresh in a separate thread
+   - Triggers a single background refresh in a separate thread — unless one is already
+     running for this key, or a recent failure's per-key cooldown is still active (see
+     *Failure* below), in which case the stale value is served without starting a new
+     refresh
 3. When the background refresh completes:
    - **Success:** New value replaces the stale entry; both clocks reset (fresh again
-     for `ttl`). Note: For `cache_resource`, callers may still hold references to the
-     previous object. This is consistent with current foreground TTL behavior where a
-     resource can be evicted while still in use. The old resource is not explicitly
-     disposed; callers holding references continue using it until they release it.
+     for `ttl`). For `cache_resource`, replacing the entry removes the previous resource
+     from the cache, so its `on_release` handler (if configured) is invoked exactly as
+     under foreground TTL eviction. There is no reference counting: callers that still
+     hold the previous object keep using it even after `on_release` runs — the same
+     in-use-while-evicted behavior that already exists today for foreground eviction,
+     not something new introduced by background refresh.
    - **Failure:** Log warning, keep serving the stale value, and retry on a later
      access with a per-key cooldown (so a failing upstream isn't retried on every
      rerun)
@@ -132,9 +137,12 @@ Time=2h+1s    : Call -> cache miss -> blocking foreground compute (errors surfac
   returned, and the next access re-triggers the refresh. This avoids building a hidden
   backlog of potentially never-needed work during mass expiry. Implementation details
   (pool size) will be determined in the tech spec.
-- **Cleanup guarantee**: A stale entry is removed either by a successful refresh
-  (replaced with the fresh value) or at hard expiry (`2 × ttl`), whichever comes first —
-  including entries that are never requested again after turning stale.
+- **Cleanup guarantee**: A stale entry is removed by whichever comes first: a successful
+  refresh (replaced with the fresh value), hard expiry (`2 × ttl`), or `max_entries` LRU
+  eviction — including entries that are never requested again after turning stale. Since
+  stale entries participate in LRU eviction like any other entry, a stale key can be
+  evicted before hard expiry under memory pressure; the next access is then a normal
+  blocking cache miss rather than a stale serve.
 - **Late / orphaned refreshes**: A refresh that finishes *after* its entry was already
   hard-evicted (`2 × ttl`), cleared via `.clear()`, or otherwise invalidated (cache
   generation changed, or the owning session ended for `scope="session"`) is discarded
@@ -152,9 +160,13 @@ Time=2h+1s    : Call -> cache miss -> blocking foreground compute (errors surfac
   and don't evict the stale entry. Users keep seeing (bounded) stale data while
   refreshes fail; the error only surfaces to a user after hard expiry, when the next
   call re-executes the function in the foreground.
-- **No st.* replay**: `st.*` element calls inside cached functions won't replay after
-  background refresh since there's no `ScriptRunContext` in background threads. This is
-  consistent with current behavior when calling cached functions from non-script contexts.
+- **No st.* replay after refresh**: On a stale hit, the element output captured when the
+  entry was first computed still replays as it does today. But a background refresh runs
+  without a `ScriptRunContext`, so it captures **no** `st.*` messages; after a successful
+  refresh, subsequent hits replay nothing — silently dropping element output for apps that
+  rely on cached `st.*` replay. Such apps should avoid `refresh_mode="background"` (or move
+  display calls outside the cached function); this is consistent with current behavior when
+  calling cached functions from non-script contexts and will be called out in the docstring.
 - **Spinner behavior**: When `refresh_mode="background"` and the cached entry is stale,
   the stale value is returned immediately without showing a spinner, since there's no
   blocking wait. The `show_spinner` parameter only applies to foreground execution (cache
@@ -200,8 +212,9 @@ is only returned if it passes `validate`. If a stale resource fails validation (
 dead DB connection), it is treated as a hard miss and recomputed in the foreground
 (blocking) — background mode never serves an invalid resource, matching today's
 discard-and-recompute behavior. When a background refresh replaces a stale resource, the
-previous resource is handled exactly as under foreground eviction (released via
-`on_release` when it is no longer referenced).
+previous resource is handled exactly as under foreground eviction — its `on_release`
+handler (if configured) fires on removal, with no reference counting (see the *Success*
+case above).
 
 **Interaction with `scope`:**
 
@@ -522,7 +535,7 @@ fetch_stock_prices.warm("AAPL", "GOOGL", "MSFT")
 
 | Item                       | ✅ or comment                                                        |
 |----------------------------|----------------------------------------------------------------------|
-| Works on SiS, Cloud, etc?  | ✅ Uses standard Python threading (`concurrent.futures.ThreadPoolExecutor`), supported on SiS/Snowflake and Cloud. If a runtime restricts thread creation, background refresh degrades safely without breaking the stale-first contract: the stale value is still returned immediately (never blocking on the stale-hit path), the background refresh is simply skipped, and the entry is only recomputed via a normal blocking foreground call at hard expiry (`2 × ttl`) — identical to `refresh_mode="foreground"`. |
+| Works on SiS, Cloud, etc?  | ✅ Uses standard Python threading (`concurrent.futures.ThreadPoolExecutor`), supported on SiS/Snowflake and Cloud. Runtimes that restrict thread creation degrade safely — see the *Platform degradation* key behavior above. |
 | No breaking API changes    | ✅ New optional parameter with backward-compatible default           |
 | No new dependencies        | ✅ Uses stdlib `concurrent.futures`; builds on the internal `TTLCache` introduced in [#16014](https://github.com/streamlit/streamlit/pull/16014) |
 | Metrics collected          | ✅ Cache API usage is already tracked via the existing `gather_metrics` decorator. Distinguishing `refresh_mode="background"` adoption specifically needs explicit instrumentation — `gather_metrics` records argument names/types but not string values (and `"background"`/`"foreground"` even share the same length) — added as part of the tech spec. |
