@@ -44,8 +44,10 @@ from streamlit.runtime.caching.cache_utils import (
     CachedFuncInfo,
     CacheScope,
     OnRelease,
+    RefreshMode,
     get_session_id_or_throw,
     make_cached_func_wrapper,
+    validate_refresh_mode,
 )
 from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
@@ -88,6 +90,16 @@ def _no_op_release(ignored: Any) -> None:
     """No-op OnRelease function."""
 
 
+@gather_metrics("cache_resource_background_refresh")
+def _record_cache_resource_background_refresh() -> None:
+    """Tracked no-op marker recording active use of ``refresh_mode="background"``.
+
+    ``gather_metrics`` records argument names/types but not string values, so the
+    ``refresh_mode`` value can't be distinguished from the standard decorator metric.
+    This marker is called at first stale-serve to signal background-refresh adoption.
+    """
+
+
 class ResourceCaches(StatsProvider):
     """Manages all ResourceCache instances."""
 
@@ -109,6 +121,7 @@ class ResourceCaches(StatsProvider):
         validate: ValidateFunc | None,
         on_release: OnRelease,
         scope: CacheScope = "global",
+        refresh_mode: RefreshMode = "foreground",
     ) -> ResourceCache[Any]:
         """Return the mem cache for the given key.
 
@@ -123,7 +136,12 @@ class ResourceCaches(StatsProvider):
         if max_entries is None:
             max_entries = math.inf
 
-        ttl_seconds = time_to_seconds(ttl)
+        # The user-facing freshness ttl. In background mode the underlying cache uses a
+        # hard-eviction ttl of 2*ttl and tracks freshness separately via stored_at.
+        fresh_ttl_seconds = time_to_seconds(ttl)
+        hard_ttl_seconds = (
+            fresh_ttl_seconds * 2 if refresh_mode == "background" else fresh_ttl_seconds
+        )
 
         # Fetch the session ID. Note that this will throw an exception if there is no
         # session associated with the current thread.
@@ -143,11 +161,17 @@ class ResourceCaches(StatsProvider):
             cache = session_caches.get(key)
             if (
                 cache is not None
-                and cache.ttl_seconds == ttl_seconds
+                and cache.fresh_ttl_seconds == fresh_ttl_seconds
                 and cache.max_entries == max_entries
+                and cache.refresh_mode == refresh_mode
                 and _equal_validate_funcs(cache.validate, validate)
             ):
                 return cache
+
+            # The params changed: detach the old cache so any in-flight background
+            # refresh is discarded rather than written back to a replaced cache.
+            if cache is not None:
+                cache.mark_detached()
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug("Creating new ResourceCache (key=%s)", key)
@@ -155,9 +179,11 @@ class ResourceCaches(StatsProvider):
                 key=key,
                 display_name=display_name,
                 max_entries=max_entries,
-                ttl_seconds=ttl_seconds,
+                ttl_seconds=hard_ttl_seconds,
+                fresh_ttl_seconds=fresh_ttl_seconds,
                 validate=validate,
                 on_release=on_release,
+                refresh_mode=refresh_mode,
             )
             self._function_caches[session_id][key] = cache
             return cache
@@ -172,6 +198,9 @@ class ResourceCaches(StatsProvider):
 
         if session_caches is not None:
             for cache in session_caches.values():
+                # Detach so a background refresh that completes after the session
+                # ended is discarded (and its produced resource released).
+                cache.mark_detached()
                 cache.clear()
 
     def clear_all(self) -> None:
@@ -187,6 +216,7 @@ class ResourceCaches(StatsProvider):
 
         # Clear each cache to ensure any on_release functions are called.
         for cache in caches:
+            cache.mark_detached()
             cache.clear()
 
     def get_stats(
@@ -247,6 +277,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
         show_time: bool = False,
         on_release: OnRelease | None = None,
         scope: CacheScope = "global",
+        refresh_mode: RefreshMode = "foreground",
     ) -> None:
         super().__init__(
             func,
@@ -254,6 +285,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
             show_spinner=show_spinner,
             show_time=show_time,
             scope=scope,
+            refresh_mode=refresh_mode,
         )
         self.max_entries = max_entries
         self.ttl = ttl
@@ -282,7 +314,11 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
             validate=self.validate,
             on_release=self.on_release,
             scope=self.scope,
+            refresh_mode=self.refresh_mode,
         )
+
+    def record_background_refresh_metric(self) -> None:
+        _record_cache_resource_background_refresh()
 
 
 class CacheResourceAPI:
@@ -323,6 +359,7 @@ class CacheResourceAPI:
         hash_funcs: HashFuncsDict | None = None,
         on_release: OnRelease | None = None,
         scope: CacheScope = "global",
+        refresh_mode: RefreshMode = "foreground",
     ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
     def __call__(
@@ -337,6 +374,7 @@ class CacheResourceAPI:
         hash_funcs: HashFuncsDict | None = None,
         on_release: OnRelease | None = None,
         scope: CacheScope = "global",
+        refresh_mode: RefreshMode = "foreground",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(  # ty: ignore[missing-argument]
             func,  # ty: ignore[invalid-argument-type]
@@ -348,6 +386,7 @@ class CacheResourceAPI:
             hash_funcs=hash_funcs,
             on_release=on_release,
             scope=scope,
+            refresh_mode=refresh_mode,
         )
 
     def _decorator(
@@ -362,6 +401,7 @@ class CacheResourceAPI:
         hash_funcs: HashFuncsDict | None = None,
         on_release: OnRelease | None = None,
         scope: CacheScope = "global",
+        refresh_mode: RefreshMode = "foreground",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return resource objects (e.g. database connections, ML models).
 
@@ -429,6 +469,27 @@ class CacheResourceAPI:
             the oldest cached entry will be removed. Defaults to None.
 
             Changes to this value will trigger a new cache to be created.
+
+        refresh_mode : "foreground" or "background"
+            How to refresh a cached resource once its ``ttl`` expires. This can be
+            one of the following:
+
+            - ``"foreground"`` (default): When the ``ttl`` expires, the next access
+              blocks and recreates the resource before returning it.
+            - ``"background"``: Enables bounded stale-while-revalidate. For up to one
+              extra ``ttl`` after expiry, the stale resource is returned immediately
+              (no blocking) while a single refresh runs in a background thread. When
+              the refresh succeeds, the replaced resource's ``on_release`` handler (if
+              configured) fires. After ``2 * ttl`` the entry is evicted and the next
+              access blocks and recreates the resource. This mode requires a ``ttl``.
+
+            .. note::
+                Because a background refresh runs without a script context, the cached
+                function must be **context-free**: ``st.session_state`` and other
+                session-bound APIs don't resolve during the refresh. Pass any needed
+                session values as explicit arguments instead. In background mode,
+                cached ``st.*`` display output is **not** replayed on cache hits (a
+                warning is shown if the function issues display commands).
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
@@ -598,6 +659,10 @@ class CacheResourceAPI:
                 f"Unsupported scope option '{scope}'. Valid values are 'global' or 'session'."
             )
 
+        validate_refresh_mode(
+            refresh_mode, time_to_seconds(ttl, coerce_none_to_inf=False)
+        )
+
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)
         if func is None:
@@ -612,6 +677,7 @@ class CacheResourceAPI:
                     hash_funcs=hash_funcs,
                     on_release=on_release,
                     scope=scope,
+                    refresh_mode=refresh_mode,
                 )
             )
 
@@ -626,6 +692,7 @@ class CacheResourceAPI:
                 hash_funcs=hash_funcs,
                 on_release=on_release,
                 scope=scope,
+                refresh_mode=refresh_mode,
             )
         )
 
@@ -646,6 +713,8 @@ class ResourceCache(Cache[R]):
         validate: ValidateFunc | None,
         display_name: str,
         on_release: OnRelease,
+        fresh_ttl_seconds: float | None = None,
+        refresh_mode: RefreshMode = "foreground",
     ) -> None:
         super().__init__()
 
@@ -660,12 +729,23 @@ class ResourceCache(Cache[R]):
         self.display_name = display_name
         self._mem_cache: TTLCleanupCache[str, CachedResult[R]] = TTLCleanupCache(
             maxsize=max_entries,
+            # In background mode this is the hard-eviction bound (2*ttl); freshness
+            # within the fresh window is tracked separately via stored_at.
             ttl=ttl_seconds,
             timer=cache_utils.TTLCACHE_TIMER,
             on_release=wrapped_on_release,
         )
         self._mem_cache_lock = threading.Lock()
         self.validate = validate
+        self.refresh_mode = refresh_mode
+        # The user-facing freshness ttl (equals ttl_seconds in foreground mode).
+        self.fresh_ttl_seconds = (
+            fresh_ttl_seconds if fresh_ttl_seconds is not None else ttl_seconds
+        )
+        # The raw user on_release, used to release a freshly produced resource that is
+        # discarded by an orphaned background refresh (the mem cache's own hook only
+        # fires on eviction, not on discard).
+        self._user_on_release = on_release
 
     @property
     def max_entries(self) -> float:
@@ -674,6 +754,14 @@ class ResourceCache(Cache[R]):
     @property
     def ttl_seconds(self) -> float:
         return self._mem_cache.ttl
+
+    def _is_stale(self, result: CachedResult[R]) -> bool:
+        """Whether a present entry is in the stale grace window ``[ttl, 2*ttl)``."""
+        if self.refresh_mode != "background" or result.stored_at is None:
+            return False
+        return (
+            cache_utils.TTLCACHE_TIMER() - result.stored_at
+        ) >= self.fresh_ttl_seconds
 
     def read_result(self, key: str) -> CachedResult[R]:
         """Read a value and associated messages from the cache.
@@ -699,8 +787,52 @@ class ResourceCache(Cache[R]):
         main_id = st._main._id
         sidebar_id = st.sidebar._id
 
+        # stored_at is only needed (and only consulted) in background mode.
+        stored_at = (
+            cache_utils.TTLCACHE_TIMER() if self.refresh_mode == "background" else None
+        )
         with self._mem_cache_lock:
-            self._mem_cache[key] = CachedResult(value, messages, main_id, sidebar_id)
+            self._mem_cache[key] = CachedResult(
+                value, messages, main_id, sidebar_id, stored_at=stored_at
+            )
+
+    def write_background_refresh_result(
+        self, value_key: str, value: R, *, expected_generation: int
+    ) -> None:
+        """Write back a background-refreshed resource unless it is orphaned.
+
+        On a successful write the replaced resource's ``on_release`` fires (via
+        ``safe_del``); on a discard the freshly produced resource is released so it
+        doesn't leak.
+        """
+        main_id = st._main._id
+        sidebar_id = st.sidebar._id
+
+        discard = False
+        with self._mem_cache_lock:
+            if (
+                not self._active
+                or self._generation != expected_generation
+                or value_key not in self._mem_cache
+            ):
+                # Detached cache, cleared/repopulated cache, or the entry was
+                # hard-evicted / LRU-evicted / cleared: discard the refresh.
+                discard = True
+            else:
+                # Release the replaced resource, then store the new one. Both under
+                # the lock so the replace-with-release is atomic.
+                self._mem_cache.safe_del(value_key)
+                self._mem_cache[value_key] = CachedResult(
+                    value,
+                    [],
+                    main_id,
+                    sidebar_id,
+                    stored_at=cache_utils.TTLCACHE_TIMER(),
+                )
+
+        if discard:
+            # Release the orphaned resource outside the lock (user code may block).
+            self._user_on_release(value)
 
     def _clear(self, key: str | None = None) -> None:
         with self._mem_cache_lock:

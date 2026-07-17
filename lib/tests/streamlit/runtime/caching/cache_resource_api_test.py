@@ -24,11 +24,15 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import (
+    cache_background_refresh,
     cache_resource_api,
     cached_message_replay,
+    clear_session_resource_cache,
     get_resource_cache_stats_provider,
 )
+from streamlit.runtime.caching.cache_resource_api import _resource_caches
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
@@ -563,3 +567,251 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
             first_element.height_config.pixel_height
             == second_element.height_config.pixel_height
         ), "Height config should be identical between original and replayed elements"
+
+
+# The fresh ttl (in seconds) used across the background-refresh tests.
+_BG_TTL = 100
+
+
+class CacheResourceBackgroundRefreshTest(unittest.TestCase):
+    """st.cache_resource refresh_mode="background" tests."""
+
+    def setUp(self) -> None:
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+
+    def tearDown(self) -> None:
+        st.cache_resource.clear()
+        cache_background_refresh.reset()
+
+    @staticmethod
+    def _sync_submit(task):
+        task()
+        return True
+
+    def _patch_sync_submit(self):
+        return patch.object(
+            cache_background_refresh.get_background_refresh_manager(),
+            "submit",
+            side_effect=self._sync_submit,
+        )
+
+    def test_background_without_ttl_raises(self) -> None:
+        """refresh_mode="background" without a ttl raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as exc:
+
+            @st.cache_resource(refresh_mode="background")
+            def foo() -> int:
+                return 1
+
+        assert "requires a 'ttl' value" in str(exc.value)
+
+    def test_invalid_refresh_mode_raises(self) -> None:
+        """An unknown refresh_mode value raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as exc:
+
+            @st.cache_resource(ttl="1h", refresh_mode="sideways")
+            def foo() -> int:
+                return 1
+
+        assert "Unsupported refresh_mode option 'sideways'" in str(exc.value)
+
+    def test_hard_ttl_is_double_fresh_ttl(self) -> None:
+        """In background mode the underlying cache ttl is 2x the user-facing ttl."""
+        cache = _resource_caches.get_cache(
+            key="bg_key",
+            display_name="bg",
+            max_entries=None,
+            ttl=_BG_TTL,
+            validate=None,
+            on_release=lambda _v: None,
+            refresh_mode="background",
+        )
+        assert cache.fresh_ttl_seconds == _BG_TTL
+        assert cache.ttl_seconds == _BG_TTL * 2
+
+    def test_cache_recreated_on_mode_change(self) -> None:
+        """Changing refresh_mode across reruns rebuilds the cache."""
+        kwargs = {
+            "key": "mode_key",
+            "display_name": "mode",
+            "max_entries": None,
+            "ttl": _BG_TTL,
+            "validate": None,
+            "on_release": lambda _v: None,
+        }
+        cache_fg = _resource_caches.get_cache(**kwargs, refresh_mode="foreground")
+        assert (
+            _resource_caches.get_cache(**kwargs, refresh_mode="foreground") is cache_fg
+        )
+        cache_bg = _resource_caches.get_cache(**kwargs, refresh_mode="background")
+        assert cache_bg is not cache_fg
+        assert cache_fg.is_active is False
+
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_replaced_resource_on_release_fires_once(self, timer_patch: Mock) -> None:
+        """A successful background refresh releases the replaced resource exactly once."""
+        released: list[int] = []
+        counter = [0]
+
+        @st.cache_resource(
+            ttl=_BG_TTL,
+            refresh_mode="background",
+            on_release=released.append,
+            show_spinner=False,
+        )
+        def foo() -> int:
+            counter[0] += 1
+            return counter[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        with self._patch_sync_submit():
+            timer_patch.return_value = _BG_TTL * 1.5
+            # Stale value served; background refresh replaces it and releases the old one.
+            assert foo() == 1
+
+        assert released == [1]
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo() == 2
+
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_orphan_produced_resource_released(self, timer_patch: Mock) -> None:
+        """A discarded (orphaned) refresh releases the resource it produced."""
+        released: list[int] = []
+        counter = [0]
+
+        @st.cache_resource(
+            ttl=_BG_TTL,
+            refresh_mode="background",
+            on_release=released.append,
+            show_spinner=False,
+        )
+        def foo() -> int:
+            counter[0] += 1
+            return counter[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        captured: list = []
+
+        def capture_submit(task):
+            captured.append(task)
+            return True
+
+        with patch.object(
+            cache_background_refresh.get_background_refresh_manager(),
+            "submit",
+            side_effect=capture_submit,
+        ):
+            timer_patch.return_value = _BG_TTL * 1.5
+            assert foo() == 1
+
+        # Clear the cache (releases the current resource, value 1) before write-back.
+        foo.clear()
+        assert released == [1]
+
+        # The refresh produces value 2 but is discarded; its resource is released too.
+        captured[0]()
+        assert released == [1, 2]
+
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_validate_fail_forces_foreground(self, timer_patch: Mock) -> None:
+        """A stale resource that fails validate is a hard miss recomputed in the foreground."""
+        counter = [0]
+        validate_ok = [True]
+
+        @st.cache_resource(
+            ttl=_BG_TTL,
+            refresh_mode="background",
+            validate=lambda _v: validate_ok[0],
+            show_spinner=False,
+        )
+        def foo() -> int:
+            counter[0] += 1
+            return counter[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        # validate fails: even a stale access recomputes in the foreground (no stale
+        # serve, no background refresh triggered).
+        validate_ok[0] = False
+        with self._patch_sync_submit() as submit_mock:
+            timer_patch.return_value = _BG_TTL * 1.5
+            assert foo() == 2
+            submit_mock.assert_not_called()
+        assert counter[0] == 2
+
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_validate_pass_allows_stale_serve(self, timer_patch: Mock) -> None:
+        """A stale resource that passes validate is served stale and refreshed in the background."""
+        counter = [0]
+
+        @st.cache_resource(
+            ttl=_BG_TTL,
+            refresh_mode="background",
+            validate=lambda _v: True,
+            show_spinner=False,
+        )
+        def foo() -> int:
+            counter[0] += 1
+            return counter[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        with self._patch_sync_submit() as submit_mock:
+            timer_patch.return_value = _BG_TTL * 1.5
+            assert foo() == 1
+            submit_mock.assert_called_once()
+
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_session_scope_refresh_discarded_after_clear_session(
+        self, timer_patch: Mock
+    ) -> None:
+        """A session-scoped refresh completing after the session ends is discarded and released."""
+        released: list[int] = []
+        counter = [0]
+        session_id = "bg-session"
+
+        @st.cache_resource(
+            scope="session",
+            ttl=_BG_TTL,
+            refresh_mode="background",
+            on_release=released.append,
+            show_spinner=False,
+        )
+        def foo() -> int:
+            counter[0] += 1
+            return counter[0]
+
+        captured: list = []
+
+        def capture_submit(task):
+            captured.append(task)
+            return True
+
+        with patch.object(
+            cache_resource_api, "get_session_id_or_throw", return_value=session_id
+        ):
+            timer_patch.return_value = 0
+            assert foo() == 1
+
+            with patch.object(
+                cache_background_refresh.get_background_refresh_manager(),
+                "submit",
+                side_effect=capture_submit,
+            ):
+                timer_patch.return_value = _BG_TTL * 1.5
+                assert foo() == 1
+
+        # End the session before the refresh writes back (releases the current resource).
+        clear_session_resource_cache(session_id)
+        assert released == [1]
+
+        # The refresh produces value 2 but the cache is detached, so it is discarded and
+        # its resource released rather than repopulating the ended session's cache.
+        captured[0]()
+        assert released == [1, 2]

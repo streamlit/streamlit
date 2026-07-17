@@ -30,6 +30,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import (
+    cache_background_refresh,
     cache_data,
     cache_data_api,
     cache_resource,
@@ -37,7 +38,10 @@ from streamlit.runtime.caching import (
     clear_session_data_cache,
     clear_session_resource_cache,
 )
-from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
+from streamlit.runtime.caching.cache_errors import (
+    CachedStFunctionInBackgroundModeWarning,
+    CacheReplayClosureError,
+)
 from streamlit.runtime.caching.cache_utils import CachedResult
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -1109,3 +1113,343 @@ def test_arrow_replay():
     at = AppTest.from_file("test_data/arrow_replay.py").run()
 
     assert not at.exception
+
+
+# The fresh ttl (in seconds) used across the background-refresh tests. The hard
+# eviction bound is 2*_BG_TTL, and the stale grace window is [_BG_TTL, 2*_BG_TTL).
+_BG_TTL = 100
+
+
+class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
+    """Behavior common to refresh_mode="background" on both cache decorators."""
+
+    def tearDown(self):
+        cache_data.clear()
+        cache_resource.clear()
+        # Shut down the shared executor and clear the degradation latch so tests are
+        # isolated from one another.
+        cache_background_refresh.reset()
+        super().tearDown()
+
+    @staticmethod
+    def _sync_submit(task):
+        """Run a submitted background-refresh task inline for deterministic tests."""
+        task()
+        return True
+
+    def _patch_sync_submit(self):
+        """Patch the background manager so refreshes run synchronously and succeed."""
+        return patch.object(
+            cache_background_refresh.get_background_refresh_manager(),
+            "submit",
+            side_effect=self._sync_submit,
+        )
+
+    def _text_deltas(self) -> list[str]:
+        return [
+            element.text.body
+            for element in (
+                delta.new_element for delta in self.get_all_deltas_from_queue()
+            )
+            if element.WhichOneof("type") == "text"
+        ]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_fresh_hit_no_refresh(self, _, cache_decorator, timer_patch: Mock):
+        """Within the fresh window, a hit returns the cached value and triggers no refresh."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        with self._patch_sync_submit() as submit_mock:
+            timer_patch.return_value = _BG_TTL * 0.5
+            assert foo() == 1
+            assert call_count[0] == 1
+            submit_mock.assert_not_called()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_stale_serves_old_then_refreshes(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """In the stale window the old value is served immediately while a refresh updates it."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        with self._patch_sync_submit() as submit_mock:
+            timer_patch.return_value = _BG_TTL * 1.5
+            # The stale value is served immediately (not the refreshed one).
+            assert foo() == 1
+            submit_mock.assert_called_once()
+
+        # The background refresh recomputed a new value and reset the freshness clock.
+        assert call_count[0] == 2
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo() == 2
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_hard_expiry_blocks_foreground(self, _, cache_decorator, timer_patch: Mock):
+        """Past 2*ttl the entry is a hard miss: a blocking foreground recompute, no stale serve."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        with self._patch_sync_submit() as submit_mock:
+            timer_patch.return_value = _BG_TTL * 2 + 1
+            # Recomputed in the foreground, returning the new value directly.
+            assert foo() == 2
+            # A hard miss is not a stale serve, so no background refresh is triggered.
+            submit_mock.assert_not_called()
+
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_refresh_deduplicated(self, _, cache_decorator, timer_patch: Mock):
+        """Only one background refresh is scheduled per key while one is already in flight."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        captured: list = []
+
+        def capture_submit(task):
+            # Capture but don't run: the per-key compute lock stays held, simulating an
+            # in-flight refresh.
+            captured.append(task)
+            return True
+
+        with patch.object(
+            cache_background_refresh.get_background_refresh_manager(),
+            "submit",
+            side_effect=capture_submit,
+        ):
+            timer_patch.return_value = _BG_TTL * 1.5
+            assert foo() == 1
+            # A second stale access while the first refresh is "in flight" is deduped.
+            assert foo() == 1
+            assert len(captured) == 1
+
+        # Running the captured refresh releases the lock and updates the value.
+        captured[0]()
+        assert call_count[0] == 2
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo() == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_refresh_failure_cooldown(self, _, cache_decorator, timer_patch: Mock):
+        """A failed refresh keeps serving stale, logs, and applies a per-key retry cooldown."""
+        # Use a long ttl so the 60s failure cooldown fits inside the stale window.
+        ttl = 1000
+        call_count = [0]
+        should_fail = [False]
+
+        @cache_decorator(ttl=ttl, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            if should_fail[0]:
+                raise RuntimeError("boom")
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+        should_fail[0] = True
+
+        # First stale access: the refresh runs and fails; the stale value is still served.
+        with self._patch_sync_submit():
+            timer_patch.return_value = ttl * 1.5
+            assert foo() == 1
+        assert call_count[0] == 2
+
+        # Within the cooldown window, no new refresh is triggered.
+        with patch.object(
+            cache_background_refresh.get_background_refresh_manager(), "submit"
+        ) as submit_mock:
+            timer_patch.return_value = ttl * 1.5 + 30
+            assert foo() == 1
+            submit_mock.assert_not_called()
+        assert call_count[0] == 2
+
+        # After the cooldown elapses, the refresh is retried and now succeeds.
+        should_fail[0] = False
+        with self._patch_sync_submit():
+            timer_patch.return_value = ttl * 1.5 + 61
+            assert foo() == 1
+        assert call_count[0] == 3
+        timer_patch.return_value = ttl * 1.5 + 61
+        assert foo() == 3
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_orphan_refresh_discarded_after_clear(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """A refresh completing after a full cache clear is discarded, not written back."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        captured: list = []
+
+        def capture_submit(task):
+            captured.append(task)
+            return True
+
+        with patch.object(
+            cache_background_refresh.get_background_refresh_manager(),
+            "submit",
+            side_effect=capture_submit,
+        ):
+            timer_patch.return_value = _BG_TTL * 1.5
+            assert foo() == 1
+            assert len(captured) == 1
+
+        # Clear the whole cache before the in-flight refresh writes back.
+        foo.clear()
+
+        # The refresh computes a value, but it must be discarded (generation changed /
+        # entry gone), so it never repopulates the cleared cache.
+        captured[0]()
+        assert call_count[0] == 2
+
+        # The next access is a normal miss that recomputes from scratch (not the
+        # discarded refresh value).
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo() == 3
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_no_spinner_on_stale_serve(self, _, cache_decorator, timer_patch: Mock):
+        """A stale serve returns immediately without showing a spinner."""
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background")
+        def foo() -> int:
+            return 1
+
+        timer_patch.return_value = 0
+        foo()
+        # A foreground miss shows the spinner; clear it before the stale serve.
+        assert not self.forward_msg_queue.is_empty()
+        self.clear_queue()
+
+        with self._patch_sync_submit():
+            timer_patch.return_value = _BG_TTL * 1.5
+            foo()
+
+        assert self.forward_msg_queue.is_empty()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_no_replay_and_warning_on_display(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """Display output renders on the miss (with a warning) but is not replayed on hits."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            st.text("hello")
+            return call_count[0]
+
+        with patch.object(st, "exception") as mock_exception:
+            timer_patch.return_value = 0
+            assert foo() == 1
+            # Display output renders live during the actual miss.
+            assert self._text_deltas() == ["hello"]
+            # A warning is emitted about background-mode display commands.
+            mock_exception.assert_called_once()
+            assert isinstance(
+                mock_exception.call_args[0][0],
+                CachedStFunctionInBackgroundModeWarning,
+            )
+
+            mock_exception.reset_mock()
+            self.clear_queue()
+
+            # A fresh hit does not replay the cached display output and does not warn.
+            timer_patch.return_value = _BG_TTL * 0.5
+            assert foo() == 1
+            assert self._text_deltas() == []
+            mock_exception.assert_not_called()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_real_thread_refresh(self, _, cache_decorator, timer_patch: Mock):
+        """A stale access triggers a real background-thread refresh that updates the entry."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        timer_patch.return_value = _BG_TTL * 1.5
+        # First stale access serves the old value and schedules a real refresh thread.
+        assert foo() == 1
+
+        # Poll until the background refresh completes and the entry becomes fresh again.
+        deadline = time.time() + 5
+        result = foo()
+        while result != 2 and time.time() < deadline:
+            time.sleep(0.01)
+            result = foo()
+
+        assert result == 2
+        assert call_count[0] == 2

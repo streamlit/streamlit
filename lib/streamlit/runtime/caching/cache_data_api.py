@@ -35,6 +35,7 @@ import streamlit as st
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
+from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
@@ -42,8 +43,10 @@ from streamlit.runtime.caching.cache_utils import (
     CachedFunc,
     CachedFuncInfo,
     CacheScope,
+    RefreshMode,
     get_session_id_or_throw,
     make_cached_func_wrapper,
+    validate_refresh_mode,
 )
 from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
@@ -90,6 +93,16 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
+@gather_metrics("cache_data_background_refresh")
+def _record_cache_data_background_refresh() -> None:
+    """Tracked no-op marker recording active use of ``refresh_mode="background"``.
+
+    ``gather_metrics`` records argument names/types but not string values, so the
+    ``refresh_mode`` value can't be distinguished from the standard decorator metric.
+    This marker is called at first stale-serve to signal background-refresh adoption.
+    """
+
+
 class CachedDataFuncInfo(CachedFuncInfo[P, R]):
     """Implements the CachedFuncInfo interface for @st.cache_data."""
 
@@ -107,6 +120,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         show_time: bool = False,
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
+        refresh_mode: RefreshMode = "foreground",
     ) -> None:
         super().__init__(
             func,
@@ -114,12 +128,16 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
             show_spinner=show_spinner,
             show_time=show_time,
             scope=scope,
+            refresh_mode=refresh_mode,
         )
         self.persist = persist
         self.max_entries = max_entries
         self.ttl = ttl
 
         self.validate_params()
+
+    def record_background_refresh_metric(self) -> None:
+        _record_cache_data_background_refresh()
 
     @property
     def cache_type(self) -> CacheType:
@@ -142,6 +160,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
             ttl=self.ttl,
             display_name=self.display_name,
             scope=self.scope,
+            refresh_mode=self.refresh_mode,
         )
 
     def validate_params(self) -> None:
@@ -179,6 +198,7 @@ class DataCaches(StatsProvider):
         ttl: int | float | timedelta | str | None,
         display_name: str,
         scope: CacheScope = "global",
+        refresh_mode: RefreshMode = "foreground",
     ) -> DataCache[Any]:
         """Return the mem cache for the given key.
 
@@ -191,7 +211,13 @@ class DataCaches(StatsProvider):
             context.
         """
 
-        ttl_seconds = time_to_seconds(ttl, coerce_none_to_inf=False)
+        # The user-facing freshness ttl. In background mode the underlying storage uses
+        # a hard-eviction ttl of 2*ttl and tracks freshness separately via stored_at.
+        fresh_ttl_seconds = time_to_seconds(ttl, coerce_none_to_inf=False)
+        if refresh_mode == "background" and fresh_ttl_seconds is not None:
+            hard_ttl_seconds: float | None = fresh_ttl_seconds * 2
+        else:
+            hard_ttl_seconds = fresh_ttl_seconds
 
         # Fetch the session ID. Note that this will throw an exception if there is no
         # session associated with the current thread.
@@ -211,14 +237,18 @@ class DataCaches(StatsProvider):
             cache = session_caches.get(key)
             if (
                 cache is not None
-                and cache.ttl_seconds == ttl_seconds
+                and cache.fresh_ttl_seconds == fresh_ttl_seconds
                 and cache.max_entries == max_entries
                 and cache.persist == persist
+                and cache.refresh_mode == refresh_mode
             ):
                 return cache
 
             # Close the existing cache's storage, if it exists.
             if cache is not None:
+                # Detach the old cache so any in-flight background refresh is discarded
+                # rather than written back to a replaced cache.
+                cache.mark_detached()
                 _LOGGER.debug(
                     "Closing existing DataCache storage "
                     "(key=%s, persist=%s, max_entries=%s, ttl=%s) "
@@ -242,7 +272,7 @@ class DataCaches(StatsProvider):
             cache_context = self.create_cache_storage_context(
                 function_key=key,
                 function_name=display_name,
-                ttl_seconds=ttl_seconds,
+                ttl_seconds=hard_ttl_seconds,
                 max_entries=max_entries,
                 persist=persist,
             )
@@ -254,8 +284,10 @@ class DataCaches(StatsProvider):
                 storage=storage,
                 persist=persist,
                 max_entries=max_entries,
-                ttl_seconds=ttl_seconds,
+                ttl_seconds=hard_ttl_seconds,
+                fresh_ttl_seconds=fresh_ttl_seconds,
                 display_name=display_name,
+                refresh_mode=refresh_mode,
             )
             self._function_caches[session_id][key] = cache
             return cache
@@ -270,12 +302,22 @@ class DataCaches(StatsProvider):
 
         if session_caches is not None:
             for cache in session_caches.values():
+                # Detach so a background refresh that completes after the session
+                # ended is discarded rather than repopulating the cache.
+                cache.mark_detached()
                 cache.clear()
                 cache.storage.close()
 
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
         with self._caches_lock:
+            # Detach every cache so in-flight background refreshes are discarded, even
+            # on the optimized storage-manager clear_all path (which doesn't iterate
+            # individual caches).
+            for data_caches in self._function_caches.values():
+                for data_cache in data_caches.values():
+                    data_cache.mark_detached()
+
             try:
                 # try to remove in optimal way if such ability provided by
                 # storage manager clear_all method;
@@ -426,6 +468,7 @@ class CacheDataAPI:
         persist: CachePersistType | bool = None,
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
+        refresh_mode: RefreshMode = "foreground",
     ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
     def __call__(
@@ -439,6 +482,7 @@ class CacheDataAPI:
         persist: CachePersistType | bool = None,
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
+        refresh_mode: RefreshMode = "foreground",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(
             func,  # ty: ignore[invalid-argument-type]
@@ -449,6 +493,7 @@ class CacheDataAPI:
             show_time=show_time,
             hash_funcs=hash_funcs,
             scope=scope,
+            refresh_mode=refresh_mode,
         )
 
     def _decorator(
@@ -462,6 +507,7 @@ class CacheDataAPI:
         persist: CachePersistType | bool,
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
+        refresh_mode: RefreshMode = "foreground",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
 
@@ -520,6 +566,27 @@ class CacheDataAPI:
             The maximum number of entries to keep in the cache, or None
             for an unbounded cache. When a new entry is added to a full cache,
             the oldest cached entry will be removed. Defaults to None.
+
+        refresh_mode : "foreground" or "background"
+            How to refresh a cache entry once its ``ttl`` expires. This can be one of
+            the following:
+
+            - ``"foreground"`` (default): When the ``ttl`` expires, the next access
+              blocks and recomputes the value before returning it.
+            - ``"background"``: Enables bounded stale-while-revalidate. For up to one
+              extra ``ttl`` after expiry, the stale value is returned immediately (no
+              blocking) while a single refresh runs in a background thread. After
+              ``2 * ttl`` the entry is evicted and the next access blocks and
+              recomputes. This mode requires a ``ttl`` and is not compatible with
+              ``persist``.
+
+            .. note::
+                Because a background refresh runs without a script context, the cached
+                function must be **context-free**: ``st.session_state`` and other
+                session-bound APIs don't resolve during the refresh. Pass any needed
+                session values as explicit arguments instead. In background mode,
+                cached ``st.*`` display output is **not** replayed on cache hits (a
+                warning is shown if the function issues display commands).
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
@@ -665,6 +732,19 @@ class CacheDataAPI:
                 f"Unsupported scope option '{scope}'. Valid values are 'global' or 'session'."
             )
 
+        validate_refresh_mode(
+            refresh_mode, time_to_seconds(ttl, coerce_none_to_inf=False)
+        )
+
+        if refresh_mode == "background" and persist_string is not None:
+            raise StreamlitAPIException(
+                "The 'refresh_mode=\"background\"' option is not compatible with "
+                "'persist' caching. Persisted (disk) caches do not support TTL-based "
+                "expiration, which background refresh requires. Use persist=None (the "
+                'default) with refresh_mode="background", or use '
+                'refresh_mode="foreground".'
+            )
+
         def wrapper(f: Callable[P, R]) -> CachedFunc[P, R]:
             return make_cached_func_wrapper(
                 CachedDataFuncInfo(
@@ -676,6 +756,7 @@ class CacheDataAPI:
                     ttl=ttl,
                     hash_funcs=hash_funcs,
                     scope=scope,
+                    refresh_mode=refresh_mode,
                 )
             )
 
@@ -692,6 +773,7 @@ class CacheDataAPI:
                 ttl=ttl,
                 hash_funcs=hash_funcs,
                 scope=scope,
+                refresh_mode=refresh_mode,
             )
         )
 
@@ -712,14 +794,27 @@ class DataCache(Cache[R]):
         max_entries: int | None,
         ttl_seconds: float | None,
         display_name: str,
+        fresh_ttl_seconds: float | None = None,
+        refresh_mode: RefreshMode = "foreground",
     ) -> None:
         super().__init__()
         self.key = key
         self.display_name = display_name
         self.storage = storage
+        # In background mode this is the hard-eviction bound (2*ttl); freshness within
+        # the fresh window is tracked separately via CachedResult.stored_at.
         self.ttl_seconds = ttl_seconds
         self.max_entries = max_entries
         self.persist = persist
+        self.refresh_mode = refresh_mode
+        # The user-facing freshness ttl (equals ttl_seconds in foreground mode).
+        self.fresh_ttl_seconds = (
+            fresh_ttl_seconds if fresh_ttl_seconds is not None else ttl_seconds
+        )
+        # Serializes a background refresh write-back against a concurrent clear so the
+        # orphan check (generation/presence) and the write stay atomic relative to a
+        # whole-cache or per-key clear (mirrors ResourceCache's _mem_cache_lock).
+        self._write_lock = threading.Lock()
 
     def get_stats(
         self, _family_names: Sequence[str] | None = None
@@ -754,6 +849,18 @@ class DataCache(Cache[R]):
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
+    def _is_stale(self, result: CachedResult[R]) -> bool:
+        """Whether a present entry is in the stale grace window ``[ttl, 2*ttl)``."""
+        if (
+            self.refresh_mode != "background"
+            or result.stored_at is None
+            or self.fresh_ttl_seconds is None
+        ):
+            return False
+        return (
+            cache_utils.TTLCACHE_TIMER() - result.stored_at
+        ) >= self.fresh_ttl_seconds
+
     @gather_metrics("_cache_data_object")
     def write_result(self, key: str, value: R, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache.
@@ -762,14 +869,63 @@ class DataCache(Cache[R]):
         try:
             main_id = st._main._id
             sidebar_id = st.sidebar._id
-            entry = CachedResult(value, messages, main_id, sidebar_id)
+            # stored_at is only needed (and only consulted) in background mode; leaving
+            # it None in foreground mode keeps the pickled entry byte-identical.
+            stored_at = (
+                cache_utils.TTLCACHE_TIMER()
+                if self.refresh_mode == "background"
+                else None
+            )
+            entry = CachedResult(
+                value, messages, main_id, sidebar_id, stored_at=stored_at
+            )
             pickled_entry = pickle.dumps(entry)
         except (pickle.PicklingError, TypeError) as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
         self.storage.set(key, pickled_entry)
 
+    def write_background_refresh_result(
+        self, value_key: str, value: R, *, expected_generation: int
+    ) -> None:
+        """Write back a background-refreshed value unless it is orphaned.
+
+        Discards (does not write) if the cache was detached, its generation changed
+        since the refresh was triggered, or the entry is no longer present (evicted,
+        hard-expired, or cleared).
+        """
+        if not self._active or self._generation != expected_generation:
+            return
+
+        main_id = st._main._id
+        sidebar_id = st.sidebar._id
+        entry = CachedResult(
+            value, [], main_id, sidebar_id, stored_at=cache_utils.TTLCACHE_TIMER()
+        )
+        try:
+            # Pickle before taking the lock to keep the critical section short.
+            pickled_entry = pickle.dumps(entry)
+        except (pickle.PicklingError, TypeError) as exc:
+            raise CacheError(f"Failed to pickle {value_key}") from exc
+
+        # Hold the write lock across the orphan check and the write so a concurrent
+        # clear can't slip in between (which would otherwise repopulate a just-cleared
+        # entry). _clear takes the same lock.
+        with self._write_lock:
+            # Re-check the orphan conditions under the lock (a clear may have landed
+            # after the early-out check above).
+            if not self._active or self._generation != expected_generation:
+                return
+            # Presence check: only write back if the entry still exists. A hard-expired
+            # / evicted / cleared entry should stay gone so the next access is a miss.
+            try:
+                self.storage.get(value_key)
+            except (CacheStorageKeyNotFoundError, CacheStorageError):
+                return
+            self.storage.set(value_key, pickled_entry)
+
     def _clear(self, key: str | None = None) -> None:
-        if not key:
-            self.storage.clear()
-        else:
-            self.storage.delete(key)
+        with self._write_lock:
+            if not key:
+                self.storage.clear()
+            else:
+                self.storage.delete(key)

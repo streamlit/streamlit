@@ -17,7 +17,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from streamlit import type_util
-from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
+from streamlit.errors import (
+    MarkdownFormattedException,
+    StreamlitAPIException,
+    StreamlitAPIWarning,
+)
 from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_name
 
 if TYPE_CHECKING:
@@ -141,3 +145,30 @@ class UnserializableReturnValueError(MarkdownFormattedException, Generic[R]):
 
 class UnevaluatedDataFrameError(StreamlitAPIException):
     """Used to display a message about uncollected dataframe being used."""
+
+
+class CachedStFunctionInBackgroundModeWarning(StreamlitAPIWarning):
+    """Warning shown when a background-mode cached function issues display commands.
+
+    With ``refresh_mode="background"``, cached ``st.*`` output is not replayed on
+    cache hits, so any display elements only appear during the initial miss (and any
+    later foreground recompute) and then disappear on subsequent reruns.
+    """
+
+    def __init__(self, cache_type: CacheType, cached_func: Callable[..., Any]) -> None:
+        func_name = get_cached_func_name_md(cached_func)
+        decorator_name = get_decorator_api_name(cache_type)
+
+        msg = (
+            f"""
+{func_name} is decorated with `@st.{decorator_name}(refresh_mode="background")`
+and uses a Streamlit display command (e.g. `st.write`). In background mode, cached
+display output is **not** replayed on cache hits, so these elements will only appear
+on the initial cache miss and then disappear on later reruns.
+
+To fix this, either move the display commands outside the cached function, or use
+`refresh_mode="foreground"`.
+"""
+        ).strip("\n")
+
+        super().__init__(msg)
