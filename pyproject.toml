@@ -94,9 +94,9 @@ test = [
   "streamlit",
   # Testing infrastructure dependencies:
   # pytest >= 9.1.0 is causing issues and is not yet supported.
-  "pytest>=9.0.3,<9.1.0",
+  "pytest>=9.1.1,<9.2.0",
   "pytest-cov",
-  "hypothesis>=6.17.4",
+  "hypothesis>=6.156.6",
   "parameterized",
   "requests-mock",
   "testfixtures",
@@ -126,15 +126,15 @@ test = [
   "playwright==1.61.*",
   "pytest-playwright>=0.3.3",
   "pixelmatch>=0.3.0",
-  "pytest-xdist>=3.6.1",
+  "pytest-xdist>=3.8.0",
   # pytest-rerunfailures 16.0 is breaking our CI:
   # https://github.com/pytest-dev/pytest-rerunfailures/issues/302
-  "pytest-rerunfailures>=15.0,!=16.0",
+  "pytest-rerunfailures!=16.0,>=16.4",
   # pytest-github-actions-annotate-failures 0.4 has compatibility issues:
-  "pytest-github-actions-annotate-failures>=0.3.0,<0.4.0",
-  "pytest-benchmark>=5.1.0",
-  "pytest-repeat>=0.9.3",
-  "pytest-timeout>=2.3.1",
+  "pytest-github-actions-annotate-failures>=0.4.2,<0.5.0",
+  "pytest-benchmark>=5.2.3",
+  "pytest-repeat>=0.9.4",
+  "pytest-timeout>=2.4.0",
   # Used for memory tracking in E2E test statistics:
   "psutil>=5.9.0",
   "types-psutil>=5.9.0",
