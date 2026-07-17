@@ -10,8 +10,8 @@ created: 2026-06-23
 A recurring criticism of Streamlit is that the full-script rerun model prevents "event-based"
 execution — running only the code affected by an interaction — which has pushed some users to
 event-driven alternatives (NiceGUI, Reflex, Shiny). This spec proposes the *Streamlit-native* answer:
-let a widget's **event handler trigger a rerun of a specific, addressable fragment** (via
-`st.rerun(target=...)`) — and the triggering widget can live anywhere — so a single event updates only
+let a widget's **event handler trigger a rerun of a specific, addressable fragment** (by passing its
+key to `st.rerun`) — and the triggering widget can live anywhere — so a single event updates only
 its dependent region, without adopting the element-handle / state-class boilerplate those frameworks
 require, and without abandoning the rerun model.
 
@@ -84,18 +84,20 @@ specific fragment by name**.
 ### The model: targeted reruns, the "Streamlit-y" way to do events
 
 The proposal supplies exactly those two missing pieces — an outside trigger and a name — and ties them
-to an event: a widget's callback (`on_change` / `on_click`) is the trigger, and `target=` is the name,
-so `st.rerun(target=...)` re-evaluates only the named fragment(s), wherever the triggering widget
-lives. The callback is the event; re-running the targeted fragment is the handler's effect. Nothing
-new is invented — it's the fragments, reruns, and callbacks Streamlit already has, combined into a
-targeted, event-based rerun.
+to an event: a widget's callback (`on_change` / `on_click`) is the trigger, and the fragment's key is
+the name, so `st.rerun("<key>")` re-evaluates only the named fragment(s), wherever the triggering
+widget lives. The callback is the event; re-running the targeted fragment is the handler's effect.
+Nothing new is invented — it's the fragments, reruns, and callbacks Streamlit already has, combined
+into a targeted, event-based rerun.
 
-#### The API: `st.rerun(target=...)`
+#### The API: `st.rerun(scope=...)`
 
 `st.rerun` is already the sanctioned *imperative* control-flow verb (alongside `st.stop`), and it
-already supports `scope="fragment"`. The proposal extends it so an event handler can target a
-*specific* fragment by name — the verb you call from the handler described above. The triggering
-widget can live anywhere, in the main script or inside another fragment:
+already carries the app-vs-fragment level in its `scope` parameter (`scope="app"` — the default — or
+`scope="fragment"`). The proposal **extends that same `scope` parameter to also accept a fragment key
+(or list of keys)**, so an event handler can target a *specific* fragment by name — the verb you call
+from the handler described above. The triggering widget can live anywhere, in the main script or
+inside another fragment:
 
 ```python
 @st.fragment(key="charts")                # name the fragment (see "Addressing fragments")
@@ -108,17 +110,19 @@ charts()
 
 st.selectbox(
     "Region", REGIONS, key="region",
-    on_change=lambda: st.rerun(target="charts"),   # event → re-run only the charts
+    on_change=lambda: st.rerun("charts"),   # event → re-run only the charts
 )
 ```
 
-`target` accepts a **single fragment key or a list of keys**; passing a list reruns all of them in one
-ordered pass. Every key must match a fragment that has rendered at least once — an unknown key (in a
-single `target` or anywhere in a list) raises a `StreamlitAPIException`, so a typo or stale key fails
-loudly rather than silently skipping part of the update. This is fail-fast: if any key in a list is
-unknown, the whole request raises and no fragment reruns.
+`scope` therefore accepts `"app"`, `"fragment"`, a **single fragment key**, or a **list of keys**
+(`Literal["app", "fragment"] | Key | list[Key]`); passing a list reruns all of them in one ordered
+pass. `"app"` and `"fragment"` remain reserved level names — any other value is read as a fragment
+key. Every key must match a fragment that has rendered at least once — an unknown key (a single
+`scope` or anywhere in a list) raises a `StreamlitAPIException`, so a typo or stale key fails loudly
+rather than silently skipping part of the update. This is fail-fast: if any key in a list is unknown,
+the whole request raises and no fragment reruns.
 
-Crucially this stays on the right side of Streamlit's model: `st.rerun(target=...)` triggers a
+Crucially this stays on the right side of Streamlit's model: rerunning a fragment by key triggers a
 **re-evaluation** of the targeted fragment (it re-runs `charts()`), it does **not** hand the developer
 an imperative `chart.update(data)`. The UI remains a pure function of state, so determinism is
 preserved. The only discipline this requires is that data shared across fragments lives in
@@ -126,27 +130,29 @@ preserved. The only discipline this requires is that data shared across fragment
 
 **Why this is the minimal, on-principle design:**
 
-- *Extend, don't invent* — no new command, no `State` class, no new paradigm. We loosen two existing
-  restrictions on `st.rerun(scope="fragment")` (it can currently only target the *current* fragment,
-  and only from inside a fragment rerun).
+- *Extend, don't invent* — no new command and no new parameter, no `State` class, no new paradigm. We
+  loosen two existing restrictions on `st.rerun(scope="fragment")` (it can currently only target the
+  *current* fragment, and only from inside a fragment rerun) and let `scope` name a fragment.
 - *Reuses existing machinery* — the runtime already executes an ordered queue of fragment IDs without
   re-running the script body, and the request layer already coalesces multiple fragment-rerun requests
   into one ordered pass. Targeted reruns mostly need an *addressing* layer on top.
 
-**Alternative parameter names considered:**
+**Alternatives considered:**
 
-- **Expanding `scope`** (e.g. `st.rerun(scope="fragment", key=...)`) — rejected: `scope` is the
-  app-vs-fragment *level* (a `Literal["app", "fragment"]`); overloading it to also carry *which*
-  fragment conflates two distinct concerns.
+- **A separate `target=` parameter** (e.g. `st.rerun(target="charts")`) — rejected: it splits
+  "what does this rerun cover?" across two parameters and invites a meaningless cross-product
+  (`scope="app", target="charts"`). Reusing `scope` keeps one parameter with one purpose.
 - **`fragment=` / `fragments=`** — rejected: ties the name to fragments specifically and reads
-  awkwardly for the single-or-list case; `target` is neutral and works for one key or many.
-- **`key=`** — rejected: ambiguous on `st.rerun` ("the key of what?"). `target` states intent
-  ("rerun this target").
-- **`target`** (chosen) — reads clearly and leaves `scope` free for the app/fragment distinction.
+  awkwardly for the single-or-list case.
+- **`key=`** — rejected: ambiguous on `st.rerun` ("the key of what?"), and reserving `key` at call
+  time collides with the `@st.fragment(key=...)` decorator name.
+- **Overloading `scope`** (chosen) — one parameter answers "what does this rerun cover?"; the reserved
+  literals `"app"`/`"fragment"` and any fragment key never conflict in practice (see "Addressing
+  fragments" for the key-naming rule that guarantees this).
 
 ### Limiting targeted reruns to callbacks
 
-For the MVP, `st.rerun(target=...)` is **only valid from a widget callback** — called anywhere else
+For the MVP, a targeted rerun (`st.rerun("<key>")`) is **only valid from a widget callback** — called anywhere else
 (partway through the main script body or a fragment body) it raises a `StreamlitAPIException`. (Plain
 `st.rerun()` is now allowed inside a callback too, triggering a full rerun; this removes the previous
 restriction, where `st.rerun` in a callback was a no-op that emitted a warning — a behavior change for
@@ -179,9 +185,11 @@ This is a deliberate starting point we may relax later. For now the restriction 
 
 To target a fragment, it needs a stable, user-facing name. Fragment identity today is an internal
 positional hash; we add a name via a new **`key` parameter on the `@st.fragment` decorator**. The key
-identifies the *fragment function*, and `st.rerun(target=...)` reruns **every** call site of that
-function. When a developer needs two independently-targetable regions, they define two fragment
-functions and factor any shared logic into a plain helper:
+names the fragment *function* (its definition), not an individual rendered instance: if that function
+is called in several places — in a loop, across tabs, or with different arguments — those calls are
+separate instances that share the key, and rerunning by key reruns **all** of them. When a developer
+instead needs two independently-targetable regions, they define two fragment functions and factor any
+shared logic into a plain helper:
 
 ```python
 @st.fragment(key="charts")       # names the fragment function
@@ -191,7 +199,7 @@ def charts():
     st.dataframe(df)
 
 charts()                          # any number of call sites; all rerun together on target
-st.button("Refresh", on_click=lambda: st.rerun(target="charts"))  # reruns every call site
+st.button("Refresh", on_click=lambda: st.rerun("charts"))  # reruns every call site
 ```
 
 Why this shape:
@@ -240,13 +248,13 @@ Behavior* violation.
 ### Fragment dependencies
 
 Dependencies between fragments need **no new API**: an event callback expresses "when this changes,
-update its dependents" by simply calling `st.rerun(target=...)` for them. Pass a list of keys
+update its dependents" by simply calling `st.rerun` with their keys. Pass a list of keys
 (or issue several `st.rerun` calls, which the request layer coalesces — see "Rerun coalescing and
 precedence") to refresh several dependents in one ordered pass:
 
 ```python
 def on_filter_change():
-    st.rerun(target=["charts", "table"])   # both rerun in a single ordered pass
+    st.rerun(["charts", "table"])   # both rerun in a single ordered pass
 ```
 
 Dependencies can also be *conditional*, because they're just code:
@@ -254,7 +262,7 @@ Dependencies can also be *conditional*, because they're just code:
 ```python
 def on_filter_change():
     if expensive_input_changed():
-        st.rerun(target="charts")
+        st.rerun("charts")
 ```
 
 **No cycles.** Chaining dependencies this way can't create an infinite rerun loop. Because a targeted
@@ -271,7 +279,7 @@ can create in a script body is structurally impossible here.
 fragments/state it depends on, and the framework cascades reruns automatically. Not chosen for two
 reasons:
 
-- **Overlapping** — it provides essentially the same capability as `st.rerun(target=...)`, and
+- **Overlapping** — it provides essentially the same capability as rerunning fragments by key, and
   offering both would mean two ways to do the same thing. To keep the API minimal and guide users
   down one path, we provide one (*Start Minimal*, *Extend Before Inventing*, *One Use Case, One
   Command*).
@@ -283,31 +291,41 @@ reasons:
     `depends_on` would actually *preclude* that event-based model.
   - **Conditional dependencies** — a declared edge fires whenever its source changes; it can't be
     gated on a runtime condition.
-  - **Dynamic targets** — `st.rerun(target=...)` can target a computed key; `depends_on` is a static
+  - **Dynamic targets** — `st.rerun(scope=...)` can target a computed key; `depends_on` is a static
     list fixed at decoration time.
-  - **Triggers from any widget** — an event handler on any widget can call `target=`, whether that
+  - **Triggers from any widget** — an event handler on any widget can rerun a fragment by key, whether that
     widget is a manual "refresh" button, lives in the main script, or sits inside an unrelated
     fragment; a declared graph only reruns on changes to declared upstreams.
 
   Its only advantage over targeted reruns is enabling cycle detection *before* execution (the declared
   graph is known up front). We judge that insufficient to justify a second, more limited mechanism.
 
-### Rerun handling: coalescing and precedence
+### Rerun handling: skipping the default rerun, coalescing, and precedence
 
-Targeted reruns make it normal for a **single interaction to produce several rerun requests at once**
-— a list `target`, multiple `st.rerun(target=...)` calls, or reruns from more than one widget callback
-(e.g. a form submit that fires several `on_change` handlers). The request layer already coalesces
-concurrent rerun requests into one run, but the way it merges them has to change so a cluster of
-fragment targets all run while a full-app rerun still wins. Two rules govern the merge:
+**A targeted rerun replaces the interaction's default rerun.** A widget interaction normally schedules
+a full-app rerun once its callbacks have run (or a fragment-scoped rerun, if the triggering widget
+already lives inside a fragment). When a callback issues a targeted rerun, that default full-app rerun
+is **skipped** — Streamlit runs only the targeted fragment(s), not the whole app; running the full app
+in addition would just redo those fragments and erase the partial-update benefit.
 
-- **A full-app rerun trumps everything.** If *any* request in the interaction is a full-app rerun
-  (`st.rerun()` with no `target`), the interaction collapses to a single full-app rerun and the
+Beyond replacing that default rerun, targeted reruns make it normal for a **single interaction to
+produce several rerun requests at once** — a list of keys, multiple `st.rerun` calls, or reruns from
+more than one widget callback (e.g. a form submit that fires several `on_change` handlers). The
+request layer already coalesces concurrent rerun requests into one run, but the way it merges them has
+to change so a cluster of fragment targets all run while a full-app rerun still wins. Two rules govern
+the merge:
+
+- **A full-app rerun trumps everything.** If *any* request in the interaction is a full-app rerun —
+  an explicit plain `st.rerun()`, or a fired callback that leaves its default full-app rerun in place
+  (i.e. requests no targeted rerun) — the interaction collapses to a single full-app rerun and the
   individual fragment targets are dropped — they would all re-execute as part of the full pass anyway,
   which also avoids running the same code twice in close succession. This holds **regardless of the
   order** the requests were issued in, so the outcome never depends on widget-callback dispatch order.
-- **Otherwise, all fragment targets are unioned.** With no full-app rerun in play, every targeted
-  fragment accumulates (de-duplicated, order-preserving) into one ordered pass, so a single
-  interaction re-runs each dependent fragment exactly once.
+- **Otherwise, all fragment targets are unioned.** With no full-app rerun in play, the targeted
+  fragments are coalesced (deduplicated) into a single pass, so one interaction reruns just the
+  targeted regions instead of the whole app. The execution order across multiple targets is not a
+  guarantee apps should depend on — an app that needs a specific order should express it through its
+  design; the precise ordering and deduplication rules are left to the tech spec.
 
 ### Out of scope (future work)
 
@@ -323,15 +341,15 @@ fragment targets all run while a full-app rerun still wins. Two rules govern the
 | Item                         | ✅ or comment          |
 |------------------------------|------------------------|
 | Works on SiS, Cloud, etc?    | ✅ — the mechanism is internal to Streamlit's existing fragment-rerun model. |
-| No breaking API changes      | ✅ signatures — additive only (`st.rerun` gains an optional `target`, `st.fragment` gains an optional `key`). ⚠️ behavior — `st.rerun()` inside a widget callback previously no-op'd with a warning and now performs the rerun (see "Limiting targeted reruns to callbacks"). |
+| No breaking API changes      | ✅ signatures — additive only (`st.rerun`'s existing `scope` parameter also accepts a fragment key or list of keys, `st.fragment` gains an optional `key`). ⚠️ behavior — `st.rerun()` inside a widget callback previously no-op'd with a warning and now performs the rerun (see "Limiting targeted reruns to callbacks"). |
 | No new dependencies          | ✅ |
-| Metrics collected            | ✅ — add metrics for `st.rerun(target=...)`. |
+| Metrics collected            | ✅ — add metrics for fragment-scoped `st.rerun` (`scope` set to a key or list of keys). |
 | Any security/legal impact?   | None identified. |
-| Any docs changes needed?     | Yes — `st.rerun` reference, fragment concept docs, and a "event-driven / partial updates" guide. |
+| Any docs changes needed?     | Yes — `st.rerun` reference, fragment concept docs, and an "event-driven / partial updates" guide. |
 
 ## Open questions
 
-- **Relaxing the callback-only restriction (post-MVP).** The MVP allows `st.rerun(target=...)` only
+- **Relaxing the callback-only restriction (post-MVP).** The MVP allows a targeted `st.rerun` only
   from a widget callback (see "Limiting targeted reruns to callbacks"). Whether to later permit it
   from other contexts — and how to do so without reintroducing goto-style control flow or rerun
   cycles — is left open and can be driven by user demand. Data-driven reruns in particular are more
