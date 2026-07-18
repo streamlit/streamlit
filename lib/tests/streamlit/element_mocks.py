@@ -129,6 +129,10 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
         lambda: st.plotly_chart(px.line(pd.DataFrame()), on_select="rerun"),
     ),
     (
+        "scatterplot_matrix_chart",
+        lambda: st.scatterplot_matrix_chart(_CHART_DATA, on_select="rerun"),
+    ),
+    (
         "pydeck_chart",
         lambda: st.pydeck_chart(
             pdk.Deck(
@@ -233,6 +237,10 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     (
         "plotly_chart",
         lambda: st.plotly_chart(px.line(_CHART_DATA), on_select="ignore"),
+    ),
+    (
+        "scatterplot_matrix_chart",
+        lambda: st.scatterplot_matrix_chart(_CHART_DATA, on_select="ignore"),
     ),
     ("pydeck_chart", lambda: st.pydeck_chart(pdk.Deck())),
     (

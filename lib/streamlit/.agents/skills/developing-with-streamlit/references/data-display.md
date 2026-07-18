@@ -30,6 +30,17 @@ st.line_chart(df, x="date", y="revenue")
 st.line_chart(df, x="dt", y="rev", x_label="Date", y_label="Revenue")
 ```
 
+## Scatterplot matrix for multidimensional data
+
+Use `st.scatterplot_matrix_chart` to explore pairwise relationships across several numeric columns (2-10 dimensions) in a single element. It shows a small scatterplot for every column pair next to one large detail plot; users can navigate between plots and lasso points into persistent query layers.
+
+```python
+event = st.scatterplot_matrix_chart(df, columns=["a", "b", "c"], on_select="rerun")
+selected_data = df.iloc[event.selection.indices]
+```
+
+Key parameters: `columns` limits the numeric dimensions (all numeric columns by default, up to 10), `label` picks the column used for point labels, and `on_select` (`"ignore"` by default) makes the chart return lasso-selection state (`selection.indices` and per-layer `selection.query_layers`) when set to `"rerun"` or a callback.
+
 ## Altair for complex charts
 
 Use Altair when you need more control. Altair is bundled with Streamlit (no extra install), while Plotly requires an additional package. Pick one and stay consistent throughout your app.

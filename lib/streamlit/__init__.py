@@ -243,6 +243,7 @@ progress = _main.progress
 pyplot = _main.pyplot
 radio = _main.radio
 scatter_chart = _main.scatter_chart
+scatterplot_matrix_chart = _main.scatterplot_matrix_chart
 selectbox = _main.selectbox
 select_slider = _main.select_slider
 segmented_control = _main.segmented_control

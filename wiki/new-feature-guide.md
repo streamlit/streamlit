@@ -18,7 +18,7 @@ New features should include:
    - New elements: add to `proto/streamlit/proto/Element.proto`
 
 2. **Backend** in `lib/streamlit/`
-   - New elements: add to `lib/streamlit/__init__.py`
+   - New elements: implement a mixin in `lib/streamlit/elements/`, register it on the `DeltaGenerator` class in `lib/streamlit/delta_generator.py`, and add the command to `lib/streamlit/__init__.py`
 
 3. **Python unit tests** in `lib/tests`
    - Run: `uv run pytest lib/tests/streamlit/the_test_name.py`

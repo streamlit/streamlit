@@ -1,0 +1,55 @@
+/**!
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+import "streamlit/proto/ArrowData.proto";
+
+// Proto message for the st.scatterplot_matrix_chart element: an interactive
+// scatterplot matrix (SPLOM) with rolling navigation, query layers, and
+// lasso selections.
+message ScatterplotMatrixChart {
+  // The unique element ID of this chart.
+  string id = 1;
+
+  // The Arrow-serialized dataframe backing the chart. Contains the dimension
+  // columns and (optionally) the label column.
+  ArrowData data = 2;
+
+  // Names of the numeric columns used as matrix dimensions. The matrix is
+  // len(columns) x len(columns) cells.
+  repeated string columns = 3;
+
+  // Optional name of the column holding point labels (shown in the
+  // excentric label lens). Empty string means row positions are used.
+  string label = 4;
+
+  // Optional title rendered above the matrix.
+  string title = 5;
+
+  // CSS colors of the query layers; the number of layers equals the number
+  // of colors. Empty means the default four-layer palette.
+  repeated string query_colors = 6;
+
+  // Speed multiplier for the rolling animation (1.0 = default speed).
+  double roll_speed = 7;
+
+  // Whether lasso selection events are sent back to the backend.
+  bool selections_activated = 8;
+
+  // Form ID, filled if selections are activated.
+  string form_id = 9;
+}

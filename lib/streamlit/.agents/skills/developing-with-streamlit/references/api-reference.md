@@ -108,6 +108,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.radio` | Display a radio button widget. Use it when users should choose exactly one option from a small visible set. |
 | `st.rerun` | Rerun the app or current fragment immediately. Use it to force a rerun after state changes or navigation-like actions. |
 | `st.scatter_chart` | Display a scatterplot chart. Use it for relationships between numeric variables, optionally with size and color encodings. |
+| `st.scatterplot_matrix_chart` | Display an interactive scatterplot matrix (SPLOM) with rolling navigation. Use it to explore pairwise relationships across 2-10 numeric columns, optionally reacting to lasso selections via `on_select`. |
 | `st.segmented_control` | Display a segmented control widget. Use it for compact mutually exclusive choices, especially mode or view switching. |
 | `st.select_slider` | Display a slider widget to select items from a list. Use it when options are ordered but not necessarily numeric. |
 | `st.selectbox` | Display a select widget. Use it for selecting one item from a medium or large set. |

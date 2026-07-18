@@ -55,6 +55,7 @@ import {
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
   Radio as RadioProto,
+  ScatterplotMatrixChart as ScatterplotMatrixChartProto,
   Selectbox as SelectboxProto,
   Skeleton as SkeletonProto,
   Slider as SliderProto,
@@ -131,6 +132,10 @@ const PlotlyChart = lazy(
 )
 const Progress = lazy(
   () => import("~lib/components/elements/Progress/Progress")
+)
+const ScatterplotMatrixChart = lazy(
+  () =>
+    import("~lib/components/elements/ScatterplotMatrixChart/ScatterplotMatrixChart")
 )
 const Snow = lazy(() => import("~lib/components/elements/Snow/Snow"))
 const Spinner = lazy(() => import("~lib/components/elements/Spinner/Spinner"))
@@ -1102,6 +1107,24 @@ const RawElementNodeRenderer = (
           <PlotlyChart
             key={plotlyProto.id}
             element={plotlyProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
+      )
+    }
+
+    case "scatterplotMatrixChart": {
+      const scatterplotMatrixProto = node.element
+        .scatterplotMatrixChart as ScatterplotMatrixChartProto
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <ScatterplotMatrixChart
+            key={scatterplotMatrixProto.id}
+            element={scatterplotMatrixProto}
             {...widgetProps}
           />
         </ElementContainer>

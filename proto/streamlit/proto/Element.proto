@@ -58,6 +58,7 @@ import "streamlit/proto/Pagination.proto";
 import "streamlit/proto/PlotlyChart.proto";
 import "streamlit/proto/Progress.proto";
 import "streamlit/proto/Radio.proto";
+import "streamlit/proto/ScatterplotMatrixChart.proto";
 import "streamlit/proto/Selectbox.proto";
 import "streamlit/proto/Skeleton.proto";
 import "streamlit/proto/Slider.proto";
@@ -144,7 +145,8 @@ message Element {
     Code code = 48;
     MenuButton menu_button = 64;
     Pagination pagination = 66;
-    // Next ID: 67
+    ScatterplotMatrixChart scatterplot_matrix_chart = 67;
+    // Next ID: 68
   }
 
   reserved 3, 9, 10, 11, 17;
