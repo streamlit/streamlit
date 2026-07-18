@@ -819,6 +819,8 @@ class ResourceCache(Cache[R]):
         sidebar_id = st.sidebar._id
 
         discard = False
+        replaced_value: R | None = None
+        replaced_present = False
         with self._mem_cache_lock:
             if (
                 self._refresh_is_orphaned(
@@ -832,9 +834,13 @@ class ResourceCache(Cache[R]):
                 # hard-evicted / LRU-evicted / cleared: discard the refresh.
                 discard = True
             else:
-                # Release the replaced resource, then store the new one. Both under
-                # the lock so the replace-with-release is atomic.
-                self._mem_cache.safe_del(value_key)
+                # Store the new resource first, capturing the replaced one to release
+                # afterwards. Storing before releasing (rather than safe_del first)
+                # ensures a raising on_release can neither drop the entry nor leak the
+                # freshly built resource. __setitem__ does not fire on_release, so we
+                # release the replaced resource explicitly below.
+                replaced_value = self._mem_cache[value_key].value
+                replaced_present = True
                 self._mem_cache[value_key] = CachedResult(
                     value,
                     [],
@@ -846,6 +852,19 @@ class ResourceCache(Cache[R]):
         if discard:
             # Release the orphaned resource outside the lock (user code may block).
             self._user_on_release(value)
+        elif replaced_present:
+            # Release the replaced resource outside the lock (user code may block). A
+            # failing on_release must not undo the successful swap, so log it rather
+            # than propagate (which would otherwise mark the refresh failed while the
+            # new value is already stored).
+            try:
+                self._user_on_release(replaced_value)
+            except Exception:
+                _LOGGER.warning(
+                    "on_release raised while releasing a replaced resource during a "
+                    "background cache refresh.",
+                    exc_info=True,
+                )
 
     def _clear(self, key: str | None = None) -> None:
         with self._mem_cache_lock:

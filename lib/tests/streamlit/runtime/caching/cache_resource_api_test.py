@@ -722,8 +722,9 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
     ) -> None:
         """An on_release that raises during background replacement is contained.
 
-        The background worker must never raise, and the cache recovers on the next
-        access by recomputing in the foreground.
+        The new value is stored first, so a failing release of the replaced resource
+        neither drops the entry (no premature foreground miss) nor leaks the freshly
+        built resource; the worker never raises.
         """
         release_attempts: list[int] = []
         counter = [0]
@@ -753,9 +754,11 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
         assert counter[0] == 2
         assert release_attempts == [1]
 
-        # The cache recovers: the next access recomputes in the foreground.
+        # The refresh still succeeded: the new value is stored and served on the next
+        # access (no recompute), rather than the entry being dropped by the failure.
         timer_patch.return_value = _BG_TTL * 1.5
-        assert foo() == 3
+        assert foo() == 2
+        assert counter[0] == 2
 
     @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
     def test_validate_fail_forces_foreground(self, timer_patch: Mock) -> None:
