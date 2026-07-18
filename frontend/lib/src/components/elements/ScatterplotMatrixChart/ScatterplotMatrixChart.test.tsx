@@ -39,6 +39,13 @@ const mockEngineInstances: Array<{
   setDisabled: ReturnType<typeof vi.fn>
 }> = []
 
+// A plain module-level `let` wouldn't be visible to the mock factory below:
+// vitest hoists vi.mock calls above regular imports/declarations, so the
+// factory needs vi.hoisted() to share mutable state with the test bodies.
+const { engineConstructionState } = vi.hoisted(() => ({
+  engineConstructionState: { shouldThrow: false },
+}))
+
 vi.mock("./scatterplotMatrixEngine", async importOriginal => {
   const original =
     await importOriginal<typeof import("./scatterplotMatrixEngine")>()
@@ -54,12 +61,31 @@ vi.mock("./scatterplotMatrixEngine", async importOriginal => {
       setDisabled = vi.fn()
 
       constructor(options: ScatterplotMatrixEngineOptions) {
+        if (engineConstructionState.shouldThrow) {
+          throw new Error("WebGL 2 is not supported in this browser.")
+        }
         this.options = options
         mockEngineInstances.push(this)
       }
     },
   }
 })
+
+let capturedFormClearListener: (() => void) | undefined
+
+vi.mock("~lib/components/widgets/Form/FormClearHelper", () => ({
+  FormClearHelper: class {
+    manageFormClearListener(
+      _widgetMgr: WidgetStateManager,
+      _formId: string,
+      listener: () => void
+    ): void {
+      capturedFormClearListener = listener
+    }
+
+    disconnect(): void {}
+  },
+}))
 
 function makeArrowData(): Uint8Array {
   const table = tableFromArrays({
@@ -135,19 +161,38 @@ describe("parseStoredSelection", () => {
         ],
       },
     })
-    expect(parseStoredSelection(stored, 4)).toEqual([[1, 2], []])
+    expect(parseStoredSelection(stored)).toEqual([[1, 2], []])
   })
 
   it("returns an empty selection for missing or invalid values", () => {
-    expect(parseStoredSelection(undefined, 4)).toEqual([])
-    expect(parseStoredSelection("not json", 4)).toEqual([])
-    expect(parseStoredSelection("{}", 4)).toEqual([])
+    expect(parseStoredSelection(undefined)).toEqual([])
+    expect(parseStoredSelection("not json")).toEqual([])
+    expect(parseStoredSelection("{}")).toEqual([])
+  })
+
+  it("does not truncate to any layer count", () => {
+    // Truncation (if the current query_colors is smaller) is the engine's
+    // job, not the parser's — see the "reconciles when a restored layer no
+    // longer exists" component test below.
+    const stored = JSON.stringify({
+      selection: {
+        indices: [1, 2, 3],
+        query_layers: [
+          { label: "Query 1", indices: [1] },
+          { label: "Query 2", indices: [2] },
+          { label: "Query 3", indices: [3] },
+        ],
+      },
+    })
+    expect(parseStoredSelection(stored)).toEqual([[1], [2], [3]])
   })
 })
 
 describe("ScatterplotMatrixChart", () => {
   beforeEach(() => {
     mockEngineInstances.length = 0
+    engineConstructionState.shouldThrow = false
+    capturedFormClearListener = undefined
   })
 
   it("renders a focusable canvas and initializes the engine", () => {
@@ -241,6 +286,38 @@ describe("ScatterplotMatrixChart", () => {
     expect(options.initialSelection).toEqual([[1]])
   })
 
+  it("passes a restored selection to the engine untruncated even when query_colors shrank", () => {
+    // The engine (not the wrapper) is responsible for reconciling a
+    // restored selection against the current layer count, so that it can
+    // also report the reconciled result back to Python. If the wrapper
+    // truncated here instead, the extra layers would be dropped from the
+    // engine's input without ever being written back to the widget state.
+    const widgetMgr = makeWidgetMgr()
+    const element = makeProto({
+      selectionsActivated: true,
+      queryColors: ["#ff0000"],
+    })
+    widgetMgr.setStringValue(
+      element,
+      JSON.stringify({
+        selection: {
+          indices: [1, 2],
+          query_layers: [
+            { label: "Query 1", indices: [1] },
+            { label: "Query 2", indices: [2] },
+          ],
+        },
+      }),
+      { fromUi: false },
+      undefined
+    )
+
+    render(<ScatterplotMatrixChart element={element} widgetMgr={widgetMgr} />)
+
+    const { options } = mockEngineInstances[0]
+    expect(options.initialSelection).toEqual([[1], [2]])
+  })
+
   it("persists and restores the navigation state across remounts", () => {
     const widgetMgr = makeWidgetMgr()
     const element = makeProto()
@@ -328,6 +405,64 @@ describe("ScatterplotMatrixChart", () => {
 
     expect(canvas).toHaveFocus()
     expect(mockEngineInstances).toHaveLength(1)
+  })
+
+  it("clears the engine's queries when the enclosing form is cleared", () => {
+    render(
+      <ScatterplotMatrixChart
+        element={makeProto({ selectionsActivated: true, formId: "my_form" })}
+        widgetMgr={makeWidgetMgr()}
+      />
+    )
+
+    expect(capturedFormClearListener).toBeDefined()
+    act(() => capturedFormClearListener?.())
+
+    expect(mockEngineInstances[0].clearAllQueries).toHaveBeenCalled()
+  })
+
+  it("resets the widget selection on form clear when the engine failed to initialize", () => {
+    engineConstructionState.shouldThrow = true
+    const widgetMgr = makeWidgetMgr()
+    const element = makeProto({
+      selectionsActivated: true,
+      formId: "my_form",
+      queryColors: ["#ff0000", "#00ff00"],
+    })
+    widgetMgr.setStringValue(
+      element,
+      JSON.stringify({
+        selection: {
+          indices: [1],
+          query_layers: [
+            { label: "Query 1", indices: [1] },
+            { label: "Query 2", indices: [] },
+          ],
+        },
+      }),
+      { fromUi: false },
+      undefined
+    )
+
+    render(<ScatterplotMatrixChart element={element} widgetMgr={widgetMgr} />)
+
+    // The engine failed to construct, so there's no mock instance to clear:
+    expect(mockEngineInstances).toHaveLength(0)
+    expect(capturedFormClearListener).toBeDefined()
+
+    act(() => capturedFormClearListener?.())
+
+    expect(widgetMgr.getStringValue(element)).toEqual(
+      JSON.stringify({
+        selection: {
+          indices: [],
+          query_layers: [
+            { label: "Query 1", indices: [] },
+            { label: "Query 2", indices: [] },
+          ],
+        },
+      })
+    )
   })
 
   it("disposes the engine on unmount", () => {

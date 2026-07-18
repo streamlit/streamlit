@@ -116,10 +116,18 @@ export function extractChartData(
   return { attributes: columns, points }
 }
 
-/** Parses the per-layer point ids from a stored widget selection state. */
+/**
+ * Parses the per-layer point ids from a stored widget selection state.
+ *
+ * Deliberately does not truncate to the current query layer count: the
+ * engine consumes exactly as many leading entries as it has layers for
+ * (see its constructor) and treats any extra restored layers as part of
+ * the same reconciliation that already handles rows no longer present in
+ * the data, so a shrunk `query_colors` also gets written back correctly
+ * instead of leaving stale layers/indices in the widget state.
+ */
 export function parseStoredSelection(
-  storedValue: string | undefined,
-  numLayers: number
+  storedValue: string | undefined
 ): number[][] {
   if (!storedValue) {
     return []
@@ -130,13 +138,11 @@ export function parseStoredSelection(
     if (!Array.isArray(layers)) {
       return []
     }
-    return layers
-      .slice(0, numLayers)
-      .map(layer =>
-        Array.isArray(layer?.indices)
-          ? layer.indices.filter((index: unknown) => typeof index === "number")
-          : []
-      )
+    return layers.map(layer =>
+      Array.isArray(layer?.indices)
+        ? layer.indices.filter((index: unknown) => typeof index === "number")
+        : []
+    )
   } catch (error) {
     LOG.warn("Failed to parse the stored selection state.", error)
     return []
@@ -172,10 +178,8 @@ function ScatterplotMatrixChart({
       return undefined
     }
 
-    const numQueryLayers =
-      element.queryColors.length || DEFAULT_QUERY_COLORS.length
     const initialSelection = element.selectionsActivated
-      ? parseStoredSelection(widgetMgr.getStringValue(element), numQueryLayers)
+      ? parseStoredSelection(widgetMgr.getStringValue(element))
       : []
 
     let engine: ScatterplotMatrixEngine | null = null
@@ -245,10 +249,39 @@ function ScatterplotMatrixChart({
     }
     const formClearHelper = new FormClearHelper()
     formClearHelper.manageFormClearListener(widgetMgr, element.formId, () => {
-      engineRef.current?.clearAllQueries()
+      if (engineRef.current) {
+        engineRef.current.clearAllQueries()
+        return
+      }
+      // The engine failed to initialize (e.g. WebGL 2 unavailable), so
+      // there's no canvas selection to clear — but the widget's stored
+      // selection must still reset like any other form field would.
+      const numQueryLayers =
+        element.queryColors.length || DEFAULT_QUERY_COLORS.length
+      const emptySelection: ScatterplotMatrixSelection = {
+        indices: [],
+        query_layers: Array.from({ length: numQueryLayers }, (_, index) => ({
+          label: `Query ${index + 1}`,
+          indices: [],
+        })),
+      }
+      const newValue = JSON.stringify({ selection: emptySelection })
+      if (widgetMgr.getStringValue(element) !== newValue) {
+        widgetMgr.setStringValue(
+          element,
+          newValue,
+          { fromUi: true },
+          fragmentId
+        )
+      }
     })
     return () => formClearHelper.disconnect()
-  }, [element.selectionsActivated, element.formId, widgetMgr])
+    // Depend on the full `element` (not just individual fields): the
+    // fallback branch above reads/writes widget state keyed by
+    // `element.id`, which changes whenever any marshalled parameter does
+    // (see compute_and_register_element_id), so a stale `element` closure
+    // here could read or write the wrong widget's state.
+  }, [element, widgetMgr, fragmentId])
 
   // Sync disabled state into the existing engine without rebuilding it (a
   // full rebuild would recreate the WebGL context for a boolean flag). Also

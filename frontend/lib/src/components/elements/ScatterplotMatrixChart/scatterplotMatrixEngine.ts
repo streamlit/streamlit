@@ -315,7 +315,14 @@ export class ScatterplotMatrixEngine {
     // matrix dimension (see extractChartData). Track whether that happened
     // so the reconciled (shrunk) selection is reported back to Python below,
     // instead of leaving stale ids in the widget state indefinitely.
-    let selectionWasReconciled = false
+    //
+    // A restored selection can also have *more layers* than `colors` (e.g.
+    // `query_colors` shrank between reruns); those extra layers are never
+    // read below (colors.map only visits index < colors.length), so they
+    // must count as reconciliation too, or their members would silently
+    // linger in the widget state despite no longer having a UI layer.
+    let selectionWasReconciled =
+      (options.initialSelection?.length ?? 0) > colors.length
     this.queries = colors.map((color, index) => {
       const { keptIds, wasReconciled } = reconcileSelectionIds(
         options.initialSelection?.[index] ?? [],
