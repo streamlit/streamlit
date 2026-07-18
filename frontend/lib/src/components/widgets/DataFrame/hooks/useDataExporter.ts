@@ -102,10 +102,33 @@ async function writeCsv(
   // Write UTF-8 BOM for excel compatibility:
   await writable.write(textEncoder.encode(CSV_UTF8_BOM))
 
-  // Write headers (skip button columns as they are not exportable):
-  const headers: string[] = columns
-    .filter(column => column.kind !== "button")
-    .map(column => column.name)
+  // 1. Get the columns we actually want to export
+  const exportableColumns = columns.filter(column => column.kind !== "button")
+
+  // 2. Find out how many rows of upper-level headers we need
+  const maxDepth = Math.max(
+    ...exportableColumns.map(col => {
+      if (!col.group) return 0
+      return Array.isArray(col.group) ? col.group.length : 1
+    }),
+    0
+  )
+
+  // 3. Write each level of the group headers as a separate row in the CSV
+  for (let i = 0; i < maxDepth; i++) {
+    const groupRow = exportableColumns.map(col => {
+      const groupArray = Array.isArray(col.group)
+        ? col.group
+        : col.group
+          ? [col.group]
+          : []
+      return groupArray[i] || ""
+    })
+    await writable.write(textEncoder.encode(toCsvRow(groupRow)))
+  }
+
+  // 4. Write the final base headers (the lowest level)
+  const headers: string[] = exportableColumns.map(column => column.name)
   await writable.write(textEncoder.encode(toCsvRow(headers)))
 
   for (let row = 0; row < numRows; row++) {
