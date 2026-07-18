@@ -105,11 +105,13 @@ async function writeCsv(
   // 1. Get the columns we actually want to export
   const exportableColumns = columns.filter(column => column.kind !== "button")
 
-  // 2. Find out how many rows of upper-level headers we need
+  // 2. Find out how many rows of upper-level headers we need, splitting the flattened string
   const maxDepth = Math.max(
     ...exportableColumns.map(col => {
       if (!col.group) return 0
-      return Array.isArray(col.group) ? col.group.length : 1
+      return Array.isArray(col.group)
+        ? col.group.length
+        : String(col.group).split(" / ").length
     }),
     0
   )
@@ -117,11 +119,10 @@ async function writeCsv(
   // 3. Write each level of the group headers as a separate row in the CSV
   for (let i = 0; i < maxDepth; i++) {
     const groupRow = exportableColumns.map(col => {
+      if (!col.group) return ""
       const groupArray = Array.isArray(col.group)
         ? col.group
-        : col.group
-          ? [col.group]
-          : []
+        : String(col.group).split(" / ")
       return groupArray[i] || ""
     })
     await writable.write(textEncoder.encode(toCsvRow(groupRow)))
@@ -129,8 +130,8 @@ async function writeCsv(
 
   // 4. Write the final base headers (the lowest level)
   const headers: string[] = exportableColumns.map(column => column.name)
-  await writable.write(textEncoder.encode(toCsvRow(headers)))
 
+  await writable.write(textEncoder.encode(toCsvRow(headers)))
   for (let row = 0; row < numRows; row++) {
     const rowData: unknown[] = []
     // Button columns are skipped because they are not exportable, but we still
