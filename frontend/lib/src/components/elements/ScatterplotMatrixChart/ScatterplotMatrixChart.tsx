@@ -63,9 +63,10 @@ interface ChartData {
 
 /**
  * Extracts the matrix dimension values and point labels from the
- * Arrow-serialized dataframe. Rows containing non-finite values in any
- * dimension are skipped, but ids keep referencing the original positional
- * row indices.
+ * Arrow-serialized dataframe. Rows are skipped if any dimension is missing
+ * (Arrow null, e.g. a pandas NA in a nullable numeric column) or otherwise
+ * not a finite number, but ids keep referencing the original positional row
+ * indices.
  */
 export function extractChartData(
   quiverData: Quiver,
@@ -95,6 +96,13 @@ export function extractChartData(
         break
       }
       const { content } = quiverData.getCell(rowIndex, position)
+      // Number(null) is 0 (finite), so a missing value must be rejected
+      // explicitly before the numeric conversion below — otherwise an Arrow
+      // null is silently plotted as zero instead of skipping the row.
+      if (content === null || content === undefined) {
+        isValid = false
+        break
+      }
       const value = Number(content)
       if (!Number.isFinite(value)) {
         isValid = false

@@ -15,7 +15,12 @@
  */
 
 import { act, screen } from "@testing-library/react"
-import { tableFromArrays, tableToIPC } from "apache-arrow"
+import {
+  Table,
+  tableFromArrays,
+  tableToIPC,
+  vectorFromArray,
+} from "apache-arrow"
 
 import { ScatterplotMatrixChart as ScatterplotMatrixChartProto } from "@streamlit/protobuf"
 
@@ -147,6 +152,25 @@ describe("extractChartData", () => {
       "third",
       "fourth",
     ])
+  })
+
+  it("skips rows with a null (missing) value instead of plotting it as zero", () => {
+    // Number(null) is 0, which is finite — a plain "is this finite" check
+    // would silently plot a missing value as zero, so nulls (e.g. a pandas
+    // NA in a nullable numeric column) need their own explicit check.
+    // tableFromArrays with a plain array doesn't preserve nulls in this
+    // arrow version, so the nullable column is built via vectorFromArray.
+    const table = new Table({
+      alpha: vectorFromArray([1, null, 3, 4]),
+      beta: vectorFromArray([10, 20, 30, 40]),
+    })
+    const quiverData = new Quiver({ data: tableToIPC(table) })
+
+    const { points } = extractChartData(quiverData, ["alpha", "beta"], "")
+
+    // Row 1 (alpha=null) must be skipped entirely, not kept with alpha
+    // coerced to 0:
+    expect(points.map(point => point.id)).toEqual([0, 2, 3])
   })
 })
 
