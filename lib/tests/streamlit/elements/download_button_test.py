@@ -15,6 +15,8 @@
 """download_button unit test."""
 
 import io
+import os
+import tempfile
 
 from parameterized import parameterized
 
@@ -162,3 +164,61 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         c2 = self.get_delta_from_queue().new_element.download_button
         assert not c2.HasField("deferred_file_id")
         assert "/media/" in c2.url
+
+    def _stored_file(self, proto):
+        """Return the MemoryFile stored for a download_button proto."""
+        return self.media_file_storage.get_file(os.path.basename(proto.url))
+
+    def test_file_object_infers_file_name_and_mime(self):
+        """A file object opened from disk fills in a missing file_name and
+        mime from its `name` attribute."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = os.path.join(tmp_dir, "report.csv")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("a,b\n1,2\n")
+            with open(path, "rb") as data:
+                st.download_button("Download", data=data)
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename == "report.csv"
+        assert stored.mimetype == "text/csv"
+
+    def test_raw_file_io_infers_file_name_and_mime(self):
+        """io.FileIO (the type mentioned in the issue) is also supported."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = os.path.join(tmp_dir, "photo.png")
+            with open(path, "wb") as f:
+                f.write(b"\x89PNG fake")
+            with io.FileIO(path, "rb") as data:
+                st.download_button("Download", data=data)
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename == "photo.png"
+        assert stored.mimetype == "image/png"
+
+    def test_file_object_explicit_params_take_precedence(self):
+        """User-provided file_name/mime always win over inferred values."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = os.path.join(tmp_dir, "report.csv")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("a,b\n")
+            with open(path, "rb") as data:
+                st.download_button(
+                    "Download", data=data, file_name="custom.bin", mime="application/x-foo"
+                )
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename == "custom.bin"
+        assert stored.mimetype == "application/x-foo"
+
+    def test_nameless_buffer_keeps_existing_behavior(self):
+        """In-memory buffers without a usable name are unaffected."""
+        st.download_button("Download", data=io.BytesIO(b"payload"))
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename is None
+        assert stored.mimetype == "application/octet-stream"

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import io
+import mimetypes
 import os
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -1730,6 +1731,28 @@ class ButtonMixin:
         return cast("DeltaGenerator", self)
 
 
+def _maybe_infer_file_info(
+    data: DownloadButtonDataType,
+    file_name: str | None,
+    mimetype: str | None,
+) -> tuple[str | None, str | None]:
+    """Infer a missing ``file_name``/``mime`` from ``data.name`` when the data
+    is a file object opened from disk (e.g. ``io.FileIO``).
+
+    Explicit user-provided values always take precedence; when nothing can be
+    inferred, the values are returned unchanged.
+    """
+    name = getattr(data, "name", None)
+    # FileIO.name is an int when the object was created from a file descriptor.
+    if not isinstance(name, str) or not name:
+        return file_name, mimetype
+    if file_name is None:
+        file_name = os.path.basename(name)
+    if mimetype is None:
+        mimetype = mimetypes.guess_type(file_name)[0]
+    return file_name, mimetype
+
+
 def marshall_file(
     coordinates: str,
     data: DownloadButtonDataType,
@@ -1754,6 +1777,10 @@ def marshall_file(
         proto_download_button.deferred_file_id = file_id
         proto_download_button.url = ""  # No URL yet, will be generated on click
         return
+
+    # A file object opened from disk carries a usable path in `name`: use it
+    # to fill in a missing file_name/mime. See issue #14159.
+    file_name, mimetype = _maybe_infer_file_info(data, file_name, mimetype)
 
     # Existing logic for non-callable data
     data_as_bytes, inferred_mime_type = convert_data_to_bytes_and_infer_mime(
