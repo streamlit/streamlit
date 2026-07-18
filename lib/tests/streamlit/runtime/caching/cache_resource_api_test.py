@@ -717,6 +717,47 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
         assert released == [1, 2]
 
     @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_background_replacement_survives_on_release_error(
+        self, timer_patch: Mock
+    ) -> None:
+        """An on_release that raises during background replacement is contained.
+
+        The background worker must never raise, and the cache recovers on the next
+        access by recomputing in the foreground.
+        """
+        release_attempts: list[int] = []
+        counter = [0]
+
+        def failing_release(value: int) -> None:
+            release_attempts.append(value)
+            raise RuntimeError("release boom")
+
+        @st.cache_resource(
+            ttl=_BG_TTL,
+            refresh_mode="background",
+            on_release=failing_release,
+            show_spinner=False,
+        )
+        def foo() -> int:
+            counter[0] += 1
+            return counter[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        # A stale serve triggers a refresh whose write-back releases the replaced
+        # resource; on_release raises, but the worker swallows it (never raises).
+        with self._patch_sync_submit():
+            timer_patch.return_value = _BG_TTL * 1.5
+            assert foo() == 1
+        assert counter[0] == 2
+        assert release_attempts == [1]
+
+        # The cache recovers: the next access recomputes in the foreground.
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo() == 3
+
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
     def test_validate_fail_forces_foreground(self, timer_patch: Mock) -> None:
         """A stale resource that fails validate is a hard miss recomputed in the foreground."""
         counter = [0]

@@ -25,10 +25,12 @@ _STALE_WAIT_MS = 9000
 def test_background_refresh_stale_while_revalidate(app: Page):
     """Aggregated scenario covering background stale-while-revalidate.
 
-    Covers: the initial miss renders display output live and shows a one-time
-    warning, a fresh-window hit does not replay the cached display output, a
-    stale-window access serves the old value instantly (no spinner), and a
-    background refresh recomputes the value shortly after.
+    Covers:
+
+    - The initial miss renders display output live and shows a one-time warning.
+    - A fresh-window hit does not replay the cached display output.
+    - A stale-window access serves the old value instantly (no spinner).
+    - A background refresh recomputes the value shortly after.
     """
     # Initial run: cache miss. The value is computed and the cached function's display
     # command renders live...

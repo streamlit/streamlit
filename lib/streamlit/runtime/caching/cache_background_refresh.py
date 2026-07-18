@@ -54,8 +54,8 @@ class _BackgroundRefreshManager:
         # Gates submission so at most ``max_workers`` refreshes run at once. We
         # acquire without blocking and skip when no slot is free (no queueing).
         self._slots = threading.Semaphore(max_workers)
-        # Latched once thread creation fails on a restricted runtime, after which
-        # all submissions are skipped (graceful degradation to foreground refresh).
+        # Latched once thread creation fails on a restricted runtime, after which the
+        # manager skips all submissions (graceful degradation to foreground refresh).
         self._threads_unavailable = False
 
     @property
@@ -81,8 +81,9 @@ class _BackgroundRefreshManager:
         Returns
         -------
         bool
-            ``True`` if the task was scheduled, ``False`` if it was skipped because
-            the pool is saturated or thread creation is unavailable on this runtime.
+            ``True`` if the manager scheduled the task, ``False`` if it skipped the
+            task because the pool is saturated or thread creation is unavailable on
+            this runtime.
         """
         if self._threads_unavailable:
             return False

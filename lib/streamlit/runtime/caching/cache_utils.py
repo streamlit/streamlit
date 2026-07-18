@@ -177,7 +177,13 @@ class Cache(Generic[R]):
         # the generation at trigger time and is discarded if it changed since then
         # (guards the clear-then-repopulate case).
         self._generation = 0
-        # Guards _generation and the per-key failure cooldowns.
+        # Maps value_key -> a counter bumped each time that key is individually cleared
+        # (func.clear(*args)). A background refresh captures its key's counter at trigger
+        # time and is discarded if it changed since then, so a per-key clear (which does
+        # not bump _generation) can't let an older refresh clobber a freshly recomputed
+        # value. Absent keys read as 0.
+        self._key_generations: dict[str, int] = {}
+        # Guards _generation, _key_generations, and the per-key failure cooldowns.
         self._refresh_state_lock = threading.Lock()
         # Maps value_key -> monotonic time until which a failed refresh won't retry.
         self._refresh_cooldowns: dict[str, float] = {}
@@ -191,6 +197,11 @@ class Cache(Generic[R]):
     def generation(self) -> int:
         """A counter that increments each time the whole cache is cleared."""
         return self._generation
+
+    def key_generation(self, value_key: str) -> int:
+        """The per-key clear counter, captured when a background refresh is triggered."""
+        with self._refresh_state_lock:
+            return self._key_generations.get(value_key, 0)
 
     def mark_detached(self) -> None:
         """Mark this cache as detached so in-flight background refreshes discard."""
@@ -250,17 +261,37 @@ class Cache(Generic[R]):
         raise NotImplementedError
 
     def write_background_refresh_result(
-        self, value_key: str, value: R, *, expected_generation: int
+        self,
+        value_key: str,
+        value: R,
+        *,
+        expected_generation: int,
+        expected_key_generation: int,
     ) -> None:
         """Write back the result of a background refresh, unless it is orphaned.
 
-        The write is discarded (not applied) if the cache was detached, its
-        generation changed since the refresh was triggered, or the entry is no longer
-        present (hard-evicted, LRU-evicted, or cleared). ``cache_resource`` also
-        releases the replaced resource on success and the freshly produced resource on
-        a discard so nothing leaks.
+        The write is discarded (not applied) if the cache was detached, the whole
+        cache or the specific key was cleared since the refresh was triggered, or the
+        entry is no longer present (hard-evicted, LRU-evicted, or cleared).
+        ``cache_resource`` also releases the replaced resource on success and the
+        freshly produced resource on a discard so nothing leaks.
         """
         raise NotImplementedError
+
+    def _refresh_is_orphaned(
+        self, value_key: str, *, expected_generation: int, expected_key_generation: int
+    ) -> bool:
+        """Whether an in-flight background refresh must be discarded on write-back.
+
+        ``True`` if the cache detached, the whole cache was cleared, or this specific
+        key was individually cleared since the refresh was triggered.
+        """
+        with self._refresh_state_lock:
+            return (
+                not self._active
+                or self._generation != expected_generation
+                or self._key_generations.get(value_key, 0) != expected_key_generation
+            )
 
     def in_refresh_cooldown(self, value_key: str) -> bool:
         """Whether a recent background-refresh failure is still on cooldown."""
@@ -306,12 +337,19 @@ class Cache(Generic[R]):
                 self._value_locks.clear()
             elif key in self._value_locks:
                 del self._value_locks[key]
-        if not key:
-            # A whole-cache clear bumps the generation so in-flight background
-            # refreshes triggered before the clear are discarded on write-back.
-            with self._refresh_state_lock:
+        with self._refresh_state_lock:
+            if not key:
+                # A whole-cache clear bumps the generation so in-flight background
+                # refreshes triggered before the clear are discarded on write-back.
                 self._generation += 1
                 self._refresh_cooldowns.clear()
+                self._key_generations.clear()
+            else:
+                # A per-key clear bumps just that key's generation so an in-flight
+                # refresh for the same key (triggered before the clear) is discarded
+                # rather than clobbering a freshly recomputed value.
+                self._key_generations[key] = self._key_generations.get(key, 0) + 1
+                self._refresh_cooldowns.pop(key, None)
         self._clear(key=key)
 
     @abstractmethod
@@ -575,6 +613,10 @@ class CachedFunc(Generic[P, R]):
                 messages = captured_messages
             try:
                 cache.write_result(value_key, computed_value, messages)
+                # A successful (re)compute clears any prior background-refresh failure
+                # cooldown, so a later stale window can refresh again even if an earlier
+                # refresh failed and the entry then hard-expired and recomputed here.
+                cache.clear_refresh_cooldown(value_key)
                 return computed_value
             except (CacheError, RuntimeError) as ex:
                 # An exception was thrown while we tried to write to the cache. Report
@@ -628,6 +670,7 @@ class CachedFunc(Generic[P, R]):
             # Record active use of background mode once per decorated function.
             self._record_background_refresh_metric_once()
             expected_generation = cache.generation
+            expected_key_generation = cache.key_generation(value_key)
             scheduled = (
                 cache_background_refresh.get_background_refresh_manager().submit(
                     lambda: self._run_background_refresh(
@@ -637,6 +680,7 @@ class CachedFunc(Generic[P, R]):
                         func_kwargs,
                         lock,
                         expected_generation,
+                        expected_key_generation,
                     )
                 )
             )
@@ -658,6 +702,7 @@ class CachedFunc(Generic[P, R]):
         func_kwargs: dict[str, Any],
         lock: threading.Lock,
         expected_generation: int,
+        expected_key_generation: int,
     ) -> None:
         """Recompute a stale entry off the script thread and write it back.
 
@@ -669,7 +714,10 @@ class CachedFunc(Generic[P, R]):
         try:
             new_value = self._info.func(*func_args, **func_kwargs)
             cache.write_background_refresh_result(
-                value_key, new_value, expected_generation=expected_generation
+                value_key,
+                new_value,
+                expected_generation=expected_generation,
+                expected_key_generation=expected_key_generation,
             )
             cache.clear_refresh_cooldown(value_key)
         except Exception as ex:

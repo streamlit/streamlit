@@ -163,8 +163,9 @@ class CachedStFunctionInBackgroundModeWarning(StreamlitAPIWarning):
             f"""
 {func_name} is decorated with `@st.{decorator_name}(refresh_mode="background")`
 and uses a Streamlit display command (e.g. `st.write`). In background mode, cached
-display output is **not** replayed on cache hits, so these elements will only appear
-on the initial cache miss and then disappear on later reruns.
+display output is **not** replayed on cache hits, so these elements only appear when
+the function actually runs (the initial cache miss and any later foreground recompute)
+and then disappear on subsequent reruns.
 
 To fix this, either move the display commands outside the cached function, or use
 `refresh_mode="foreground"`.

@@ -568,27 +568,6 @@ class CacheDataAPI:
             for an unbounded cache. When a new entry is added to a full cache,
             the oldest cached entry will be removed. Defaults to None.
 
-        refresh_mode : "foreground" or "background"
-            How to refresh a cache entry once its ``ttl`` expires. This can be one of
-            the following:
-
-            - ``"foreground"`` (default): When the ``ttl`` expires, the next access
-              blocks and recomputes the value before returning it.
-            - ``"background"``: Enables bounded stale-while-revalidate. For up to one
-              extra ``ttl`` after expiry, the stale value is returned immediately (no
-              blocking) while a single refresh runs in a background thread. After
-              ``2 * ttl`` the entry is evicted and the next access blocks and
-              recomputes. This mode requires a ``ttl`` and is not compatible with
-              ``persist``.
-
-            .. note::
-                Because a background refresh runs without a script context, the cached
-                function must be **context-free**: ``st.session_state`` and other
-                session-bound APIs don't resolve during the refresh. Pass any needed
-                session values as explicit arguments instead. In background mode,
-                cached ``st.*`` display output is **not** replayed on cache hits (a
-                warning is shown if the function issues display commands).
-
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
             a "cache miss" and the cached data is being created. If string,
@@ -623,6 +602,27 @@ class CacheDataAPI:
             multiple times in a single session. If this is a problem, you might
             consider adjusting the ``server.websocketPingInterval``
             configuration option.
+
+        refresh_mode : "foreground" or "background"
+            How to refresh a cache entry once its ``ttl`` expires. This can be one of
+            the following:
+
+            - ``"foreground"`` (default): When the ``ttl`` expires, the next access
+              blocks and recomputes the value before returning it.
+            - ``"background"``: Enables bounded stale-while-revalidate. For up to one
+              extra ``ttl`` after expiry, the cache returns the stale value immediately
+              (no blocking) while a single refresh runs in a background thread. After
+              ``2 * ttl`` the cache evicts the entry and the next access blocks and
+              recomputes. This mode requires a ``ttl`` and is not compatible with
+              ``persist``.
+
+            .. note::
+                Because a background refresh runs without a script context, the cached
+                function must be **context-free**: ``st.session_state`` and other
+                session-bound APIs don't resolve during the refresh. Pass any needed
+                session values as explicit arguments instead. In background mode,
+                Streamlit does not replay cached ``st.*`` display output on cache hits,
+                and shows a warning if the function issues display commands.
 
         Examples
         --------
@@ -887,15 +887,24 @@ class DataCache(Cache[R]):
         self.storage.set(key, pickled_entry)
 
     def write_background_refresh_result(
-        self, value_key: str, value: R, *, expected_generation: int
+        self,
+        value_key: str,
+        value: R,
+        *,
+        expected_generation: int,
+        expected_key_generation: int,
     ) -> None:
         """Write back a background-refreshed value unless it is orphaned.
 
-        Discards (does not write) if the cache was detached, its generation changed
-        since the refresh was triggered, or the entry is no longer present (evicted,
-        hard-expired, or cleared).
+        Discards (does not write) if the cache was detached, the whole cache or the
+        specific key was cleared since the refresh was triggered, or the entry is no
+        longer present (evicted, hard-expired, or cleared).
         """
-        if not self._active or self._generation != expected_generation:
+        if self._refresh_is_orphaned(
+            value_key,
+            expected_generation=expected_generation,
+            expected_key_generation=expected_key_generation,
+        ):
             return
 
         # st._main and st.sidebar are process-global DeltaGenerator singletons, so
@@ -918,7 +927,11 @@ class DataCache(Cache[R]):
         with self._write_lock:
             # Re-check the orphan conditions under the lock (a clear may have landed
             # after the early-out check above).
-            if not self._active or self._generation != expected_generation:
+            if self._refresh_is_orphaned(
+                value_key,
+                expected_generation=expected_generation,
+                expected_key_generation=expected_key_generation,
+            ):
                 return
             # Presence check: only write back if the entry still exists. A hard-expired
             # / evicted / cleared entry should stay gone so the next access is a miss.

@@ -1368,6 +1368,108 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
     )
     @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_orphan_refresh_discarded_after_per_key_clear(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """A refresh finishing after a per-key clear + recompute must not clobber the fresh value.
+
+        Unlike a whole-cache clear, ``func.clear(*args)`` does not bump the cache
+        generation, so this guards the per-key epoch path specifically.
+        """
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo(_arg: int) -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo(1) == 1
+
+        captured: list = []
+
+        def capture_submit(task):
+            captured.append(task)
+            return True
+
+        with patch.object(
+            cache_background_refresh.get_background_refresh_manager(),
+            "submit",
+            side_effect=capture_submit,
+        ):
+            timer_patch.return_value = _BG_TTL * 1.5
+            # Stale serve schedules a refresh that stays "in flight" (not run yet).
+            assert foo(1) == 1
+            assert len(captured) == 1
+
+        # Clear just this key and recompute it in the foreground before the in-flight
+        # refresh writes back.
+        foo.clear(1)
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo(1) == 2
+
+        # The older in-flight refresh now completes: it computes a value but must be
+        # discarded because the key was individually cleared since it was triggered.
+        captured[0]()
+        assert call_count[0] == 3
+
+        # The freshly recomputed value survives; the stale refresh did not clobber it.
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo(1) == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_foreground_recompute_clears_failure_cooldown(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """A successful foreground recompute clears a prior refresh-failure cooldown.
+
+        Covers "failed refresh -> hard expiry -> foreground recompute -> later stale
+        window": the later stale window must refresh again rather than stay stuck on the
+        old cooldown.
+        """
+        # A short ttl so the whole cycle stays well within the 60s failure cooldown.
+        ttl = 10
+        call_count = [0]
+        should_fail = [False]
+
+        @cache_decorator(ttl=ttl, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            if should_fail[0]:
+                raise RuntimeError("boom")
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        # A stale access triggers a refresh that fails, arming the 60s cooldown.
+        should_fail[0] = True
+        with self._patch_sync_submit():
+            timer_patch.return_value = ttl * 1.5
+            assert foo() == 1
+        assert call_count[0] == 2
+
+        # The entry hard-expires (>= 2*ttl) and a foreground recompute succeeds; this
+        # must clear the still-active failure cooldown.
+        should_fail[0] = False
+        timer_patch.return_value = ttl * 2 + 1
+        assert foo() == 3
+
+        # A later stale window (still within 60s of the failure) now triggers a
+        # background refresh again, proving the cooldown was cleared.
+        with self._patch_sync_submit() as submit_mock:
+            timer_patch.return_value = ttl * 2 + 1 + ttl * 1.5
+            assert foo() == 3
+            submit_mock.assert_called_once()
+        assert call_count[0] == 4
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
     def test_no_spinner_on_stale_serve(self, _, cache_decorator, timer_patch: Mock):
         """A stale serve returns immediately without showing a spinner."""
 

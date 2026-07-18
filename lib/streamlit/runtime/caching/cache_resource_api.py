@@ -471,27 +471,6 @@ class CacheResourceAPI:
 
             Changes to this value will trigger a new cache to be created.
 
-        refresh_mode : "foreground" or "background"
-            How to refresh a cached resource once its ``ttl`` expires. This can be
-            one of the following:
-
-            - ``"foreground"`` (default): When the ``ttl`` expires, the next access
-              blocks and recreates the resource before returning it.
-            - ``"background"``: Enables bounded stale-while-revalidate. For up to one
-              extra ``ttl`` after expiry, the stale resource is returned immediately
-              (no blocking) while a single refresh runs in a background thread. When
-              the refresh succeeds, the replaced resource's ``on_release`` handler (if
-              configured) fires. After ``2 * ttl`` the entry is evicted and the next
-              access blocks and recreates the resource. This mode requires a ``ttl``.
-
-            .. note::
-                Because a background refresh runs without a script context, the cached
-                function must be **context-free**: ``st.session_state`` and other
-                session-bound APIs don't resolve during the refresh. Pass any needed
-                session values as explicit arguments instead. In background mode,
-                cached ``st.*`` display output is **not** replayed on cache hits (a
-                warning is shown if the function issues display commands).
-
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
             a "cache miss" and the cached resource is being created. If string,
@@ -547,6 +526,28 @@ class CacheResourceAPI:
             multiple times in a single session. If this is a problem, you might
             consider adjusting the ``server.websocketPingInterval``
             configuration option.
+
+        refresh_mode : "foreground" or "background"
+            How to refresh a cached resource once its ``ttl`` expires. This can be
+            one of the following:
+
+            - ``"foreground"`` (default): When the ``ttl`` expires, the next access
+              blocks and recreates the resource before returning it.
+            - ``"background"``: Enables bounded stale-while-revalidate. For up to one
+              extra ``ttl`` after expiry, the cache returns the stale resource
+              immediately (no blocking) while a single refresh runs in a background
+              thread. When the refresh succeeds, the replaced resource's
+              ``on_release`` handler (if configured) fires. After ``2 * ttl`` the cache
+              evicts the entry and the next access blocks and recreates the resource.
+              This mode requires a ``ttl``.
+
+            .. note::
+                Because a background refresh runs without a script context, the cached
+                function must be **context-free**: ``st.session_state`` and other
+                session-bound APIs don't resolve during the refresh. Pass any needed
+                session values as explicit arguments instead. In background mode,
+                Streamlit does not replay cached ``st.*`` display output on cache hits,
+                and shows a warning if the function issues display commands.
 
         Examples
         --------
@@ -798,7 +799,12 @@ class ResourceCache(Cache[R]):
             )
 
     def write_background_refresh_result(
-        self, value_key: str, value: R, *, expected_generation: int
+        self,
+        value_key: str,
+        value: R,
+        *,
+        expected_generation: int,
+        expected_key_generation: int,
     ) -> None:
         """Write back a background-refreshed resource unless it is orphaned.
 
@@ -815,11 +821,14 @@ class ResourceCache(Cache[R]):
         discard = False
         with self._mem_cache_lock:
             if (
-                not self._active
-                or self._generation != expected_generation
+                self._refresh_is_orphaned(
+                    value_key,
+                    expected_generation=expected_generation,
+                    expected_key_generation=expected_key_generation,
+                )
                 or value_key not in self._mem_cache
             ):
-                # Detached cache, cleared/repopulated cache, or the entry was
+                # Detached cache, whole-cache or per-key clear, or the entry was
                 # hard-evicted / LRU-evicted / cleared: discard the refresh.
                 discard = True
             else:
