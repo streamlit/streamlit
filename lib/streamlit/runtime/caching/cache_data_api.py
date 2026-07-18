@@ -870,8 +870,9 @@ class DataCache(Cache[R]):
         try:
             main_id = st._main._id
             sidebar_id = st.sidebar._id
-            # stored_at is only needed (and only consulted) in background mode; leaving
-            # it None in foreground mode keeps the pickled entry byte-identical.
+            # stored_at is only used by background refresh; foreground mode leaves it
+            # None (freshness tracking disabled), which also keeps old pickled entries
+            # compatible.
             stored_at = (
                 cache_utils.TTLCACHE_TIMER()
                 if self.refresh_mode == "background"
@@ -897,6 +898,9 @@ class DataCache(Cache[R]):
         if not self._active or self._generation != expected_generation:
             return
 
+        # st._main and st.sidebar are process-global DeltaGenerator singletons, so
+        # reading their _id is safe here on the background refresh thread even though
+        # it has no ScriptRunContext.
         main_id = st._main._id
         sidebar_id = st.sidebar._id
         entry = CachedResult(

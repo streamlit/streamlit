@@ -806,6 +806,9 @@ class ResourceCache(Cache[R]):
         ``safe_del``); on a discard the freshly produced resource is released so it
         doesn't leak.
         """
+        # st._main and st.sidebar are process-global DeltaGenerator singletons, so
+        # reading their _id is safe here on the background refresh thread even though
+        # it has no ScriptRunContext.
         main_id = st._main._id
         sidebar_id = st.sidebar._id
 

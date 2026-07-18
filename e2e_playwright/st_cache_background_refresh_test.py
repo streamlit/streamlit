@@ -16,9 +16,10 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import rerun_app, wait_until
 
-# Slightly longer than the app's ttl (6s) so the entry is comfortably inside the stale
-# grace window ([ttl, 2*ttl)) when we rerun.
-_STALE_WAIT_MS = 6500
+# Comfortably longer than the app's ttl (8s) so the entry is safely inside the stale
+# grace window ([ttl, 2*ttl)) when we rerun, with a ~1s margin on a slow/loaded CI
+# runner (both before the stale window starts and before hard expiry at 2*ttl).
+_STALE_WAIT_MS = 9000
 
 
 def test_background_refresh_stale_while_revalidate(app: Page):

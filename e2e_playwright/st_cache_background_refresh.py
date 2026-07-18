@@ -18,7 +18,7 @@ import streamlit as st
 # fresh [0, _TTL), stale grace [_TTL, 2*_TTL), hard expiry >= 2*_TTL. Kept large enough
 # that the initial miss and the fresh-window rerun comfortably fit inside the fresh
 # window even on a slow/loaded CI runner (avoids a premature refresh flipping the value).
-_TTL_SECONDS = 6
+_TTL_SECONDS = 8
 
 
 @st.cache_resource(show_spinner=False)
