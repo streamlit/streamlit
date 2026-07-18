@@ -92,11 +92,12 @@ def _no_op_release(ignored: Any) -> None:
 
 @gather_metrics("cache_resource_background_refresh")
 def _record_cache_resource_background_refresh() -> None:
-    """Tracked no-op marker recording active use of ``refresh_mode="background"``.
+    """Record active use of ``refresh_mode="background"`` with ``st.cache_resource``.
 
-    ``gather_metrics`` records argument names/types but not string values, so the
-    ``refresh_mode`` value can't be distinguished from the standard decorator metric.
-    This marker is called at first stale-serve to signal background-refresh adoption.
+    Called on the first stale-serve so ``gather_metrics`` can distinguish
+    background-refresh adoption from the standard decorator metric (which records
+    argument names/types but not string values, so it can't tell the ``refresh_mode``
+    value apart). The function body is intentionally empty; only the call is tracked.
     """
 
 
