@@ -114,10 +114,10 @@ class DataframeSelectionState(TypedDict, total=False):
     except ``"multi-cell"``. If ``"single-cell"`` isn't included in the
     selection modes of the dataframe, programmatic cell selections are ignored.
 
-    .. warning::
-        If a user sorts a dataframe, row selections will be reset. If your
-        users need to sort and filter the dataframe to make selections, direct
-        them to use the search function in the dataframe toolbar instead.
+    .. note::
+        Row selections are preserved when a user sorts the dataframe in their
+        browser. The selected rows continue to reference the same underlying
+        data rows by their original integer position.
 
     Attributes
     ----------

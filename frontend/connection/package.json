@@ -44,7 +44,7 @@
     "vite-plugin-dts": "^5.0.3",
     "vite-plugin-svgr": "^5.2.0",
     "vitest": "^4.1.10",
-    "vitest-websocket-mock": "^0.5.0"
+    "vitest-websocket-mock": "^0.7.0"
   },
   "browserslist": [
     ">0.2%",

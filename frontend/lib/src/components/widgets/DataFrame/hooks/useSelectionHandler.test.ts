@@ -267,6 +267,63 @@ describe("useSelectionHandler hook", () => {
 
     expect(syncSelectionStateMock).toBeCalledTimes(2)
   })
+  it("forceSync syncs an unchanged row selection", () => {
+    // Regression test: when a column is sorted within the selection debounce
+    // window, the sort handler cancels the pending sync and re-syncs the
+    // remapped selection via `forceSync`. If the preserved row keeps the same
+    // display index after sorting, the display-selection is unchanged, so the
+    // default change-detection would skip the sync and the backend would never
+    // receive the selection. `forceSync` must sync it anyway.
+    const { result } = renderHook(() =>
+      useSelectionHandler(
+        DataframeProto.create({
+          selectionMode: [DataframeProto.SelectionMode.MULTI_ROW],
+        }),
+        false,
+        false,
+        [],
+        syncSelectionStateMock
+      )
+    )
+
+    const rowSelection = {
+      columns: CompactSelection.empty(),
+      rows: CompactSelection.fromSingleSelection(0),
+      current: undefined,
+    }
+
+    // Initial selection triggers a sync.
+    act(() => {
+      result.current.processSelectionChange(rowSelection)
+    })
+    expect(result.current.isRowSelected).toEqual(true)
+    expect(syncSelectionStateMock).toBeCalledTimes(1)
+
+    // Processing the same (unchanged) selection is deduplicated: no extra sync.
+    act(() => {
+      result.current.processSelectionChange({
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.fromSingleSelection(0),
+        current: undefined,
+      })
+    })
+    expect(syncSelectionStateMock).toBeCalledTimes(1)
+
+    // Forcing a sync of the same (unchanged) selection syncs it anyway.
+    act(() => {
+      result.current.processSelectionChange(
+        {
+          columns: CompactSelection.empty(),
+          rows: CompactSelection.fromSingleSelection(0),
+          current: undefined,
+        },
+        { forceSync: true }
+      )
+    })
+    expect(result.current.isRowSelected).toEqual(true)
+    expect(syncSelectionStateMock).toBeCalledTimes(2)
+  })
+
   it("correctly processes and clears row+column selection", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(

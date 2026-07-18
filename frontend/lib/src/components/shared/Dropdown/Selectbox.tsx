@@ -171,6 +171,17 @@ const renderOption = (item: unknown): ReactElement => {
   )
 }
 
+/**
+ * Swallow paste and IME composition events so FILTER_MODE_NONE inputs stay
+ * non-editable, mirroring the character blocking in onKeyDownCapture. Paste
+ * cancellation is honored by browsers; compositionstart cancellation is
+ * best-effort (some browsers ignore preventDefault on it), so IME text may
+ * still slip in — but it is never committed as a selection.
+ */
+const preventInputEvent = (e: React.SyntheticEvent): void => {
+  e.preventDefault()
+}
+
 const Selectbox: FC<Props> = ({
   disabled,
   value: propValue,
@@ -316,9 +327,11 @@ const Selectbox: FC<Props> = ({
 
   const isFilterNone =
     filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
-  // Don't use `readOnly` for FILTER_MODE_NONE: it disables RAC's internal
-  // keyboard navigation (Arrow keys, Enter). Block character input via
-  // onKeyDown/onPaste instead.
+  // Don't use `readOnly` for FILTER_MODE_NONE: it disables React Aria's internal
+  // keyboard navigation (Arrow keys, Enter) and makes Chromium close the
+  // ComboBox during the pointer-event lifecycle. Instead, suppress the mobile
+  // software keyboard with inputMode="none" (see the input below) and block
+  // character input via onKeyDown/onPaste.
   const inputReadOnly =
     isMobile() && options.length <= 10 && !acceptNewOptions && !isFilterNone
 
@@ -563,13 +576,16 @@ const Selectbox: FC<Props> = ({
             <StyledInput
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}
+              // inputMode="none" suppresses the mobile software keyboard while
+              // keeping the input focusable (unlike readOnly — see above).
+              // $typingDisabled hides the caret and shows a pointer cursor.
+              inputMode={isFilterNone ? "none" : undefined}
+              $typingDisabled={isFilterNone}
               onPointerDown={handleInputPointerDown}
               onKeyDownCapture={handleInputKeyDownCapture}
               onKeyDown={handleInputKeyDown}
-              onPaste={isFilterNone ? e => e.preventDefault() : undefined}
-              onCompositionStart={
-                isFilterNone ? e => e.preventDefault() : undefined
-              }
+              onPaste={isFilterNone ? preventInputEvent : undefined}
+              onCompositionStart={isFilterNone ? preventInputEvent : undefined}
               $placeholderColor={
                 selectDisabled ? theme.colors.fadedText40 : undefined
               }

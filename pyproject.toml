@@ -82,7 +82,6 @@ dev = [
   "types-requests",
   "types-setuptools",
   "types-toml",
-  "types-cachetools",
   "types-Authlib",
   # pandas-stubs have caused a couple of CI breaks, so we pin to a specific version.
   # We need to pin 2.3.3.260113 since higher versions require a min Python 3.11 support.

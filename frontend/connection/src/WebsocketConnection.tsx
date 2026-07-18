@@ -188,6 +188,20 @@ export class WebsocketConnection {
   private uriIndex = 0
 
   /**
+   * Index into baseUriPartsList that the WebSocket last successfully connected
+   * on. Once set, we skip path discovery on reconnect and only probe this URI.
+   */
+  private connectedUriIndex?: number
+
+  /**
+   * Index into baseUriPartsList used to build the currently-open WebSocket.
+   * Captured when the socket is created so that, once connected, we pin to the
+   * URI the socket actually used rather than this.uriIndex, which a background
+   * ping (bypass mode) may have overwritten before the socket's open event.
+   */
+  private socketUriIndex?: number
+
+  /**
    * To guarantee packet transmission order, this is the index of the last
    * dispatched incoming message.
    */
@@ -290,6 +304,13 @@ export class WebsocketConnection {
       case ConnectionState.CONNECTED:
         this.reconnectAttempt = 0
         this.clearReconnectDelayTimeout()
+        // Pin to the URI the live socket actually used (captured at socket
+        // creation), not this.uriIndex: in bypass mode a background ping can
+        // overwrite this.uriIndex before the socket's open event fires, which
+        // would otherwise pin a URI the socket never used. Also realign
+        // this.uriIndex so getBaseUriParts() and reconnects stay consistent.
+        this.connectedUriIndex = this.socketUriIndex ?? this.uriIndex
+        this.uriIndex = this.connectedUriIndex
         break
 
       default:
@@ -500,9 +521,23 @@ export class WebsocketConnection {
     }
   }
 
+  /**
+   * Returns the base URIs to probe when (re)connecting. Before the first
+   * successful connection we probe all candidates (path discovery for multipage
+   * apps). Once connected, we pin to the URI that worked so reconnects don't
+   * re-run discovery — which would double requests and risk selecting the wrong
+   * path.
+   */
+  private getBaseUrisToProbe(): URL[] {
+    if (this.connectedUriIndex !== undefined) {
+      return [this.args.baseUriPartsList[this.connectedUriIndex]]
+    }
+    return this.args.baseUriPartsList
+  }
+
   private async pingServer(): Promise<void> {
     const currentRequest = doInitPings(
-      this.args.baseUriPartsList,
+      this.getBaseUrisToProbe(),
       PING_MINIMUM_RETRY_PERIOD_MS,
       PING_MAXIMUM_RETRY_PERIOD_MS,
       this.args.onRetry,
@@ -512,7 +547,10 @@ export class WebsocketConnection {
     this.pingRequest = currentRequest
 
     try {
-      this.uriIndex = await currentRequest.promise
+      const resolvedIndex = await currentRequest.promise
+      // When probing a pinned single-URI list, doInitPings resolves index 0;
+      // map it back to the real index into baseUriPartsList.
+      this.uriIndex = this.connectedUriIndex ?? resolvedIndex
       // Only clear if we're still the active request
       if (this.pingRequest === currentRequest) {
         this.pingRequest = undefined
@@ -568,7 +606,11 @@ export class WebsocketConnection {
 
     try {
       const uriIndex = await currentRequest.promise
-      this.uriIndex = uriIndex
+      // Don't overwrite the index once the WebSocket has already connected on a
+      // URI; the connected path takes precedence over background discovery.
+      if (this.connectedUriIndex === undefined) {
+        this.uriIndex = uriIndex
+      }
       LOG.info("Background pings completed successfully")
     } catch (e) {
       if (e instanceof PingCancelledError) {
@@ -617,8 +659,11 @@ export class WebsocketConnection {
   }
 
   private async connectToWebSocket(): Promise<void> {
+    // Capture the index this socket is built from so that, once connected, we
+    // pin to it even if a background ping overwrites this.uriIndex in between.
+    this.socketUriIndex = this.uriIndex
     const uri = buildWsUri(
-      this.args.baseUriPartsList[this.uriIndex],
+      this.args.baseUriPartsList[this.socketUriIndex],
       WEBSOCKET_STREAM_PATH
     )
 
