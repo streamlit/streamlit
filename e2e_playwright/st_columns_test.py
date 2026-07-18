@@ -168,7 +168,7 @@ def test_column_top_alignment_does_not_leak_into_nested_horizontal_container(
     only apply to direct-child first checkboxes of the column.
     """
     column_container = (
-        get_expander(app, "Vertical alignment - top with nested horizontal container")
+        get_expander(app, "Nested horizontal container in top-aligned column")
         .get_by_test_id("stHorizontalBlock")
         .nth(0)
     )

@@ -106,9 +106,7 @@ with st.expander("Vertical alignment - top", expanded=True):
     col3.checkbox("Checkbox 1 (top)")
     col3.checkbox("Checkbox 2 (top)")
 
-with st.expander(
-    "Vertical alignment - top with nested horizontal container", expanded=True
-):
+with st.expander("Nested horizontal container in top-aligned column", expanded=True):
     # Regression coverage for #13162: checkboxes nested inside a horizontal
     # container within a TOP-aligned column should NOT receive the
     # alignment margin-top — only direct-child checkboxes of the column
