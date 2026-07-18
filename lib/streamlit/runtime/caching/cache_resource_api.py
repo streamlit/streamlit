@@ -759,6 +759,8 @@ class ResourceCache(Cache[R]):
 
     def _is_stale(self, result: CachedResult[R]) -> bool:
         """Whether a present entry is in the stale grace window ``[ttl, 2*ttl)``."""
+        # Unlike DataCache, no ``fresh_ttl_seconds is None`` guard is needed here:
+        # resource caches always resolve it to a float (ttl uses coerce_none_to_inf).
         if self.refresh_mode != "background" or result.stored_at is None:
             return False
         return (
