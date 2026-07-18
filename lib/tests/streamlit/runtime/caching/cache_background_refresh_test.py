@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import threading
 import time
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from streamlit.runtime.caching.cache_background_refresh import _BackgroundRefreshManager
 
@@ -124,3 +124,30 @@ def test_shutdown_resets_state() -> None:
 
     assert manager.threads_unavailable is False
     assert manager._slots._value == 2
+
+
+def test_pool_size_read_from_config() -> None:
+    """The config-backed manager reads its pool size from config on first use."""
+    manager = _BackgroundRefreshManager()
+    try:
+        with patch("streamlit.config.get_option", return_value=7) as get_option:
+            manager._ensure_initialized()
+        get_option.assert_called_once_with("runner.cacheBackgroundRefreshMaxWorkers")
+        assert manager._max_workers == 7
+        assert manager._slots is not None
+        assert manager._slots._value == 7
+    finally:
+        manager.shutdown()
+
+
+def test_zero_workers_disables_background_refresh() -> None:
+    """A configured pool size of 0 disables background refresh: submit always skips."""
+    manager = _BackgroundRefreshManager()
+    ran = Mock()
+    try:
+        with patch("streamlit.config.get_option", return_value=0):
+            assert manager.submit(ran) is False
+        ran.assert_not_called()
+        assert manager._slots is None
+    finally:
+        manager.shutdown()
