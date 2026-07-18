@@ -79,6 +79,8 @@ export interface ScatterplotMatrixEngineOptions {
   /** Navigation/viewport state used to restore a previous engine instance. */
   initialViewState?: ScatterplotMatrixViewState
   onViewStateChange?: (viewState: ScatterplotMatrixViewState) => void
+  /** When true, keyboard shortcuts are ignored. See {@link ScatterplotMatrixEngine.setDisabled}. */
+  disabled?: boolean
 }
 
 interface Point {
@@ -257,6 +259,8 @@ export class ScatterplotMatrixEngine {
 
   private disposed = false
 
+  private disabled = false
+
   // Pre-baked static labels atlas. The title/axis labels never change
   // frame-to-frame within a given layout, so we rasterize them once into
   // this canvas and blit the result as a single textured quad until the
@@ -278,6 +282,7 @@ export class ScatterplotMatrixEngine {
       `${options.points.length} points • left-click a small plot to jump` +
       ` • right-click to roll • lasso the large plot to select`
     this.onSelectionChange = options.onSelectionChange ?? null
+    this.disabled = options.disabled ?? false
     this.labelAtlasCanvas = document.createElement("canvas")
     const atlasCtx = this.labelAtlasCanvas.getContext("2d")
     if (atlasCtx === null) {
@@ -305,16 +310,27 @@ export class ScatterplotMatrixEngine {
       ? options.queryColors
       : DEFAULT_QUERY_COLORS
     const pointIds = new Set(this.points.map(point => point.id))
-    this.queries = colors.map((color, index) => ({
-      index,
-      color,
-      label: `Query ${index + 1}`,
-      members: new Set(
-        (options.initialSelection?.[index] ?? []).filter(id =>
-          pointIds.has(id)
-        )
-      ),
-    }))
+    // Ids from a restored selection can be missing from `this.points` when a
+    // row that used to be selected no longer has finite values in every
+    // matrix dimension (see extractChartData). Track whether that happened
+    // so the reconciled (shrunk) selection is reported back to Python below,
+    // instead of leaving stale ids in the widget state indefinitely.
+    let selectionWasReconciled = false
+    this.queries = colors.map((color, index) => {
+      const { keptIds, wasReconciled } = reconcileSelectionIds(
+        options.initialSelection?.[index] ?? [],
+        pointIds
+      )
+      if (wasReconciled) {
+        selectionWasReconciled = true
+      }
+      return {
+        index,
+        color,
+        label: `Query ${index + 1}`,
+        members: new Set(keptIds),
+      }
+    })
     this.selectedQueryIndex = 0
 
     this.selectedPlot = { col: 0, row: Math.max(0, numAtts - 1) }
@@ -327,6 +343,10 @@ export class ScatterplotMatrixEngine {
     this.view = this.computeDetailFit()
     this.restoreViewState(options.initialViewState)
     this.render()
+
+    if (selectionWasReconciled) {
+      this.emitSelection()
+    }
   }
 
   /** Restores navigation/viewport state from a previous engine instance. */
@@ -368,6 +388,19 @@ export class ScatterplotMatrixEngine {
   setRollSpeed(speed: number): void {
     const safe = Number.isFinite(speed) && speed > 0 ? speed : 1
     this.rollFrames = Math.max(1, Math.round(ROLL_FRAMES_DEFAULT / safe))
+  }
+
+  /**
+   * Toggles whether keyboard shortcuts are handled. Pointer interactions are
+   * already blocked via `pointer-events: none` on the disabled canvas, but
+   * that alone doesn't affect an element that was focused *before* becoming
+   * disabled — the browser keeps delivering keydown events to it since
+   * `tabIndex={-1}` doesn't blur an already-focused element. The caller is
+   * expected to also blur the canvas on this transition (belt and suspenders
+   * against any focus that persists or gets restored).
+   */
+  setDisabled(disabled: boolean): void {
+    this.disabled = disabled
   }
 
   getSelection(): ScatterplotMatrixSelection {
@@ -542,6 +575,9 @@ export class ScatterplotMatrixEngine {
     )
 
     const onKeyDown = (event: KeyboardEvent): void => {
+      if (this.disabled) {
+        return
+      }
       let handled = true
       if (event.key === "ArrowUp") {
         this.moveSelectedPlot(0, -1)
@@ -966,6 +1002,14 @@ export class ScatterplotMatrixEngine {
   }
 
   private moveSelectedPlot(deltaX: number, deltaY: number): void {
+    // Mirror the right-click "roll to" rule (see handlePointerUp): don't
+    // start a new route while one is still animating. Without this, a key
+    // repeat mid-roll would replace pendingSteps relative to the *pending*
+    // destination while the in-flight step keeps animating toward its own
+    // target, producing a visibly discontinuous path.
+    if (this.hasActiveAnimation()) {
+      return
+    }
     const maxIndex = this.attributes.length - 1
     this.startNavigationToPlot({
       col: clamp(this.selectedPlot.col + deltaX, 0, maxIndex),
@@ -2934,6 +2978,21 @@ function drawQuadStrip(
     triangles.push([last - 2, 1, 0])
   }
   renderer.polygonFromTriangulation(pts, triangles, fillColor)
+}
+
+/**
+ * Filters a restored query layer's point ids down to those still present in
+ * the current dataset (e.g. after a row was excluded for having a
+ * non-finite value in a matrix dimension), and reports whether anything was
+ * dropped so the caller can push the reconciled selection back to Python
+ * instead of leaving stale ids in the widget state.
+ */
+export function reconcileSelectionIds(
+  restoredIds: number[],
+  pointIds: ReadonlySet<number>
+): { keptIds: number[]; wasReconciled: boolean } {
+  const keptIds = restoredIds.filter(id => pointIds.has(id))
+  return { keptIds, wasReconciled: keptIds.length !== restoredIds.length }
 }
 
 export function buildNavigationSteps(

@@ -210,6 +210,7 @@ function ScatterplotMatrixChart({
               }
             }
           : undefined,
+        disabled: disabled ?? false,
       })
     } catch (engineError) {
       LOG.error(
@@ -230,6 +231,11 @@ function ScatterplotMatrixChart({
       engineRef.current = null
       engine?.dispose()
     }
+    // `disabled` is intentionally omitted: rebuilding the engine (and its
+    // WebGL context) just to toggle a boolean would be wasteful. The
+    // dedicated effect below keeps an existing engine's disabled state in
+    // sync via `setDisabled` instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element, widgetMgr, fragmentId, chartData])
 
   // Reset all query layers when the enclosing form is cleared.
@@ -243,6 +249,18 @@ function ScatterplotMatrixChart({
     })
     return () => formClearHelper.disconnect()
   }, [element.selectionsActivated, element.formId, widgetMgr])
+
+  // Sync disabled state into the existing engine without rebuilding it (a
+  // full rebuild would recreate the WebGL context for a boolean flag). Also
+  // blur the canvas so an already-focused canvas can't keep receiving
+  // keyboard events after becoming disabled (tabIndex alone only prevents
+  // *future* focusing, it doesn't remove existing focus).
+  useEffect(() => {
+    engineRef.current?.setDisabled(disabled ?? false)
+    if (disabled) {
+      canvasRef.current?.blur()
+    }
+  }, [disabled])
 
   if (error !== null) {
     return (

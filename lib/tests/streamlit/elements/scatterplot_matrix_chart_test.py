@@ -136,6 +136,17 @@ class TestScatterplotMatrixChart(DeltaGeneratorTestCase):
         st.scatterplot_matrix_chart(df)
         assert list(df.columns) == [0, 1]
 
+    def test_throws_on_columns_colliding_after_stringification(self):
+        """Distinct columns that stringify to the same name are rejected.
+
+        E.g. an int column named 0 and a str column named "0" would
+        otherwise silently collapse into a single ambiguous "0" column.
+        """
+        df = pd.DataFrame(np.random.default_rng(0).standard_normal((10, 3)))
+        df.columns = [0, "0", 1]
+        with pytest.raises(StreamlitAPIException, match="duplicate column names"):
+            st.scatterplot_matrix_chart(df)
+
     def test_non_numeric_columns_are_excluded_by_default(self):
         """Auto-detected dimensions must not include non-numeric columns."""
         st.scatterplot_matrix_chart(_test_data())

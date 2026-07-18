@@ -17,7 +17,35 @@
 import {
   buildNavigationSteps,
   pointInPolygon,
+  reconcileSelectionIds,
 } from "./scatterplotMatrixEngine"
+
+describe("reconcileSelectionIds", () => {
+  it("keeps ids that are still present and reports no reconciliation", () => {
+    const pointIds = new Set([1, 2, 3])
+    expect(reconcileSelectionIds([1, 3], pointIds)).toEqual({
+      keptIds: [1, 3],
+      wasReconciled: false,
+    })
+  })
+
+  it("drops ids that are no longer present and reports reconciliation", () => {
+    // E.g. a row that used to be selected but now has a non-finite value in
+    // one of the matrix dimensions and was excluded from `points`.
+    const pointIds = new Set([1, 3])
+    expect(reconcileSelectionIds([1, 2, 3], pointIds)).toEqual({
+      keptIds: [1, 3],
+      wasReconciled: true,
+    })
+  })
+
+  it("handles an empty restored selection", () => {
+    expect(reconcileSelectionIds([], new Set([1, 2]))).toEqual({
+      keptIds: [],
+      wasReconciled: false,
+    })
+  })
+})
 
 describe("buildNavigationSteps", () => {
   it("returns no steps when source and target are the same", () => {

@@ -36,6 +36,7 @@ const mockEngineInstances: Array<{
   options: ScatterplotMatrixEngineOptions
   dispose: ReturnType<typeof vi.fn>
   clearAllQueries: ReturnType<typeof vi.fn>
+  setDisabled: ReturnType<typeof vi.fn>
 }> = []
 
 vi.mock("./scatterplotMatrixEngine", async importOriginal => {
@@ -49,6 +50,8 @@ vi.mock("./scatterplotMatrixEngine", async importOriginal => {
       dispose = vi.fn()
 
       clearAllQueries = vi.fn()
+
+      setDisabled = vi.fn()
 
       constructor(options: ScatterplotMatrixEngineOptions) {
         this.options = options
@@ -269,6 +272,62 @@ describe("ScatterplotMatrixChart", () => {
     const canvas = screen.getByTestId("stScatterplotMatrixChartCanvas")
     expect(canvas).toHaveAttribute("tabindex", "-1")
     expect(canvas).toHaveStyle("pointer-events: none")
+    // The engine's own keyboard handling must also be turned off, not just
+    // the CSS/tabIndex (which don't affect an already-focused element):
+    expect(mockEngineInstances[0].setDisabled).toHaveBeenCalledWith(true)
+  })
+
+  it("blurs an already-focused canvas when it becomes disabled", () => {
+    const element = makeProto()
+    const widgetMgr = makeWidgetMgr()
+    // Reuse the same element/widgetMgr across the rerender (as a real app
+    // would across reruns) so only `disabled` changes and the existing
+    // engine is reused via setDisabled, instead of being torn down/rebuilt.
+    const { rerender } = render(
+      <ScatterplotMatrixChart element={element} widgetMgr={widgetMgr} />
+    )
+
+    const canvas = screen.getByTestId("stScatterplotMatrixChartCanvas")
+    act(() => canvas.focus())
+    expect(canvas).toHaveFocus()
+
+    rerender(
+      <ScatterplotMatrixChart
+        element={element}
+        widgetMgr={widgetMgr}
+        disabled
+      />
+    )
+
+    // tabIndex alone wouldn't remove focus from an already-focused element;
+    // the component must explicitly blur it so keydown events stop
+    // targeting the (now disabled) canvas.
+    expect(canvas).not.toHaveFocus()
+    expect(mockEngineInstances).toHaveLength(1)
+    expect(mockEngineInstances[0].setDisabled).toHaveBeenLastCalledWith(true)
+  })
+
+  it("does not blur the canvas when it remains enabled", () => {
+    const element = makeProto()
+    const widgetMgr = makeWidgetMgr()
+    const { rerender } = render(
+      <ScatterplotMatrixChart element={element} widgetMgr={widgetMgr} />
+    )
+
+    const canvas = screen.getByTestId("stScatterplotMatrixChartCanvas")
+    act(() => canvas.focus())
+    expect(canvas).toHaveFocus()
+
+    rerender(
+      <ScatterplotMatrixChart
+        element={element}
+        widgetMgr={widgetMgr}
+        disabled={false}
+      />
+    )
+
+    expect(canvas).toHaveFocus()
+    expect(mockEngineInstances).toHaveLength(1)
   })
 
   it("disposes the engine on unmount", () => {

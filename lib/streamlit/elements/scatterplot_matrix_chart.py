@@ -425,6 +425,19 @@ class ScatterplotMatrixChartMixin:
         # consistent. rename returns a new frame, so user data is not mutated.
         data_df = data_df.rename(columns=str)
 
+        # Stringification can collapse distinct columns into the same name
+        # (e.g. an integer column 0 and a string column "0"). Duplicate names
+        # make column selection ambiguous (data_df[name] returns every
+        # matching column), so reject them explicitly rather than silently
+        # reading the wrong column.
+        duplicate_columns = data_df.columns[data_df.columns.duplicated()].unique()
+        if len(duplicate_columns) > 0:
+            raise StreamlitAPIException(
+                f"The data contains duplicate column names after converting "
+                f"them to strings: {list(duplicate_columns)}. Please rename "
+                f"the columns to unique values before passing the data."
+            )
+
         parsed_columns = _parse_dimension_columns(data_df, columns)
 
         if label is not None and label not in data_df.columns:
