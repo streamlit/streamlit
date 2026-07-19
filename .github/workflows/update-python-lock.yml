@@ -15,6 +15,8 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # Required by github-script for issues.addLabels/issues.createComment on PRs.
+  issues: write
 
 # Only one lock refresh at a time; a scheduled and a manual run should not race.
 concurrency:
@@ -28,7 +30,7 @@ jobs:
 
     steps:
       - name: Checkout develop
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: develop
           fetch-depth: 0
@@ -77,7 +79,7 @@ jobs:
 
       - name: Close superseded lock-update PRs
         if: ${{ steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           NEW_BRANCH: ${{ steps.create-branch.outputs.branch_name }}
         with:
@@ -114,7 +116,7 @@ jobs:
       - name: Create pull request
         id: create-pr
         if: ${{ steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         with:

@@ -223,11 +223,15 @@ jobs:
       - name: Install minimum-compatible protoc
         env:
           PROTOC_VERSION: "3.20.0"
+          # SHA-256 of the pinned protoc release asset, verified against the
+          # official protocolbuffers/protobuf v3.20.0 GitHub release.
+          PROTOC_SHA256: "75d8a9d7a2c42566e46411750d589c51276242d8b6247a5724bac0f9283e05a8"
         run: |
           archive="protoc-${PROTOC_VERSION}-linux-x86_64.zip"
           url="https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${archive}"
           curl -fL --retry 5 --retry-all-errors --retry-delay 3 -o "$RUNNER_TEMP/$archive" "$url"
-          unzip -tq "$RUNNER_TEMP/$archive"
+          # Verify authenticity (and integrity) of the download before extracting.
+          echo "${PROTOC_SHA256}  $RUNNER_TEMP/$archive" | sha256sum -c -
           unzip -q "$RUNNER_TEMP/$archive" -d "$RUNNER_TEMP/protoc-min"
           echo "$RUNNER_TEMP/protoc-min/bin" >> "$GITHUB_PATH"
       - name: Generate and import minimum-compatible Python protobufs
