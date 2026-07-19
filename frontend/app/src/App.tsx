@@ -148,6 +148,7 @@ import {
   ParentMessage,
   SessionEvent,
   SessionStatus,
+  StopAutoRerun,
   WidgetStates,
 } from "@streamlit/protobuf"
 import {
@@ -199,6 +200,7 @@ interface State {
   scriptFinishedHandlers: (() => void)[]
   toolbarMode: Config.ToolbarMode
   showErrorLinks: Config.ShowErrorLinks
+  disableDataExport: boolean
   themeHash: string
   gitInfo: IGitInfo | null
   formsData: FormsData
@@ -358,6 +360,7 @@ export class App extends PureComponent<Props, State> {
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
       showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+      disableDataExport: false,
       // Initialize themeHash to empty string to ensure the first processThemeInput
       // call always processes the theme (whether null or custom theme from server).
       // This prevents the bug where a cached custom theme isn't cleared when the
@@ -1052,6 +1055,8 @@ export class App extends PureComponent<Props, State> {
         pageProfile: (pageProfile: PageProfile) =>
           this.handlePageProfileMsg(pageProfile),
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
+        stopAutoRerun: (stopAutoRerun: StopAutoRerun) =>
+          this.handleStopAutoRerun(stopAutoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
@@ -1275,6 +1280,17 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Handler for ForwardMsg.stopAutoRerun messages. The server sends this when
+   * it evicts fragments (e.g. a nested ``run_every`` fragment whose ancestor
+   * stopped rendering it), so we cancel their pending auto-rerun timers.
+   */
+  handleStopAutoRerun = (stopAutoRerun: StopAutoRerun): void => {
+    stopAutoRerun.fragmentIds.forEach(fragmentId => {
+      this.clearAutoRerunInterval(fragmentId)
+    })
+  }
+
+  /**
    * Handler for ForwardMsg.sessionStatusChanged messages
    * @param statusChangeProto a SessionStatus protobuf
    */
@@ -1452,6 +1468,7 @@ export class App extends PureComponent<Props, State> {
         hideTopBar: config.hideTopBar,
         toolbarMode: config.toolbarMode,
         showErrorLinks: config.showErrorLinks,
+        disableDataExport: config.disableDataExport,
         latestRunTime: performance.now(),
         mainScriptHash,
         // If we're here, the fragmentIdsThisRun variable is always the
@@ -2663,6 +2680,7 @@ export class App extends PureComponent<Props, State> {
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
         resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
         showErrorLinks={this.state.showErrorLinks}
+        disableDataExport={this.state.disableDataExport}
         backendOperationClient={this.backendOperationClient}
       >
         <Hotkeys

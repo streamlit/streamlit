@@ -138,6 +138,9 @@ message Config {
   }
   ShowErrorLinks show_error_links = 9;
 
+  // See config option "client.disableDataExport".
+  bool disable_data_export = 10;
+
   reserved 1, 4;
 }
 

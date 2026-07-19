@@ -620,6 +620,12 @@ class NumberInputMixin:
         if max_value is not None and value is not None and max_value < value:
             raise StreamlitValueAboveMaxError(value=value, max_value=max_value)
 
+        # Record whether the user explicitly provided bounds before we backfill
+        # unset bounds with JS safe-number sentinels below. The frontend uses
+        # these flags to decide which range-validation message to show.
+        has_user_min = min_value is not None
+        has_user_max = max_value is not None
+
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
         try:
@@ -676,13 +682,17 @@ class NumberInputMixin:
         if help is not None:
             number_input_proto.help = dedent(help)
 
+        # min_value/max_value are guaranteed to be non-None here (unset bounds
+        # were backfilled with JS sentinels above). We always send them as the
+        # input's min/max attributes, but has_min/has_max only reflect bounds
+        # the user actually set.
         if min_value is not None:
             number_input_proto.min = min_value
-            number_input_proto.has_min = True
+            number_input_proto.has_min = has_user_min
 
         if max_value is not None:
             number_input_proto.max = max_value
-            number_input_proto.has_max = True
+            number_input_proto.has_max = has_user_max
 
         if step is not None:
             number_input_proto.step = step

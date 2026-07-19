@@ -16,18 +16,14 @@
 
 from __future__ import annotations
 
-import io
 import os
 import shutil
 import sys
-import tarfile
 import tempfile
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 from typing import Final
-from urllib import request
-from urllib.error import URLError
 
 import click
 
@@ -35,11 +31,6 @@ import streamlit
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
-
-# GitHub URL for downloading global skills (versioned tag)
-_GLOBAL_SKILLS_URL: Final[str] = (
-    "https://github.com/streamlit/agent-skills/archive/refs/tags/v1.tar.gz"
-)
 
 # Skill name installed in global mode
 _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
@@ -59,7 +50,7 @@ def _generate_gitignore_snippet(
             rel_dir = target_dir.relative_to(project_root)
         except ValueError:
             rel_dir = target_dir
-        lines.extend(f"{rel_dir}/{skill_name}/" for skill_name in skills)
+        lines.extend(f"{rel_dir}/{skill_name}" for skill_name in skills)
     return "\n".join(lines)
 
 
@@ -76,6 +67,21 @@ def _get_source_skills_dir() -> Path:
     """Get the path to bundled skills in the Streamlit package."""
     package_dir = Path(streamlit.__file__).parent
     return package_dir / ".agents" / "skills"
+
+
+def _get_meta_skill_dir() -> Path:
+    """Get the path to the bundled, version-agnostic meta-skill in the package.
+
+    The meta-skill (a thin ``SKILL.md`` router plus ``scripts/discover.py``) is
+    vendored in the wheel so global installs can copy it from local disk instead
+    of downloading it from GitHub. ``discover.py`` finds the project's installed
+    Streamlit at runtime and points the agent at the version-matched bundled
+    content skills, so a single global install stays correct across Streamlit
+    versions. It lives outside ``.agents/skills`` so project-mode discovery and
+    skill detection never treat it as an installable content skill.
+    """
+    package_dir = Path(streamlit.__file__).parent
+    return package_dir / ".agents" / "meta-skill"
 
 
 def _discover_skills(source_dir: Path) -> list[str]:
@@ -426,61 +432,6 @@ def _install_skill_copy(
         result.skipped.append(f"{rel_target_path} (copy failed: {e})")
 
 
-def _download_global_skill(url: str, skill_name: str) -> Path:
-    """Download and extract global skill from GitHub.
-
-    Returns path to extracted skill directory in a temporary location.
-    Raises click.ClickException on network or extraction errors.
-    """
-    try:
-        with request.urlopen(url, timeout=30) as response:  # noqa: S310
-            data = response.read()
-    except URLError as e:
-        raise click.ClickException(
-            f"Failed to download skills from GitHub: {e}\n"
-            "Check your network connection and try again."
-        ) from e
-
-    # Extract tarball to temp directory
-    temp_dir = Path(tempfile.mkdtemp(prefix="streamlit-skills-"))
-    try:
-        with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
-            # Security: prevent path traversal and other attacks by filtering members.
-            # On Python 3.12+, use filter='data' which blocks absolute paths,
-            # parent directory references (..), and special files (devices, fifos, etc.).
-            # On earlier versions, manually filter to regular files and directories only.
-            if sys.version_info >= (3, 12):
-                tar.extractall(temp_dir, filter="data")
-            else:
-                # Manual safe extraction for Python 3.10/3.11
-                safe_members = [
-                    m
-                    for m in tar.getmembers()
-                    if (m.isfile() or m.isdir())
-                    and not os.path.isabs(m.name)
-                    and ".." not in m.name.split("/")
-                ]
-                tar.extractall(temp_dir, members=safe_members)  # noqa: S202
-    except tarfile.TarError as e:
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        raise click.ClickException(f"Failed to extract skills archive: {e}") from e
-
-    # Find skill directory - search all top-level directories in case archive has
-    # multiple entries (typically GitHub archives have one: repo-name-tag/)
-    extracted_dirs = [d for d in temp_dir.iterdir() if d.is_dir()]
-    if not extracted_dirs:
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        raise click.ClickException("Downloaded archive is empty")
-
-    for archive_root in extracted_dirs:
-        skill_path = archive_root / skill_name
-        if skill_path.is_dir() and (skill_path / "SKILL.md").is_file():
-            return skill_path
-
-    shutil.rmtree(temp_dir, ignore_errors=True)
-    raise click.ClickException(f"Skill '{skill_name}' not found in downloaded archive")
-
-
 def _print_result(result: _InstallResult) -> None:
     """Print the installation result summary."""
     if result.installed:
@@ -569,12 +520,12 @@ def _confirm_project_installation(
 def _confirm_global_installation(target_dirs: list[Path]) -> bool:
     """Show global installation plan and confirm with user."""
     click.echo()
-    click.echo("Installing globally (downloads from GitHub)")
+    click.echo("Installing globally")
 
     click.secho("\nSource:", bold=True)
     click.echo(
         f"  {click.style('•', fg='magenta')} "
-        f"{click.style(_GLOBAL_SKILLS_URL, fg='cyan')}"
+        f"{click.style(str(_get_meta_skill_dir() / _GLOBAL_SKILL_NAME), fg='cyan')}"
     )
 
     click.secho("\nSkill to install:", bold=True)
@@ -634,8 +585,12 @@ def _install_project_skills(
     # Discover bundled skills
     source_skills_dir = _get_source_skills_dir()
     if not source_skills_dir.is_dir():
+        # Keep the absolute path in the server log only - this message is shown
+        # verbatim in the in-app nudge, so it must not leak a server path.
+        _LOGGER.warning("Bundled skills directory not found at %s", source_skills_dir)
         raise click.ClickException(
-            f"Bundled skills directory not found: {source_skills_dir}"
+            "Bundled skills were not found in your Streamlit installation. "
+            "Reinstall Streamlit and try again."
         )
 
     skills = _discover_skills(source_skills_dir)
@@ -752,7 +707,17 @@ def _install_project_skills(
 
 
 def _install_global_skills(*, yes: bool = False) -> _InstallResult:
-    """Install skills globally by downloading from GitHub."""
+    """Install the version-agnostic meta-skill globally from the local package.
+
+    The meta-skill is vendored inside the installed ``streamlit`` package
+    (:func:`_get_meta_skill_dir`), so we copy it from local disk with no network
+    dependency. The old implementation downloaded it from GitHub, which made the
+    in-app one-click install fail for ~1 in 8 Windows users on locked-down
+    networks (see issue #15933) and raised a security review of runtime external
+    downloads. Copying the bundled meta-skill removes both problems; its
+    ``discover.py`` still resolves the version-matched content skills at runtime,
+    so a single global install stays correct across Streamlit versions.
+    """
     target_dirs = _get_global_target_dirs()
 
     # Confirm installation
@@ -760,54 +725,68 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
         click.echo("Installation cancelled.")
         raise click.Abort()
 
-    # Download skill from GitHub
-    click.echo("Downloading skills from GitHub...")
-    skill_path = _download_global_skill(_GLOBAL_SKILLS_URL, _GLOBAL_SKILL_NAME)
+    # The meta-skill ships in the wheel; copy it from local disk (no network).
+    meta_skill_dir = _get_meta_skill_dir()
+    meta_skill = meta_skill_dir / _GLOBAL_SKILL_NAME
+    # The meta-skill is a router (SKILL.md) plus the discover.py it points the
+    # agent at; SKILL.md alone is inert. Require BOTH so a stripped wheel or a
+    # too-narrow package-data glob surfaces as an error instead of a "successful"
+    # install of a skill that fails the moment an agent runs discover.py.
+    if not (
+        (meta_skill / "SKILL.md").is_file()
+        and (meta_skill / "scripts" / "discover.py").is_file()
+    ):
+        # Keep the absolute path in the server log only - this message is shown
+        # verbatim in the in-app nudge, so it must not leak a server path.
+        _LOGGER.warning(
+            "Bundled meta-skill %r is incomplete under %s "
+            "(need SKILL.md + scripts/discover.py)",
+            _GLOBAL_SKILL_NAME,
+            meta_skill_dir,
+        )
+        raise click.ClickException(
+            f"The bundled '{_GLOBAL_SKILL_NAME}' meta-skill was not found in your "
+            "Streamlit installation. Reinstall Streamlit and try again."
+        )
 
-    try:
-        # Install to each target directory
-        result = _InstallResult()
-        # For global install, only one skill is installed but we use a set for consistency
-        bundled_skill_names = {_GLOBAL_SKILL_NAME}
-        for target_dir in target_dirs:
-            _install_skill_copy(
-                _GLOBAL_SKILL_NAME,
-                skill_path.parent,
-                target_dir,
-                result,
-                bundled_skill_names,
-            )
+    # Install to each target directory
+    result = _InstallResult()
+    # For global install, only one skill is installed but we use a set for consistency
+    bundled_skill_names = {_GLOBAL_SKILL_NAME}
+    for target_dir in target_dirs:
+        _install_skill_copy(
+            _GLOBAL_SKILL_NAME,
+            meta_skill_dir,
+            target_dir,
+            result,
+            bundled_skill_names,
+        )
 
-        # Report results
-        _print_result(result)
+    # Report results
+    _print_result(result)
 
-        if result.installed or result.up_to_date:
+    if result.installed or result.up_to_date:
+        click.echo()
+        click.secho(
+            "✨ Successfully installed globally",
+            fg="green",
+            bold=True,
+        )
+        if result.installed:
             click.echo()
+            click.secho("Note: ", fg="bright_black", bold=True, nl=False)
             click.secho(
-                "✨ Successfully installed globally",
-                fg="green",
-                bold=True,
+                "Global skills include a discover.py script that finds",
+                fg="bright_black",
             )
-            if result.installed:
-                click.echo()
-                click.secho("Note: ", fg="bright_black", bold=True, nl=False)
-                click.secho(
-                    "Global skills include a discover.py script that finds",
-                    fg="bright_black",
-                )
-                click.secho(
-                    "      project-specific bundled skills at runtime.",
-                    fg="bright_black",
-                )
-        elif result.skipped:
-            raise _conflict_error(result.skipped)
+            click.secho(
+                "      project-specific bundled skills at runtime.",
+                fg="bright_black",
+            )
+    elif result.skipped:
+        raise _conflict_error(result.skipped)
 
-        return result
-    finally:
-        # Clean up temp directory
-        temp_root = skill_path.parent.parent
-        if temp_root.name.startswith("streamlit-skills-"):
-            shutil.rmtree(temp_root, ignore_errors=True)
+    return result
 
 
 def install_skills(
@@ -941,6 +920,8 @@ _HARNESSES: Final = (
     ("gemini", ".gemini/skills", ".gemini/skills", ".gemini"),
     ("opencode", ".opencode/skills", ".config/opencode/skills", ".config/opencode"),
 )
+
+
 # Max directory levels to walk when searching for a ``.git`` ancestor. Bounded
 # to avoid scanning the entire filesystem on pathological layouts.
 _MAX_REPO_ROOT_WALK_DEPTH: Final = 20

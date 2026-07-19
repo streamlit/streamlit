@@ -75,6 +75,8 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `generating-changelog` | When preparing release notes between two git tags |
 | `improving-frontend-coverage` | When you want to systematically improve frontend test coverage with high-value test cases |
 | `improving-python-coverage` | When you want to systematically improve Python test coverage with high-value test cases |
+| `reviewing-readability` | When reviewing a PR, branch, or changes for comment, docstring, and naming readability — produces findings with concrete proposed rewrites |
+| `reviewing-pr-description` | When reviewing a PR's title and description for clarity and conciseness |
 
 ### Subagents
 

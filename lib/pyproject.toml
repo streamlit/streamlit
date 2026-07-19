@@ -61,7 +61,6 @@ dependencies = [
   # API that our built-in charts rely on.
   "altair>=5.0.0,<7,!=5.4.0,!=5.4.1",
   "blinker>=1.5.0,<2",
-  "cachetools>=5.5,<8",
   "click>=7.0,<9",
   "gitpython>=3.0.7,<4,!=3.1.19",
   "numpy>=1.23,<3",
@@ -169,6 +168,7 @@ streamlit = [
     ".agents/**/*.md",
     ".agents/skills/**/assets/templates/**/*.py",
     ".agents/skills/**/assets/templates/**/*.toml",
+    ".agents/meta-skill/**/*.py",
     "hello/**/*.py",
 ]
 

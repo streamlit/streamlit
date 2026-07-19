@@ -60,7 +60,7 @@ runs:
       run: corepack enable
       shell: bash
     - name: Setup Node
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version-file: ".nvmrc"
         cache: "yarn"
@@ -101,7 +101,7 @@ runs:
     - if: inputs.use_cached_venv == 'true' && inputs.enforce_lock == 'true'
       name: Restore virtualenv from cache
       id: cache-virtualenv
-      uses: actions/cache@v5
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: .venv
         key: v3-python-venv-${{ runner.os }}-${{ runner.arch }}-py${{ inputs.python_version }}-dev-${{ hashFiles('uv.lock') }}

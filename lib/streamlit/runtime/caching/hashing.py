@@ -432,10 +432,11 @@ class _CacheFuncHasher:
             try:
                 self.update(h, hash_pandas_object(series_obj).to_numpy().tobytes())
                 return h.digest()
-            except TypeError:
+            except TypeError as ex:
                 _LOGGER.warning(
-                    "Pandas Series hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Streamlit's default hashing method failed for a pandas Series, "
+                    "so it is falling back to pickling the object. Original error: %s",
+                    ex,
                 )
 
                 # Use pickle if pandas cannot hash the object for example if
@@ -458,10 +459,11 @@ class _CacheFuncHasher:
                 self.update(h, values_hash_bytes)
                 return h.digest()
 
-            except TypeError:
+            except TypeError as ex:
                 _LOGGER.warning(
-                    "Pandas DataFrame hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Streamlit's default hashing method failed for a pandas DataFrame, "
+                    "so it is falling back to pickling the object. Original error: %s",
+                    ex,
                 )
 
                 # Use pickle if pandas cannot hash the object for example if
@@ -482,10 +484,11 @@ class _CacheFuncHasher:
                 self.update(h, obj.hash(seed=0).to_arrow().to_string().encode())
                 return h.digest()
 
-            except TypeError:
+            except TypeError as ex:
                 _LOGGER.warning(
-                    "Polars Series hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Streamlit's default hashing method failed for a polars Series, "
+                    "so it is falling back to pickling the object. Original error: %s",
+                    ex,
                 )
 
                 # Use pickle if polars cannot hash the object for example if
@@ -512,10 +515,11 @@ class _CacheFuncHasher:
                 self.update(h, values_hash_bytes)
                 return h.digest()
 
-            except TypeError:
+            except TypeError as ex:
                 _LOGGER.warning(
-                    "Polars DataFrame hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Streamlit's default hashing method failed for a polars DataFrame, "
+                    "so it is falling back to pickling the object. Original error: %s",
+                    ex,
                 )
 
                 # Use pickle if polars cannot hash the object for example if

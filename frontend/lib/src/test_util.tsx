@@ -77,6 +77,7 @@ const defaultLibConfigContextValue = {
   enforceDownloadInNewTab: undefined,
   resourceCrossOriginMode: undefined,
   showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+  disableDataExport: false,
 }
 
 const defaultSidebarConfigContextValue = {
@@ -263,6 +264,7 @@ export const renderWithContexts = (
     enforceDownloadInNewTab: undefined,
     resourceCrossOriginMode: undefined,
     showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+    disableDataExport: false,
     ...options.libConfigContext,
   }
 

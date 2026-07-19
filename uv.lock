@@ -210,15 +210,6 @@ wheels = [
 ]
 
 [[package]]
-name = "cachetools"
-version = "7.1.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f4/8b/0d3945a13955303b81272f759a0331e54c5c793da455e6f5706b89d2639c/cachetools-7.1.4.tar.gz", hash = "sha256:437f55a4e0c1b01a4f3077cc470e6991d47430970e36fbcb77e2be0df4fc1cd6", size = 40085, upload-time = "2026-05-21T22:40:43.376Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8c/7b/1fc1c09cc0756cf25861a3be10565915953876da48bb228fb9a672b20a42/cachetools-7.1.4-py3-none-any.whl", hash = "sha256:323dc4127934744db5b54eb4924482d7edafbf9554e820d1531c2e08c0e4ef54", size = 16761, upload-time = "2026-05-21T22:40:41.845Z" },
-]
-
-[[package]]
 name = "certifi"
 version = "2026.6.17"
 source = { registry = "https://pypi.org/simple" }
@@ -4284,7 +4275,6 @@ dependencies = [
     { name = "altair" },
     { name = "anyio" },
     { name = "blinker" },
-    { name = "cachetools" },
     { name = "click" },
     { name = "gitpython" },
     { name = "httptools" },
@@ -4315,7 +4305,6 @@ requires-dist = [
     { name = "anyio", specifier = ">=4.0.0,<5" },
     { name = "authlib", marker = "extra == 'auth'", specifier = ">=1.3.2" },
     { name = "blinker", specifier = ">=1.5.0,<2" },
-    { name = "cachetools", specifier = ">=5.5,<8" },
     { name = "click", specifier = ">=7.0,<9" },
     { name = "gitpython", specifier = ">=3.0.7,!=3.1.19,<4" },
     { name = "graphviz", marker = "extra == 'charts'", specifier = ">=0.19.0" },
@@ -4410,7 +4399,6 @@ dev = [
     { name = "twine" },
     { name = "ty" },
     { name = "types-authlib" },
-    { name = "types-cachetools" },
     { name = "types-protobuf" },
     { name = "types-psutil" },
     { name = "types-pytz" },
@@ -4554,7 +4542,6 @@ dev = [
     { name = "twine" },
     { name = "ty", specifier = "==0.0.56" },
     { name = "types-authlib" },
-    { name = "types-cachetools" },
     { name = "types-protobuf" },
     { name = "types-psutil", specifier = ">=5.9.0" },
     { name = "types-pytz" },
@@ -4881,15 +4868,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9e/30/19a552613eda35189e13784693cf98374153700378d6082cd89e35c96ae2/types_authlib-1.6.11.20260518.tar.gz", hash = "sha256:15b9a257e849e740241baa2113dd868c1b295cdc32449e54b109e9fc0105b556", size = 47147, upload-time = "2026-05-18T06:06:40.793Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/75/62/503ca34fd9d92a79694fa2f1b6897f1603c5d9e4aa86b219b232de204578/types_authlib-1.6.11.20260518-py3-none-any.whl", hash = "sha256:e9c873dbc61d87f57cda25b8eb6d35610eb1cae2f5f2b74a8faf94c5e5f01b90", size = 104066, upload-time = "2026-05-18T06:06:39.553Z" },
-]
-
-[[package]]
-name = "types-cachetools"
-version = "7.0.0.20260713"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/34/64/66d7efdb36ecf6826aca5415e59fe2df96e97d24157147e53acfbe8dda11/types_cachetools-7.0.0.20260713.tar.gz", hash = "sha256:f1acf079e9c66a81e096a897ef0b261a82117cf856834e37b4bd0c9a116a076a", size = 10199, upload-time = "2026-07-13T05:22:21.845Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0e/c7/d3525c9dbdc1be7786bad46655ef051b6e7993f656d304719ec40079c91c/types_cachetools-7.0.0.20260713-py3-none-any.whl", hash = "sha256:6db9bcc7a3840d39e91c04117d85a9d0937eacc9d14d12a873e2b01a2d24a71d", size = 9615, upload-time = "2026-07-13T05:22:20.76Z" },
 ]
 
 [[package]]
