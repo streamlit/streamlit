@@ -4361,6 +4361,11 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
+automation = [
+    { name = "packaging" },
+    { name = "requests" },
+    { name = "semver" },
+]
 dev = [
     { name = "authlib" },
     { name = "build" },
@@ -4503,6 +4508,11 @@ test = [
 requires-dist = [{ name = "streamlit", editable = "lib" }]
 
 [package.metadata.requires-dev]
+automation = [
+    { name = "packaging", specifier = ">=20" },
+    { name = "requests", specifier = ">=2.27,<3" },
+    { name = "semver", specifier = ">=3" },
+]
 dev = [
     { name = "authlib", specifier = ">=1.3.2" },
     { name = "build" },

@@ -198,6 +198,12 @@ The supported selections are:
 | Development | `uv sync --locked --no-default-groups --group dev` |
 | Integration | `uv sync --locked --no-default-groups --group integration` |
 
+Lightweight CI and release scripts use a separate `automation` group containing only
+`packaging`, `requests`, and `semver`. It is synced directly by the CI-only
+`setup_automation` action and is intentionally not exposed as a Make target. Scripts run
+with `uv run --no-sync` after setup so a later checkout of an older release branch or tag
+cannot replace the prepared environment.
+
 Expose these through the existing `python-init` target and a validated
 `PYTHON_DEPENDENCY_GROUP` value. `make all-dev` continues to select `dev` by default.
 

@@ -61,6 +61,7 @@ Reusable composite actions in `.github/actions/` encapsulate common setup steps.
 |--------|-------------|
 | `build_info` | Sets Python version env vars (`PYTHON_MIN_VERSION`, `PYTHON_MAX_VERSION`, `PYTHON_VERSIONS`). Call early in workflows. |
 | `make_init` | Locked dev environment setup: uv 0.11.28, Python, Node/Yarn, protoc, lock-keyed virtualenv, protobufs. Does NOT install Playwright. Lock enforcement defaults on; only lock-repair workflows may disable it. |
+| `setup_automation` | Locked Python 3.12 environment containing only the dependencies used by lightweight CI and release utility scripts. |
 | `playwright_install` | Installs Playwright browsers with caching (by OS/arch/version). Call after `make_init` for E2E tests. |
 | `apt_mirror_fix` | Fixes slow Azure apt mirrors on Ubuntu runners. Called automatically by `playwright_install`. |
 | `preview_branch` | Sets `PREVIEW_BRANCH` and `BRANCH` env vars for PR preview deployments. Uses action inputs to mitigate script injection. |
@@ -76,6 +77,12 @@ steps:
       python_version: ${{ env.PYTHON_MAX_VERSION }}
   - uses: ./.github/actions/playwright_install  # Only for E2E tests
 ```
+
+For jobs that only run Python utility scripts, use `setup_automation` instead of
+`make_init`, then invoke scripts with `uv run --no-sync python`. The action exact-syncs
+the small, locked `automation` dependency group, and `--no-sync` prevents later branch or
+tag checkouts from changing that environment. Do not install these dependencies into the
+runner's system Python.
 
 ## Workflow Reference
 

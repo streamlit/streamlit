@@ -58,6 +58,14 @@ streamlit = { path = "lib", editable = true }
 # =============================================================================
 
 [dependency-groups]
+# Dependencies used by lightweight CI and release automation scripts.
+# Keep this group small so those workflows do not need the complete dev environment.
+automation = [
+  "packaging>=20",
+  "requests>=2.27,<3",
+  "semver>=3",
+]
+
 # Development dependencies - includes test group
 dev = [
   { include-group = "test" },

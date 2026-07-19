@@ -36,22 +36,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Set Python version vars
-        uses: ./.github/actions/build_info
-
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
-        with:
-          version: "0.11.28"
-
-      - name: Install Python deps for release automation
-        run: |
-          uv pip install --system packaging semver requests
+      # Sync before checking out the nightly tag. The selected tag may predate
+      # this automation group, so later Python commands use --no-sync.
+      - name: Setup Python automation environment
+        uses: ./.github/actions/setup_automation
 
       - name: Configure Git
         env:
@@ -164,4 +152,4 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RELEASE_BASE_REF: ${{ inputs.nightly_tag }}
         run: |
-          python scripts/slack_notifications.py release_automation branch_created
+          uv run --no-sync python scripts/slack_notifications.py release_automation branch_created

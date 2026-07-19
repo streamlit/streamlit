@@ -19,7 +19,7 @@ VERSION=$1
 VERSION_BRANCH="release/${VERSION}"
 
 git switch --create "$VERSION_BRANCH"
-python scripts/update_version.py "$VERSION"
+uv run --no-sync python scripts/update_version.py "$VERSION"
 env -u UV_LOCKED uv lock
 # Stage tracked updates plus uv.lock explicitly, since `git commit --all` skips
 # an untracked lock when basing a patch on a tag that predates the committed lock.

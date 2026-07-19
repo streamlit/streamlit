@@ -44,11 +44,11 @@ jobs:
           git config --global user.email "core+streamlitbot-github@streamlit.io"
           git config --global user.name "Streamlit Bot"
 
-          TAG="$(./scripts/pypi_nightly_create_tag.py)"
+          TAG="$(uv run --no-sync python scripts/pypi_nightly_create_tag.py)"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-          ./scripts/update_version.py $TAG
-          ./scripts/update_name.py streamlit-nightly
+          uv run --no-sync python scripts/update_version.py "$TAG"
+          uv run --no-sync python scripts/update_name.py streamlit-nightly
           env -u UV_LOCKED uv lock
 
           git add pyproject.toml lib/pyproject.toml frontend/package.json lib/streamlit/__init__.py lib/streamlit/version.py uv.lock
@@ -62,7 +62,7 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           RUN_ID: ${{ github.run_id }}
-        run: python scripts/slack_notifications.py nightly tag
+        run: uv run --no-sync python scripts/slack_notifications.py nightly tag
 
   run-python-tests:
     needs: create-nightly-tag
@@ -121,12 +121,15 @@ jobs:
           ref: ${{ needs.create-nightly-tag.outputs.tag }}
           persist-credentials: false
           submodules: "recursive"
+      - name: Setup Python automation environment
+        if: ${{ needs.run-python-tests.result == 'failure' || needs.run-javascript-tests.result == 'failure' || needs.run-playwright-tests.result == 'failure' }}
+        uses: ./.github/actions/setup_automation
       - if: ${{ needs.run-python-tests.result == 'failure' }}
-        run: python scripts/slack_notifications.py nightly python
+        run: uv run --no-sync python scripts/slack_notifications.py nightly python
       - if: ${{ needs.run-javascript-tests.result == 'failure' }}
-        run: python scripts/slack_notifications.py nightly js
+        run: uv run --no-sync python scripts/slack_notifications.py nightly js
       - if: ${{ needs.run-playwright-tests.result == 'failure' }}
-        run: python scripts/slack_notifications.py nightly playwright
+        run: uv run --no-sync python scripts/slack_notifications.py nightly playwright
 
   create-nightly-build:
     runs-on: ubuntu-latest
@@ -169,7 +172,7 @@ jobs:
         env:
           TAG: ${{ needs.create-nightly-tag.outputs.tag }}
         run: |
-          uv run python scripts/verify_version.py
+          uv run --no-sync python scripts/verify_version.py
       - name: Fix apt mirrors
         if: ${{ runner.os == 'Linux' }}
         uses: ./.github/actions/apt_mirror_fix
@@ -215,7 +218,7 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           RUN_ID: ${{ github.run_id }}
-        run: python scripts/slack_notifications.py nightly build
+        run: uv run --no-sync python scripts/slack_notifications.py nightly build
 
   setup-nightly-preview:
     runs-on: ubuntu-latest
