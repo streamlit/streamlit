@@ -44,6 +44,7 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.runtime import AsyncObjects, RuntimeStoppedError
+from streamlit.runtime.session_manager import ActiveSessionInfo
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from streamlit.watcher import event_based_path_watcher
 from tests.streamlit.message_mocks import (
@@ -555,6 +556,54 @@ class RuntimeTest(RuntimeTestCase):
         # Assert that our error was raised, and that our session was disconnected.
         raise_disconnected_error.assert_called_once()
         assert not self.runtime.is_active_session(session_id)
+
+    async def test_flush_loop_stale_client_error_keeps_reconnected_session(self):
+        """A stale client error during the flush loop must not disconnect a
+        session that has been reconnected to a new client.
+
+        Regression test for a reconnect-while-flushing race: the outbound flush
+        loop can still hold the pre-reconnect ``ActiveSessionInfo`` (old client)
+        when a reconnect swaps in a new client for the same session id. A
+        ``SessionClientDisconnectedError`` from the old client must be routed
+        through the client-aware disconnect guard so the freshly reconnected
+        session is preserved.
+        """
+        await self.runtime.start()
+
+        old_client = MockSessionClient()
+        session_id = self.runtime.connect_session(
+            client=old_client, user_info=MagicMock()
+        )
+
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session = session_info.session
+
+        # The flush loop still holds the pre-reconnect session info (old client),
+        # while the session manager has swapped in a new client for the same id
+        # (as a reconnect would do after the disconnect+restore handoff).
+        new_client = MockSessionClient()
+        session_info.client = new_client
+        stale_session_info = ActiveSessionInfo(old_client, session)
+
+        raise_disconnected_error = MagicMock(side_effect=SessionClientDisconnectedError)
+        old_client.write_forward_msg = raise_disconnected_error
+
+        with patch.object(
+            self.runtime._session_mgr,
+            "list_active_sessions",
+            return_value=[stale_session_info],
+        ):
+            self.enqueue_forward_msg(session_id, create_dataframe_msg([1, 2, 3]))
+            await self.tick_runtime_loop()
+
+        # The stale client raised, but the reconnected session stays active and
+        # remains bound to the new client instead of being torn down.
+        raise_disconnected_error.assert_called_once()
+        assert self.runtime.is_active_session(session_id)
+        reconnected_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert reconnected_info is not None
+        assert reconnected_info.client is new_client
 
     async def test_stable_number_of_async_tasks(self):
         """Test that the number of async tasks remains stable.

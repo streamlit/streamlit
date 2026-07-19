@@ -703,8 +703,14 @@ class Runtime:
                             try:
                                 self._send_message(active_session_info, msg)
                             except SessionClientDisconnectedError:
-                                self._session_mgr.disconnect_session(
-                                    active_session_info.session.id
+                                # Only disconnect if the session is still bound to
+                                # this (now-disconnected) client. A reconnect during
+                                # the flush loop can swap in a new client for the same
+                                # session id, and we must not tear that freshly
+                                # reconnected session down.
+                                self.disconnect_session(
+                                    active_session_info.session.id,
+                                    client=active_session_info.client,
                                 )
 
                             # Yield for a tick after sending a message.
