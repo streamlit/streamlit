@@ -146,8 +146,9 @@ That mechanism is not safe to merge:
 
 ### Alternative displaced-node draft
 
-The alternative draft contributed several requirements that this combined proposal
-adopts:
+The alternative displaced-node draft (an internal "preservation" design draft shared
+alongside this PR for reviewer comparison) contributed several requirements that this
+combined proposal adopts:
 
 - keep displaced nodes outside `children`;
 - retain only prior-run nodes, preserving same-run replacement;
@@ -313,7 +314,7 @@ class BlockNode {
 }
 ```
 
-`elementRetention` is render and lifecycle metadata, not a fifth kind of child. The
+`elementRetention` is render and lifecycle metadata, not a child of the block. The
 identity map provides O(1) revival. `anchorIndex` and `orderWithinAnchor` preserve prior
 rendered order. When a canonical occupant is displaced at an index that already has
 retained entries, assign the next decreasing order at that anchor because the canonical
@@ -575,7 +576,7 @@ one-shot auditing harder.
 ### Complexity and memory
 
 Per-parent identity maps make identity lookup, displacement, and revival O(1), excluding
-ordinary immutable-map copying. Rendering adds one O(children + retained log retained)
+ordinary immutable-map copying. Rendering adds one O(children + retained · log(retained))
 prepass if retained entries are sorted by `(anchorIndex, orderWithinAnchor)` on demand.
 An ordered persistent structure or cached sorted view can reduce that to
 O(children + retained), but is not required for the first implementation. Either option
