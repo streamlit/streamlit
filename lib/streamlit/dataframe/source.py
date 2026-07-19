@@ -287,7 +287,7 @@ class InMemoryDataframeSource:
         # by the type stubs, hence the suppressions below. Unsupported Arrow
         # types must raise: silently returning the original table would leave a
         # sort indicator visible while presenting unsorted rows.
-        indices = pc.sort_indices(  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+        indices = pc.sort_indices(  # type: ignore[attr-defined, unused-ignore] # ty: ignore[unresolved-attribute]
             self._table, sort_keys=[(sort.column, order)]
         )
         return self._table.take(indices)

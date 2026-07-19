@@ -846,8 +846,11 @@ class ArrowMixin:
               Snowpark dataframe) and otherwise converts a supported input to
               an in-memory ``pandas.DataFrame`` and serves row ranges from
               server memory. For small inputs (1,000 rows or fewer), Streamlit
-              keeps eager rendering as an optimization. If lazy delivery is
-              incompatible with the input or other options, Streamlit raises a
+              keeps eager rendering as an optimization, and dataframes with
+              multi-level (``MultiIndex``) column headers always keep eager
+              rendering because lazy loading cannot yet address a single
+              header level. If lazy delivery is otherwise incompatible with the
+              input or other options, Streamlit raises a
               ``StreamlitAPIException``.
             - ``False``: Never use lazy delivery. Streamlit uses the regular
               eager rendering and the existing capped-preview behavior for
