@@ -144,11 +144,10 @@ That mechanism is not safe to merge:
 - The prototype predates the visitor-based tree, `TransientNode`, current fragment
   cleanup, and stable `Block.id` handling.
 
-### Alternative displaced-node draft
+### Earlier displaced-node draft
 
-The alternative displaced-node draft (an internal "preservation" design draft shared
-alongside this PR for reviewer comparison) contributed several requirements that this
-combined proposal adopts:
+An earlier displaced-node draft (reviewed in prior discussion on this PR) contributed
+several requirements that this combined proposal adopts:
 
 - keep displaced nodes outside `children`;
 - retain only prior-run nodes, preserving same-run replacement;
@@ -578,6 +577,8 @@ one-shot auditing harder.
 Per-parent identity maps make identity lookup, displacement, and revival O(1), excluding
 ordinary immutable-map copying. Rendering adds one O(children + retained · log(retained))
 prepass if retained entries are sorted by `(anchorIndex, orderWithinAnchor)` on demand.
+In plain terms, per-rerun rendering cost stays linear in the number of children plus a
+small logarithmic factor for the retained entries — negligible for typical sibling counts.
 An ordered persistent structure or cached sorted view can reduce that to
 O(children + retained), but is not required for the first implementation. Either option
 avoids scanning the canonical suffix inside every tree mutation as PR #12122 does.
