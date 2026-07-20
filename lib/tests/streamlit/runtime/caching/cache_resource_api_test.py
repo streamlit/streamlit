@@ -24,7 +24,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.caching import (
     cache_background_refresh,
     cache_resource_api,
@@ -606,14 +606,17 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
         assert "requires a 'ttl' value" in str(exc.value)
 
     def test_invalid_refresh_mode_raises(self) -> None:
-        """An unknown refresh_mode value raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        """An unknown refresh_mode value raises a StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc:
 
             @st.cache_resource(ttl="1h", refresh_mode="sideways")
             def foo() -> int:
                 return 1
 
-        assert "Unsupported refresh_mode option 'sideways'" in str(exc.value)
+        assert (
+            str(exc.value)
+            == "Invalid `refresh_mode` value. Supported values: foreground, background."
+        )
 
     def test_hard_ttl_is_double_fresh_ttl(self) -> None:
         """In background mode the underlying cache ttl is 2x the user-facing ttl."""
