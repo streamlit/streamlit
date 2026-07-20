@@ -463,7 +463,9 @@ const Selectbox: FC<Props> = ({
    *   whether the dropdown was open before RAC may have closed it.
    * - Opens the dropdown on ArrowUp/Down when closed.
    * - Blocks character input for FILTER_MODE_NONE (can't use readOnly — see above).
-   * - Clears the value on Escape when clearable.
+   * - On Escape while filtering, discards the typed query and restores the
+   *   committed label.
+   * - On Escape when not filtering and clearable, clears the committed value.
    */
   const handleInputKeyDownCapture = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
