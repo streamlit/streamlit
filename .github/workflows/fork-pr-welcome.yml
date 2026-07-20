@@ -31,7 +31,7 @@ jobs:
 
             - 🐛 [Report a bug](https://github.com/streamlit/streamlit/issues/new?template=bug_report.yml) with clear, reproducible steps.
             - 💡 [Request a feature](https://github.com/streamlit/streamlit/issues/new?template=feature_request.yml) and describe your use case.
-            - 👍 Improve or upvote existing issues, and comment on open specs.
+            - 👍 Improve or upvote [existing issues](https://github.com/streamlit/streamlit/issues?q=is%3Aissue%20state%3Aopen%20sort%3Areactions-%2B1-desc), and comment on [open specs](https://github.com/streamlit/streamlit/issues?q=state%3Aopen%20label%3Achange%3Aspec).
             - 🧩 Build a [custom component](https://docs.streamlit.io/develop/concepts/custom-components) or contribute to [streamlit-extras](https://github.com/arnaudmiribel/streamlit-extras).
             - 🙋 Help other users in the [community forum](https://discuss.streamlit.io).
 

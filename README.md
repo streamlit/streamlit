@@ -134,8 +134,10 @@ Deploy, manage and share your apps for free using our [Community Cloud](https://
 🎉 Thanks for your interest in helping improve Streamlit! 🎉
 
 We have paused accepting pull requests from outside the Streamlit maintainer team. You can still
-make a valuable contribution by reporting bugs, requesting features, improving or upvoting
-existing issues, commenting on open specs, creating
+make a valuable contribution by [reporting bugs](https://github.com/streamlit/streamlit/issues/new?template=bug_report.yml),
+[requesting features](https://github.com/streamlit/streamlit/issues/new?template=feature_request.yml),
+[improving or upvoting existing issues](https://github.com/streamlit/streamlit/issues?q=is%3Aissue%20state%3Aopen%20sort%3Areactions-%2B1-desc),
+[commenting on open specs](https://github.com/streamlit/streamlit/issues?q=state%3Aopen%20label%3Achange%3Aspec), creating
 [custom components](https://docs.streamlit.io/develop/concepts/custom-components/components-v2),
 and contributing to [streamlit-extras](https://github.com/arnaudmiribel/streamlit-extras).
 

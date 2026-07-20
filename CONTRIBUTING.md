@@ -46,18 +46,18 @@ Detailed feature requests help us understand community needs and prioritize our 
 
 ### Help improve existing issues and specs
 
-- Add relevant details to existing issues, such as a new reproduction, environment information,
-  use case, or workaround.
+- Add relevant details to [existing issues](https://github.com/streamlit/streamlit/issues?q=is%3Aissue%20state%3Aopen%20sort%3Areactions-%2B1-desc),
+  such as a new reproduction, environment information, use case, or workaround.
 - Answer open questions from maintainers when you have firsthand knowledge that can help.
 - React with a 👍 to the initial post of bugs and feature requests that matter to you. Please use
   reactions instead of adding "+1" or "same" comments.
-- Review [open spec pull requests](https://github.com/streamlit/streamlit/pulls?q=is%3Apr+is%3Aopen+%5Bspec%5D+in%3Atitle)
+- Review [open specs](https://github.com/streamlit/streamlit/issues?q=state%3Aopen%20label%3Achange%3Aspec)
   and comment with concrete feedback about the use case, proposed API, design, or tradeoffs.
 
 ### Extend the Streamlit ecosystem
 
 - Build a [custom Streamlit Component](https://docs.streamlit.io/develop/concepts/custom-components/components-v2)
-  and [publish it to PyPI](https://docs.streamlit.io/develop/concepts/custom-components/publish)
+  and [publish it to PyPI](https://docs.streamlit.io/develop/concepts/custom-components/components-v2/package-based#publishing-your-package)
   so the community can use it.
 - Contribute reusable utilities to the community-maintained
   [streamlit-extras project](https://github.com/arnaudmiribel/streamlit-extras).
