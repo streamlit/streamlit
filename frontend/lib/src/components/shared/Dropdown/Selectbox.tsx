@@ -487,13 +487,28 @@ const Selectbox: FC<Props> = ({
       ) {
         openDropdownRef.current?.()
       }
-      if (
-        e.key === "Escape" &&
-        clearable &&
-        !isNullOrUndefined(valueRef.current)
-      ) {
-        e.preventDefault()
-        commitSelection(null)
+      if (e.key === "Escape") {
+        // While the user is actively filtering (typed query diverges from the
+        // committed value), Escape discards the query and restores the input
+        // to the committed label — matching pre-1.59 BaseWeb behavior and
+        // React Aria's own ComboBox contract. See #16004. This must run
+        // BEFORE the clear-on-Escape branch below, otherwise typing then
+        // pressing Escape on a clearable selectbox would wipe the committed
+        // value instead of just the typed query.
+        if (filterActiveRef.current) {
+          e.preventDefault()
+          const committed = valueRef.current ?? ""
+          setInputValue(committed)
+          inputValueRef.current = committed
+          setFilterActive(false)
+          filterActiveRef.current = false
+          closeDropdownRef.current?.()
+          return
+        }
+        if (clearable && !isNullOrUndefined(valueRef.current)) {
+          e.preventDefault()
+          commitSelection(null)
+        }
       }
     },
     [clearable, commitSelection, isFilterNone, selectDisabled]
