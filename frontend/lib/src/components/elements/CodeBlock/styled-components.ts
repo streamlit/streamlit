@@ -54,7 +54,14 @@ const codeBlockStyle = (
   background: "transparent",
   border: 0,
   color: "inherit",
-  display: "inline",
+  /**
+   * `inline-block` + a right padding on the child keeps a gutter after the
+   * text when the block scrolls horizontally. Browsers drop the parent
+   * `<pre>`'s `padding-right` from the scrollable overflow region, so
+   * without this the last characters butt up against the right edge / copy
+   * button. See issue #8206.
+   */
+  display: "inline-block",
   fontFamily: theme.genericFonts.codeFont,
   fontSize: theme.fontSizes.codeFontSize,
   fontWeight: theme.fontWeights.code,
@@ -62,6 +69,7 @@ const codeBlockStyle = (
   margin: 0,
   overflowX: "auto",
   padding: 0,
+  paddingRight: theme.spacing.lg,
   whiteSpace: wrapLines ? "pre-wrap" : "pre",
   overflowWrap: wrapLines ? "break-word" : "normal",
   ...codeLink,
@@ -97,8 +105,15 @@ export const StyledPre = styled.pre<StyledCodeProps>(
     // Don't allow content to break outside
     overflow: "auto",
 
-    // Add padding around the code
+    /**
+     * Add padding around the code. `paddingRight` is set on the inner
+     * `<code>` (via `codeBlockStyle`) instead of here so the gutter after
+     * the last character survives horizontal scrolling — browsers drop the
+     * `<pre>`'s own right padding from the scrollable overflow region.
+     * See #8206.
+     */
     padding: theme.spacing.lg,
+    paddingRight: 0,
 
     code: { ...codeBlockStyle(theme, wrapLines) },
 

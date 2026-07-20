@@ -27,7 +27,14 @@ export const StyledStackTrace = styled.pre(({ theme }) => ({
   overflowX: "auto",
   margin: 0,
   borderRadius: theme.radii.default,
+  /**
+   * `paddingRight` is applied on the inner `StyledStackTraceContent`
+   * (via its `min-width: 100%` inline-block box) so the gutter on the right
+   * survives horizontal scrolling. Browsers drop a scroll container's own
+   * right padding from its scrollable overflow. See issue #8206.
+   */
   padding: theme.spacing.lg,
+  paddingRight: 0,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
 }))
 
