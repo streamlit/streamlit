@@ -17,7 +17,7 @@ from typing import Final
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -498,18 +498,17 @@ def test_rapid_toggle_does_not_clip_content(app: Page):
     for _ in range(4):
         summary.click(no_wait_after=True)
 
-    # Allow the final open animation to fully settle (duration is 500ms).
-    app.wait_for_timeout(800)
-
     # Content must be visible (final state is open) and NOT clipped by a
     # stale inline height / overflow lock left behind by an interrupted
-    # animation.
+    # animation. Poll until the animation settles instead of a fixed sleep so
+    # the test tolerates slow CI runners.
     body_text = expander.get_by_text("Integer et justo orci", exact=False)
     expect(body_text).to_be_visible()
 
-    height_style = details.evaluate("el => el.style.height")
-    overflow_style = details.evaluate("el => el.style.overflow")
-    assert height_style == "", f"expected no inline height lock, got {height_style!r}"
-    assert overflow_style == "", (
-        f"expected no inline overflow lock, got {overflow_style!r}"
-    )
+    def styles_cleared() -> bool:
+        return (
+            details.evaluate("el => el.style.height") == ""
+            and details.evaluate("el => el.style.overflow") == ""
+        )
+
+    wait_until(app, styles_cleared, timeout=3000)
