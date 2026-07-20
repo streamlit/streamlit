@@ -794,9 +794,11 @@ class ResourceCache(Cache[R]):
     ) -> None:
         """Write back a background-refreshed resource unless it is orphaned.
 
-        On a successful write the replaced resource's ``on_release`` fires (via
-        ``safe_del``); on a discard the freshly produced resource is released so it
-        doesn't leak.
+        On a successful write the replaced resource's ``on_release`` fires, unless the
+        refresh returned the same object that is now cached (then it is left intact).
+        On a discard the freshly produced resource is released so it doesn't leak. Any
+        ``on_release`` failure is logged rather than propagated so it can't turn a
+        successful compute into a failed refresh.
         """
         # st._main and st.sidebar are process-global DeltaGenerator singletons, so
         # reading their _id is safe here on the background refresh thread even though
@@ -836,13 +838,25 @@ class ResourceCache(Cache[R]):
                 )
 
         if discard:
-            # Release the orphaned resource outside the lock (user code may block).
-            self._user_on_release(value)
-        elif replaced_present:
+            # Release the orphaned resource outside the lock (user code may block). The
+            # compute itself succeeded, so a failing on_release must not propagate (it
+            # would otherwise be treated as a failed refresh and start a cooldown); log
+            # it instead.
+            try:
+                self._user_on_release(value)
+            except Exception:
+                _LOGGER.warning(
+                    "on_release raised while releasing a discarded resource during a "
+                    "background cache refresh.",
+                    exc_info=True,
+                )
+        elif replaced_present and replaced_value is not value:
             # Release the replaced resource outside the lock (user code may block). A
             # failing on_release must not undo the successful swap, so log it rather
             # than propagate (which would otherwise mark the refresh failed while the
-            # new value is already stored).
+            # new value is already stored). We skip the release entirely when the
+            # refresh returned the same object that is now cached (e.g. a process-wide
+            # singleton), so we don't tear down the live cached resource.
             try:
                 self._user_on_release(replaced_value)
             except Exception:

@@ -32,7 +32,7 @@ from streamlit.runtime.caching import (
     clear_session_resource_cache,
     get_resource_cache_stats_provider,
 )
-from streamlit.runtime.caching.cache_resource_api import _resource_caches
+from streamlit.runtime.caching.cache_resource_api import ResourceCache, _resource_caches
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
@@ -762,6 +762,75 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
         timer_patch.return_value = _BG_TTL * 1.5
         assert foo() == 2
         assert counter[0] == 2
+
+    def test_same_instance_refresh_skips_release(self) -> None:
+        """A refresh returning the already-cached object must not release it.
+
+        When the cached function returns the same object it replaces (e.g. a
+        process-wide singleton), releasing the "replaced" resource would tear down the
+        live cached object, so on_release must be skipped.
+        """
+        released: list[object] = []
+        cache: ResourceCache[object] = ResourceCache(
+            key="same_instance",
+            max_entries=float("inf"),
+            ttl_seconds=_BG_TTL * 2,
+            validate=None,
+            display_name="same",
+            on_release=released.append,
+            fresh_ttl_seconds=_BG_TTL,
+            refresh_mode="background",
+        )
+        singleton = object()
+        cache.write_result("k", singleton, [])
+
+        cache.write_background_refresh_result(
+            "k",
+            singleton,
+            expected_generation=cache.generation,
+            expected_key_generation=cache.key_generation("k"),
+        )
+
+        assert released == []
+        assert cache.read_result("k").value is singleton
+
+    def test_orphan_discard_swallows_release_error(self) -> None:
+        """A raising on_release while discarding an orphaned refresh must not propagate.
+
+        The compute itself succeeded, so a failing release of the discarded resource is
+        swallowed rather than raised (which would otherwise be treated as a failed
+        refresh and start a retry cooldown).
+        """
+        released: list[int] = []
+
+        def failing_release(value: int) -> None:
+            released.append(value)
+            raise RuntimeError("release boom")
+
+        cache: ResourceCache[int] = ResourceCache(
+            key="discard_err",
+            max_entries=float("inf"),
+            ttl_seconds=_BG_TTL * 2,
+            validate=None,
+            display_name="discard",
+            on_release=failing_release,
+            fresh_ttl_seconds=_BG_TTL,
+            refresh_mode="background",
+        )
+        cache.write_result("k", 1, [])
+
+        # A stale generation orphans the write-back, so the produced value (2) is
+        # discarded and released; the raising on_release must not escape.
+        cache.write_background_refresh_result(
+            "k",
+            2,
+            expected_generation=cache.generation + 1,
+            expected_key_generation=cache.key_generation("k"),
+        )
+
+        assert released == [2]
+        # The originally cached value is untouched by the discarded refresh.
+        assert cache.read_result("k").value == 1
 
     @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
     def test_validate_fail_forces_foreground(self, timer_patch: Mock) -> None:
