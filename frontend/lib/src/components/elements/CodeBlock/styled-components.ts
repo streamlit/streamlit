@@ -58,7 +58,7 @@ const codeBlockStyle = (
    * `inline-block` + a right padding on the child keeps a gutter after the
    * text when the block scrolls horizontally. Browsers drop the parent
    * `<pre>`'s `padding-right` from the scrollable overflow region, so
-   * without this the last characters butt up against the right edge / copy
+   * without this the last characters sit flush against the right edge / copy
    * button. See issue #8206.
    */
   display: "inline-block",
