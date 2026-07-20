@@ -506,7 +506,7 @@ def test_rapid_toggle_does_not_clip_content(app: Page):
     expect(body_text).to_be_visible()
 
     def styles_cleared() -> bool:
-        return (
+        return bool(
             details.evaluate("el => el.style.height") == ""
             and details.evaluate("el => el.style.overflow") == ""
         )
