@@ -85,6 +85,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             // Close any still-open lock-update PRs so only the latest one accumulates.
+            const repoFullName = `${context.repo.owner}/${context.repo.repo}`;
             const openPrs = await github.paginate(github.rest.pulls.list, {
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -93,9 +94,12 @@ jobs:
               per_page: 100,
             });
             for (const pr of openPrs) {
+              // Restrict to our own automation branches; a fork PR could share
+              // the update-python-lock- prefix but must never be closed here.
               if (
                 pr.head.ref !== process.env.NEW_BRANCH &&
-                pr.head.ref.startsWith('update-python-lock-')
+                pr.head.ref.startsWith('update-python-lock-') &&
+                pr.head.repo?.full_name === repoFullName
               ) {
                 await github.rest.issues.createComment({
                   owner: context.repo.owner,
