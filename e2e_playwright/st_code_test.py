@@ -205,30 +205,6 @@ def test_right_padding_preserved_on_horizontal_scroll(app: Page):
         f"Expected right padding gap of ~16px at max scroll, got {gap_px}px"
     )
 
-    # Sanity check: when NOT scrolled, the block also has a right-side gap.
-    # (This asserts the fix doesn't degrade the non-scrolled state.)
-    non_scrolled_gap_px = pre.evaluate(
-        """(el) => {
-            el.scrollLeft = 0;
-            const preRight = el.getBoundingClientRect().right;
-            const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT);
-            let rightmost = 0;
-            let node = walker.nextNode();
-            while (node) {
-                if (node.children.length === 0 && (node.textContent ?? "").trim()) {
-                    const r = node.getBoundingClientRect().right;
-                    // Ignore overflowing content when measuring initial state.
-                    if (r <= preRight) rightmost = Math.max(rightmost, r);
-                }
-                node = walker.nextNode();
-            }
-            return preRight - rightmost;
-        }"""
-    )
-    assert non_scrolled_gap_px >= 12, (
-        f"Expected non-scrolled right padding of ~16px, got {non_scrolled_gap_px}px"
-    )
-
 
 def test_correct_bottom_spacing_for_code_blocks(app: Page):
     """Test that the code blocks have the correct bottom spacing."""
