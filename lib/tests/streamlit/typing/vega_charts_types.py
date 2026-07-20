@@ -276,3 +276,7 @@ if TYPE_CHECKING:
 
     # Invalid theme value for altair_chart (only "streamlit" or None).
     altair_chart(chart, theme="dark")  # type: ignore[call-overload]
+
+    # Invalid on_select literal (only "ignore" / "rerun" or a callable).
+    altair_chart(chart, on_select="invalid")  # type: ignore[call-overload]
+    vega_lite_chart(data, spec, on_select="invalid")  # type: ignore[call-overload]
