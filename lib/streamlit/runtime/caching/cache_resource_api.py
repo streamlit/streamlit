@@ -90,17 +90,6 @@ def _no_op_release(ignored: Any) -> None:
     """No-op OnRelease function."""
 
 
-@gather_metrics("cache_resource_background_refresh")
-def _record_cache_resource_background_refresh() -> None:
-    """Record active use of ``refresh_mode="background"`` with ``st.cache_resource``.
-
-    Called on the first stale-serve so ``gather_metrics`` can distinguish
-    background-refresh adoption from the standard decorator metric (which records
-    argument names/types but not string values, so it can't tell the ``refresh_mode``
-    value apart). The function body is intentionally empty; only the call is tracked.
-    """
-
-
 class ResourceCaches(StatsProvider):
     """Manages all ResourceCache instances."""
 
@@ -317,9 +306,6 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
             scope=self.scope,
             refresh_mode=self.refresh_mode,
         )
-
-    def record_background_refresh_metric(self) -> None:
-        _record_cache_resource_background_refresh()
 
 
 class CacheResourceAPI:

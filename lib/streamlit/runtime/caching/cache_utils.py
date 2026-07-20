@@ -394,13 +394,6 @@ class CachedFuncInfo(Generic[P, R]):
         """
         raise NotImplementedError
 
-    def record_background_refresh_metric(self) -> None:
-        """Record a metric marking active use of ``refresh_mode="background"``.
-
-        Overridden by the data/resource subclasses to record their respective
-        tracked markers. The default is a no-op.
-        """
-
 
 def make_cached_func_wrapper(info: CachedFuncInfo[P, R]) -> CachedFunc[P, R]:
     """Create a callable wrapper around a CachedFunctionInfo.
@@ -446,10 +439,6 @@ class CachedFunc(Generic[P, R]):
     def __init__(self, info: CachedFuncInfo[P, R]) -> None:
         self._info = info
         self._function_key = _make_function_key(info.cache_type, info.func)
-        # Ensures the background-refresh usage metric is recorded approximately once
-        # per decorated function per process. The flag is intentionally unsynchronized
-        # (telemetry only), so concurrent first stale-hits may record it a few times.
-        self._background_refresh_metric_recorded = False
 
     def __repr__(self) -> str:
         return f"<CachedFunc: {self._info.func}>"
@@ -665,8 +654,6 @@ class CachedFunc(Generic[P, R]):
         # release it here (in the finally) so the key can be retried on a later access.
         scheduled = False
         try:
-            # Record active use of background mode once per decorated function.
-            self._record_background_refresh_metric_once()
             expected_generation = cache.generation
             expected_key_generation = cache.key_generation(value_key)
             scheduled = (
@@ -727,13 +714,6 @@ class CachedFunc(Generic[P, R]):
             )
         finally:
             lock.release()
-
-    def _record_background_refresh_metric_once(self) -> None:
-        """Record the background-refresh usage metric approximately once per function."""
-        if self._background_refresh_metric_recorded:
-            return
-        self._background_refresh_metric_recorded = True
-        self._info.record_background_refresh_metric()
 
     def _emit_background_display_warning(self) -> None:
         """Warn that display output won't replay on hits in background mode."""

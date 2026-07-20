@@ -93,17 +93,6 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-@gather_metrics("cache_data_background_refresh")
-def _record_cache_data_background_refresh() -> None:
-    """Record active use of ``refresh_mode="background"`` with ``st.cache_data``.
-
-    Called on the first stale-serve so ``gather_metrics`` can distinguish
-    background-refresh adoption from the standard decorator metric (which records
-    argument names/types but not string values, so it can't tell the ``refresh_mode``
-    value apart). The function body is intentionally empty; only the call is tracked.
-    """
-
-
 class CachedDataFuncInfo(CachedFuncInfo[P, R]):
     """Implements the CachedFuncInfo interface for @st.cache_data."""
 
@@ -136,9 +125,6 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         self.ttl = ttl
 
         self.validate_params()
-
-    def record_background_refresh_metric(self) -> None:
-        _record_cache_data_background_refresh()
 
     @property
     def cache_type(self) -> CacheType:
