@@ -87,8 +87,17 @@ def echo(
         collect_body_statements(root_node)
 
         # In AST module the lineno (line numbers) are 1-indexed,
-        # so we decrease it by 1 to lookup in source lines list
-        echo_block_start_line = line_to_node_map[start_line].body[0].lineno - 1
+        # so we decrease it by 1 to lookup in source lines list.
+        # For a decorated function/class as the first body statement, ast
+        # points `lineno` at `def`/`class` — the decorators are one or more
+        # lines above. Use the earliest of the node and its decorators so the
+        # @decorator lines are included in the echoed source (#9252).
+        first_body_node = line_to_node_map[start_line].body[0]
+        first_body_lineno = min(
+            [first_body_node.lineno]
+            + [d.lineno for d in getattr(first_body_node, "decorator_list", [])]
+        )
+        echo_block_start_line = first_body_lineno - 1
         echo_block_end_line = line_to_node_map[start_line].end_lineno
         lines_to_display = source_lines[echo_block_start_line:echo_block_end_line]
 
