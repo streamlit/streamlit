@@ -44,11 +44,10 @@ The issue discussion proposed `streamlit.typing`, but the codebase contains many
 possible exports. Publishing all of them would turn implementation details into a
 permanent compatibility surface.
 
-There is also an earlier implementation attempt. [`#9048`](https://github.com/streamlit/streamlit/pull/9048)
-initially proposed a `streamlit.types` module containing `UploadedFile` and
-`DeltaGenerator`. During review, maintainers asked to separate that public-API
-decision into a dedicated change; the final merged PR contained only the unrelated
-annotation improvements. No types namespace has shipped, so this spec makes the
+No types namespace has shipped. An earlier PR ([`#9048`](https://github.com/streamlit/streamlit/pull/9048))
+proposed a `streamlit.types` module with `UploadedFile` and `DeltaGenerator`, but
+maintainers asked to separate the public-API decision into a dedicated change, and the
+merged PR contained only unrelated annotation improvements. This spec makes those
 deferred naming and scope decisions explicitly.
 
 ### Goals
