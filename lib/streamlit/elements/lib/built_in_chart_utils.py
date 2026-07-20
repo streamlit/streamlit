@@ -450,9 +450,25 @@ def _prep_data(
         selected_data, x_column, y_column_list, color_column, size_column, sort_column
     )
 
-    # Return the data, the new names to use for x, y, and color, the aliased y column
-    # list (so the caller can build a color scale whose domain matches the data), and
-    # the alias-to-original title map.
+    # If the melt produced a melted-color column and any y columns were aliased,
+    # rewrite the melted-color values back to the original user-facing names.
+    # This makes the color legend and tooltip display the original column names
+    # without needing a Vega-Lite ``labelExpr`` remap. The y encoding still
+    # references the alias columns via ``y_column`` for the actual value lookup.
+    if (
+        color_column == _MELTED_COLOR_COLUMN_NAME
+        and alias_to_original
+        and color_column in melted_data.columns
+    ):
+        melted_data[color_column] = melted_data[color_column].map(
+            lambda v: alias_to_original.get(v, v)
+        )
+        # Also swap ``y_column_list`` entries back to originals so any downstream
+        # scale domain lines up with the values now stored in the data.
+        y_column_list = [alias_to_original.get(c, c) for c in y_column_list]
+
+    # Return the data, the new names to use for x, y, and color, the (possibly
+    # user-facing) y column list, and the alias-to-original title map.
     return (
         melted_data,
         x_column,
@@ -1112,24 +1128,15 @@ def _get_color_encoding(
                 else:
                     resolved_colors.append(to_css_color(c))
 
-            # The melted `color` column contains the (possibly aliased) y column
-            # names, so the scale domain must match those. If any y columns were
-            # renamed, use a labelExpr to show the original name in the legend.
-            legend_settings: dict[str, Any] = dict(_COLOR_LEGEND_SETTINGS)
-            if alias_to_original:
-                # Vega expression that maps a datum value (an alias) to the
-                # original user-facing name, falling back to the value itself.
-                lookup_pairs = ", ".join(
-                    f"{alias!r}: {original!r}"
-                    for alias, original in alias_to_original.items()
-                )
-                legend_settings["labelExpr"] = (
-                    f"({{{lookup_pairs}}})[datum.value] || datum.value"
-                )
+            # After ``_prep_data`` the melted `color` column contains the
+            # original user-facing y column names (aliases are only used as the
+            # underlying data-column identifiers). ``y_column_list`` is likewise
+            # in user-facing form here, so the scale domain lines up naturally
+            # and no ``labelExpr`` remap is needed for the legend.
             return alt.Color(
                 field=color_column if color_column is not None else alt.Undefined,
                 scale=alt.Scale(domain=y_column_list, range=resolved_colors),
-                legend=legend_settings,
+                legend=_COLOR_LEGEND_SETTINGS,
                 type="nominal",
                 title=" ",
             )
@@ -1145,18 +1152,13 @@ def _get_color_encoding(
             else _infer_vegalite_type(df[color_column])
         )
 
-        legend: Any = _COLOR_LEGEND_SETTINGS
-        # If the melted `color` column contains aliased y column names, remap them
-        # back to the original names for the legend labels. See #7714.
-        if color_column == _MELTED_COLOR_COLUMN_NAME and alias_to_original:
-            lookup_pairs = ", ".join(
-                f"{alias!r}: {original!r}"
-                for alias, original in alias_to_original.items()
-            )
-            legend = dict(_COLOR_LEGEND_SETTINGS)
-            legend["labelExpr"] = f"({{{lookup_pairs}}})[datum.value] || datum.value"
-
-        color_enc = alt.Color(field=color_column, legend=legend, type=column_type)
+        # When the melted `color` column is in play its values are the original
+        # (user-facing) y column names — ``_prep_data`` rewrites them from
+        # aliases before we get here — so the legend labels come out correct
+        # without any extra remapping. See #7714.
+        color_enc = alt.Color(
+            field=color_column, legend=_COLOR_LEGEND_SETTINGS, type=column_type
+        )
 
         # Fix title if DF was melted
         if color_column == _MELTED_COLOR_COLUMN_NAME:

@@ -2632,8 +2632,9 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert chart_spec["encoding"]["y"]["title"] == "a.b"
 
     def test_bar_chart_multi_dotted_columns_legend_shows_originals(self):
-        """When multiple y columns contain '.', the melted-color legend must map
-        internal aliases back to the original names via labelExpr.
+        """When multiple y columns contain '.', the melted-color column data
+        values must be rewritten back to the original names so the legend and
+        the tooltip both display 'a.b' / 'c.d' rather than internal aliases.
         """
         df = pd.DataFrame({"a.b": [1, 2, 3], "c.d": [4, 5, 6]})
 
@@ -2642,12 +2643,38 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
+        # The melted color column data values must be the original names, not
+        # the internal aliases. That way both the legend and the melted-color
+        # tooltip pick them up naturally.
+        data_frame = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        color_field = chart_spec["encoding"]["color"]["field"]
+        color_values = set(data_frame[color_field].unique())
+        assert color_values == {"a.b", "c.d"}
+        # And the color legend must not carry a stale labelExpr — a leftover
+        # alias-to-original remap would be a signal that data and encoding
+        # went out of sync.
         legend = chart_spec["encoding"]["color"]["legend"]
-        # The labelExpr must reference both original column names so the legend
-        # displays 'a.b' and 'c.d' rather than the internal aliases.
-        assert "labelExpr" in legend
-        assert "a.b" in legend["labelExpr"]
-        assert "c.d" in legend["labelExpr"]
+        assert "labelExpr" not in legend
+
+    def test_bar_chart_multi_dotted_columns_tooltip_shows_originals(self):
+        """Regression test: the melted-color tooltip must display the original
+        column names, not the internal aliases. Reported by Cursor Bugbot on
+        #16089 — the earlier fix only remapped the legend via ``labelExpr``.
+        """
+        df = pd.DataFrame({"a.b": [1, 2, 3], "c.d": [4, 5, 6]})
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # The melted-color tooltip references the color field directly, so what
+        # the user sees on hover is the raw data value. Assert those values
+        # cannot leak internal aliases.
+        data_frame = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        color_field = chart_spec["encoding"]["color"]["field"]
+        for value in data_frame[color_field].unique():
+            assert not any(ch in str(value) for ch in ("streamlit-generated",))
 
     def test_bar_chart_plain_column_names_are_not_aliased(self):
         """Anti-regression: columns without special characters must keep their
