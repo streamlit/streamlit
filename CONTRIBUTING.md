@@ -455,44 +455,14 @@ def test_streamlit_version(self):
 
 To fix this make sure your Python environment is set up correctly. Try running `make python-init` to reinstall locked development dependencies, or delete the `.venv` directory and run `make all-dev` again to recreate the environment.
 
-#### `protoc` command fails because of version mismatch
+#### `protoc` command fails because the compiler is too old
 
-If the `protoc` command fails and there is a version mismatch reported, try to install the correct version.
+If `make protobuf` reports that the installed compiler is too old, install protoc 3.20 or
+newer using the [official installation instructions](https://protobuf.dev/installation/).
+The compiler does not need to exactly match the Python protobuf runtime version.
 
-- Go to [Protobuf releases](https://github.com/protocolbuffers/protobuf/releases)
-- Choose the [Protobuf tag](https://github.com/protocolbuffers/protobuf/tags) which matches Python's environment Protobuf version, for example [3.20.0](https://github.com/protocolbuffers/protobuf/releases/tag/v3.20.0). Call `uv run pip show protobuf` or equivalent to find this out.
-- Download zip containing protoc for your system, example: [protoc-3.20.0-osx-x86_64.zip](https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-osx-x86_64.zip)
-
-<details>
-<summary>Example for macOS</summary>
-
-```bash
-curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-osx-x86_64.zip
-sudo unzip -o protoc-3.20.0-osx-x86_64.zip -d /usr/local bin/protoc
-sudo unzip -o protoc-3.20.0-osx-x86_64.zip -d /usr/local 'include/*'
-# Print out your System's Protoc version
-protoc --version
-```
-
-</details>
-
-<details>
-<summary>Example for Linux (ARM)</summary>
-
-```bash
-curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-linux-aarch_64.zip
-sudo unzip -o protoc-3.20.0-linux-aarch_64.zip -d /usr/local bin/protoc
-sudo unzip -o protoc-3.20.0-linux-aarch_64.zip -d /usr/local 'include/*'
-
-# (optional) remove old version
-rm /usr/bin/protoc
-ln -s /usr/local/bin/protoc /usr/bin/protoc
-
-# Print out your System's Protoc version
-protoc --version
-```
-
-</details>
+To reproduce CI or release-generated output, use the compiler version configured in
+[`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml).
 
 ## Introducing dependencies
 
