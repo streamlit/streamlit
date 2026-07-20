@@ -87,6 +87,16 @@ jobs:
         run: |
           git fetch --prune --tags --force origin
 
+      # Save the current (develop) release script before checking out the
+      # nightly tag. The nightly tag may predate the uv.lock migration, so its
+      # historical copy of create_release_branch.sh would lack the `uv lock` /
+      # `git add uv.lock` steps. Running the preserved copy guarantees the
+      # release branch always gets a freshly generated lock.
+      - name: Preserve current release script
+        run: |
+          set -euo pipefail
+          cp scripts/create_release_branch.sh "${RUNNER_TEMP}/create_release_branch.sh"
+
       - name: Checkout nightly tag (detached HEAD)
         env:
           NIGHTLY_TAG: ${{ inputs.nightly_tag }}
@@ -120,11 +130,11 @@ jobs:
           RELEASE_VERSION: ${{ inputs.release_version }}
         run: |
           set -euo pipefail
-          chmod +x scripts/create_release_branch.sh
+          chmod +x "${RUNNER_TEMP}/create_release_branch.sh"
           if [ "$DRY_RUN" = "true" ]; then
-            echo "[DRY RUN] Would run: ./scripts/create_release_branch.sh $RELEASE_VERSION"
+            echo "[DRY RUN] Would run: scripts/create_release_branch.sh $RELEASE_VERSION"
           else
-            bash scripts/create_release_branch.sh "$RELEASE_VERSION"
+            bash "${RUNNER_TEMP}/create_release_branch.sh" "$RELEASE_VERSION"
           fi
 
       - name: Write step summary

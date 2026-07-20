@@ -138,11 +138,9 @@ def pytest_collection_modifyitems(config, items):
 @pytest.fixture
 def anyio_backend() -> str:
     """Pin `@pytest.mark.anyio` tests to the asyncio backend."""
-    # Streamlit's server runs on asyncio, so that is the only backend worth
-    # testing. Without this pin, the anyio pytest plugin parametrizes over every
-    # backend it considers available; on the minimum supported anyio that
-    # includes trio, which is not a declared dependency (so it is not installed)
-    # and the trio variants error out.
+    # Streamlit only runs on asyncio. Without this pin, the anyio pytest plugin
+    # parametrizes tests over undeclared backends (like trio), which causes
+    # errors in the minimum-dependency test environment.
     return "asyncio"
 
 

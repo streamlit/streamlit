@@ -218,7 +218,8 @@ python-performance-tests:
 # Run Python integration tests. Requires `PYTHON_DEPENDENCY_GROUP=integration make python-init` first.
 python-integration-tests:
 	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
-	MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v -l \
+	@# --no-sync keeps the integration group installed by `PYTHON_DEPENDENCY_GROUP=integration make python-init`; a bare `uv run` re-syncs to the default `dev` group and drops integration-only deps.
+	MPLBACKEND=Agg uv run --no-sync pytest -c lib/pyproject.toml -v -l \
 		--require-integration \
 		lib/tests/
 
