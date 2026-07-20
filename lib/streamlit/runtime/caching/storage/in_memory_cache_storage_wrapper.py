@@ -87,6 +87,13 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     def stats_families(self) -> Sequence[str]:
         return (CACHE_MEMORY_FAMILY,)
 
+    def has(self, key: str) -> bool:
+        """Return whether the key is in memory or the underlying storage."""
+        with self._mem_cache_lock:
+            if key in self._mem_cache:
+                return True
+        return self._persist_storage.has(key)
+
     def get(self, key: str) -> bytes:
         """
         Returns the stored value for the key or raise CacheStorageKeyNotFoundError if

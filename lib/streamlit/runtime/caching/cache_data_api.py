@@ -920,8 +920,9 @@ class DataCache(Cache[R]):
             # Presence check: only write back if the entry still exists. A hard-expired
             # / evicted / cleared entry should stay gone so the next access is a miss.
             try:
-                self.storage.get(value_key)
-            except (CacheStorageKeyNotFoundError, CacheStorageError):
+                if not self.storage.has(value_key):
+                    return
+            except CacheStorageError:
                 return
             self.storage.set(value_key, pickled_entry)
 
