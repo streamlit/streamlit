@@ -96,3 +96,10 @@ st.bar_chart(df, x="b", y="a", sort="a", horizontal=True)  # horizontal, sort by
 st.bar_chart(
     df, x="a", y=["b", "c"], sort="-a"
 )  # sort by x column with multiple y columns (regression test)
+
+# Regression test for https://github.com/streamlit/streamlit/issues/7714:
+# Vega-Lite treats '.' in a field string as nested-object access. A single
+# column whose name contains '.' used to produce a blank chart.
+st.bar_chart(pd.DataFrame({"col.name": [1, 2, 3, 4]}))
+# Same behavior for column names with square brackets, as reported by users.
+st.bar_chart(pd.DataFrame({"CO2 Storage [t]": [10, 20, 30, 40]}))
