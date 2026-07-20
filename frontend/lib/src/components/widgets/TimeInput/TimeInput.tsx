@@ -68,7 +68,7 @@ export interface Props {
  *
  * Note: `step` still controls arrow-key behaviour via `handleArrowKeyCapture`.
  */
-function stepToGranularity(_stepSeconds: number): "hour" | "minute" {
+function stepToGranularity(_stepSeconds: number): "minute" {
   return "minute"
 }
 

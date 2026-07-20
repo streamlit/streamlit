@@ -15,6 +15,7 @@
  */
 
 import styled from "@emotion/styled"
+import { getLuminance } from "color2k"
 import { DateInput, DateSegment } from "react-aria-components"
 
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
@@ -69,33 +70,37 @@ export const StyledTimeFieldInput = styled(DateInput)({
 })
 
 /** Individual hour, minute, or literal separator segment. */
-export const StyledTimeSegment = styled(DateSegment)(({ theme }) => ({
-  paddingLeft: theme.spacing.threeXS,
-  paddingRight: theme.spacing.threeXS,
-  borderRadius: theme.radii.sm,
-  color: theme.colors.bodyText,
-  caretColor: "transparent",
-  outline: "none",
-  fontWeight: theme.fontWeights.normal,
-  "&[data-type=literal]": {
-    color: theme.colors.fadedText60,
-    padding: 0,
-  },
-  "&[data-placeholder]": {
-    color: theme.colors.fadedText60,
-  },
-  // focused must come after placeholder so white text always wins on the
-  // primary-colored focused highlight, even when the segment is still a placeholder.
-  "&[data-focused]": {
-    backgroundColor: theme.colors.primary,
-    color: theme.colors.white,
-  },
-  // When disabled, inherit the fadedText40 color set on StyledTimeInputWrapper.
-  // Without this, the explicit color: bodyText above blocks CSS inheritance.
-  "&[data-disabled]": {
-    color: "inherit",
-  },
-}))
+export const StyledTimeSegment = styled(DateSegment)(({ theme }) => {
+  const isLightPrimary = getLuminance(theme.colors.primary) > 0.5
+
+  return {
+    paddingLeft: theme.spacing.threeXS,
+    paddingRight: theme.spacing.threeXS,
+    borderRadius: theme.radii.sm,
+    color: theme.colors.bodyText,
+    caretColor: "transparent",
+    outline: "none",
+    fontWeight: theme.fontWeights.normal,
+    "&[data-type=literal]": {
+      color: theme.colors.fadedText60,
+      padding: 0,
+    },
+    "&[data-placeholder]": {
+      color: theme.colors.fadedText60,
+    },
+    // focused must come after placeholder so contrast text always wins on the
+    // primary-colored focused highlight, even when the segment is still a placeholder.
+    "&[data-focused]": {
+      backgroundColor: theme.colors.primary,
+      color: isLightPrimary ? theme.colors.bodyText : theme.colors.white,
+    },
+    // When disabled, inherit the fadedText40 color set on StyledTimeInputWrapper.
+    // Without this, the explicit color: bodyText above blocks CSS inheritance.
+    "&[data-disabled]": {
+      color: "inherit",
+    },
+  }
+})
 
 /** Icon-only clear button, absolute-positioned to the right of the input. */
 export const StyledClearButton = styled.button(({ theme }) => ({
