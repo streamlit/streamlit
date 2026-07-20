@@ -25,7 +25,7 @@ import {
   useState,
 } from "react"
 
-import { FloatingPortal } from "@floating-ui/react"
+import { FloatingPortal, type Middleware, size } from "@floating-ui/react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
@@ -194,22 +194,27 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // keyboard activation, which can dispatch a `click` with no prior pointerdown.
   const interactionInsideRef = useRef(false)
 
-  // When inside the sidebar, override the shift/flip boundary so the popover
-  // can escape the sidebar's `overflow: auto` clipping rect. Without this, the
-  // popover (which is portalled to document.body with `position: fixed`) is
-  // constrained to the narrow sidebar column: shift squishes it against the
-  // sidebar's edge and flip may flip it vertically as soon as its bottom edge
-  // exceeds the sidebar's inner scroll boundary — producing the
-  // "clipped/off-screen" behavior tracked in #9387.
+  // When inside the sidebar, adjust Floating UI middleware so the popover can
+  // escape the sidebar's `overflow: auto` clipping rect and stay within the
+  // viewport. Two things are needed:
   //
-  // We use `document.documentElement` (the <html> element) rather than
-  // `document.body` because Streamlit's root layout uses
-  // `position: absolute; inset: 0` on `.stApp`, which takes it out of normal
-  // flow and leaves `document.body` sized 0x0 — a body-scoped boundary would
-  // report the popover as always overflowing and cause exactly the flip we're
-  // trying to avoid. The html element mirrors the viewport size (720x1280 in
-  // typical desktop tests) and is the correct clipping context for a
-  // popover that is `position: fixed` and portalled to body.
+  // 1. Override the shift/flip boundary to `document.documentElement` so the
+  //    popover (portalled to document.body with `position: fixed`) is bounded
+  //    by the viewport rather than the sidebar. `document.documentElement`
+  //    (the <html> element) is used rather than `document.body` because
+  //    Streamlit's `.stApp` uses `position: absolute; inset: 0`, which leaves
+  //    document.body sized 0x0 — a body boundary would always report overflow
+  //    and re-introduce the same flip. Without this override, shift squishes
+  //    the popover (whose min-width exceeds the sidebar column) against the
+  //    sidebar's edge.
+  //
+  // 2. Add a `size` middleware that clamps the popover's maxHeight to the
+  //    available space at the chosen placement. Without this, when the popover
+  //    is taller than the space both above and below the trigger, `flip` picks
+  //    the less-overflowing side and the popover extends off-screen (bug in
+  //    #9387: popover clipped above the viewport top). `size` sits after
+  //    `flip` so it constrains the height to whichever side `flip` landed on,
+  //    causing the internal `overflow: auto` on StyledPopoverBody to kick in.
   const shiftPadding = 8
   const overlayOptions = useMemo(() => {
     const base = {
@@ -221,10 +226,22 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       return base
     }
     const boundary = document.documentElement
+    const sizeMiddleware: Middleware = size({
+      padding: shiftPadding,
+      boundary,
+      apply({ availableHeight, elements }) {
+        // Floor at a reasonable minimum so the popover remains usable even
+        // when the trigger is very close to a viewport edge. The internal
+        // `overflow: auto` on StyledPopoverBody handles the scroll.
+        const clampedHeight = Math.max(Math.floor(availableHeight), 160)
+        elements.floating.style.maxHeight = `${clampedHeight}px`
+      },
+    })
     return {
       ...base,
       flipOptions: { boundary },
       shiftOptions: { padding: shiftPadding, boundary },
+      extraMiddleware: [sizeMiddleware],
     }
   }, [open, theme.spacing.twoXS, isInSidebar])
 
