@@ -125,11 +125,24 @@ export function useDetailsAnimation({
   const hasMountedRef = useRef(false)
 
   /**
-   * Cancel any running animation.
+   * Cancel any running animation and clear the inline height/overflow lock.
+   *
+   * `animateHeight` intentionally does not clean up on cancel (see its docstring).
+   * Every in-flow caller here — `animateTo` and `animateResize` — captures the
+   * current height BEFORE calling `cancelAnimation()` and re-locks the styles
+   * synchronously right after, so clearing here is safe and makes "locked with
+   * no animation running" an unreachable state. This prevents leftover inline
+   * `height`/`overflow` from clipping content after a cancel with no successor
+   * (unmount cleanup, rapid toggle chains, or ResizeObserver early-returns).
    */
   const cancelAnimation = useCallback((): void => {
     animationRef.current?.cancel()
     animationRef.current = null
+    const details = detailsRef.current
+    if (details) {
+      details.style.height = ""
+      details.style.overflow = ""
+    }
   }, [])
 
   /**
@@ -278,7 +291,8 @@ export function useDetailsAnimation({
     prevLabelRef.current = label
 
     // If label changed, this is a "new expander" - cancel animations and reset.
-    // Clear any stale inline styles that cancelAnimation leaves behind.
+    // `cancelAnimation` clears the inline height/overflow lock as part of its
+    // contract, so no explicit style clearing is needed here.
     if (labelChanged) {
       cancelAnimation()
       const newOpen = backendExpanded ?? false
@@ -286,8 +300,6 @@ export function useDetailsAnimation({
 
       setIsOpen(newOpen)
       if (detailsRef.current) {
-        detailsRef.current.style.height = ""
-        detailsRef.current.style.overflow = ""
         detailsRef.current.open = newOpen
       }
       return

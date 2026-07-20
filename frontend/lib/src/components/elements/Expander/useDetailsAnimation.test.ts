@@ -339,6 +339,120 @@ describe("useDetailsAnimation", () => {
 
       expect(() => unmount()).not.toThrow()
     })
+
+    it("clears inline height/overflow when a label change cancels a mid-flight animation (issue #16027)", async () => {
+      // Regression: without the fix, a cancel with no successor animation
+      // (here, a label-change reset) left inline height/overflow locked on
+      // the <details>, clipping content.
+      const user = userEvent.setup()
+
+      const mockAnimation = {
+        addEventListener: vi.fn(),
+        cancel: vi.fn(),
+      }
+      Element.prototype.animate = vi.fn().mockReturnValue(mockAnimation)
+
+      const { rerender } = render(
+        createElement(TestHarness, {
+          backendExpanded: false,
+          label: "Old",
+        })
+      )
+
+      const details = screen.getByTestId("details")
+      const summary = screen.getByTestId("summary")
+      const content = screen.getByTestId("content")
+
+      // Mock non-zero heights so animateTo actually schedules an animation
+      // (the contentHeight === 0 branch would skip animate() entirely).
+      vi.spyOn(details, "getBoundingClientRect").mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 42,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        toJSON: () => ({}),
+      })
+      vi.spyOn(summary, "getBoundingClientRect").mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 40,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        toJSON: () => ({}),
+      })
+      vi.spyOn(content, "getBoundingClientRect").mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 200,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        toJSON: () => ({}),
+      })
+
+      // Click summary to start an open animation. Inline styles are locked
+      // and the WAAPI mock represents the in-flight animation.
+      await user.click(summary)
+      expect(details.style.overflow).toBe("hidden")
+      expect(details.style.height).toBe("42px")
+      expect(Element.prototype.animate).toHaveBeenCalled()
+
+      // Label change triggers cancelAnimation() with no follow-up animation.
+      // The WAAPI mock's `cancel` and `finish` listeners never fire, so the
+      // only cleanup path is inside cancelAnimation itself.
+      rerender(
+        createElement(TestHarness, {
+          backendExpanded: false,
+          label: "New",
+        })
+      )
+
+      expect(mockAnimation.cancel).toHaveBeenCalled()
+      expect(details.style.height).toBe("")
+      expect(details.style.overflow).toBe("")
+    })
+
+    it("clears inline height/overflow when a label change replaces the expander", () => {
+      // Label change ("new expander") calls cancelAnimation() and expects the
+      // element to be visually reset. Guards against future regressions if
+      // the label-change branch stops relying on cancelAnimation for cleanup.
+      Element.prototype.animate = vi.fn().mockReturnValue({
+        addEventListener: vi.fn(),
+        cancel: vi.fn(),
+      })
+
+      const { rerender } = render(
+        createElement(TestHarness, {
+          backendExpanded: true,
+          label: "Old Label",
+        })
+      )
+
+      const details = screen.getByTestId("details")
+      // Simulate an in-flight lock (as would exist mid-animation)
+      details.style.height = "123px"
+      details.style.overflow = "hidden"
+
+      // Label change triggers cancelAnimation() and a full reset.
+      rerender(
+        createElement(TestHarness, {
+          backendExpanded: true,
+          label: "New Label",
+        })
+      )
+
+      expect(details.style.height).toBe("")
+      expect(details.style.overflow).toBe("")
+    })
   })
 
   describe("ResizeObserver", () => {
