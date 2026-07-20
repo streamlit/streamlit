@@ -381,6 +381,42 @@ def test_convert_col_names_to_str_in_place_aliases_dotted_columns() -> None:
     assert set(alias_to_original.values()) == {"col.name", "CO2 [t]"}
 
 
+def test_convert_col_names_to_str_in_place_alias_avoids_collision() -> None:
+    """Regression test: a generated alias must never collide with a plain user
+    column that happens to already be named like the default alias form. If it
+    did, the prepared DataFrame would end up with duplicate labels and downstream
+    field selection would return both columns instead of the intended series.
+    """
+    # A dotted column plus a plain column literally named like the default alias.
+    df = pd.DataFrame(
+        {
+            "a.b": [1, 2],
+            "col -- streamlit-generated-0": [3, 4],
+        }
+    )
+    (
+        _x,
+        y_list,
+        _color,
+        _size,
+        _sort,
+        alias_to_original,
+    ) = chart_utils._convert_col_names_to_str_in_place(
+        df, None, ["a.b", "col -- streamlit-generated-0"], None, None, None
+    )
+    # No duplicate column labels — the alias must have been bumped past the
+    # already-taken name.
+    assert not df.columns.duplicated().any()
+    # The plain user column must be preserved untouched.
+    assert "col -- streamlit-generated-0" in df.columns
+    # The dotted column must be aliased to a distinct name.
+    assert "a.b" not in df.columns
+    # And the alias for the dotted column must round-trip back to its original.
+    assert set(alias_to_original.values()) == {"a.b"}
+    # The y column list must have no duplicate entries either.
+    assert len(y_list) == len(set(y_list))
+
+
 @pytest.mark.parametrize(
     "color_value",
     [["#ff0000"], ["primary"], "primary"],
