@@ -3772,7 +3772,7 @@ __metadata:
     remend: "npm:^1.2.2"
     styletron-react: "npm:^6.1.0"
     timezone-mock: "npm:^1.4.3"
-    tsc-alias: "npm:^1.9.0"
+    tsc-alias: "npm:^1.9.1"
     typed-signals: "npm:^3.0.0"
     typesync: "npm:^0.14.3"
     ua-parser-js: "npm:^1.0.41"
@@ -8792,14 +8792,14 @@ __metadata:
   linkType: hard
 
 "dompurify@npm:^3.2.4":
-  version: 3.4.11
-  resolution: "dompurify@npm:3.4.11"
+  version: 3.4.12
+  resolution: "dompurify@npm:3.4.12"
   dependencies:
     "@types/trusted-types": "npm:^2.0.7"
   dependenciesMeta:
     "@types/trusted-types":
       optional: true
-  checksum: 10c0/31439481c7e8fc3805d40c376936fd66936620fb1b1a31a2ec097f6165412c37f2d868e082c9ceba62bb37661c1ea132a5db4d5213434317e30df68d4aca9cc9
+  checksum: 10c0/127a13817353d4e20e75a991a9022a04c3af12af7479f68e2b8bee6dbc7330a96edfb8f4ebff96f4f0f24cd43e8dbba46214131f510c3aa87a843bd8b610d0ab
   languageName: node
   linkType: hard
 
@@ -17803,9 +17803,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tsc-alias@npm:^1.9.0":
-  version: 1.9.0
-  resolution: "tsc-alias@npm:1.9.0"
+"tsc-alias@npm:^1.9.1":
+  version: 1.9.1
+  resolution: "tsc-alias@npm:1.9.1"
   dependencies:
     chokidar: "npm:^3.5.3"
     commander: "npm:^9.0.0"
@@ -17816,7 +17816,7 @@ __metadata:
     plimit-lit: "npm:^1.2.6"
   bin:
     tsc-alias: dist/bin/index.js
-  checksum: 10c0/229ef236f4ccd3145cbb7a003b805e5c1de7ecfb563ffe88ecccb7c0c596fb4d2baf06706b8ee0b66017141beb3e8505a1e6b5e5b1c8cd7a87a640cf13b40e41
+  checksum: 10c0/b696508a671fdcd3e10fe6d88a64da77397811dbb7fd701623b8def2ae41f0cb7b39607de403873f072088dea8c6c10fc88ea3e65b6bb8a69635c9d61a935f77
   languageName: node
   linkType: hard
 
