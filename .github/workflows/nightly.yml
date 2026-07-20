@@ -49,6 +49,7 @@ jobs:
 
           uv run --no-sync python scripts/update_version.py "$TAG"
           uv run --no-sync python scripts/update_name.py streamlit-nightly
+          # Unset UV_LOCKED (set by make_init) so this relock can proceed.
           env -u UV_LOCKED uv lock
 
           git add pyproject.toml lib/pyproject.toml frontend/package.json lib/streamlit/__init__.py lib/streamlit/version.py uv.lock

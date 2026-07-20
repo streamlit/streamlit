@@ -20,6 +20,7 @@ VERSION_BRANCH="release/${VERSION}"
 
 git switch --create "$VERSION_BRANCH"
 uv run --no-sync python scripts/update_version.py "$VERSION"
+# Unset UV_LOCKED (set by make_init) so this relock can proceed.
 env -u UV_LOCKED uv lock
 # Stage tracked updates and uv.lock explicitly. `git commit --all` skips
 # an untracked lockfile when patching a tag that predates it.

@@ -63,7 +63,7 @@ jobs:
         id: create-branch
         if: ${{ steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
         run: |
-          branch_name="update-python-lock-$(date +%Y-%m-%d)-${GITHUB_RUN_ID}"
+          branch_name="update-python-lock-$(date -u +%Y-%m-%d)-${GITHUB_RUN_ID}"
           echo "branch_name=$branch_name" >> "$GITHUB_OUTPUT"
           git checkout -b "$branch_name"
 
