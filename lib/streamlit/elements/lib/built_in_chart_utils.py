@@ -659,6 +659,13 @@ def _convert_col_names_to_str_in_place(
     column_names = list(df.columns)  # list() converts RangeIndex, etc, to regular list.
     str_column_names = [str(c) for c in column_names]
 
+    # Set of stringified names that must not collide with generated aliases. This
+    # covers plain user columns (which we never rename) so an alias like
+    # ``col -- streamlit-generated-0`` cannot silently shadow a user column that
+    # happens to already be named that.
+    reserved_names: set[str] = {
+        name for name in str_column_names if not _needs_field_alias(name)
+    }
     # Map from original stringified name to safe alias. Only populated for columns
     # whose name contains Vega-Lite-special characters.
     original_to_alias: dict[str, str] = {}
@@ -667,7 +674,15 @@ def _convert_col_names_to_str_in_place(
     final_column_names: list[str] = []
     for idx, name in enumerate(str_column_names):
         if _needs_field_alias(name) and name not in original_to_alias:
+            # Pick an alias that does not collide with any plain user column or a
+            # previously generated alias. The index disambiguates duplicates; a
+            # trailing counter is only needed on the extremely rare occasion that
+            # a user column literally matches the default form.
             alias = f"{_COLUMN_ALIAS_PREFIX}{idx}"
+            counter = 0
+            while alias in reserved_names or alias in alias_to_original:
+                counter += 1
+                alias = f"{_COLUMN_ALIAS_PREFIX}{idx}-{counter}"
             original_to_alias[name] = alias
             alias_to_original[alias] = name
             final_column_names.append(alias)
