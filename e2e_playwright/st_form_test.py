@@ -26,6 +26,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     reset_hovering,
     select_selectbox_option,
+    type_time,
 )
 
 
@@ -78,17 +79,11 @@ def change_widget_values(app: Page):
     # Change the text input value.
     form_1.get_by_test_id("stTextInput").locator("input").fill("bar")
 
-    # Change the time input value. Explicitly click each spinbutton rather than
-    # relying on react-aria auto-advance between segments, which is racy in Chromium.
-    _time_spinbuttons = (
-        form_1.get_by_test_id("stTimeInput")
-        .get_by_test_id("stTimeInputTimeDisplay")
-        .locator("[role='spinbutton']")
+    # Change the time input value.
+    time_display = form_1.get_by_test_id("stTimeInput").get_by_test_id(
+        "stTimeInputTimeDisplay"
     )
-    _time_spinbuttons.first.click()
-    app.keyboard.type("00")  # hour
-    _time_spinbuttons.last.click()  # explicitly focus minute before typing
-    app.keyboard.type("00")  # minute
+    type_time(time_display, "00", "00")
 
     # Change the toggle value.
     click_toggle(app, "Toggle Input")

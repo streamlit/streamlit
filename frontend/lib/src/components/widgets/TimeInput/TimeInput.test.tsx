@@ -129,6 +129,13 @@ describe("TimeInput widget", () => {
     // React Aria sets data-disabled on the DateInput container when isDisabled
     const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
     expect(timeDisplay).toHaveAttribute("data-disabled")
+
+    // Spinbuttons themselves must also be disabled
+    const spinbuttons = screen.getAllByRole("spinbutton")
+    for (const seg of spinbuttons) {
+      expect(seg).toHaveAttribute("data-disabled")
+      expect(seg).toHaveAttribute("aria-disabled", "true")
+    }
   })
 
   it("has the correct default value", () => {
@@ -151,12 +158,12 @@ describe("TimeInput widget", () => {
     expect(segments).toHaveLength(2)
   })
 
-  it("shows only the hour segment when step is divisible by 3600", () => {
+  it("always shows hour and minute segments even when step is divisible by 3600", () => {
     const props = getProps({ step: 3600 })
     render(<TimeInput {...props} />)
 
     const segments = screen.getAllByRole("spinbutton")
-    expect(segments).toHaveLength(1)
+    expect(segments).toHaveLength(2)
   })
 
   it("has 24-hour format", () => {

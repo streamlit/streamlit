@@ -18,9 +18,9 @@ import {
   FocusEvent,
   KeyboardEvent,
   memo,
+  MouseEvent,
   ReactElement,
   useCallback,
-  useMemo,
   useRef,
 } from "react"
 
@@ -62,15 +62,14 @@ export interface Props {
 /**
  * Maps a step value (in seconds) to a React Aria TimeField granularity.
  *
- * Only "hour" and "minute" granularities are used because the wire format
- * is always HH:MM — seconds have never been stored or displayed.
+ * Always returns "minute" because the wire format is HH:MM — hiding minutes
+ * (hour-only granularity) would silently discard minute components from values
+ * like "12:45" that can arrive via query-params or session state.
  *
- * Note: `step` also controls arrow-key behaviour via `handleArrowKeyCapture`.
- * A step divisible by 3600 shows only the hour segment; otherwise both hour
- * and minute segments are shown.
+ * Note: `step` still controls arrow-key behaviour via `handleArrowKeyCapture`.
  */
-function stepToGranularity(stepSeconds: number): "hour" | "minute" {
-  return stepSeconds % 3600 === 0 ? "hour" : "minute"
+function stepToGranularity(_stepSeconds: number): "hour" | "minute" {
+  return "minute"
 }
 
 /** Converts an HH:MM wire-format string to a React Aria Time object. */
@@ -132,9 +131,8 @@ function TimeInput({
     []
   )
 
-  // Derived step sizes — memoised so the arrow-key handler stays stable.
-  const stepMins = useMemo(() => step / 60, [step])
-  const stepHours = useMemo(() => step / 3600, [step])
+  const stepMins = step / 60
+  const stepHours = step / 3600
 
   const handleChange = useCallback(
     (newTime: Time | null): void => {
@@ -199,7 +197,7 @@ function TimeInput({
       const current = stringToTime(value)
 
       if (segmentType === "minute") {
-        // Guard: step must divide evenly into whole minutes and be > 1 min.
+        // Non-whole-minute steps (e.g. 90s) fall back to react-aria's default ±1.
         // For step=60 (stepMins=1) react-aria's default ±1 is already correct.
         if (!Number.isInteger(stepMins) || stepMins <= 1) return
 
@@ -228,10 +226,23 @@ function TimeInput({
           ? Math.floor(current.hour / stepHours) * stepHours + stepHours
           : Math.ceil(current.hour / stepHours) * stepHours - stepHours
         const wrapped = ((next % 24) + 24) % 24
-        handleChange(new Time(wrapped, 0))
+        handleChange(new Time(wrapped, current.minute))
       }
     },
     [value, step, stepMins, stepHours, handleChange]
+  )
+
+  const handleWrapperClick = useCallback(
+    (e: MouseEvent<HTMLDivElement>): void => {
+      if (disabled) return
+      const target = e.target as HTMLElement
+      if (target.getAttribute("role") === "spinbutton") return
+      const firstSegment = wrapperRef.current?.querySelector<HTMLElement>(
+        "[role='spinbutton']"
+      )
+      firstSegment?.focus()
+    },
+    [disabled]
   )
 
   return (
@@ -252,6 +263,7 @@ function TimeInput({
           ref={wrapperRef}
           data-testid="stTimeInputTimeDisplay"
           data-disabled={disabled || undefined}
+          onClick={handleWrapperClick}
           onFocusCapture={handleFocusCapture}
           onKeyDownCapture={handleArrowKeyCapture}
         >
@@ -271,6 +283,7 @@ function TimeInput({
         </StyledTimeInputWrapper>
         {clearable && !isNullOrUndefined(value) && (
           <StyledClearButton
+            type="button"
             onClick={handleClear}
             aria-label="Clear time"
             data-testid="stTimeInputClearButton"

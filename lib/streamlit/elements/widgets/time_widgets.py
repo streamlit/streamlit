@@ -802,14 +802,9 @@ class TimeWidgetsMixin:
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         step : int or timedelta
-            Controls which time components are displayed in the widget. This
-            defaults to ``900`` (15 minutes). You can also pass a
-            ``datetime.timedelta`` object. The value must be between 60
-            seconds and 23 hours.
-
-            - If ``step`` is divisible by 3600 (one hour), only the hour
-              component is shown.
-            - Otherwise, both the hour and minute components are shown.
+            The stepping interval in seconds. This defaults to ``900`` (15
+            minutes). You can also pass a ``datetime.timedelta`` object. The
+            value must be between 60 seconds and 23 hours.
 
             Arrow keys on the minute segment snap to the nearest step
             boundary in the pressed direction (e.g. ``step=900`` → ±15 min
@@ -1189,19 +1184,9 @@ class TimeWidgetsMixin:
             doesn't affect the time format.
 
         step : int or timedelta
-            Controls which time components are displayed in the widget. This
-            defaults to ``900`` (15 minutes). You can also pass a
-            ``datetime.timedelta`` object. The value must be between 60
-            seconds and 23 hours.
-
-            - If ``step`` is divisible by 3600 (one hour), only the hour
-              component is shown.
-            - Otherwise, both the hour and minute components are shown.
-
-            Arrow keys on the minute segment snap to the nearest step
-            boundary in the pressed direction (e.g. ``step=900`` → ±15 min
-            increments; ``step=60`` → ±1 min). Any valid time may be typed
-            regardless of the step value.
+            The stepping interval in seconds. This defaults to ``900`` (15
+            minutes). You can also pass a ``datetime.timedelta`` object. The
+            value must be between 60 seconds and 23 hours.
 
         disabled : bool
             An optional boolean that disables the widget if set to ``True``.

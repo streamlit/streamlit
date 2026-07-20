@@ -99,6 +99,27 @@ def get_time_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
     return element
 
 
+def type_time(time_display: Locator, hour: str, minute: str) -> None:
+    """Type a time into a TimeInput's spinbutton segments.
+
+    Parameters
+    ----------
+    time_display : Locator
+        The stTimeInputTimeDisplay locator containing the spinbuttons.
+
+    hour : str
+        Two-digit hour string (e.g. "08").
+
+    minute : str
+        Two-digit minute string (e.g. "45").
+    """
+    spinbuttons = time_display.locator("[role='spinbutton']")
+    spinbuttons.first.click()
+    spinbuttons.first.press_sequentially(hour, delay=50)
+    spinbuttons.last.click()
+    spinbuttons.last.press_sequentially(minute, delay=50)
+
+
 def get_datetime_input(
     locator: Locator | Page, label: str | re.Pattern[str]
 ) -> Locator:

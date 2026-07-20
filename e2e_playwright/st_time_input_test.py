@@ -32,6 +32,7 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_element_by_key,
     get_time_input,
+    type_time,
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
@@ -120,11 +121,7 @@ def test_handles_time_selection(app: Page):
     time_display = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
         "stTimeInputTimeDisplay"
     )
-    spinbuttons = time_display.locator("[role='spinbutton']")
-    spinbuttons.first.click()
-    spinbuttons.first.press_sequentially("00", delay=50)
-    spinbuttons.last.click()
-    spinbuttons.last.press_sequentially("00", delay=50)
+    type_time(time_display, "00", "00")
     wait_for_app_run(app)
     # Check that selection worked:
     expect_markdown(app, "Value 1: 00:00:00")
@@ -147,11 +144,7 @@ def test_handles_step_correctly(app: Page):
     time_display = get_time_input(app, "Time input 7 (step=60)").get_by_test_id(
         "stTimeInputTimeDisplay"
     )
-    spinbuttons = time_display.locator("[role='spinbutton']")
-    spinbuttons.first.click()
-    spinbuttons.first.press_sequentially("00", delay=50)
-    spinbuttons.last.click()
-    spinbuttons.last.press_sequentially("01", delay=50)
+    type_time(time_display, "00", "01")
     wait_for_app_run(app)
     # Check that selection worked (step does not restrict entered values):
     expect_markdown(app, "Value 7: 00:01:00")
@@ -200,21 +193,14 @@ def test_handles_time_selection_via_typing(app: Page):
     time_display = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
         "stTimeInputTimeDisplay"
     )
-    spinbuttons = time_display.locator("[role='spinbutton']")
 
     # Type 00:15 using digit keys:
-    spinbuttons.first.click()
-    spinbuttons.first.press_sequentially("00", delay=50)
-    spinbuttons.last.click()
-    spinbuttons.last.press_sequentially("15", delay=50)
+    type_time(time_display, "00", "15")
     wait_for_app_run(app)
     expect_markdown(app, "Value 1: 00:15:00")
 
     # Re-focus the hour segment, then type a different value:
-    spinbuttons.first.click()
-    spinbuttons.first.press_sequentially("00", delay=50)
-    spinbuttons.last.click()
-    spinbuttons.last.press_sequentially("16", delay=50)
+    type_time(time_display, "00", "16")
     wait_for_app_run(app)
     expect_markdown(app, "Value 1: 00:16:00")
 
@@ -226,14 +212,7 @@ def test_empty_time_input_behaves_correctly(
     empty_time_input = get_time_input(app, "Time input 8 (empty)")
     time_display = empty_time_input.get_by_test_id("stTimeInputTimeDisplay")
 
-    # Enter a time via segments using press_sequentially with delay to match
-    # realistic typing speed. Instant keystrokes can outrun React's re-render
-    # cycle in the spinbutton segments.
-    spinbuttons = time_display.locator("[role='spinbutton']")
-    spinbuttons.first.click()
-    spinbuttons.first.press_sequentially("00", delay=50)
-    spinbuttons.last.click()
-    spinbuttons.last.press_sequentially("15", delay=50)
+    type_time(time_display, "00", "15")
     wait_for_app_run(app)
     expect_markdown(app, "Value 8: 00:15:00")
 
@@ -268,11 +247,7 @@ def test_handles_callback_on_change_correctly(app: Page):
     callback_input = get_time_input(app, "Time input 6 (with callback)").get_by_test_id(
         "stTimeInputTimeDisplay"
     )
-    spinbuttons = callback_input.locator("[role='spinbutton']")
-    spinbuttons.first.click()
-    spinbuttons.first.press_sequentially("00", delay=50)
-    spinbuttons.last.click()
-    spinbuttons.last.press_sequentially("00", delay=50)
+    type_time(callback_input, "00", "00")
     # Wait for app to process the change before checking values:
     wait_for_app_run(app)
 
@@ -284,11 +259,7 @@ def test_handles_callback_on_change_correctly(app: Page):
     other_input = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
         "stTimeInputTimeDisplay"
     )
-    other_spinbuttons = other_input.locator("[role='spinbutton']")
-    other_spinbuttons.first.click()
-    other_spinbuttons.first.press_sequentially("00", delay=50)
-    other_spinbuttons.last.click()
-    other_spinbuttons.last.press_sequentially("15", delay=50)
+    type_time(other_input, "00", "15")
     # Wait for app to process the change before checking values:
     wait_for_app_run(app)
 
@@ -323,11 +294,7 @@ def test_dynamic_time_input_props(app: Page, assert_snapshot: ImageCompareFuncti
 
     # Type a new time via the segmented input:
     time_display = dynamic_time_input.get_by_test_id("stTimeInputTimeDisplay")
-    spinbuttons = time_display.locator("[role='spinbutton']")
-    spinbuttons.first.click()
-    spinbuttons.first.press_sequentially("00", delay=50)
-    spinbuttons.last.click()
-    spinbuttons.last.press_sequentially("15", delay=50)
+    type_time(time_display, "00", "15")
     wait_for_app_loaded(app)
 
     expect_prefixed_markdown(app, "Initial time input value:", "00:15:00")
