@@ -202,7 +202,7 @@ git checkout -b ${BRANCH_NAME}
 
 ### 3. Create a new Python environment
 
-We use [uv](https://docs.astral.sh/uv/) to manage Python dependencies and virtual environments. Use uv 0.11.28 or newer; CI and pre-commit use exactly 0.11.28 so automated lock updates are consistent. If you don't have uv installed, you can install it with:
+We use [uv](https://docs.astral.sh/uv/) to manage Python dependencies and virtual environments. Use a version allowed by `[tool.uv].required-version` in `pyproject.toml`. CI uses the latest compatible uv release, while the pinned pre-commit hook is updated by Dependabot. If you don't have uv installed, you can install it with:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh

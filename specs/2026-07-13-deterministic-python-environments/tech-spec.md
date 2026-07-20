@@ -117,7 +117,7 @@ before the test suite starts.
 ### 1. Commit one universal root lockfile
 
 1. Remove `uv.lock` from `.gitignore`.
-2. Regenerate it with the uv version selected for CI and commit it.
+2. Regenerate it with a compatible uv version and commit it.
 3. Mark it as generated in `.gitattributes`:
 
    ```gitattributes
@@ -216,21 +216,17 @@ Targeted upgrades remain:
 uv lock --upgrade-package <package>
 ```
 
-### 3. Pin uv for deterministic automation
+### 3. Use the latest compatible uv in CI
 
-Select one tested uv release during implementation and use it in:
+Keep `[tool.uv].required-version` as the minimum supported contributor version. Omit the
+`version` input from `astral-sh/setup-uv`; the action reads the project requirement and
+installs the latest compatible uv release. Continue pinning the setup action itself by commit
+SHA for supply-chain safety.
 
-- `astral-sh/setup-uv`'s `version` input in the shared CI action.
-- The `astral-sh/uv-pre-commit` revision.
-- The documented contributor setup baseline.
-
-Keep `[tool.uv].required-version` as the minimum supported contributor version, updated to
-the selected release if its lock format or features are required. CI and pre-commit must use
-the same exact release even if newer local uv versions remain permitted.
-
-This avoids a strict exact-version requirement for every contributor while keeping the two
-automated lock writers consistent. Astral recommends pinning a specific uv version in CI;
-see the [uv GitHub Actions guide](https://docs.astral.sh/uv/guides/integration/github/).
+Keep the official `astral-sh/uv-pre-commit` hook pinned because pre-commit requires a concrete
+repository revision. Dependabot updates that revision independently. Normal CI uses locked
+operations and cannot rewrite `uv.lock`; changes produced by newer resolver behavior remain
+limited to explicit lock-writing hooks and workflows, where they are reviewed as diffs.
 
 ### 4. Enforce the lock in normal CI
 
@@ -372,7 +368,7 @@ Add `.github/workflows/update-python-lock.yml`, modeled on
 The workflow:
 
 1. Runs weekly and supports manual dry-run dispatch.
-2. Checks out `develop` and installs the pinned uv version.
+2. Checks out `develop` and installs the latest compatible uv version.
 3. Runs `uv lock --upgrade`, using the cooldown configured in `pyproject.toml`.
 4. Opens a PR only when `uv.lock` changes.
 5. Adds `change:chore`, `impact:internal`, `autofix`, and `never-stale` labels.
@@ -458,7 +454,7 @@ agent instruction files using the repository's existing generator.
 Land together:
 
 - committed lock and repository-policy exclusions,
-- pinned automation uv version,
+- compatible uv version policy for CI and pre-commit,
 - explicit dependency-group selection,
 - locked shared CI setup and lock-based cache,
 - uv-lock pre-commit hook,
@@ -534,7 +530,7 @@ acceptable and cache behavior is more reliable.
 | Minimum protobuf cannot import generated code | Generate with compatible protoc or raise the supported lower bound |
 | Large lock fails repository policy checks | Narrow large-file and license-scanner exclusions |
 | Version/tag automation creates a stale lock | Explicit relock in nightly and release-branch paths |
-| Different uv writers create lock churn | Pin the same uv release in CI and uv-pre-commit |
+| Different uv writers create lock churn | Dependabot keeps uv-pre-commit current; normal CI cannot rewrite the lock, and weekly lock changes are reviewed in a PR |
 | One lock cannot resolve future conflicting groups | Declare uv group conflicts only if a real incompatibility appears; use explicit group syncs |
 
 ## Alternatives Considered
@@ -610,16 +606,14 @@ review to surface its changes.
 
 ## Open Decisions
 
-1. **Selected uv version:** Choose and test one release for CI and uv-pre-commit during
-   implementation. Do not assume the current developer-installed version is the target.
-2. **Cooldown:** Keep the existing global 24-hour uv cooldown, or change it globally to five
+1. **Cooldown:** Keep the existing global 24-hour uv cooldown, or change it globally to five
    days to match Dependabot. Do not override it only in the scheduled workflow.
-3. **Protobuf lower bound:** Generate min-compatible code in the minimum job, or raise the
+2. **Protobuf lower bound:** Generate min-compatible code in the minimum job, or raise the
    published protobuf minimum. Preferred: preserve 3.20 by generating with a compatible
    protoc (3.x / early 4.x series, not the pinned protoc 26.1) in that job.
-4. **Environment command interface:** Use the existing `python-init` target with one
+3. **Environment command interface:** Use the existing `python-init` target with one
    validated `PYTHON_DEPENDENCY_GROUP` variable and explicit no-default-group semantics.
-5. **Root development Python range:** Optionally restrict lock resolution to the currently
+4. **Root development Python range:** Optionally restrict lock resolution to the currently
    supported 3.10-3.14 range through the dev project or `tool.uv.environments`; this can
    reduce future-Python resolution churn but requires an update whenever support expands.
 
