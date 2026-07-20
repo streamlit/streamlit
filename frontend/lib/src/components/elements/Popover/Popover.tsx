@@ -231,10 +231,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       padding: shiftPadding,
       boundary,
       apply({ availableHeight, elements }) {
-        // Floor at a reasonable minimum so the popover remains usable even
-        // when the trigger is very close to a viewport edge. The internal
-        // `overflow: auto` on StyledPopoverBody handles the scroll.
-        const clampedHeight = Math.max(Math.floor(availableHeight), 160)
+        // Clamp strictly to Floating UI's measured space so the popover never
+        // extends past the viewport, even in very short viewports where both
+        // sides of the trigger have limited room. The internal `overflow:
+        // auto` on StyledPopoverBody handles the scroll.
+        const clampedHeight = Math.max(Math.floor(availableHeight), 0)
         elements.floating.style.maxHeight = `${clampedHeight}px`
       },
     })

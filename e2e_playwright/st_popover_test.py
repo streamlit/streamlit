@@ -129,7 +129,17 @@ def test_popover_in_sidebar_stays_within_viewport(app: Page):
     viewport — the sidebar's `overflow: auto` must not clip or force-flip the
     popover body off-screen. Regression test for
     https://github.com/streamlit/streamlit/issues/9387.
+
+    Uses a small viewport so the popover body (which has content taller than
+    the available space) must be clamped by the `size` middleware to fit
+    within the viewport. Without the fix, shift/flip would treat the
+    sidebar's `overflow: auto` container as the boundary and render the
+    popover off-screen.
     """
+    # Constrain viewport height so the popover content must be clamped to
+    # fit — this is what actually exercises the size middleware.
+    app.set_viewport_size({"width": 1024, "height": 600})
+
     popover_body = open_popover(app, "popover 5 (in sidebar)")
     expect_markdown(popover_body, "Popover in sidebar with dataframe")
 
