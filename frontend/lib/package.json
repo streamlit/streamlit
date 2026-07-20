@@ -96,7 +96,7 @@
     "re-resizable": "^6.11.2",
     "react-aria-components": "^1.19.0",
     "react-color": "^2.18.1",
-    "react-dropzone": "^16.0.0",
+    "react-dropzone": "^17.0.0",
     "react-feather": "^2.0.10",
     "react-map-gl": "^5.3.21",
     "react-markdown": "^10.1.0",
