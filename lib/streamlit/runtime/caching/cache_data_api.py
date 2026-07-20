@@ -595,20 +595,17 @@ class CacheDataAPI:
 
             - ``"foreground"`` (default): When the ``ttl`` expires, the next access
               blocks and recomputes the value before returning it.
-            - ``"background"``: Enables bounded stale-while-revalidate. For up to one
-              extra ``ttl`` after expiry, the cache returns the stale value immediately
-              (no blocking) while a single refresh runs in a background thread. After
-              ``2 * ttl`` the cache evicts the entry and the next access blocks and
-              recomputes. This mode requires a ``ttl`` and is not compatible with
-              ``persist``.
+            - ``"background"``: Return the expired value immediately and update it in
+              the background. Streamlit can keep returning the expired value for up to
+              one additional ``ttl``. After that, the next call waits for a new value.
+              This mode requires a ``ttl`` and can't be used with ``persist``.
 
             .. note::
-                Because a background refresh runs without a script context, the cached
-                function must be **context-free**: ``st.session_state`` and other
-                session-bound APIs don't resolve during the refresh. Pass any needed
-                session values as explicit arguments instead. In background mode,
-                Streamlit does not replay cached ``st.*`` display output on cache hits,
-                and shows a warning if the function issues display commands.
+                A function that refreshes in the background can't use session-specific
+                features such as ``st.session_state``. Pass any required session values
+                as arguments instead. The function also shouldn't contain Streamlit
+                commands that display elements. Streamlit doesn't replay these elements
+                for cached results and shows a warning when the function creates them.
 
         Examples
         --------

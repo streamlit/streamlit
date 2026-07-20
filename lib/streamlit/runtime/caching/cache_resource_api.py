@@ -519,21 +519,18 @@ class CacheResourceAPI:
 
             - ``"foreground"`` (default): When the ``ttl`` expires, the next access
               blocks and recreates the resource before returning it.
-            - ``"background"``: Enables bounded stale-while-revalidate. For up to one
-              extra ``ttl`` after expiry, the cache returns the stale resource
-              immediately (no blocking) while a single refresh runs in a background
-              thread. When the refresh succeeds, the replaced resource's
-              ``on_release`` handler (if configured) fires. After ``2 * ttl`` the cache
-              evicts the entry and the next access blocks and recreates the resource.
-              This mode requires a ``ttl``.
+            - ``"background"``: Return the expired resource immediately and update it
+              in the background. Streamlit can keep returning the expired resource for
+              up to one additional ``ttl``. After that, the next call waits for a new
+              resource. This mode requires a ``ttl``. If you set ``on_release``,
+              Streamlit calls it for the old resource after a successful update.
 
             .. note::
-                Because a background refresh runs without a script context, the cached
-                function must be **context-free**: ``st.session_state`` and other
-                session-bound APIs don't resolve during the refresh. Pass any needed
-                session values as explicit arguments instead. In background mode,
-                Streamlit does not replay cached ``st.*`` display output on cache hits,
-                and shows a warning if the function issues display commands.
+                A function that refreshes in the background can't use session-specific
+                features such as ``st.session_state``. Pass any required session values
+                as arguments instead. The function also shouldn't contain Streamlit
+                commands that display elements. Streamlit doesn't replay these elements
+                for cached results and shows a warning when the function creates them.
 
         Examples
         --------
