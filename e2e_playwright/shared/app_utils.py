@@ -102,6 +102,10 @@ def get_time_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
 def type_time(time_display: Locator, hour: str, minute: str) -> None:
     """Type a time into a TimeInput's spinbutton segments.
 
+    Uses press_sequentially (key events per character) rather than fill() to
+    exercise the real keystroke handling path through React Aria's digit
+    buffering logic.
+
     Parameters
     ----------
     time_display : Locator
@@ -114,10 +118,8 @@ def type_time(time_display: Locator, hour: str, minute: str) -> None:
         Two-digit minute string (e.g. "45").
     """
     spinbuttons = time_display.locator("[role='spinbutton']")
-    spinbuttons.first.click()
-    spinbuttons.first.press_sequentially(hour, delay=50)
-    spinbuttons.last.click()
-    spinbuttons.last.press_sequentially(minute, delay=50)
+    spinbuttons.first.press_sequentially(hour)
+    spinbuttons.last.press_sequentially(minute)
 
 
 def get_datetime_input(

@@ -15,7 +15,6 @@
  */
 
 import {
-  FocusEvent,
   KeyboardEvent,
   memo,
   ReactElement,
@@ -27,7 +26,6 @@ import {
 import { Cancel } from "@emotion-icons/material-rounded"
 import { Time } from "@internationalized/date"
 import { TimeField } from "react-aria-components"
-import { flushSync } from "react-dom"
 
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
@@ -130,56 +128,17 @@ function TimeInput({
   const step = element.step ? Number(element.step) : 900
   const clearable = isNullOrUndefined(element.default) && !disabled
 
-  // Chromium drops focus on the active spinbutton when TimeField transitions
-  // null→non-null. Track the active segment so we can restore focus synchronously.
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const activeSegmentTypeRef = useRef<string | null>(null)
-
-  const handleFocusCapture = useCallback(
-    (e: FocusEvent<HTMLDivElement>): void => {
-      const t = e.target as HTMLElement
-      if (t.getAttribute("role") === "spinbutton") {
-        activeSegmentTypeRef.current = t.getAttribute("data-type") ?? null
-      }
-    },
-    []
-  )
-
   const stepMins = step / 60
   const stepHours = step / 3600
 
   const handleChange = useCallback(
     (newTime: Time | null): void => {
       if (newTime === null && !clearable) return
-
       const newValue = newTime ? timeToString(newTime) : null
-      const transitioningFromNull =
-        isNullOrUndefined(displayValue) && newTime !== null
-
-      if (transitioningFromNull) {
-        /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
-         * flushSync ensures the DOM update (segment re-mount) completes
-         * synchronously so we can restore focus before the next keystroke
-         * arrives. Without this, Chromium drops focus during the null→non-null
-         * TimeField transition and rapid keystrokes leak to the page.
-         */
-        flushSync(() => {
-          setDisplayValue(newValue)
-        })
-        const type = activeSegmentTypeRef.current
-        if (type && wrapperRef.current) {
-          const el = wrapperRef.current.querySelector<HTMLElement>(
-            `[role="spinbutton"][data-type="${CSS.escape(type)}"]`
-          )
-          el?.focus()
-        }
-      } else {
-        setDisplayValue(newValue)
-      }
-
+      setDisplayValue(newValue)
       setValueWithSource({ value: newValue, fromUi: true })
     },
-    [clearable, displayValue, setValueWithSource]
+    [clearable, setValueWithSource]
   )
 
   const handleClear = useCallback((): void => {
@@ -263,10 +222,8 @@ function TimeInput({
       </WidgetLabel>
       <StyledTimeFieldContainer>
         <StyledTimeInputWrapper
-          ref={wrapperRef}
           data-testid="stTimeInputTimeDisplay"
           data-disabled={disabled || undefined}
-          onFocusCapture={handleFocusCapture}
           onKeyDownCapture={handleArrowKeyCapture}
         >
           <TimeField
