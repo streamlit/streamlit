@@ -277,7 +277,17 @@ function TimeInput({
             isDisabled={disabled}
           >
             <StyledTimeFieldInput>
-              {segment => <StyledTimeSegment segment={segment} />}
+              {segment => (
+                <StyledTimeSegment segment={segment}>
+                  {({ text, isPlaceholder, type }) =>
+                    isPlaceholder && type === "hour"
+                      ? "HH"
+                      : isPlaceholder && type === "minute"
+                        ? "mm"
+                        : text
+                  }
+                </StyledTimeSegment>
+              )}
             </StyledTimeFieldInput>
           </TimeField>
         </StyledTimeInputWrapper>

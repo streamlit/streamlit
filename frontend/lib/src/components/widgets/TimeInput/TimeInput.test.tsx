@@ -519,6 +519,15 @@ describe("TimeInput clearable behavior", () => {
     expect(screen.queryByTestId("stTimeInputClearButton")).toBeNull()
   })
 
+  it("shows HH:mm placeholder text when value is null", () => {
+    const props = getProps({ default: undefined })
+    render(<TimeInput {...props} />)
+
+    const segments = screen.getAllByRole("spinbutton")
+    expect(segments[0]).toHaveTextContent("HH")
+    expect(segments[1]).toHaveTextContent("mm")
+  })
+
   it("reads value from element when set_value flag is true", () => {
     const props = getProps({
       default: "10:30",
