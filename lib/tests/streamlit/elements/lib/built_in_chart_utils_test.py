@@ -256,20 +256,21 @@ def test_get_size_encoding_scatter(
     expected_cls: type,
 ) -> None:
     """Scatter plots produce Size/SizeValue encodings depending on input."""
-    encoding = chart_utils._get_size_encoding(chart_type, size_column, size_value)
+    encoding = chart_utils._get_size_encoding(chart_type, size_column, size_value, {})
     assert isinstance(encoding, expected_cls)
 
 
 def test_get_size_encoding_invalid_size_value_raises() -> None:
     """Non-numeric size_value should raise StreamlitAPIException."""
     with pytest.raises(StreamlitAPIException, match="valid size"):
-        chart_utils._get_size_encoding(chart_utils.ChartType.SCATTER, None, "huge")
+        chart_utils._get_size_encoding(chart_utils.ChartType.SCATTER, None, "huge", {})
 
 
 def test_get_size_encoding_returns_none_for_non_scatter() -> None:
     """Non-scatter chart types get no size encoding."""
     assert (
-        chart_utils._get_size_encoding(chart_utils.ChartType.LINE, None, None) is None
+        chart_utils._get_size_encoding(chart_utils.ChartType.LINE, None, None, {})
+        is None
     )
 
 
@@ -337,11 +338,47 @@ def test_melt_data_raises_on_too_many_mixed_types() -> None:
 def test_convert_col_names_to_str_in_place_stringifies_columns() -> None:
     """Integer column names are converted to strings."""
     df = pd.DataFrame({0: [1], 1: [2]})
-    x, y_list, color, size, sort = chart_utils._convert_col_names_to_str_in_place(
-        df, 0, [1], None, None, None
-    )
+    (
+        x,
+        y_list,
+        color,
+        size,
+        sort,
+        alias_to_original,
+    ) = chart_utils._convert_col_names_to_str_in_place(df, 0, [1], None, None, None)
     assert list(df.columns) == ["0", "1"]
     assert (x, y_list, color, size, sort) == ("0", ["1"], None, None, None)
+    # Plain column names should not require aliasing.
+    assert alias_to_original == {}
+
+
+def test_convert_col_names_to_str_in_place_aliases_dotted_columns() -> None:
+    """Regression test for #7714: columns with characters Vega-Lite treats as
+    special (``.``, ``[``, ``]``, ``\\``) are renamed to safe internal aliases
+    and the alias-to-original map is returned so encodings can preserve titles.
+    """
+    df = pd.DataFrame({"col.name": [1, 2], "plain": [3, 4], "CO2 [t]": [5, 6]})
+    (
+        _x,
+        y_list,
+        _color,
+        _size,
+        _sort,
+        alias_to_original,
+    ) = chart_utils._convert_col_names_to_str_in_place(
+        df, None, ["col.name", "plain", "CO2 [t]"], None, None, None
+    )
+    # The special-char columns must have been renamed to aliases; the plain one
+    # must have been left alone.
+    assert "col.name" not in df.columns
+    assert "CO2 [t]" not in df.columns
+    assert "plain" in df.columns
+    # The y column list must reference the aliases (never the raw names).
+    assert "col.name" not in y_list
+    assert "CO2 [t]" not in y_list
+    assert "plain" in y_list
+    # And the alias map must round-trip back to the original names.
+    assert set(alias_to_original.values()) == {"col.name", "CO2 [t]"}
 
 
 @pytest.mark.parametrize(
@@ -358,6 +395,7 @@ def test_get_color_encoding_single_color_yields_color_value(color_value: Any) ->
         color_column=None,
         y_column_list=["y1"],
         color_from_user=color_value,
+        alias_to_original={},
     )
     assert isinstance(encoding, alt.ColorValue)
 
@@ -372,6 +410,7 @@ def test_get_color_encoding_builtin_name_with_multiple_y_raises() -> None:
             color_column=None,
             y_column_list=["y1", "y2"],
             color_from_user="primary",
+            alias_to_original={},
         )
 
 
@@ -385,4 +424,5 @@ def test_get_color_encoding_invalid_color_raises() -> None:
             color_column=None,
             y_column_list=["y1"],
             color_from_user=123,
+            alias_to_original={},
         )
