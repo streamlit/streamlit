@@ -237,6 +237,31 @@ def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
     expect_markdown(dialog, "Tags Value: ['Utilities']")
 
 
+def test_dialog_allows_interacting_with_widget_in_popover(app: Page):
+    """Widgets inside an st.popover opened inside an st.dialog must be
+    interactable — the popover body must not be occluded by the dialog's
+    React Aria overlay (regression coverage for #16005).
+    """
+    click_button(app, "Open Dialog with Popover")
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+
+    dialog.get_by_role("button", name="Open popover").click()
+    popover_body = app.get_by_test_id("stPopoverBody")
+    expect(popover_body).to_be_visible()
+
+    # The popover body must land above the dialog for hit-testing: its parent
+    # container (the FloatingPortal host) must not be `inert`. Without the fix,
+    # the popover body's own DIV is above the dialog visually, but its parent
+    # is marked inert by React Aria's ModalOverlay — so `elementFromPoint` at
+    # the widget's center returns the dialog rather than the widget.
+    select_selectbox_option(popover_body, "Fruit", "Banana")
+    expect_markdown(popover_body, "picked: Banana")
+
+    # The dialog must not be dismissed by the interaction inside the popover.
+    expect(dialog).to_be_visible()
+
+
 def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Page):
     """Dismissing a dialog is a UI-only interaction as of today (the Python backend does
     not know about this). We use a deltaMsgReceivedAt to differentiate React renders

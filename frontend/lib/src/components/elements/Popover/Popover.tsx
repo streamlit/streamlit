@@ -31,6 +31,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
@@ -401,7 +402,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         </BaseButtonTooltip>
       </div>
       {open && (
-        <FloatingPortal>
+        <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <StyledPopoverBody
             ref={setFloatingRef}
             data-testid="stPopoverBody"
