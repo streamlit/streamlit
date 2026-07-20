@@ -594,7 +594,8 @@ class CacheDataAPI:
             the following:
 
             - ``"foreground"`` (default): When the ``ttl`` expires, the next access
-              blocks and recomputes the value before returning it.
+              runs the cached function synchronously. The app rerun waits until the new
+              value is ready.
             - ``"background"``: Return the expired value immediately and update it in
               the background. Streamlit can keep returning the expired value for up to
               one additional ``ttl``. After that, the next call waits for a new value.
