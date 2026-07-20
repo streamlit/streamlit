@@ -220,35 +220,10 @@ jobs:
               )
               print(f"{requirement.name}=={actual_version}")
           PY
-      - name: Install minimum-compatible protoc
+      - name: Import standard-generated Python protobufs
         env:
-          PROTOC_VERSION: "3.20.0"
-          # SHA-256 of the pinned protoc release asset, verified against the
-          # official protocolbuffers/protobuf v3.20.0 GitHub release.
-          PROTOC_SHA256: "75d8a9d7a2c42566e46411750d589c51276242d8b6247a5724bac0f9283e05a8"
-        run: |
-          archive="protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          url="https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${archive}"
-          curl -fL --retry 5 --retry-all-errors --retry-delay 3 -o "$RUNNER_TEMP/$archive" "$url"
-          # Verify authenticity (and integrity) of the download before extracting.
-          echo "${PROTOC_SHA256}  $RUNNER_TEMP/$archive" | sha256sum -c -
-          unzip -q "$RUNNER_TEMP/$archive" -d "$RUNNER_TEMP/protoc-min"
-          echo "$RUNNER_TEMP/protoc-min/bin" >> "$GITHUB_PATH"
-      - name: Generate and import minimum-compatible Python protobufs
-        env:
-          PROTOC_VERSION: "3.20.0"
           UV_NO_SYNC: 1
         run: |
-          actual_version="$(protoc --version)"
-          if [[ "$actual_version" != "libprotoc $PROTOC_VERSION" ]]; then
-            echo "::error::Expected libprotoc $PROTOC_VERSION, found $actual_version"
-            exit 1
-          fi
-          echo "$actual_version"
-          protoc \
-            --proto_path=proto \
-            --python_out=lib \
-            proto/streamlit/proto/*.proto
           uv run python - <<'PY'
           import importlib
           from pathlib import Path
