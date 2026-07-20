@@ -153,12 +153,14 @@ def test_popover_in_sidebar_stays_within_viewport(app: Page):
     # #9387 fix, shift/flip treated the sidebar's `overflow: auto` container as
     # the boundary and squished the body against the sidebar's left edge (or
     # flipped it off-screen), producing negative `x` / clipped `y` values.
-    assert body_box["x"] >= 0, f"popover body extends off left edge: {body_box}"
-    assert body_box["y"] >= 0, f"popover body extends off top edge: {body_box}"
-    assert body_box["x"] + body_box["width"] <= viewport["width"], (
+    # A 1px epsilon guards against subpixel layout differences across browsers.
+    epsilon = 1
+    assert body_box["x"] >= -epsilon, f"popover body extends off left edge: {body_box}"
+    assert body_box["y"] >= -epsilon, f"popover body extends off top edge: {body_box}"
+    assert body_box["x"] + body_box["width"] <= viewport["width"] + epsilon, (
         f"popover body extends past right edge: {body_box}, viewport={viewport}"
     )
-    assert body_box["y"] + body_box["height"] <= viewport["height"], (
+    assert body_box["y"] + body_box["height"] <= viewport["height"] + epsilon, (
         f"popover body extends past bottom edge: {body_box}, viewport={viewport}"
     )
 
