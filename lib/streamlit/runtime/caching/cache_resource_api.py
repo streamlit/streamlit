@@ -130,7 +130,9 @@ class ResourceCaches(StatsProvider):
         # hard-eviction ttl of 2*ttl and tracks freshness separately via stored_at.
         fresh_ttl_seconds = time_to_seconds(ttl)
         hard_ttl_seconds = (
-            fresh_ttl_seconds * 2 if refresh_mode == "background" else fresh_ttl_seconds
+            fresh_ttl_seconds * cache_utils.BACKGROUND_REFRESH_TTL_MULTIPLIER
+            if refresh_mode == "background"
+            else fresh_ttl_seconds
         )
 
         # Fetch the session ID. Note that this will throw an exception if there is no

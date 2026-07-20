@@ -202,7 +202,9 @@ class DataCaches(StatsProvider):
         # a hard-eviction ttl of 2*ttl and tracks freshness separately via stored_at.
         fresh_ttl_seconds = time_to_seconds(ttl, coerce_none_to_inf=False)
         if refresh_mode == "background" and fresh_ttl_seconds is not None:
-            hard_ttl_seconds: float | None = fresh_ttl_seconds * 2
+            hard_ttl_seconds: float | None = (
+                fresh_ttl_seconds * cache_utils.BACKGROUND_REFRESH_TTL_MULTIPLIER
+            )
         else:
             hard_ttl_seconds = fresh_ttl_seconds
 

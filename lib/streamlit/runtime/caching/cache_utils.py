@@ -92,6 +92,10 @@ CacheScope: TypeAlias = Literal["global", "session"]
 # How a cache entry is refreshed once its ttl expires.
 RefreshMode: TypeAlias = Literal["foreground", "background"]
 
+# The hard-expiration TTL for background refresh caches is this multiple of the
+# user-facing freshness TTL.
+BACKGROUND_REFRESH_TTL_MULTIPLIER: Final = 2
+
 # How long (in seconds) to wait before retrying a background refresh after a failure,
 # so a persistently failing upstream isn't retried on every rerun.
 _FAILURE_COOLDOWN_SECONDS: Final = 60.0
