@@ -18,10 +18,10 @@ import {
   FocusEvent,
   KeyboardEvent,
   memo,
-  MouseEvent,
   ReactElement,
   useCallback,
   useRef,
+  useState,
 } from "react"
 
 import { Cancel } from "@emotion-icons/material-rounded"
@@ -112,6 +112,20 @@ function TimeInput({
     formClearBehavior: "resetValueOnly",
   })
 
+  // Local display state drives the TimeField directly, avoiding the
+  // useEffect-delay in useBasicWidgetState that would cause React Aria
+  // to see a stale value mid-render and reset its segment edit buffer.
+  const [displayValue, setDisplayValue] = useState<string | null>(value)
+
+  // Sync from backend when value changes externally (form clear, session
+  // state update, setValue call). Uses render-time adjustment pattern:
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const prevValueRef = useRef(value)
+  if (prevValueRef.current !== value) {
+    prevValueRef.current = value
+    setDisplayValue(value)
+  }
+
   const theme = useEmotionTheme()
   const step = element.step ? Number(element.step) : 900
   const clearable = isNullOrUndefined(element.default) && !disabled
@@ -138,8 +152,9 @@ function TimeInput({
     (newTime: Time | null): void => {
       if (newTime === null && !clearable) return
 
+      const newValue = newTime ? timeToString(newTime) : null
       const transitioningFromNull =
-        isNullOrUndefined(value) && newTime !== null
+        isNullOrUndefined(displayValue) && newTime !== null
 
       if (transitioningFromNull) {
         /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
@@ -149,7 +164,7 @@ function TimeInput({
          * TimeField transition and rapid keystrokes leak to the page.
          */
         flushSync(() => {
-          setValueWithSource({ value: timeToString(newTime), fromUi: true })
+          setDisplayValue(newValue)
         })
         const type = activeSegmentTypeRef.current
         if (type && wrapperRef.current) {
@@ -159,16 +174,16 @@ function TimeInput({
           el?.focus()
         }
       } else {
-        setValueWithSource({
-          value: newTime ? timeToString(newTime) : null,
-          fromUi: true,
-        })
+        setDisplayValue(newValue)
       }
+
+      setValueWithSource({ value: newValue, fromUi: true })
     },
-    [clearable, value, setValueWithSource]
+    [clearable, displayValue, setValueWithSource]
   )
 
   const handleClear = useCallback((): void => {
+    setDisplayValue(null)
     setValueWithSource({ value: null, fromUi: true })
   }, [setValueWithSource])
 
@@ -188,13 +203,14 @@ function TimeInput({
    */
   const handleArrowKeyCapture = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
-      if (!value || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return
+      if (!displayValue || (e.key !== "ArrowUp" && e.key !== "ArrowDown"))
+        return
       const target = e.target as HTMLElement
       if (target.getAttribute("role") !== "spinbutton") return
 
       const segmentType = target.getAttribute("data-type")
       const up = e.key === "ArrowUp"
-      const current = stringToTime(value)
+      const current = stringToTime(displayValue)
 
       if (segmentType === "minute") {
         // Non-whole-minute steps (e.g. 90s) fall back to react-aria's default ±1.
@@ -229,20 +245,7 @@ function TimeInput({
         handleChange(new Time(wrapped, current.minute))
       }
     },
-    [value, step, stepMins, stepHours, handleChange]
-  )
-
-  const handleWrapperClick = useCallback(
-    (e: MouseEvent<HTMLDivElement>): void => {
-      if (disabled) return
-      const target = e.target as HTMLElement
-      if (target.getAttribute("role") === "spinbutton") return
-      const firstSegment = wrapperRef.current?.querySelector<HTMLElement>(
-        "[role='spinbutton']"
-      )
-      firstSegment?.focus()
-    },
-    [disabled]
+    [displayValue, step, stepMins, stepHours, handleChange]
   )
 
   return (
@@ -263,13 +266,16 @@ function TimeInput({
           ref={wrapperRef}
           data-testid="stTimeInputTimeDisplay"
           data-disabled={disabled || undefined}
-          onClick={handleWrapperClick}
           onFocusCapture={handleFocusCapture}
           onKeyDownCapture={handleArrowKeyCapture}
         >
           <TimeField
             aria-label={element.label}
-            value={isNullOrUndefined(value) ? null : stringToTime(value)}
+            value={
+              isNullOrUndefined(displayValue)
+                ? null
+                : stringToTime(displayValue)
+            }
             onChange={handleChange}
             granularity={stepToGranularity(step)}
             hourCycle={24}
@@ -291,7 +297,7 @@ function TimeInput({
             </StyledTimeFieldInput>
           </TimeField>
         </StyledTimeInputWrapper>
-        {clearable && !isNullOrUndefined(value) && (
+        {clearable && !isNullOrUndefined(displayValue) && (
           <StyledClearButton
             type="button"
             onClick={handleClear}

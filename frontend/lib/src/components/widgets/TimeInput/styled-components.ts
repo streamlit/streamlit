@@ -27,22 +27,16 @@ export const StyledTimeFieldContainer = styled.div({
 })
 
 /**
- * Visual container for the time input (border, background, padding).
+ * Visual container for the time input (border, background).
  *
- * Using a plain `styled.div` instead of `styled(DateInput)` because React
- * Aria Components applies className via render-props, which can prevent
- * Emotion's layout styles (e.g. paddingLeft) from reaching the DOM element
- * reliably. A plain div guarantees consistent behaviour.
+ * Padding lives on StyledTimeFieldInput (DateInput) so React Aria's built-in
+ * click-to-nearest-segment behaviour covers the full clickable area.
  */
 export const StyledTimeInputWrapper = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   width: "100%",
   height: theme.sizes.minElementHeight,
-  paddingTop: theme.spacing.sm,
-  paddingBottom: theme.spacing.sm,
-  paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
-  paddingRight: theme.spacing.sm,
   borderRadius: theme.radii.default,
   borderWidth: theme.sizes.borderWidth,
   borderStyle: "solid",
@@ -61,13 +55,17 @@ export const StyledTimeInputWrapper = styled.div(({ theme }) => ({
   },
 }))
 
-/** DateInput stripped to a bare flex container — layout only, no visual styling. */
-export const StyledTimeFieldInput = styled(DateInput)({
+/** DateInput that fills the wrapper, with padding so clicks anywhere focus the nearest segment. */
+export const StyledTimeFieldInput = styled(DateInput)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   flex: 1,
+  paddingTop: theme.spacing.sm,
+  paddingBottom: theme.spacing.sm,
+  paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
+  paddingRight: theme.spacing.sm,
   outline: "none",
-})
+}))
 
 /** Individual hour, minute, or literal separator segment. */
 export const StyledTimeSegment = styled(DateSegment)(({ theme }) => {
