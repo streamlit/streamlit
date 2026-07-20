@@ -14,11 +14,20 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useMemo } from "react"
+import {
+  FocusEvent,
+  KeyboardEvent,
+  memo,
+  ReactElement,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react"
 
 import { Cancel } from "@emotion-icons/material-rounded"
 import { Time } from "@internationalized/date"
 import { TimeField } from "react-aria-components"
+import { flushSync } from "react-dom"
 
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
@@ -108,21 +117,57 @@ function TimeInput({
   const step = element.step ? Number(element.step) : 900
   const clearable = isNullOrUndefined(element.default) && !disabled
 
+  // Chromium drops focus on the active spinbutton when TimeField transitions
+  // null→non-null. Track the active segment so we can restore focus synchronously.
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const activeSegmentTypeRef = useRef<string | null>(null)
+
+  const handleFocusCapture = useCallback(
+    (e: FocusEvent<HTMLDivElement>): void => {
+      const t = e.target as HTMLElement
+      if (t.getAttribute("role") === "spinbutton") {
+        activeSegmentTypeRef.current = t.getAttribute("data-type") ?? null
+      }
+    },
+    []
+  )
+
   // Derived step sizes — memoised so the arrow-key handler stays stable.
   const stepMins = useMemo(() => step / 60, [step])
   const stepHours = useMemo(() => step / 3600, [step])
 
   const handleChange = useCallback(
     (newTime: Time | null): void => {
-      // Suppress null mid-edit events for non-clearable widgets to avoid
-      // resetting the backend value while the user is still typing.
       if (newTime === null && !clearable) return
-      setValueWithSource({
-        value: newTime ? timeToString(newTime) : null,
-        fromUi: true,
-      })
+
+      const transitioningFromNull =
+        isNullOrUndefined(value) && newTime !== null
+
+      if (transitioningFromNull) {
+        /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
+         * flushSync ensures the DOM update (segment re-mount) completes
+         * synchronously so we can restore focus before the next keystroke
+         * arrives. Without this, Chromium drops focus during the null→non-null
+         * TimeField transition and rapid keystrokes leak to the page.
+         */
+        flushSync(() => {
+          setValueWithSource({ value: timeToString(newTime), fromUi: true })
+        })
+        const type = activeSegmentTypeRef.current
+        if (type && wrapperRef.current) {
+          const el = wrapperRef.current.querySelector<HTMLElement>(
+            `[role="spinbutton"][data-type="${CSS.escape(type)}"]`
+          )
+          el?.focus()
+        }
+      } else {
+        setValueWithSource({
+          value: newTime ? timeToString(newTime) : null,
+          fromUi: true,
+        })
+      }
     },
-    [clearable, setValueWithSource]
+    [clearable, value, setValueWithSource]
   )
 
   const handleClear = useCallback((): void => {
@@ -144,17 +189,16 @@ function TimeInput({
    * boundary in the pressed direction, matching the original widget behaviour.
    */
   const handleArrowKeyCapture = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>): void => {
+    (e: KeyboardEvent<HTMLDivElement>): void => {
       if (!value || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return
       const target = e.target as HTMLElement
       if (target.getAttribute("role") !== "spinbutton") return
 
-      const label = (target.getAttribute("aria-label") ?? "").toLowerCase()
+      const segmentType = target.getAttribute("data-type")
       const up = e.key === "ArrowUp"
-      // value is stored as "HH:MM" string; parse to Time for arithmetic.
       const current = stringToTime(value)
 
-      if (label.startsWith("minute")) {
+      if (segmentType === "minute") {
         // Guard: step must divide evenly into whole minutes and be > 1 min.
         // For step=60 (stepMins=1) react-aria's default ±1 is already correct.
         if (!Number.isInteger(stepMins) || stepMins <= 1) return
@@ -171,7 +215,7 @@ function TimeInput({
           : Math.ceil(totalMins / stepMins) * stepMins - stepMins
         const wrapped = ((next % 1440) + 1440) % 1440
         handleChange(new Time(Math.floor(wrapped / 60), wrapped % 60))
-      } else if (label.startsWith("hour") && step % 3600 === 0) {
+      } else if (segmentType === "hour" && step % 3600 === 0) {
         // Hour-only mode. React-aria defaults to ±1 h; only intercept when the
         // step is a multiple of hours greater than 1.
         if (!Number.isInteger(stepHours) || stepHours <= 1) return
@@ -205,8 +249,10 @@ function TimeInput({
       </WidgetLabel>
       <StyledTimeFieldContainer>
         <StyledTimeInputWrapper
+          ref={wrapperRef}
           data-testid="stTimeInputTimeDisplay"
           data-disabled={disabled || undefined}
+          onFocusCapture={handleFocusCapture}
           onKeyDownCapture={handleArrowKeyCapture}
         >
           <TimeField
