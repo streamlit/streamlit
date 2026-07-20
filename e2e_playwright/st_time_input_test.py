@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-NUM_TIME_INPUTS = 17
+NUM_TIME_INPUTS = 20
 
 
 def test_time_input_widget_rendering(
@@ -94,6 +94,18 @@ def test_time_input_widget_rendering(
     assert_snapshot(
         get_time_input(themed_app, "Time input 12 (width='stretch')"),
         name="st_time_input-width_stretch",
+    )
+    assert_snapshot(
+        get_time_input(themed_app, "Time input (step=30, seconds)"),
+        name="st_time_input-seconds_step30",
+    )
+    assert_snapshot(
+        get_time_input(themed_app, "Time input (12-hour)"),
+        name="st_time_input-hour_cycle_12",
+    )
+    assert_snapshot(
+        get_time_input(themed_app, "Time input (localized)"),
+        name="st_time_input-hour_cycle_localized",
     )
 
 
@@ -519,3 +531,61 @@ def test_paste_in_form_context(app: Page):
     wait_for_app_run(app)
 
     expect_markdown(app, "Form time: 14:30:00")
+
+
+# --- Seconds granularity and hour cycle tests ---
+
+
+def test_seconds_granularity_shows_three_segments(app: Page):
+    """Time input with step=30 shows three spinbutton segments (H, M, S)."""
+    time_input = get_time_input(app, "Time input (step=30, seconds)")
+    spinbuttons = time_input.get_by_test_id("stTimeInputTimeDisplay").get_by_role(
+        "spinbutton"
+    )
+    # Expect 3 segments: hour, minute, second (no dayPeriod in 24-hour mode)
+    expect(spinbuttons).to_have_count(3)
+    # Verify no dayPeriod segment is present
+    expect(
+        time_input.get_by_test_id("stTimeInputTimeDisplay").locator(
+            "[data-type='dayPeriod']"
+        )
+    ).to_have_count(0)
+
+
+def test_seconds_value_is_returned(app: Page):
+    """Typing into the three-segment seconds widget returns HH:MM:SS."""
+    time_display = get_time_input(app, "Time input (step=30, seconds)").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    spinbuttons = time_display.get_by_role("spinbutton")
+
+    # Type hours, minutes, seconds
+    spinbuttons.nth(0).click()
+    spinbuttons.nth(0).press("0")
+    spinbuttons.nth(0).press("8")
+    spinbuttons.nth(1).press("4")
+    spinbuttons.nth(1).press("5")
+    spinbuttons.nth(2).press("3")
+    spinbuttons.nth(2).press("0")
+
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Value seconds:", "08:45:30")
+
+
+def test_12_hour_display_shows_am_pm(app: Page):
+    """Time input with hour_cycle=12 shows a dayPeriod (AM/PM) segment."""
+    time_input = get_time_input(app, "Time input (12-hour)")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    expect(time_display.locator("[data-type='dayPeriod']")).to_have_count(1)
+
+
+def test_localized_hour_cycle_renders(app: Page):
+    """Time input with hour_cycle='localized' renders without error."""
+    time_input = get_time_input(app, "Time input (localized)")
+    # Render-only test — CI locale is unpredictable in headless mode.
+    # Assert the widget renders and has at least hour + minute segments visible.
+    spinbuttons = time_input.get_by_test_id("stTimeInputTimeDisplay").get_by_role(
+        "spinbutton"
+    )
+    expect(spinbuttons.first()).to_be_visible()
+    expect(spinbuttons.nth(1)).to_be_visible()

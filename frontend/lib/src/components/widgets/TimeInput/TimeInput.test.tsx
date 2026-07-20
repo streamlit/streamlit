@@ -1440,3 +1440,145 @@ describe("TimeInput clearable behavior", () => {
     expect(minuteSegment).toHaveAttribute("aria-valuenow", "0")
   })
 })
+
+describe("TimeInput seconds granularity", () => {
+  it("shows three segments (H:M:S) when step is not divisible by 60", () => {
+    const props = getProps({ default: "12:45:30", step: 30 })
+    render(<TimeInput {...props} />)
+
+    const segments = screen.getAllByRole("spinbutton")
+    expect(segments).toHaveLength(3)
+    expect(segments[0]).toHaveAttribute("aria-valuenow", "12")
+    expect(segments[1]).toHaveAttribute("aria-valuenow", "45")
+    expect(segments[2]).toHaveAttribute("aria-valuenow", "30")
+  })
+
+  it("shows ss placeholder when seconds granularity and value is null", () => {
+    const props = getProps({ default: undefined, step: 30 })
+    render(<TimeInput {...props} />)
+
+    const segments = screen.getAllByRole("spinbutton")
+    expect(segments).toHaveLength(3)
+    expect(segments[2]).toHaveTextContent("ss")
+  })
+
+  it("shows HH:MM:SS format in setStringValue when step < 60", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:44:15", step: 30 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    // ArrowDown on minute segment: snaps to boundary, value includes seconds
+    const segments = screen.getAllByRole("spinbutton")
+    const minuteSegment = segments[1]
+    await user.click(minuteSegment)
+    await user.keyboard("{ArrowDown}")
+
+    // Expect the called value to include a seconds component
+    const lastCall = vi.mocked(props.widgetMgr.setStringValue).mock.lastCall
+    expect(lastCall?.[1]).toMatch(/^\d{2}:\d{2}:\d{2}$/)
+  })
+
+  it("snaps second ArrowUp to next step boundary", async () => {
+    const user = userEvent.setup()
+    // step=30. value=12:44:15 (off-step) → ArrowUp on seconds → next boundary = 12:44:30
+    const props = getProps({ default: "12:44:15", step: 30 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const segments = screen.getAllByRole("spinbutton")
+    const secondSegment = segments[2]
+    await user.click(secondSegment)
+    await user.keyboard("{ArrowUp}")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "12:44:30",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("wraps seconds forward past midnight", async () => {
+    const user = userEvent.setup()
+    // step=30. value=23:59:30 → ArrowUp on seconds → 00:00:00 (wraps)
+    const props = getProps({ default: "23:59:30", step: 30 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const segments = screen.getAllByRole("spinbutton")
+    const secondSegment = segments[2]
+    await user.click(secondSegment)
+    await user.keyboard("{ArrowUp}")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "00:00:00",
+      { fromUi: true },
+      undefined
+    )
+  })
+})
+
+describe("TimeInput hour cycle", () => {
+  it("shows AM/PM segment when hourCycle=12", () => {
+    const props = getProps({ hourCycle: 12, default: "08:45" })
+    render(<TimeInput {...props} />)
+
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
+    const dayPeriodSegment = timeDisplay.querySelector(
+      '[data-type="dayPeriod"]'
+    )
+    expect(dayPeriodSegment).toBeInTheDocument()
+  })
+
+  it("shows hh placeholder when hourCycle=12 and value is null", () => {
+    const props = getProps({ hourCycle: 12, default: undefined })
+    render(<TimeInput {...props} />)
+
+    const segments = screen.getAllByRole("spinbutton")
+    // Hour placeholder should show "hh" for 12-hour mode
+    expect(segments[0]).toHaveTextContent("hh")
+  })
+
+  it("does not show AM/PM segment when hourCycle=24", () => {
+    const props = getProps({ hourCycle: 24, default: "08:45" })
+    render(<TimeInput {...props} />)
+
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
+    const dayPeriodSegment = timeDisplay.querySelector(
+      '[data-type="dayPeriod"]'
+    )
+    expect(dayPeriodSegment).toBeNull()
+  })
+
+  it("renders without crashing when hourCycle=0 (localized)", () => {
+    // hourCycle=0 maps to undefined (browser locale) — should not crash
+    const props = getProps({ hourCycle: 0, default: "08:45" })
+    render(<TimeInput {...props} />)
+
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
+    expect(timeDisplay).toBeInTheDocument()
+    // At least 2 spinbutton segments must be present
+    const segments = screen.getAllByRole("spinbutton")
+    expect(segments.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it("uses locale-appropriate hour placeholder when hourCycle is localized", () => {
+    // Mirror the component's Intl probe to derive the expected placeholder without
+    // needing a constructor-compatible mock of Intl.DateTimeFormat.
+    const hc = new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+    }).resolvedOptions().hourCycle
+    const expected = hc === "h11" || hc === "h12" ? "hh" : "HH"
+
+    const props = getProps({ hourCycle: 0, default: undefined })
+    render(<TimeInput {...props} />)
+
+    const segments = screen.getAllByRole("spinbutton")
+    expect(segments[0]).toHaveTextContent(expected)
+  })
+})

@@ -22,6 +22,7 @@ import {
   ReactElement,
   useCallback,
   useId,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -68,15 +69,34 @@ export interface Props {
   fragmentId?: string
 }
 
-/** Converts an HH:MM wire-format string to a React Aria Time object. */
-function stringToTime(value: string): Time {
-  const [hours, minutes] = value.split(":").map(Number)
-  return new Time(hours, minutes)
+/**
+ * Maps a step value (in seconds) to a React Aria TimeField granularity.
+ *
+ * Always returns at least "minute" because the wire format includes at
+ * minimum HH:MM — hiding minutes (hour-only granularity) would silently
+ * discard minute components from values like "12:45" that can arrive via
+ * query-params or session state.
+ *
+ * Note: `step` also controls arrow-key behaviour via `handleArrowKeyCapture`.
+ */
+function stepToGranularity(stepSeconds: number): "minute" | "second" {
+  return stepSeconds % 60 !== 0 ? "second" : "minute"
 }
 
-/** Converts a React Aria Time object back to the HH:MM wire format. */
-function timeToString(value: TimeValue): string {
-  return `${String(value.hour).padStart(2, "0")}:${String(value.minute).padStart(2, "0")}`
+/** Converts an HH:MM or HH:MM:SS wire-format string to a React Aria Time object. */
+function stringToTime(value: string): Time {
+  const [hours, minutes, seconds = 0] = value.split(":").map(Number)
+  return new Time(hours, minutes, seconds)
+}
+
+/** Converts a React Aria Time object back to the wire format (HH:MM or HH:MM:SS). */
+function timeToString(value: TimeValue, granularity: "minute" | "second"): string {
+  const hh = String(value.hour).padStart(2, "0")
+  const mm = String(value.minute).padStart(2, "0")
+  if (granularity === "second") {
+    return `${hh}:${mm}:${String(value.second).padStart(2, "0")}`
+  }
+  return `${hh}:${mm}`
 }
 
 function TimeInput({
@@ -174,6 +194,29 @@ function TimeInput({
   const stepMins = step / 60
   const stepHours = step / 3600
 
+  // Prop passed to react-aria <TimeField>. For "localized" (element.hourCycle === 0)
+  // we pass undefined so react-aria uses the browser locale itself.
+  const hourCycleProp: 12 | 24 | undefined =
+    element.hourCycle === 0
+      ? undefined // localized — let browser locale decide
+      : element.hourCycle === 12
+        ? 12
+        : 24 // default: 24-hour (backward compatible)
+
+  // For placeholder rendering we need to know whether the resolved display is
+  // 12-hour, even when element.hourCycle === 0 (localized). Probe Intl so the
+  // empty-state "hh"/"HH" hint matches what react-aria actually renders.
+  const placeholderIs12Hour = useMemo((): boolean => {
+    if (element.hourCycle === 12) return true
+    if (element.hourCycle === 0) {
+      const hc = new Intl.DateTimeFormat(undefined, {
+        hour: "numeric",
+      }).resolvedOptions().hourCycle
+      return hc === "h11" || hc === "h12"
+    }
+    return false
+  }, [element.hourCycle])
+
   /**
    * Called by TimeField on every committed segment change.
    *
@@ -192,7 +235,8 @@ function TimeInput({
         setPasteOverride(null)
         return
       }
-      const newValue = newTime ? timeToString(newTime) : null
+      const granularity = stepToGranularity(step)
+      const newValue = newTime ? timeToString(newTime, granularity) : null
       setDisplayValue(newValue)
       if (commitImmediatelyRef.current) {
         commitImmediatelyRef.current = false
@@ -209,7 +253,7 @@ function TimeInput({
       setValidationError(null)
       setPasteOverride(null)
     },
-    [clearable, setValueWithSource, inForm, element, widgetMgr, fragmentId]
+    [clearable, setValueWithSource, step, inForm, element, widgetMgr, fragmentId]
   )
 
   /**
@@ -437,6 +481,28 @@ function TimeInput({
               ? Math.floor(23 / stepHours) * stepHours
               : next
         handleChange(new Time(wrapped, 0))
+      } else if (segmentType === "second" && step % 60 !== 0) {
+        // Sub-minute step: snap seconds across the full HH:MM:SS value.
+        // For step=1 react-aria's default ±1 is already correct.
+        if (step <= 1) return
+
+        e.preventDefault()
+        e.stopPropagation()
+        e.nativeEvent.stopImmediatePropagation()
+
+        const totalSecs =
+          current.hour * 3600 + current.minute * 60 + current.second
+        const next = up
+          ? Math.floor(totalSecs / step) * step + step
+          : Math.ceil(totalSecs / step) * step - step
+        const wrapped = ((next % 86400) + 86400) % 86400
+        handleChange(
+          new Time(
+            Math.floor(wrapped / 3600),
+            Math.floor((wrapped % 3600) / 60),
+            wrapped % 60
+          )
+        )
       }
     },
     [
@@ -487,11 +553,8 @@ function TimeInput({
                 : stringToTime(displayValue)
             }
             onChange={handleChange}
-            // Always "minute": the wire format is HH:MM, so hiding the minute
-            // segment would silently discard values like "12:45" from query-params
-            // or session state. `step` controls arrow-key behaviour instead.
-            granularity="minute"
-            hourCycle={24}
+            granularity={stepToGranularity(step)}
+            hourCycle={hourCycleProp}
             shouldForceLeadingZeros
             isDisabled={disabled}
           >
@@ -507,8 +570,12 @@ function TimeInput({
                       if (type === "hour") return pasteOverride.hour
                       if (type === "minute") return pasteOverride.minute
                     }
-                    if (isPlaceholder && type === "hour") return "HH"
-                    if (isPlaceholder && type === "minute") return "mm"
+                    if (!isPlaceholder) return text
+                    if (type === "hour")
+                      return placeholderIs12Hour ? "hh" : "HH"
+                    if (type === "minute") return "mm"
+                    if (type === "second") return "ss"
+                    // dayPeriod (AM/PM) — react-aria's default text is correct
                     return text
                   }}
                 </StyledTimeSegment>

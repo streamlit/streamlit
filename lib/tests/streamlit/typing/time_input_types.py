@@ -68,3 +68,8 @@ if TYPE_CHECKING:
         time | None,
     )
     assert_type(time_input("label", time(12, 0), key="my_key", bind=None), time)
+
+    # Test hour_cycle parameter
+    assert_type(time_input("label", hour_cycle=12), time)
+    assert_type(time_input("label", hour_cycle=24), time)
+    assert_type(time_input("label", hour_cycle="localized"), time)

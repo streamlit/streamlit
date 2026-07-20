@@ -30,4 +30,7 @@ message TimeInput {
   LabelVisibility label_visibility = 9;
   int64 step = 10;
   optional string query_param_key = 11;
+  // 0 = localized (use browser locale), 12 = 12-hour, 24 = 24-hour.
+  // When absent, frontend defaults to 24 for backward compatibility.
+  optional int32 hour_cycle = 12;
 }

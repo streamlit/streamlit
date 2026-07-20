@@ -152,13 +152,14 @@ class TimeInputTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.time_input("Set an alarm for", value, step=(90, 0))
         with pytest.raises(StreamlitAPIException):
-            st.time_input("Set an alarm for", value, step=1)
-        with pytest.raises(StreamlitAPIException):
-            st.time_input("Set an alarm for", value, step=59)
+            st.time_input("Set an alarm for", value, step=0)
         with pytest.raises(StreamlitAPIException):
             st.time_input("Set an alarm for", value, step=timedelta(hours=24))
         with pytest.raises(StreamlitAPIException):
             st.time_input("Set an alarm for", value, step=timedelta(days=1))
+        # step=1 and step=59 are now valid (sub-minute steps unlocked)
+        st.time_input("Set an alarm for", value, step=1)
+        st.time_input("Set an alarm for", value, step=59)
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
@@ -408,10 +409,18 @@ class TestTimeInputSerdeDeserialization:
     ("value", "expected"),
     [
         ("12:30", time(12, 30)),
-        ("2020-01-01T12:30:45.123", time(12, 30)),
-        (datetime(2020, 1, 1, 9, 5, 33), time(9, 5)),
+        ("12:30:45", time(12, 30, 45)),
+        ("12:30:45.123456", time(12, 30, 45)),  # microseconds stripped
+        ("2020-01-01T12:30:45.123", time(12, 30, 45)),
+        (datetime(2020, 1, 1, 9, 5, 33), time(9, 5, 33)),
     ],
-    ids=["iso_time", "iso_datetime_drops_subseconds", "datetime_object"],
+    ids=[
+        "iso_time_hh_mm",
+        "iso_time_hh_mm_ss",
+        "iso_time_strips_microseconds",
+        "iso_datetime_preserves_seconds",
+        "datetime_object",
+    ],
 )
 def test_convert_timelike_to_time_parses_value(
     value: str | datetime, expected: time
@@ -513,3 +522,76 @@ def test_parse_date_value_returns_dates_and_range_flag(
 ) -> None:
     """Single dates are wrapped in a list; lists are treated as ranges."""
     assert _parse_date_value(value) == (expected_dates, expected_is_range)
+
+
+# ---------------------------------------------------------------------------
+# New tests for step validation, serde, and hour_cycle proto field
+# ---------------------------------------------------------------------------
+
+
+class TestStepUnlocksSecondsGranularity(DeltaGeneratorTestCase):
+    """Tests that sub-minute step enables seconds and correct proto field."""
+
+    def test_step_30_sets_proto_step(self):
+        """step=30 writes step=30 to the proto."""
+        st.time_input("label", time(8, 45, 30), step=30)
+        el = self.get_delta_from_queue().new_element
+        assert el.time_input.step == 30
+
+    def test_step_normalization_strips_seconds_for_minute_granularity(self):
+        """value seconds are stripped when step is minute-granular."""
+        st.time_input("label", time(9, 5, 33), step=900)
+        el = self.get_delta_from_queue().new_element
+        assert el.time_input.default == "09:05"
+
+    def test_step_preserves_seconds_in_default_for_sub_minute_step(self):
+        """value seconds are kept when step < 60."""
+        st.time_input("label", time(8, 45, 30), step=30)
+        el = self.get_delta_from_queue().new_element
+        assert el.time_input.default == "08:45:30"
+
+
+class TestTimeInputSerdeNew(DeltaGeneratorTestCase):
+    """Tests for new TimeInputSerde behaviour."""
+
+    def test_serde_seconds_serialize(self):
+        """Serialize includes seconds when step is sub-minute."""
+        serde = TimeInputSerde(value=time(8, 45, 30), step=30)
+        assert serde.serialize(time(8, 45, 30)) == "08:45:30"
+
+    def test_serde_minutes_serialize(self):
+        """Serialize omits seconds when step is minute-granular."""
+        serde = TimeInputSerde(value=time(8, 45, 0), step=60)
+        assert serde.serialize(time(8, 45, 0)) == "08:45"
+
+    def test_serde_deserialize_hh_mm_ss(self):
+        """HH:MM:SS is parsed correctly."""
+        serde = TimeInputSerde(value=time(0, 0), step=30)
+        assert serde.deserialize("14:30:45") == time(14, 30, 45)
+
+    def test_serde_deserialize_hh_mm_still_works(self):
+        """HH:MM still parses correctly (backward compatibility)."""
+        serde = TimeInputSerde(value=time(0, 0), step=900)
+        assert serde.deserialize("14:30") == time(14, 30)
+
+
+class TestHourCycleProtoField(DeltaGeneratorTestCase):
+    """Tests that hour_cycle is correctly written to the proto."""
+
+    def test_hour_cycle_12_sets_proto(self):
+        """hour_cycle=12 writes 12 to proto."""
+        st.time_input("label", time(8, 45), hour_cycle=12)
+        el = self.get_delta_from_queue().new_element
+        assert el.time_input.hour_cycle == 12
+
+    def test_hour_cycle_24_sets_proto(self):
+        """hour_cycle=24 (default) writes 24 to proto."""
+        st.time_input("label", time(8, 45), hour_cycle=24)
+        el = self.get_delta_from_queue().new_element
+        assert el.time_input.hour_cycle == 24
+
+    def test_hour_cycle_localized_sets_proto_to_0(self):
+        """hour_cycle='localized' writes 0 to proto."""
+        st.time_input("label", time(8, 45), hour_cycle="localized")
+        el = self.get_delta_from_queue().new_element
+        assert el.time_input.hour_cycle == 0
