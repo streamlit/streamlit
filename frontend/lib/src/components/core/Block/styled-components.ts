@@ -176,7 +176,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         // Scoped to the column's own stVerticalBlock so nested containers
         // (e.g. horizontal containers of checkboxes) do not also get matched
         // (issue #13162).
-        [`& > [data-testid="stVerticalBlock"] > ${StyledElementContainer}:last-of-type > ${StyledCheckbox}`]:
+        [`& > .stVerticalBlock > ${StyledElementContainer}:last-of-type > ${StyledCheckbox}`]:
           {
             marginBottom: theme.spacing.sm,
           },
@@ -186,7 +186,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         // widgets. Scoped to the column's own stVerticalBlock so nested
         // containers (e.g. horizontal containers of checkboxes) do not also
         // get matched (issue #13162).
-        [`& > [data-testid="stVerticalBlock"] > ${StyledElementContainer}:first-of-type > ${StyledCheckbox}`]:
+        [`& > .stVerticalBlock > ${StyledElementContainer}:first-of-type > ${StyledCheckbox}`]:
           {
             marginTop: theme.spacing.sm,
           },
