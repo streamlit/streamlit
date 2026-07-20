@@ -124,6 +124,48 @@ def test_popover_columns(app: Page, assert_snapshot: ImageCompareFunction):
     )
 
 
+def test_popover_in_sidebar_stays_within_viewport(app: Page):
+    """A popover opened inside the sidebar must render fully within the browser
+    viewport — the sidebar's `overflow: auto` must not clip or force-flip the
+    popover body off-screen. Regression test for
+    https://github.com/streamlit/streamlit/issues/9387.
+    """
+    popover_body = open_popover(app, "popover 5 (in sidebar)")
+    expect_markdown(popover_body, "Popover in sidebar with dataframe")
+
+    viewport = app.viewport_size
+    assert viewport is not None, "viewport_size must be set for this test"
+
+    body_box = popover_body.bounding_box()
+    assert body_box is not None, "popover body must have a bounding box"
+
+    # The popover body's rect must fit entirely inside the viewport. Before the
+    # #9387 fix, shift/flip treated the sidebar's `overflow: auto` container as
+    # the boundary and squished the body against the sidebar's left edge (or
+    # flipped it off-screen), producing negative `x` / clipped `y` values.
+    assert body_box["x"] >= 0, f"popover body extends off left edge: {body_box}"
+    assert body_box["y"] >= 0, f"popover body extends off top edge: {body_box}"
+    assert body_box["x"] + body_box["width"] <= viewport["width"], (
+        f"popover body extends past right edge: {body_box}, viewport={viewport}"
+    )
+    assert body_box["y"] + body_box["height"] <= viewport["height"], (
+        f"popover body extends past bottom edge: {body_box}, viewport={viewport}"
+    )
+
+    # The popover body's minimum width (20rem = 320px) is wider than the
+    # default sidebar, so it MUST extend past the sidebar's right edge to
+    # render its content. This is the "escape the sidebar" behavior we want.
+    sidebar = app.get_by_test_id("stSidebar")
+    sidebar_box = sidebar.bounding_box()
+    assert sidebar_box is not None
+    assert (
+        body_box["x"] + body_box["width"] > sidebar_box["x"] + sidebar_box["width"]
+    ), (
+        "popover body must extend beyond the sidebar (it is portalled to body); "
+        f"body={body_box}, sidebar={sidebar_box}"
+    )
+
+
 def test_popover_container_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):

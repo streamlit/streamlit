@@ -18,7 +18,9 @@ import {
   memo,
   ReactElement,
   useCallback,
+  useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -28,6 +30,7 @@ import { FloatingPortal } from "@floating-ui/react"
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
@@ -73,6 +76,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   fragmentId,
 }): ReactElement => {
   const theme = useEmotionTheme()
+  const isInSidebar = useContext(IsSidebarContext)
 
   // id is only set when the backend registers the popover as a
   // stateful widget (on_change="rerun").
@@ -190,14 +194,44 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // keyboard activation, which can dispatch a `click` with no prior pointerdown.
   const interactionInsideRef = useRef(false)
 
+  // When inside the sidebar, override the shift/flip boundary so the popover
+  // can escape the sidebar's `overflow: auto` clipping rect. Without this, the
+  // popover (which is portalled to document.body with `position: fixed`) is
+  // constrained to the narrow sidebar column: shift squishes it against the
+  // sidebar's edge and flip may flip it vertically as soon as its bottom edge
+  // exceeds the sidebar's inner scroll boundary — producing the
+  // "clipped/off-screen" behavior tracked in #9387.
+  //
+  // We use `document.documentElement` (the <html> element) rather than
+  // `document.body` because Streamlit's root layout uses
+  // `position: absolute; inset: 0` on `.stApp`, which takes it out of normal
+  // flow and leaves `document.body` sized 0x0 — a body-scoped boundary would
+  // report the popover as always overflowing and cause exactly the flip we're
+  // trying to avoid. The html element mirrors the viewport size (720x1280 in
+  // typical desktop tests) and is the correct clipping context for a
+  // popover that is `position: fixed` and portalled to body.
+  const shiftPadding = 8
+  const overlayOptions = useMemo(() => {
+    const base = {
+      open,
+      placement: "bottom-start" as const,
+      offsetPx: convertRemToPx(theme.spacing.twoXS),
+    }
+    if (!isInSidebar || typeof document === "undefined") {
+      return base
+    }
+    const boundary = document.documentElement
+    return {
+      ...base,
+      flipOptions: { boundary },
+      shiftOptions: { padding: shiftPadding, boundary },
+    }
+  }, [open, theme.spacing.twoXS, isInSidebar])
+
   // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
   // fully replaced with FloatingPortal here because Popover has no collection
   // system dependency — it renders arbitrary children, not ComboBox items.
-  const { refs, floatingStyles } = useFloatingOverlay({
-    open,
-    placement: "bottom-start",
-    offsetPx: convertRemToPx(theme.spacing.twoXS),
-  })
+  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
   // Custom dismissal via document-level DOM listeners.
   //
