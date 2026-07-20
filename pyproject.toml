@@ -82,7 +82,6 @@ dev = [
   "types-requests",
   "types-setuptools",
   "types-toml",
-  "types-cachetools",
   "types-Authlib",
   # pandas-stubs have caused a couple of CI breaks, so we pin to a specific version.
   # We need to pin 2.3.3.260113 since higher versions require a min Python 3.11 support.
@@ -120,7 +119,7 @@ test = [
   # httpx2 is used by starlette's TestClient (>=1.2); httpx is still required
   # by authlib's httpx_client integration used in the auth route tests.
   "httpx>=0.24.1",
-  "httpx2>=2.0.0",
+  "httpx2>=2.7.0",
   # Playwright and E2E test dependencies:
   # We pin playwright to a minor version to avoid new browser versions breaking our CI.
   "playwright==1.61.*",

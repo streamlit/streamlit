@@ -44,6 +44,7 @@ from streamlit.runtime.caching import cache_data, cache_resource
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import (
+    _LOGGER,
     _NP_SIZE_LARGE,
     _PANDAS_ROWS_LARGE,
     UserHashError,
@@ -925,15 +926,37 @@ def test_hash_stack_pretty_print_handles_str_conversion_error() -> None:
 def test_pandas_series_hash_pickle_fallback_on_type_error() -> None:
     """Series that ``hash_pandas_object`` cannot hash fall back to pickling."""
     series = pd.Series([[1, 2], [3, 4]])
-    assert get_hash(series) == get_hash(series)
-    assert get_hash(series) != get_hash(pd.Series([[1, 2], [3, 5]]))
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        digest = get_hash(series)
+
+    assert digest == get_hash(series)
+    assert digest != get_hash(pd.Series([[1, 2], [3, 5]]))
+
+    mock_warning.assert_called_once()
+    # The traceback must not be attached anymore (``exc_info`` was removed).
+    assert "exc_info" not in mock_warning.call_args.kwargs
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert "failed for a pandas Series" in logged_message
+    assert "falling back to pickling the object" in logged_message
+    assert "unhashable type: 'list'" in logged_message
 
 
 def test_pandas_dataframe_hash_pickle_fallback_on_type_error() -> None:
     """DataFrame that ``hash_pandas_object`` cannot hash fall back to pickling."""
     df = pd.DataFrame({"col": [[1], [2]]})
-    assert get_hash(df) == get_hash(df)
-    assert get_hash(df) != get_hash(pd.DataFrame({"col": [[1], [3]]}))
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        digest = get_hash(df)
+
+    assert digest == get_hash(df)
+    assert digest != get_hash(pd.DataFrame({"col": [[1], [3]]}))
+
+    mock_warning.assert_called_once()
+    # The traceback must not be attached anymore (``exc_info`` was removed).
+    assert "exc_info" not in mock_warning.call_args.kwargs
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert "failed for a pandas DataFrame" in logged_message
+    assert "falling back to pickling the object" in logged_message
+    assert "unhashable type: 'list'" in logged_message
 
 
 def test_numpy_ufunc_hashes_by_encoded_name() -> None:
@@ -950,26 +973,38 @@ def test_module_hashes_via_module_name() -> None:
 
 @pytest.mark.require_integration
 @pytest.mark.parametrize(
-    ("make_obj", "method_name"),
+    ("make_obj", "method_name", "expected_obj_type"),
     [
-        (lambda pl: pl.Series([1, 2, 3]), "hash"),
-        (lambda pl: pl.DataFrame({"a": [1, 2]}), "hash_rows"),
+        (lambda pl: pl.Series([1, 2, 3]), "hash", "polars Series"),
+        (lambda pl: pl.DataFrame({"a": [1, 2]}), "hash_rows", "polars DataFrame"),
     ],
     ids=["series", "dataframe"],
 )
 def test_polars_pickle_fallback_when_hash_raises_typeerror(
     make_obj: Callable[..., Any],
     method_name: str,
+    expected_obj_type: str,
 ) -> None:
     """Polars objects fall back to pickle when native hashing raises ``TypeError``."""
     import polars as pl
 
     obj = make_obj(pl)
     cls = type(obj)
-    with mock.patch.object(cls, method_name, side_effect=TypeError("forced")):
+    with (
+        mock.patch.object(cls, method_name, side_effect=TypeError("forced")),
+        mock.patch.object(_LOGGER, "warning") as mock_warning,
+    ):
         digest = get_hash(obj)
     with mock.patch.object(cls, method_name, side_effect=TypeError("forced")):
         assert get_hash(obj) == digest
+
+    mock_warning.assert_called_once()
+    # The traceback must not be attached anymore (``exc_info`` was removed).
+    assert "exc_info" not in mock_warning.call_args.kwargs
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert "falling back to pickling the object" in logged_message
+    assert f"failed for a {expected_obj_type}" in logged_message
+    assert "forced" in logged_message
 
 
 @pytest.mark.require_integration
