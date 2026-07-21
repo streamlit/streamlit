@@ -807,9 +807,13 @@ class TimeWidgetsMixin:
             value must be between 60 seconds and 23 hours.
 
             Arrow keys on the minute segment snap to the nearest step
-            boundary in the pressed direction (e.g. ``step=900`` → ±15 min
-            increments; ``step=60`` → ±1 min). Any valid time may be typed
-            regardless of the step value.
+            boundary in the pressed direction when the step is a whole number
+            of minutes greater than one (e.g. ``step=900`` → ±15 min).
+            ``step=60`` uses the default ±1 min increment. Non-whole-minute
+            steps (e.g. ``step=90``) also fall back to ±1 min. When the step
+            is a whole number of hours (e.g. ``step=7200``), arrow keys on
+            the hour segment snap by that interval. Any valid time may be
+            typed regardless of the step value.
 
         width : "stretch" or int
             The width of the time input widget. This can be one of the following:

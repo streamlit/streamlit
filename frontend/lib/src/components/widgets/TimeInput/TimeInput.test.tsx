@@ -153,7 +153,7 @@ describe("TimeInput widget", () => {
     const props = getProps()
     render(<TimeInput {...props} />)
 
-    // Default step=900s (divisible by 60) → granularity="minute" → 2 spinbuttons
+    // granularity is always "minute" (2 spinbuttons) regardless of step
     const segments = screen.getAllByRole("spinbutton")
     expect(segments).toHaveLength(2)
   })
@@ -463,7 +463,7 @@ describe("TimeInput widget", () => {
       props.element,
       null,
       expect.any(Object),
-      expect.anything()
+      undefined
     )
   })
 })

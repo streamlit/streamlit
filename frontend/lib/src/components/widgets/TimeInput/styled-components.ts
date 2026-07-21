@@ -90,7 +90,7 @@ export const StyledTimeSegment = styled(DateSegment)(({ theme }) => {
     // primary-colored focused highlight, even when the segment is still a placeholder.
     "&[data-focused]": {
       backgroundColor: theme.colors.primary,
-      color: isLightPrimary ? theme.colors.bodyText : theme.colors.white,
+      color: isLightPrimary ? theme.colors.black : theme.colors.white,
     },
     // When disabled, inherit the fadedText40 color set on StyledTimeInputWrapper.
     // Without this, the explicit color: bodyText above blocks CSS inheritance.
