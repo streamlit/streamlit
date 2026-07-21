@@ -178,7 +178,7 @@ class DataframeSourceManager:
 
         # Short-circuit out-of-bounds requests with an empty (schema-only) chunk
         # instead of running a row query. This avoids unnecessary work for deep
-        # offsets, which can be expensive for sources like Snowpark.
+        # offsets, which can be expensive for some native lazy sources.
         #
         # Known-size sources report an integer ``row_count``. Future unknown-size
         # sequential sources report ``row_count=None``; for those the offset can

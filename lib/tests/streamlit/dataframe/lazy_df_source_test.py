@@ -252,14 +252,12 @@ def _make_multiindex_pandas(num_rows: int) -> pd.DataFrame:
     return pd.DataFrame(np.arange(num_rows * 2).reshape(num_rows, 2), columns=columns)
 
 
-def test_resolve_multiindex_columns_lazy_true_falls_back_to_eager() -> None:
-    """``lazy=True`` on a MultiIndex-column pandas DataFrame renders eagerly.
-
-    Multi-level column headers are unsupported for lazy loading, so they fall
-    back to eager rendering rather than raising.
-    """
-    df = _make_multiindex_pandas(FORCED_LAZY_MIN_ROWS + 1)
-    assert resolve_lazy_source(df, True, is_selection_activated=False) is None
+@pytest.mark.parametrize("num_rows", [10, FORCED_LAZY_MIN_ROWS + 1])
+def test_resolve_multiindex_columns_lazy_true_raises(num_rows: int) -> None:
+    """``lazy=True`` rejects MultiIndex columns regardless of input size."""
+    df = _make_multiindex_pandas(num_rows)
+    with pytest.raises(StreamlitAPIException, match="multi-level"):
+        resolve_lazy_source(df, True, is_selection_activated=False)
 
 
 def test_resolve_multiindex_columns_lazy_none_falls_back_to_eager() -> None:
@@ -268,11 +266,19 @@ def test_resolve_multiindex_columns_lazy_none_falls_back_to_eager() -> None:
     assert resolve_lazy_source(df, None, is_selection_activated=False) is None
 
 
-def test_resolve_multiindex_columns_pyarrow_falls_back_to_eager() -> None:
-    """A pyarrow.Table carrying MultiIndex column metadata stays eager."""
+def test_resolve_multiindex_columns_pyarrow_lazy_true_raises() -> None:
+    """``lazy=True`` rejects Arrow tables carrying MultiIndex metadata."""
     df = _make_multiindex_pandas(FORCED_LAZY_MIN_ROWS + 1)
     table = pa.Table.from_pandas(df)
-    assert resolve_lazy_source(table, True, is_selection_activated=False) is None
+    with pytest.raises(StreamlitAPIException, match="multi-level"):
+        resolve_lazy_source(table, True, is_selection_activated=False)
+
+
+def test_resolve_multiindex_columns_pyarrow_lazy_none_falls_back_to_eager() -> None:
+    """Arrow tables carrying MultiIndex metadata stay eager for ``lazy=None``."""
+    df = _make_multiindex_pandas(AUTO_LAZY_ROW_THRESHOLD + 1)
+    table = pa.Table.from_pandas(df)
+    assert resolve_lazy_source(table, None, is_selection_activated=False) is None
 
 
 def test_resolve_single_level_columns_stay_lazy() -> None:

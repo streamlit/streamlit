@@ -833,21 +833,19 @@ class ArrowMixin:
               in-memory ``pandas`` and ``polars`` dataframes and
               ``pyarrow.Table`` objects with more than 150,000 rows are
               delivered lazily. Compatible unevaluated objects with more than
-              10,000 rows, such as Polars ``LazyFrame`` and Snowpark dataframes,
-              are also delivered lazily. Everything else uses the regular eager
-              rendering, including the existing capped preview for unsupported
-              unevaluated data objects.
+              10,000 rows, such as a Polars ``LazyFrame``, are also delivered
+              lazily. Everything else uses the regular eager rendering,
+              including the existing capped preview for unsupported unevaluated
+              data objects.
             - ``True``: Force lazy delivery. Streamlit uses a native lazy
-              adapter when available (for example, a Polars ``LazyFrame`` or a
-              Snowpark dataframe) and otherwise converts a supported input to
-              an in-memory ``pandas.DataFrame`` and serves row ranges from
-              server memory. For small inputs (1,000 rows or fewer), Streamlit
-              keeps eager rendering as an optimization, and dataframes with
-              multi-level (``MultiIndex``) column headers always keep eager
-              rendering because lazy loading cannot yet address a single
-              header level. If lazy delivery is otherwise incompatible with the
-              input or other options, Streamlit raises a
-              ``StreamlitAPIException``.
+              adapter when available (for example, a Polars ``LazyFrame``) and
+              otherwise converts a supported input to an in-memory
+              ``pandas.DataFrame`` and serves row ranges from server memory. For
+              small inputs (1,000 rows or fewer), Streamlit
+              keeps eager rendering as an optimization. If lazy delivery is
+              incompatible with the input or other options, including
+              dataframes with multi-level (``MultiIndex``) column headers,
+              Streamlit raises a ``StreamlitAPIException``.
             - ``False``: Never use lazy delivery. Streamlit uses the regular
               eager rendering and the existing capped-preview behavior for
               unevaluated data objects.

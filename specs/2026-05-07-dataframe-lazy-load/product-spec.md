@@ -243,8 +243,9 @@ st.dataframe(
 Validation and fallback:
 
 - `lazy=True` with incompatible options raises a `StreamlitAPIException`. Examples include
-  `pandas.Styler`, `on_select != "ignore"` in the first version, and inputs that cannot use a
-  native adapter or safe in-memory pandas fallback.
+  `pandas.Styler`, dataframes with multi-level (`MultiIndex`) column headers,
+  `on_select != "ignore"` in the first version, and inputs that cannot use a native adapter or
+  safe in-memory pandas fallback.
 - `lazy=None` should prefer compatibility: if lazy mode is not supported for the input/options,
   Streamlit uses eager rendering or the existing capped-preview fallback.
 - `lazy=False` always uses eager rendering or the existing capped-preview fallback.

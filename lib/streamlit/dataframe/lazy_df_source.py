@@ -316,9 +316,7 @@ def _has_multi_level_columns(data: object) -> bool:
     """Return ``True`` if ``data`` has multi-level (MultiIndex) column headers.
 
     Lazy loading identifies a sort column by its flat Arrow field name, which
-    cannot unambiguously address a single level of a multi-level header. To keep
-    the first version simple, dataframes with multi-level column headers fall
-    back to eager rendering instead of being served lazily.
+    cannot unambiguously address a single level of a multi-level header.
     """
     import pandas as pd
 
@@ -337,13 +335,22 @@ def _has_multi_level_columns(data: object) -> bool:
     return False
 
 
+def _validate_lazy_columns(data: object) -> None:
+    """Raise when ``data`` has column headers unsupported by lazy loading."""
+    if _has_multi_level_columns(data):
+        raise StreamlitAPIException(
+            "`lazy=True` is not supported for dataframes with multi-level "
+            "(`MultiIndex`) column headers. Flatten the column headers or set "
+            "`lazy=False`."
+        )
+
+
 def _try_create_native_source(data: object) -> DataframeSource | None:
     """Return a native lazy adapter for an unevaluated object, or ``None``.
 
-    Available adapters (Polars ``LazyFrame``, Snowpark ``DataFrame``/``Table``)
-    are registered here. Objects without a ready adapter return ``None`` so the
-    caller can fall back to the capped-preview path (``lazy=None``) or raise
-    (``lazy=True``).
+    Available adapters (currently Polars ``LazyFrame``) are registered here.
+    Objects without a ready adapter return ``None`` so the caller can fall back
+    to the capped-preview path (``lazy=None``) or raise (``lazy=True``).
     """
     from streamlit.dataframe import lazy_df_adapters
 
@@ -422,6 +429,9 @@ def resolve_lazy_source(
         # selection behavior.
         return None
 
+    if lazy is True:
+        _validate_lazy_columns(data)
+
     if config.get_option("global.appTest"):
         # AppTest exposes dataframe values through the element tree, not through
         # frontend chunk requests. Keep all AppTest dataframes eager, including
@@ -429,8 +439,8 @@ def resolve_lazy_source(
         # truncated to the initial chunk.
         return None
 
-    # 1) Native adapter for supported unevaluated objects (Polars LazyFrame,
-    # Snowpark). For ``lazy=True``, known small sources keep eager rendering as
+    # 1) Native adapter for supported unevaluated objects (currently Polars
+    # LazyFrame). For ``lazy=True``, known small sources keep eager rendering as
     # the bounded small-data optimization. For ``lazy=None``, compatible
     # unevaluated sources auto-switch to lazy only above the existing
     # capped-preview threshold; smaller sources preserve today's eager path.
@@ -461,8 +471,8 @@ def resolve_lazy_source(
     import pandas as pd
 
     if isinstance(data, pd.DataFrame):
-        # Multi-level column headers are not supported for lazy loading; keep
-        # eager rendering (this also covers an explicit ``lazy=True``).
+        # With lazy=None, unsupported multi-level columns keep eager rendering
+        # for compatibility. Explicit lazy=True was rejected above.
         if _has_multi_level_columns(data):
             return None
         if _should_lazy_load_in_memory(lazy, len(data)):
@@ -473,6 +483,8 @@ def resolve_lazy_source(
     import pyarrow as pa
 
     if isinstance(data, pa.Table):
+        # Match the pandas compatibility fallback for Arrow tables carrying
+        # pandas MultiIndex column metadata.
         if _has_multi_level_columns(data):
             return None
         if _should_lazy_load_in_memory(lazy, data.num_rows):
@@ -494,10 +506,10 @@ def resolve_lazy_source(
     # and serve slices from memory.
     if lazy is True:
         df = dataframe_util.convert_anything_to_pandas_df(data, ensure_copy=True)
-        # Multi-level column headers are not supported for lazy loading; fall
-        # back to eager rendering. Return the converted dataframe so one-shot
-        # inputs are not consumed again by the eager serialization path.
-        if _has_multi_level_columns(df) or len(df) <= FORCED_LAZY_MIN_ROWS:
+        _validate_lazy_columns(df)
+        # Return a small converted dataframe so one-shot inputs are not consumed
+        # again by the eager serialization path.
+        if len(df) <= FORCED_LAZY_MIN_ROWS:
             return EagerDataframeFallback(df)
         return _in_memory_source_from_pandas(df)
 
