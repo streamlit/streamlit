@@ -208,6 +208,19 @@ fragment keys — declaring `@st.fragment(key="app")` or `@st.fragment(key="frag
 `StreamlitAPIException`. This is the naming rule that keeps a fragment key from ever colliding with a
 reserved level name, so `st.rerun("app")` and `st.rerun("fragment")` are always unambiguous.
 
+**Keys must be unique — the same way widget keys are.** A fragment `key` is scoped exactly like a
+widget `key`: it must be unique among what renders in a single run, enforced per run (Streamlit
+already clears its per-run key set on every run). Two *different* fragment definitions that render in
+the same run under the same key raise a `StreamlitAPIException` — the same duplicate-`key` error
+widgets already raise. Calling one keyed fragment at several sites (a loop, tabs — above) is *not* a
+collision: that is a single definition with a single key whose instances rerun together by design.
+Because the check is per run, different pages of a multipage app may reuse a key (they never render
+together), just as they can for widgets; only fragments rendered *together* must differ. Sharing
+*logic* across fragments never requires sharing a *key* — factor common code into a plain helper and
+give each fragment its own name. Starting strict is deliberate: it keeps `key` consistent across
+widgets and fragments, and can be relaxed later if needed without breaking apps, whereas allowing duplicates now
+could not be tightened later without potential breakage.
+
 Why this shape:
 
 - **Fully backwards compatible** — `key` is a new *decorator* parameter (like `run_every`, `parallel`)
