@@ -28,6 +28,7 @@ from streamlit.errors import (
     FragmentHandledException,
     FragmentStorageKeyError,
     StreamlitAPIException,
+    StreamlitDuplicateElementKey,
 )
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -53,6 +54,10 @@ if TYPE_CHECKING:
     from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
 
 _LOGGER: Final = get_logger(__name__)
+
+# ``st.rerun(scope=...)`` reads these two values as level names, so they cannot
+# double as fragment keys.
+_RESERVED_FRAGMENT_KEYS: Final = frozenset({"app", "fragment"})
 
 
 def _check_not_parallel_worker(api_name: str) -> None:
@@ -126,7 +131,7 @@ class FragmentStorage(Protocol):
             nested, or ``None`` for a top-level fragment.
         target_key
             The user-facing name from ``@st.fragment(key=...)``. When set, the
-            fragment id is indexed under this name so ``st.rerun(target=...)`` can
+            fragment id is indexed under this name so ``st.rerun(<key>)`` can
             resolve it. A name may map to several ids if the fragment function is
             called from multiple sites.
         """
@@ -519,6 +524,13 @@ def _fragment(
     (note that the @gather_metrics annotation is only on the publicly exposed function)
     """
 
+    if key in _RESERVED_FRAGMENT_KEYS:
+        raise StreamlitAPIException(
+            f"`{key}` is a reserved name and cannot be used as a fragment key, "
+            "because `st.rerun(scope=...)` reads it as a rerun level. Choose a "
+            "different key for `@st.fragment(key=...)`."
+        )
+
     if func is None:
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
@@ -547,6 +559,17 @@ def _fragment(
         fragment_id = calc_hash(
             f"{non_optional_func.__module__}.{get_object_name(non_optional_func)}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}"
         )
+
+        # Unlike the fragment id, this identifies the fragment function itself
+        # (no delta path), so different call sites of one keyed fragment share it
+        # and don't collide on the per-run key-uniqueness check below.
+        if key is not None:
+            fragment_definition_id = (
+                f"{non_optional_func.__module__}."
+                f"{get_object_name(non_optional_func)}{additional_hash_info}"
+            )
+            if not ctx.shared.register_fragment_user_key(key, fragment_definition_id):
+                raise StreamlitDuplicateElementKey(key)
 
         # We intentionally want to capture the active script hash here to ensure
         # that the fragment is associated with the correct script running.
@@ -788,12 +811,15 @@ def fragment(
             unless you coordinate access explicitly.
 
     key : str or None
-        An optional name for the fragment. When set,
-        ``st.rerun(target=key)`` re-runs this fragment from a widget
-        callback (``on_change`` / ``on_click``). If the fragment function is
-        called from multiple sites, every call site re-runs together. If this
-        is ``None`` (default), the fragment can only be re-run from within
-        itself via ``st.rerun(scope="fragment")``.
+        An optional name for the fragment. When set, ``st.rerun(key)`` re-runs
+        this fragment from a widget callback (``on_change`` / ``on_click``). If
+        the fragment function is called from multiple sites, every call site
+        re-runs together. If this is ``None`` (default), the fragment can only
+        be re-run from within itself via ``st.rerun(scope="fragment")``.
+
+        A fragment key must be unique among the fragments that render in a
+        single run, just like a widget ``key``. The names ``"app"`` and
+        ``"fragment"`` are reserved and cannot be used as fragment keys.
 
     Examples
     --------

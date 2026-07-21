@@ -33,6 +33,7 @@ from streamlit.errors import (
     FragmentHandledException,
     FragmentStorageKeyError,
     StreamlitAPIException,
+    StreamlitDuplicateElementKey,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -2337,3 +2338,78 @@ def test_fragment_key_multi_call_site_no_duplicate_key_error() -> None:
 
     # Both calls must have created a container without raising.
     assert container_call_count == 2
+
+
+@pytest.mark.parametrize("reserved_key", ["app", "fragment"])
+def test_fragment_reserved_key_raises(reserved_key: str) -> None:
+    """@st.fragment(key=...) rejects the reserved level names "app" and "fragment"."""
+    with pytest.raises(StreamlitAPIException, match="reserved name"):
+
+        @fragment(key=reserved_key)
+        def _frag() -> None:
+            pass
+
+
+class _FakeContainerCtx:
+    def __enter__(self) -> _FakeContainerCtx:  # noqa: PYI034
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        pass
+
+
+def _make_fragment_ctx() -> MagicMock:
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_storage = MemoryFragmentStorage()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.cursors = {}
+    return mock_ctx
+
+
+def test_fragment_duplicate_key_across_definitions_raises() -> None:
+    """Two different fragment definitions sharing a key in one run collide."""
+    mock_ctx = _make_fragment_ctx()
+
+    @fragment(key="dup")
+    def frag_a() -> None:
+        pass
+
+    @fragment(key="dup")
+    def frag_b() -> None:
+        pass
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        patch("streamlit.container", side_effect=lambda **_: _FakeContainerCtx()),
+    ):
+        ThreadState.initialize()
+        frag_a()
+        with pytest.raises(StreamlitDuplicateElementKey):
+            frag_b()
+
+
+def test_fragment_same_key_allowed_after_run_reset() -> None:
+    """A key freed by resetting the per-run state can be reused on the next run."""
+    mock_ctx = _make_fragment_ctx()
+
+    @fragment(key="dup")
+    def frag_a() -> None:
+        pass
+
+    @fragment(key="dup")
+    def frag_b() -> None:
+        pass
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        patch("streamlit.container", side_effect=lambda **_: _FakeContainerCtx()),
+    ):
+        ThreadState.initialize()
+        frag_a()
+        mock_ctx.shared.reset()
+        # After a fresh run the key is free again, so a different definition may
+        # claim it without colliding.
+        frag_b()
