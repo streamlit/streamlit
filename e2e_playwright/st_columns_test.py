@@ -158,6 +158,31 @@ def test_column_vertical_alignment_top(
     )
 
 
+def test_column_top_alignment_does_not_leak_into_nested_horizontal_container(
+    app: Page,
+):
+    """Regression test for #13162.
+
+    Checkboxes inside a horizontal container nested inside a TOP-aligned
+    column must not receive the alignment `margin-top`. The margin should
+    only apply to direct-child first checkboxes of the column.
+    """
+    column_container = (
+        get_expander(app, "Nested horizontal container in top-aligned column")
+        .get_by_test_id("stHorizontalBlock")
+        .nth(0)
+    )
+
+    checkboxes = column_container.get_by_test_id("stCheckbox")
+    expect(checkboxes).to_have_count(3)
+
+    # None of the checkboxes in the nested horizontal container should have
+    # the alignment margin — previously the first-of-type inside the nested
+    # container was incorrectly picking it up.
+    for i in range(3):
+        expect(checkboxes.nth(i)).to_have_css("margin-top", "0px")
+
+
 def test_column_vertical_alignment_center(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
