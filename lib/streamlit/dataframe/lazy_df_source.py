@@ -160,19 +160,7 @@ def _pandas_to_arrow_table(df: DataFrame) -> pa.Table:
     (matching the eager behavior). The index column is still marked as an index
     in the pandas metadata, so the frontend renders it in the index gutter.
     """
-    import pyarrow as pa
-
-    try:
-        return pa.Table.from_pandas(df, preserve_index=True)
-    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
-        _LOGGER.info(
-            "Serialization of dataframe to Arrow table was unsuccessful. "
-            "Applying automatic fixes for column types to make the dataframe "
-            "Arrow-compatible.",
-            exc_info=ex,
-        )
-        fixed = dataframe_util.fix_arrow_incompatible_column_types(df)
-        return pa.Table.from_pandas(fixed, preserve_index=True)
+    return dataframe_util.convert_pandas_df_to_arrow_table(df, preserve_index=True)
 
 
 def _materialize_arrow_table_index(table: pa.Table) -> pa.Table:

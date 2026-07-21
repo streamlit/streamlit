@@ -84,6 +84,34 @@ class DataframeUtilTest(unittest.TestCase):
         col_type = result_table.schema.field("col").type
         assert col_type in {pa.string(), pa.large_string()}
 
+    def test_convert_pandas_df_to_arrow_table_preserve_index(self):
+        """preserve_index=True materializes a default RangeIndex as a column."""
+        import pyarrow as pa
+
+        df = pd.DataFrame({"col": [1, 2, 3]})
+
+        with_index = dataframe_util.convert_pandas_df_to_arrow_table(
+            df, preserve_index=True
+        )
+        without_index = dataframe_util.convert_pandas_df_to_arrow_table(df)
+
+        assert isinstance(with_index, pa.Table)
+        # With preserve_index=True the RangeIndex becomes a physical column; the
+        # default keeps it as schema metadata only.
+        assert without_index.num_columns == 1
+        assert with_index.num_columns == 2
+
+    def test_convert_pandas_df_to_arrow_table_applies_column_fixes(self):
+        """Arrow-incompatible columns are fixed and the conversion still succeeds."""
+        import pyarrow as pa
+
+        # A dataframe of dtypes is not natively Arrow-serializable and exercises
+        # the fix-and-retry fallback.
+        df = pd.DataFrame(pd.DataFrame(["foo", "bar"]).dtypes)
+
+        table = dataframe_util.convert_pandas_df_to_arrow_table(df)
+        assert isinstance(table, pa.Table)
+
     def test_convert_arrow_table_to_arrow_bytes_downcasts_large_list(self):
         """Test that convert_arrow_table_to_arrow_bytes downcasts large_list to list."""
         table = pa.table(

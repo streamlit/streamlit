@@ -907,6 +907,48 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     return cast("bytes", sink.getvalue().to_pybytes())
 
 
+def convert_pandas_df_to_arrow_table(
+    df: DataFrame,
+    *,
+    preserve_index: bool | None = None,
+) -> pa.Table:
+    """Convert a pandas.DataFrame to a pyarrow.Table.
+
+    Applies automatic column-type fixes and retries the conversion if the
+    initial attempt fails (e.g. for mixed-type or otherwise Arrow-incompatible
+    columns).
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        A dataframe to convert.
+
+    preserve_index : bool or None
+        Passed through to ``pyarrow.Table.from_pandas``. ``None`` (default) lets
+        pyarrow decide: a non-default index is stored as a column, while a
+        default ``RangeIndex`` is stored only as schema metadata. Pass ``True``
+        to always materialize the index as a real column.
+
+    Returns
+    -------
+    pyarrow.Table
+        The converted table.
+    """
+    import pyarrow as pa
+
+    try:
+        return pa.Table.from_pandas(df, preserve_index=preserve_index)
+    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
+        _LOGGER.info(
+            "Serialization of dataframe to Arrow table was unsuccessful. "
+            "Applying automatic fixes for column types to make the dataframe "
+            "Arrow-compatible.",
+            exc_info=ex,
+        )
+        fixed_df = fix_arrow_incompatible_column_types(df)
+        return pa.Table.from_pandas(fixed_df, preserve_index=preserve_index)
+
+
 def convert_pandas_df_to_arrow_bytes(
     df: DataFrame,
     *,
@@ -931,19 +973,7 @@ def convert_pandas_df_to_arrow_bytes(
     bytes
         The serialized Arrow IPC bytes.
     """
-    import pyarrow as pa
-
-    try:
-        table = pa.Table.from_pandas(df)
-    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
-        _LOGGER.info(
-            "Serialization of dataframe to Arrow table was unsuccessful. "
-            "Applying automatic fixes for column types to make the dataframe "
-            "Arrow-compatible.",
-            exc_info=ex,
-        )
-        df = fix_arrow_incompatible_column_types(df)
-        table = pa.Table.from_pandas(df)
+    table = convert_pandas_df_to_arrow_table(df)
 
     if downcast_large_types:
         table = _downcast_large_arrow_types(table)
