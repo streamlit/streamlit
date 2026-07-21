@@ -255,11 +255,11 @@ describe("TimeInput widget", () => {
     await user.keyboard("1")
 
     // Simulate external value change (e.g. fragment rerun)
-    const updatedElement = {
+    const updatedElement = TimeInputProto.create({
       ...props.element,
       default: "10:00",
       value: "10:00",
-    }
+    })
     rerender(<TimeInput {...props} element={updatedElement} />)
 
     // Pending edit should be preserved, not overwritten by external update
