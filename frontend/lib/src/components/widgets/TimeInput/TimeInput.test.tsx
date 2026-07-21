@@ -403,6 +403,46 @@ describe("TimeInput widget", () => {
     )
   })
 
+  it("snaps hour ArrowUp to next step boundary when step=7200", async () => {
+    const user = userEvent.setup()
+    // step=7200s → stepHours=2. value=12:45 → ArrowUp → hour 14
+    const props = getProps({ default: "12:45", step: 7200 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("{ArrowUp}")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "14:45",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("snaps hour ArrowDown to previous step boundary when step=7200", async () => {
+    const user = userEvent.setup()
+    // step=7200s → stepHours=2. value=12:45 → ArrowDown → hour 10
+    const props = getProps({ default: "12:45", step: 7200 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("{ArrowDown}")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "10:45",
+      { fromUi: true },
+      undefined
+    )
+  })
+
   it("does not commit null for non-clearable widget when a segment is cleared mid-edit", async () => {
     const user = userEvent.setup()
     // Widget with a default is non-clearable

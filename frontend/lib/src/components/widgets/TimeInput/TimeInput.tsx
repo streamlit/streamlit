@@ -57,19 +57,6 @@ export interface Props {
   fragmentId?: string
 }
 
-/**
- * Maps a step value (in seconds) to a React Aria TimeField granularity.
- *
- * Always returns "minute" because the wire format is HH:MM — hiding minutes
- * (hour-only granularity) would silently discard minute components from values
- * like "12:45" that can arrive via query-params or session state.
- *
- * Note: `step` still controls arrow-key behaviour via `handleArrowKeyCapture`.
- */
-function stepToGranularity(_stepSeconds: number): "minute" {
-  return "minute"
-}
-
 /** Converts an HH:MM wire-format string to a React Aria Time object. */
 function stringToTime(value: string): Time {
   const [hours, minutes] = value.split(":").map(Number)
@@ -162,7 +149,11 @@ function TimeInput({
    */
   const handleArrowKeyCapture = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
-      if (!displayValue || (e.key !== "ArrowUp" && e.key !== "ArrowDown"))
+      if (
+        disabled ||
+        !displayValue ||
+        (e.key !== "ArrowUp" && e.key !== "ArrowDown")
+      )
         return
       const target = e.target as HTMLElement
       if (target.getAttribute("role") !== "spinbutton") return
@@ -204,7 +195,7 @@ function TimeInput({
         handleChange(new Time(wrapped, current.minute))
       }
     },
-    [displayValue, step, stepMins, stepHours, handleChange]
+    [disabled, displayValue, step, stepMins, stepHours, handleChange]
   )
 
   return (
@@ -234,7 +225,10 @@ function TimeInput({
                 : stringToTime(displayValue)
             }
             onChange={handleChange}
-            granularity={stepToGranularity(step)}
+            // Always "minute": the wire format is HH:MM, so hiding the minute
+            // segment would silently discard values like "12:45" from query-params
+            // or session state. `step` controls arrow-key behaviour instead.
+            granularity="minute"
             hourCycle={24}
             shouldForceLeadingZeros
             isDisabled={disabled}
