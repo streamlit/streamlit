@@ -140,7 +140,7 @@ def get_max_message_size_bytes() -> int:
 
     This will lazyload the value from the config and store it in the global symbol table.
     """
-    global _max_message_size_bytes  # ruff:ignore[global-statement]
+    global _max_message_size_bytes  # noqa: PLW0603
 
     if _max_message_size_bytes is None:
         _max_message_size_bytes = config.get_option("server.maxMessageSize") * int(1e6)
@@ -156,7 +156,7 @@ def get_max_widget_state_size_bytes() -> int:
 
     This will lazyload the value from the config and store it in the global symbol table.
     """
-    global _max_widget_state_size_bytes  # ruff:ignore[global-statement]
+    global _max_widget_state_size_bytes  # noqa: PLW0603
 
     if _max_widget_state_size_bytes is None:
         _max_widget_state_size_bytes = config.get_option(

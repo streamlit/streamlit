@@ -139,7 +139,7 @@ def main(log_level: str = "info") -> None:
     Or use the line below to run your own script:
 
         $ streamlit run your_script.py
-    """  # ruff:ignore[missing-trailing-period]
+    """  # noqa: D400
 
     if log_level:
         from streamlit.logger import get_logger
@@ -152,7 +152,7 @@ def main(log_level: str = "info") -> None:
 
 
 @main.command("help")
-def help() -> None:  # ruff:ignore[builtin-variable-shadowing]
+def help() -> None:  # noqa: A001
     """Print this help message."""
     # We use _get_command_line_as_string to run some error checks but don't do
     # anything with its return value.
@@ -374,7 +374,7 @@ def _check_extension_or_raise(path_str: str) -> None:
 
 
 def _get_command_line_as_string() -> str | None:
-    import subprocess  # ruff:ignore[suspicious-subprocess-import]
+    import subprocess  # noqa: S404
 
     parent = click.get_current_context().parent
     if parent is None:

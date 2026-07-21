@@ -689,7 +689,7 @@ def test_custom_objects_without_eq() -> None:
 
         # Custom class without __eq__ implementation - uses identity comparison
         # Must be defined inside script() because AppTest.from_function() runs in isolation
-        class CustomOption:  # ruff:ignore[class-as-data-structure]
+        class CustomOption:  # noqa: B903
             def __init__(self, value: str, label: str):
                 self.value = value
                 self.label = label

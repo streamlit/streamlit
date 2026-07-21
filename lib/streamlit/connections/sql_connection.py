@@ -313,7 +313,7 @@ class SQLConnection(BaseConnection["Engine"]):
         )
         def _query(
             # Dummy parameter to retain per-instance caching.
-            instance_id: UUID,  # ruff:ignore[unused-function-argument]
+            instance_id: UUID,  # noqa: ARG001
             sql: str,
             index_col: str | list[str] | None = None,
             chunksize: int | None = None,

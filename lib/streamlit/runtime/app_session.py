@@ -1113,7 +1113,7 @@ def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
         Config.ToolbarMode, config_value.upper()
     )
     if enum_value is None:
-        allowed_values = ", ".join(k.lower() for k in Config.ToolbarMode.keys())  # ruff:ignore[in-dict-keys]
+        allowed_values = ", ".join(k.lower() for k in Config.ToolbarMode.keys())  # noqa: SIM118
         raise ValueError(
             f"Config {config_key!r} expects to have one of "
             f"the following values: {allowed_values}. "
@@ -1210,7 +1210,7 @@ def _parse_and_populate_chart_colors(
         for color in colors:
             try:
                 msg_field.append(color)
-            except Exception as e:  # ruff:ignore[try-except-in-loop]
+            except Exception as e:  # noqa: PERF203
                 _LOGGER.warning(
                     "Failed to parse the theme.%s config option: %s.",
                     config_key,
@@ -1303,7 +1303,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                     ):
                         font_face["weight_range"] = str(font_face["weight_range"])
                 msg.font_faces.append(ParseDict(font_face, FontFace()))
-            except Exception as e:  # ruff:ignore[try-except-in-loop]
+            except Exception as e:  # noqa: PERF203
                 _LOGGER.warning(
                     "Failed to parse the theme.fontFaces config option: %s.",
                     font_face,
@@ -1342,7 +1342,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         for size in heading_font_sizes:
             try:
                 msg.heading_font_sizes.append(size)
-            except Exception as e:  # ruff:ignore[try-except-in-loop]
+            except Exception as e:  # noqa: PERF203
                 _LOGGER.warning(
                     "Failed to parse the theme.headingFontSizes config option: %s.",
                     size,
@@ -1383,7 +1383,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         for weight in heading_weights:
             try:
                 msg.heading_font_weights.append(weight)
-            except Exception as e:  # ruff:ignore[try-except-in-loop]
+            except Exception as e:  # noqa: PERF203
                 _LOGGER.warning(
                     "Failed to parse the theme.headingFontWeights config option: %s.",
                     weight,

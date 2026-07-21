@@ -84,14 +84,14 @@ barley_chart = (
 
 # TODO(lukasmasuch): This chart causes some flickering in webkit & chromium.
 # This points to an actual bug or issue that needs more investigation.
-# st.write("Grouped Bar Chart with default theme:")  # ruff:ignore[commented-out-code]
-# st.altair_chart(barley_chart, theme=None)  # ruff:ignore[commented-out-code]
+# st.write("Grouped Bar Chart with default theme:")  # noqa: ERA001
+# st.altair_chart(barley_chart, theme=None)  # noqa: ERA001
 
-# st.write("Grouped Bar Chart with streamlit theme:")  # ruff:ignore[commented-out-code]
-# st.altair_chart(barley_chart, theme="streamlit")  # ruff:ignore[commented-out-code]
+# st.write("Grouped Bar Chart with streamlit theme:")  # noqa: ERA001
+# st.altair_chart(barley_chart, theme="streamlit")  # noqa: ERA001
 
-# st.write( "Grouped Bar Chart with use_container_width=True (note that this doesn't work well)")  # ruff:ignore[commented-out-code]
-# st.altair_chart(barley_chart, theme=None, use_container_width=True)  # ruff:ignore[commented-out-code]
+# st.write( "Grouped Bar Chart with use_container_width=True (note that this doesn't work well)")  # noqa: ERA001
+# st.altair_chart(barley_chart, theme=None, use_container_width=True)  # noqa: ERA001
 
 st.write("Layered chart")
 # Taken from vega_datasets

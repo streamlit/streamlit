@@ -59,7 +59,7 @@ def marshall_table(
         This attribute is optional and only used for pandas.Styler, other elements
         can ignore it.
 
-    """  # ruff:ignore[line-too-long]
+    """  # noqa: E501
 
     if dataframe_util.is_pandas_styler(data):
         # default_uuid is a string only if the data is a `Styler`,

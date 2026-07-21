@@ -669,7 +669,7 @@ def _parse_start_time_end_time(
     try:
         maybe_start_time = time_to_seconds(start_time, coerce_none_to_inf=False)
         if maybe_start_time is None:
-            raise ValueError  # ruff:ignore[raise-within-try]
+            raise ValueError  # noqa: TRY301
         start_time = int(maybe_start_time)
     except (StreamlitAPIException, ValueError):
         error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(

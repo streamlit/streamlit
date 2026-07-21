@@ -14,7 +14,7 @@
 
 """st.secrets unit tests."""
 
-# ruff:file-ignore[uncapitalized-environment-variables]
+# ruff: noqa: SIM112
 
 from __future__ import annotations
 
@@ -225,10 +225,10 @@ class SecretsTest(unittest.TestCase):
     def test_getattr_nonexistent(self, *mocks):
         """Verify that access to missing attribute raises  AttributeError."""
         with pytest.raises(AttributeError):
-            self.secrets.nonexistent_secret  # ruff:ignore[useless-expression]
+            self.secrets.nonexistent_secret  # noqa: B018
 
         with pytest.raises(AttributeError):
-            self.secrets.subsection.nonexistent_secret  # ruff:ignore[useless-expression]
+            self.secrets.subsection.nonexistent_secret  # noqa: B018
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)

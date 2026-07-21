@@ -383,7 +383,7 @@ def _delete_option(key: str) -> None:
     try:
         del _config_options_template[key]
         del _config_options[key]
-    except Exception:  # ruff:ignore[try-except-pass]
+    except Exception:  # noqa: S110
         # We don't care if the option already doesn't exist.
         pass
 
@@ -542,7 +542,7 @@ def _logger_enable_rich() -> bool:
     Defaults to True if rich is installed, False otherwise.
     """
     try:
-        import rich  # ruff:ignore[unused-import]
+        import rich  # noqa: F401
 
         # Rich is importable, activate rich logging.
         return True
@@ -2827,12 +2827,12 @@ def _maybe_convert_to_number(v: Any) -> Any:
     """Convert v to int or float, or leave it as is."""
     try:
         return int(v)
-    except Exception:  # ruff:ignore[try-except-pass]
+    except Exception:  # noqa: S110
         pass
 
     try:
         return float(v)
-    except Exception:  # ruff:ignore[try-except-pass]
+    except Exception:  # noqa: S110
         pass
 
     return v
@@ -2895,7 +2895,7 @@ def get_config_options(
     dict[str, ConfigOption]
         An ordered dict that maps config option names to their values.
     """
-    global _config_options  # ruff:ignore[global-statement]
+    global _config_options  # noqa: PLW0603
 
     if not options_from_flags:
         options_from_flags = {}
@@ -3057,7 +3057,7 @@ def _parse_trusted_user_headers() -> None:
             if not isinstance(parsed_value, dict):
                 # Config validation is using RuntimeError deliberately; ignore warning
                 # about making this TypeError.
-                # ruff:file-ignore[TRY004]
+                # ruff: noqa: TRY004
                 raise RuntimeError("server.trustedUserHeaders JSON must be an object")
             for json_key, json_value in parsed_value.items():
                 if not isinstance(json_value, str):

@@ -21,7 +21,7 @@ from playwright.sync_api import Page
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import expect_font, expect_no_skeletons
 
-# ruff:file-ignore[commented-out-code]
+# ruff: noqa: ERA001
 # The theme.base points to a toml file hosted on our streamlit s3 bucket
 # It has the following fields set:
 # [theme]

@@ -751,7 +751,7 @@ class ScriptRunner:
                                 # inside of a exec_func_with_error_handling call, so
                                 # there is a correct handler for these exceptions.
                                 raise
-                            except Exception:  # ruff:ignore[try-except-pass]
+                            except Exception:  # noqa: S110
                                 # Ignore exceptions raised by fragments here as we don't
                                 # want to stop the execution of other fragments. The
                                 # error itself is already rendered within the wrapped
@@ -804,7 +804,7 @@ class ScriptRunner:
                             if PagesManager.uses_pages_directory:
                                 _mpa_v1(self._main_script_path)
                             else:
-                                exec(code, module.__dict__)  # ruff:ignore[exec-builtin]
+                                exec(code, module.__dict__)  # noqa: S102
                             coordinator.join()
                         except BaseException:
                             # Always drain so in-flight worker fragments
@@ -915,7 +915,7 @@ def _clean_problem_modules() -> None:
         try:
             keras = sys.modules["keras"]
             cast("Any", keras).backend.clear_session()
-        except Exception:  # ruff:ignore[try-except-pass]
+        except Exception:  # noqa: S110
             # We don't want to crash the app if we can't clear the Keras session.
             pass
 
@@ -923,7 +923,7 @@ def _clean_problem_modules() -> None:
         try:
             plt = sys.modules["matplotlib.pyplot"]
             cast("Any", plt).close("all")
-        except Exception:  # ruff:ignore[try-except-pass]
+        except Exception:  # noqa: S110
             # We don't want to crash the app if we can't close matplotlib
             pass
 

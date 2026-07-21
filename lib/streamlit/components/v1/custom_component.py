@@ -118,7 +118,7 @@ class CustomComponent(BaseCustomComponent):
             )
 
         try:
-            import pyarrow  # ruff:ignore[unused-import, unconventional-import-alias]
+            import pyarrow  # noqa: F401, ICN001
 
             from streamlit.components.v1 import component_arrow
         except ImportError:  # pragma: no cover - optional dep

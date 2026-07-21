@@ -104,7 +104,7 @@ class PopoverContainer(DeltaGenerator):
         """
         return self._open
 
-    @open.setter  # ruff:ignore[builtin-attribute-shadowing]
+    @open.setter  # noqa: A003
     def open(self, value: bool | None) -> None:
         self._open = value
 

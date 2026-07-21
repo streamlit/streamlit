@@ -17,7 +17,7 @@ from __future__ import annotations
 import numbers
 
 
-class JSNumberBoundsException(Exception):  # ruff:ignore[error-suffix-on-exception-name]
+class JSNumberBoundsException(Exception):  # noqa: N818
     pass
 
 

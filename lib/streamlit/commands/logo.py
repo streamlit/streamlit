@@ -61,7 +61,7 @@ def _process_logo_image(
         If the image is an empty string or a plain text string that is not
         a valid file path, URL, emoji, or material icon.
     """
-    ImageType = LogoProto.ImageType  # ruff:ignore[non-lowercase-variable-in-function]
+    ImageType = LogoProto.ImageType  # noqa: N806
 
     # Check if it's a material icon
     if isinstance(image, str) and image.startswith(":material"):

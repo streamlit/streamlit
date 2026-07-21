@@ -82,7 +82,7 @@ class TTLCleanupCache(TTLCache[K, V]):
         while True:
             try:
                 self.popitem()
-            except KeyError:  # ruff:ignore[try-except-in-loop]
+            except KeyError:  # noqa: PERF203
                 break
 
     def safe_del(self, key: K) -> None:

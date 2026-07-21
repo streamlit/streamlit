@@ -379,7 +379,7 @@ class BidiComponentManager:
                 updated_def = self._recompute_definition_from_api(name)
                 if updated_def is not None:
                     self._registry.update_component(updated_def)
-            except Exception:  # ruff:ignore[try-except-in-loop]
+            except Exception:  # noqa: PERF203
                 _LOGGER.exception("Failed to update component after change: %s", name)
 
     def _recompute_definition_from_api(

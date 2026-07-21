@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
 
 
-class modified_sys_path:  # ruff:ignore[invalid-class-name]
+class modified_sys_path:  # noqa: N801
     """A context for prepending a directory to sys.path for a second.
 
     Code inspired by IPython:

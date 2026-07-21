@@ -196,7 +196,7 @@ class ContextVarWithLazyDefault(Generic[_T]):
 
     def _ensure_context_var(self) -> ContextVar[_T]:
         if self._context_var is None:
-            self._context_var = ContextVar(self._name, default=self._default())  # ruff:ignore[mutable-contextvar-default]
+            self._context_var = ContextVar(self._name, default=self._default())  # noqa: B039
         return self._context_var
 
     def get(self) -> _T:

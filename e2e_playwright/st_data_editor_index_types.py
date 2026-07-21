@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# ruff:file-ignore[commented-out-code]
+# ruff: noqa: ERA001
 import random
 
 import numpy as np

@@ -151,7 +151,7 @@ class Credentials:
             with open(self._conf_file, encoding="utf-8") as f:
                 data = toml.load(f).get("general")
             if data is None:
-                raise RuntimeError  # ruff:ignore[raise-within-try]
+                raise RuntimeError  # noqa: TRY301
             self.activation = _verify_email(data.get("email"))
         except FileNotFoundError:
             if auto_resolve:

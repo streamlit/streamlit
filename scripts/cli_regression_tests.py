@@ -56,16 +56,16 @@ class TestCLIRegressions:
     @pytest.fixture(scope="module", autouse=True)
     def setup(self) -> Generator[None, None, None]:
         # ---- Initialization
-        global CONFIG_FILE_PATH  # ruff:ignore[global-statement]
+        global CONFIG_FILE_PATH  # noqa: PLW0603
         CONFIG_FILE_PATH = os.path.expanduser("~/.streamlit/config.toml")
 
-        global CREDENTIALS_FILE_PATH  # ruff:ignore[global-statement]
+        global CREDENTIALS_FILE_PATH  # noqa: PLW0603
         CREDENTIALS_FILE_PATH = os.path.expanduser("~/.streamlit/credentials.toml")
 
-        global REPO_ROOT  # ruff:ignore[global-statement]
+        global REPO_ROOT  # noqa: PLW0603
         REPO_ROOT = os.getcwd()
 
-        global STREAMLIT_RELEASE_VERSION  # ruff:ignore[global-statement]
+        global STREAMLIT_RELEASE_VERSION  # noqa: PLW0603
         STREAMLIT_RELEASE_VERSION = os.environ.get("STREAMLIT_RELEASE_VERSION", None)
 
         # Ensure that there aren't any previously stored credentials
@@ -109,7 +109,7 @@ class TestCLIRegressions:
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            preexec_fn=os.setpgrp,  # ruff:ignore[subprocess-popen-preexec-fn]
+            preexec_fn=os.setpgrp,  # noqa: PLW1509
         )
 
         output = self.read_process_output(proc, num_lines_to_read)
@@ -130,7 +130,7 @@ class TestCLIRegressions:
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            preexec_fn=os.setpgrp,  # ruff:ignore[subprocess-popen-preexec-fn]
+            preexec_fn=os.setpgrp,  # noqa: PLW1509
         )
 
         # Getting the output from process one ensures the process started first
@@ -141,7 +141,7 @@ class TestCLIRegressions:
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            preexec_fn=os.setpgrp,  # ruff:ignore[subprocess-popen-preexec-fn]
+            preexec_fn=os.setpgrp,  # noqa: PLW1509
         )
 
         output_two = self.read_process_output(proc_two, num_lines_to_read)

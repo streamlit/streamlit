@@ -55,7 +55,7 @@ from streamlit.testing.v1.element_tree import (
     ElementList,
     ElementTree,
     Error,
-    Exception,  # ruff:ignore[builtin-import-shadowing]
+    Exception,  # noqa: A004
     Expander,
     Feedback,
     FileUploader,
@@ -86,7 +86,7 @@ from streamlit.testing.v1.element_tree import (
     Title,
     Toast,
     Toggle,
-    Warning,  # ruff:ignore[builtin-import-shadowing]
+    Warning,  # noqa: A004
     WidgetList,
     repr_,
 )

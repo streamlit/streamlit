@@ -78,7 +78,7 @@ def is_url_from_allowed_origins(url: str) -> bool:
     allowed_domains: list[str | Callable[[], str | None] | None] = [
         # Check localhost first.
         "localhost",
-        "0.0.0.0",  # ruff:ignore[hardcoded-bind-all-interfaces]
+        "0.0.0.0",  # noqa: S104
         "127.0.0.1",
         # Try to avoid making unnecessary HTTP requests by checking if the user
         # manually specified a server address.
@@ -148,7 +148,7 @@ def get_display_address(address: str) -> str:
     str
         Address suitable for display. Wildcards become "localhost".
     """
-    if address in {"0.0.0.0", "::"}:  # ruff:ignore[hardcoded-bind-all-interfaces]
+    if address in {"0.0.0.0", "::"}:  # noqa: S104
         return "localhost"
     return address
 

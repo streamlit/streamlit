@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Allow function names with uppercase letters:
-# ruff:file-ignore[invalid-function-name]
+# ruff: noqa: N802
 
 from __future__ import annotations
 
@@ -670,7 +670,7 @@ def NumberColumn(
     .. output::
         https://doc-number-column.streamlit.app/
         height: 300px
-    """  # ruff:ignore[line-too-long]
+    """  # noqa: E501
 
     return ColumnConfig(
         label=label,
@@ -3008,7 +3008,7 @@ def ProgressColumn(
     .. output::
         https://doc-progress-column.streamlit.app/
         height: 300px
-    """  # ruff:ignore[line-too-long]
+    """  # noqa: E501
 
     if color is not None:
         _validate_chart_color(color)

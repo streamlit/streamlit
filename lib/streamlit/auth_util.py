@@ -43,7 +43,7 @@ MAX_COOKIE_BYTES: Final = 4096
 SIGNING_OVERHEAD_SAFETY_BUFFER: Final = 50
 # Base64 encoding of 1 byte = 4 bytes, so overhead = total - 4
 SINGLE_BYTE_BASE64_SIZE: Final = 4
-_PROVIDER_TOKEN_ALGORITHM: Final = "HS256"  # ruff:ignore[hardcoded-password-string]
+_PROVIDER_TOKEN_ALGORITHM: Final = "HS256"  # noqa: S105
 # joserfc emits SecurityWarning when the symmetric key is shorter than 14 bytes
 # (112 bits). We track the same threshold to surface a one-time Streamlit-level
 # warning when callers configure a weak ``cookie_secret``.
@@ -61,7 +61,7 @@ class AuthCache:
 
     # for set method, we are follow the same signature used in Authlib
     # the expires_in is not used in our case
-    def set(self, key: str, value: Any, expires_in: int | None = None) -> None:  # ruff:ignore[unused-method-argument]
+    def set(self, key: str, value: Any, expires_in: int | None = None) -> None:  # noqa: ARG002
         self.cache[key] = value
 
     def get_dict(self) -> dict[str, Any]:

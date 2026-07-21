@@ -62,7 +62,7 @@ _OPENAI_RESPONSE_TEXT_EVENT_TYPES: Final = frozenset(
 )
 
 
-class StreamingOutput(list[Any]):  # ruff:ignore[subclass-builtin]
+class StreamingOutput(list[Any]):  # noqa: FURB189
     pass
 
 
@@ -221,9 +221,9 @@ class WriteMixin:
                     if len(chunk.choices) == 0 or chunk.choices[0].delta is None:
                         # The choices list can be empty. E.g. when using the
                         # AzureOpenAI client, the first chunk will always be empty.
-                        chunk = ""  # ruff:ignore[redefined-loop-name]
+                        chunk = ""  # noqa: PLW2901
                     else:
-                        chunk = chunk.choices[0].delta.content or ""  # ruff:ignore[redefined-loop-name]
+                        chunk = chunk.choices[0].delta.content or ""  # noqa: PLW2901
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the OpenAI ChatCompletionChunk. "
@@ -237,9 +237,9 @@ class WriteMixin:
                 # Try to convert OpenAI Responses API stream events to a string.
                 try:
                     if chunk.type in _OPENAI_RESPONSE_TEXT_EVENT_TYPES:
-                        chunk = chunk.delta or ""  # ruff:ignore[redefined-loop-name]
+                        chunk = chunk.delta or ""  # noqa: PLW2901
                     else:
-                        chunk = ""  # ruff:ignore[redefined-loop-name]
+                        chunk = ""  # noqa: PLW2901
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the OpenAI Response stream event. "
@@ -252,7 +252,7 @@ class WriteMixin:
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
                 # Try to convert LangChain message chunk to a string:
                 try:
-                    chunk = chunk.content or ""  # ruff:ignore[redefined-loop-name] # type: ignore[possibly-unbound-attribute] # ty: ignore[unresolved-attribute]
+                    chunk = chunk.content or ""  # noqa: PLW2901 # type: ignore[possibly-unbound-attribute] # ty: ignore[unresolved-attribute]
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the LangChain AIMessageChunk. "

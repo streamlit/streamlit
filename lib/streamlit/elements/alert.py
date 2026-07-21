@@ -359,7 +359,7 @@ class AlertMixin:
         >>>
         >>> st.info('This is a purely informational message', icon="ℹ️")
 
-        """  # ruff:ignore[ambiguous-unicode-character-docstring]
+        """  # noqa: RUF002
 
         alert_proto = AlertProto()
         processed_body, processed_icon = _process_alert_body_and_icon(body, icon)

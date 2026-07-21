@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# ruff:file-ignore[missing-f-string-syntax] - We allow template strings in localizable exception messages instead of f-strings.
+# ruff: noqa: RUF027 - We allow template strings in localizable exception messages instead of f-strings.
 
 from __future__ import annotations
 
@@ -58,21 +58,21 @@ class FragmentStorageKeyError(Error, KeyError):  # pragma: no cover - trivial su
     """
 
 
-class FragmentHandledException(Exception):  # ruff:ignore[error-suffix-on-exception-name]  # pragma: no cover - trivial subclass
+class FragmentHandledException(Exception):  # noqa: N818  # pragma: no cover - trivial subclass
     """An exception that is raised by the fragment
     when it has handled the exception itself.
     """
 
 
-class NoStaticFiles(Error):  # ruff:ignore[error-suffix-on-exception-name]  # pragma: no cover - trivial subclass
+class NoStaticFiles(Error):  # noqa: N818  # pragma: no cover - trivial subclass
     pass
 
 
-class NoSessionContext(Error):  # ruff:ignore[error-suffix-on-exception-name]  # pragma: no cover - trivial subclass
+class NoSessionContext(Error):  # noqa: N818  # pragma: no cover - trivial subclass
     pass
 
 
-class MarkdownFormattedException(Error):  # ruff:ignore[error-suffix-on-exception-name]  # pragma: no cover - trivial subclass
+class MarkdownFormattedException(Error):  # noqa: N818  # pragma: no cover - trivial subclass
     """Exceptions with Markdown in their description.
 
     Instances of this class can use markdown in their messages, which will get

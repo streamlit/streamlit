@@ -257,7 +257,7 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
             for part in _to_non_empty_list(value):
                 try:
                     result_double.append(float(part))
-                except ValueError:  # ruff:ignore[try-except-in-loop]
+                except ValueError:  # noqa: PERF203
                     # Try ISO date/time/datetime parsing for date/time sliders.
                     # Converts human-readable ISO strings to microsecond floats.
                     micros = _try_parse_iso_to_micros(part)
@@ -273,7 +273,7 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
             for part in _to_non_empty_list(value):
                 try:
                     result_int.append(int(part))
-                except ValueError:  # ruff:ignore[try-except-in-loop]
+                except ValueError:  # noqa: PERF203
                     result_int.append(part)
             return result_int
         case _:
@@ -904,7 +904,7 @@ def process_query_params(
         query_params = cast(
             "SupportsKeysAndGetItem[str, str | Iterable[str]]", query_params
         )
-        for key in query_params.keys():  # ruff:ignore[in-dict-keys]
+        for key in query_params.keys():  # noqa: SIM118
             value = query_params[key]
             _set_item_in_dict(processed_params, key, value)
     else:

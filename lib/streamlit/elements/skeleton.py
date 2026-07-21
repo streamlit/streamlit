@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 class SkeletonMixin:
     @gather_metrics("_skeleton")
-    def _skeleton(self, *, height: int | None = None) -> DeltaGenerator:  # ruff:ignore[unused-method-argument]
+    def _skeleton(self, *, height: int | None = None) -> DeltaGenerator:  # noqa: ARG002
         """Insert a single-element container displaying a skeleton placeholder.
 
         .. deprecated::

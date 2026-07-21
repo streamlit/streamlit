@@ -601,7 +601,7 @@ class Runtime:
             session.request_rerun(None)
 
             now = time.perf_counter()
-            while (  # ruff:ignore[async-busy-wait]
+            while (  # noqa: ASYNC110
                 SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state
                 and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT
             ):
@@ -639,7 +639,7 @@ class Runtime:
             elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                 pass
             else:
-                raise RuntimeError(f"Bad Runtime state at start: {self._state}")  # ruff:ignore[raise-within-try]
+                raise RuntimeError(f"Bad Runtime state at start: {self._state}")  # noqa: TRY301
 
             # Signal that we're started and ready to accept sessions
             async_objs.started.set_result(None)

@@ -203,7 +203,7 @@ Object of type tests.streamlit.runtime.caching.cache_data_api_test.CacheDataTest
 ```
 
 If you think this is actually a Streamlit bug, please
-[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""  # ruff:ignore[line-too-long]
+[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""  # noqa: E501
         assert str(ctx.value) == expected_message
 
     def test_cached_st_function_clear_args(self):

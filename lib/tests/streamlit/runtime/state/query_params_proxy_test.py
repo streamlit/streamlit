@@ -102,7 +102,7 @@ class TestQueryParamsProxy(unittest.TestCase):
 
     def test__getattr__raises_Attribute_exception(self):
         with pytest.raises(AttributeError):
-            self.query_params_proxy.nonexistent  # ruff:ignore[useless-expression]
+            self.query_params_proxy.nonexistent  # noqa: B018
 
     def test__delattr__raises_Attribute_exception(self):
         with pytest.raises(AttributeError):
@@ -131,6 +131,6 @@ class TestQueryParamsProxy(unittest.TestCase):
 
     def test_attribute_error_message(self):
         with pytest.raises(AttributeError) as e:
-            self.query_params_proxy.nonexistent  # ruff:ignore[useless-expression]
+            self.query_params_proxy.nonexistent  # noqa: B018
 
         assert str(e.value) == 'st.query_params has no attribute "nonexistent".'

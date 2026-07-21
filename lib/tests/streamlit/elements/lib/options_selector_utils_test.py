@@ -601,7 +601,7 @@ class TestValidateAndSyncValueWithOptions(unittest.TestCase):
         from copy import deepcopy
 
         # Custom class without __eq__ implementation
-        class MyOption:  # ruff:ignore[class-as-data-structure]
+        class MyOption:  # noqa: B903
             def __init__(self, value: str):
                 self.value = value
 
@@ -751,7 +751,7 @@ class TestValidateAndSyncRangeValueWithOptions(unittest.TestCase):
         from copy import deepcopy
 
         # Custom class without __eq__ implementation
-        class MyOption:  # ruff:ignore[class-as-data-structure]
+        class MyOption:  # noqa: B903
             def __init__(self, value: str):
                 self.value = value
 
@@ -777,7 +777,7 @@ class TestValidateAndSyncRangeValueWithOptions(unittest.TestCase):
     def test_format_func_failure_resets_to_default(self) -> None:
         """Test that format_func failure on a value causes reset to default."""
 
-        class MyOption:  # ruff:ignore[class-as-data-structure]
+        class MyOption:  # noqa: B903
             def __init__(self, value: str):
                 self.value = value
 
@@ -876,7 +876,7 @@ class TestValidateMultiselectWithCustomObjects(unittest.TestCase):
         """Test that custom objects without __eq__ work with format_func validation."""
 
         # Custom class without __eq__ implementation
-        class MyOption:  # ruff:ignore[class-as-data-structure]
+        class MyOption:  # noqa: B903
             def __init__(self, value: str):
                 self.value = value
 
@@ -906,7 +906,7 @@ class TestValidateMultiselectWithCustomObjects(unittest.TestCase):
     def test_custom_objects_partial_match_with_format_func(self):
         """Test that only matching custom objects are kept."""
 
-        class MyOption:  # ruff:ignore[class-as-data-structure]
+        class MyOption:  # noqa: B903
             def __init__(self, value: str):
                 self.value = value
 
@@ -965,7 +965,7 @@ class TestValidateMultiselectWithCustomObjects(unittest.TestCase):
         but the format_func can't handle strings (e.g., lambda x: x.attribute).
         """
 
-        class MyOption:  # ruff:ignore[class-as-data-structure]
+        class MyOption:  # noqa: B903
             def __init__(self, value: str):
                 self.value = value
 
@@ -1032,7 +1032,7 @@ class TestResolveValueAgainstOptions:
         passed-in (potentially stale) value.
         """
 
-        class Stale:  # ruff:ignore[class-as-data-structure]
+        class Stale:  # noqa: B903
             def __init__(self, name: str):
                 self.name = name
 
@@ -1062,7 +1062,7 @@ class TestResolveValueAgainstOptions:
         data model, so neither format_func nor its label match the new options.
         """
 
-        class Stale:  # ruff:ignore[class-as-data-structure]
+        class Stale:  # noqa: B903
             def __init__(self, name: str):
                 self.name = name
 
@@ -1089,7 +1089,7 @@ class TestResolveValueAgainstOptions:
     def test_format_func_raises_without_wire_label_resets(self) -> None:
         """When format_func raises and no wire label is available, reset."""
 
-        class Stale:  # ruff:ignore[class-as-data-structure]
+        class Stale:  # noqa: B903
             def __init__(self, name: str):
                 self.name = name
 

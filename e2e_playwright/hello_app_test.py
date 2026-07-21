@@ -97,7 +97,7 @@ def test_mapping_demo_page(app: Page) -> None:
 
     # The snapshot test here is flaky, the map doesn't seem to always result
     # in the same image.
-    # assert_snapshot(app, name="hello_app-mapping_demo_page")  # ruff:ignore[commented-out-code]
+    # assert_snapshot(app, name="hello_app-mapping_demo_page")  # noqa: ERA001
 
 
 def _load_dataframe_demo_page(app: Page):

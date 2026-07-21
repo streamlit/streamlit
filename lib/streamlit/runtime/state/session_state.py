@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-import pickle  # ruff:ignore[suspicious-pickle-import]
+import pickle  # noqa: S403
 from collections.abc import (
     Callable,
     Iterator,
@@ -644,7 +644,7 @@ class SessionState:
         for key_or_wid in self:
             try:
                 self._old_state[key_or_wid] = self[key_or_wid]
-            except KeyError:  # ruff:ignore[try-except-in-loop]
+            except KeyError:  # noqa: PERF203
                 # handle key errors from widget state not having metadata gracefully
                 # https://github.com/streamlit/streamlit/issues/7206
                 pass
@@ -863,7 +863,7 @@ class SessionState:
         for wid in changed_widget_ids_for_single_callback:
             try:
                 self._new_widget_state.call_callback(wid)
-            except RerunException:  # ruff:ignore[try-except-in-loop]
+            except RerunException:  # noqa: PERF203
                 get_dg_singleton_instance().main_dg.warning(
                     "Calling st.rerun() within a callback is a no-op."
                 )
@@ -1617,7 +1617,7 @@ class SessionState:
         for k in self:
             try:
                 pickle.dumps(self[k])
-            except Exception as e:  # ruff:ignore[try-except-in-loop]
+            except Exception as e:  # noqa: PERF203
                 err_msg = (
                     f"Cannot serialize the value (of type `{type(self[k])}`) of '{k}' in "
                     "st.session_state. Streamlit has been configured to use "

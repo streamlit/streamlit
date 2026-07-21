@@ -781,7 +781,7 @@ class TestMultiSelectSerde:
         from copy import deepcopy
 
         # Custom class without __eq__ implementation
-        class MyOption:  # ruff:ignore[class-as-data-structure]
+        class MyOption:  # noqa: B903
             def __init__(self, value: str):
                 self.value = value
 

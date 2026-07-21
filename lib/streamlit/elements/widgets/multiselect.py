@@ -163,7 +163,7 @@ class MultiSelectSerde(Generic[T]):
             try:
                 option_index = self.formatted_options.index(v)
                 values.append(self.options[option_index])
-            except ValueError:  # ruff:ignore[try-except-in-loop]
+            except ValueError:  # noqa: PERF203
                 values.append(v)
         return values
 

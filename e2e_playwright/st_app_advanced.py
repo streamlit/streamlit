@@ -80,26 +80,26 @@ class CustomHeaderMiddleware:
 
 
 # --- Custom routes ---
-async def api_data(request: Request) -> JSONResponse:  # ruff:ignore[unused-function-argument]
+async def api_data(request: Request) -> JSONResponse:  # noqa: ARG001
     """Return test data from a custom API endpoint."""
     return JSONResponse(
         {"items": ["apple", "banana", "cherry"], "count": 3, "source": "custom_route"}
     )
 
 
-async def api_lifespan_check(request: Request) -> JSONResponse:  # ruff:ignore[unused-function-argument]
+async def api_lifespan_check(request: Request) -> JSONResponse:  # noqa: ARG001
     """Return lifespan events to verify startup hook was called."""
     return JSONResponse({"events": _lifespan_events})
 
 
-async def api_error(request: Request) -> JSONResponse:  # ruff:ignore[unused-function-argument]
+async def api_error(request: Request) -> JSONResponse:  # noqa: ARG001
     """Raise a custom exception to test exception handlers."""
     raise CustomAPIError("Something went wrong", error_code=422)
 
 
 # --- Exception handlers ---
 async def custom_api_error_handler(
-    request: Request,  # ruff:ignore[unused-function-argument]
+    request: Request,  # noqa: ARG001
     exc: CustomAPIError,
 ) -> JSONResponse:
     """Return a structured JSON response for CustomAPIError exceptions."""
@@ -111,7 +111,7 @@ async def custom_api_error_handler(
 
 # --- Lifespan hooks ---
 @asynccontextmanager
-async def lifespan(app: st.App) -> AsyncIterator[dict[str, Any]]:  # ruff:ignore[unused-function-argument]
+async def lifespan(app: st.App) -> AsyncIterator[dict[str, Any]]:  # noqa: ARG001
     """Track startup and shutdown events via lifespan context manager."""
     _lifespan_events.append("startup")
     yield {"initialized": True}

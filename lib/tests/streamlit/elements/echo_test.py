@@ -181,7 +181,7 @@ class MultiDecorated:
         self.clear_queue()
 
     def test_root_level_echo(self):
-        import tests.streamlit.echo_test_data.root_level_echo  # ruff:ignore[unused-import]
+        import tests.streamlit.echo_test_data.root_level_echo  # noqa: F401
 
         echo_str = "a = 123"
 
@@ -189,7 +189,7 @@ class MultiDecorated:
         assert echo_str == element.code.code_text
 
     def test_echo_multiline_param(self):
-        import tests.streamlit.echo_test_data.multiline_param_echo  # ruff:ignore[unused-import]
+        import tests.streamlit.echo_test_data.multiline_param_echo  # noqa: F401
 
         echo_str = "a = 123"
 

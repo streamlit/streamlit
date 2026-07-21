@@ -160,7 +160,7 @@ class ComponentFileWatcher:
             for watcher in self._path_watchers:
                 try:
                     watcher.close()
-                except Exception:  # ruff:ignore[try-except-in-loop]
+                except Exception:  # noqa: PERF203
                     _LOGGER.exception("Failed to close path watcher")
 
             self._path_watchers.clear()
@@ -300,7 +300,7 @@ class ComponentFileWatcher:
                     directory,
                     component_names,
                 )
-            except Exception:  # ruff:ignore[try-except-in-loop]
+            except Exception:  # noqa: PERF203
                 # Roll back watchers created so far
                 self._rollback_watchers(new_watchers)
                 raise
@@ -343,7 +343,7 @@ class ComponentFileWatcher:
         for w in watchers:
             try:
                 w.close()
-            except Exception:  # ruff:ignore[try-except-in-loop]
+            except Exception:  # noqa: PERF203
                 _LOGGER.exception("Failed to close path watcher during rollback")
 
     def _make_directory_callback(self, comps: tuple[str, ...]) -> Callable[[str], None]:

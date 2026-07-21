@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-import pickle  # ruff:ignore[suspicious-pickle-import]
+import pickle  # noqa: S403
 import threading
 from typing import (
     TYPE_CHECKING,
@@ -744,7 +744,7 @@ class DataCache(Cache[R]):
             raise CacheError(str(e)) from e
 
         try:
-            entry = pickle.loads(pickled_entry)  # ruff:ignore[suspicious-pickle-usage]
+            entry = pickle.loads(pickled_entry)  # noqa: S301
             if not isinstance(entry, CachedResult):
                 # Loaded an old cache file format, remove it and let the caller
                 # rerun the function.

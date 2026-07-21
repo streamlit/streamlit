@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# ruff:file-ignore[print] - standalone CLI script: printing to stdout/stderr is its interface.
+# ruff: noqa: T201 - standalone CLI script: printing to stdout/stderr is its interface.
 
 """Discover the Streamlit package's bundled agent-skills SKILL.md.
 
@@ -42,7 +42,7 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
-import subprocess  # ruff:ignore[suspicious-subprocess-import] - used only to probe the project's own interpreter (see below).
+import subprocess  # noqa: S404 - used only to probe the project's own interpreter (see below).
 import sys
 from pathlib import Path
 
@@ -204,7 +204,7 @@ def main() -> int:
 
     probe = "import streamlit; print(streamlit.__path__[0])"
     try:
-        result = subprocess.run(  # ruff:ignore[subprocess-without-shell-equals-true] - cmd is a detected interpreter path, not user input.
+        result = subprocess.run(  # noqa: S603 - cmd is a detected interpreter path, not user input.
             [*cmd, "-c", probe],
             capture_output=True,
             text=True,

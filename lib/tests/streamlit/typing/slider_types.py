@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     )
     assert_type(slider("foo", max_value=10.0, value=5.0, step=1.0), float)
     assert_type(slider("foo", max_value=10.0, step=1.0), float)
-    # kwsingularfloat7 = slider("foo", step=1.0)  # ruff:ignore[commented-out-code]
+    # kwsingularfloat7 = slider("foo", step=1.0)  # noqa: ERA001
     # ^ This actually raises an exception and is an invalid signature
 
     assert_type(slider("foo", min_value=5.0, max_value=10.0), float)
@@ -119,7 +119,7 @@ if TYPE_CHECKING:
     )
     assert_type(slider("foo", max_value=_2024_5_20, step=_1DAYSPAN), date)
 
-    # kwsingulardate7 = slider("foo", step=_1DAYSPAN)  # ruff:ignore[commented-out-code]
+    # kwsingulardate7 = slider("foo", step=_1DAYSPAN)  # noqa: ERA001
     # ^ This actually raises an exception and is an invalid signature
 
     assert_type(slider("foo", min_value=_2024_5_1, max_value=_2024_5_20), date)
@@ -173,7 +173,7 @@ if TYPE_CHECKING:
     assert_type(slider("foo", max_value=_2000, value=_1400, step=_5MINUTESPAN), time)
     assert_type(slider("foo", max_value=_2000, step=_5MINUTESPAN), time)
 
-    # kwsingulartime7 = slider("foo", step=_5MINUTESPAN)  # ruff:ignore[commented-out-code]
+    # kwsingulartime7 = slider("foo", step=_5MINUTESPAN)  # noqa: ERA001
     # ^ This actually raises an exception and is an invalid signature
 
     assert_type(slider("foo", min_value=_0800, max_value=_2000), time)

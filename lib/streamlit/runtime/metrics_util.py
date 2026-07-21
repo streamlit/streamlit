@@ -426,7 +426,7 @@ def _get_command_telemetry(
         pos = i
         if is_method:
             # If func is a method, ignore the first argument (self)
-            i += 1  # ruff:ignore[redefined-loop-name]
+            i += 1  # noqa: PLW2901
 
         keyword = arg_keywords[i] if len(arg_keywords) > i else f"{i}"
         if keyword == "self":

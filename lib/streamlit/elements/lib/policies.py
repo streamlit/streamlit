@@ -69,7 +69,7 @@ def check_session_state_rules(
     StreamlitValueAssignmentNotAllowedError:
         Raised when writing is not allowed but session state contains a new value.
     """
-    global _shown_default_value_warning  # ruff:ignore[global-statement]
+    global _shown_default_value_warning  # noqa: PLW0603
 
     if key is None or not runtime.exists():
         return

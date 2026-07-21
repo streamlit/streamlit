@@ -209,7 +209,7 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
 
     # Interval does not seem to work correctly:
     # if pa.types.is_interval(field_type):
-    #     return ColumnDataKind.INTERVAL  # ruff:ignore[commented-out-code]
+    #     return ColumnDataKind.INTERVAL  # noqa: ERA001
 
     if pa.types.is_binary(field_type):
         return ColumnDataKind.BYTES

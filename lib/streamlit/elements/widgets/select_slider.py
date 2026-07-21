@@ -113,7 +113,7 @@ class SelectSliderSerde(Generic[T]):
             formatted = self.format_func(v)
             if formatted in self.formatted_option_to_index:
                 return [formatted]
-        except Exception:  # ruff:ignore[try-except-pass]
+        except Exception:  # noqa: S110
             pass
 
         # Handle as range/sequence

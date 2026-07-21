@@ -33,7 +33,7 @@ def print_to_cli(message: str, **kwargs: Any) -> None:
 
         click.secho(message, **kwargs)
     except ImportError:  # pragma: no cover - optional dep
-        print(message, flush=True)  # ruff:ignore[print]
+        print(message, flush=True)  # noqa: T201
 
 
 def style_for_cli(message: str, **kwargs: Any) -> str:
@@ -60,9 +60,9 @@ def _open_browser_with_webbrowser(url: str) -> None:
 def _open_browser_with_command(command: str, url: str) -> None:
     cmd_line = [command, url]
     with open(os.devnull, "w", encoding="utf-8") as devnull:
-        import subprocess  # ruff:ignore[suspicious-subprocess-import]
+        import subprocess  # noqa: S404
 
-        subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)  # ruff:ignore[subprocess-without-shell-equals-true]
+        subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)  # noqa: S603
 
 
 def open_browser(url: str) -> None:

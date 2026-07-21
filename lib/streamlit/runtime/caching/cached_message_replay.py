@@ -136,7 +136,7 @@ class CachedMessageReplayContext(threading.local):
         return util.repr_(self)
 
     @contextlib.contextmanager
-    def calling_cached_function(self, func: Callable[..., Any]) -> Iterator[None]:  # ruff:ignore[unused-method-argument]
+    def calling_cached_function(self, func: Callable[..., Any]) -> Iterator[None]:  # noqa: ARG002
         """Context manager that should wrap the invocation of a cached function.
         It allows us to track any `st.foo` messages that are generated from inside the
         function for playback during cache retrieval.
