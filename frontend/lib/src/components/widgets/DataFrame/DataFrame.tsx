@@ -73,6 +73,7 @@ import {
   ImageCellEditor,
   toGlideColumn,
 } from "./columns"
+import { isServerSortableColumn } from "./hooks/sortUtils"
 import useButtonColumnInteractions from "./hooks/useButtonColumnInteractions"
 import useColumnFormatting from "./hooks/useColumnFormatting"
 import useColumnLoader from "./hooks/useColumnLoader"
@@ -365,10 +366,13 @@ function DataFrame({
   // Whether a specific column can be sorted in the current mode. Eager sorting
   // is client-side and works for any column (incl. the index). Lazy sorting is
   // server-side and keys on the backend Arrow field name, so columns without
-  // one (e.g. the index column, whose name is empty) cannot be sorted — we hide
-  // the sort affordance for them instead of silently no-op'ing.
+  // one (e.g. the index column) or with an unorderable nested type (list/struct)
+  // cannot be sorted — we hide the sort affordance for them instead of issuing a
+  // chunk request the backend would fail.
   const isColumnSortable = (column: BaseColumn | undefined): boolean =>
-    canSort && column !== undefined && (!isLazy || column.name !== "")
+    canSort &&
+    column !== undefined &&
+    (!isLazy || isServerSortableColumn(column))
 
   const {
     buttonActionMenu,

@@ -15,6 +15,7 @@
  */
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { isListType, isObjectType } from "~lib/dataframes/arrowTypeUtils"
 
 /**
  * The active column sort, identified by the frontend column id and direction.
@@ -23,6 +24,25 @@ import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 export interface ActiveColumnSort {
   columnId: string
   direction: "asc" | "desc"
+}
+
+/**
+ * Whether a column can be sorted server-side (lazy dataframes).
+ *
+ * A column is server-sortable only when it has a backend Arrow field name (the
+ * index column's name is empty, and the backend keys the sort on that name) and
+ * an orderable Arrow type. Nested types (list/struct/map) are excluded because
+ * the backend cannot order them: the sort chunk request would fail and leave
+ * the grid with persistent "Failed to load data" cells while the sort indicator
+ * stays applied. Eager (client-side) sorting is unaffected and still works for
+ * every column.
+ */
+export function isServerSortableColumn(column: BaseColumn): boolean {
+  return (
+    column.name !== "" &&
+    !isListType(column.arrowType) &&
+    !isObjectType(column.arrowType)
+  )
 }
 
 /**

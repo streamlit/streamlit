@@ -28,6 +28,7 @@ import {
   ActiveColumnSort,
   applySortIndicator,
   getNextColumnSort,
+  isServerSortableColumn,
 } from "./sortUtils"
 
 /**
@@ -172,10 +173,11 @@ function useColumnSort({
       if (clickedColumn === undefined) {
         return
       }
-      // Server-side sorting keys on the backend Arrow field name; columns
-      // without one (e.g. the index column, whose name is empty) cannot be
-      // sorted server-side, so we ignore the request.
-      if (mode === "server" && !clickedColumn.name) {
+      // Server-side sorting keys on the backend Arrow field name and requires
+      // an orderable type; columns without a field name (e.g. the index column)
+      // or with an unorderable nested type cannot be sorted server-side, so we
+      // ignore the request.
+      if (mode === "server" && !isServerSortableColumn(clickedColumn)) {
         return
       }
       setSort(getNextColumnSort(sort, clickedColumn.id, direction, autoReset))

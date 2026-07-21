@@ -50,14 +50,22 @@ st.dataframe(make_df(10), lazy=True, width=400)
 
 # 4) Lazy dataframe with hidden index and fixed-width columns. Used to test the
 # column menu at deterministic click positions (the test helpers assume all
-# columns share one width and that there is no visible index column).
+# columns share one width and that there is no visible index column). The
+# ``tags`` column holds lists, which the backend cannot order, so the menu must
+# not offer server-side sorting for it.
 st.header("Lazy dataframe with fixed-width columns")
+fixed_df = make_df(5_000).copy()
+fixed_df["tags"] = [[i % 3, i % 5] for i in range(len(fixed_df))]
+# Keep ``tags`` (the unorderable list column) as the second column so the test
+# can open its menu at a reliably clickable position (not the right edge).
+fixed_df = fixed_df[["index_col", "tags", "squared", "label"]]
 st.dataframe(
-    make_df(5_000),
+    fixed_df,
     lazy=True,
     hide_index=True,
     column_config={
         "index_col": st.column_config.Column(width="medium"),
+        "tags": st.column_config.Column(width="medium"),
         "squared": st.column_config.Column(width="medium"),
         "label": st.column_config.Column(width="medium"),
     },

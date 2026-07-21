@@ -14,15 +14,39 @@
  * limitations under the License.
  */
 
+import { Field, Int64, List, Struct, Utf8 } from "apache-arrow"
 import { describe, expect, it } from "vitest"
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import {
   ActiveColumnSort,
   applySortIndicator,
   getNextColumnSort,
+  isServerSortableColumn,
 } from "./sortUtils"
+
+/** Build a minimal column carrying only the fields the predicate reads. */
+function makeColumn(
+  name: string,
+  arrowField: Field,
+  pandasTypeName = "unicode",
+  numpyTypeName = "object"
+): BaseColumn {
+  const arrowType: ArrowType = {
+    type: DataFrameCellType.DATA,
+    arrowField,
+    pandasType: {
+      field_name: arrowField.name,
+      name: arrowField.name,
+      pandas_type: pandasTypeName,
+      numpy_type: numpyTypeName,
+      metadata: null,
+    },
+  }
+  return { name, arrowType } as BaseColumn
+}
 
 describe("getNextColumnSort", () => {
   it("starts ascending for an unsorted column with auto", () => {
@@ -102,5 +126,69 @@ describe("applySortIndicator", () => {
     })
     expect(result[0].title).toBe("A")
     expect(result[1].title).toBe("↓ B")
+  })
+})
+
+describe("isServerSortableColumn", () => {
+  it("allows a named column with an orderable numeric type", () => {
+    const column = makeColumn(
+      "num",
+      new Field("num", new Int64(), true),
+      "int64",
+      "int64"
+    )
+    expect(isServerSortableColumn(column)).toBe(true)
+  })
+
+  it("allows a named column with an orderable string type", () => {
+    const column = makeColumn("str", new Field("str", new Utf8(), true))
+    expect(isServerSortableColumn(column)).toBe(true)
+  })
+
+  it("rejects the index column (empty backend field name)", () => {
+    const column = makeColumn(
+      "",
+      new Field("index", new Int64(), true),
+      "int64",
+      "int64"
+    )
+    expect(isServerSortableColumn(column)).toBe(false)
+  })
+
+  it("rejects an unorderable list column", () => {
+    const column = makeColumn(
+      "list_col",
+      new Field(
+        "list_col",
+        new List(new Field("item", new Int64(), true)),
+        true
+      ),
+      "list[int64]"
+    )
+    expect(isServerSortableColumn(column)).toBe(false)
+  })
+
+  it("rejects an unorderable struct column", () => {
+    const column = makeColumn(
+      "struct_col",
+      new Field(
+        "struct_col",
+        new Struct([new Field("x", new Int64(), true)]),
+        true
+      ),
+      "object",
+      "object"
+    )
+    expect(isServerSortableColumn(column)).toBe(false)
+  })
+
+  it("rejects a column whose pandas type resolves to a generic object", () => {
+    const column = makeColumn(
+      "obj",
+      new Field("obj", new Utf8(), true),
+      "object",
+      "object"
+    )
+    expect(isServerSortableColumn(column)).toBe(false)
   })
 })

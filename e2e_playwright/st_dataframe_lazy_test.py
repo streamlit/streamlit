@@ -93,21 +93,35 @@ def test_small_lazy_dataframe_stays_eager(app: Page):
     expect(toolbar.get_by_role("button", name="Download as CSV")).to_have_count(1)
 
 
-def test_lazy_column_menu_offers_sort_but_hides_statistics(app: Page):
-    """The lazy column menu offers server-side sorting but hides statistics.
+def test_lazy_column_menu_sort_gating_and_statistics(app: Page):
+    """The lazy column menu gates sorting on orderability and hides statistics.
 
     Statistics are hidden because only the initial chunk is loaded client-side,
     so they would reflect a subset of rows rather than the full dataframe.
+    Server-side sorting is offered for orderable data columns but hidden for
+    unorderable (nested) columns, which the backend cannot sort.
     """
     # Use the fixed-width, index-hidden lazy dataframe (index 3) so the column
-    # menu opens at a deterministic position over a sortable data column.
+    # menu opens at a deterministic position. Columns (all medium width):
+    # index_col (0), tags (1, a list column), squared (2), label (3).
     fixed_df = _get_dataframe(app, 3)
-    open_column_menu(fixed_df, col_pos=0, column_width="medium")
 
+    # An orderable data column offers server-side sorting and hides statistics.
+    open_column_menu(fixed_df, col_pos=0, column_width="medium")
     menu = app.get_by_test_id("stDataFrameColumnMenu")
     expect(menu).to_be_visible()
-    # Server-side sorting is offered for data columns.
     expect(menu.get_by_text("Sort ascending")).to_be_visible()
     expect(menu.get_by_text("Sort descending")).to_be_visible()
-    # Statistics are hidden in lazy mode (only the initial chunk is loaded).
     expect(menu.get_by_text("Statistics")).to_have_count(0)
+
+    # Close the menu before opening it for another column.
+    app.keyboard.press("Escape")
+    expect(menu).not_to_be_visible()
+
+    # The unorderable ``tags`` list column does not offer server-side sorting,
+    # so clicking it can never leave the grid stuck on a failed sort request.
+    open_column_menu(fixed_df, col_pos=1, column_width="medium")
+    menu = app.get_by_test_id("stDataFrameColumnMenu")
+    expect(menu).to_be_visible()
+    expect(menu.get_by_text("Sort ascending")).to_have_count(0)
+    expect(menu.get_by_text("Sort descending")).to_have_count(0)
