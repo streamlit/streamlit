@@ -689,9 +689,9 @@ def _convert_col_names_to_str_in_place(
     original_to_alias: dict[str, str] = {}
     # Map from alias back to the original name, for user-facing titles.
     alias_to_original: dict[str, str] = {}
-    # Per-name FIFO queue of aliases, in df-column order, used for position-aware
-    # y remapping so a ``y_column_list`` derived from ``list(df.columns)`` with
-    # duplicate labels consumes distinct aliases in order (see #7714 follow-up).
+    # FIFO queue of aliases per original column name. When ``y_column_list`` has
+    # duplicate labels (e.g. two columns both named ``"a.b"``), each entry
+    # consumes a distinct alias in column order (see #7714 follow-up).
     per_name_aliases: dict[str, list[str]] = {}
     final_column_names: list[str] = []
     for idx, name in enumerate(str_column_names):
@@ -726,12 +726,16 @@ def _convert_col_names_to_str_in_place(
         # Position-aware: consume aliases in df-column order so duplicate y
         # entries (e.g. ``list(df.columns)`` on a df with duplicate labels) each
         # address a distinct DataFrame column instead of collapsing to the first
-        # alias.
+        # alias. If a caller passes more duplicates than the DataFrame actually
+        # has, fall back to the first alias for that name so the reference still
+        # points at an aliased column (never the pre-rename original).
         name = str(name)
         aliases = per_name_aliases.get(name)
         if aliases:
+            # Intentionally destructive: each queue entry is consumed once,
+            # matching one DataFrame column occurrence.
             return aliases.pop(0)
-        return name
+        return original_to_alias.get(name, name)
 
     remapped_y = [_remap_y(c) for c in y_column_list]
 
