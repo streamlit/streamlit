@@ -196,9 +196,9 @@ explicit-preview-rules = false
 select = ["ALL"]
 ignore = [
   # Rules planned to be supported in the future:
-  "raw-string-in-exception",  # Checks for the use of string literals in exception constructors.
-  "f-string-in-exception",  # Checks for the use of f-strings in exception constructors.
-  "raise-vanilla-args", # Checks for exception messages that are not defined in the exception class itself.
+  "EM101",  # Checks for the use of string literals in exception constructors.
+  "EM102",  # Checks for the use of f-strings in exception constructors.
+  "TRY003", # Checks for exception messages that are not defined in the exception class itself.
   # Ignored rule sets:
   "DTZ", # Checks for usage of unsafe naive datetime class.
   "PTH", # Enforces usage of pathlib.
@@ -208,84 +208,89 @@ ignore = [
   "BLE", # Checks for blind except statements.
   "CPY", # Checks for copyright statement.
   # DOC rules for enforcing docstring completeness (too noisy):
-  "docstring-missing-returns", # Checks for missing return documentation.
-  "docstring-missing-yields", # Checks for missing yield documentation.
-  "docstring-missing-exception", # Checks for missing exception documentation.
-  "docstring-extraneous-exception", # Checks for extraneous exception documentation.
+  "DOC201", # Checks for missing return documentation.
+  "DOC402", # Checks for missing yield documentation.
+  "DOC501", # Checks for missing exception documentation.
+  "DOC502", # Checks for extraneous exception documentation.
   # Ignored rules:
-  "builtin-argument-shadowing",    # Checks if function argument shadows a Python builtin.
-  "any-type",  # Checks that `any` is not used as an annotation.
-  "raise-without-from-inside-except",    # Checks for raise statements in exception handlers that lack a from clause.
-  "missing-trailing-comma",  # Checks for absence of trailing commas. Not recommended with formatter.
-  "prohibited-trailing-comma",  # Checks for presence of prohibited trailing commas. Not recommended with formatter.
-  "undocumented-public-module",    # Checks for missing docstring in public module.
-  "undocumented-public-class",    # Checks for missing docstring in public class.
-  "undocumented-public-method",    # Checks for missing docstring in public method.
-  "undocumented-public-function",    # Checks for missing docstring in public function.
-  "undocumented-public-package",    # Checks for missing docstring in public package.
-  "undocumented-magic-method",    # Checks for missing docstring in magic method.
-  "undocumented-public-nested-class",    # Checks for missing docstring in public nested class.
-  "undocumented-public-init",    # Checks for missing docstring in __init__.
-  "blank-line-after-function",    # Checks for no-blank line after docstring.
-  "missing-blank-line-after-summary",    # Checks for missing blank line after docstring summary.
-  "non-imperative-mood",    # Checks for docstring to start with imperative mood.
-  "multiple-leading-hashes-for-block-comment",    # Checks for multiple leading hashes in block comments.
-  "line-contains-todo",  # Checks todo comments (which we want to allow).
-  "read-whole-file", # Checks for open and read calls that can be replaced by pathlib.
-  "write-whole-file", # Checks for open and write calls that can be replaced by pathlib.
-  "repeated-append", # Checks for repeated append calls that can be replaced by extend.
-  "math-constant", # Checks for math constants that could use math module.
-  "pandas-use-of-dot-iat",   # Checks for usage of pd.DataFrame.iat.
-  "blanket-type-ignore",  # Checks for blanket type ignore.
-  "import-outside-top-level", # Enforces imports to be at the top-level of the file.
-  "compare-to-empty-string", # Checks for comparisons to empty string.
-  "import-private-name", # Checks for imports of private names.
-  "too-many-public-methods", # Checks for classes with too many public methods.
-  "too-many-return-statements", # Checks for functions with too many return statements.
-  "too-many-branches", # Checks for functions with too many branches.
-  "too-many-arguments", # Checks for functions with too many arguments.
-  "too-many-locals", # Checks for functions with too many local variables.
-  "too-many-statements", # Checks for functions with too many statements.
-  "too-many-boolean-expressions", # Checks for too many boolean expressions in if statements.
-  "too-many-positional-arguments", # Checks for functions with too many positional arguments.
-  "too-many-nested-blocks", # Checks for functions with too many nested blocks.
-  "magic-value-comparison", # Checks for numerical values that could be put into a constant.
-  "no-self-use", # Checks for methods that do not use self.
-  "unnecessary-lambda", # Checks for lambdas that can be replaced by existing functions.
-  "too-many-statements-in-try-clause", # Checks for try clauses with too many statements (new in ruff 0.15.14).
-  "bad-dunder-method-name", # Checks for bad dunder method names.
-  "pytest-raises-with-multiple-statements",   # Checks for pytest.raises context managers with multiple statements.
-  "pytest-fixture-param-without-value",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
-  "redundant-numeric-union",  # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
-  "redundant-literal-union",  # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
-  "unnecessary-assign",  # Checks for assignments that immediately precede a return of the assigned variable (too opinionated).
-  "unnecessary-paren-on-raise-exception",  # Checks for unnecessary parentheses on raised exceptions.
-  "used-dummy-variable",  # Checks for dummy variables that are used.
-  "non-empty-init-module",  # Checks for non empty __init__ modules.
-  "fallible-context-manager",  # Checks for context managers that don't catch exceptions (new preview rule in ruff 0.15.14).
-  "pytest-fixture-autouse",  # Checks for autouse=True in pytest.fixture decorators (new rule in ruff 0.15.17; autouse is intentional in our fixtures).
-  "suppressible-exception",  # Enforces use of contextlib.suppress.
-  "if-else-block-instead-of-if-exp",  # Enforces ternary operators instead of if-else.
-  "open-file-with-context-handler",  # Enforces context manager for opening files.
-  "multiple-with-statements",  # Enforces single with statement with multiple contexts.
-  "split-static-string",  # Enforces list instead of st.split.
-  "missing-todo-author",   # Checks for missing author in TODO comment.
-  "missing-todo-link",   # Checks for missing issue link in TODO comment.
-  "try-consider-else",  # Checks for return statements in try blocks.
+  "A002",    # Checks if function argument shadows a Python builtin.
+  "ANN401",  # Checks that `any` is not used as an annotation.
+  "B904",    # Checks for raise statements in exception handlers that lack a from clause.
+  "COM812",  # Checks for absence of trailing commas. Not recommended with formatter.
+  "COM819",  # Checks for presence of prohibited trailing commas. Not recommended with formatter.
+  "D100",    # Checks for missing docstring in public module.
+  "D101",    # Checks for missing docstring in public class.
+  "D102",    # Checks for missing docstring in public method.
+  "D103",    # Checks for missing docstring in public function.
+  "D104",    # Checks for missing docstring in public package.
+  "D105",    # Checks for missing docstring in magic method.
+  "D106",    # Checks for missing docstring in public nested class.
+  "D107",    # Checks for missing docstring in __init__.
+  "D202",    # Checks for no-blank line after docstring.
+  "D205",    # Checks for missing blank line after docstring summary.
+  "D401",    # Checks for docstring to start with imperative mood.
+  "E266",    # Checks for multiple leading hashes in block comments.
+  "FIX002",  # Checks todo comments (which we want to allow).
+  "FURB101", # Checks for open and read calls that can be replaced by pathlib.
+  "FURB103", # Checks for open and write calls that can be replaced by pathlib.
+  "FURB113", # Checks for repeated append calls that can be replaced by extend.
+  "FURB152", # Checks for math constants that could use math module.
+  "PD009",   # Checks for usage of pd.DataFrame.iat.
+  "PGH003",  # Checks for blanket type ignore.
+  "PLC0415", # Enforces imports to be at the top-level of the file.
+  "PLC1901", # Checks for comparisons to empty string.
+  "PLC2701", # Checks for imports of private names.
+  "PLR0904", # Checks for classes with too many public methods.
+  "PLR0911", # Checks for functions with too many return statements.
+  "PLR0912", # Checks for functions with too many branches.
+  "PLR0913", # Checks for functions with too many arguments.
+  "PLR0914", # Checks for functions with too many local variables.
+  "PLR0915", # Checks for functions with too many statements.
+  "PLR0916", # Checks for too many boolean expressions in if statements.
+  "PLR0917", # Checks for functions with too many positional arguments.
+  "PLR1702", # Checks for functions with too many nested blocks.
+  "PLR2004", # Checks for numerical values that could be put into a constant.
+  "PLR6301", # Checks for methods that do not use self.
+  "PLW0108", # Checks for lambdas that can be replaced by existing functions.
+  "PLW0717", # Checks for try clauses with too many statements (new in ruff 0.15.14).
+  "PLW3201", # Checks for bad dunder method names.
+  "PT012",   # Checks for pytest.raises context managers with multiple statements.
+  "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
+  "PYI041",  # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
+  "PYI051",  # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
+  "RET504",  # Checks for assignments that immediately precede a return of the assigned variable (too opinionated).
+  "RSE102",  # Checks for unnecessary parentheses on raised exceptions.
+  "RUF052",  # Checks for dummy variables that are used.
+  "RUF067",  # Checks for non empty __init__ modules.
+  "RUF075",  # Checks for context managers that don't catch exceptions (new preview rule in ruff 0.15.14).
+  "SIM105",  # Enforces use of contextlib.suppress.
+  "SIM108",  # Enforces ternary operators instead of if-else.
+  "SIM115",  # Enforces context manager for opening files.
+  "SIM117",  # Enforces single with statement with multiple contexts.
+  "SIM905",  # Enforces list instead of st.split.
+  "TD002",   # Checks for missing author in TODO comment.
+  "TD003",   # Checks for missing issue link in TODO comment.
+  "TRY300",  # Checks for return statements in try blocks.
+  # New preview rules in ruff 0.15.22 that would migrate our existing
+  # `# noqa` comments and rule codes to the unstable `ruff:ignore` syntax and
+  # human-readable names. We keep the established conventions for now.
+  "RUF105",  # Checks for legacy `# noqa` comments (migrates them to `# ruff:ignore`).
+  "RUF106",  # Checks for rule codes in suppression comments (migrates to human-readable names).
+  "RUF201",  # Checks for rule codes in config selectors (migrates to human-readable names).
 ]
-extend-safe-fixes = ["typing-only-third-party-import", "typing-only-standard-library-import"]
+extend-safe-fixes = ["TC002", "TC003"]
 
 [tool.ruff.lint.per-file-ignores]
 # Only add ignores for entire folders here. To ignore rules in individual
 # files, use the noqa ignore comment on top of the given file.
 "e2e_playwright/**" = [
-  "useless-expression",   # Allow useless expressions (e.g., for side effects in tests).
+  "B018",   # Allow useless expressions (e.g., for side effects in tests).
   "DOC",    # Ignore docstring correctness rules.
-  "invalid-module-name",   # Allow invalid module names (test files use descriptive names).
-  "numpy-legacy-random", # Allow legacy numpy random generation.
+  "N999",   # Allow invalid module names (test files use descriptive names).
+  "NPY002", # Allow legacy numpy random generation.
   "PD",     # Ignore pandas-vet rules (test data manipulation patterns).
   "PERF",   # Ignore performance rules (clarity over speed in tests).
-  "unused-async", # Allow async functions without await (intentional for testing async behavior).
+  "RUF029", # Allow async functions without await (intentional for testing async behavior).
   "S",      # Ignore bandit security rules (test code doesn't need security hardening).
   "T20",    # Allow print statements (useful for test debugging).
   "TRY",    # Ignore tryceratops rules (simpler exception handling in tests).
@@ -295,20 +300,20 @@ extend-safe-fixes = ["typing-only-third-party-import", "typing-only-standard-lib
   "ARG",     # Allow unused arguments (common in test fixtures and mocks).
   "D",       # Ignore docstring rules.
   "DOC",     # Ignore docstring correctness rules.
-  "reimplemented-operator", # Allow all operators (tests may use operator module intentionally).
-  "subclass-builtin", # Allow subclassing of builtin types (for test mocking).
+  "FURB118", # Allow all operators (tests may use operator module intentionally).
+  "FURB189", # Allow subclassing of builtin types (for test mocking).
   "INP",     # Allow implicit namespace packages (test directories).
   "N",       # Ignore naming conventions (test names can be descriptive/long).
-  "numpy-legacy-random",  # Allow legacy numpy random generation.
+  "NPY002",  # Allow legacy numpy random generation.
   "PD",      # Ignore pandas-vet rules (test data manipulation patterns).
   "PERF",    # Ignore performance rules (clarity over speed in tests).
-  "unnecessary-dunder-call", # Allow dunder calls (e.g., object.__setattr__ for frozen dataclasses).
-  "unused-async",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
-  "float-equality-comparison",  # Allow float equality checks in test assertions.
+  "PLC2801", # Allow dunder calls (e.g., object.__setattr__ for frozen dataclasses).
+  "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
+  "RUF069",  # Allow float equality checks in test assertions.
   "S",       # Ignore bandit security rules (test code doesn't need security hardening).
   "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
 ]
-"scripts/**" = ["T20", "INP", "PERF", "S", "raise-vanilla-class"]
+"scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
 "lib/streamlit/.agents/**" = [
   # Each template is a standalone app, not a package. Adding __init__.py would
   # misrepresent them as importable modules.
