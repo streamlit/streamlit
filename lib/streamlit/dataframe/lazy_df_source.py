@@ -434,6 +434,13 @@ def resolve_lazy_source(
     # capped-preview threshold; smaller sources preserve today's eager path.
     native = _try_create_native_source(data)
     if native is not None:
+        # TODO(lazy-dataframe): For ``lazy=None`` this reads ``row_count`` on
+        # every rerun to decide whether to auto-lazy. For a native source like a
+        # Polars ``LazyFrame`` that is a full ``select(pl.len()).collect()``
+        # count/scan re-run each time, even when the size hasn't changed.
+        # Consider caching the count across reruns, gating auto-lazy on a cheap
+        # row-count capability, or deferring the count until the frontend first
+        # requests a chunk.
         native_row_count = _get_native_row_count(native, lazy)
         if native_row_count is None:
             return None
