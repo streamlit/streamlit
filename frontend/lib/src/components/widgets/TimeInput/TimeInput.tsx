@@ -145,7 +145,10 @@ function TimeInput({
    */
   const handleChange = useCallback(
     (newTime: Time | null): void => {
-      if (newTime === null && !clearable) return
+      if (newTime === null && !clearable) {
+        commitImmediatelyRef.current = false
+        return
+      }
       const newValue = newTime ? timeToString(newTime) : null
       setDisplayValue(newValue)
       if (commitImmediatelyRef.current) {
