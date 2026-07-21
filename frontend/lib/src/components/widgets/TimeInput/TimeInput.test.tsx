@@ -126,7 +126,7 @@ describe("TimeInput widget", () => {
     const widgetLabel = screen.getByTestId("stWidgetLabel")
     expect(widgetLabel).toHaveAttribute("disabled")
 
-    // React Aria sets data-disabled on the DateInput container when isDisabled
+    // The wrapper receives data-disabled explicitly from our component
     const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
     expect(timeDisplay).toHaveAttribute("data-disabled")
 

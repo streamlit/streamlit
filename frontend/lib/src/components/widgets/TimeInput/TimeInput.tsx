@@ -19,7 +19,6 @@ import {
   memo,
   ReactElement,
   useCallback,
-  useRef,
   useState,
 } from "react"
 
@@ -105,9 +104,9 @@ function TimeInput({
   // Sync from backend when value changes externally (form clear, session
   // state update, setValue call). Uses render-time adjustment pattern:
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
-  const prevValueRef = useRef(value)
-  if (prevValueRef.current !== value) {
-    prevValueRef.current = value
+  const [prevValue, setPrevValue] = useState(value)
+  if (prevValue !== value) {
+    setPrevValue(value)
     setDisplayValue(value)
   }
 
