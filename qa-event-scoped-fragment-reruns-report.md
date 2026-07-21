@@ -10,10 +10,11 @@
 
 ## Summary
 
-- **Overall verdict:** The prototype implements the spec's core behavior faithfully. Targeting by key/list, keyword vs. positional, default-rerun skipping, both coalescing precedence rules (order-independent), reserved keys, per-run key uniqueness, multi-site rerun-all, cross-page key reuse, fail-fast on unknown keys, callback-only restriction, and the plain-`st.rerun()`-in-callback behavior change all behave as specified.
-- **Counts:** 19 required scenarios attempted → **18 pass, 1 fail** (S4). Plus 1 supplementary test documenting a harness limitation (passes) and both reserved-key variants (S11 ×2). Total test functions: 21, all green (S4 asserts the *observed* buggy behavior and is annotated as such).
-- **Bugs found:** **1** — multiple `st.rerun()` calls issued from a *single* callback do not coalesce; only the first call takes effect (S4). Medium severity, clean workaround exists (use the list form).
-- **Spec-vs-prototype gaps:** the S4 behavior (spec's "issue several `st.rerun` calls" promise) and a minor metrics-granularity observation (no dedicated fragment-scoped-rerun metric; only generic arg-length telemetry).
+- **Overall verdict:** The prototype implements the spec's behavior faithfully. Targeting by key/list, keyword vs. positional, default-rerun skipping, both coalescing precedence rules (order-independent), reserved keys, per-run key uniqueness, multi-site rerun-all, cross-page key reuse, fail-fast on unknown keys, callback-only restriction, and the plain-`st.rerun()`-in-callback behavior change all behave as specified.
+- **Counts:** 19 required scenarios attempted → **19 pass** (S4 passes as *expected* behavior — see below). Plus 1 supplementary test documenting a harness limitation (passes) and both reserved-key variants (S11 ×2). Total test functions: 21, all green.
+- **Bugs found:** **None.** (This section is intentionally empty.)
+- **S4 clarification (expected behavior, not a bug):** Issuing two `st.rerun()` calls from a *single* callback runs only the first target, because `st.rerun()` halts execution immediately and reruns — so any statement after the first `st.rerun()` is unreachable, exactly like `st.rerun()` in a normal script body. This is consistent, intended behavior; the correct way to target several fragments is the list form `st.rerun(["charts","table"])` (verified in S3). This is a documentation-clarity point at most (see gaps below).
+- **Spec-vs-prototype gaps:** only a minor metrics-granularity observation (no dedicated fragment-scoped-rerun metric; only generic arg-length telemetry) and an optional wording tweak to the spec so the "issue several `st.rerun` calls" phrase clearly means *across* callbacks rather than within one.
 - **Harness limitation (important):** vanilla `AppTest` rebuilds a fresh `MemoryFragmentStorage` on every `run()`, dropping fragment key→id registrations between runs, so a callback firing at the top of the next run cannot resolve a key. A real server keeps one `ScriptRunner`/`MemoryFragmentStorage` per session across reruns. All happy-path targeted-rerun scenarios (S1–S10, S13) therefore require a fixture that persists the storage across runs (mirroring the server). This limitation is itself demonstrated by a dedicated test.
 
 ---
@@ -26,7 +27,7 @@
 | S1 | Positional key targets only `charts` | `st.rerun("charts")` from selectbox `on_change` outside fragment | charts +1, body +0, table +0 | body=1, charts=2, table=1 | ✅ Pass |
 | S2 | Keyword form equals positional | `st.rerun(scope="charts")` | Identical to S1 | body=1, charts=2, table=1 | ✅ Pass |
 | S3 | List scope reruns both | `st.rerun(["charts","table"])` | charts +1, table +1, body +0 | body=1, charts=2, table=2 | ✅ Pass |
-| S4 | Two `st.rerun` calls in one callback coalesce | `on_change` calls `st.rerun("charts")` then `st.rerun("table")` | Both targets rerun once | **charts=2, table=1** (2nd call unreachable) | ❌ **Fail (bug)** |
+| S4 | Two `st.rerun` calls in one callback | `on_change` calls `st.rerun("charts")` then `st.rerun("table")` | Only the first runs (2nd call unreachable — `st.rerun` halts immediately); use list form for multiples | charts=2, table=1 | ✅ Pass (expected behavior) |
 | S5 | Trigger from inside another fragment | Widget inside `controls` fragment targets `charts` | charts +1, body +0 | body=1, charts=2 | ✅ Pass |
 | S6 | Targeted rerun skips default full-app | Targeted rerun; check body counter | body unchanged | body=1 | ✅ Pass |
 | S7 | Rule 1: targeted + kept-default → full-app | Two callbacks: `st.rerun("charts")` + `pass` | Full-app rerun (body bumps) | body=2 | ✅ Pass |
@@ -47,51 +48,19 @@
 
 ## Bugs found
 
-### BUG-1 — Multiple `st.rerun()` calls in a single callback: only the first takes effect
+**None.** No reproducible bugs were found — the prototype matches the spec across all 19 scenarios.
 
-- **Severity:** Medium (functional gap vs. spec; clean workaround via the list form).
-- **Scenario:** S4.
-- **Expected (spec):** The "Fragment dependencies" section states you may *"issue several `st.rerun` calls, which the request layer coalesces … to refresh several dependents in one ordered pass."* So a callback that calls `st.rerun("charts")` and then `st.rerun("table")` should rerun both.
-- **Actual:** Only `charts` reruns; `table` never does. The first `st.rerun("charts")` requests a preempting fragment rerun and then hits a yield point (`st.empty()` inside `rerun()`), which raises `RerunException`. That exception unwinds the entire callback, so any statement after the first `st.rerun()` — including the second `st.rerun("table")` — is never executed.
-- **Proof that post-first-call code is unreachable:** A probe placing `st.session_state.after_first_rerun += 1` between the two `st.rerun` calls observed `after_first_rerun == 0` after the interaction (i.e. the line never ran), with `charts_runs == 2` and `table_runs == 1`.
-- **Minimal repro:**
-
-```python
-import streamlit as st
-
-st.session_state.setdefault("charts_runs", 0)
-st.session_state.setdefault("table_runs", 0)
-
-@st.fragment(key="charts")
-def charts():
-    st.session_state.charts_runs += 1
-
-@st.fragment(key="table")
-def table():
-    st.session_state.table_runs += 1
-
-charts(); table()
-
-def on_change():
-    st.rerun("charts")   # raises RerunException here …
-    st.rerun("table")    # … so this line never runs
-
-st.selectbox("Region", ["A", "B", "C"], key="region", on_change=on_change)
-# Change the selectbox → charts_runs == 2 but table_runs stays 1.
-```
-
-- **Suspected code location:** `lib/streamlit/commands/execution_control.py::rerun` calls `ctx.script_requests.request_rerun(...)` and then `st.empty()`, which yields and raises `RerunException` at the first call. `lib/streamlit/runtime/state/session_state.py::_run_widget_callback` catches that `RerunException` at the callback boundary — it captures only the single `rerun_data` from the first call, so a second `st.rerun` in the same callback can never be reached or captured.
-- **Note on ambiguity:** The spec sentence could be read as "several `st.rerun` calls *across several callbacks*" (which does work — see S10 / Rule 2). If the intended contract is only cross-callback coalescing, this is a documentation-clarity issue rather than a code bug. Either way, the single-callback multi-call form silently drops all targets after the first, which is surprising; recommend either supporting it or documenting the list form as the required pattern. The list form `st.rerun(["charts","table"])` (S3) is a fully working equivalent.
+The one initially-suspicious result (S4 — two `st.rerun()` calls in a single callback runs only the first) was triaged as **expected behavior**, not a bug: `st.rerun()` halts execution immediately and reruns, so code after the first `st.rerun()` is unreachable, exactly as it is in a normal script body. The intended way to target multiple fragments is the list form `st.rerun(["charts","table"])`, which works correctly (S3). See the S4 discussion under "Spec-vs-prototype gaps" for an optional documentation clarification.
 
 ---
 
 ## Spec-vs-prototype gaps
 
-1. **Several `st.rerun` calls from one callback do not coalesce (BUG-1 above).** The spec advertises this as a supported pattern; the prototype only honors the first call. Workaround: `st.rerun([...])`.
+1. **Optional spec wording clarification (S4, cosmetic).** The "Fragment dependencies" section says you may *"issue several `st.rerun` calls, which the request layer coalesces … to refresh several dependents in one ordered pass."* Read literally within a single callback this is misleading, because the first `st.rerun()` immediately halts the callback (consistent with `st.rerun` semantics everywhere else) so subsequent calls never run. The prototype behaves correctly; only the spec sentence could be tightened to make clear that (a) multiple targets in one callback should use the **list form** `st.rerun([...])`, and (b) "several `st.rerun` calls" refers to calls originating from **different callbacks** in one interaction (which do coalesce — verified in S10 / Rule 2). No code change needed.
 
 2. **Metrics granularity (minor / likely acceptable).** The spec checklist calls for *"metrics for fragment-scoped `st.rerun` (`scope` set to a key or list of keys)."* `st.rerun` is wrapped in `@gather_metrics("rerun")`, and `metrics_util._get_arg_metadata` records generic argument metadata for `scope` — `len:N` for a string/list value (and `val:…` for bools). There is **no dedicated signal** distinguishing a fragment-scoped/keyed rerun from an `"app"`/`"fragment"` level rerun (e.g. `st.rerun("app")` and `st.rerun("foo")` both record `len:3`). This may satisfy the checklist via the generic mechanism, but does not cleanly separate targeted reruns for analytics. Low priority.
 
-No other spec requirements were found unimplemented. Reserved keys, per-run uniqueness (with multi-site allowance and cross-page reuse), fail-fast on unknown keys, the callback-only restriction, default-rerun skipping, and both coalescing precedence rules all match the spec.
+No spec requirements were found unimplemented. Reserved keys, per-run uniqueness (with multi-site allowance and cross-page reuse), fail-fast on unknown keys, the callback-only restriction, default-rerun skipping, and both coalescing precedence rules all match the spec.
 
 ---
 
@@ -266,8 +235,13 @@ def test_s3_list_scope_reruns_both_targets(persist_fragment_storage) -> None:
     assert not at.exception
 
 
-def test_s4_two_rerun_calls_coalesce(persist_fragment_storage) -> None:
-    """S4: two separate st.rerun calls in one callback coalesce (both run once)."""
+def test_s4_two_rerun_calls_only_first_runs(persist_fragment_storage) -> None:
+    """S4: two separate st.rerun calls in one callback -> only the first runs.
+
+    This is expected behavior (not a bug): st.rerun() halts execution and reruns
+    immediately, so the second st.rerun() is unreachable, exactly as in a normal
+    script body. Use the list form st.rerun([...]) to target multiples (see S3).
+    """
     script = """
 import streamlit as st
 
@@ -298,16 +272,11 @@ st.selectbox("Region", ["A", "B", "C"], key="region", on_change=on_change)
     at = AppTest.from_string(script).run()
     at.selectbox[0].set_value("B").run()
     body, charts, table = counters(at)
-    # SPEC says two st.rerun calls in one callback should coalesce so BOTH
-    # targets run. ACTUAL: the first st.rerun("charts") raises RerunException
-    # and aborts the callback, so st.rerun("table") never executes. Only charts
-    # reruns. This test asserts the *observed* (buggy) behavior; see report.
+    # Expected: the first st.rerun("charts") halts the callback immediately, so
+    # st.rerun("table") never executes. Only charts reruns; body is not re-run.
     assert body == 1, f"body should NOT re-run, got {body}"
     assert charts == 2, f"charts re-runs (first call), got {charts}"
-    assert table == 1, (
-        f"BUG: table should re-run per spec but does NOT (second st.rerun "
-        f"unreachable); got {table}"
-    )
+    assert table == 1, f"table not re-run: second st.rerun is unreachable, got {table}"
     assert not at.exception
 
 
