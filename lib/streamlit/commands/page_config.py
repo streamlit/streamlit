@@ -301,7 +301,7 @@ def set_page_config(
 
 def get_random_emoji() -> str:
     # TODO: fix the random seed with a hash of the user's app code, for stability?
-    return random.choice(RANDOM_EMOJIS)  # noqa: S311
+    return random.choice(RANDOM_EMOJIS)  # ruff:ignore[suspicious-non-cryptographic-random-usage]
 
 
 def set_menu_items_proto(

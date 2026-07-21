@@ -962,7 +962,7 @@ class TestSelectboxSerde:
         from copy import deepcopy
 
         # Custom class without __eq__ implementation
-        class MyOption:  # noqa: B903
+        class MyOption:  # ruff:ignore[class-as-data-structure]
             def __init__(self, value: str):
                 self.value = value
 

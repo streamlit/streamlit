@@ -630,7 +630,7 @@ def _load_theme_file(
             # Load from URL - noqa: S310 suppressed since url_util.is_url() restricts to only
             # http/https schemes by default, preventing file:// or other dangerous schemes
             # 30-second timeout prevents hanging in poor network conditions (same as cli.py)
-            with urllib.request.urlopen(file_path_or_url, timeout=30) as response:  # noqa: S310
+            with urllib.request.urlopen(file_path_or_url, timeout=30) as response:  # ruff:ignore[suspicious-url-open-usage]
                 content = response.read().decode("utf-8")
         else:
             # Load from local file path

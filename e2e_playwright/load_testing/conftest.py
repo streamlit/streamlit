@@ -161,7 +161,7 @@ def results_collector(
     return collector
 
 
-def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # noqa: ARG001
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # ruff:ignore[unused-function-argument]
     """Write combined results at the end of the test session."""
     collector: ResultsCollector | None = getattr(
         session.config, "_load_test_collector", None

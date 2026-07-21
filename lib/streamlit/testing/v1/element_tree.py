@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Assert statements are allowed here since the app testing logic is used within unit tests:
-# ruff: noqa: S101
+# ruff:file-ignore[assert]
 
 from __future__ import annotations
 
@@ -307,7 +307,7 @@ class Error(AlertBase):
 
 
 @dataclass(repr=False)
-class Warning(AlertBase):  # noqa: A001
+class Warning(AlertBase):  # ruff:ignore[builtin-variable-shadowing]
     def __init__(self, proto: AlertProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "warning"
@@ -352,7 +352,7 @@ class Button(Widget):
 
     @property
     def value(self) -> bool:
-        """The value of the button. (bool)"""  # noqa: D400
+        """The value of the button. (bool)"""  # ruff:ignore[missing-trailing-period]
         if self._value:
             return self._value
         state = self.root.session_state
@@ -394,7 +394,7 @@ class DownloadButton(Widget):
 
     @property
     def value(self) -> bool:
-        """The value of the download button. (bool)"""  # noqa: D400
+        """The value of the download button. (bool)"""  # ruff:ignore[missing-trailing-period]
         if self._value:
             return self._value
         state = self.root.session_state
@@ -438,7 +438,7 @@ class ChatInput(Widget):
 
     @property
     def value(self) -> str | None:
-        """The value of the widget. (str)"""  # noqa: D400
+        """The value of the widget. (str)"""  # ruff:ignore[missing-trailing-period]
         if self._value:
             return self._value
         state = self.root.session_state
@@ -470,7 +470,7 @@ class Checkbox(Widget):
 
     @property
     def value(self) -> bool:
-        """The value of the widget. (bool)"""  # noqa: D400
+        """The value of the widget. (bool)"""  # ruff:ignore[missing-trailing-period]
         if self._value is not None:
             return self._value
         state = self.root.session_state
@@ -509,7 +509,7 @@ class Code(Element):
 
     @property
     def value(self) -> str:
-        """The value of the element. (str)"""  # noqa: D400
+        """The value of the element. (str)"""  # ruff:ignore[missing-trailing-period]
         return self.proto.code_text
 
 
@@ -530,7 +530,7 @@ class ColorPicker(Widget):
 
     @property
     def value(self) -> str:
-        """The currently selected value as a hex string. (str)"""  # noqa: D400
+        """The currently selected value as a hex string. (str)"""  # ruff:ignore[missing-trailing-period]
         if self._value is not None:
             return self._value
         state = self.root.session_state
@@ -618,7 +618,7 @@ class DateInput(Widget):
 
     @property
     def value(self) -> DateWidgetReturn:
-        """The value of the widget. (date or Tuple of date)"""  # noqa: D400
+        """The value of the widget. (date or Tuple of date)"""  # ruff:ignore[missing-trailing-period]
         if not isinstance(self._value, InitialValue):
             parsed, _ = _parse_date_value(self._value)
             return tuple(parsed) if parsed is not None else None  # type: ignore
@@ -628,7 +628,7 @@ class DateInput(Widget):
 
 
 @dataclass(repr=False)
-class Exception(Element):  # noqa: A001
+class Exception(Element):  # ruff:ignore[builtin-variable-shadowing]
     message: str
     is_markdown: bool
     stack_trace: list[str]
@@ -851,7 +851,7 @@ class ButtonGroup(Widget, Generic[T]):
 
     @property
     def indices(self) -> Sequence[int]:
-        """The indices of the currently selected values from the options. (list)"""  # noqa: D400
+        """The indices of the currently selected values from the options. (list)"""  # ruff:ignore[missing-trailing-period]
         return [self.options.index(v) for v in self.formatted_values]
 
     @property
@@ -871,7 +871,7 @@ class ButtonGroup(Widget, Generic[T]):
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
+        """The widget's formatting function for displaying options. (callable)"""  # ruff:ignore[missing-trailing-period]
         ss = self.root.session_state
         return cast("Callable[[Any], Any]", ss[TESTING_KEY][self.id])
 
@@ -959,7 +959,7 @@ class Feedback(Widget):
 
     @property
     def value(self) -> int | None:
-        """The currently selected feedback value. (int or None)"""  # noqa: D400
+        """The currently selected feedback value. (int or None)"""  # ruff:ignore[missing-trailing-period]
         if not isinstance(self._value, InitialValue):
             return self._value
         state = self.root.session_state
@@ -967,7 +967,7 @@ class Feedback(Widget):
         return cast("int | None", state[self.id])
 
     def set_value(self, v: int | None) -> Feedback:
-        """Set the value of the feedback widget. (int or None)"""  # noqa: D400
+        """Set the value of the feedback widget. (int or None)"""  # ruff:ignore[missing-trailing-period]
         self._value = v
         return self
 
@@ -1009,17 +1009,17 @@ class FileUploader(Widget):
 
     @property
     def accept_multiple_files(self) -> bool:
-        """Whether multiple files can be uploaded. (bool)"""  # noqa: D400
+        """Whether multiple files can be uploaded. (bool)"""  # ruff:ignore[missing-trailing-period]
         return self.proto.multiple_files
 
     @property
     def accept_directory(self) -> bool:
-        """Whether directory uploads are accepted. (bool)"""  # noqa: D400
+        """Whether directory uploads are accepted. (bool)"""  # ruff:ignore[missing-trailing-period]
         return self.proto.accept_directory
 
     @property
     def allowed_type(self) -> list[str]:
-        """Allowed file types for upload. (list of str)"""  # noqa: D400
+        """Allowed file types for upload. (list of str)"""  # ruff:ignore[missing-trailing-period]
         return list(self.proto.type)
 
     def set_value(  # ty: ignore[invalid-method-override]
@@ -1217,7 +1217,7 @@ class MenuButton(Widget, Generic[T]):
 
     @property
     def value(self) -> T | None:
-        """The selected option value, or None if no option was clicked. (Any)"""  # noqa: D400
+        """The selected option value, or None if no option was clicked. (Any)"""  # ruff:ignore[missing-trailing-period]
         if self._value is not None:
             return self._value
         state = self.root.session_state
@@ -1228,7 +1228,7 @@ class MenuButton(Widget, Generic[T]):
 
     @property
     def format_func(self) -> Callable[[Any], str]:
-        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
+        """The widget's formatting function for displaying options. (callable)"""  # ruff:ignore[missing-trailing-period]
         ss = self.root.session_state
         testing_data = ss[TESTING_KEY][self.id]
         return cast("Callable[[Any], str]", testing_data["format_func"])
@@ -1282,7 +1282,7 @@ class Multiselect(Widget, Generic[T]):
 
     @property
     def value(self) -> list[T]:
-        """The currently selected values from the options. (list)"""  # noqa: D400
+        """The currently selected values from the options. (list)"""  # ruff:ignore[missing-trailing-period]
         if self._value is not None:
             return self._value
         state = self.root.session_state
@@ -1291,23 +1291,23 @@ class Multiselect(Widget, Generic[T]):
 
     @property
     def indices(self) -> Sequence[int]:
-        """The indices of the currently selected values from the options. (list)"""  # noqa: D400
+        """The indices of the currently selected values from the options. (list)"""  # ruff:ignore[missing-trailing-period]
         return [self.options.index(v) for v in self.values]
 
     @property
     def values(self) -> Sequence[str]:
-        """The currently selected values from the options. (list)"""  # noqa: D400
+        """The currently selected values from the options. (list)"""  # ruff:ignore[missing-trailing-period]
         format_func = self.format_func
         return [_format_value_for_widget(format_func, v) for v in self.value]
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
+        """The widget's formatting function for displaying options. (callable)"""  # ruff:ignore[missing-trailing-period]
         ss = self.root.session_state
         return cast("Callable[[Any], Any]", ss[TESTING_KEY][self.id])
 
     def set_value(self, v: list[T]) -> Multiselect[T]:
-        """Set the value of the multiselect widget. (list)"""  # noqa: D400
+        """Set the value of the multiselect widget. (list)"""  # ruff:ignore[missing-trailing-period]
 
         self._value = v
         return self
@@ -1427,7 +1427,7 @@ class Radio(Widget, Generic[T]):
 
     @property
     def index(self) -> int | None:
-        """The index of the current selection. (int)"""  # noqa: D400
+        """The index of the current selection. (int)"""  # ruff:ignore[missing-trailing-period]
         if self.value is None:
             return None
         formatted_value = _format_value_for_widget(self.format_func, self.value)
@@ -1435,7 +1435,7 @@ class Radio(Widget, Generic[T]):
 
     @property
     def value(self) -> T | None:
-        """The currently selected value from the options. (Any)"""  # noqa: D400
+        """The currently selected value from the options. (Any)"""  # ruff:ignore[missing-trailing-period]
         if not isinstance(self._value, InitialValue):
             return self._value
         state = self.root.session_state
@@ -1444,7 +1444,7 @@ class Radio(Widget, Generic[T]):
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
+        """The widget's formatting function for displaying options. (callable)"""  # ruff:ignore[missing-trailing-period]
         ss = self.root.session_state
         return cast("Callable[[Any], Any]", ss[TESTING_KEY][self.id])
 
@@ -1486,7 +1486,7 @@ class Selectbox(Widget, Generic[T]):
 
     @property
     def index(self) -> int | None:
-        """The index of the current selection. (int)"""  # noqa: D400
+        """The index of the current selection. (int)"""  # ruff:ignore[missing-trailing-period]
         if self.value is None:
             return None
 
@@ -1497,7 +1497,7 @@ class Selectbox(Widget, Generic[T]):
 
     @property
     def value(self) -> T | None:
-        """The currently selected value from the options. (Any)"""  # noqa: D400
+        """The currently selected value from the options. (Any)"""  # ruff:ignore[missing-trailing-period]
         if not isinstance(self._value, InitialValue):
             return self._value
         state = self.root.session_state
@@ -1506,7 +1506,7 @@ class Selectbox(Widget, Generic[T]):
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
+        """The widget's formatting function for displaying options. (callable)"""  # ruff:ignore[missing-trailing-period]
         ss = self.root.session_state
         return cast("Callable[[Any], Any]", ss[TESTING_KEY][self.id])
 
@@ -1594,7 +1594,7 @@ class SelectSlider(Widget, Generic[T]):
 
     @property
     def value(self) -> T | Sequence[T]:
-        """The currently selected value or range. (Any or Sequence of Any)"""  # noqa: D400
+        """The currently selected value or range. (Any or Sequence of Any)"""  # ruff:ignore[missing-trailing-period]
         if self._value is not None:
             return self._value
         state = self.root.session_state
@@ -1604,7 +1604,7 @@ class SelectSlider(Widget, Generic[T]):
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
+        """The widget's formatting function for displaying options. (callable)"""  # ruff:ignore[missing-trailing-period]
         ss = self.root.session_state
         return cast("Callable[[Any], Any]", ss[TESTING_KEY][self.id])
 
@@ -1655,7 +1655,7 @@ class Slider(Widget, Generic[SliderValueT]):
 
     @property
     def value(self) -> SliderValueT | Sequence[SliderValueT]:
-        """The currently selected value or range. (Any or Sequence of Any)"""  # noqa: D400
+        """The currently selected value or range. (Any or Sequence of Any)"""  # ruff:ignore[missing-trailing-period]
         if self._value is not None:
             return self._value
         state = self.root.session_state
@@ -1700,7 +1700,7 @@ class Text(Element):
 
     @property
     def value(self) -> str:
-        """The value of the element. (str)"""  # noqa: D400
+        """The value of the element. (str)"""  # ruff:ignore[missing-trailing-period]
         return self.proto.body
 
 
@@ -1737,7 +1737,7 @@ class TextArea(Widget):
 
     @property
     def value(self) -> str | None:
-        """The current value of the widget. (str)"""  # noqa: D400
+        """The current value of the widget. (str)"""  # ruff:ignore[missing-trailing-period]
         if not isinstance(self._value, InitialValue):
             return self._value
         state = self.root.session_state
@@ -1789,7 +1789,7 @@ class TextInput(Widget):
 
     @property
     def value(self) -> str | None:
-        """The current value of the widget. (str)"""  # noqa: D400
+        """The current value of the widget. (str)"""  # ruff:ignore[missing-trailing-period]
         if not isinstance(self._value, InitialValue):
             return self._value
         state = self.root.session_state
@@ -1846,7 +1846,7 @@ class TimeInput(Widget):
 
     @property
     def value(self) -> time | None:
-        """The current value of the widget. (time)"""  # noqa: D400
+        """The current value of the widget. (time)"""  # ruff:ignore[missing-trailing-period]
         if not isinstance(self._value, InitialValue):
             v = self._value
             return v.time() if isinstance(v, datetime) else v
@@ -1918,7 +1918,7 @@ class DateTimeInput(Widget):
 
     @property
     def value(self) -> datetime | None:
-        """The current value of the widget. (datetime)"""  # noqa: D400
+        """The current value of the widget. (datetime)"""  # ruff:ignore[missing-trailing-period]
         if not isinstance(self._value, InitialValue):
             return self._value
         state = self.root.session_state
@@ -1967,7 +1967,7 @@ class Toggle(Widget):
 
     @property
     def value(self) -> bool:
-        """The current value of the widget. (bool)"""  # noqa: D400
+        """The current value of the widget. (bool)"""  # ruff:ignore[missing-trailing-period]
         if self._value is not None:
             return self._value
         state = self.root.session_state

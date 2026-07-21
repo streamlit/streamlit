@@ -122,7 +122,7 @@ def _handle_string_or_path_data(data_or_path: str | Path) -> bytes:
             content = file.read()
         return _srt_to_vtt(content) if file_extension == ".srt" else content
     if isinstance(data_or_path, Path):
-        raise ValueError(f"File {data_or_path} does not exist.")  # noqa: TRY004
+        raise ValueError(f"File {data_or_path} does not exist.")  # ruff:ignore[type-check-without-type-error]
 
     content_string = data_or_path.strip()
 

@@ -149,7 +149,7 @@ def _maybe_print_use_warning() -> None:
     """Print a warning if Streamlit is imported but not being run with `streamlit run`.
     The warning is printed only once, and is printed using the root logger.
     """
-    global _use_warning_has_been_displayed  # noqa: PLW0603
+    global _use_warning_has_been_displayed  # ruff:ignore[global-statement]
 
     if not _use_warning_has_been_displayed:
         _use_warning_has_been_displayed = True

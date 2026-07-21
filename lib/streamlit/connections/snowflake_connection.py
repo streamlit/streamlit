@@ -48,10 +48,10 @@ if TYPE_CHECKING:
 SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED: Final = "08001"
 
 # The location on disk where Snowpark Container Services will mount service connection tokens.
-SNOWPARK_CONNECTION_TOKEN_FILE = "/snowflake/session/token"  # noqa: S105 (not a password)
+SNOWPARK_CONNECTION_TOKEN_FILE = "/snowflake/session/token"  # ruff:ignore[hardcoded-password-string] (not a password)
 
 # The header where Snowpark Container Services will put per-user connection tokens.
-SNOWPARK_USER_TOKEN_HEADER_NAME = "Sf-Context-Current-User-Token"  # noqa: S105 (not a password)
+SNOWPARK_USER_TOKEN_HEADER_NAME = "Sf-Context-Current-User-Token"  # ruff:ignore[hardcoded-password-string] (not a password)
 
 
 class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
@@ -142,7 +142,7 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         # `@st.cache_data` includes it in the cache key.
         def _query(
             # Dummy parameter to retain per-instance caching.
-            instance_id: UUID,  # noqa: ARG001
+            instance_id: UUID,  # ruff:ignore[unused-function-argument]
             sql: str,
             params: Any = None,
         ) -> DataFrame:

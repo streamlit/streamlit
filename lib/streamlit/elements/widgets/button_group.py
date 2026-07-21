@@ -1104,7 +1104,7 @@ class ButtonGroupMixin:
                     )
                     if _valid:
                         _ss_fallback_multi = _valid
-            except Exception:  # noqa: S110
+            except Exception:  # ruff:ignore[try-except-pass]
                 pass  # KeyError (key not yet set) or other SS error; safe to ignore
 
         # Create appropriate serde based on selection mode. A shared mutable

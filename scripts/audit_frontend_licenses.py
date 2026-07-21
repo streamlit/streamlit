@@ -125,7 +125,7 @@ def check_licenses(licenses: list[str]) -> NoReturn:
     # `yarn licenses` outputs a bunch of lines.
     # The last line contains the JSON object we care about
     packages = []
-    for license in licenses:  # noqa: A001
+    for license in licenses:  # ruff:ignore[builtin-variable-shadowing]
         license_json = json.loads(license)
         license_name = license_json["value"]
         for package_name in license_json["children"]:

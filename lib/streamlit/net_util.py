@@ -40,7 +40,7 @@ def get_external_ip() -> str | None:
         The external IPv4 address of the current machine.
 
     """
-    global _external_ip  # noqa: PLW0603
+    global _external_ip  # ruff:ignore[global-statement]
 
     if _external_ip is not None:
         return _external_ip
@@ -77,7 +77,7 @@ def get_internal_ip() -> str | None:
         The local IPv4 address of the current machine.
 
     """
-    global _internal_ip  # noqa: PLW0603
+    global _internal_ip  # ruff:ignore[global-statement]
 
     if _internal_ip is not None:
         return _internal_ip

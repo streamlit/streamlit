@@ -542,7 +542,7 @@ class Secrets(Mapping[str, Any]):
                             self._on_secrets_changed,
                             watcher_type="poll",
                         )
-                except (StreamlitMaxRetriesError, FileNotFoundError):  # noqa: PERF203
+                except (StreamlitMaxRetriesError, FileNotFoundError):  # ruff:ignore[try-except-in-loop]
                     # A user may only have one secrets.toml file defined, so we'd expect
                     # exceptions to be raised here when attempting to install a
                     # watcher on the nonexistent ones.

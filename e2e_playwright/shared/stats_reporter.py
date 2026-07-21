@@ -135,7 +135,7 @@ class StatsReporterPlugin:
         self.output_path = output_path
         self.collector = StatsCollector()
 
-    def pytest_sessionstart(self, session: pytest.Session) -> None:  # noqa: ARG002
+    def pytest_sessionstart(self, session: pytest.Session) -> None:  # ruff:ignore[unused-method-argument]
         """Called at the start of the test session."""
         # Use perf_counter for elapsed time measurement (monotonic, not affected by
         # system clock adjustments like NTP or VM clock drift)
@@ -218,7 +218,7 @@ class StatsReporterPlugin:
             worker_stat.test_count += 1
             worker_stat.total_runtime += report.duration
 
-    def pytest_testnodedown(self, node: Any, error: Any) -> None:  # noqa: ARG002
+    def pytest_testnodedown(self, node: Any, error: Any) -> None:  # ruff:ignore[unused-method-argument]
         """Merge worker stats when an xdist worker node goes down."""
         if hasattr(node, "workeroutput") and "worker_stats" in node.workeroutput:
             worker_data = node.workeroutput["worker_stats"]
@@ -250,7 +250,7 @@ class StatsReporterPlugin:
 
     def _compute_statistics(
         self,
-        session: pytest.Session,  # noqa: ARG002
+        session: pytest.Session,  # ruff:ignore[unused-method-argument]
         exitstatus: int,
     ) -> dict[str, Any]:
         """Compute aggregate statistics from collected test results."""
@@ -392,7 +392,7 @@ class StatsReporterPlugin:
                 }
                 for mod, data in module_durations.items()
             ],
-            key=lambda x: x["total_duration_seconds"],  # noqa: FURB118
+            key=lambda x: x["total_duration_seconds"],  # ruff:ignore[reimplemented-operator]
             reverse=True,
         )
 

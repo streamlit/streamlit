@@ -133,7 +133,7 @@ class TabContainer(DeltaGenerator):
         """
         return self._open
 
-    @open.setter  # noqa: A003
+    @open.setter  # ruff:ignore[builtin-attribute-shadowing]
     def open(self, value: bool | None) -> None:
         self._open = value
 

@@ -70,7 +70,7 @@ def main() -> None:
         payload = json.load(sys.stdin)
     except Exception as e:
         # Fail secure: block (exit 2) if we can't parse input to verify safety.
-        print(  # noqa: T201
+        print(  # ruff:ignore[print]
             f"Policy: Failed to parse hook input ({type(e).__name__}: {e}). "
             f"Blocking tool call for safety.",
             file=sys.stderr,
@@ -87,7 +87,7 @@ def main() -> None:
 
     # Check if this is a pytest command targeting e2e_playwright
     if PYTEST_PATTERN.search(norm) and "e2e_playwright" in norm:
-        print(  # noqa: T201
+        print(  # ruff:ignore[print]
             f"Policy: Bash('{norm}') is blocked.\n"
             f"E2E tests should use 'make run-e2e-test <filename>' instead.\n",
             file=sys.stderr,
@@ -97,7 +97,7 @@ def main() -> None:
     # Check if command starts with a tool/command that requires `uv run`
     for cmd_prefix in UV_RUN_COMMANDS:
         if norm == cmd_prefix or norm.startswith(cmd_prefix + " "):
-            print(  # noqa: T201
+            print(  # ruff:ignore[print]
                 f"Policy: Bash('{cmd}') is blocked.\n"
                 f"Use 'uv run {cmd}' instead of running '{cmd_prefix}' directly.\n",
                 file=sys.stderr,

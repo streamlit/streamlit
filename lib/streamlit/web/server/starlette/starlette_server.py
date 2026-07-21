@@ -377,7 +377,7 @@ class UvicornServer:
                 # EACCES: port reserved by system (common on Windows, see #13521)
                 if exc.errno in {errno.EADDRINUSE, errno.EACCES}:
                     if _is_port_manually_set():
-                        _LOGGER.error("Port %s is not available", port)  # noqa: TRY400
+                        _LOGGER.error("Port %s is not available", port)  # ruff:ignore[error-instead-of-exception]
                         sys.exit(1)
                     _LOGGER.debug(
                         "Port %s not available, trying to use the next one.", port
@@ -428,10 +428,10 @@ class UvicornServer:
                     await self._server.startup(sockets=[self._socket])
                     if self._server.should_exit:
                         startup_exception = RuntimeError("Server startup failed")
-                        startup_complete.set()  # noqa: B023
+                        startup_complete.set()  # ruff:ignore[function-uses-loop-variable]
                         return
 
-                    startup_complete.set()  # noqa: B023
+                    startup_complete.set()  # ruff:ignore[function-uses-loop-variable]
 
                     await self._server.main_loop()
                 except BaseException as e:
@@ -454,7 +454,7 @@ class UvicornServer:
                         self._stopped_event.set()
                         # Always set startup_complete to prevent deadlock in start()
                         # if task is cancelled before normal startup_complete.set().
-                        startup_complete.set()  # noqa: B023
+                        startup_complete.set()  # ruff:ignore[function-uses-loop-variable]
 
             self._server_task = asyncio.create_task(
                 serve_with_signal(), name="uvicorn-server"
@@ -602,13 +602,13 @@ class UvicornRunner:
                 # EACCES: port reserved by system (common on Windows)
                 if exc.errno in {errno.EADDRINUSE, errno.EACCES}:
                     if _is_port_manually_set():
-                        _LOGGER.error("Port %s is not available", port)  # noqa: TRY400
+                        _LOGGER.error("Port %s is not available", port)  # ruff:ignore[error-instead-of-exception]
                         sys.exit(1)
                     _LOGGER.debug(
                         "Port %s not available, trying to use the next one.", port
                     )
                     if attempt == MAX_PORT_SEARCH_RETRIES:
-                        _LOGGER.error(  # noqa: TRY400
+                        _LOGGER.error(  # ruff:ignore[error-instead-of-exception]
                             "Cannot start Streamlit server. Port %s is not available, "
                             "and Streamlit was unable to find a free port after "
                             "%s attempts.",

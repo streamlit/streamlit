@@ -24,7 +24,7 @@ import functools
 import inspect
 import io
 import os
-import pickle  # noqa: S403
+import pickle  # ruff:ignore[suspicious-pickle-import]
 import re
 import sys
 import tempfile
@@ -496,7 +496,7 @@ class _CacheFuncHasher:
                 return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "polars.dataframe.frame.DataFrame"):
-            import polars as pl  # noqa: TC002
+            import polars as pl  # ruff:ignore[typing-only-third-party-import]
 
             obj = cast("pl.DataFrame", obj)
             self.update(h, obj.shape)

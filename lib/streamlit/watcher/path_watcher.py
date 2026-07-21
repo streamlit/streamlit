@@ -63,7 +63,7 @@ _WSL_POLLING_INFO: Final = (
 def _is_watchdog_available() -> bool:
     """Check if the watchdog module is installed."""
     try:
-        import watchdog  # noqa: F401
+        import watchdog  # ruff:ignore[unused-import]
 
         return True
     except ImportError:  # pragma: no cover - optional dep

@@ -53,7 +53,7 @@ def set_log_level(level: str | int) -> None:
     for log in _loggers.values():
         log.setLevel(log_level)
 
-    global _global_log_level  # noqa: PLW0603
+    global _global_log_level  # ruff:ignore[global-statement]
     _global_log_level = log_level
 
 

@@ -927,7 +927,7 @@ class SliderMixin:
             } and max_value - min_value < timedelta(days=1):
                 step = timedelta(minutes=15)
         if format is None:
-            format = cast("str", defaults[data_type]["format"])  # noqa: A001
+            format = cast("str", defaults[data_type]["format"])  # ruff:ignore[builtin-variable-shadowing]
 
         if step == 0:
             raise StreamlitAPIException(

@@ -26,12 +26,12 @@ def plotting_demo() -> None:
     chart = st.empty()
 
     # Initialize with one data point
-    data = np.random.randn(1, 1)  # noqa: NPY002
+    data = np.random.randn(1, 1)  # ruff:ignore[numpy-legacy-random]
     chart.line_chart(data)
 
     for i in range(1, 51):
         # Generate new rows based on the last value (random walk)
-        new_rows = data[-1, :] + np.random.randn(5, 1).cumsum(axis=0)  # noqa: NPY002
+        new_rows = data[-1, :] + np.random.randn(5, 1).cumsum(axis=0)  # ruff:ignore[numpy-legacy-random]
         # Append new rows to existing data
         data = np.concatenate([data, new_rows])
         # Update the chart with full data

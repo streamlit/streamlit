@@ -493,7 +493,7 @@ div {
         *,
         key: str | None = None,
         data: Any | None = None,
-        on_formValues_change: WidgetCallback | None = None,  # noqa: N803
+        on_formValues_change: WidgetCallback | None = None,  # ruff:ignore[invalid-argument-name]
         on_clicked_change: WidgetCallback | None = None,
         default: dict[str, Any] | None = None,
     ) -> ComponentResult:

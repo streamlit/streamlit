@@ -43,7 +43,7 @@ def test_total_loaded_assets_size_under_threshold(page: Page, app_base_url: str)
     # frontend (in MB) for a basic app run. While its important to keep the total
     # size of web assets low, you can modify this threshold if it's really needed
     # to add some new features. But make sure that its justified and intended.
-    TOTAL_ASSET_SIZE_THRESHOLD_MB: Final = 3.8  # noqa: N806
+    TOTAL_ASSET_SIZE_THRESHOLD_MB: Final = 3.8  # ruff:ignore[non-lowercase-variable-in-function]
 
     total_size_bytes = 0
 
@@ -97,14 +97,14 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_base_url:
     # and expected
 
     # BackMsg's; currently: ~70 bytes
-    TOTAL_WEBSOCKET_SENT_SIZE_THRESHOLD_BYTES: Final = 150  # noqa: N806
+    TOTAL_WEBSOCKET_SENT_SIZE_THRESHOLD_BYTES: Final = 150  # ruff:ignore[non-lowercase-variable-in-function]
     # Number of websocket messages sent
-    EXPECTED_WEBSOCKET_MESSAGES_SENT: Final = 1  # noqa: N806
+    EXPECTED_WEBSOCKET_MESSAGES_SENT: Final = 1  # ruff:ignore[non-lowercase-variable-in-function]
 
     # ForwardMsg's; currently: ~1200 bytes
-    TOTAL_WEBSOCKET_RECEIVED_SIZE_THRESHOLD_BYTES: Final = 2000  # noqa: N806
+    TOTAL_WEBSOCKET_RECEIVED_SIZE_THRESHOLD_BYTES: Final = 2000  # ruff:ignore[non-lowercase-variable-in-function]
     # Number of websocket messages received
-    EXPECTED_WEBSOCKET_MESSAGES_RECEIVED: Final = 8  # noqa: N806
+    EXPECTED_WEBSOCKET_MESSAGES_RECEIVED: Final = 8  # ruff:ignore[non-lowercase-variable-in-function]
 
     total_websocket_sent_size_bytes = 0
     total_websocket_received_size_bytes = 0

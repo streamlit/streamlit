@@ -42,5 +42,5 @@ st.write(
 # is slow, when in reality this is just an artifact of loading/compiling
 # large modules from zero.
 with st.spinner("Preloading Python modules for other pages..."):
-    import numpy  # noqa: ICN001 F401
-    import pandas  # noqa: ICN001 F401
+    import numpy  # ruff:ignore[unconventional-import-alias, unused-import]
+    import pandas  # ruff:ignore[unconventional-import-alias, unused-import]
