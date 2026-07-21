@@ -28,6 +28,7 @@ from streamlit.dataframe import lazy_df_source as dataframe_source
 from streamlit.dataframe.lazy_df_source import (
     AUTO_LAZY_ROW_THRESHOLD,
     FORCED_LAZY_MIN_ROWS,
+    UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD,
     AccessMode,
     EagerDataframeFallback,
     InMemoryDataframeSource,
@@ -335,44 +336,34 @@ def test_resolve_selection_lazy_none_eager() -> None:
     assert resolve_lazy_source(df, None, is_selection_activated=True) is None
 
 
-def test_resolve_native_source_lazy_none_stays_eager_without_counting(
+def test_resolve_auto_lazy_native_source_above_unevaluated_threshold(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``lazy=None`` keeps native adapters on the capped-preview path.
-
-    Native adapters are opt-in via ``lazy=True`` in this version, so the default
-    path must not read ``row_count`` (which can trigger a full ``count()``/scan
-    on every rerun for remote sources like a Polars ``LazyFrame``).
-    """
-    row_count_calls = 0
-
-    class _CountingSource(_UnknownRowCountSource):
-        @property
-        def row_count(self) -> int:  # type: ignore[override]
-            nonlocal row_count_calls
-            row_count_calls += 1
-            return 1_000_000
-
-    monkeypatch.setattr(
-        dataframe_source, "_try_create_native_source", lambda _data: _CountingSource()
+    """Supported unevaluated objects auto-lazy above the capped-preview threshold."""
+    native_source = InMemoryDataframeSource(
+        _make_table(UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD + 1)
     )
-
-    assert resolve_lazy_source(object(), None, is_selection_activated=False) is None
-    assert row_count_calls == 0
-
-
-def test_resolve_forced_lazy_native_source_large_uses_adapter(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """``lazy=True`` uses a native adapter above the small-data threshold."""
-    native_source = InMemoryDataframeSource(_make_table(FORCED_LAZY_MIN_ROWS + 1))
     monkeypatch.setattr(
         dataframe_source, "_try_create_native_source", lambda _data: native_source
     )
 
-    source = resolve_lazy_source(object(), True, is_selection_activated=False)
+    source = resolve_lazy_source(object(), None, is_selection_activated=False)
 
     assert source is native_source
+
+
+def test_resolve_auto_lazy_native_source_at_unevaluated_threshold_stays_eager(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Supported unevaluated objects preserve eager/default preview at <=10k rows."""
+    native_source = InMemoryDataframeSource(
+        _make_table(UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD)
+    )
+    monkeypatch.setattr(
+        dataframe_source, "_try_create_native_source", lambda _data: native_source
+    )
+
+    assert resolve_lazy_source(object(), None, is_selection_activated=False) is None
 
 
 def test_resolve_forced_lazy_native_source_small_short_circuits(
@@ -385,6 +376,19 @@ def test_resolve_forced_lazy_native_source_small_short_circuits(
     )
 
     assert resolve_lazy_source(object(), True, is_selection_activated=False) is None
+
+
+def test_resolve_auto_lazy_unknown_row_count_native_source_falls_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``lazy=None`` falls back when a native source has no known row count."""
+    monkeypatch.setattr(
+        dataframe_source,
+        "_try_create_native_source",
+        lambda _data: _UnknownRowCountSource(),
+    )
+
+    assert resolve_lazy_source(object(), None, is_selection_activated=False) is None
 
 
 def test_resolve_forced_lazy_unknown_row_count_native_source_raises(
