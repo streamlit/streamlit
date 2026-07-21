@@ -59,9 +59,11 @@ const codeBlockStyle = (
    * text when the block scrolls horizontally. Browsers drop the parent
    * `<pre>`'s `padding-right` from the scrollable overflow region, so
    * without this the last characters sit flush against the right edge / copy
-   * button. See issue #8206.
+   * button. See issue #8206. `vertical-align: top` suppresses the baseline
+   * descender space an inline-block would otherwise leave under the code.
    */
   display: "inline-block",
+  verticalAlign: "top",
   fontFamily: theme.genericFonts.codeFont,
   fontSize: theme.fontSizes.codeFontSize,
   fontWeight: theme.fontWeights.code,
