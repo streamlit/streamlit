@@ -507,8 +507,7 @@ def test_rapid_toggle_does_not_clip_content(app: Page):
 
     def styles_cleared() -> bool:
         return bool(
-            details.evaluate("el => el.style.height") == ""
-            and details.evaluate("el => el.style.overflow") == ""
+            details.evaluate("el => el.style.height === '' && el.style.overflow === ''")
         )
 
     wait_until(app, styles_cleared, timeout=3000)

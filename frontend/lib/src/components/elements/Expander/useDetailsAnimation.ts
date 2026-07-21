@@ -128,12 +128,13 @@ export function useDetailsAnimation({
    * Cancel any running animation and clear the inline height/overflow lock.
    *
    * `animateHeight` intentionally does not clean up on cancel (see its docstring).
-   * Every in-flow caller here — `animateTo` and `animateResize` — captures the
-   * current height BEFORE calling `cancelAnimation()` and re-locks the styles
-   * synchronously right after, so clearing here is safe and makes "locked with
-   * no animation running" an unreachable state. This prevents leftover inline
-   * `height`/`overflow` from clipping content after a cancel with no successor
-   * (unmount cleanup, rapid toggle chains, or ResizeObserver early-returns).
+   * The callers that chain a new animation immediately after — `animateTo` and
+   * `animateResize` — capture the current height BEFORE calling
+   * `cancelAnimation()` and re-lock the styles synchronously right after, so
+   * clearing here is safe and makes "locked with no animation running" an
+   * unreachable state. This prevents leftover inline `height`/`overflow` from
+   * clipping content after a cancel with no successor (unmount cleanup, rapid
+   * toggle chains, or ResizeObserver early-returns).
    */
   const cancelAnimation = useCallback((): void => {
     animationRef.current?.cancel()
