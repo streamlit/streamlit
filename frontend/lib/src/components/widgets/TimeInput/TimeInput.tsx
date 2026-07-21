@@ -21,6 +21,7 @@ import {
   memo,
   ReactElement,
   useCallback,
+  useId,
   useRef,
   useState,
 } from "react"
@@ -33,6 +34,7 @@ import { type TimeValue } from "react-aria-components"
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
 import Icon from "~lib/components/shared/Icon/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
@@ -56,6 +58,7 @@ import {
   StyledTimeFieldInput,
   StyledTimeInputWrapper,
   StyledTimeSegment,
+  StyledVisuallyHidden,
 } from "./styled-components"
 
 export interface Props {
@@ -156,6 +159,8 @@ function TimeInput({
    */
   const commitImmediatelyRef = useRef(false)
 
+  const id = useId()
+  const validationErrorId = `${id}-validation-error`
   const theme = useEmotionTheme()
   const step = element.step ? Number(element.step) : 900
   const clearable = isNullOrUndefined(element.default) && !disabled
@@ -260,7 +265,7 @@ function TimeInput({
             minute: String(minutes).padStart(2, "0"),
           })
           setValidationError(
-            `Time "${text}" is out of range. Hours must be 0–23, minutes 0–59.`
+            "Time is out of range. Hours must be 0–23, minutes 0–59."
           )
           return
         }
@@ -303,7 +308,7 @@ function TimeInput({
                 : currentMinute,
           })
           setValidationError(
-            `Value "${text}" is out of range for ${segmentType}.`
+            `Value is out of range for ${segmentType}. ${segmentType === "hour" ? "Hours must be 0–23." : "Minutes must be 0–59."}`
           )
         }
         return
@@ -312,7 +317,7 @@ function TimeInput({
       // Unrecognized format containing a colon — show error
       if (text.includes(":")) {
         e.preventDefault()
-        setValidationError(`Invalid time format "${text}". Please use HH:MM.`)
+        setValidationError("Invalid time format. Please use HH:MM.")
       }
     },
     [displayValue, handleChange]
@@ -357,11 +362,6 @@ function TimeInput({
       if (!displayValue || (e.key !== "ArrowUp" && e.key !== "ArrowDown"))
         return
 
-      // Arrow key on an existing value always commits immediately (like the
-      // +/- buttons on st.number_input). Set the flag before any step-specific
-      // early-returns so it covers both custom-handled and fall-through paths.
-      commitImmediatelyRef.current = true
-
       // When an invalid paste is displayed, arrow keys simply revert to the
       // prior valid value rather than computing a new step from it.
       if (pasteOverride) {
@@ -373,7 +373,10 @@ function TimeInput({
         return
       }
 
-      if (!displayValue) return
+      // Arrow key on an existing value always commits immediately (like the
+      // +/- buttons on st.number_input). Set the flag after the paste-override
+      // check so it doesn't leak when the revert path early-returns.
+      commitImmediatelyRef.current = true
 
       const segmentType = target.getAttribute("data-type")
       const up = e.key === "ArrowUp"
@@ -462,6 +465,7 @@ function TimeInput({
         >
           <StyledTimeField
             aria-label={element.label}
+            aria-describedby={validationError ? validationErrorId : undefined}
             isInvalid={!!validationError}
             value={
               isNullOrUndefined(displayValue)
@@ -496,7 +500,12 @@ function TimeInput({
           {validationError && (
             <StyledErrorIconContainer data-testid="stTimeInputError">
               <Tooltip
-                content={validationError}
+                content={
+                  <StreamlitMarkdown
+                    source={`**Error**: ${validationError}`}
+                    allowHTML={false}
+                  />
+                }
                 placement={Placement.TOP_RIGHT}
                 error
               >
@@ -519,6 +528,11 @@ function TimeInput({
                 <Cancel size={theme.iconSizes.base} aria-hidden="true" />
               </StyledClearButton>
             )}
+          {validationError && (
+            <StyledVisuallyHidden id={validationErrorId} role="alert">
+              {`Error: ${validationError}`}
+            </StyledVisuallyHidden>
+          )}
         </StyledTimeInputWrapper>
       </StyledTimeFieldContainer>
     </div>

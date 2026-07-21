@@ -1044,6 +1044,47 @@ describe("TimeInput widget", () => {
     expect(hourSegment).toHaveTextContent("15")
     expect(minuteSegment).toHaveTextContent("30")
   })
+
+  it("typed input after arrow-key revert still defers commit to blur", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(minuteSegment)
+    await user.paste("08:99")
+
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+
+    // Arrow revert
+    await user.keyboard("{ArrowUp}")
+    expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+    // Now type a digit into the hour segment — should NOT commit immediately
+    await user.click(hourSegment)
+    await user.keyboard("1")
+
+    // The typed digit should update the display but NOT commit (deferred to blur)
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+  })
+
+  it("renders visually-hidden alert with error message for screen readers", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    render(<TimeInput {...props} />)
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("25:00")
+
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent(
+      "Error: Time is out of range. Hours must be 0–23, minutes 0–59."
+    )
+  })
 })
 
 describe("TimeInput query param binding", () => {
