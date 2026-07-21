@@ -2657,9 +2657,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert "labelExpr" not in legend
 
     def test_bar_chart_multi_dotted_columns_tooltip_shows_originals(self):
-        """Regression test: the melted-color tooltip must display the original
-        column names, not the internal aliases. Reported by Cursor Bugbot on
-        #16089 — the earlier fix only remapped the legend via ``labelExpr``.
+        """The melted-color tooltip must display the original column names,
+        not the internal aliases.
         """
         df = pd.DataFrame({"a.b": [1, 2, 3], "c.d": [4, 5, 6]})
 
@@ -2714,8 +2713,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
     ):
         """Two columns whose stringified names collide (e.g. literal duplicate
         ``"a.b"`` labels, which is a legal pandas construct) must each receive
-        their own alias so the underlying DataFrame does not end up with
-        duplicate column labels after aliasing.
+        their own alias so both columns survive as distinct series through
+        aliasing and melting.
         """
         df = pd.DataFrame([[1, 10], [2, 20], [3, 30]])
         df.columns = pd.Index(["a.b", "a.b"])
@@ -2723,14 +2722,16 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         st.bar_chart(df)
 
         proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
         data_frame = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
 
-        aliases = [c for c in data_frame.columns if "streamlit-generated" in str(c)]
-        # Both colliding names must have been aliased.
-        assert len(aliases) >= 2
-        # And each alias must be distinct — the pre-fix bug reused a single
-        # alias for both, silently collapsing the columns.
-        assert len(set(aliases)) == len(aliases)
+        # Both columns must survive the melt: the first contributes 1, 2, 3
+        # and the second contributes 10, 20, 30. Duplicate y-list remap
+        # collapsing to a single alias would produce only one of these sets
+        # (or duplicate one), leaving a value column that doesn't cover
+        # both ranges.
+        y_field = chart_spec["encoding"]["y"]["field"]
+        assert sorted(data_frame[y_field].tolist()) == [1, 2, 3, 10, 20, 30]
 
 
 class ChartWidthHeightTest(DeltaGeneratorTestCase):

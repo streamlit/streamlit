@@ -682,13 +682,17 @@ def _convert_col_names_to_str_in_place(
     reserved_names: set[str] = {
         name for name in str_column_names if not _needs_field_alias(name)
     }
-    # Map from original stringified name to safe alias, used to remap user-provided
-    # arguments (x, y, color, size, sort) that reference columns by name. If two
-    # columns stringify to the same name, the first occurrence wins here, matching
-    # pandas' behavior when selecting by a duplicated column label.
+    # Map from original stringified name to the *first* safe alias assigned to
+    # that name. Used to remap single-column user arguments (x, color, size,
+    # sort) that reference columns by name — for those, first-occurrence-wins
+    # matches pandas' behavior when selecting by a duplicated column label.
     original_to_alias: dict[str, str] = {}
     # Map from alias back to the original name, for user-facing titles.
     alias_to_original: dict[str, str] = {}
+    # Per-name FIFO queue of aliases, in df-column order, used for position-aware
+    # y remapping so a ``y_column_list`` derived from ``list(df.columns)`` with
+    # duplicate labels consumes distinct aliases in order (see #7714 follow-up).
+    per_name_aliases: dict[str, list[str]] = {}
     final_column_names: list[str] = []
     for idx, name in enumerate(str_column_names):
         if _needs_field_alias(name):
@@ -705,6 +709,7 @@ def _convert_col_names_to_str_in_place(
                 alias = f"{_COLUMN_ALIAS_PREFIX}{idx}-{counter}"
             alias_to_original[alias] = name
             original_to_alias.setdefault(name, alias)
+            per_name_aliases.setdefault(name, []).append(alias)
             final_column_names.append(alias)
         else:
             final_column_names.append(name)
@@ -717,9 +722,22 @@ def _convert_col_names_to_str_in_place(
         name = str(name)
         return original_to_alias.get(name, name)
 
+    def _remap_y(name: str) -> str:
+        # Position-aware: consume aliases in df-column order so duplicate y
+        # entries (e.g. ``list(df.columns)`` on a df with duplicate labels) each
+        # address a distinct DataFrame column instead of collapsing to the first
+        # alias.
+        name = str(name)
+        aliases = per_name_aliases.get(name)
+        if aliases:
+            return aliases.pop(0)
+        return name
+
+    remapped_y = [_remap_y(c) for c in y_column_list]
+
     return (
         _remap(x_column),
-        [cast("str", _remap(c)) for c in y_column_list],
+        remapped_y,
         _remap(color_column),
         _remap(size_column),
         _remap(sort_column),
@@ -1072,9 +1090,13 @@ def _update_encoding_with_sort(
         sort_field = sort_from_user.removeprefix("-")
         # If the sort column was renamed to a safe alias (e.g. because its name
         # contained ".", "[", "]", or "\"), use the alias here so Vega-Lite finds
-        # the actual field. See #7714.
-        original_to_alias = {v: k for k, v in alias_to_original.items()}
-        sort_field = original_to_alias.get(sort_field, sort_field)
+        # the actual field. See #7714. When multiple df columns share the same
+        # original name, use the first alias assigned to that name so this stays
+        # consistent with ``_remap`` (which also picks the first alias).
+        sort_field = next(
+            (alias for alias, orig in alias_to_original.items() if orig == sort_field),
+            sort_field,
+        )
         encoding["sort"] = alt.SortField(field=sort_field, order=sort_order)
 
 
