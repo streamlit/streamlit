@@ -15,10 +15,12 @@
  */
 
 import {
+  FocusEvent,
   KeyboardEvent,
   memo,
   ReactElement,
   useCallback,
+  useRef,
   useState,
 } from "react"
 
@@ -110,6 +112,20 @@ function TimeInput({
     setDisplayValue(value)
   }
 
+  // Stable refs used in blur/arrow handlers to avoid stale closure issues.
+  const displayValueRef = useRef(displayValue)
+  displayValueRef.current = displayValue
+  const valueRef = useRef(value)
+  valueRef.current = value
+
+  /**
+   * Arrow-key presses commit immediately (like the +/- buttons on
+   * st.number_input); typed digits commit only on blur. This flag is set
+   * in handleArrowKeyCapture and consumed + reset in handleChange so that
+   * the two paths share a single commit call-site.
+   */
+  const commitImmediatelyRef = useRef(false)
+
   const theme = useEmotionTheme()
   const step = element.step ? Number(element.step) : 900
   const clearable = isNullOrUndefined(element.default) && !disabled
@@ -117,14 +133,43 @@ function TimeInput({
   const stepMins = step / 60
   const stepHours = step / 3600
 
+  /**
+   * Called by TimeField on every committed segment change.
+   *
+   * Typing: only update local display — commit is deferred to blur, matching
+   * the behaviour of st.number_input (no spurious on_change calls or fragment
+   * reruns while the user is still editing).
+   *
+   * Arrow keys: commit immediately via commitImmediatelyRef set in
+   * handleArrowKeyCapture, matching the st.number_input +/- button behaviour.
+   */
   const handleChange = useCallback(
     (newTime: Time | null): void => {
       if (newTime === null && !clearable) return
       const newValue = newTime ? timeToString(newTime) : null
       setDisplayValue(newValue)
-      setValueWithSource({ value: newValue, fromUi: true })
+      if (commitImmediatelyRef.current) {
+        commitImmediatelyRef.current = false
+        setValueWithSource({ value: newValue, fromUi: true })
+      }
     },
     [clearable, setValueWithSource]
+  )
+
+  /**
+   * Commit the current display value when the user leaves the entire field.
+   * relatedTarget check ensures we don't commit when focus simply moves
+   * between the hour and minute segments within the same wrapper.
+   * Skip the commit entirely when the displayed value hasn't changed so we
+   * don't trigger a spurious rerun on an unedited blur.
+   */
+  const handleBlur = useCallback(
+    (e: FocusEvent<HTMLDivElement>): void => {
+      if (e.currentTarget.contains(e.relatedTarget)) return
+      if (displayValueRef.current === valueRef.current) return
+      setValueWithSource({ value: displayValueRef.current, fromUi: true })
+    },
+    [setValueWithSource]
   )
 
   const handleClear = useCallback((): void => {
@@ -148,14 +193,28 @@ function TimeInput({
    */
   const handleArrowKeyCapture = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
+      const target = e.target as HTMLElement
+      if (target.getAttribute("role") !== "spinbutton") return
+
+      // Enter commits the current display value, matching st.number_input.
+      if (e.key === "Enter") {
+        if (displayValueRef.current !== valueRef.current) {
+          setValueWithSource({ value: displayValueRef.current, fromUi: true })
+        }
+        return
+      }
+
       if (
         disabled ||
         !displayValue ||
         (e.key !== "ArrowUp" && e.key !== "ArrowDown")
       )
         return
-      const target = e.target as HTMLElement
-      if (target.getAttribute("role") !== "spinbutton") return
+
+      // Arrow key on an existing value always commits immediately (like the
+      // +/- buttons on st.number_input). Set the flag before any step-specific
+      // early-returns so it covers both custom-handled and fall-through paths.
+      commitImmediatelyRef.current = true
 
       const segmentType = target.getAttribute("data-type")
       const up = e.key === "ArrowUp"
@@ -204,7 +263,15 @@ function TimeInput({
         handleChange(new Time(wrapped, current.minute))
       }
     },
-    [disabled, displayValue, step, stepMins, stepHours, handleChange]
+    [
+      disabled,
+      displayValue,
+      step,
+      stepMins,
+      stepHours,
+      handleChange,
+      setValueWithSource,
+    ]
   )
 
   return (
@@ -224,6 +291,7 @@ function TimeInput({
         <StyledTimeInputWrapper
           data-testid="stTimeInputTimeDisplay"
           data-disabled={disabled || undefined}
+          onBlur={handleBlur}
           onKeyDownCapture={handleArrowKeyCapture}
         >
           <TimeField

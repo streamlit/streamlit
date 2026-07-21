@@ -106,6 +106,10 @@ def type_time(time_display: Locator, hour: str, minute: str) -> None:
     exercise the real keystroke handling path through React Aria's digit
     buffering logic.
 
+    After typing, blurs the minute spinbutton so the widget commits the value
+    to the backend (commit is deferred to blur, matching st.number_input
+    semantics).
+
     Parameters
     ----------
     time_display : Locator
@@ -117,9 +121,11 @@ def type_time(time_display: Locator, hour: str, minute: str) -> None:
     minute : str
         Two-digit minute string (e.g. "45").
     """
-    spinbuttons = time_display.locator("[role='spinbutton']")
+    spinbuttons = time_display.get_by_role("spinbutton")
     spinbuttons.first.press_sequentially(hour)
     spinbuttons.last.press_sequentially(minute)
+    # Blur triggers the deferred commit to the backend.
+    spinbuttons.last.blur()
 
 
 def get_datetime_input(

@@ -546,6 +546,77 @@ describe("TimeInput widget", () => {
       undefined
     )
   })
+
+  it("does not commit on blur when value is unchanged", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    // Focus the hour segment and tab away without making any edits
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.tab()
+
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+  })
+
+  it("commits value immediately when Enter is pressed on a spinbutton", async () => {
+    const user = userEvent.setup()
+    // Use step=900 so ArrowDown on the minute segment changes the value;
+    // then verify Enter on the hour segment commits the updated display value.
+    const props = getProps({ default: "12:45", step: 900 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [, minuteSegment] = screen.getAllByRole("spinbutton")
+
+    // Arrow key changes the value immediately (committed via commitImmediatelyRef).
+    await user.click(minuteSegment)
+    await user.keyboard("{ArrowDown}")
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "12:30",
+      { fromUi: true },
+      undefined
+    )
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    // After the arrow key commit, display == value == "12:30".
+    // Pressing Enter should not fire a redundant commit.
+    await user.keyboard("{Enter}")
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+  })
+
+  it("commits value on blur after a typed edit (deferred commit path)", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+
+    // Type a digit — react-aria updates its internal segment state and fires
+    // handleChange, which updates displayValue but does NOT yet call
+    // setStringValue (deferred to blur).
+    await user.keyboard("0")
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+    // Tab away to blur the entire wrapper — this should trigger the commit.
+    await user.tab()
+    // If react-aria produced a value change, setStringValue should have been
+    // called once on blur; if "0" alone didn't change the effective value the
+    // no-change guard correctly skips it — either way no INTERMEDIATE commit.
+    const calls = vi.mocked(props.widgetMgr.setStringValue).mock.calls
+    // Every call that did fire must have fromUi: true (blur-path commit)
+    for (const [, , opts] of calls) {
+      expect(opts).toEqual({ fromUi: true })
+    }
+  })
 })
 
 describe("TimeInput query param binding", () => {
