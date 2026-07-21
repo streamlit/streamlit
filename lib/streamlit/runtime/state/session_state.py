@@ -14,9 +14,11 @@
 
 from __future__ import annotations
 
+import functools
 import json
 import pickle  # noqa: S403
 from collections.abc import (
+    Callable,
     Iterator,
     KeysView,
     Mapping,
@@ -400,6 +402,21 @@ class KeyIdMapper:
 
 
 @dataclass(slots=True)
+class _CallbackRerunVotes:
+    """Tallies how the callbacks fired in one interaction want the rerun scoped.
+
+    ``requested_targeted`` is set when a callback asks for a fragment/keyed
+    rerun; ``kept_default`` is set when a callback returns normally (keeping the
+    interaction's default full-app/fragment rerun) or issues a plain
+    ``st.rerun()``. When both are set, the kept default wins (see
+    ``SessionState._call_callbacks``).
+    """
+
+    requested_targeted: bool = False
+    kept_default: bool = False
+
+
+@dataclass(slots=True)
 class SessionState:
     """SessionState allows users to store values that persist between app
     reruns.
@@ -651,7 +668,7 @@ class SessionState:
 
     def _call_callbacks(self) -> None:
         """Call callbacks for widgets whose value changed or whose trigger fired."""
-        from streamlit.runtime.scriptrunner import RerunException
+        votes = _CallbackRerunVotes()
 
         # Path 1: single callback.
         changed_widget_ids_for_single_callback = [
@@ -664,16 +681,10 @@ class SessionState:
         ]
 
         for wid in changed_widget_ids_for_single_callback:
-            try:
-                self._new_widget_state.call_callback(wid)
-            except RerunException as e:  # noqa: PERF203
-                # Re-queue the rerun data so it is honored after the script body
-                # completes.  on_scriptrunner_yield() already consumed the request
-                # when it raised the exception, so we restore it here to avoid
-                # losing the caller's intent.
-                ctx = get_script_run_ctx()
-                if ctx and ctx.script_requests:
-                    ctx.script_requests.request_rerun(e.rerun_data)
+            self._run_widget_callback(
+                votes,
+                functools.partial(self._new_widget_state.call_callback, wid),
+            )
 
         # Path 2: multiple callbacks.
         widget_ids_to_process = list(self._new_widget_state.states.keys())
@@ -687,14 +698,67 @@ class SessionState:
             kwargs = metadata.callback_kwargs or {}
 
             # 1) Trigger dispatch: bool + JSON trigger aggregator
-            self._dispatch_trigger_callbacks(wid, metadata, args, kwargs)
+            self._dispatch_trigger_callbacks(votes, wid, metadata, args, kwargs)
 
             # 2) JSON value change dispatch
             if metadata.value_type == "json_value":
-                self._dispatch_json_change_callbacks(wid, metadata, args, kwargs)
+                self._dispatch_json_change_callbacks(votes, wid, metadata, args, kwargs)
+
+        if votes.requested_targeted and votes.kept_default:
+            # A callback that kept its default rerun in place wins over the
+            # targeted reruns other callbacks requested, so cast that implicit
+            # vote as an explicit full-app rerun. The request layer then
+            # coalesces the queued fragment targets into a single full-app run.
+            # No widget_states are attached, so the forced rerun does not
+            # re-fire callbacks.
+            self._request_full_app_rerun()
+
+    def _run_widget_callback(
+        self, votes: _CallbackRerunVotes, run: Callable[[], None]
+    ) -> None:
+        """Run one widget callback and record how it votes on the rerun scope.
+
+        A callback that requests a fragment/keyed rerun votes to rerun only
+        those targets; one that returns normally or issues a plain
+        ``st.rerun()`` keeps the interaction's default rerun. When ``st.rerun``
+        is called inside a callback, ``on_scriptrunner_yield`` has already
+        consumed the request, so it is re-queued here to honor the caller's
+        intent after all callbacks have run.
+        """
+        from streamlit.runtime.scriptrunner import RerunException
+
+        try:
+            run()
+        except RerunException as e:
+            rerun_data = e.rerun_data
+            if rerun_data.fragment_id_queue or rerun_data.is_fragment_scoped_rerun:
+                votes.requested_targeted = True
+            else:
+                votes.kept_default = True
+            ctx = get_script_run_ctx()
+            if ctx and ctx.script_requests:
+                ctx.script_requests.request_rerun(rerun_data)
+        else:
+            votes.kept_default = True
+
+    def _request_full_app_rerun(self) -> None:
+        """Queue a full-app rerun that does not re-fire widget callbacks."""
+        from streamlit.runtime.scriptrunner import RerunData
+
+        ctx = get_script_run_ctx()
+        if ctx and ctx.script_requests:
+            ctx.script_requests.request_rerun(
+                RerunData(
+                    query_string=ctx.query_string,
+                    page_script_hash=ctx.page_script_hash,
+                    cached_message_hashes=ctx.cached_message_hashes,
+                    context_info=ctx.context_info,
+                )
+            )
 
     def _execute_widget_callback(
         self,
+        votes: _CallbackRerunVotes,
         callback_fn: WidgetCallback,
         cb_metadata: WidgetMetadata[Any],
         cb_args: WidgetArgs,
@@ -710,6 +774,8 @@ class SessionState:
 
         Parameters
         ----------
+        votes : _CallbackRerunVotes
+            Accumulator recording how the fired callbacks want the rerun scoped.
         callback_fn : WidgetCallback
             The user-provided callback to execute.
         cb_metadata : WidgetMetadata[Any]
@@ -719,21 +785,19 @@ class SessionState:
         cb_kwargs : dict[str, Any]
             Keyword arguments passed to the callback.
         """
-        from streamlit.runtime.scriptrunner import RerunException
 
-        ctx = get_script_run_ctx()
-        try:
+        def run() -> None:
             with ThreadState.scoped(
                 run_location=RunLocation.CALLBACK,
                 fragment_id=cb_metadata.fragment_id,
             ):
                 callback_fn(*cb_args, **cb_kwargs)
-        except RerunException as e:
-            if ctx and ctx.script_requests:
-                ctx.script_requests.request_rerun(e.rerun_data)
+
+        self._run_widget_callback(votes, run)
 
     def _dispatch_trigger_callbacks(
         self,
+        votes: _CallbackRerunVotes,
         wid: str,
         metadata: WidgetMetadata[Any],
         args: WidgetArgs,
@@ -794,10 +858,13 @@ class SessionState:
                     if isinstance(event_name, str) and metadata.callbacks:
                         cb = metadata.callbacks.get(event_name)
                         if cb is not None:
-                            self._execute_widget_callback(cb, metadata, args, kwargs)
+                            self._execute_widget_callback(
+                                votes, cb, metadata, args, kwargs
+                            )
 
     def _dispatch_json_change_callbacks(
         self,
+        votes: _CallbackRerunVotes,
         wid: str,
         metadata: WidgetMetadata[Any],
         args: WidgetArgs,
@@ -850,7 +917,7 @@ class SessionState:
             for key in changed_keys:
                 cb = metadata.callbacks.get(key)
                 if cb is not None:
-                    self._execute_widget_callback(cb, metadata, args, kwargs)
+                    self._execute_widget_callback(votes, cb, metadata, args, kwargs)
 
     def _widget_changed(self, widget_id: str) -> bool:
         """True if the given widget's value changed between the previous
