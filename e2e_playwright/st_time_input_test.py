@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-NUM_TIME_INPUTS = 16
+NUM_TIME_INPUTS = 17
 
 
 def test_time_input_widget_rendering(
@@ -489,3 +489,70 @@ def test_paste_partial_digit_into_segment(app: Page):
     wait_for_app_run(app)
 
     expect_markdown(app, "Value 1: 08:22:00")
+
+
+def test_paste_error_state_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
+    """Snapshot test for the error visual (red border + error icon)."""
+    time_input = get_time_input(app, "Time input 1 (8:45)")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    hour_segment = time_display.locator("[role='spinbutton']").first
+    hour_segment.click()
+
+    _paste_into(hour_segment, "25:00")
+
+    # Wait for error icon to appear
+    expect(time_input.get_by_test_id("stTimeInputError")).to_be_visible()
+
+    assert_snapshot(time_input, name="st_time_input-paste_error_state")
+
+
+def test_paste_into_empty_cleared_field(app: Page):
+    """Test that pasting into an empty (cleared) time input works."""
+    time_input = get_time_input(app, "Time input 8 (empty)")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    hour_segment = time_display.locator("[role='spinbutton']").first
+    hour_segment.click()
+
+    _paste_into(hour_segment, "16:45")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Value 8: 16:45:00")
+
+    # Partial paste into empty field: paste single digit into minute segment
+    minute_segment = time_display.locator("[role='spinbutton']").last
+    minute_segment.click()
+    _paste_into(minute_segment, "30")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Value 8: 16:30:00")
+
+
+def test_paste_in_form_context(app: Page):
+    """Test that paste works inside a form and value is submitted correctly."""
+    time_input = get_time_input(app, "Form time input")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    hour_segment = time_display.locator("[role='spinbutton']").first
+    hour_segment.click()
+
+    # Paste a valid time
+    _paste_into(hour_segment, "14:30")
+
+    # Value should NOT commit until form is submitted (form widgets defer)
+    expect(app.get_by_text("Form time:")).not_to_be_visible()
+
+    # Submit the form
+    app.get_by_role("button", name="Submit").click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Form time: 14:30:00")
+
+    # Test invalid paste in form doesn't block submission of prior valid value
+    hour_segment.click()
+    _paste_into(hour_segment, "99:99")
+    expect(time_input.get_by_test_id("stTimeInputError")).to_be_visible()
+
+    # Submit form — should still submit the last committed value (14:30)
+    app.get_by_role("button", name="Submit").click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Form time: 14:30:00")

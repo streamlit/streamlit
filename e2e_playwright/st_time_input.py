@@ -108,6 +108,13 @@ bound_step_time = st.time_input(
 )
 st.write("Bound step time:", bound_step_time)
 
+# --- Form context ---
+with st.form("time_form"):
+    form_time = st.time_input("Form time input", time(9, 0))
+    submitted = st.form_submit_button("Submit")
+if submitted:
+    st.write("Form time:", form_time)
+
 if st.toggle("Update time input props"):
     tval = st.time_input(
         "Updated dynamic time input",
