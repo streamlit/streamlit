@@ -825,36 +825,39 @@ class ArrowMixin:
             values are ``"null"``, ``"NaN"`` and ``"-"``.
 
         lazy : bool or None
-            Whether to load rows lazily from the server instead of sending the
-            full dataset to the browser. This is useful for datasets that are
-            too large to render eagerly. This can be one of the following:
+            Whether to load rows lazily from the app server instead of sending
+            the full dataset to the browser. When rows are loaded lazily,
+            Streamlit sends only the rows the user is viewing and fetches more
+            as they scroll or sort. This is useful for datasets that are too
+            large to send to the browser all at once. It can also make your app
+            faster on reruns, since far less data needs to be transferred from
+            the app server to the client (browser). This can be one of the
+            following:
 
-            - ``None`` (default): Streamlit chooses automatically. Compatible
-              in-memory ``pandas`` and ``polars`` dataframes and
-              ``pyarrow.Table`` objects with more than 150,000 rows are
-              delivered lazily. Compatible unevaluated objects with more than
-              10,000 rows, such as a Polars ``LazyFrame``, are also delivered
-              lazily. Everything else uses the regular eager rendering,
-              including the existing capped preview for unsupported unevaluated
-              data objects.
-            - ``True``: Force lazy delivery. Streamlit uses a native lazy
-              adapter when available (for example, a Polars ``LazyFrame``) and
-              otherwise converts a supported input to an in-memory
-              ``pandas.DataFrame`` and serves row ranges from server memory. For
-              small inputs (1,000 rows or fewer), Streamlit
-              keeps eager rendering as an optimization. If lazy delivery is
-              incompatible with the input or other options, including
-              dataframes with multi-level (``MultiIndex``) column headers,
-              Streamlit raises a ``StreamlitAPIException``.
-            - ``False``: Never use lazy delivery. Streamlit uses the regular
-              eager rendering and the existing capped-preview behavior for
-              unevaluated data objects.
+            - ``None`` (default): Streamlit chooses automatically. In-memory
+              ``pandas`` and ``polars`` dataframes and ``pyarrow.Table`` objects
+              are loaded lazily when they have more than 150,000 rows.
+              Unevaluated objects, such as a Polars ``LazyFrame``, are loaded
+              lazily when they have more than 10,000 rows. Everything else is
+              loaded eagerly, including the capped preview for unsupported
+              unevaluated objects.
+            - ``True``: Always load rows lazily. For inputs that support lazy
+              access natively (for example, a Polars ``LazyFrame``), Streamlit
+              reads rows directly from the source. Other supported inputs are
+              held in the app server's memory and served in chunks. Small
+              datasets (1,000 rows or fewer) are still loaded eagerly as an
+              optimization. If lazy loading is incompatible with the data or the
+              other parameters (for example, dataframes with multi-level,
+              ``MultiIndex``, column headers), Streamlit raises a
+              ``StreamlitAPIException``.
+            - ``False``: Never load rows lazily. Streamlit loads data eagerly
+              and uses the capped preview for unevaluated data objects.
 
             .. note::
-                In lazy mode, search, CSV download, selections (``on_select``),
-                and ``pandas.Styler`` styling are not supported. Server-side
-                sorting is supported. To use these features, set
-                ``lazy=False``.
+                When rows are loaded lazily, search, CSV download, selections
+                (``on_select``), and ``pandas.Styler`` styling are not
+                supported. Server-side sorting is supported. To use these
+                features, set ``lazy=False``.
 
         Returns
         -------
