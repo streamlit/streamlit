@@ -95,7 +95,10 @@ function TimeInput({
     widgetMgr,
     fragmentId,
     queryParamBinding,
-    formClearBehavior: "resetValueOnly",
+    formClearBehavior: "resetValueAndRunCallback",
+    onFormCleared: () => {
+      setDisplayValue(element.default ?? null)
+    },
   })
 
   // Local display state drives the TimeField directly, avoiding the
