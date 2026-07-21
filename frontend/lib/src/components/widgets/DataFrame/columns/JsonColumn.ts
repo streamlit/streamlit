@@ -79,6 +79,16 @@ function JsonColumn(props: BaseColumnProps): BaseColumn {
     getCellValue(cell: JsonCell): string | object | null {
       return cell.data?.value ?? null
     },
+    valuesEqual(a: unknown, b: unknown): boolean {
+      // Treat two JSON values as equal when their serialized form matches.
+      // A raw string is assumed to be already-serialized JSON and compared
+      // against JSON.stringify(other). JSON.stringify can throw (circular
+      // refs, BigInt); the central valuesEqual() wraps this and falls back
+      // to an identity check.
+      const normalizedA = typeof a === "string" ? a : JSON.stringify(a)
+      const normalizedB = typeof b === "string" ? b : JSON.stringify(b)
+      return normalizedA === normalizedB
+    },
   }
 }
 

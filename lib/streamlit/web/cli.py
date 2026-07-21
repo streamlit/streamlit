@@ -545,8 +545,9 @@ def main_skills(global_mode: bool, yes: bool) -> None:
 
     \b
     Global mode (--global):
-        Installs a meta skill globally (in user directory) that is available
-        to all projects.
+        Installs a version-agnostic meta skill into your user directory. It
+        discovers each project's installed Streamlit at runtime, so a single
+        global install works across all projects and Streamlit versions.
 
     \b
     Examples:

@@ -39,6 +39,7 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.testing.v1.util import patch_config_options
+from streamlit.web import skills
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_pep649_function
 
@@ -792,11 +793,11 @@ def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
 @pytest.fixture(autouse=True)
 def _clear_skills_cache() -> Iterator[None]:
     """Reset the skill-detection cache around each test in this module section."""
-    metrics_util._detect_installed_skills_cached.cache_clear()
-    metrics_util._detect_installed_agents_cached.cache_clear()
+    skills._detect_installed_skills_cached.cache_clear()
+    skills._detect_installed_agents_cached.cache_clear()
     yield
-    metrics_util._detect_installed_skills_cached.cache_clear()
-    metrics_util._detect_installed_agents_cached.cache_clear()
+    skills._detect_installed_skills_cached.cache_clear()
+    skills._detect_installed_agents_cached.cache_clear()
 
 
 @pytest.mark.parametrize("location", ["home", "app", "repo"])
@@ -839,9 +840,11 @@ def test_detect_installed_skills_emits_expected_token(
     _make_skill_dir(roots[location], harness_dir, skill)
 
     monkeypatch.setenv("HOME", str(home))
-    tokens = metrics_util._detect_installed_skills(str(app))
+    tokens = skills.detect_installed_skills(str(app))
 
-    assert f"{location}:{harness}:{skill}" in tokens
+    # Exactly one marker is planted, so assert the full list (``==`` not ``in``)
+    # to also catch a spurious extra token bleeding in from another root.
+    assert tokens == [f"{location}:{harness}:{skill}"]
 
 
 def test_detect_installed_skills_empty_when_absent(
@@ -854,7 +857,7 @@ def test_detect_installed_skills_empty_when_absent(
     app.mkdir()
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_skills(str(app)) == []
+    assert skills.detect_installed_skills(str(app)) == []
 
 
 def test_detect_installed_skills_ignores_unrelated_skill_names(
@@ -866,7 +869,7 @@ def test_detect_installed_skills_ignores_unrelated_skill_names(
     _make_skill_dir(home, ".claude/skills", "some-other-skill")
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_skills(str(tmp_path / "app-missing")) == []
+    assert skills.detect_installed_skills(str(tmp_path / "app-missing")) == []
 
 
 def test_detect_installed_skills_skips_repo_when_same_as_app(
@@ -881,7 +884,7 @@ def test_detect_installed_skills_skips_repo_when_same_as_app(
     _make_skill_dir(app_and_repo, ".claude/skills", "developing-with-streamlit")
 
     monkeypatch.setenv("HOME", str(home))
-    tokens = metrics_util._detect_installed_skills(str(app_and_repo))
+    tokens = skills.detect_installed_skills(str(app_and_repo))
 
     assert tokens == ["app:claude:developing-with-streamlit"]
 
@@ -899,7 +902,7 @@ def test_detect_installed_skills_walks_up_to_repo_root(
     _make_skill_dir(repo, ".agents/skills", "developing-with-streamlit-in-snowflake")
 
     monkeypatch.setenv("HOME", str(home))
-    tokens = metrics_util._detect_installed_skills(str(app))
+    tokens = skills.detect_installed_skills(str(app))
 
     assert tokens == ["repo:agents:developing-with-streamlit-in-snowflake"]
 
@@ -919,7 +922,7 @@ def test_detect_installed_skills_returns_sorted_deduped_tokens(
     _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit")
 
     monkeypatch.setenv("HOME", str(home))
-    tokens = metrics_util._detect_installed_skills(str(app))
+    tokens = skills.detect_installed_skills(str(app))
 
     assert tokens == [
         "app:agents:developing-with-streamlit-in-snowflake",
@@ -948,7 +951,7 @@ def test_detect_installed_skills_finds_project_skills_when_home_harness_absent(
     _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit-in-snowflake")
 
     monkeypatch.setenv("HOME", str(home))
-    tokens = metrics_util._detect_installed_skills(str(app))
+    tokens = skills.detect_installed_skills(str(app))
 
     assert tokens == [
         "app:claude:developing-with-streamlit",
@@ -981,7 +984,7 @@ def test_detect_installed_skills_detects_symlinked_skill_dir(
         pytest.skip("Symlinks not supported in this environment")
 
     monkeypatch.setenv("HOME", str(home))
-    tokens = metrics_util._detect_installed_skills(str(app))
+    tokens = skills.detect_installed_skills(str(app))
 
     assert tokens == ["app:claude:developing-with-streamlit"]
 
@@ -995,7 +998,7 @@ def test_create_page_profile_message_sets_installed_skills(
 ) -> None:
     """``installed_skills`` is populated from the detection helper."""
     with patch(
-        "streamlit.runtime.metrics_util._detect_installed_skills",
+        "streamlit.web.skills.detect_installed_skills",
         return_value=detected,
     ):
         msg = metrics_util.create_page_profile_message([], 0, 0)
@@ -1026,7 +1029,7 @@ def test_detect_installed_agents_finds_each_harness(
     (home / marker_dir).mkdir(parents=True)
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_agents() == [harness]
+    assert skills.detect_installed_agents() == [harness]
 
 
 def test_detect_installed_agents_empty_when_no_harnesses(
@@ -1037,7 +1040,7 @@ def test_detect_installed_agents_empty_when_no_harnesses(
     home.mkdir()
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_agents() == []
+    assert skills.detect_installed_agents() == []
 
 
 def test_detect_installed_agents_ignores_plain_snowflake(
@@ -1048,7 +1051,7 @@ def test_detect_installed_agents_ignores_plain_snowflake(
     (home / ".snowflake").mkdir(parents=True)
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_agents() == []
+    assert skills.detect_installed_agents() == []
 
 
 def test_detect_installed_agents_returns_sorted_deduped_tokens(
@@ -1061,7 +1064,7 @@ def test_detect_installed_agents_returns_sorted_deduped_tokens(
     (home / ".config/opencode").mkdir(parents=True)
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_agents() == ["claude", "cursor", "opencode"]
+    assert skills.detect_installed_agents() == ["claude", "cursor", "opencode"]
 
 
 def test_detect_installed_agents_detects_symlinked_harness_dir(
@@ -1082,7 +1085,7 @@ def test_detect_installed_agents_detects_symlinked_harness_dir(
         pytest.skip("Symlinks not supported in this environment")
 
     monkeypatch.setenv("HOME", str(home))
-    assert metrics_util._detect_installed_agents() == ["claude"]
+    assert skills.detect_installed_agents() == ["claude"]
 
 
 @pytest.mark.parametrize(
@@ -1094,7 +1097,7 @@ def test_create_page_profile_message_sets_installed_agents(
 ) -> None:
     """``installed_agents`` is populated from the detection helper."""
     with patch(
-        "streamlit.runtime.metrics_util._detect_installed_agents",
+        "streamlit.web.skills.detect_installed_agents",
         return_value=detected,
     ):
         msg = metrics_util.create_page_profile_message([], 0, 0)

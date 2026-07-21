@@ -64,6 +64,21 @@ const ModalButton: FunctionComponent<
   </StyledModalButton>
 )
 
+/**
+ * Prevents the dialog from closing when the user interacts with an overlay that
+ * is rendered outside the dialog's DOM subtree but conceptually belongs to it,
+ * e.g. BaseWeb dropdowns/popovers/calendars and the dataframe portal (menus,
+ * cell editors). These overlay roots are tagged with `data-st-overlay-root`.
+ *
+ * Those same hosts also carry `data-react-aria-top-layer`, which React Aria's
+ * `useInteractOutside` already ignores. We keep this explicit check because it
+ * relies on React Aria's documented `shouldCloseOnInteractOutside` API rather
+ * than that internal attribute, and it keeps the dismissal contract obvious.
+ */
+function shouldCloseOnInteractOutside(element: Element): boolean {
+  return element.closest('[data-st-overlay-root="true"]') === null
+}
+
 interface StreamlitModalProps {
   isOpen?: boolean
   onClose?: () => void
@@ -96,7 +111,8 @@ export function calculateModalSize(
   if (size === "medium" && width && padding) {
     // Same width as the AppView container (contentMaxWidth) plus the extra dialog padding.
     // The dialog has 0.5rem more left/right padding than AppView, adding 1rem total.
-    // Note: max-width:100% keeps this responsive on mobile regardless of the calculated value.
+    // Note: the panel's maxWidth (calc(100% - lg - lg)) keeps this responsive on
+    // narrow screens regardless of the calculated value.
     return `calc(${width} + ${padding})`
   }
   if (size === "auto") {
@@ -132,6 +148,7 @@ function Modal({
       isOpen={isOpen ?? false}
       isDismissable={closeable}
       isKeyboardDismissDisabled={!closeable}
+      shouldCloseOnInteractOutside={shouldCloseOnInteractOutside}
       onOpenChange={handleOpenChange}
       className="stDialog"
       data-testid="stDialog"

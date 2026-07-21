@@ -583,9 +583,59 @@ describe("Metric element", () => {
                 strokeCap: "round",
               }),
             }),
+            encoding: expect.objectContaining({
+              y2: { datum: 1 },
+            }),
           }),
         ]),
       })
+    })
+
+    it.each([
+      { chartData: [100, 110, 105], expectedBaseline: 100 },
+      { chartData: [-30, -20, -25], expectedBaseline: -30 },
+      { chartData: [-10, 0, 10], expectedBaseline: 0 },
+      { chartData: [0, 0, 0], expectedBaseline: 0 },
+      { chartData: [42], expectedBaseline: 42 },
+      { chartData: [], expectedBaseline: 0 },
+      // Series that only touch zero do not cross it: they still anchor to
+      // the data minimum rather than diverging around the zero line.
+      { chartData: [-2, -1, 0], expectedBaseline: -2 },
+      { chartData: [0, 5, 10], expectedBaseline: 0 },
+    ])(
+      "sets area chart baseline to $expectedBaseline for $chartData",
+      ({ chartData, expectedBaseline }) => {
+        const spec = getMetricChartSpec(
+          chartData,
+          MetricProto.ChartType.AREA,
+          200,
+          mockTheme.emotion,
+          MetricProto.MetricColor.GRAY
+        ) as TopLevelSpec & {
+          layer: Array<{ encoding?: { y2?: { datum: number } } }>
+        }
+
+        expect(spec.layer[0].encoding?.y2).toEqual({
+          datum: expectedBaseline,
+        })
+      }
+    )
+
+    it.each([
+      { chartType: MetricProto.ChartType.LINE, name: "line" },
+      { chartType: MetricProto.ChartType.BAR, name: "bar" },
+    ])("does not set a y2 baseline for $name charts", ({ chartType }) => {
+      const spec = getMetricChartSpec(
+        [-10, 0, 10],
+        chartType,
+        200,
+        mockTheme.emotion,
+        MetricProto.MetricColor.GRAY
+      ) as TopLevelSpec & {
+        layer: Array<{ encoding?: { y2?: { datum: number } } }>
+      }
+
+      expect(spec.layer[0].encoding?.y2).toBeUndefined()
     })
 
     it("handles single value by duplicating it", () => {

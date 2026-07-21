@@ -1,5 +1,6 @@
-# This workflow automatically comments on pull requests from forks
-# to welcome contributors and provide guidance on the review process.
+# This workflow automatically comments on pull requests from forks to let
+# external contributors know that PRs from outside the maintainer team are
+# paused and to point them to other ways to contribute.
 
 name: Fork PR Welcome Comment
 
@@ -22,18 +23,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR_COMMENT_BODY: |
-            Thanks for contributing to Streamlit! 🎈
+            Thanks for your interest in contributing to Streamlit! 🎈
 
-            Please make sure you have read our [Contributing Guide](https://github.com/streamlit/streamlit/blob/develop/CONTRIBUTING.md). You can find additional information about Streamlit development in the [wiki](https://github.com/streamlit/streamlit/tree/develop/wiki).
+            We have **paused accepting pull requests from outside the Streamlit maintainer team**. AI coding tools have increased PR volume beyond what we can review sustainably, while detailed issues give maintainers a more effective starting point for improving Streamlit. As a result, this PR most likely won't be reviewed or merged.
 
-            **The review process:**
+            There are still many valuable ways to contribute:
 
-            1. **Initial triage**: A maintainer will apply labels, approve CI to run, and trigger AI-assisted reviews. Your PR may be flagged with `status:needs-product-approval` if the feature requires product team sign-off.
+            - 🐛 [Report a bug](https://github.com/streamlit/streamlit/issues/new?template=bug_report.yml) with clear, reproducible steps.
+            - 💡 [Request a feature](https://github.com/streamlit/streamlit/issues/new?template=feature_request.yml) and describe your use case.
+            - 👍 Improve or upvote [existing issues](https://github.com/streamlit/streamlit/issues?q=is%3Aissue%20state%3Aopen%20sort%3Areactions-%2B1-desc), and comment on [open specs](https://github.com/streamlit/streamlit/issues?q=state%3Aopen%20label%3Achange%3Aspec).
+            - 🧩 Build a [custom component](https://docs.streamlit.io/develop/concepts/custom-components) or contribute to [streamlit-extras](https://github.com/arnaudmiribel/streamlit-extras).
+            - 🙋 Help other users in the [community forum](https://discuss.streamlit.io).
 
-            2. **Code review**: A core maintainer will start reviewing your PR once:
-               - It is marked as 'ready for review', not 'draft'
-               - It has `status:product-approved` (or doesn't need it)
-               - All CI checks pass
-               - All AI review comments are addressed
-
-            We're receiving many contributions and have limited review bandwidth — please expect some delay. We appreciate your patience! 🙏
+            Please read our [Contributing Guide](https://github.com/streamlit/streamlit/blob/develop/CONTRIBUTING.md) for details. Thanks for helping shape what we build next! 🙏

@@ -289,6 +289,18 @@ function BaseDateTimeColumn(
         ? null
         : toISOString(cell.data.date)
     },
+    valuesEqual(a: unknown, b: unknown): boolean {
+      // Equal if both parse to the same instant, so differing ISO
+      // representations of the same time are treated as equal.
+      const timeA = Date.parse(String(a))
+      const timeB = Date.parse(String(b))
+
+      if (!Number.isNaN(timeA) && !Number.isNaN(timeB)) {
+        return timeA === timeB
+      }
+
+      return Object.is(a, b)
+    },
   }
 }
 

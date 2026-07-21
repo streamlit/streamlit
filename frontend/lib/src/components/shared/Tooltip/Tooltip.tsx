@@ -107,8 +107,11 @@ export interface TooltipProps {
   inline?: boolean
   style?: CSSProperties
   onMouseEnterDelay?: number
+  closeDelay?: number
   containerWidth?: boolean
   error?: boolean
+  dismissOnClick?: boolean
+  interactive?: boolean
 }
 
 /** Shared ref to the trigger's DOM element, readable inside the tooltip portal. */
@@ -132,6 +135,8 @@ interface TriggerAreaProps {
   className: string
   ariaDescribedBy: string | undefined
   disabled: boolean
+  dismissOnClick: boolean
+  closeImmediatelyOnPointerLeave: boolean
   children: ReactNode
 }
 
@@ -156,6 +161,8 @@ function TriggerArea({
   className,
   ariaDescribedBy,
   disabled,
+  dismissOnClick,
+  closeImmediatelyOnPointerLeave,
   children,
 }: TriggerAreaProps): ReactElement {
   const state = useContext(TooltipTriggerStateContext)
@@ -194,7 +201,12 @@ function TriggerArea({
       }}
       onPointerLeave={() => {
         if (!hasFocusWithinRef.current) {
-          state?.close(false)
+          state?.close(closeImmediatelyOnPointerLeave)
+        }
+      }}
+      onClickCapture={() => {
+        if (dismissOnClick) {
+          state?.close(true)
         }
       }}
       {...focusWithinProps}
@@ -211,8 +223,11 @@ function Tooltip({
   inline,
   style,
   onMouseEnterDelay,
+  closeDelay,
   containerWidth,
   error,
+  dismissOnClick = false,
+  interactive = true,
 }: TooltipProps): ReactElement {
   const triggerRef = useRef<Element | null>(null)
   // Always-null ref passed to RAC's TooltipContext so its internal
@@ -223,14 +238,21 @@ function Tooltip({
 
   const state = useTooltipTriggerState({
     delay: onMouseEnterDelay ?? 200,
-    closeDelay: 300,
+    closeDelay: closeDelay ?? 300,
   })
+  const isDisabled = !content
 
   // Stable ref so effects always call close() on the latest state without
   // re-subscribing listeners on every render (useTooltipTriggerState returns
   // a new object reference each render).
   const stateRef = useRef(state)
   stateRef.current = state
+
+  useEffect(() => {
+    if (isDisabled) {
+      stateRef.current.close(true)
+    }
+  }, [isDisabled])
 
   // Floating UI provides scroll-tracking via autoUpdate. RAC's <Tooltip> is
   // kept for its portal, role="tooltip", and aria-hidden management. Its
@@ -313,12 +335,16 @@ function Tooltip({
               className={
                 error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
               }
-              ariaDescribedBy={state.isOpen ? tooltipId : undefined}
-              disabled={!content}
+              ariaDescribedBy={
+                !isDisabled && state.isOpen ? tooltipId : undefined
+              }
+              disabled={isDisabled}
+              dismissOnClick={dismissOnClick}
+              closeImmediatelyOnPointerLeave={closeDelay === 0}
             >
               {children}
             </TriggerArea>
-            {content ? (
+            {!isDisabled ? (
               <StyledTooltip
                 ref={refs.setFloating}
                 id={tooltipId}
@@ -332,8 +358,12 @@ function Tooltip({
                   data-testid={
                     error ? "stTooltipErrorContent" : "stTooltipContent"
                   }
-                  onPointerEnter={() => state?.open(true)}
-                  onPointerLeave={() => state?.close()}
+                  onPointerEnter={() => {
+                    if (interactive) {
+                      state?.open(true)
+                    }
+                  }}
+                  onPointerLeave={() => state?.close(!interactive)}
                 >
                   {content}
                 </StyledTooltipContentWrapper>

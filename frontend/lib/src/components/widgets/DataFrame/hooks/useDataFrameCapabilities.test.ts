@@ -32,6 +32,7 @@ describe("useDataFrameCapabilities", () => {
     disabled: false,
     numDataRows: 10,
     numDataColumns: 5,
+    disableDataExport: false,
   }
 
   describe("canSort", () => {
@@ -108,6 +109,7 @@ describe("useDataFrameCapabilities", () => {
     it.each([
       ["large tables", { numDataRows: LARGE_TABLE_ROWS_THRESHOLD + 1 }],
       ["empty tables", { numDataRows: 0 }],
+      ["disabled data export", { disableDataExport: true }],
     ])("returns false for %s", (_description, overrides) => {
       const { result } = renderHook(() =>
         useDataFrameCapabilities({ ...defaultParams, ...overrides })

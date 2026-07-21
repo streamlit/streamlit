@@ -49,6 +49,7 @@ interface UseVegaEmbedOutput {
   ) => Promise<VegaView | null>
   finalizeView: () => void
   resizeView: (width: number, height: number) => Promise<boolean>
+  exportToPng: () => Promise<string | null>
   isViewReady: boolean
 }
 
@@ -133,7 +134,17 @@ export function useVegaEmbed(
           // avoid inlining styles.
           tooltip: { disableDefaultStyle: true },
           defaultStyle: false,
-          forceActionsMenu: true,
+          // Disable all built-in vega-embed action links ("View Source", "Open
+          // in Vega Editor", "Save as PNG/SVG"). Combined with sanitizing
+          // usermeta.embedOptions (see useVegaElementPreprocessor), this prevents
+          // a chart spec from using these actions to open same-origin pages with
+          // serialized spec contents. We expose our own toolbar actions instead.
+          // Note: `actions: false` also changes vega-embed's DOM output: it no
+          // longer wraps the chart in a `.chart-wrapper`/`.vega-actions`
+          // structure and instead applies `role="graphics-document"` and the
+          // `fit-x`/`fit-y` sizing classes directly to this container element
+          // (which our styles and e2e locators rely on).
+          actions: false,
         }
 
         const { vgSpec, view, finalize } = await embed(
@@ -294,6 +305,19 @@ export function useVegaEmbed(
     [isCreatingView]
   )
 
+  const exportToPng = useCallback(async (): Promise<string | null> => {
+    if (vegaViewRef.current === null || isCreatingView) {
+      return null
+    }
+
+    try {
+      return await vegaViewRef.current.toImageURL("png")
+    } catch (error) {
+      LOG.warn("Failed to export Vega view as PNG:", error)
+      return null
+    }
+  }, [isCreatingView])
+
   // Whether the view exists and is not mid-creation, so it's safe to resize.
   // This is derived from a ref (`vegaViewRef`) rather than state, so it only
   // reflects the latest value on re-render. That's sufficient here because
@@ -301,5 +325,12 @@ export function useVegaEmbed(
   // that recomputes this flag once the view becomes ready.
   const isViewReady = vegaViewRef.current !== null && !isCreatingView
 
-  return { createView, updateView, finalizeView, resizeView, isViewReady }
+  return {
+    createView,
+    updateView,
+    finalizeView,
+    resizeView,
+    exportToPng,
+    isViewReady,
+  }
 }
