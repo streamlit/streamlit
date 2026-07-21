@@ -16,6 +16,7 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/ArrowData.proto";
 import "streamlit/proto/AuthRedirect.proto";
 import "streamlit/proto/AutoRerun.proto";
 import "streamlit/proto/Common.proto";
@@ -128,6 +129,9 @@ message BackendOperationResponse {
 
     // Acknowledgement for permanently dismissing the skills nudge
     DismissSkillsNudgeResponsePayload dismiss_skills_nudge = 5;
+
+    // Response for lazy dataframe row chunk requests
+    DataframeChunkResponsePayload dataframe_chunk = 6;
   }
 }
 
@@ -147,6 +151,20 @@ message InstallSkillsResponsePayload {
 // Acknowledgement payload for dismissing the skills nudge. Carries no data;
 // its presence signals the marker was written successfully.
 message DismissSkillsNudgeResponsePayload {}
+
+// Response payload for lazy dataframe row chunks. Carries the requested rows
+// serialized as Arrow IPC bytes.
+message DataframeChunkResponsePayload {
+  // Echoes the requested source id so the frontend can match the response.
+  string source_id = 1;
+  // Row offset of the first row in `arrow_data`.
+  uint64 offset = 2;
+  // Reserved for future sequential sources; always false for known-size
+  // random-access sources.
+  bool end_of_stream = 3;
+  // The requested rows as an Arrow IPC table.
+  ArrowData arrow_data = 4;
+}
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)
 // in our ForwardMsgCache. (That is, when we cache a ForwardMsg, we clear its

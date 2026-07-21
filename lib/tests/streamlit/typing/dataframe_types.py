@@ -264,6 +264,14 @@ if TYPE_CHECKING:
     assert_type(dataframe(df, placeholder="-", on_select="rerun"), DataframeState)
 
     # =====================================================================
+    # Test lazy parameter (bool or None)
+    # =====================================================================
+
+    assert_type(dataframe(df, lazy=None), DeltaGenerator)
+    assert_type(dataframe(df, lazy=True), DeltaGenerator)
+    assert_type(dataframe(df, lazy=False), DeltaGenerator)
+
+    # =====================================================================
     # Test with all parameters combined (on_select="ignore")
     # =====================================================================
 

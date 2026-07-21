@@ -12,13 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-import pandas as pd
+"""Internal package for lazy ``st.dataframe`` row sources.
 
-import streamlit as st
-
-np.random.seed(0)
-
-df = pd.DataFrame(np.random.randn(50000, 20), columns=[f"col_{i}" for i in range(20)])
-
-st.dataframe(df)
+This package is not part of Streamlit's public API. It contains the internal
+data-source protocol and adapters used to serve dataframe row chunks on demand
+for lazy ``st.dataframe`` rendering.
+"""

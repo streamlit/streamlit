@@ -31,12 +31,9 @@ import pytest
 from pandas.api.types import infer_dtype
 from parameterized import parameterized
 
-import streamlit as st
 from streamlit import dataframe_util
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.type_util import get_fqn_type
-from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.data_mocks.snowpandas_mocks import Index as SnowpandasIndex
 from tests.streamlit.data_mocks.snowpandas_mocks import Series as SnowpandasSeries
@@ -47,7 +44,7 @@ from tests.streamlit.data_test_cases import (
     CaseMetadata,
     TestObject,
 )
-from tests.testutil import create_snowpark_session, patch_config_options
+from tests.testutil import create_snowpark_session
 
 
 class DataframeUtilTest(unittest.TestCase):
@@ -86,6 +83,34 @@ class DataframeUtilTest(unittest.TestCase):
         # pandas >= 3.0. Without downcasting the type should be preserved.
         col_type = result_table.schema.field("col").type
         assert col_type in {pa.string(), pa.large_string()}
+
+    def test_convert_pandas_df_to_arrow_table_preserve_index(self):
+        """preserve_index=True materializes a default RangeIndex as a column."""
+        import pyarrow as pa
+
+        df = pd.DataFrame({"col": [1, 2, 3]})
+
+        with_index = dataframe_util.convert_pandas_df_to_arrow_table(
+            df, preserve_index=True
+        )
+        without_index = dataframe_util.convert_pandas_df_to_arrow_table(df)
+
+        assert isinstance(with_index, pa.Table)
+        # With preserve_index=True the RangeIndex becomes a physical column; the
+        # default keeps it as schema metadata only.
+        assert without_index.num_columns == 1
+        assert with_index.num_columns == 2
+
+    def test_convert_pandas_df_to_arrow_table_applies_column_fixes(self):
+        """Arrow-incompatible columns are fixed and the conversion still succeeds."""
+        import pyarrow as pa
+
+        # A dataframe of dtypes is not natively Arrow-serializable and exercises
+        # the fix-and-retry fallback.
+        df = pd.DataFrame(pd.DataFrame(["foo", "bar"]).dtypes)
+
+        table = dataframe_util.convert_pandas_df_to_arrow_table(df)
+        assert isinstance(table, pa.Table)
 
     def test_convert_arrow_table_to_arrow_bytes_downcasts_large_list(self):
         """Test that convert_arrow_table_to_arrow_bytes downcasts large_list to list."""
@@ -1315,114 +1340,6 @@ def test_convert_pandas_df_to_polars_and_xarray_formats() -> None:
         pdf, dataframe_util.DataFormat.XARRAY_DATA_ARRAY
     )
     assert isinstance(da, xr.DataArray)
-
-
-class TestArrowTruncation(DeltaGeneratorTestCase):
-    """Test class for the automatic arrow truncation feature."""
-
-    @patch_config_options(
-        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
-    )
-    def test_truncate_larger_table(self):
-        """Test that `_maybe_truncate_table` correctly truncates a table that is
-        larger than the max message size.
-        """
-        col_data = list(range(200000))
-        original_df = pd.DataFrame(
-            {
-                "col 1": col_data,
-                "col 2": col_data,
-                "col 3": col_data,
-            }
-        )
-
-        original_table = pa.Table.from_pandas(original_df)
-        truncated_table = dataframe_util._maybe_truncate_table(
-            pa.Table.from_pandas(original_df)
-        )
-        # Should be under the configured 3MB limit:
-        assert truncated_table.nbytes < 3 * int(1000000.0)
-
-        # Test that the table should have been truncated
-        assert truncated_table.nbytes < original_table.nbytes
-        assert truncated_table.num_rows < original_table.num_rows
-
-        # Test that it prints out a caption test:
-        el = self.get_delta_from_queue().new_element
-        assert "due to data size limitations" in el.markdown.body
-        assert el.markdown.element_type == MarkdownProto.Type.CAPTION
-
-    @patch_config_options(
-        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
-    )
-    def test_dont_truncate_smaller_table(self):
-        """Test that `_maybe_truncate_table` doesn't truncate smaller tables."""
-        col_data = list(range(100))
-        original_df = pd.DataFrame(
-            {
-                "col 1": col_data,
-                "col 2": col_data,
-                "col 3": col_data,
-            }
-        )
-
-        original_table = pa.Table.from_pandas(original_df)
-        truncated_table = dataframe_util._maybe_truncate_table(
-            pa.Table.from_pandas(original_df)
-        )
-
-        # Test that the tables are the same:
-        assert truncated_table.nbytes == original_table.nbytes
-        assert truncated_table.num_rows == original_table.num_rows
-
-    @patch_config_options({"server.enableArrowTruncation": False})
-    def test_dont_truncate_if_deactivated(self):
-        """Test that `_maybe_truncate_table` doesn't do anything
-        when server.enableArrowTruncation is decatived
-        """
-        col_data = list(range(200000))
-        original_df = pd.DataFrame(
-            {
-                "col 1": col_data,
-                "col 2": col_data,
-                "col 3": col_data,
-            }
-        )
-
-        original_table = pa.Table.from_pandas(original_df)
-        truncated_table = dataframe_util._maybe_truncate_table(
-            pa.Table.from_pandas(original_df)
-        )
-
-        # Test that the tables are the same:
-        assert truncated_table.nbytes == original_table.nbytes
-        assert truncated_table.num_rows == original_table.num_rows
-
-    @patch_config_options(
-        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
-    )
-    def test_st_dataframe_truncates_data(self):
-        """Test that `st.dataframe` truncates the data if server.enableArrowTruncation==True."""
-        col_data = list(range(200000))
-        original_df = pd.DataFrame(
-            {
-                "col 1": col_data,
-                "col 2": col_data,
-                "col 3": col_data,
-            }
-        )
-        original_table = pa.Table.from_pandas(original_df)
-        st.dataframe(original_df)
-        el = self.get_delta_from_queue().new_element
-        # Test that table bytes should be smaller than the full table
-        assert len(el.dataframe.arrow_data.data) < original_table.nbytes
-        # Should be under the configured 3MB limit:
-        assert len(el.dataframe.arrow_data.data) < 3 * int(1000000.0)
-
-        # Test that it prints out a caption test:
-        el = self.get_delta_from_queue(-2).new_element
-        assert "due to data size limitations" in el.markdown.body
-        assert el.markdown.element_type == MarkdownProto.Type.CAPTION
 
 
 @pytest.mark.require_integration

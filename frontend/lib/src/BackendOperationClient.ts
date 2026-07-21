@@ -21,6 +21,8 @@ import {
   BackendOperationRequest,
   IBackendOperationRequest,
   IBackendOperationResponse,
+  IDataframeChunkRequestPayload,
+  IDataframeChunkResponsePayload,
 } from "@streamlit/protobuf"
 
 const LOG = getLogger("BackendOperationClient")
@@ -30,6 +32,9 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
 
 /** Timeout for deferred file requests (3 minutes). */
 const DEFERRED_FILE_REQUEST_TIMEOUT_MS = 180_000
+
+/** Timeout for lazy dataframe chunk requests (2 minutes). */
+const DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS = 120_000
 
 /**
  * Timeout for skills-install requests (3 minutes).
@@ -99,7 +104,10 @@ export class BackendOperationClient {
   public request<TResponse>(
     payloadField: keyof Pick<
       IBackendOperationRequest,
-      "deferredFile" | "installSkills" | "dismissSkillsNudge"
+      | "deferredFile"
+      | "dataframeChunk"
+      | "installSkills"
+      | "dismissSkillsNudge"
     >,
     payload: IBackendOperationRequest[typeof payloadField],
     timeoutMs?: number
@@ -161,6 +169,24 @@ export class BackendOperationClient {
       "deferredFile",
       { fileId },
       timeoutMs ?? DEFERRED_FILE_REQUEST_TIMEOUT_MS
+    )
+  }
+
+  /**
+   * Request a chunk of rows for a lazy dataframe source.
+   *
+   * @param payload - The chunk request (source id, offset, limit, sort)
+   * @param timeoutMs - Optional timeout override
+   * @returns A promise that resolves with the chunk response payload
+   */
+  public requestDataframeChunk(
+    payload: IDataframeChunkRequestPayload,
+    timeoutMs?: number
+  ): Promise<IDataframeChunkResponsePayload> {
+    return this.request<IDataframeChunkResponsePayload>(
+      "dataframeChunk",
+      payload,
+      timeoutMs ?? DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS
     )
   }
 
@@ -255,6 +281,7 @@ export class BackendOperationClient {
   ): unknown {
     // Return the first recognized non-null payload field
     if (response.deferredFile) return response.deferredFile
+    if (response.dataframeChunk) return response.dataframeChunk
     if (response.installSkills) return response.installSkills
     if (response.dismissSkillsNudge) return response.dismissSkillsNudge
 

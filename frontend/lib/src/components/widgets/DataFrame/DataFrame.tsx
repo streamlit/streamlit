@@ -49,6 +49,7 @@ import { createPortal } from "react-dom"
 
 import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
+import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
@@ -66,7 +67,13 @@ import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
+import {
+  BaseColumn,
+  getTextCell,
+  ImageCellEditor,
+  toGlideColumn,
+} from "./columns"
+import { isServerSortableColumn } from "./hooks/sortUtils"
 import useButtonColumnInteractions from "./hooks/useButtonColumnInteractions"
 import useColumnFormatting from "./hooks/useColumnFormatting"
 import useColumnLoader from "./hooks/useColumnLoader"
@@ -83,6 +90,7 @@ import useDataExporter from "./hooks/useDataExporter"
 import useDataFrameCapabilities from "./hooks/useDataFrameCapabilities"
 import useDataLoader from "./hooks/useDataLoader"
 import useEditReconciliation from "./hooks/useEditReconciliation"
+import useLazyDataLoader from "./hooks/useLazyDataLoader"
 import useRowHover from "./hooks/useRowHover"
 import useSelectionHandler from "./hooks/useSelectionHandler"
 import useTableSizer from "./hooks/useTableSizer"
@@ -143,12 +151,28 @@ function DataFrame({
   widthConfig,
   heightConfig,
 }: Readonly<DataFrameProps>): ReactElement {
-  // Use provided Quiver data or construct from proto's arrowData. The
-  // elementHash serves as the primary memoization key to avoid unnecessary
-  // re-parsing when the payload hasn't changed.
+  // Lazy mode metadata. When present, rows are loaded on demand in chunks from
+  // the backend instead of being delivered eagerly in `arrowData`.
+  const lazyData = element.lazyData ?? null
+  const isLazy = lazyData !== null
+  const hasButtonColumnInteractions =
+    Object.keys(element.buttonClickWidgets).length > 0
+
+  const { backendOperationClient } = useContext(BackendOperationContext)
+
+  // Use provided Quiver data, the lazy initial chunk, or the eager arrowData.
+  // For lazy dataframes the initial chunk carries the schema plus the first
+  // visible rows. The elementHash serves as the primary memoization key to
+  // avoid unnecessary re-parsing when the payload hasn't changed.
   const data = useMemo(() => {
     if (dataProp !== undefined) {
       return dataProp
+    }
+    if (lazyData !== null) {
+      if (!lazyData.initialChunk) {
+        throw new Error("Lazy dataframe is missing its initial chunk")
+      }
+      return new Quiver(lazyData.initialChunk)
     }
     if (!element.arrowData) {
       throw new Error("DataFrame element is missing arrowData")
@@ -156,7 +180,7 @@ function DataFrame({
     return new Quiver(element.arrowData)
     // elementHash is intentionally included as a stability anchor for memoization
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataProp, elementHash, element.arrowData])
+  }, [dataProp, elementHash, element.arrowData, lazyData?.initialChunk])
 
   const {
     expanded: isFullScreen,
@@ -227,9 +251,17 @@ function DataFrame({
   const isReadOnly = editingMode === DataframeProto.EditingMode.READ_ONLY
   const isClipboardCopyDisabled = disableDataExport && isReadOnly
 
-  // Number of rows of the table minus 1 for the header row:
+  // Number of rows of the table minus 1 for the header row. For lazy
+  // dataframes the total row count comes from the lazy metadata, not from the
+  // (partial) initial chunk.
   const dataDimensions = data.dimensions
-  const originalNumRows = Math.max(0, dataDimensions.numDataRows)
+  const lazyRowCount =
+    typeof lazyData?.rowCount === "number"
+      ? lazyData.rowCount
+      : (lazyData?.rowCount?.toNumber() ?? 0)
+  const originalNumRows = isLazy
+    ? Math.max(0, lazyRowCount)
+    : Math.max(0, dataDimensions.numDataRows)
 
   // Centralized capability layer that determines which features are enabled
   const {
@@ -251,6 +283,9 @@ function DataFrame({
     disabled,
     numDataRows: originalNumRows,
     numDataColumns: dataDimensions.numDataColumns,
+    isLazy,
+    lazySortable: lazyData?.sortable ?? false,
+    hasButtonColumnInteractions,
     disableDataExport,
   })
 
@@ -296,8 +331,48 @@ function DataFrame({
     editingState
   )
 
-  const { columns, sortColumn, getOriginalIndex, getCellContent } =
-    useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
+  // A single sort hook handles both modes: client-side (eager) sorting and
+  // server-side (lazy) sort state. In server mode it never runs Glide's
+  // client-side sorter over the lazy rows and exposes `serverSortState` for the
+  // lazy loader.
+  const {
+    columns,
+    sortColumn,
+    getOriginalIndex,
+    serverSortState,
+    getCellContent: eagerGetCellContent,
+  } = useColumnSort({
+    mode: isLazy ? "server" : "client",
+    numRows: originalNumRows,
+    columns: originalColumns,
+    getCellContent: getOriginalCellContent,
+  })
+
+  const { getCellContent: getLazyCellContent, onVisibleRegionChanged } =
+    useLazyDataLoader({
+      initialChunk: data,
+      columns: originalColumns,
+      numRows: originalNumRows,
+      sourceId: lazyData?.sourceId ?? "",
+      pageSize: lazyData?.pageSize ?? 1,
+      sortState: serverSortState,
+      backendOperationClient,
+    })
+
+  // In lazy mode, cells come from the chunked loader; otherwise from the
+  // client-sorted eager getter.
+  const getCellContent = isLazy ? getLazyCellContent : eagerGetCellContent
+
+  // Whether a specific column can be sorted in the current mode. Eager sorting
+  // is client-side and works for any column (incl. the index). Lazy sorting is
+  // server-side and keys on the backend Arrow field name, so columns without
+  // one (e.g. the index column) or with an unorderable nested type (list/struct)
+  // cannot be sorted — we hide the sort affordance for them instead of issuing a
+  // chunk request the backend would fail.
+  const isColumnSortable = (column: BaseColumn | undefined): boolean =>
+    canSort &&
+    column !== undefined &&
+    (!isLazy || isServerSortableColumn(column))
 
   const {
     buttonActionMenu,
@@ -1070,16 +1145,22 @@ function DataFrame({
           keybindings={{
             downFill: true,
             copy: !isClipboardCopyDisabled,
-            ...(isCellSelectionActivated || isLargeTable
+            ...(isCellSelectionActivated || isLargeTable || isLazy
               ? {
                   // Deactivate select all to prevent potential performance issues
-                  // with too many selected cells being processed for cell selection:
+                  // with too many selected cells being processed for cell selection.
+                  // For lazy dataframes this also prevents triggering load
+                  // requests for the entire dataset.
                   selectAll: false,
                 }
               : {}),
           }}
+          // Request chunks for the visible range (plus a small buffer) when the
+          // user scrolls a lazy dataframe.
+          onVisibleRegionChanged={isLazy ? onVisibleRegionChanged : undefined}
           // Search needs to be activated manually, to support search
-          // via the toolbar:
+          // via the toolbar. Disabled for lazy dataframes since search would
+          // only operate on loaded chunks.
           onKeyDown={event => {
             if (
               canSearch &&
@@ -1099,9 +1180,13 @@ function DataFrame({
           }}
           // Header click is used for column sorting:
           onHeaderClicked={(columnIdx: number, _event) => {
-            if (!canSort || isColumnSelectionActivated) {
-              // Deactivate sorting for empty state, for large dataframes, or
-              // when column selection is activated.
+            if (
+              !isColumnSortable(columns[columnIdx]) ||
+              isColumnSelectionActivated
+            ) {
+              // Deactivate sorting for empty state, large dataframes, columns
+              // that aren't sortable in the current mode (e.g. the index column
+              // in lazy mode), or when column selection is activated.
               return
             }
 
@@ -1290,7 +1375,7 @@ function DataFrame({
             canShowColumnStatistics={canShowColumnStatistics}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
-              canSort
+              isColumnSortable(originalColumns[showMenu.columnIdx])
                 ? (direction: "asc" | "desc" | undefined) => {
                     // Hide search before sorting to clear search results
                     if (showSearch) {
