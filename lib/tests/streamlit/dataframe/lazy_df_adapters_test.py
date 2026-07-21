@@ -26,13 +26,13 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-from streamlit.dataframe import adapters
-from streamlit.dataframe.adapters import (
+from streamlit.dataframe import lazy_df_adapters
+from streamlit.dataframe.lazy_df_adapters import (
     SnowparkDataframeSource,
     _align_to_schema,
     try_create_native_source,
 )
-from streamlit.dataframe.source import AccessMode, SortSpec
+from streamlit.dataframe.lazy_df_source import AccessMode, SortSpec
 
 
 class _FakeLimited:
@@ -200,7 +200,7 @@ def test_snowpark_schema_probe_degrades_when_ordering_unsupported() -> None:
 
 def test_snowpark_caches_initial_page() -> None:
     """The unsorted first page is queried once and reused for the initial chunk."""
-    from streamlit.dataframe.source import DEFAULT_PAGE_SIZE
+    from streamlit.dataframe.lazy_df_source import DEFAULT_PAGE_SIZE
 
     fake = _make_fake(10)
     source = SnowparkDataframeSource(fake)
@@ -249,7 +249,9 @@ def test_try_create_native_source_detects_snowpark(
 ) -> None:
     """A detected Snowpark object yields a SnowparkDataframeSource."""
     monkeypatch.setattr(
-        adapters.dataframe_util, "is_snowpark_data_object", lambda _obj: True
+        lazy_df_adapters.dataframe_util,
+        "is_snowpark_data_object",
+        lambda _obj: True,
     )
     source = try_create_native_source(_make_fake())
     assert isinstance(source, SnowparkDataframeSource)
@@ -260,7 +262,7 @@ def test_try_create_native_source_detects_polars_lazyframe() -> None:
     """A Polars LazyFrame yields a PolarsLazyFrameSource."""
     import polars as pl
 
-    from streamlit.dataframe.adapters import PolarsLazyFrameSource
+    from streamlit.dataframe.lazy_df_adapters import PolarsLazyFrameSource
 
     source = try_create_native_source(pl.LazyFrame({"a": [1, 2, 3]}))
     assert isinstance(source, PolarsLazyFrameSource)
@@ -277,7 +279,7 @@ def test_polars_lazyframe_sort_is_deterministic_across_chunks() -> None:
     """
     import polars as pl
 
-    from streamlit.dataframe.adapters import PolarsLazyFrameSource
+    from streamlit.dataframe.lazy_df_adapters import PolarsLazyFrameSource
 
     # Every value in the sort column "k" is a tie, forcing the tiebreaker.
     lf = pl.LazyFrame({"k": [0] * 100, "v": list(range(100))})
@@ -301,7 +303,7 @@ def test_polars_lazyframe_sort_avoids_row_index_name_collision() -> None:
     """Sorting preserves a user column matching the internal tiebreaker name."""
     import polars as pl
 
-    from streamlit.dataframe.adapters import PolarsLazyFrameSource
+    from streamlit.dataframe.lazy_df_adapters import PolarsLazyFrameSource
 
     internal_name = PolarsLazyFrameSource._ROW_INDEX_COLUMN
     source = PolarsLazyFrameSource(

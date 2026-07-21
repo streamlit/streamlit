@@ -23,7 +23,7 @@ import pandas as pd
 import pytest
 
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
-from streamlit.dataframe import source as dataframe_source
+from streamlit.dataframe import lazy_df_source as dataframe_source
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import _format_value_for_widget

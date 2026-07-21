@@ -23,7 +23,7 @@ from unittest.mock import patch
 
 import pyarrow as pa
 
-from streamlit.dataframe.source import InMemoryDataframeSource
+from streamlit.dataframe.lazy_df_source import InMemoryDataframeSource
 from streamlit.dataframe_util import convert_arrow_bytes_to_pandas_df
 from streamlit.proto.BackMsg_pb2 import BackendOperationRequest
 from streamlit.proto.Dataframe_pb2 import SortState

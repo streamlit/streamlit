@@ -24,8 +24,8 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-from streamlit.dataframe import source as dataframe_source
-from streamlit.dataframe.source import (
+from streamlit.dataframe import lazy_df_source as dataframe_source
+from streamlit.dataframe.lazy_df_source import (
     AUTO_LAZY_ROW_THRESHOLD,
     FORCED_LAZY_MIN_ROWS,
     UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD,
@@ -404,7 +404,7 @@ def test_resolve_polars_lazyframe_native_adapter() -> None:
     """A Polars LazyFrame uses the native lazy adapter for ``lazy=True``."""
     import polars as pl
 
-    from streamlit.dataframe.adapters import PolarsLazyFrameSource
+    from streamlit.dataframe.lazy_df_adapters import PolarsLazyFrameSource
 
     lf = pl.LazyFrame({"a": list(range(5000)), "b": list(range(5000))})
     source = resolve_lazy_source(lf, True, is_selection_activated=False)

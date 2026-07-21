@@ -20,7 +20,7 @@ import asyncio
 from functools import partial
 from typing import TYPE_CHECKING, Final, TypeAlias
 
-from streamlit.dataframe.source import MAX_CHUNK_ROWS, SortSpec
+from streamlit.dataframe.lazy_df_source import MAX_CHUNK_ROWS, SortSpec
 from streamlit.logger import get_logger
 from streamlit.proto.Dataframe_pb2 import SortState
 from streamlit.proto.ForwardMsg_pb2 import (

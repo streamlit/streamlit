@@ -28,7 +28,7 @@ from typing import (
 )
 
 from streamlit import dataframe_util
-from streamlit.dataframe import source as dataframe_source
+from streamlit.dataframe import lazy_df_source as dataframe_source
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
@@ -526,9 +526,7 @@ def _marshall_lazy_dataframe(
     access_mode = source.access_mode
     sortable = source.sortable
     initial_table = source.load_rows(0, page_size)
-    initial_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(
-        initial_table, truncate=False
-    )
+    initial_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(initial_table)
 
     coordinates = dg._get_delta_path_str()
     registered = source_mgr.register_source(source, coordinates, page_size=page_size)

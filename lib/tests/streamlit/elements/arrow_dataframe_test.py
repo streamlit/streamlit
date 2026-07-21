@@ -27,7 +27,7 @@ from pandas.io.formats.style_render import StylerRenderer as Styler
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.dataframe.source import InMemoryDataframeSource
+from streamlit.dataframe.lazy_df_source import InMemoryDataframeSource
 from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     is_pandas_version_less_than,

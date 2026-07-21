@@ -340,14 +340,14 @@ def _has_multi_level_columns(data: object) -> bool:
 def _try_create_native_source(data: object) -> DataframeSource | None:
     """Return a native lazy adapter for an unevaluated object, or ``None``.
 
-    Phase 2 adapters (Polars ``LazyFrame``, Snowpark ``DataFrame``/``Table``)
+    Available adapters (Polars ``LazyFrame``, Snowpark ``DataFrame``/``Table``)
     are registered here. Objects without a ready adapter return ``None`` so the
     caller can fall back to the capped-preview path (``lazy=None``) or raise
     (``lazy=True``).
     """
-    from streamlit.dataframe import adapters
+    from streamlit.dataframe import lazy_df_adapters
 
-    return adapters.try_create_native_source(data)
+    return lazy_df_adapters.try_create_native_source(data)
 
 
 def _get_native_row_count(source: DataframeSource, lazy: bool | None) -> int | None:

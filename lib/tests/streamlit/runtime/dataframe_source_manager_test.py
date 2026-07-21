@@ -21,7 +21,11 @@ from unittest.mock import patch
 import pyarrow as pa
 import pytest
 
-from streamlit.dataframe.source import AccessMode, InMemoryDataframeSource, SortSpec
+from streamlit.dataframe.lazy_df_source import (
+    AccessMode,
+    InMemoryDataframeSource,
+    SortSpec,
+)
 from streamlit.dataframe_util import convert_arrow_bytes_to_pandas_df
 from streamlit.runtime.dataframe_source_manager import (
     DataframeSourceError,

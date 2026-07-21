@@ -16,9 +16,9 @@
 
 These adapters let ``st.dataframe`` render unevaluated objects lazily without
 materializing the full dataset up front. Each adapter normalizes its backend to
-the internal :class:`~streamlit.dataframe.source.DataframeSource` protocol.
+the internal :class:`~streamlit.dataframe.lazy_df_source.DataframeSource` protocol.
 
-Phase 2 adapters:
+Available adapters:
 - Polars ``LazyFrame``: ``.slice(offset, limit).collect()`` per chunk.
 - Snowpark ``DataFrame`` / ``Table``: deterministic ``ORDER BY`` + ``LIMIT/OFFSET``
   ("offset" mode). Efficient deep random access (materialized row-index table)
@@ -33,13 +33,13 @@ import threading
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import dataframe_util
-from streamlit.dataframe.source import AccessMode
+from streamlit.dataframe.lazy_df_source import AccessMode
 from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
     import pyarrow as pa
 
-    from streamlit.dataframe.source import DataframeSource, SortSpec
+    from streamlit.dataframe.lazy_df_source import DataframeSource, SortSpec
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -198,7 +198,7 @@ class SnowparkDataframeSource:
     @property
     def schema(self) -> pa.Schema:
         if self._schema is None:
-            from streamlit.dataframe.source import DEFAULT_PAGE_SIZE
+            from streamlit.dataframe.lazy_df_source import DEFAULT_PAGE_SIZE
 
             with self._lock:
                 if self._schema is None:
@@ -226,7 +226,7 @@ class SnowparkDataframeSource:
         *,
         sort: SortSpec | None = None,
     ) -> pa.Table:
-        from streamlit.dataframe.source import DEFAULT_PAGE_SIZE
+        from streamlit.dataframe.lazy_df_source import DEFAULT_PAGE_SIZE
 
         # Resolve the schema first; this also caches the unsorted first page.
         schema = self.schema

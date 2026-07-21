@@ -43,10 +43,14 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from streamlit import dataframe_util
-from streamlit.dataframe.source import DEFAULT_PAGE_SIZE, MAX_CHUNK_ROWS, SortSpec
+from streamlit.dataframe.lazy_df_source import (
+    DEFAULT_PAGE_SIZE,
+    MAX_CHUNK_ROWS,
+    SortSpec,
+)
 
 if TYPE_CHECKING:
-    from streamlit.dataframe.source import DataframeSource
+    from streamlit.dataframe.lazy_df_source import DataframeSource
 
 
 class DataframeSourceError(Exception):
@@ -183,17 +187,11 @@ class DataframeSourceManager:
         row_count = entry.source.row_count
         if row_count is not None and offset >= row_count:
             empty_table = entry.source.schema.empty_table()
-            # Never truncate lazy chunks: the frontend relies on a fixed
-            # per-chunk row window, so dropping rows would misalign offsets.
-            arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(
-                empty_table, truncate=False
-            )
+            arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(empty_table)
             return arrow_bytes, offset
 
         table = entry.source.load_rows(offset, capped_limit, sort=sort)
-        arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(
-            table, truncate=False
-        )
+        arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(table)
         return arrow_bytes, offset
 
     def clear_session_refs(
