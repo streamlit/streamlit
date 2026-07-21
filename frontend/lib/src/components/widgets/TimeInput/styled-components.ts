@@ -16,13 +16,18 @@
 
 import styled from "@emotion/styled"
 import { getLuminance } from "color2k"
-import { DateInput, DateSegment } from "react-aria-components"
+import { DateInput, DateSegment, TimeField } from "react-aria-components"
 
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 
 /** Outermost wrapper for layout. */
 export const StyledTimeFieldContainer = styled.div({
   width: "100%",
+})
+
+/** TimeField fills the flex row so error/clear icons stay at the trailing edge. */
+export const StyledTimeField = styled(TimeField)({
+  flex: 1,
 })
 
 /**

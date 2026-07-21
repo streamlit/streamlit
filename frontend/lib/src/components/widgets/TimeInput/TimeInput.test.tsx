@@ -1007,6 +1007,43 @@ describe("TimeInput widget", () => {
       undefined
     )
   })
+
+  it("clears paste override and error when backend value changes externally", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    const { rerender } = render(<TimeInput {...props} />)
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("08:99")
+
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+    expect(hourSegment).toHaveTextContent("08")
+    expect(minuteSegment).toHaveTextContent("99")
+
+    // Simulate external value update (e.g. session_state setValue call).
+    // useBasicWidgetState detects this via element.setValue = true.
+    const updatedElement = TimeInputProto.create({
+      id: "123",
+      label: "Label",
+      default: "12:45",
+      value: "15:30",
+      setValue: true,
+      step: 900,
+    })
+    rerender(
+      <TimeInput
+        element={updatedElement}
+        disabled={false}
+        widgetMgr={props.widgetMgr}
+      />
+    )
+
+    // Error and override should be cleared
+    expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+    expect(hourSegment).toHaveTextContent("15")
+    expect(minuteSegment).toHaveTextContent("30")
+  })
 })
 
 describe("TimeInput query param binding", () => {

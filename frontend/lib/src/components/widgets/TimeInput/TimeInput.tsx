@@ -28,12 +28,11 @@ import {
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { Time } from "@internationalized/date"
-import { TimeField } from "react-aria-components"
+import { type TimeValue } from "react-aria-components"
 
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
 import Icon from "~lib/components/shared/Icon/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
@@ -52,6 +51,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   StyledClearButton,
   StyledErrorIconContainer,
+  StyledTimeField,
   StyledTimeFieldContainer,
   StyledTimeFieldInput,
   StyledTimeInputWrapper,
@@ -72,7 +72,7 @@ function stringToTime(value: string): Time {
 }
 
 /** Converts a React Aria Time object back to the HH:MM wire format. */
-function timeToString(value: Time): string {
+function timeToString(value: TimeValue): string {
   return `${String(value.hour).padStart(2, "0")}:${String(value.minute).padStart(2, "0")}`
 }
 
@@ -117,6 +117,16 @@ function TimeInput({
   const [displayValue, setDisplayValue] = useState<string | null>(value)
   onFormClearedRef.current = () => setDisplayValue(element.default ?? null)
 
+  const [validationError, setValidationError] = useState<string | null>(null)
+
+  // When an out-of-range value is pasted (e.g. "08:99"), we can't represent it
+  // with a Time object. Store the raw digits here to override segment rendering
+  // while keeping the TimeField value at the last valid state.
+  const [pasteOverride, setPasteOverride] = useState<{
+    hour: string
+    minute: string
+  } | null>(null)
+
   // Sync from backend when value changes externally (form clear, session
   // state update, setValue call). Uses render-time adjustment pattern:
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
@@ -127,6 +137,8 @@ function TimeInput({
     setPrevValue(value)
     if (displayValue === prevValue) {
       setDisplayValue(value)
+      setValidationError(null)
+      setPasteOverride(null)
     }
   }
 
@@ -152,16 +164,6 @@ function TimeInput({
   const stepMins = step / 60
   const stepHours = step / 3600
 
-  const [validationError, setValidationError] = useState<string | null>(null)
-
-  // When an out-of-range value is pasted (e.g. "08:99"), we can't represent it
-  // with a Time object. Store the raw digits here to override segment rendering
-  // while keeping the TimeField value at the last valid state.
-  const [pasteOverride, setPasteOverride] = useState<{
-    hour: string
-    minute: string
-  } | null>(null)
-
   /**
    * Called by TimeField on every committed segment change.
    *
@@ -173,7 +175,7 @@ function TimeInput({
    * handleArrowKeyCapture, matching the st.number_input +/- button behaviour.
    */
   const handleChange = useCallback(
-    (newTime: Time | null): void => {
+    (newTime: TimeValue | null): void => {
       if (newTime === null && !clearable) {
         commitImmediatelyRef.current = false
         return
@@ -458,9 +460,8 @@ function TimeInput({
           onKeyDownCapture={handleArrowKeyCapture}
           onPaste={handlePaste}
         >
-          <TimeField
+          <StyledTimeField
             aria-label={element.label}
-            style={{ flex: 1 }}
             isInvalid={!!validationError}
             value={
               isNullOrUndefined(displayValue)
@@ -491,16 +492,11 @@ function TimeInput({
                 </StyledTimeSegment>
               )}
             </StyledTimeFieldInput>
-          </TimeField>
+          </StyledTimeField>
           {validationError && (
             <StyledErrorIconContainer data-testid="stTimeInputError">
               <Tooltip
-                content={
-                  <StreamlitMarkdown
-                    source={`**Error**: ${validationError}`}
-                    allowHTML={false}
-                  />
-                }
+                content={validationError}
                 placement={Placement.TOP_RIGHT}
                 error
               >
@@ -515,6 +511,8 @@ function TimeInput({
                 onClick={handleClear}
                 aria-label="Clear time"
                 data-testid="stTimeInputClearButton"
+                // Removed from tab order: keyboard users clear via
+                // Backspace/Delete in segments. Matches NumberInput pattern.
                 tabIndex={-1}
                 onMouseDown={e => e.preventDefault()}
               >

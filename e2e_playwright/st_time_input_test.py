@@ -398,12 +398,13 @@ def _paste_into(locator: Locator, text: str) -> None:
     locator.evaluate(
         """(el, text) => {
             const dt = new DataTransfer();
-            dt.setData('text', text);
-            el.dispatchEvent(new ClipboardEvent('paste', {
-                clipboardData: dt,
+            dt.setData('text/plain', text);
+            const event = new ClipboardEvent('paste', {
                 bubbles: true,
                 cancelable: true,
-            }));
+            });
+            Object.defineProperty(event, 'clipboardData', { value: dt });
+            el.dispatchEvent(event);
         }""",
         text,
     )
