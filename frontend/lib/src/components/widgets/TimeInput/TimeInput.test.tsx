@@ -243,6 +243,29 @@ describe("TimeInput widget", () => {
     expect(minuteAfter).toHaveAttribute("aria-valuenow", "45")
   })
 
+  it("preserves pending edit when external value changes before blur", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    const { rerender } = render(<TimeInput {...props} />)
+
+    // Type a new hour (not committed — deferred to blur)
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("1")
+    await user.keyboard("1")
+
+    // Simulate external value change (e.g. fragment rerun)
+    const updatedElement = {
+      ...props.element,
+      default: "10:00",
+      value: "10:00",
+    }
+    rerender(<TimeInput {...props} element={updatedElement} />)
+
+    // Pending edit should be preserved, not overwritten by external update
+    expect(hourSegment).toHaveAttribute("aria-valuenow", "11")
+  })
+
   it("snaps minute ArrowUp to next step boundary (on-step value)", async () => {
     const user = userEvent.setup()
     // step=900s → stepMins=15. value=12:45 → next boundary up = 13:00
@@ -405,7 +428,7 @@ describe("TimeInput widget", () => {
 
   it("snaps hour ArrowUp to next step boundary when step=7200", async () => {
     const user = userEvent.setup()
-    // step=7200s → stepHours=2. value=12:45 → ArrowUp → hour 14
+    // step=7200s → stepHours=2. value=12:45 → ArrowUp → 14:00 (minutes zeroed to grid)
     const props = getProps({ default: "12:45", step: 7200 })
     vi.spyOn(props.widgetMgr, "setStringValue")
     render(<TimeInput {...props} />)
@@ -417,7 +440,7 @@ describe("TimeInput widget", () => {
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      "14:45",
+      "14:00",
       { fromUi: true },
       undefined
     )
@@ -425,7 +448,7 @@ describe("TimeInput widget", () => {
 
   it("snaps hour ArrowDown to previous step boundary when step=7200", async () => {
     const user = userEvent.setup()
-    // step=7200s → stepHours=2. value=12:45 → ArrowDown → hour 10
+    // step=7200s → stepHours=2. value=12:45 → ArrowDown → 10:00 (minutes zeroed to grid)
     const props = getProps({ default: "12:45", step: 7200 })
     vi.spyOn(props.widgetMgr, "setStringValue")
     render(<TimeInput {...props} />)
@@ -437,7 +460,7 @@ describe("TimeInput widget", () => {
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      "10:45",
+      "10:00",
       { fromUi: true },
       undefined
     )
@@ -485,7 +508,7 @@ describe("TimeInput widget", () => {
 
   it("wraps hour ArrowUp to 00 for non-divisor step (step=18000, 5 hours)", async () => {
     const user = userEvent.setup()
-    // step=18000s → stepHours=5. value=20:30 (last boundary) → ArrowUp wraps to 00:30
+    // step=18000s → stepHours=5. value=20:30 → ArrowUp wraps to 00:00 (minutes zeroed)
     const props = getProps({ default: "20:30", step: 18000 })
     vi.spyOn(props.widgetMgr, "setStringValue")
     render(<TimeInput {...props} />)
@@ -497,7 +520,7 @@ describe("TimeInput widget", () => {
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      "00:30",
+      "00:00",
       { fromUi: true },
       undefined
     )
@@ -505,7 +528,7 @@ describe("TimeInput widget", () => {
 
   it("wraps hour ArrowDown to last boundary for non-divisor step (step=18000, 5 hours)", async () => {
     const user = userEvent.setup()
-    // step=18000s → stepHours=5. value=00:30 → ArrowDown wraps to 20:30 (last 5-hour boundary)
+    // step=18000s → stepHours=5. value=00:30 → ArrowDown wraps to 20:00 (minutes zeroed)
     const props = getProps({ default: "00:30", step: 18000 })
     vi.spyOn(props.widgetMgr, "setStringValue")
     render(<TimeInput {...props} />)
@@ -517,7 +540,7 @@ describe("TimeInput widget", () => {
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      "20:30",
+      "20:00",
       { fromUi: true },
       undefined
     )

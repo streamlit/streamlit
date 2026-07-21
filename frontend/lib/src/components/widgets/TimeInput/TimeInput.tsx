@@ -106,10 +106,14 @@ function TimeInput({
   // Sync from backend when value changes externally (form clear, session
   // state update, setValue call). Uses render-time adjustment pattern:
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  // Gated: only update display when user has no uncommitted local edits
+  // (displayValue still matches the last committed value we synced from).
   const [prevValue, setPrevValue] = useState(value)
   if (prevValue !== value) {
     setPrevValue(value)
-    setDisplayValue(value)
+    if (displayValue === prevValue) {
+      setDisplayValue(value)
+    }
   }
 
   // Stable refs used in blur/arrow handlers to avoid stale closure issues.
@@ -263,7 +267,7 @@ function TimeInput({
             : next < 0
               ? Math.floor(23 / stepHours) * stepHours
               : next
-        handleChange(new Time(wrapped, current.minute))
+        handleChange(new Time(wrapped, 0))
       }
     },
     [
