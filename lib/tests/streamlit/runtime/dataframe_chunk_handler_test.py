@@ -98,6 +98,26 @@ def test_handle_wrong_session_returns_error() -> None:
     assert not response.HasField("dataframe_chunk")
 
 
+def test_handle_oversized_chunk_returns_error() -> None:
+    """A chunk larger than the message size limit returns an error, not a chunk.
+
+    An oversized ``backend_operation_response`` would otherwise be rewritten into
+    an exception delta by ``serialize_forward_msg`` (both share the ForwardMsg
+    ``oneof``), leaving the frontend without a matching response until timeout.
+    """
+    handler, _mgr, reg = _setup()
+    request = _build_request(reg, offset=0, limit=5)
+
+    with patch(
+        "streamlit.runtime.dataframe_chunk_handler.get_max_message_size_bytes",
+        return_value=1,
+    ):
+        response = asyncio.run(handler.handle(request, reg.session_id))  # type: ignore[attr-defined]
+
+    assert "exceeds the message size limit" in response.error_msg
+    assert not response.HasField("dataframe_chunk")
+
+
 def test_handle_unexpected_error_returns_generic_message() -> None:
     """An unexpected loader error returns a generic error response."""
     mgr = DataframeSourceManager()

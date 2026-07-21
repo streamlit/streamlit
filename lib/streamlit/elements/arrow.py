@@ -74,6 +74,7 @@ if TYPE_CHECKING:
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
+    from streamlit.runtime.dataframe_source_manager import DataframeSourceManager
 
 
 SelectionMode: TypeAlias = Literal[
@@ -489,7 +490,7 @@ def _validate_selection_state(
     return {"selection": validated_selection}
 
 
-def _get_dataframe_source_mgr() -> Any:
+def _get_dataframe_source_mgr() -> DataframeSourceManager | None:
     """Return the runtime's dataframe source manager, or ``None`` if no runtime.
 
     Lazy delivery requires a running Streamlit server to serve chunk requests.

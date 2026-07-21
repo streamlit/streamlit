@@ -158,8 +158,8 @@ class DataframeSourceManager:
         Raises
         ------
         DataframeSourceError
-            If the source is unknown, belongs to another session, is stale, or
-            the request is invalid.
+            If the source is unknown, belongs to another session, or the
+            request is invalid.
         """
         with self._lock:
             entry = self._sources.get(source_id)

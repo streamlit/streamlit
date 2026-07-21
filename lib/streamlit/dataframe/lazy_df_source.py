@@ -46,11 +46,6 @@ _LOGGER: Final = get_logger(__name__)
 # dataframes above this size are auto-delivered lazily when ``lazy=None``.
 AUTO_LAZY_ROW_THRESHOLD: Final = 150_000
 
-# Reuse the existing capped-preview threshold for unevaluated data objects.
-# Native adapters with a known row count above this size are auto-delivered
-# lazily when ``lazy=None`` instead of showing only a capped preview.
-UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD: Final = dataframe_util._MAX_UNEVALUATED_DF_ROWS
-
 # For an explicit ``lazy=True`` request, inputs at or below this size keep eager
 # rendering. Lazy loading a small dataset only adds downsides (extra round-trips
 # and disabled lazy-incompatible features) without reducing the already-bounded
@@ -357,24 +352,24 @@ def _try_create_native_source(data: object) -> DataframeSource | None:
     return lazy_df_adapters.try_create_native_source(data)
 
 
-def _get_native_row_count(source: DataframeSource, lazy: bool | None) -> int | None:
-    """Return a native source row count, handling default-path fallbacks."""
+def _get_forced_lazy_row_count(source: DataframeSource) -> int:
+    """Return the row count of a native source for an explicit ``lazy=True`` request.
+
+    Raises
+    ------
+    StreamlitAPIException
+        If the row count cannot be determined, since the first lazy dataframe
+        version requires a known row count.
+    """
     try:
         row_count = source.row_count
     except Exception as ex:
-        if lazy is True:
-            raise StreamlitAPIException(
-                "`lazy=True` is not supported for this object because Streamlit "
-                "could not determine its row count for lazy loading."
-            ) from ex
-        _LOGGER.info(
-            "Could not determine row count for native lazy dataframe source; "
-            "falling back to the regular preview path.",
-            exc_info=ex,
-        )
-        return None
+        raise StreamlitAPIException(
+            "`lazy=True` is not supported for this object because Streamlit "
+            "could not determine its row count for lazy loading."
+        ) from ex
 
-    if row_count is None and lazy is True:
+    if row_count is None:
         raise StreamlitAPIException(
             "`lazy=True` is not supported for this object because the first "
             "lazy dataframe version requires a known row count."
@@ -440,22 +435,20 @@ def resolve_lazy_source(
         return None
 
     # 1) Native adapter for supported unevaluated objects (currently Polars
-    # LazyFrame). For ``lazy=True``, known small sources keep eager rendering as
-    # the bounded small-data optimization. For ``lazy=None``, compatible
-    # unevaluated sources auto-switch to lazy only above the existing
-    # capped-preview threshold; smaller sources preserve today's eager path.
+    # LazyFrame). Native adapters are opt-in via ``lazy=True`` in this version.
+    # For ``lazy=None`` we intentionally keep the existing capped-preview path
+    # and, crucially, do not read ``row_count`` here: for some sources (e.g. a
+    # Polars ``LazyFrame``) that would trigger a full ``count()``/scan on every
+    # rerun. Auto-lazy for native adapters can follow once proven on hosted
+    # runtimes. For ``lazy=True``, known small sources keep eager rendering as
+    # the bounded small-data optimization.
     native = _try_create_native_source(data)
     if native is not None:
-        native_row_count = _get_native_row_count(native, lazy)
-        if native_row_count is None:
+        if lazy is not True:
             return None
-        if lazy is True:
-            if native_row_count <= FORCED_LAZY_MIN_ROWS:
-                return None
-            return native
-        if native_row_count > UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD:
-            return native
-        return None
+        if _get_forced_lazy_row_count(native) <= FORCED_LAZY_MIN_ROWS:
+            return None
+        return native
 
     # 2) In-memory Polars DataFrame.
     if dataframe_util.is_polars_dataframe(data):

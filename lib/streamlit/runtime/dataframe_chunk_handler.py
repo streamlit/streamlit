@@ -29,6 +29,7 @@ from streamlit.proto.ForwardMsg_pb2 import (
 )
 from streamlit.runtime.backend_operation_handler import BackendOperationHandler
 from streamlit.runtime.dataframe_source_manager import DataframeSourceError
+from streamlit.runtime.runtime_util import get_max_message_size_bytes
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -160,6 +161,33 @@ class DataframeChunkHandler(BackendOperationHandler):
             return BackendOperationResponse(
                 request_id=request.request_id,
                 error_msg="Failed to load dataframe chunk.",
+            )
+
+        max_message_size = get_max_message_size_bytes()
+        if len(arrow_bytes) > max_message_size:
+            # A chunk larger than the websocket message-size limit cannot be
+            # delivered as-is. Returning it would let serialize_forward_msg()
+            # rewrite the oversized ForwardMsg into an exception delta, which
+            # clears the shared `backend_operation_response` oneof so the
+            # frontend never receives a matching response and the chunk request
+            # hangs until it times out. Surface an actionable error instead.
+            _LOGGER.warning(
+                "Dataframe chunk for source %s (offset=%s, limit=%s) is %.1f MB, "
+                "exceeding the message size limit of %.1f MB.",
+                payload.source_id,
+                payload.offset,
+                limit,
+                len(arrow_bytes) / 1e6,
+                max_message_size / 1e6,
+            )
+            return BackendOperationResponse(
+                request_id=request.request_id,
+                error_msg=(
+                    f"Dataframe chunk of size {len(arrow_bytes) / 1e6:.1f} MB "
+                    f"exceeds the message size limit of "
+                    f"{max_message_size / 1e6:.1f} MB. Reduce the page size or "
+                    "increase the `server.maxMessageSize` config option."
+                ),
             )
 
         response = BackendOperationResponse(request_id=request.request_id)
