@@ -331,6 +331,10 @@ function TimeInput({
             onClick={handleClear}
             aria-label="Clear time"
             data-testid="stTimeInputClearButton"
+            // Removed from tab order: keyboard users clear via
+            // Backspace/Delete in segments. Matches NumberInput pattern.
+            tabIndex={-1}
+            onMouseDown={e => e.preventDefault()}
           >
             <Cancel size={theme.iconSizes.base} aria-hidden="true" />
           </StyledClearButton>
