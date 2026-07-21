@@ -532,6 +532,79 @@ describe("Selectbox widget", () => {
     })
   })
 
+  it("clears the typed query on Escape and restores the committed label", async () => {
+    // Regression test for https://github.com/streamlit/streamlit/issues/16004
+    // With a value already committed, typing a query then pressing Escape
+    // must drop the typed query and restore the committed label — matching
+    // pre-1.59 (BaseWeb) behavior. The committed value must not change.
+    const user = userEvent.setup()
+    props = getProps({
+      options: ["Apple", "Banana", "Cherry"],
+      value: "Banana",
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("Banana")
+
+    await user.click(input)
+    await user.keyboard("Che")
+    // The type-to-search behavior replaces the committed label with the query.
+    expect(input).toHaveValue("Che")
+
+    await user.keyboard("{Escape}")
+
+    // The typed query is discarded; the committed label is restored.
+    expect(input).toHaveValue("Banana")
+    // No commit was made (Escape only discards the query).
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
+  it("clears the typed query on Escape when no value is committed", async () => {
+    // Same as above, but with no initial value — Escape must empty the input
+    // (restoring the empty "committed" state) rather than leaving the query.
+    const user = userEvent.setup()
+    props = getProps({
+      options: ["Apple", "Banana", "Cherry"],
+      value: null,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("")
+
+    await user.click(input)
+    await user.keyboard("App")
+    expect(input).toHaveValue("App")
+
+    await user.keyboard("{Escape}")
+
+    expect(input).toHaveValue("")
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
+  it("Escape without a typed query still clears a clearable committed value", async () => {
+    // Escape has two contracts on a clearable selectbox:
+    //  - while typing: discard the query, keep the committed value (see above)
+    //  - while NOT typing: clear the committed value (pre-existing behavior,
+    //    covered by the e2e test test_empty_selectbox_behaves_correctly)
+    // This test guards the second contract so the #16004 fix does not
+    // regress it.
+    const user = userEvent.setup()
+    props = getProps({
+      options: ["Apple", "Banana", "Cherry"],
+      value: "Banana",
+      clearable: true,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    // No typing — press Escape immediately.
+    await user.keyboard("{Escape}")
+
+    expect(props.onChange).toHaveBeenCalledTimes(1)
+    expect(props.onChange).toHaveBeenCalledWith(null)
+  })
+
   it("updates value if new value provided from parent", () => {
     const { rerender } = render(<Selectbox {...props} />)
     expect(screen.getByDisplayValue(props.options[0])).toBeVisible()
