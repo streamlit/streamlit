@@ -86,9 +86,6 @@ message Dataframe {
 // in row chunks via BackendOperationRequest/BackendOperationResponse, keyed by
 // `source_id`.
 message LazyDataframe {
-  reserved 3, 5, 8;
-  reserved "initial_offset", "generation", "serialized_schema";
-
   // Session-scoped, unguessable id of the backend data source. Used by the
   // frontend to request row chunks. Not usable across sessions.
   string source_id = 1;
@@ -99,17 +96,17 @@ message LazyDataframe {
 
   // Number of rows the backend serves per chunk. The frontend aligns its chunk
   // requests to this page size.
-  uint32 page_size = 4;
+  uint32 page_size = 3;
 
   // How the source can be accessed.
-  AccessMode access_mode = 6;
+  AccessMode access_mode = 4;
 
   // The initial row chunk as an Arrow IPC table including the full schema.
   // For lazy dataframes this carries the schema and the first visible rows.
-  ArrowData initial_chunk = 7;
+  ArrowData initial_chunk = 5;
 
   // Whether server-side sorting is enabled for this source.
-  bool sortable = 9;
+  bool sortable = 6;
 
   enum AccessMode {
     ACCESS_MODE_UNSPECIFIED = 0;
