@@ -584,10 +584,17 @@ describe("TimeInput widget", () => {
     )
     vi.mocked(props.widgetMgr.setStringValue).mockClear()
 
-    // After the arrow key commit, display == value == "12:30".
-    // Pressing Enter should not fire a redundant commit.
-    await user.keyboard("{Enter}")
+    // Typed digits remain local until Enter commits them.
+    await user.keyboard("10")
     expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+    await user.keyboard("{Enter}")
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "12:10",
+      { fromUi: true },
+      undefined
+    )
   })
 
   it("commits value on blur after a typed edit (deferred commit path)", async () => {
