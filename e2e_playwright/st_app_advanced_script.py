@@ -87,7 +87,7 @@ st.write(f"Database Host: {_get_nested_secret('database', 'host')}")
 st.write(f"Database Port: {_get_nested_secret('database', 'port')}")
 
 st.subheader("Environment Variables")
-st.write(f"API Key from environ: {os.environ.get('api_key', 'NOT SET')}")  # noqa: SIM112
+st.write(f"API Key from environ: {os.environ.get('api_key', 'NOT SET')}")  # ruff:ignore[uncapitalized-environment-variables]
 
 st.subheader("Nested Secrets")
 try:

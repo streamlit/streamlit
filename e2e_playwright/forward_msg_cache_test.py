@@ -82,22 +82,22 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_base_url:
     # justified, and expected.
 
     # BackMsg's
-    TOTAL_WEBSOCKET_SENT_SIZE_THRESHOLD_MB: Final = 0.1  # noqa: N806
+    TOTAL_WEBSOCKET_SENT_SIZE_THRESHOLD_MB: Final = 0.1  # ruff:ignore[non-lowercase-variable-in-function]
     # Number of websocket messages sent
-    EXPECTED_WEBSOCKET_MESSAGES_SENT: Final = 34  # noqa: N806
+    EXPECTED_WEBSOCKET_MESSAGES_SENT: Final = 34  # ruff:ignore[non-lowercase-variable-in-function]
 
     # ForwardMsg's
     # Note: Pandas 3.x uses large_string (64-bit offsets) by default, which produces
     # ~18% larger Arrow IPC serialization compared to pandas 2.x's string (32-bit).
-    TOTAL_WEBSOCKET_RECEIVED_SIZE_THRESHOLD_MB: Final = 70  # noqa: N806
+    TOTAL_WEBSOCKET_RECEIVED_SIZE_THRESHOLD_MB: Final = 70  # ruff:ignore[non-lowercase-variable-in-function]
     # Max number of websocket messages received.
-    EXPECTED_WEBSOCKET_MESSAGES_RECEIVED: Final = 2540  # noqa: N806
+    EXPECTED_WEBSOCKET_MESSAGES_RECEIVED: Final = 2540  # ruff:ignore[non-lowercase-variable-in-function]
     # There can be a bit of fluctuation because of optimization logic:
     # See the composable messages logic in
     # lib/streamlit/runtime/forward_msg_queue.py (-> `_maybe_compose_delta_msgs`)
     # the queues can be flushed to the browser before
     # the optimization is able to be applied.
-    ALLOWED_WEBSOCKET_MESSAGES_RECEIVED_DIFFERENCE: Final = 25  # noqa: N806
+    ALLOWED_WEBSOCKET_MESSAGES_RECEIVED_DIFFERENCE: Final = 25  # ruff:ignore[non-lowercase-variable-in-function]
 
     total_websocket_sent_size_bytes: int = 0
     total_websocket_received_size_bytes: int = 0

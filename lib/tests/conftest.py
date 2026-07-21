@@ -53,7 +53,7 @@ with (
     # be sure to catch any instances of calling config.get_option() when
     # first importing a file. We disallow this because doing so means that we
     # miss config options set via flag or environment variable.
-    import streamlit as st  # noqa: F401
+    import streamlit as st  # ruff:ignore[unused-import]
     from streamlit import config, file_util
 
     if config._config_options:
@@ -91,7 +91,7 @@ def pytest_configure(config: pytest.Config):
     is_require_integration = config.getoption("--require-integration", default=False)
     if is_require_integration:
         try:
-            import snowflake.snowpark  # noqa: F401
+            import snowflake.snowpark  # ruff:ignore[unused-import]
         except ImportError:
             raise pytest.UsageError(
                 "The snowflake-snowpark-python package is not installed."

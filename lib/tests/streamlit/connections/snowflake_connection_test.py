@@ -402,7 +402,7 @@ class TestSnowflakeCallersRightsConnection:
         for missing_var in env_var_names:
 
             def fake_getenv(key: str) -> str | None:
-                if key == missing_var:  # noqa: B023 (deliberately capturing loop var)
+                if key == missing_var:  # ruff:ignore[function-uses-loop-variable] (deliberately capturing loop var)
                     return None
                 return "exists"
 

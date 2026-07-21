@@ -38,7 +38,7 @@ MAX_APP_STATIC_FOLDER_SIZE = 1 * 1024 * 1024 * 1024  # 1 GB
 def _set_up_signal_handler(server: Server) -> None:
     _LOGGER.debug("Setting up signal handler")
 
-    def signal_handler(signal_number: int, stack_frame: Any) -> None:  # noqa: ARG001
+    def signal_handler(signal_number: int, stack_frame: Any) -> None:  # ruff:ignore[unused-function-argument]
         # This handler can interrupt the event loop in the middle of a
         # buffered console write, in which case the console output triggered
         # by `Server.stop` raises "RuntimeError: reentrant call inside
@@ -231,7 +231,7 @@ def _print_url(is_running_hello: bool) -> None:
     elif (
         config.is_manually_set("server.address")
         and not server_address_is_unix_socket()
-        and config.get_option("server.address") not in {"0.0.0.0", "::"}  # noqa: S104
+        and config.get_option("server.address") not in {"0.0.0.0", "::"}  # ruff:ignore[hardcoded-bind-all-interfaces]
     ):
         # Non-wildcard specific address - show single URL
         named_urls = [

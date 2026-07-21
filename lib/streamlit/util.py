@@ -86,7 +86,7 @@ def calc_hash(s: bytes | str) -> str:
     return h.hexdigest()
 
 
-class AttributeDictionary(dict[Any, Any]):  # noqa: FURB189
+class AttributeDictionary(dict[Any, Any]):  # ruff:ignore[subclass-builtin]
     """
     A dictionary subclass that supports attribute-style access.
 
@@ -154,7 +154,7 @@ class ReadOnlyAttributeDictionary(AttributeDictionary):
     def __delitem__(self, key: Any) -> None:
         raise TypeError(_READ_ONLY_ERROR_MSG)
 
-    def __ior__(self, other: Any) -> ReadOnlyAttributeDictionary:  # type: ignore[misc]  # noqa: PYI034
+    def __ior__(self, other: Any) -> ReadOnlyAttributeDictionary:  # type: ignore[misc]  # ruff:ignore[non-self-return-type]
         raise TypeError(_READ_ONLY_ERROR_MSG)
 
     def clear(self) -> None:
@@ -166,7 +166,7 @@ class ReadOnlyAttributeDictionary(AttributeDictionary):
     def popitem(self) -> tuple[Any, Any]:
         raise TypeError(_READ_ONLY_ERROR_MSG)
 
-    def setdefault(self, key: Any, default: Any = None) -> Any:  # noqa: ARG002
+    def setdefault(self, key: Any, default: Any = None) -> Any:  # ruff:ignore[unused-method-argument]
         raise TypeError(_READ_ONLY_ERROR_MSG)
 
     def update(self, *args: Any, **kwargs: Any) -> None:

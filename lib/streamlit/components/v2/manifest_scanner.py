@@ -287,7 +287,7 @@ def _pyproject_via_read_text(dist: importlib.metadata.Distribution) -> Path | No
                                     return pyproject_path
                             # Stop after first reasonable file
                             break
-                        except Exception:  # noqa: S112
+                        except Exception:  # ruff:ignore[try-except-continue]
                             continue
     except Exception:
         return None
@@ -312,7 +312,7 @@ def _pyproject_via_dist_files(dist: importlib.metadata.Distribution) -> Path | N
                     package_name,
                 ):
                     return pyproject_path
-            except Exception:  # noqa: S112
+            except Exception:  # ruff:ignore[try-except-continue]
                 continue
     return None
 

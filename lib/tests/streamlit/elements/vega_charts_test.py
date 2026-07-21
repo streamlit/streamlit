@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# ruff: noqa: E501
+# ruff:file-ignore[line-too-long]
 
 from __future__ import annotations
 

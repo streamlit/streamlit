@@ -82,7 +82,7 @@ class TypeUtilTest(unittest.TestCase):
         assert res
 
     def test_is_namedtuple(self):
-        Boy = namedtuple("Boy", ("name", "age"))  # noqa: PYI024
+        Boy = namedtuple("Boy", ("name", "age"))  # ruff:ignore[collections-named-tuple]
         John = Boy("John", "29")
 
         res = type_util.is_namedtuple(John)

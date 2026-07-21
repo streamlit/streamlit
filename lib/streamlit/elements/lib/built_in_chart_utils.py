@@ -335,7 +335,7 @@ def _infer_vegalite_type(
 
     if typ == "categorical" and data.cat.ordered:
         # The original code returns a tuple here:
-        # return ("ordinal", data.cat.categories.tolist())  # noqa: ERA001
+        # return ("ordinal", data.cat.categories.tolist())  # ruff:ignore[commented-out-code]
         # But returning the tuple here isn't compatible with our
         # built-in chart implementation. And it also doesn't seem to be necessary.
         # Altair already extracts the correct sort order somewhere else.
@@ -533,7 +533,7 @@ def _maybe_reset_index_in_place(
             x_column = str(df.index.name)
 
         df.index.name = x_column
-        df.reset_index(inplace=True)  # noqa: PD002
+        df.reset_index(inplace=True)  # ruff:ignore[pandas-use-of-inplace-argument]
 
     return x_column
 

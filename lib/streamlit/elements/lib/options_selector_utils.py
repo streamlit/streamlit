@@ -154,11 +154,11 @@ def _coerce_enum(from_enum_value: E1, to_enum_class: type[E2]) -> E1 | E2:
     match as well. (This is configurable in streamlist configs)
     """
     if not isinstance(from_enum_value, Enum):
-        raise ValueError(  # noqa: TRY004
+        raise ValueError(  # ruff:ignore[type-check-without-type-error]
             f"Expected an Enum in the first argument. Got {type(from_enum_value)}"
         )
     if not isinstance(to_enum_class, EnumMeta):
-        raise ValueError(  # noqa: TRY004
+        raise ValueError(  # ruff:ignore[type-check-without-type-error]
             f"Expected an EnumMeta/Type in the second argument. Got {type(to_enum_class)}"
         )
     if isinstance(from_enum_value, to_enum_class):
@@ -381,7 +381,7 @@ def validate_and_sync_value_with_options(
         formatted_value = format_func(current_value)
         if formatted_value in formatted_options_set:
             return current_value, False
-    except Exception:  # noqa: S110
+    except Exception:  # ruff:ignore[try-except-pass]
         pass  # format_func failed - value is invalid, fall through to reset
 
     # Value not in options - reset to default
@@ -530,7 +530,7 @@ def validate_and_sync_multiselect_value_with_options(
     for value in current_values:
         try:
             formatted_value = format_func(value)
-        except Exception:  # noqa: S112
+        except Exception:  # ruff:ignore[try-except-continue]
             # format_func failed on this value (e.g., a string value from a previous
             # session when format_func expects an object with specific attributes).
             # In this case, the value is definitely not valid since the current options

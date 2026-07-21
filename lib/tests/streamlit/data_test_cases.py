@@ -220,7 +220,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         "Set[str]",
         # Set does not have a stable order across different Python version.
         # Therefore, we are only testing this with one item.
-        {"st.number_input", "st.number_input"},  # noqa: B033
+        {"st.number_input", "st.number_input"},  # ruff:ignore[duplicate-value]
         CaseMetadata(
             1, 1, DataFormat.SET_OF_VALUES, ["st.number_input"], "markdown", False
         ),
@@ -241,7 +241,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         "Frozenset[str]",
         # Set does not have a stable order across different Python version.
         # Therefore, we are only testing this with one item.
-        frozenset({"st.number_input", "st.number_input"}),  # noqa: B033
+        frozenset({"st.number_input", "st.number_input"}),  # ruff:ignore[duplicate-value]
         CaseMetadata(
             1,
             1,
@@ -1127,7 +1127,7 @@ try:
         ]
     )
 except ModuleNotFoundError:
-    print("Polars not installed. Skipping Polars dataframe integration tests.")  # noqa: T201
+    print("Polars not installed. Skipping Polars dataframe integration tests.")  # ruff:ignore[print]
 
 ###################################
 ########### Xarray Types ##########
@@ -1176,7 +1176,7 @@ try:
         ]
     )
 except ModuleNotFoundError:
-    print("Xarray not installed. Skipping Xarray dataframe integration tests.")  # noqa: T201
+    print("Xarray not installed. Skipping Xarray dataframe integration tests.")  # ruff:ignore[print]
 
 ###################################
 ########## Pydantic Types #########
@@ -1264,4 +1264,4 @@ try:
         ]
     )
 except ModuleNotFoundError:
-    print("Pydantic not installed. Skipping Pydantic dataframe tests.")  # noqa: T201
+    print("Pydantic not installed. Skipping Pydantic dataframe tests.")  # ruff:ignore[print]

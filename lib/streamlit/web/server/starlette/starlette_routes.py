@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# ruff: noqa: RUF029  # Async route handlers are idiomatic even without await
+# ruff:file-ignore[unused-async]  # Async route handlers are idiomatic even without await
 
 """Route handlers for the Starlette server."""
 

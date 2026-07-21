@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# ruff: noqa: RUF029  # Async route handlers are idiomatic even without await
+# ruff:file-ignore[unused-async]  # Async route handlers are idiomatic even without await
 
 """Starlette app authentication routes."""
 
@@ -107,7 +107,7 @@ def _create_streamlit_oauth_class(starlette_client: Any) -> type[Any]:
     return StreamlitStarletteOAuth
 
 
-class _AuthlibConfig(dict[str, Any]):  # noqa: FURB189
+class _AuthlibConfig(dict[str, Any]):  # ruff:ignore[subclass-builtin]
     """Config adapter that exposes provider data via Authlib's flat lookup.
 
     Authlib expects a flat configuration dictionary (e.g. "GOOGLE_CLIENT_ID").

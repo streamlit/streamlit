@@ -303,7 +303,7 @@ def _parse_value(
         # To make the type checker happy, we raise a TypeError here. However,
         # This isn't expected to happen.
         if isinstance(value, list):
-            raise TypeError(  # noqa: TRY301
+            raise TypeError(  # ruff:ignore[raise-within-try]
                 "List values are only supported by list, string and empty columns."
             )
 
@@ -386,7 +386,7 @@ def _apply_cell_edits(
                 new_idx_value = _parse_value(value, dataframe_schema[INDEX_IDENTIFIER])
                 df.rename(
                     index={old_idx_value: new_idx_value},
-                    inplace=True,  # noqa: PD002
+                    inplace=True,  # ruff:ignore[pandas-use-of-inplace-argument]
                 )
             else:
                 col_pos = df.columns.get_loc(col_name)
@@ -528,7 +528,7 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> None:
         A list of row numbers to delete.
     """
     # Drop rows based in numeric row positions
-    df.drop(df.index[deleted_rows], inplace=True)  # noqa: PD002
+    df.drop(df.index[deleted_rows], inplace=True)  # ruff:ignore[pandas-use-of-inplace-argument]
 
 
 def _apply_dataframe_edits(
@@ -614,7 +614,7 @@ def _fix_column_headers(data_df: pd.DataFrame) -> None:
         # to avoid issues with editing:
         data_df.rename(
             columns={column: str(column) for column in data_df.columns},
-            inplace=True,  # noqa: PD002
+            inplace=True,  # ruff:ignore[pandas-use-of-inplace-argument]
         )
 
 

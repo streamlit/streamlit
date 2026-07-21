@@ -30,7 +30,7 @@ from streamlit.proto.Help_pb2 import Member as MemberProto
 from streamlit.runtime.caching.cache_utils import CachedFunc
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_runner import (
-    __file__ as SCRIPTRUNNER_FILENAME,  # noqa: N812
+    __file__ as SCRIPTRUNNER_FILENAME,  # ruff:ignore[lowercase-imported-as-non-lowercase]
 )
 from streamlit.runtime.secrets import Secrets
 from streamlit.string_util import is_mem_address_str

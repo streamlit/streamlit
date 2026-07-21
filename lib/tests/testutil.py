@@ -30,10 +30,10 @@ from streamlit.runtime.state import SafeSessionState, SessionState
 
 # Reexport functions that were moved to main codebase
 from streamlit.testing.v1.util import (
-    build_mock_config_get_option as build_mock_config_get_option,  # noqa: PLC0414
+    build_mock_config_get_option as build_mock_config_get_option,  # ruff:ignore[useless-import-alias]
 )
 from streamlit.testing.v1.util import (
-    patch_config_options as patch_config_options,  # noqa: PLC0414
+    patch_config_options as patch_config_options,  # ruff:ignore[useless-import-alias]
 )
 
 if TYPE_CHECKING:

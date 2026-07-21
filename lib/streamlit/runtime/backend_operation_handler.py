@@ -158,7 +158,7 @@ class DeferredFileHandler(BackendOperationHandler):
     async def handle(
         self,
         request: BackendOperationRequest,
-        session_id: str,  # noqa: ARG002
+        session_id: str,  # ruff:ignore[unused-method-argument]
     ) -> BackendOperationResponse:
         """Execute the deferred callable and return the generated file URL."""
         payload = request.deferred_file

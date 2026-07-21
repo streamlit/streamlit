@@ -49,7 +49,7 @@ def test_displays_a_pyplot_figures(
 
     # Snapshot testing the global object is flaky. But we anyways want to remove this,
     # functionality so we can just comment it out for now.
-    # assert_snapshot(pyplot_elements.nth(6), name="st_pyplot-global_figure")  # noqa: ERA001
+    # assert_snapshot(pyplot_elements.nth(6), name="st_pyplot-global_figure")  # ruff:ignore[commented-out-code]
 
 
 def test_shows_deprecation_warning(app: Page):

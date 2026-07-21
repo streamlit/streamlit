@@ -1131,7 +1131,7 @@ def marshall(
         This attribute is optional and only used for pandas.Styler, other elements
         (e.g. charts) can ignore it.
 
-    """  # noqa: E501
+    """  # ruff:ignore[line-too-long]
 
     if dataframe_util.is_pandas_styler(data):
         # default_uuid is a string only if the data is a `Styler`,

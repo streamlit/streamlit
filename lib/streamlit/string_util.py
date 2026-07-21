@@ -298,7 +298,7 @@ def from_number(value: AnyNumber) -> str:
             item_value = cast("Callable[[], Any]", value.item)()
             if isinstance(item_value, (float, int)):
                 return str(item_value)
-        except Exception:  # noqa: S110
+        except Exception:  # ruff:ignore[try-except-pass]
             # If the numpy item is not a valid value, the TypeError below will be raised.
             pass
 

@@ -225,7 +225,7 @@ class LocalSourcesWatcher:
     def _register_watcher(
         self, filepath: str, module_name: str | None, is_directory: bool = False
     ) -> None:
-        global PathWatcher  # noqa: PLW0603
+        global PathWatcher  # ruff:ignore[global-statement]
         if PathWatcher is None:
             PathWatcher = get_default_path_watcher_class()
 

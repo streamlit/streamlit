@@ -127,7 +127,7 @@ def unflatten(
     for k, v in list(out_dict.items()):
         # Unflatten child dicts:
         if isinstance(v, dict):
-            v = unflatten(v, encodings)  # noqa: PLW2901
+            v = unflatten(v, encodings)  # ruff:ignore[redefined-loop-name]
         elif hasattr(v, "__iter__"):
             for i, child in enumerate(v):
                 if isinstance(child, dict):

@@ -513,7 +513,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 click_mode=0,
                 style="",
                 key="",
-                help="",  # noqa: A006
+                help="",  # ruff:ignore[builtin-lambda-argument-shadowing]
                 width="content": st.pills(label, options, disabled=disabled),
                 "button_group",
             ),
@@ -527,7 +527,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 click_mode=0,
                 style="",
                 key="",
-                help="",  # noqa: A006
+                help="",  # ruff:ignore[builtin-lambda-argument-shadowing]
                 width="content": st.segmented_control(
                     label, options, disabled=disabled
                 ),

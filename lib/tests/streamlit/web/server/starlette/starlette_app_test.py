@@ -2738,9 +2738,9 @@ class TestAppSecrets:
             assert response.status_code == 200
 
             # Lowercase keys test that secrets API preserves key casing
-            assert os.environ.get("str_key") == "value"  # noqa: SIM112
-            assert os.environ.get("int_key") == "42"  # noqa: SIM112
-            assert os.environ.get("float_key") == "3.14"  # noqa: SIM112
+            assert os.environ.get("str_key") == "value"  # ruff:ignore[uncapitalized-environment-variables]
+            assert os.environ.get("int_key") == "42"  # ruff:ignore[uncapitalized-environment-variables]
+            assert os.environ.get("float_key") == "3.14"  # ruff:ignore[uncapitalized-environment-variables]
 
     @patch_config_options(
         {
