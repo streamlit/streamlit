@@ -20,9 +20,8 @@ import { DateInput, DateSegment } from "react-aria-components"
 
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 
-/** Outermost wrapper; provides relative positioning for the clear button. */
+/** Outermost wrapper for layout. */
 export const StyledTimeFieldContainer = styled.div({
-  position: "relative",
   width: "100%",
 })
 
@@ -48,6 +47,10 @@ export const StyledTimeInputWrapper = styled.div(({ theme }) => ({
   "&:focus-within": {
     borderColor: getBorderColor(theme.colors, true),
     outline: "none",
+  },
+  "&[data-has-error]": {
+    borderColor: theme.colors.redTextColor,
+    backgroundColor: theme.colors.redBackgroundColor,
   },
   "&[data-disabled]": {
     color: theme.colors.fadedText40,
@@ -100,21 +103,28 @@ export const StyledTimeSegment = styled(DateSegment)(({ theme }) => {
   }
 })
 
-/** Icon-only clear button, absolute-positioned to the right of the input. */
+/** Error icon, flex item to the right of the time segments. */
+export const StyledErrorIconContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  color: theme.colors.redTextColor,
+  paddingLeft: theme.spacing.twoXS,
+  paddingRight: theme.spacing.sm,
+  flexShrink: 0,
+}))
+
+/** Clear button, flex item to the right of the time segments (or error icon). */
 export const StyledClearButton = styled.button(({ theme }) => ({
-  position: "absolute",
-  top: "50%",
-  right: theme.spacing.sm,
-  transform: "translateY(-50%)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  background: "transparent",
+  background: "none",
   border: "none",
   cursor: "pointer",
-  padding: theme.spacing.threeXS,
+  padding: `0 ${theme.spacing.twoXS}`,
+  marginRight: theme.spacing.sm,
   color: theme.colors.grayTextColor,
-  lineHeight: theme.lineHeights.none,
+  flexShrink: 0,
   "&:hover": {
     color: theme.colors.bodyText,
   },

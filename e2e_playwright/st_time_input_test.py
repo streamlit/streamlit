@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -388,3 +388,103 @@ def test_time_input_query_param_step_not_snapped(page: Page, app_base_url: str):
 
     expect_prefixed_markdown(page, "Bound step time:", "09:17:00")
     expect(page).to_have_url(re.compile(r"bound_step_time=09%3A17"))
+
+
+# --- Paste behavior tests ---
+
+
+def _paste_into(locator: Locator, text: str) -> None:
+    """Simulate a paste event with the given text on a Playwright locator."""
+    locator.evaluate(
+        """(el, text) => {
+            const dt = new DataTransfer();
+            dt.setData('text', text);
+            el.dispatchEvent(new ClipboardEvent('paste', {
+                clipboardData: dt,
+                bubbles: true,
+                cancelable: true,
+            }));
+        }""",
+        text,
+    )
+
+
+def test_paste_valid_time(app: Page):
+    """Test that pasting valid time values (with colon and bare digits) commits."""
+    time_display = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    hour_segment = time_display.locator("[role='spinbutton']").first
+    hour_segment.click()
+
+    # HH:MM format with colon
+    _paste_into(hour_segment, "14:30")
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 1: 14:30:00")
+
+    # HHMM format without colon
+    _paste_into(hour_segment, "2215")
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 1: 22:15:00")
+
+
+def test_paste_invalid_time_shows_error_and_recovers(app: Page):
+    """Test that invalid paste shows error without committing, and valid paste recovers."""
+    time_input = get_time_input(app, "Time input 1 (8:45)")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    hour_segment = time_display.locator("[role='spinbutton']").first
+    minute_segment = time_display.locator("[role='spinbutton']").last
+    hour_segment.click()
+
+    # Paste out-of-range value
+    _paste_into(hour_segment, "08:99")
+
+    # Error icon is visible, invalid digits displayed, value NOT committed
+    expect(time_input.get_by_test_id("stTimeInputError")).to_be_visible()
+    expect(hour_segment).to_have_text("08")
+    expect(minute_segment).to_have_text("99")
+    expect_markdown(app, "Value 1: 08:45:00")
+
+    # Paste valid value to recover
+    _paste_into(hour_segment, "10:30")
+    wait_for_app_run(app)
+
+    expect(time_input.get_by_test_id("stTimeInputError")).not_to_be_visible()
+    expect_markdown(app, "Value 1: 10:30:00")
+
+
+def test_paste_invalid_time_arrow_key_reverts(app: Page):
+    """Test that ArrowUp after invalid paste reverts to prior valid value."""
+    time_input = get_time_input(app, "Time input 1 (8:45)")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    minute_segment = time_display.locator("[role='spinbutton']").last
+    hour_segment = time_display.locator("[role='spinbutton']").first
+    hour_segment.click()
+
+    # Paste invalid
+    _paste_into(hour_segment, "08:99")
+    expect(time_input.get_by_test_id("stTimeInputError")).to_be_visible()
+
+    # Press ArrowUp to revert
+    minute_segment.click()
+    minute_segment.press("ArrowUp")
+
+    # Error cleared, original value restored
+    expect(time_input.get_by_test_id("stTimeInputError")).not_to_be_visible()
+    expect(hour_segment).to_have_text("08")
+    expect(minute_segment).to_have_text("45")
+    # Still not committed (no change from original)
+    expect_markdown(app, "Value 1: 08:45:00")
+
+
+def test_paste_partial_digit_into_segment(app: Page):
+    """Test that pasting a partial digit into minute segment works."""
+    time_display = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    minute_segment = time_display.locator("[role='spinbutton']").last
+    minute_segment.click()
+    _paste_into(minute_segment, "22")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Value 1: 08:22:00")

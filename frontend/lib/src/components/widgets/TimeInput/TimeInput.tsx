@@ -15,6 +15,7 @@
  */
 
 import {
+  ClipboardEvent,
   FocusEvent,
   KeyboardEvent,
   memo,
@@ -24,12 +25,16 @@ import {
   useState,
 } from "react"
 
+import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { Time } from "@internationalized/date"
 import { TimeField } from "react-aria-components"
 
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
+import Icon from "~lib/components/shared/Icon/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
@@ -46,6 +51,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledClearButton,
+  StyledErrorIconContainer,
   StyledTimeFieldContainer,
   StyledTimeFieldInput,
   StyledTimeInputWrapper,
@@ -146,6 +152,16 @@ function TimeInput({
   const stepMins = step / 60
   const stepHours = step / 3600
 
+  const [validationError, setValidationError] = useState<string | null>(null)
+
+  // When an out-of-range value is pasted (e.g. "08:99"), we can't represent it
+  // with a Time object. Store the raw digits here to override segment rendering
+  // while keeping the TimeField value at the last valid state.
+  const [pasteOverride, setPasteOverride] = useState<{
+    hour: string
+    minute: string
+  } | null>(null)
+
   /**
    * Called by TimeField on every committed segment change.
    *
@@ -176,6 +192,8 @@ function TimeInput({
           )
         }
       }
+      setValidationError(null)
+      setPasteOverride(null)
     },
     [clearable, setValueWithSource, inForm, element, widgetMgr, fragmentId]
   )
@@ -218,7 +236,85 @@ function TimeInput({
         fragmentId
       )
     }
+    setValidationError(null)
+    setPasteOverride(null)
   }, [setValueWithSource, inForm, element, widgetMgr, fragmentId])
+
+  const handlePaste = useCallback(
+    (e: ClipboardEvent<HTMLDivElement>): void => {
+      const text = e.clipboardData.getData("text").trim()
+
+      // Full time paste: HH:MM (with colon) or HHMM / HMM (3-4 digits, no colon)
+      const colonMatch = /^(\d{1,2}):(\d{2})$/.exec(text)
+      const bareMatch = !colonMatch ? /^(\d{1,2})(\d{2})$/.exec(text) : null
+      const match = colonMatch ?? bareMatch
+      if (match) {
+        const hours = Number(match[1])
+        const minutes = Number(match[2])
+        e.preventDefault()
+        if (hours > 23 || minutes > 59) {
+          setPasteOverride({
+            hour: String(hours).padStart(2, "0"),
+            minute: String(minutes).padStart(2, "0"),
+          })
+          setValidationError(
+            `Time "${text}" is out of range. Hours must be 0–23, minutes 0–59.`
+          )
+          return
+        }
+        commitImmediatelyRef.current = true
+        handleChange(new Time(hours, minutes))
+        return
+      }
+
+      // Partial paste: pure digits (1-2) into the currently focused segment
+      const digitMatch = /^\d{1,2}$/.exec(text)
+      if (digitMatch) {
+        const target = e.target as HTMLElement
+        if (target.getAttribute("role") !== "spinbutton") return
+        const segmentType = target.getAttribute("data-type")
+        const numValue = Number(text)
+        const current = displayValue ? stringToTime(displayValue) : null
+        const currentHour = current
+          ? String(current.hour).padStart(2, "0")
+          : "00"
+        const currentMinute = current
+          ? String(current.minute).padStart(2, "0")
+          : "00"
+        e.preventDefault()
+
+        if (segmentType === "hour" && numValue <= 23) {
+          commitImmediatelyRef.current = true
+          handleChange(new Time(numValue, current ? current.minute : 0))
+        } else if (segmentType === "minute" && numValue <= 59) {
+          commitImmediatelyRef.current = true
+          handleChange(new Time(current ? current.hour : 0, numValue))
+        } else {
+          setPasteOverride({
+            hour:
+              segmentType === "hour"
+                ? String(numValue).padStart(2, "0")
+                : currentHour,
+            minute:
+              segmentType === "minute"
+                ? String(numValue).padStart(2, "0")
+                : currentMinute,
+          })
+          setValidationError(
+            `Value "${text}" is out of range for ${segmentType}.`
+          )
+        }
+        return
+      }
+
+      // Unrecognized format containing a colon — show error
+      if (text.includes(":")) {
+        e.preventDefault()
+        setValidationError(`Invalid time format "${text}". Please use HH:MM.`)
+      }
+    },
+    [displayValue, handleChange]
+  )
 
   /**
    * Intercept ArrowUp/Down on the spinbutton segments (capture phase, before
@@ -263,6 +359,19 @@ function TimeInput({
       // +/- buttons on st.number_input). Set the flag before any step-specific
       // early-returns so it covers both custom-handled and fall-through paths.
       commitImmediatelyRef.current = true
+
+      // When an invalid paste is displayed, arrow keys simply revert to the
+      // prior valid value rather than computing a new step from it.
+      if (pasteOverride) {
+        e.preventDefault()
+        e.stopPropagation()
+        e.nativeEvent.stopImmediatePropagation()
+        setPasteOverride(null)
+        setValidationError(null)
+        return
+      }
+
+      if (!displayValue) return
 
       const segmentType = target.getAttribute("data-type")
       const up = e.key === "ArrowUp"
@@ -314,6 +423,7 @@ function TimeInput({
     [
       disabled,
       displayValue,
+      pasteOverride,
       step,
       stepMins,
       stepHours,
@@ -344,10 +454,14 @@ function TimeInput({
           data-testid="stTimeInputTimeDisplay"
           data-disabled={disabled || undefined}
           onBlur={handleBlur}
+          data-has-error={validationError ? "" : undefined}
           onKeyDownCapture={handleArrowKeyCapture}
+          onPaste={handlePaste}
         >
           <TimeField
             aria-label={element.label}
+            style={{ flex: 1 }}
+            isInvalid={!!validationError}
             value={
               isNullOrUndefined(displayValue)
                 ? null
@@ -365,32 +479,49 @@ function TimeInput({
             <StyledTimeFieldInput>
               {segment => (
                 <StyledTimeSegment segment={segment}>
-                  {({ text, isPlaceholder, type }) =>
-                    isPlaceholder && type === "hour"
-                      ? "HH"
-                      : isPlaceholder && type === "minute"
-                        ? "mm"
-                        : text
-                  }
+                  {({ text, isPlaceholder, type }) => {
+                    if (pasteOverride) {
+                      if (type === "hour") return pasteOverride.hour
+                      if (type === "minute") return pasteOverride.minute
+                    }
+                    if (isPlaceholder && type === "hour") return "HH"
+                    if (isPlaceholder && type === "minute") return "mm"
+                    return text
+                  }}
                 </StyledTimeSegment>
               )}
             </StyledTimeFieldInput>
           </TimeField>
+          {validationError && (
+            <StyledErrorIconContainer data-testid="stTimeInputError">
+              <Tooltip
+                content={
+                  <StreamlitMarkdown
+                    source={`**Error**: ${validationError}`}
+                    allowHTML={false}
+                  />
+                }
+                placement={Placement.TOP_RIGHT}
+                error
+              >
+                <Icon content={ErrorOutline} size="base" />
+              </Tooltip>
+            </StyledErrorIconContainer>
+          )}
+          {clearable &&
+            (!isNullOrUndefined(displayValue) || pasteOverride) && (
+              <StyledClearButton
+                type="button"
+                onClick={handleClear}
+                aria-label="Clear time"
+                data-testid="stTimeInputClearButton"
+                tabIndex={-1}
+                onMouseDown={e => e.preventDefault()}
+              >
+                <Cancel size={theme.iconSizes.base} aria-hidden="true" />
+              </StyledClearButton>
+            )}
         </StyledTimeInputWrapper>
-        {clearable && !isNullOrUndefined(displayValue) && (
-          <StyledClearButton
-            type="button"
-            onClick={handleClear}
-            aria-label="Clear time"
-            data-testid="stTimeInputClearButton"
-            // Removed from tab order: keyboard users clear via
-            // Backspace/Delete in segments. Matches NumberInput pattern.
-            tabIndex={-1}
-            onMouseDown={e => e.preventDefault()}
-          >
-            <Cancel size={theme.iconSizes.base} aria-hidden="true" />
-          </StyledClearButton>
-        )}
       </StyledTimeFieldContainer>
     </div>
   )

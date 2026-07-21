@@ -426,7 +426,7 @@ describe("TimeInput widget", () => {
     )
   })
 
-  it("snaps hour ArrowUp to next step boundary when step=7200", async () => {
+  it("snaps hour ArrowUp to next step boundary when step is multiple of hours (step=7200)", async () => {
     const user = userEvent.setup()
     // step=7200s → stepHours=2. value=12:45 → ArrowUp → 14:00 (minutes zeroed to grid)
     const props = getProps({ default: "12:45", step: 7200 })
@@ -446,7 +446,7 @@ describe("TimeInput widget", () => {
     )
   })
 
-  it("snaps hour ArrowDown to previous step boundary when step=7200", async () => {
+  it("snaps hour ArrowDown to previous step boundary when step is multiple of hours (step=7200)", async () => {
     const user = userEvent.setup()
     // step=7200s → stepHours=2. value=12:45 → ArrowDown → 10:00 (minutes zeroed to grid)
     const props = getProps({ default: "12:45", step: 7200 })
@@ -746,6 +746,266 @@ describe("TimeInput widget", () => {
     // Blur after arrow commit must NOT trigger a second commit
     await user.tab()
     expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+  })
+
+  it("accepts pasted HH:MM values", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("08:30")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "08:30",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("accepts pasted HHMM values without colon", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("0830")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "08:30",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("displays out-of-range HHMM paste (no colon) with error", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("2599")
+
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+    expect(hourSegment).toHaveTextContent("25")
+    expect(minuteSegment).toHaveTextContent("99")
+  })
+
+  it("accepts partial paste of digits into the minute segment", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(minuteSegment)
+    await user.paste("22")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "12:22",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("accepts partial paste of digits into the hour segment", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("8")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "08:45",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("ignores pasted values with invalid format", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("not-a-time")
+
+    // Should not have changed from the paste
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+  })
+
+  it("shows validation error when pasting invalid time-like text", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    render(<TimeInput {...props} />)
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("ab:cd")
+
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+  })
+
+  it("displays out-of-range pasted time in segments with error but does not commit", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("25:00")
+
+    // Value not committed to backend
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+    // Error is shown
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+    // Pasted digits are displayed in the segments
+    expect(hourSegment).toHaveTextContent("25")
+  })
+
+  it("displays out-of-range pasted minutes in segment with error but does not commit", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(minuteSegment)
+    await user.paste("75")
+
+    // Value not committed to backend
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+    // Error is shown
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+    // Pasted digit is displayed in the segment
+    expect(minuteSegment).toHaveTextContent("75")
+  })
+
+  it("clears paste override and error on next valid change", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("25:00")
+
+    // Error is active
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+    expect(hourSegment).toHaveTextContent("25")
+
+    // Now type a valid value — should clear the override and error
+    await user.click(hourSegment)
+    await user.paste("08:30")
+
+    expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+    expect(hourSegment).toHaveTextContent("08")
+    expect(minuteSegment).toHaveTextContent("30")
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "08:30",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("arrow key reverts to prior valid value when paste override is active", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(minuteSegment)
+    await user.paste("08:99")
+
+    // Override is active, showing invalid digits
+    expect(hourSegment).toHaveTextContent("08")
+    expect(minuteSegment).toHaveTextContent("99")
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+
+    // Press ArrowUp — should revert to prior value (12:45), not compute a step
+    await user.keyboard("{ArrowUp}")
+
+    expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+    expect(hourSegment).toHaveTextContent("12")
+    expect(minuteSegment).toHaveTextContent("45")
+    // No new commit — just reverted display
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+  })
+
+  it("shows both error icon and clear button on clearable input with invalid paste", async () => {
+    const user = userEvent.setup()
+    // No default → clearable
+    const props = getProps({ default: undefined, value: "10:00" })
+    render(<TimeInput {...props} />)
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("08:99")
+
+    // Both icons should be visible
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+    expect(screen.getByTestId("stTimeInputClearButton")).toBeVisible()
+    // Pasted digits displayed
+    expect(hourSegment).toHaveTextContent("08")
+    const [, minuteSegment] = screen.getAllByRole("spinbutton")
+    expect(minuteSegment).toHaveTextContent("99")
+  })
+
+  it("clear button dismisses paste override on clearable input", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: undefined, value: "10:00" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("25:00")
+
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+
+    // Click clear
+    await user.click(screen.getByTestId("stTimeInputClearButton"))
+
+    // Error and override should be gone
+    expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+    // Value committed as null (cleared)
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      null,
+      { fromUi: true },
+      undefined
+    )
   })
 })
 
