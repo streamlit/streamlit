@@ -543,6 +543,51 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         assert saved_filepath == SCRIPT_PATH
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_extended_windows_path_matches_watched_file(self, _fob):
+        """Test that an extended-length Windows path matches a watched file."""
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        callback = MagicMock()
+        lsw.register_file_change_callback(callback)
+        watched_path = r"C:\project\module.py"
+        changed_path = r"\\?\C:\project\module.py"
+        lsw._watched_modules = {
+            watched_path: local_sources_watcher.WatchedModule(MagicMock(), None)
+        }
+
+        with (
+            patch.object(
+                local_sources_watcher.os.path, "realpath", side_effect=lambda p: p
+            ),
+            patch.object(local_sources_watcher.util.env_util, "IS_WINDOWS", True),
+        ):
+            lsw.on_path_changed(changed_path)
+
+        callback.assert_called_once_with(changed_path)
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_extended_windows_path_matches_watched_directory(self, _fob):
+        """Test that an extended-length Windows path matches a watched directory."""
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        callback = MagicMock()
+        lsw.register_file_change_callback(callback)
+        watched_path = r"C:\project"
+        changed_path = r"\\?\C:\project\__pycache__\module.pyc"
+        lsw._watched_modules = {
+            watched_path: local_sources_watcher.WatchedModule(MagicMock(), None)
+        }
+
+        with (
+            patch.object(
+                local_sources_watcher.os.path, "realpath", side_effect=lambda p: p
+            ),
+            patch.object(local_sources_watcher.os.path, "isdir", return_value=True),
+            patch.object(local_sources_watcher.util.env_util, "IS_WINDOWS", True),
+        ):
+            lsw.on_path_changed(changed_path)
+
+        callback.assert_called_once_with(changed_path)
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     @patch("os.path.isdir")
     def test_folder_watch_list(self, mock_isdir, mock_path_watcher):
         watch_folders = ["/watch/path1", "/watch/path2"]

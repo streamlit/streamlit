@@ -19,6 +19,8 @@ from __future__ import annotations
 import os
 from unittest.mock import mock_open, patch
 
+import pytest
+
 from streamlit import env_util
 
 
@@ -109,3 +111,16 @@ def test_is_wsl_false_when_proc_version_is_unavailable() -> None:
         patch("builtins.open", side_effect=OSError),
     ):
         assert not env_util._is_wsl()
+
+
+@pytest.mark.parametrize(
+    ("which_return", "expected"),
+    [
+        pytest.param("/usr/bin/python", True, id="found"),
+        pytest.param(None, False, id="missing"),
+    ],
+)
+def test_is_executable_in_path(which_return: str | None, expected: bool) -> None:
+    """is_executable_in_path reflects whether shutil.which locates the executable."""
+    with patch("shutil.which", return_value=which_return):
+        assert env_util.is_executable_in_path("python") is expected

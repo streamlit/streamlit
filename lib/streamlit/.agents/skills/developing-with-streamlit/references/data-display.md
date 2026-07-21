@@ -1,4 +1,3 @@
-
 # Streamlit charts & data
 
 Present data clearly.
@@ -47,6 +46,7 @@ st.altair_chart(chart)
 ```
 
 **When to use Altair:**
+
 - Custom axis formatting
 - Multiple series with legends
 - Interactive tooltips
@@ -101,12 +101,14 @@ st.dataframe(
 **Note on hiding columns:** Setting a column to `None` hides it from the UI, but the data is still sent to the frontend. For truly sensitive data, pre-filter the DataFrame before displaying.
 
 **Dataframe best practices:**
+
 - **Hide useless index:** `hide_index=True`
 - **Or make index meaningful:** `df = df.set_index("customer_name")` before displaying
 - **Hide internal/technical columns:** Set column to `None` in config (but pre-filter for sensitive data)
 - **Use visual column types where they help:** sparklines for trends, progress bars for completion, images for logos
 
 **Column types:**
+
 - `AreaChartColumn` → Area sparklines
 - `AudioColumn` → Audio playback
 - `BarChartColumn` → Bar sparklines
@@ -156,6 +158,7 @@ st.dataframe(
 ```
 
 **Key points:**
+
 - **`key` is required** to enable clicks/callbacks. Click info lives in `st.session_state[key]` as `{"row", "label"}` — only during the click rerun, then resets to `None`.
 - Use `on_click` (with optional `args`/`kwargs`) for the action; read the clicked row/label inside the callback.
 - Always **read-only** — even in `st.data_editor`, the cell values can't be edited, but clicks still fire.
@@ -163,11 +166,11 @@ st.dataframe(
 
 ## Choosing the right data widget
 
-| Widget | Use When |
-|---|---|
-| `st.dataframe` | Large datasets, interactive exploration, sorting, filtering, row selection |
-| `st.data_editor` | Users need to modify data (edit cells, add/delete rows) |
-| `st.table` | Small static datasets, Markdown-formatting and extended Pandas Styler support |
+| Widget           | Use When                                                                      |
+| ---------------- | ----------------------------------------------------------------------------- |
+| `st.dataframe`   | Large datasets, interactive exploration, sorting, filtering, row selection    |
+| `st.data_editor` | Users need to modify data (edit cells, add/delete rows)                       |
+| `st.table`       | Small static datasets, Markdown-formatting and extended Pandas Styler support |
 
 Use `st.dataframe` with `on_select` for row selection — do **not** use `st.data_editor` with a checkbox column for selection-only use cases.
 
@@ -208,6 +211,8 @@ edited_df = st.data_editor(
 ```
 
 Access edit details via `st.session_state["my_editor"]["edited_rows"]`.
+
+**Preserving edits on data refresh** — With a `key` and `num_rows="fixed"`, edits are kept when the data's *values* change and only reset when its structure changes (columns, dtypes, row count, or index labels). An edit is dropped once its value matches the new data. Edits are matched by row position, so use a meaningful index if edits should follow specific rows when the data is reordered. Omit `key` to reset edits on every data change.
 
 **Double-input anti-pattern** — assigning the result back to the same session state used as input causes every other edit to disappear:
 

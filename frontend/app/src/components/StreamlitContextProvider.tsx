@@ -52,6 +52,7 @@ type LibConfigContextValues = {
   enforceDownloadInNewTab?: boolean
   resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
   showErrorLinks?: Config.ShowErrorLinks
+  disableDataExport?: boolean
 }
 
 type NavigationContextValues = {
@@ -80,9 +81,12 @@ type ThemeContextValues = {
 }
 
 type ScriptRunContextValues = {
+  stopScript: () => void
   scriptRunState: ScriptRunState
   scriptRunId: string
   fragmentIdsThisRun: Array<string>
+  scriptRunFinishedSequence: number
+  scriptRunFinishedFragmentIds: Array<string>
 }
 
 type FormsContextValues = {
@@ -118,6 +122,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   enforceDownloadInNewTab,
   resourceCrossOriginMode,
   showErrorLinks,
+  disableDataExport,
   // NavigationContext
   pageLinkBaseUrl,
   currentPageScriptHash,
@@ -138,9 +143,12 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   setTheme,
   availableThemes,
   // ScriptRunContext
+  stopScript,
   scriptRunState,
   scriptRunId,
   fragmentIdsThisRun,
+  scriptRunFinishedSequence,
+  scriptRunFinishedFragmentIds,
   // FormsContext
   formsData,
   // BackendOperationContext
@@ -156,6 +164,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
       showErrorLinks,
+      disableDataExport,
     }),
     [
       locale,
@@ -163,6 +172,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
       showErrorLinks,
+      disableDataExport,
     ]
   )
 
@@ -231,11 +241,21 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // Memoized object for ScriptRunContext values
   const scriptRunContextProps = useMemo<ScriptRunContextProps>(
     () => ({
+      stopScript,
       scriptRunState,
       scriptRunId,
       fragmentIdsThisRun,
+      scriptRunFinishedSequence,
+      scriptRunFinishedFragmentIds,
     }),
-    [scriptRunState, scriptRunId, fragmentIdsThisRun]
+    [
+      stopScript,
+      scriptRunState,
+      scriptRunId,
+      fragmentIdsThisRun,
+      scriptRunFinishedSequence,
+      scriptRunFinishedFragmentIds,
+    ]
   )
 
   const formsContextProps: FormsContextProps = useMemo(

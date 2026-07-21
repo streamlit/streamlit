@@ -75,6 +75,7 @@ message ForwardMsg {
     PageNotFound page_not_found = 15;
     FileURLsResponse file_urls_response = 19;
     AutoRerun auto_rerun = 21;
+    StopAutoRerun stop_auto_rerun = 28;
 
     // App logo message
     Logo logo = 22;
@@ -107,7 +108,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8, 16, 25;
-  // Next: 28
+  // Next: 29
 }
 
 // Generic backend operation response for server-side operations without script rerun.
@@ -121,6 +122,12 @@ message BackendOperationResponse {
   oneof payload {
     // Response for deferred file requests
     DeferredFileResponsePayload deferred_file = 3;
+
+    // Response for one-click skills install requests
+    InstallSkillsResponsePayload install_skills = 4;
+
+    // Acknowledgement for permanently dismissing the skills nudge
+    DismissSkillsNudgeResponsePayload dismiss_skills_nudge = 5;
   }
 }
 
@@ -128,6 +135,18 @@ message BackendOperationResponse {
 message DeferredFileResponsePayload {
   string url = 1;
 }
+
+// Response payload for one-click skills install. A successful, empty detail
+// indicates a clean install; failures are reported via the response's
+// error_msg field instead.
+message InstallSkillsResponsePayload {
+  // Optional human-readable detail about the install outcome.
+  string detail = 1;
+}
+
+// Acknowledgement payload for dismissing the skills nudge. Carries no data;
+// its presence signals the marker was written successfully.
+message DismissSkillsNudgeResponsePayload {}
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)
 // in our ForwardMsgCache. (That is, when we cache a ForwardMsg, we clear its

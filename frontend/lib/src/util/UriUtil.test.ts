@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { getCrossOriginAttribute, isValidOrigin } from "./UriUtil"
+import {
+  getCrossOriginAttribute,
+  isDangerousLinkUri,
+  isValidOrigin,
+} from "./UriUtil"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
@@ -25,6 +29,34 @@ vi.mock("@streamlit/utils", async () => {
       return globalThis.__mockStreamlitConfig
     },
   }
+})
+
+describe("isDangerousLinkUri", () => {
+  it.each([
+    "javascript:alert(1)",
+    "vbscript:msgbox(1)",
+    "JavaScript:alert(1)",
+    "VBScript:msgbox(1)",
+    "  javascript:alert(1)  ",
+    "\u0001javascript:alert(1)",
+    "java\nscript:alert(1)",
+    "java\tscript:alert(1)",
+  ])("returns true for dangerous URI %j", uri => {
+    expect(isDangerousLinkUri(uri)).toBe(true)
+  })
+
+  it.each([
+    "https://streamlit.io",
+    "http://example.com",
+    "#anchor",
+    "/relative/path",
+    "mailto:hello@streamlit.io",
+    "data:image/png;base64,abc",
+    "not-javascript:foo",
+    "",
+  ])("returns false for safe URI %j", uri => {
+    expect(isDangerousLinkUri(uri)).toBe(false)
+  })
 })
 
 describe("isValidOrigin", () => {

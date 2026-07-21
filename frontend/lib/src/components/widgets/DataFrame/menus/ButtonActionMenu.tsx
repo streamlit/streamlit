@@ -14,26 +14,23 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect, useRef } from "react"
-
-import { FloatingPortal } from "@floating-ui/react"
+import { memo, ReactElement, useCallback, useEffect } from "react"
 
 import {
   DynamicIcon,
   extractLeadingMaterialIcon,
 } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
-import { convertRemToPx } from "~lib/theme/utils"
+import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 
 import {
+  COLUMN_MENU_OFFSET,
   StyledButtonActionMenuPanel,
   StyledMenuList,
   StyledMenuListItem,
 } from "./styled-components"
-
-/** Margin between the popover and its anchor element. */
-const POPOVER_MARGIN = convertRemToPx("0.375rem")
 
 interface ButtonActionMenuProps {
   /** The top position of the menu */
@@ -62,60 +59,21 @@ function ButtonActionMenu({
   const { refs, floatingStyles } = useFloatingOverlay({
     open: true,
     placement: "bottom-end",
-    offsetPx: POPOVER_MARGIN,
+    offsetPx: COLUMN_MENU_OFFSET,
   })
 
-  // Local ref for the panel — needed for click-outside detection and scroll-close.
-  // Merged with floating-ui's ref via a callback ref.
-  const panelRef = useRef<HTMLDivElement | null>(null)
-  const setFloatingCallback = useCallback(
-    (node: HTMLDivElement | null) => {
-      panelRef.current = node
-      refs.setFloating(node)
-    },
-    [refs]
-  )
-
-  // Close menu on click outside or Escape key.
-  // Both use the capture phase to match the ColumnMenu/ColumnVisibilityMenu pattern.
-  useEffect(() => {
-    function handlePointerDown(event: PointerEvent): void {
-      if (
-        panelRef.current &&
-        !panelRef.current.contains(event.target as Node)
-      ) {
-        // Let grid's button handler manage state for clicks on the menu target
-        // (the invisible anchor element that positions this menu).
-        if (
-          (event.target as Element).closest(
-            '[data-testid="stDataFrameButtonActionMenuTarget"]'
-          )
-        ) {
-          return
-        }
-        onCloseMenu()
-      }
-    }
-
-    function handleKeyDown(e: KeyboardEvent): void {
-      if (e.key === "Escape") {
-        e.stopPropagation()
-        onCloseMenu()
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown, true)
-    document.addEventListener("keydown", handleKeyDown, true)
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown, true)
-      document.removeEventListener("keydown", handleKeyDown, true)
-    }
-  }, [onCloseMenu])
+  // panelRef is used by the scroll-close effect below to ignore scrolls inside the panel.
+  const { panelRef, setFloatingRef } = useOverlayDismissal({
+    isOpen: true,
+    onClose: onCloseMenu,
+    floatingSetFn: refs.setFloating,
+    excludeSelectors: ['[data-testid="stDataFrameButtonActionMenuTarget"]'],
+  })
 
   // Close menu on any scroll in the document (fixed positioning would misalign
-  // with cell). The menu is rendered via FloatingPortal outside the dataframe's
-  // DOM tree, so we cannot rely on ancestor containment checks — we must close
-  // on any scroll except within the menu itself.
+  // with cell). The menu is rendered via DataFrameOverlayPortal outside the
+  // dataframe's DOM tree, so we cannot rely on ancestor containment checks —
+  // we must close on any scroll except within the menu itself.
   useEffect(() => {
     function handleScroll(event: Event): void {
       // Ignore if the scroll is on the menu itself
@@ -136,7 +94,7 @@ function ButtonActionMenu({
       document.removeEventListener("scroll", handleScroll, { capture: true })
       window.removeEventListener("wheel", handleScroll)
     }
-  }, [onCloseMenu])
+  }, [onCloseMenu, panelRef])
 
   const handleSelectAction = useCallback(
     (label: string) => {
@@ -175,9 +133,9 @@ function ButtonActionMenu({
           pointerEvents: "none",
         }}
       />
-      <FloatingPortal>
+      <DataFrameOverlayPortal>
         <StyledButtonActionMenuPanel
-          ref={setFloatingCallback}
+          ref={setFloatingRef}
           style={floatingStyles}
           tabIndex={-1}
           data-testid="stDataFrameButtonActionMenu"
@@ -212,7 +170,7 @@ function ButtonActionMenu({
             })}
           </StyledMenuList>
         </StyledButtonActionMenuPanel>
-      </FloatingPortal>
+      </DataFrameOverlayPortal>
     </>
   )
 }

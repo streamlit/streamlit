@@ -18,7 +18,6 @@ import {
   memo,
   ReactElement,
   useCallback,
-  useEffect,
   useId,
   useMemo,
   useRef,
@@ -45,6 +44,7 @@ import {
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -79,11 +79,10 @@ function MenuButton(props: Props): ReactElement {
   const instanceId = useId()
   // Anchor ref on the outer container — mirrors the original anchorRef pattern,
   // avoiding the ref duplication issue that occurs when BaseButtonTooltip
-  // renders its children twice (desktop tooltip + mobile variant).
-  const containerRef = useRef<HTMLDivElement>(null)
-  // Ref to the popover DOM element — needed by the outside-click handler below
-  // to distinguish clicks on portal-rendered menu items from true outside clicks.
-  const popoverRef = useRef<HTMLDivElement>(null)
+  // renders its children twice (desktop tooltip + mobile variant). Used by
+  // restoreFocusFn to find and focus the trigger button after Escape.
+  // useRef<T | null>(null) gives MutableRefObject so .current is assignable.
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
   // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
   // fully replaced with FloatingPortal here because Menu is a self-contained
@@ -95,67 +94,28 @@ function MenuButton(props: Props): ReactElement {
   })
 
   // Custom dismissal via capture-phase DOM listeners.
-  //
-  // The popover is portalled to document.body, so we implement
-  // outside-click and Escape/Tab dismissal ourselves.
-  useEffect(() => {
-    if (!isOpen) return
+  // restoreFocusFn uses querySelector on containerRef rather than a direct button
+  // ref to avoid the BaseButtonTooltip double-render issue.
+  const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
+    isOpen,
+    onClose: () => setIsOpen(false),
+    floatingSetFn: refs.setFloating,
+    referenceSetFn: refs.setReference,
+    restoreFocusFn: () =>
+      containerRef.current
+        ?.querySelector<HTMLButtonElement>("button")
+        ?.focus(),
+    closeOnTab: true,
+  })
 
-    const handlePointerDown = (e: PointerEvent): void => {
-      const target = e.target as Node
-      // Close only when the pointer lands outside BOTH the trigger container
-      // and the portal-rendered popover. Clicks inside either are handled by
-      // their own React handlers (trigger onClick toggle / MenuItem onAction).
-      if (
-        !containerRef.current?.contains(target) &&
-        !popoverRef.current?.contains(target)
-      ) {
-        setIsOpen(false)
-      }
-    }
-
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape" || e.key === "Tab") {
-        setIsOpen(false)
-        if (e.key === "Escape") {
-          // Stop propagation so parent overlays (e.g. st.dialog) don't also
-          // dismiss — only the innermost overlay should close per ARIA pattern.
-          e.stopPropagation()
-          e.preventDefault()
-          containerRef.current
-            ?.querySelector<HTMLButtonElement>("button")
-            ?.focus()
-        }
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown, true)
-    document.addEventListener("keydown", handleKeyDown, true)
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown, true)
-      document.removeEventListener("keydown", handleKeyDown, true)
-    }
-  }, [isOpen])
-
-  // Merge the floating ref with our local popoverRef for dismissal logic.
-  const setFloatingRef = useCallback(
+  // Merge containerRef (for restoreFocusFn's querySelector) with setReferenceRef
+  // (for floating-ui positioning + outside-click hit-testing) on the same <Box>.
+  const setContainerRef = useCallback(
     (node: HTMLDivElement | null): void => {
-      refs.setFloating(node)
-      ;(popoverRef as React.MutableRefObject<HTMLDivElement | null>).current =
-        node
+      containerRef.current = node
+      setReferenceRef(node)
     },
-    [refs]
-  )
-
-  // Merge the reference ref with our local containerRef for dismissal logic.
-  const setReferenceRef = useCallback(
-    (node: HTMLDivElement | null): void => {
-      ;(
-        containerRef as React.MutableRefObject<HTMLDivElement | null>
-      ).current = node
-      refs.setReference(node)
-    },
-    [refs]
+    [setReferenceRef]
   )
 
   const kind = BUTTON_TYPE_TO_KIND[element.type] ?? BaseButtonKind.SECONDARY
@@ -190,7 +150,7 @@ function MenuButton(props: Props): ReactElement {
 
   return (
     <Box
-      ref={setReferenceRef}
+      ref={setContainerRef}
       className="stMenuButton"
       data-testid="stMenuButton"
     >

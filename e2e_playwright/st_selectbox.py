@@ -254,6 +254,16 @@ v24 = st.selectbox(
 )
 st.write("value 24:", v24.name)
 
+# Large option list to exercise the dropdown's virtualization: only a small
+# window of the options should be rendered in the DOM at any time.
+v25 = st.selectbox(
+    "selectbox 25 (large virtualized list)",
+    [f"Option {i}" for i in range(1000)],
+    index=None,
+    key="selectbox_25",
+)
+st.write("value 25:", v25)
+
 # --- Bound widgets (query-params) ---
 
 v_bound = st.selectbox(

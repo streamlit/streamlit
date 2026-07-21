@@ -59,7 +59,35 @@ export interface ScriptRunContextProps {
    * @see Block
    */
   fragmentIdsThisRun: Array<string>
+
+  /**
+   * Lets widgets detect that a run finished. Bumped on every scriptFinished
+   * message (a monotonic counter, so consecutive finishes stay distinct).
+   *
+   * Consumed by: ChatInput
+   */
+  scriptRunFinishedSequence: number
+
+  /**
+   * IDs of the fragments that ran in the run that just finished; empty for a
+   * full-script run. A single rerun can batch multiple fragments (e.g. several
+   * run_every auto-reruns coming due at once), so this may contain more than one.
+   *
+   * Consumed by: ChatInput
+   */
+  scriptRunFinishedFragmentIds: Array<string>
+
+  /**
+   * Stops the currently running script. Used by widgets that provide a stop
+   * button (e.g. st.chat_input with submit_mode="stop").
+   *
+   * Consumed by: ChatInput
+   */
+  stopScript: () => void
 }
+
+// No-op default for stopScript to avoid null checks
+const noop = (): void => {}
 
 /**
  * ScriptRunContext provides script execution state throughout the app.
@@ -72,6 +100,9 @@ export const ScriptRunContext = createContext<ScriptRunContextProps>({
   scriptRunState: ScriptRunState.NOT_RUNNING,
   scriptRunId: INITIAL_SCRIPT_RUN_ID,
   fragmentIdsThisRun: [],
+  scriptRunFinishedSequence: 0,
+  scriptRunFinishedFragmentIds: [],
+  stopScript: noop,
 })
 
 // Set the context display name for React DevTools

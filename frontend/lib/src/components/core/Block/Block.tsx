@@ -61,7 +61,7 @@ import {
   convertKeyToClassName,
   getBorderBackwardsCompatible,
   getClassnamePrefix,
-  getColumnGapSize,
+  getColumnGapConfig,
   getKeyFromId,
   isComponentStale,
   shouldActivateScrollToBottom,
@@ -125,7 +125,7 @@ export const ContainerContentsWrapper = (
   const defaultStyles: StyledFlexContainerBlockProps = {
     direction: Direction.VERTICAL,
     flex: 1,
-    gap: streamlit.GapSize.SMALL,
+    gap: { gapSize: streamlit.GapSize.SMALL },
     height: props.height,
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     border: false,
@@ -170,8 +170,9 @@ export const FlexBoxContainer = (
     gap:
       // This is backwards compatible with old proto messages since previously
       // the gap size was defaulted to small.
-      props.node.deltaBlock.flexContainer?.gapConfig?.gapSize ??
-      streamlit.GapSize.SMALL,
+      props.node.deltaBlock.flexContainer?.gapConfig ?? {
+        gapSize: streamlit.GapSize.SMALL,
+      },
     direction: direction,
     // This is also backwards compatible since previously wrap was not added
     // to the flex container.
@@ -394,7 +395,7 @@ export const BlockNodeRenderer = (
     return (
       <StyledColumn
         weight={node.deltaBlock.column.weight ?? 0}
-        gap={getColumnGapSize(node.deltaBlock.column)}
+        gap={getColumnGapConfig(node.deltaBlock.column)}
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
@@ -408,11 +409,25 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.tabContainer) {
+    // Only pixel / stretch heights actually constrain the tab container. A
+    // `height="content"` config yields `styles.height === "auto"`, which
+    // shouldn't switch tabs into the fill-and-scroll layout — that would clip
+    // content that legitimately overflows (tooltips, focus rings, drop
+    // shadows).
+    const heightConfig = node.deltaBlock.heightConfig
+    const hasConstrainingHeight =
+      notNullOrUndefined(heightConfig) && !heightConfig.useContent
+    const contentHeight = hasConstrainingHeight ? "100%" : "auto"
     const renderTabContent = (
       mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
     ): ReactElement => {
       // avoid circular dependency where Tab uses VerticalBlock but VerticalBlock uses tabs
-      return <ContainerContentsWrapper {...mappedChildProps} height="auto" />
+      return (
+        <ContainerContentsWrapper
+          {...mappedChildProps}
+          height={contentHeight}
+        />
+      )
     }
     // We can't use StyledLayoutWrapper for tabs currently because of the horizontal scrolling
     // management that is handled in the Tabs component. TODO(lwilby): Investigate whether it makes
@@ -422,6 +437,7 @@ export const BlockNodeRenderer = (
       isStale,
       renderTabContent,
       width: styles.width,
+      height: hasConstrainingHeight ? styles.height : undefined,
       flex: styles.flex,
       fragmentId: node.fragmentId,
     }

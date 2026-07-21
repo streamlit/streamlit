@@ -51,6 +51,7 @@ import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
@@ -81,6 +82,7 @@ import useDataEditor from "./hooks/useDataEditor"
 import useDataExporter from "./hooks/useDataExporter"
 import useDataFrameCapabilities from "./hooks/useDataFrameCapabilities"
 import useDataLoader from "./hooks/useDataLoader"
+import useEditReconciliation from "./hooks/useEditReconciliation"
 import useRowHover from "./hooks/useRowHover"
 import useSelectionHandler from "./hooks/useSelectionHandler"
 import useTableSizer from "./hooks/useTableSizer"
@@ -169,7 +171,8 @@ function DataFrame({
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
   // Stores original data row indices that need remapping after a sort operation.
-  // Used to preserve row selection in single-row-required mode when columns are sorted.
+  // Used to preserve row selections (single-row, multi-row, and
+  // single-row-required modes) when columns are sorted on the frontend.
   const pendingRowSelectionRemapRef = useRef<{
     originalRowIndices: number[]
     columns: CompactSelection
@@ -188,7 +191,8 @@ function DataFrame({
     useRowHover(gridTheme)
 
   // Default to false, if no libConfig, e.g. for tests
-  const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
+  const { enforceDownloadInNewTab = false, disableDataExport = false } =
+    useContext(LibConfigContext)
 
   const [isFocused, setIsFocused] = useState<boolean>(true)
   const [showSearch, setShowSearch] = useState(false)
@@ -220,6 +224,8 @@ function DataFrame({
   // editingMode field defined.
   const editingMode =
     element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
+  const isReadOnly = editingMode === DataframeProto.EditingMode.READ_ONLY
+  const isClipboardCopyDisabled = disableDataExport && isReadOnly
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
@@ -245,6 +251,7 @@ function DataFrame({
     disabled,
     numDataRows: originalNumRows,
     numDataColumns: dataDimensions.numDataColumns,
+    disableDataExport,
   })
 
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)
@@ -267,6 +274,7 @@ function DataFrame({
   const {
     editingState,
     numRows,
+    editStateHydrationCount,
     updateNumRows,
     syncEditState,
     createSyncSelectionState,
@@ -323,10 +331,10 @@ function DataFrame({
   )
 
   // Use a debounce to prevent rapid updates to the widget state.
-  const { debouncedCallback: syncSelectionState } = useDebouncedCallback(
-    innerSyncSelectionState,
-    DEBOUNCE_TIME_MS
-  )
+  const {
+    debouncedCallback: syncSelectionState,
+    cancel: cancelSelectionSync,
+  } = useDebouncedCallback(innerSyncSelectionState, DEBOUNCE_TIME_MS)
 
   const {
     gridSelection,
@@ -407,7 +415,8 @@ function DataFrame({
   )
 
   /**
-   * Remap row selection after sort in single-row-required mode.
+   * Remap row selections after sort so that they keep pointing at the same
+   * underlying data rows (single-row, multi-row, and single-row-required modes).
    * Scheduled via useTimeout to run after React applies the sort state.
    */
   const performRowSelectionRemap = useCallback(() => {
@@ -423,26 +432,40 @@ function DataFrame({
 
     // Build a Set for O(1) lookup instead of O(n²) nested loops
     const targetOriginalIndices = new Set(originalRowIndices)
-    const newDisplayIndices: number[] = []
+    let newRows = CompactSelection.empty()
+    // Track matches with a local counter to avoid repeatedly walking
+    // CompactSelection's internal ranges via `.length` on every match.
+    let foundCount = 0
 
     for (let displayIdx = 0; displayIdx < originalNumRows; displayIdx++) {
       const origIdx = currentGetOriginalIndex(displayIdx)
       if (targetOriginalIndices.has(origIdx)) {
-        newDisplayIndices.push(displayIdx)
+        newRows = newRows.add(displayIdx)
+        foundCount += 1
         // Early exit when all targets found
-        if (newDisplayIndices.length === targetOriginalIndices.size) {
+        if (foundCount === targetOriginalIndices.size) {
           break
         }
       }
     }
 
-    if (newDisplayIndices.length > 0) {
+    if (foundCount > 0) {
       const newSelection: GridSelection = {
         columns,
-        rows: CompactSelection.fromSingleSelection(newDisplayIndices[0]),
+        rows: newRows,
         current,
       }
-      processSelectionChange(newSelection)
+      // Re-sync the preserved selection so the backend keeps the correct
+      // original row indices. We force the sync (`forceSync: true`) because the
+      // sort handler cancels any pending debounced sync: if the initial
+      // selection hadn't been synced yet and the preserved row keeps the same
+      // display index after sorting, the default change-detection would skip the
+      // sync and the backend would never receive the selection. Because reported
+      // rows use a stable ascending order (see createSyncSelectionState), the
+      // serialized value is unchanged when the underlying selection is
+      // unchanged, so the forced sync is still deduplicated at the widget-state
+      // level and triggers no extra rerun / on_select callback.
+      processSelectionChange(newSelection, { forceSync: true })
     }
   }, [originalNumRows, processSelectionChange])
 
@@ -454,6 +477,68 @@ function DataFrame({
     performRowSelectionRemap,
     0,
     { autoStart: false }
+  )
+
+  /**
+   * Handle a column sort while preserving the current row selection.
+   *
+   * Sorting is a frontend-only operation, so selected rows should keep pointing
+   * at the same underlying data rows even as their display positions change.
+   * The selected original row indices are captured before sorting and remapped
+   * to their new display positions afterwards (single-row, multi-row, and
+   * single-row-required modes). Cell selections are cleared because their
+   * display coordinates become stale after sorting.
+   *
+   * @param performSort - Callback that applies the actual column sort.
+   */
+  const handleSortWithSelectionPreservation = useCallback(
+    (performSort: () => void) => {
+      const shouldPreserveRowSelection =
+        isRowSelectionActivated && isRowSelected
+      if (shouldPreserveRowSelection) {
+        // Capture the selected original row indices before sorting so they can
+        // be remapped to their new display positions afterwards. If a remap
+        // from a previous sort is still pending (e.g. back-to-back sorts before
+        // the deferred remap runs), its captured indices are authoritative:
+        // gridSelection still holds the stale pre-remap display rows, which
+        // would map to the wrong original rows under the new sort order.
+        const originalRowIndices =
+          pendingRowSelectionRemapRef.current?.originalRowIndices ??
+          gridSelection.rows.toArray().map(getOriginalIndex)
+        pendingRowSelectionRemapRef.current = {
+          originalRowIndices,
+          columns: gridSelection.columns,
+          // Cell selections use display coordinates that become stale after
+          // sorting, so we don't preserve them.
+          current: undefined,
+        }
+        // Cancel any pending debounced selection sync queued by the initial row
+        // selection. Otherwise it could fire after the sort and serialize the
+        // pre-sort display rows through the post-sort index mapping, sending
+        // wrong row ids to the backend. The scheduled remap re-syncs the
+        // correct value.
+        cancelSelectionSync()
+      }
+      // Clear cell selections but keep row and column selections. Row selections
+      // are remapped to the same data rows after sorting.
+      clearSelection(true, true)
+
+      performSort()
+
+      // Schedule remap after sorting (ref was just set above).
+      if (shouldPreserveRowSelection) {
+        scheduleRowSelectionRemap()
+      }
+    },
+    [
+      isRowSelectionActivated,
+      isRowSelected,
+      gridSelection,
+      getOriginalIndex,
+      cancelSelectionSync,
+      clearSelection,
+      scheduleRowSelectionRemap,
+    ]
   )
 
   /**
@@ -507,6 +592,15 @@ function DataFrame({
     enforceDownloadInNewTab
   )
 
+  const { getSourceCellValue } = useEditReconciliation({
+    data,
+    allColumns,
+    editingState,
+    isEditingEnabled: canEdit,
+    editStateHydrationCount,
+    syncEditState,
+  })
+
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
     useDataEditor({
       columns,
@@ -515,6 +609,7 @@ function DataFrame({
       canDeleteRows,
       editingState,
       getCellContent,
+      getSourceCellValue,
       getOriginalIndex,
       refreshCells,
       updateNumRows,
@@ -974,6 +1069,7 @@ function DataFrame({
           // Activate keybindings:
           keybindings={{
             downFill: true,
+            copy: !isClipboardCopyDisabled,
             ...(isCellSelectionActivated || isLargeTable
               ? {
                   // Deactivate select all to prevent potential performance issues
@@ -1014,37 +1110,9 @@ function DataFrame({
               setShowSearch(false)
             }
 
-            if (isRequiredRowSelectionActivated && isRowSelected) {
-              // In single-row-required mode, preserve the row selection by remapping
-              // it to the same data row after sort. Capture the original data indices
-              // and current column selection before sorting.
-              const originalRowIndices = gridSelection.rows
-                .toArray()
-                .map(getOriginalIndex)
-              pendingRowSelectionRemapRef.current = {
-                originalRowIndices,
-                columns: gridSelection.columns,
-                // Don't capture current cell selection - it uses display coordinates
-                // that become stale after sorting
-                current: undefined,
-              }
-              // Clear cell selections but keep row and column selections
-              clearSelection(true, true)
-            } else if (isRowSelectionActivated && isRowSelected) {
-              // For other row selection modes, clear the selection before sorting.
-              // Keeping row selections when sorting columns is not supported at the moment.
-              clearSelection()
-            } else {
-              // Cell selections are kept on the old position,
-              // which can be confusing. So we clear all cell selections before sorting.
-              clearSelection(true, true)
-            }
-
-            sortColumn(columnIdx, "auto")
-            // Schedule remap after sorting (ref was just set above)
-            if (isRequiredRowSelectionActivated && isRowSelected) {
-              scheduleRowSelectionRemap()
-            }
+            handleSortWithSelectionPreservation(() =>
+              sortColumn(columnIdx, "auto")
+            )
           }}
           gridSelection={gridSelection}
           // We don't have to react to "onSelectionCleared" since
@@ -1229,39 +1297,9 @@ function DataFrame({
                       setShowSearch(false)
                     }
 
-                    if (isRequiredRowSelectionActivated && isRowSelected) {
-                      // In single-row-required mode, preserve the row selection by remapping
-                      // it to the same data row after sort. Capture the original data indices
-                      // and current column selection before sorting.
-                      const originalRowIndices = gridSelection.rows
-                        .toArray()
-                        .map(getOriginalIndex)
-                      pendingRowSelectionRemapRef.current = {
-                        originalRowIndices,
-                        columns: gridSelection.columns,
-                        // Don't capture current cell selection - it uses display coordinates
-                        // that become stale after sorting
-                        current: undefined,
-                      }
-                      // Clear cell selections but keep row and column selections
-                      clearSelection(true, true)
-                    } else if (isRowSelectionActivated && isRowSelected) {
-                      // For other row selection modes, clear the selection before sorting.
-                      // Keeping row selections when sorting columns is not supported at the moment.
-                      // So we need to clear the selected rows before we do the sorting (Issue #11345).
-                      // Maintain column selections as these are not impacted.
-                      clearSelection(false, true)
-                    } else {
-                      // Cell selection are kept on the old position,
-                      // which can be confusing. So we clear all cell selections before sorting.
-                      clearSelection(true, true)
-                    }
-
-                    sortColumn(showMenu.columnIdx, direction, true)
-                    // Schedule remap after sorting (ref was just set above)
-                    if (isRequiredRowSelectionActivated && isRowSelected) {
-                      scheduleRowSelectionRemap()
-                    }
+                    handleSortWithSelectionPreservation(() =>
+                      sortColumn(showMenu.columnIdx, direction, true)
+                    )
                   }
                 : undefined
             }
@@ -1301,7 +1339,7 @@ function DataFrame({
           // by the transform property of the parent element).
           // The portal element is expected to always exist (-> PortalProvider).
           // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
-          document.querySelector("#portal") as HTMLElement
+          document.querySelector(`#${DATAFRAME_PORTAL_ID}`) as HTMLElement
         )}
       {buttonActionMenu &&
         createPortal(
@@ -1314,7 +1352,7 @@ function DataFrame({
             onCloseMenu={clearButtonActionMenu}
           />,
           // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
-          document.querySelector("#portal") as HTMLElement
+          document.querySelector(`#${DATAFRAME_PORTAL_ID}`) as HTMLElement
         )}
     </StyledResizableContainer>
   )

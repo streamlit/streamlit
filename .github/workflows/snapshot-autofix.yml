@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.head_ref }}
           persist-credentials: true
@@ -43,7 +43,7 @@ jobs:
           gh pr edit ${{ github.event.pull_request.number }} --remove-label "update-snapshots"
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
 
@@ -65,7 +65,7 @@ jobs:
 
       - name: Comment on PR when snapshot update fails
         if: steps.update-snapshots.outputs.script_status == 'failed'
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |

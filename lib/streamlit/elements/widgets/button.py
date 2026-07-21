@@ -1675,7 +1675,9 @@ class ButtonMixin:
         if runtime.exists():
             if is_in_form(self.dg) and not is_form_submitter:
                 raise StreamlitAPIException(
-                    f"`st.button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
+                    "`st.button()` can't be used in an `st.form()`. Use "
+                    "`st.form_submit_button()` instead to submit the form."
+                    f"{FORM_DOCS_INFO}"
                 )
             if not is_in_form(self.dg) and is_form_submitter:
                 raise StreamlitAPIException(

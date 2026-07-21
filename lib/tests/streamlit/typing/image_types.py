@@ -111,7 +111,7 @@ if TYPE_CHECKING:
         "auto",
         None,
         "https://example.com",
-    )  # type: ignore[misc]
+    )  # type: ignore[call-arg]
 
     # Removed deprecated parameter
     image("image.png", use_column_width=True)  # type: ignore[call-arg]

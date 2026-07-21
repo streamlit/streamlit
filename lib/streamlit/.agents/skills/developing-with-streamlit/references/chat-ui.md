@@ -61,6 +61,22 @@ with st.chat_message("assistant"):
     response = st.write_stream(stream)
 ```
 
+## Controlling input while the response runs
+
+Use `submit_mode` to control what happens to the chat input after a user submits a message while the script (e.g. an LLM response) is still running:
+
+```python
+# Disable the input until the response finishes (prevents interruptions)
+prompt = st.chat_input("Ask a question", submit_mode="disable")
+
+# Turn the submit button into a stop button so users can cancel a long response
+prompt = st.chat_input("Ask a question", submit_mode="stop")
+```
+
+- `"submit"` (default): the input stays enabled, so users can send new messages while the script runs.
+- `"disable"`: the input is disabled after submission and re-enabled when the run completes—useful to avoid interrupting streaming responses.
+- `"stop"`: the submit button becomes a stop button during the run; clicking it stops the script, like the app's "Stop" button.
+
 ## Chat message avatars
 
 Streamlit provides default avatars for "user" and "assistant" roles—only customize if you have a specific need. You can use icons or images:

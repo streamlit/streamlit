@@ -20,6 +20,11 @@ import {
   getOverlayZIndex,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
+import type { EmotionTheme } from "~lib/theme/types"
+import { convertRemToPx } from "~lib/theme/utils"
+
+/** Pixel offset between a column menu panel and its anchor element. */
+export const COLUMN_MENU_OFFSET = convertRemToPx("0.375rem")
 
 /**
  * Wrapper div that gives floating-ui a measurable bounding rect for sub-menu
@@ -30,57 +35,56 @@ import {
 export const StyledSubMenuAnchor = styled.div({})
 
 /**
- * Portal panel wrapper for the ColumnMenu content.
- * position/top/left/transform are set by floatingStyles at render time.
+ * Shared base style for the dataframe menu panels
+ * (ColumnMenu, FormattingMenu/StatisticsMenu, ButtonActionMenu,
+ * ColumnVisibilityMenu). position/top/left/transform are set by floatingStyles
+ * at render time.
+ *
+ * `lineHeight` is set explicitly because these panels render into the shared
+ * `#portal` overlay (`StyledDataFrameOverlay`), which uses `line-height: 100%`
+ * for glide-data-grid cell overlays. Without this override the menu rows would
+ * inherit that compressed line-height and lose their vertical spacing.
  */
-export const StyledColumnMenuPanel = styled.div(({ theme }) => ({
+const getMenuPanelStyle = (
+  theme: EmotionTheme
+): Record<string, string | number> => ({
   ...getPopoverContainerStyle(theme),
   zIndex: getOverlayZIndex(theme),
   backgroundColor: theme.colors.bgColor,
   color: theme.colors.bodyText,
   fontSize: theme.fontSizes.sm,
   fontWeight: theme.fontWeights.normal,
+  lineHeight: theme.lineHeights.base,
+})
+
+/**
+ * Portal panel wrapper for the ColumnMenu content.
+ */
+export const StyledColumnMenuPanel = styled.div(({ theme }) => ({
+  ...getMenuPanelStyle(theme),
   overflow: "auto",
 }))
 
 /**
  * Portal panel wrapper shared by FormattingMenu and StatisticsMenu.
- * position/top/left/transform are set by floatingStyles at render time.
  */
 export const StyledSubMenuPanel = styled.div(({ theme }) => ({
-  ...getPopoverContainerStyle(theme),
-  zIndex: getOverlayZIndex(theme),
-  backgroundColor: theme.colors.bgColor,
-  color: theme.colors.bodyText,
-  fontSize: theme.fontSizes.sm,
-  fontWeight: theme.fontWeights.normal,
+  ...getMenuPanelStyle(theme),
 }))
 
 /**
  * Portal panel wrapper for the ButtonActionMenu content.
- * position/top/left/transform are set by floatingStyles at render time.
  */
 export const StyledButtonActionMenuPanel = styled.div(({ theme }) => ({
-  ...getPopoverContainerStyle(theme),
-  zIndex: getOverlayZIndex(theme),
-  backgroundColor: theme.colors.bgColor,
-  color: theme.colors.bodyText,
-  fontSize: theme.fontSizes.sm,
-  fontWeight: theme.fontWeights.normal,
+  ...getMenuPanelStyle(theme),
   overflow: "auto",
 }))
 
 /**
  * Portal panel wrapper for the ColumnVisibilityMenu content.
- * position/top/left/transform are set by floatingStyles at render time.
  */
 export const StyledColumnVisibilityMenuPanel = styled.div(({ theme }) => ({
-  ...getPopoverContainerStyle(theme),
-  zIndex: getOverlayZIndex(theme),
-  backgroundColor: theme.colors.bgColor,
-  color: theme.colors.bodyText,
-  fontSize: theme.fontSizes.sm,
-  fontWeight: theme.fontWeights.normal,
+  ...getMenuPanelStyle(theme),
   overflow: "hidden",
   minWidth: theme.sizes.minMenuWidth,
   maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,

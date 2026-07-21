@@ -28,6 +28,7 @@ import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   arrayToCopyValue,
+  arrayValuesEqual,
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
@@ -215,6 +216,7 @@ function MultiselectColumn(
 
       return cell.data.values
     },
+    valuesEqual: arrayValuesEqual,
   }
 }
 

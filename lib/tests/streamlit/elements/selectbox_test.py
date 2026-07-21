@@ -35,6 +35,7 @@ from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
+from streamlit.runtime.state.widgets import register_widget_from_metadata
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -737,6 +738,27 @@ class TestSelectboxSerde:
         res = serde.serialize(None)
         assert res is None
 
+    def test_serialize_falls_back_to_str_when_format_func_raises(self):
+        """When format_func raises, serialize falls back to str(value)."""
+        options = [{"id": "a"}, {"id": "b"}]
+
+        def format_func(x):
+            return x["id"]
+
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            options, format_func
+        )
+        serde = SelectboxSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
+        )
+
+        # A bare string value makes format_func raise a TypeError, triggering the
+        # str(value) fallback path.
+        assert serde.serialize("free text") == "free text"
+
     def test_serialize_empty_options(self):
         """Test serializing with empty options.
 
@@ -993,6 +1015,24 @@ class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
         """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
         with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
             st.selectbox("the label", ["a", "b"], key="my_key", bind="invalid-value")
+
+    def test_persist_state_passed_to_metadata(self) -> None:
+        """Test that persist_state is threaded onto the widget's WidgetMetadata."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched:
+            st.selectbox(
+                "the label", ["a", "b", "c"], key="my_key", persist_state="session"
+            )
+
+        metadata = patched.call_args[0][0]
+        assert metadata.persist_state == "session"
+
+    def test_persist_state_without_key_raises(self) -> None:
+        """Test that persist_state without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.selectbox("the label", ["a", "b", "c"], persist_state="session")
 
     def test_bind_with_format_func(self):
         """Test that bind works with format_func."""

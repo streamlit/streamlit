@@ -48,6 +48,16 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     box-sizing: border-box;
   }
 
+  // The BaseWeb layer host (see RootStyleProvider) is a full-viewport,
+  // fixed-position container with pointer-events: none so it never blocks
+  // clicks on the app underneath. Its children (BaseWeb dropdowns, popovers,
+  // calendars, etc.) must re-enable pointer events to remain interactive.
+  // TODO: Remove this once the migration away from BaseWeb is finished and
+  // the layer host is no longer needed.
+  [data-st-baseweb-layer-host="true"] > * {
+    pointer-events: auto;
+  }
+
   // Body
   //
   // 1. Remove the margin in all browsers.

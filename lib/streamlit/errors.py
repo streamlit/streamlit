@@ -269,11 +269,12 @@ class StreamlitInvalidVerticalAlignmentError(LocalizableStreamlitException):
 class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
     """Exception raised when an invalid value is specified for gap."""
 
-    def __init__(self, gap: str, element_type: str) -> None:
+    def __init__(self, gap: object, element_type: str) -> None:
         super().__init__(
             'The `gap` argument to `{element_type}` must be `"xxsmall"`, '
             '`"xsmall"`, `"small"`, `"medium"`, `"large"`, `"xlarge"`, '
-            '`"xxlarge"`, or `"none"`. \n'
+            '`"xxlarge"`, `None`, or a non-negative integer specifying '
+            "the gap in pixels. \n"
             "The argument passed was {gap}.",
             gap=gap,
             element_type=element_type,
@@ -312,6 +313,17 @@ class StreamlitInvalidBindValueError(LocalizableStreamlitException):
             'Invalid `bind` value: "{bind_value}". '
             'Supported values are: `"query-params"` or `None`.',
             bind_value=bind_value,
+        )
+
+
+class StreamlitInvalidPersistStateError(LocalizableStreamlitException):
+    """Exception raised when an invalid value is specified for the persist_state parameter."""
+
+    def __init__(self, persist_state_value: Any) -> None:
+        super().__init__(
+            'Invalid `persist_state` value: "{persist_state_value}". '
+            'Supported values are: `"page"`, `"session"`, or `None`.',
+            persist_state_value=persist_state_value,
         )
 
 
