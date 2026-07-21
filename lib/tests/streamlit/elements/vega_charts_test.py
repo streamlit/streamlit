@@ -2674,7 +2674,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         data_frame = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
         color_field = chart_spec["encoding"]["color"]["field"]
         for value in data_frame[color_field].unique():
-            assert not any(ch in str(value) for ch in ("streamlit-generated",))
+            assert "streamlit-generated" not in str(value)
 
     def test_bar_chart_plain_column_names_are_not_aliased(self):
         """Anti-regression: columns without special characters must keep their
@@ -2708,6 +2708,29 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         sort = chart_spec["encoding"]["x"]["sort"]
         assert not any(ch in sort["field"] for ch in (".", "[", "]", "\\"))
         assert sort["order"] == "descending"
+
+    def test_bar_chart_columns_with_colliding_stringified_names_get_distinct_aliases(
+        self,
+    ):
+        """Two columns whose stringified names collide (e.g. literal duplicate
+        ``"a.b"`` labels, which is a legal pandas construct) must each receive
+        their own alias so the underlying DataFrame does not end up with
+        duplicate column labels after aliasing.
+        """
+        df = pd.DataFrame([[1, 10], [2, 20], [3, 30]])
+        df.columns = pd.Index(["a.b", "a.b"])
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        data_frame = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+
+        aliases = [c for c in data_frame.columns if "streamlit-generated" in str(c)]
+        # Both colliding names must have been aliased.
+        assert len(aliases) >= 2
+        # And each alias must be distinct — the pre-fix bug reused a single
+        # alias for both, silently collapsing the columns.
+        assert len(set(aliases)) == len(aliases)
 
 
 class ChartWidthHeightTest(DeltaGeneratorTestCase):

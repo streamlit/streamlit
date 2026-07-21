@@ -682,28 +682,32 @@ def _convert_col_names_to_str_in_place(
     reserved_names: set[str] = {
         name for name in str_column_names if not _needs_field_alias(name)
     }
-    # Map from original stringified name to safe alias. Only populated for columns
-    # whose name contains Vega-Lite-special characters.
+    # Map from original stringified name to safe alias, used to remap user-provided
+    # arguments (x, y, color, size, sort) that reference columns by name. If two
+    # columns stringify to the same name, the first occurrence wins here, matching
+    # pandas' behavior when selecting by a duplicated column label.
     original_to_alias: dict[str, str] = {}
     # Map from alias back to the original name, for user-facing titles.
     alias_to_original: dict[str, str] = {}
     final_column_names: list[str] = []
     for idx, name in enumerate(str_column_names):
-        if _needs_field_alias(name) and name not in original_to_alias:
-            # Pick an alias that does not collide with any plain user column or a
-            # previously generated alias. The index disambiguates duplicates; a
-            # trailing counter is only needed on the extremely rare occasion that
-            # a user column literally matches the default form.
+        if _needs_field_alias(name):
+            # Every column that needs aliasing gets its own alias keyed on the
+            # column index, so two columns whose stringified names collide (e.g.
+            # tuple columns ``('a.b', 0)`` and ``('a.b', 1)`` both -> ``"a.b"``)
+            # still map to distinct DataFrame columns. The trailing counter is
+            # only needed on the extremely rare occasion that a user column
+            # literally matches the default form.
             alias = f"{_COLUMN_ALIAS_PREFIX}{idx}"
             counter = 0
             while alias in reserved_names or alias in alias_to_original:
                 counter += 1
                 alias = f"{_COLUMN_ALIAS_PREFIX}{idx}-{counter}"
-            original_to_alias[name] = alias
             alias_to_original[alias] = name
+            original_to_alias.setdefault(name, alias)
             final_column_names.append(alias)
         else:
-            final_column_names.append(original_to_alias.get(name, name))
+            final_column_names.append(name)
 
     df.columns = pd.Index(final_column_names)
 
