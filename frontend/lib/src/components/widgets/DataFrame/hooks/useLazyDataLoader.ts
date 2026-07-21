@@ -40,9 +40,6 @@ import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 /** Debounce window for chunk requests during rapid scrolling. */
 const CHUNK_REQUEST_DEBOUNCE_MS = 150
 
-/** Number of extra chunks to prefetch before and after the visible range. */
-const PREFETCH_BUFFER_CHUNKS = 1
-
 /** Maximum chunk operations this hook may have in flight at once. */
 const MAX_CONCURRENT_CHUNK_REQUESTS = 4
 
@@ -74,7 +71,7 @@ interface UseLazyDataLoaderParams {
 interface UseLazyDataLoaderReturn {
   /** Synchronous cell getter for glide-data-grid. */
   getCellContent: (cell: Item) => GridCell
-  /** Handler to wire to glide's onVisibleRegionChanged for prefetching. */
+  /** Handler to wire to glide's onVisibleRegionChanged for chunk loading. */
   onVisibleRegionChanged: (range: Rectangle) => void
 }
 
@@ -309,18 +306,8 @@ function useLazyDataLoader({
         return
       }
       const lastRow = Math.min(range.y + range.height - 1, numRows - 1)
-      // The highest chunk index that can contain rows. Prefetching past this
-      // would request a chunk that can never exist (e.g. when numRows is an
-      // exact multiple of pageSize) and cache a bogus "empty chunk" failure.
-      const maxChunk = cache.getChunkIndex(numRows - 1)
-      const firstChunk = Math.max(
-        0,
-        cache.getChunkIndex(range.y) - PREFETCH_BUFFER_CHUNKS
-      )
-      const lastChunk = Math.min(
-        cache.getChunkIndex(lastRow) + PREFETCH_BUFFER_CHUNKS,
-        maxChunk
-      )
+      const firstChunk = cache.getChunkIndex(range.y)
+      const lastChunk = cache.getChunkIndex(lastRow)
       const latestVisibleRange = new Set<number>()
       for (
         let chunkIndex = firstChunk;

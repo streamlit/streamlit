@@ -21,7 +21,9 @@ import { Quiver } from "~lib/dataframes/Quiver"
  * insertion order (FIFO) once this limit is exceeded. This bounds browser
  * memory for very large lazy dataframes.
  */
-const DEFAULT_MAX_CHUNKS = 50
+// With the default 1,000-row chunk size, this preserves the previous
+// approximate cache bound of 25,000 rows.
+const DEFAULT_MAX_CHUNKS = 25
 
 /**
  * A simple FIFO-evicting cache of row chunks for a lazy dataframe. Each chunk is

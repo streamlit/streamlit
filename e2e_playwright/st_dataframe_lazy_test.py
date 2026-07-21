@@ -48,13 +48,9 @@ def test_scrolling_does_not_trigger_rerun(app: Page):
     """Scrolling a lazy dataframe loads chunks without triggering a script rerun."""
     lazy_df = _get_dataframe(app, 0)
 
-    # Scroll down within the dataframe to request later chunks.
+    # Scroll beyond the 1,000-row initial chunk to request a later chunk.
     lazy_df.hover()
-    for _ in range(5):
-        app.mouse.wheel(0, 600)
-        # Pace scroll events to emulate realistic user scrolling and give the
-        # debounced chunk loader time to react between steps.
-        app.wait_for_timeout(100)
+    app.mouse.wheel(0, 40_000)
 
     expect_canvas_to_be_stable(lazy_df)
     # The run count must stay at 1: chunk requests use the non-rerun transport.

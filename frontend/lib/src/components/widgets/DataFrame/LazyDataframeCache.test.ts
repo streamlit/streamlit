@@ -87,6 +87,17 @@ describe("LazyDataframeCache", () => {
     expect(cache.hasChunk(3)).toBe(true)
   })
 
+  it("retains at most 25 chunks by default", () => {
+    const cache = new LazyDataframeCache(1000)
+    for (let chunkIndex = 0; chunkIndex <= 25; chunkIndex++) {
+      cache.addChunk(chunkIndex, makeChunk(chunkIndex))
+    }
+
+    expect(cache.hasChunk(0)).toBe(false)
+    expect(cache.hasChunk(1)).toBe(true)
+    expect(cache.hasChunk(25)).toBe(true)
+  })
+
   it("evicts the oldest failed chunk when exceeding the max-chunks limit", () => {
     const maxChunks = 3
     const cache = new LazyDataframeCache(500, maxChunks)

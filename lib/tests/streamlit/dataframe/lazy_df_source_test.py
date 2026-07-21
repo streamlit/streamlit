@@ -426,7 +426,7 @@ def test_resolve_auto_lazy_large_polars_dataframe() -> None:
     assert source.row_count == AUTO_LAZY_ROW_THRESHOLD + 1
 
 
-def test_default_page_size_is_positive() -> None:
-    """The default page size constant is a sane positive value."""
-    assert dataframe_source.DEFAULT_PAGE_SIZE > 0
+def test_default_page_size() -> None:
+    """The default page size balances initial payload size and scrolling runway."""
+    assert dataframe_source.DEFAULT_PAGE_SIZE == 1_000
     assert dataframe_source.MAX_CHUNK_ROWS >= dataframe_source.DEFAULT_PAGE_SIZE

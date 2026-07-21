@@ -58,7 +58,7 @@ UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD: Final = dataframe_util._MAX_UNEVALUATED_DF_
 FORCED_LAZY_MIN_ROWS: Final = 1_000
 
 # Number of rows the backend serves per chunk by default.
-DEFAULT_PAGE_SIZE: Final = 500
+DEFAULT_PAGE_SIZE: Final = 1_000
 
 # Hard upper bound on the number of rows a single chunk request may return.
 # Prevents a modified client from requesting arbitrarily large chunks.

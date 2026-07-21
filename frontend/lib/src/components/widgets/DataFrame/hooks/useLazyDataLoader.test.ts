@@ -213,8 +213,6 @@ describe("useLazyDataLoader", () => {
     const { result } = renderLoader(client)
 
     // numRows=4 and pageSize=2, so the last valid chunk is index 1 (offset 2).
-    // The prefetch buffer would otherwise also schedule chunk 2 (offset 4),
-    // which can never contain rows.
     act(() => {
       result.current.onVisibleRegionChanged({
         x: 0,
@@ -224,11 +222,11 @@ describe("useLazyDataLoader", () => {
       })
     })
 
-    await waitFor(() => expect(request).toHaveBeenCalled())
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(1))
     // No request may target an out-of-bounds offset (>= numRows).
-    for (const call of request.mock.calls) {
-      expect(call[0].offset).toBeLessThan(4)
-    }
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({ offset: 2, limit: PAGE_SIZE })
+    )
   })
 
   it("drops debounced chunks from superseded visible ranges", async () => {
@@ -255,10 +253,30 @@ describe("useLazyDataLoader", () => {
       })
     })
 
-    await waitFor(() => expect(request).toHaveBeenCalledTimes(3))
-    expect(request.mock.calls.map(call => call[0].offset)).toEqual([
-      98, 100, 102,
-    ])
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(1))
+    expect(request.mock.calls.map(call => call[0].offset)).toEqual([100])
+  })
+
+  it("requests both visible chunks when the viewport crosses a boundary", async () => {
+    const { client, request } = makeClient(() =>
+      Promise.resolve({
+        sourceId: SOURCE_ID,
+        arrowData: { data: UNICODE },
+      })
+    )
+    const { result } = renderLoader(client, PAGE_SIZE, 200)
+
+    act(() => {
+      result.current.onVisibleRegionChanged({
+        x: 0,
+        y: 99,
+        width: 1,
+        height: 2,
+      })
+    })
+
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(2))
+    expect(request.mock.calls.map(call => call[0].offset)).toEqual([98, 100])
   })
 
   it("bounds concurrent requests for a large visible range", async () => {
