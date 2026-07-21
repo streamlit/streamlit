@@ -426,13 +426,15 @@ class ScriptRunnerTest(unittest.TestCase):
         outer = MagicMock()
         inner = MagicMock()
 
-        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
+            initial_rerun_data=RerunData(fragment_id_queue=["outer"]),
+        )
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
         scriptrunner._fragment_storage.register(
             "inner", inner, parent_fragment_id="outer"
         )
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["outer"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -448,10 +450,12 @@ class ScriptRunnerTest(unittest.TestCase):
         """A fragment rerun that evicts nothing must not enqueue a StopAutoRerun."""
         fragment = MagicMock()
 
-        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
+            initial_rerun_data=RerunData(fragment_id_queue=["my_fragment"]),
+        )
         scriptrunner._fragment_storage.register("my_fragment", fragment)
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
         scriptrunner.start()
         scriptrunner.join()
 
