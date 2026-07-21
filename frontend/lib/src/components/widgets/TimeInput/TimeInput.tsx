@@ -176,7 +176,12 @@ function TimeInput({
         const next = up
           ? Math.floor(totalMins / stepMins) * stepMins + stepMins
           : Math.ceil(totalMins / stepMins) * stepMins - stepMins
-        const wrapped = ((next % 1440) + 1440) % 1440
+        const wrapped =
+          next >= 1440
+            ? 0
+            : next < 0
+              ? Math.floor(1439 / stepMins) * stepMins
+              : next
         handleChange(new Time(Math.floor(wrapped / 60), wrapped % 60))
       } else if (segmentType === "hour" && step % 3600 === 0) {
         // Hour-only mode. React-aria defaults to ±1 h; only intercept when the
@@ -190,7 +195,12 @@ function TimeInput({
         const next = up
           ? Math.floor(current.hour / stepHours) * stepHours + stepHours
           : Math.ceil(current.hour / stepHours) * stepHours - stepHours
-        const wrapped = ((next % 24) + 24) % 24
+        const wrapped =
+          next >= 24
+            ? 0
+            : next < 0
+              ? Math.floor(23 / stepHours) * stepHours
+              : next
         handleChange(new Time(wrapped, current.minute))
       }
     },

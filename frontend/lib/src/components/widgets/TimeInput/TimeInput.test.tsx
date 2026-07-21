@@ -443,6 +443,86 @@ describe("TimeInput widget", () => {
     )
   })
 
+  it("wraps minute ArrowUp to 00:00 for non-divisor step (step=4200, 70 min)", async () => {
+    const user = userEvent.setup()
+    // step=4200s → stepMins=70. value=23:20 (last boundary) → ArrowUp wraps to 00:00
+    const props = getProps({ default: "23:20", step: 4200 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(minuteSegment)
+    await user.keyboard("{ArrowUp}")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "00:00",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("wraps minute ArrowDown to last boundary for non-divisor step (step=4200, 70 min)", async () => {
+    const user = userEvent.setup()
+    // step=4200s → stepMins=70. value=00:00 → ArrowDown wraps to 23:20 (last 70-min boundary)
+    const props = getProps({ default: "00:00", step: 4200 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(minuteSegment)
+    await user.keyboard("{ArrowDown}")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "23:20",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("wraps hour ArrowUp to 00 for non-divisor step (step=18000, 5 hours)", async () => {
+    const user = userEvent.setup()
+    // step=18000s → stepHours=5. value=20:30 (last boundary) → ArrowUp wraps to 00:30
+    const props = getProps({ default: "20:30", step: 18000 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("{ArrowUp}")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "00:30",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("wraps hour ArrowDown to last boundary for non-divisor step (step=18000, 5 hours)", async () => {
+    const user = userEvent.setup()
+    // step=18000s → stepHours=5. value=00:30 → ArrowDown wraps to 20:30 (last 5-hour boundary)
+    const props = getProps({ default: "00:30", step: 18000 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("{ArrowDown}")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "20:30",
+      { fromUi: true },
+      undefined
+    )
+  })
+
   it("does not commit null for non-clearable widget when a segment is cleared mid-edit", async () => {
     const user = userEvent.setup()
     // Widget with a default is non-clearable
