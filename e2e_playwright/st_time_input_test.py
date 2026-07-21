@@ -227,9 +227,13 @@ def test_empty_time_input_behaves_correctly(
 
 def test_keeps_value_on_blur_without_edit(app: Page):
     """Test that clicking away without editing leaves the value unchanged."""
-    get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
+    time_display = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
         "stTimeInputTimeDisplay"
-    ).click()
+    )
+    # Focus a spinbutton directly so blur is meaningful
+    segment = time_display.locator("[role='spinbutton']").first
+    segment.click()
+    expect(segment).to_be_focused()
 
     # Click outside to blur the input without making any changes:
     app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})

@@ -547,6 +547,35 @@ describe("TimeInput widget", () => {
     )
   })
 
+  it("commits null for clearable widget when clear button is activated", async () => {
+    const user = userEvent.setup()
+    // No default + setValue → clearable widget with a current value
+    const props = getProps({
+      default: undefined,
+      value: "12:45",
+      setValue: true,
+    })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    // The clear button is accessible via aria-label even though tabIndex={-1}
+    const clearButton = screen.getByRole("button", { name: "Clear time" })
+    await user.click(clearButton)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      null,
+      { fromUi: true },
+      undefined
+    )
+
+    // Segments should show placeholders after clearing
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    expect(hourSegment).toHaveTextContent("HH")
+    expect(minuteSegment).toHaveTextContent("mm")
+  })
+
   it("does not commit on blur when value is unchanged", async () => {
     const user = userEvent.setup()
     const props = getProps()
@@ -554,9 +583,10 @@ describe("TimeInput widget", () => {
     render(<TimeInput {...props} />)
     vi.mocked(props.widgetMgr.setStringValue).mockClear()
 
-    // Focus the hour segment and tab away without making any edits
-    const [hourSegment] = screen.getAllByRole("spinbutton")
-    await user.click(hourSegment)
+    // Focus the last segment and tab out of the entire wrapper
+    const segments = screen.getAllByRole("spinbutton")
+    const lastSegment = segments[segments.length - 1]
+    await user.click(lastSegment)
     await user.tab()
 
     expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
@@ -565,7 +595,7 @@ describe("TimeInput widget", () => {
   it("commits value immediately when Enter is pressed on a spinbutton", async () => {
     const user = userEvent.setup()
     // Use step=900 so ArrowDown on the minute segment changes the value;
-    // then verify Enter on the hour segment commits the updated display value.
+    // then verify Enter on the minute segment commits the updated display value.
     const props = getProps({ default: "12:45", step: 900 })
     vi.spyOn(props.widgetMgr, "setStringValue")
     render(<TimeInput {...props} />)
@@ -604,25 +634,23 @@ describe("TimeInput widget", () => {
     render(<TimeInput {...props} />)
     vi.mocked(props.widgetMgr.setStringValue).mockClear()
 
-    const [hourSegment] = screen.getAllByRole("spinbutton")
-    await user.click(hourSegment)
+    // Focus the last segment (minute) so a single Tab leaves the wrapper entirely
+    const segments = screen.getAllByRole("spinbutton")
+    const minuteSegment = segments[segments.length - 1]
+    await user.click(minuteSegment)
 
-    // Type a digit — react-aria updates its internal segment state and fires
-    // handleChange, which updates displayValue but does NOT yet call
-    // setStringValue (deferred to blur).
-    await user.keyboard("0")
+    // Type a new value — displayValue updates but commit is deferred to blur.
+    await user.keyboard("30")
     expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
 
-    // Tab away to blur the entire wrapper — this should trigger the commit.
+    // Tab out from the last segment to blur the entire wrapper — triggers commit.
     await user.tab()
-    // If react-aria produced a value change, setStringValue should have been
-    // called once on blur; if "0" alone didn't change the effective value the
-    // no-change guard correctly skips it — either way no INTERMEDIATE commit.
-    const calls = vi.mocked(props.widgetMgr.setStringValue).mock.calls
-    // Every call that did fire must have fromUi: true (blur-path commit)
-    for (const [, , opts] of calls) {
-      expect(opts).toEqual({ fromUi: true })
-    }
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "12:30",
+      { fromUi: true },
+      undefined
+    )
   })
 })
 
