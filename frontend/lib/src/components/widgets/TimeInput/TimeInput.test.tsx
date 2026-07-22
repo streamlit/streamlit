@@ -720,6 +720,33 @@ describe("TimeInput widget", () => {
     // Only the deferred effect write — no synchronous form write
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
   })
+
+  it("does not double-commit when arrow key is followed by blur", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45", step: 900 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const segments = screen.getAllByRole("spinbutton")
+    const minuteSegment = segments[segments.length - 1]
+    await user.click(minuteSegment)
+
+    // Arrow key commits immediately
+    await user.keyboard("{ArrowUp}")
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "13:00",
+      { fromUi: true },
+      undefined
+    )
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    // Blur after arrow commit must NOT trigger a second commit
+    await user.tab()
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+  })
 })
 
 describe("TimeInput query param binding", () => {

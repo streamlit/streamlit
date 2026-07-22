@@ -85,6 +85,9 @@ function TimeInput({
     : undefined
 
   const onFormClearedRef = useRef<() => void>(() => {})
+  const stableOnFormCleared = useCallback(() => {
+    onFormClearedRef.current()
+  }, [])
 
   const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
@@ -99,9 +102,7 @@ function TimeInput({
     fragmentId,
     queryParamBinding,
     formClearBehavior: "resetValueAndRunCallback",
-    onFormCleared: () => {
-      onFormClearedRef.current()
-    },
+    onFormCleared: stableOnFormCleared,
   })
 
   // Local display state drives the TimeField directly, avoiding the
@@ -237,6 +238,7 @@ function TimeInput({
     (e: KeyboardEvent<HTMLDivElement>): void => {
       const target = e.target as HTMLElement
       if (target.getAttribute("role") !== "spinbutton") return
+      if (disabled) return
 
       // Enter commits the current display value, matching st.number_input.
       if (e.key === "Enter") {
