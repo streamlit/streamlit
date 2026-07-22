@@ -26,99 +26,28 @@ st.header("Issue #<N>: <Short Title>")
 
 Keep it as small as possible. If the reporter's snippet is 10 lines, don't make it 50.
 
-## Playwright Verification Script Template
+## Playwright Verification Script
 
-Use this for `$OUT_DIR/gh-<N>/verify_gh_<N>.py` — a standalone script that runs against the app under test (released wheel or `make debug` session).
+Write the verification script to `$OUT_DIR/gh-<N>/verify_gh_<N>.py`. It follows the same
+Playwright patterns as the [debugging-streamlit](../debugging-streamlit/SKILL.md) skill —
+see that skill for the full script template, the `e2e_playwright` helpers
+(`get_text_input`, `click_button`, `wait_for_app_loaded`, `wait_for_app_run`, …), and
+screenshot tips. The script runs in the repo's env (via `PYTHONPATH=. uv run`), so it can
+import those helpers even when the app under test is a separately-installed released wheel.
 
-```python
-"""Playwright verification for GitHub Issue #<N>."""
-import os
-import sys
+Layer these reproduction-specific requirements on top of that template:
 
-from playwright.sync_api import sync_playwright, expect
+- **Screenshot** evidence into `$OUT_DIR/gh-<N>/` (e.g. `repro_gh_<N>.png`).
+- **Assert** expected vs. actual so the assertion **FAILS when the bug exists**.
+- **Exit code**: `0` = no bug detected, `1` = bug confirmed — so a caller can read the
+  verdict from the exit status.
 
-from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
-from e2e_playwright.shared.app_utils import (
-    # Import helpers as needed:
-    # get_text_input, get_button, click_button, get_checkbox,
-    # get_selectbox, get_multiselect, expect_markdown,
-)
-
-
-def main() -> int:
-    app_url = os.environ.get("STREAMLIT_APP_URL", "http://localhost:8600")
-    out_dir = os.environ.get("OUT_DIR", "work-tmp/debug")
-    screenshot_path = f"{out_dir}/gh-<N>/repro_gh_<N>.png"
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 1280, "height": 720})
-
-        page.goto(app_url)
-        wait_for_app_loaded(page)
-
-        # --- Interact to trigger the bug ---
-        # Example: fill a text input and click a button
-        # text_input = get_text_input(page, "Label")
-        # text_input.locator("input").fill("value")
-        # click_button(page, "Submit")
-        # wait_for_app_run(page)
-
-        # --- Capture evidence ---
-        page.screenshot(path=screenshot_path, full_page=True)
-        print(f"Screenshot saved: {screenshot_path}")
-
-        # --- Verify expected behavior ---
-        # Write assertions that FAIL when the bug exists:
-        # expect(page.get_by_text("expected output")).to_be_visible()
-        #
-        # Or check for the buggy state:
-        # buggy_element = page.locator(".error-state")
-        # if buggy_element.count() > 0:
-        #     print("BUG CONFIRMED: error state element found")
-        #     return 1
-
-        browser.close()
-
-    print("Verification complete — no bug detected")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
-```
-
-### Running the script
+Run it once the app under test is up:
 
 ```bash
-# Ensure the app under test is running first, then:
 OUT_DIR="${OUT_DIR:-work-tmp/debug}" \
 STREAMLIT_APP_URL="${STREAMLIT_APP_URL:-http://localhost:8600}" \
 PYTHONPATH=. uv run python "$OUT_DIR/gh-<N>/verify_gh_<N>.py"
-```
-
-Exit code 0 = no bug detected, exit code 1 = bug confirmed.
-
-### Available Playwright utilities
-
-**Element locators** (`e2e_playwright.shared.app_utils`):
-- `get_text_input(page, label)`, `get_button(page, label)`, `click_button(page, label)`
-- `get_checkbox(page, label)`, `get_selectbox(page, label)`, `get_multiselect(page, label)`
-- `expect_markdown(page, text)`, `get_dataframe(page)`
-
-**Synchronization** (`e2e_playwright.conftest`):
-- `wait_for_app_loaded(page)` — wait for initial load
-- `wait_for_app_run(page)` — wait for script execution after an interaction
-- `wait_until(page, fn, timeout)` — poll until condition is true
-
-**Screenshot helpers:**
-```python
-# Full page
-page.screenshot(path="path.png", full_page=True)
-
-# Specific element
-element = page.get_by_test_id("stDataFrame")
-element.screenshot(path="element.png")
 ```
 
 ## st-issues App Template
@@ -213,7 +142,7 @@ investigated.>
 - **Type:** <Bug / Not a bug — working as intended / Feature request>
 - **Status:** <Confirmed on X.Y.Z / Cannot reproduce / Reproduced; behavior explained>
 - **Areas:** <frontend|backend>, <component or module name>
-- **Priority:** <P0 / P1 / P2 / P3 / Won't Fix> — <brief justification, per the priority guidelines>
+- **Priority:** <P0 / P1 / P2 / P3 / P4> — <brief justification, per the priority guidelines>
 - **Fix complexity:** <Small / Medium / Large> — <brief description of what a fix involves>
 ```
 
@@ -224,4 +153,4 @@ investigated.>
 - **Explain the "why"** — root cause matters more than symptoms
 - **Keep it scannable** — use headings, tables, and code blocks
 - **Include fix direction** — even a one-liner hint helps future fixers
-- **Recommend a priority per `wiki/issue-prioritization.md`** — read that doc first, then pick P0–P3 (or Won't Fix) using its criteria (not an ad-hoc judgment) and give a one-sentence rationale
+- **Recommend a priority per `wiki/issue-prioritization.md`** — read that doc first, then pick P0–P4 using its criteria (not an ad-hoc judgment) and give a one-sentence rationale

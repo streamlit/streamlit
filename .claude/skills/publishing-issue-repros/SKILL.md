@@ -42,8 +42,15 @@ repro — proceed, but say so in the commit message.
 ## Publish
 
 ```bash
+set -e  # stop on any failure so we never commit a partial or empty bundle
+
 SRC="${OUT_DIR:-work-tmp/debug}/gh-<N>"
 DEST="${ST_ISSUES_DIR:-$HOME/dev/st-issues}/issues/gh-<N>"
+
+# The investigate phase must have produced these — bail out if any are missing:
+[ -f "$SRC/app.py" ] || { echo "Error: $SRC/app.py not found"; exit 1; }
+[ -f "$SRC/NOTES.md" ] || { echo "Error: $SRC/NOTES.md not found"; exit 1; }
+[ -f "$SRC/result.json" ] || { echo "Error: $SRC/result.json not found"; exit 1; }
 
 [ -d "$DEST" ] && echo "Refreshing existing repro for gh-<N>"
 mkdir -p "$DEST"

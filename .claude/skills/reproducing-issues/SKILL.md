@@ -13,6 +13,10 @@ no pushes, no cross-repo writes) and **deterministic** (every decision resolves 
 verdict rather than pausing for input), so the same skill can run locally or in a
 GitHub Actions job.
 
+For running apps and driving Playwright, this skill builds on the
+[debugging-streamlit](../debugging-streamlit/SKILL.md) skill — see it for `make debug`,
+the Playwright script template, and the `e2e_playwright` helpers referenced below.
+
 ## Inputs
 
 Locally, the agent already knows which issue it's working on — substitute the number
@@ -37,7 +41,7 @@ directory or to any remote.
 | `result.json` | Machine-readable verdict and metadata (schema below) — the source of truth. |
 | `app.py` | Polished, self-contained repro app ready to publish to st-issues. |
 | `NOTES.md` | Investigation notes for maintainers (root cause, classification, priority). |
-| `requirements.txt` | Only if the repro needs packages outside st-issues' base env. |
+| `requirements.txt` | Avoid — st-issues runs repros inline and won't install per-issue deps (see the Step 5 caution). |
 | `*.png` | Screenshots captured as evidence. |
 | `repro_gh_<N>.py`, `verify_gh_<N>.py` | Minimal app and Playwright script used during verification. |
 
@@ -103,12 +107,19 @@ python -m py_compile "$OUT_DIR/gh-<N>/repro_gh_<N>.py"
 
 ### Step 3: Verify with Playwright
 
-Run the repro app and verify the bug programmatically.
+Verify the bug programmatically with a Playwright script. This reuses the Playwright
+patterns from the [debugging-streamlit](../debugging-streamlit/SKILL.md) skill — see it
+for the script template, the `e2e_playwright` helpers, and screenshot tips. Only the
+reproduction-specific parts are covered here and in [reference.md](reference.md).
 
 **Which version to test:** always confirm on the reporter's `REPORTED_VERSION` at
 minimum — do not let the current dev build stand in for it. Prefer testing a
 **released wheel** in a throwaway environment, which behaves identically locally and in
-CI and avoids protobuf-version mismatches:
+CI and avoids protobuf-version mismatches. For **regressions**, also test the
+last-working release to bracket the range.
+
+Start the app server first — run it in a background task so the shell is free for the
+Playwright script:
 
 ```bash
 uv venv /tmp/st-<version> --python 3.13
@@ -117,19 +128,18 @@ uv pip install --python /tmp/st-<version>/bin/python "streamlit==<version>"
   --server.port 8600 --server.headless true
 ```
 
-For **regressions**, also test the last-working release to bracket the range.
-
 **App URL:** point Playwright at the server via `STREAMLIT_APP_URL`. Default to
 `http://localhost:8600` for a released wheel, or `http://localhost:3001` when using
 `make debug` for the `develop` build.
 
-Write `$OUT_DIR/gh-<N>/verify_gh_<N>.py` — a standalone script that navigates to the
-app, drives the widgets to trigger the bug, screenshots evidence, and asserts expected
-vs. actual (assertions FAIL when the bug exists). See [reference.md](reference.md). When
-testing a released wheel, keep the script self-contained (no `streamlit` or
-`e2e_playwright` imports).
+Write `$OUT_DIR/gh-<N>/verify_gh_<N>.py` — a script that navigates to the app, drives
+the widgets to trigger the bug, screenshots evidence into `$OUT_DIR/gh-<N>/`, and
+asserts expected vs. actual (assertions FAIL when the bug exists). See
+[reference.md](reference.md) for the template. The script runs in the repo's env (via
+`PYTHONPATH=. uv run`), so it can import `e2e_playwright` helpers even when the app under
+test is a separately-installed released wheel.
 
-Run it:
+Run it once the app server is up:
 ```bash
 OUT_DIR="${OUT_DIR:-work-tmp/debug}" \
 STREAMLIT_APP_URL="${STREAMLIT_APP_URL:-http://localhost:8600}" \
@@ -160,12 +170,22 @@ publish-ready files **into `$OUT_DIR/gh-<N>/`**.
   which versions).
 - `NOTES.md` — findings, root cause with code pointers, and classification. See
   [reference.md](reference.md).
-- `requirements.txt` — only for packages outside st-issues' base environment.
+- `requirements.txt` — **avoid unless truly unavoidable.** st-issues runs every
+  repro's `app.py` *inline* inside one shared Streamlit app, so only the packages
+  already in that app's environment are available (Streamlit plus common data/plotting
+  libraries — pandas, numpy, polars, plotly, altair, matplotlib, etc.; see st-issues'
+  `pyproject.toml`). A per-issue `requirements.txt` is **not** installed for the shared
+  app: the explorer detects it and falls back to a separate, manually-triggered
+  deployment that is often not even running — so a repro that needs extra packages
+  effectively won't run in the explorer. Nearly all issues reproduce on the base
+  environment; build the repro against it. If a bug genuinely can't be shown without an
+  extra package, don't silently add one (and never pull in arbitrary or untrusted
+  packages a reporter happened to use) — note the limitation in `NOTES.md` and flag it
+  for a human.
 
 For **priority** in `NOTES.md`, read `wiki/issue-prioritization.md` first, then
-recommend a level (P0–P3 or Won't Fix) grounded in its criteria — not an ad-hoc
-judgment. In particular, measure reach by the *broken behavior*, not the affected
-surface.
+recommend a level (P0–P4) grounded in its criteria — not an ad-hoc judgment. In
+particular, measure reach by the *broken behavior*, not the affected surface.
 
 Validate:
 ```bash
