@@ -3593,7 +3593,7 @@ __metadata:
     hoist-non-react-statics: "npm:^3.3.2"
     humanize-string: "npm:^3.1.0"
     iframe-resizer: "npm:4.3.11"
-    immer: "npm:^11.1.11"
+    immer: "npm:^11.1.15"
     jsdom: "npm:24.1.3"
     lighthouse: "npm:^13.4.0"
     lodash-es: "npm:^4.18.1"
@@ -3731,7 +3731,7 @@ __metadata:
     deck.gl: "npm:^9.3.6"
     dompurify: "npm:^3.4.12"
     hoist-non-react-statics: "npm:^3.3.2"
-    immer: "npm:^11.1.11"
+    immer: "npm:^11.1.15"
     json5: "npm:^2.2.3"
     katex: "npm:^0.17.0"
     lodash-es: "npm:^4.18.1"
@@ -3790,7 +3790,7 @@ __metadata:
     vitest: "npm:^4.1.10"
     vitest-canvas-mock: "npm:^1.1.4"
     vitest-fetch-mock: "npm:^0.4.5"
-    wavesurfer.js: "npm:^7.12.10"
+    wavesurfer.js: "npm:^7.12.11"
     xxhashjs: "npm:^0.2.2"
   peerDependencies:
     react: ^17.0.0 || ^18.0.0
@@ -11196,10 +11196,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"immer@npm:^11.1.11":
-  version: 11.1.11
-  resolution: "immer@npm:11.1.11"
-  checksum: 10c0/b660b4308966775f8514da8b266d061d90bab83ac90c7be6c400fac66f71054a85a272eb97f87f1c4cad5f9bab92e62ed3d2312bb65308debe4d3318d06ad9e2
+"immer@npm:^11.1.15":
+  version: 11.1.15
+  resolution: "immer@npm:11.1.15"
+  checksum: 10c0/5215eaec9641ad786ae8940a489514c26ce3726f8c49f0191a754902800f3ddd102b0653e894cabe7049d93e77b86d67d19953e778ffebba56848739a31b3b79
   languageName: node
   linkType: hard
 
@@ -19203,10 +19203,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wavesurfer.js@npm:^7.12.10":
-  version: 7.12.10
-  resolution: "wavesurfer.js@npm:7.12.10"
-  checksum: 10c0/ece78a38a8679d34395194f9eeca9fa2b5b9c772c1e66c81cd3103fbc62a1a365973ac9b31ceeb6448e5b9fa8c14da477eb7286ad28c42ce939998aa71e3af1f
+"wavesurfer.js@npm:^7.12.11":
+  version: 7.12.11
+  resolution: "wavesurfer.js@npm:7.12.11"
+  checksum: 10c0/e08b0fb41d605fc9d88b956795a89f8fef3c1df3a896ae9f45c236a6e2769ee6ae836e42b6d7e147e775ed687761db40a216f59c0b797aea07b916274dfd665c
   languageName: node
   linkType: hard
 

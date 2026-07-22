@@ -76,7 +76,7 @@
     "deck.gl": "^9.3.6",
     "dompurify": "^3.4.12",
     "hoist-non-react-statics": "^3.3.2",
-    "immer": "^11.1.11",
+    "immer": "^11.1.15",
     "json5": "^2.2.3",
     "katex": "^0.17.0",
     "lodash-es": "^4.18.1",
@@ -124,7 +124,7 @@
     "vega-embed": "^7.1.0",
     "vega-interpreter": "^2.2.1",
     "vega-lite": "6.4.3",
-    "wavesurfer.js": "^7.12.10",
+    "wavesurfer.js": "^7.12.11",
     "xxhashjs": "^0.2.2"
   },
   "peerDependencies": {
