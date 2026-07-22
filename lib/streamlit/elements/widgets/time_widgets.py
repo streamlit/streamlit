@@ -983,6 +983,19 @@ class TimeWidgetsMixin:
         parsed_time: time | None
         parsed_time = None if value is None else _convert_timelike_to_time(value)
 
+        # Normalize early: strip seconds for minute-granular steps before ID
+        # computation so the widget identity stays stable when value carries
+        # live seconds (e.g. value=datetime.now()).
+        _step_secs = (
+            step.seconds
+            if isinstance(step, timedelta)
+            else step
+            if isinstance(step, int)
+            else 0
+        )
+        if parsed_time is not None and _step_secs % 60 == 0:
+            parsed_time = parsed_time.replace(second=0, microsecond=0)
+
         element_id = compute_and_register_element_id(
             "time_input",
             user_key=key,
@@ -1016,11 +1029,6 @@ class TimeWidgetsMixin:
             raise StreamlitAPIException(
                 f"`step` must be between 1 second and 23 hours but is currently set to {step} seconds."
             )
-
-        # Normalize parsed_time: strip seconds when step doesn't have sub-minute
-        # precision, so first-run and subsequent-run return values are consistent.
-        if parsed_time is not None and step % 60 == 0:
-            parsed_time = parsed_time.replace(second=0, microsecond=0)
 
         serde = TimeInputSerde(parsed_time, step=step)
         if parsed_time is not None:

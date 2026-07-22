@@ -510,9 +510,8 @@ function TimeInput({
       const up = e.key === "ArrowUp"
       const current = stringToTime(displayValue)
 
-      if (segmentType === "minute") {
-        // Non-whole-minute steps (e.g. 90s) fall back to react-aria's default ±1.
-        // For step=60 (stepMins=1) react-aria's default ±1 is already correct.
+      if (segmentType === "minute" && step % 60 === 0) {
+        // Minute-granular step. For step=60 (stepMins=1) react-aria's ±1 is correct.
         if (!Number.isInteger(stepMins) || stepMins <= 1) return
 
         e.preventDefault()
@@ -551,10 +550,15 @@ function TimeInput({
               ? Math.floor(23 / stepHours) * stepHours
               : next
         handleChange(new Time(wrapped, 0))
-      } else if (segmentType === "second" && step % 60 !== 0) {
-        // Sub-minute step: snap seconds across the full HH:MM:SS value.
-        // For step=1 react-aria's default ±1 is already correct.
-        if (step <= 1) return
+      } else if (step % 60 !== 0 && step > 1) {
+        // Non-minute-divisible step (e.g. 30s, 90s): all time segments snap
+        // using total-seconds math so the result is always a valid step boundary.
+        if (
+          segmentType !== "hour" &&
+          segmentType !== "minute" &&
+          segmentType !== "second"
+        )
+          return
 
         e.preventDefault()
         e.stopPropagation()
@@ -562,9 +566,21 @@ function TimeInput({
 
         const totalSecs =
           current.hour * 3600 + current.minute * 60 + current.second
-        const next = up
-          ? Math.floor(totalSecs / step) * step + step
-          : Math.ceil(totalSecs / step) * step - step
+
+        let next: number
+        if (segmentType === "second") {
+          next = up
+            ? Math.floor(totalSecs / step) * step + step
+            : Math.ceil(totalSecs / step) * step - step
+        } else {
+          // For hour/minute segments, find the next step boundary at least one
+          // segment-unit away so the displayed segment visibly changes.
+          const jumpSize = segmentType === "hour" ? 3600 : 60
+          next = up
+            ? Math.ceil((totalSecs + jumpSize) / step) * step
+            : Math.floor((totalSecs - jumpSize) / step) * step
+        }
+
         const wrapped = ((next % 86400) + 86400) % 86400
         handleChange(
           new Time(

@@ -1453,6 +1453,14 @@ describe("TimeInput seconds granularity", () => {
     expect(segments[2]).toHaveAttribute("aria-valuenow", "30")
   })
 
+  it("shows seconds segment for step=90 (not divisible by 60)", () => {
+    const props = getProps({ default: "12:45:00", step: 90 })
+    render(<TimeInput {...props} />)
+
+    const segments = screen.getAllByRole("spinbutton")
+    expect(segments).toHaveLength(3)
+  })
+
   it("shows ss placeholder when seconds granularity and value is null", () => {
     const props = getProps({ default: undefined, step: 30 })
     render(<TimeInput {...props} />)
@@ -1521,6 +1529,61 @@ describe("TimeInput seconds granularity", () => {
       undefined
     )
   })
+
+  it.each([
+    {
+      step: 30,
+      value: "08:45:30",
+      seg: 1,
+      key: "ArrowUp",
+      expected: "08:46:30",
+      desc: "minute up, step=30",
+    },
+    {
+      step: 30,
+      value: "08:45:00",
+      seg: 1,
+      key: "ArrowDown",
+      expected: "08:44:00",
+      desc: "minute down, step=30",
+    },
+    {
+      step: 30,
+      value: "08:45:30",
+      seg: 0,
+      key: "ArrowUp",
+      expected: "09:45:30",
+      desc: "hour up, step=30",
+    },
+    {
+      step: 90,
+      value: "00:01:30",
+      seg: 1,
+      key: "ArrowUp",
+      expected: "00:03:00",
+      desc: "minute up, step=90",
+    },
+  ])(
+    "snaps to step boundary on non-second segment arrow: $desc",
+    async ({ step, value, seg, key, expected }) => {
+      const user = userEvent.setup()
+      const props = getProps({ default: value, step })
+      vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TimeInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[seg])
+      await user.keyboard(`{${key}}`)
+
+      expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+        props.element,
+        expected,
+        { fromUi: true },
+        undefined
+      )
+    }
+  )
 })
 
 describe("TimeInput hour cycle", () => {
