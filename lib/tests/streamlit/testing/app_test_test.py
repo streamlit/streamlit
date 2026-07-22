@@ -318,3 +318,90 @@ def test_navigation_resets_pages_manager_state():
         assert "Page content" in at.markdown.values
     finally:
         PagesManager.uses_pages_directory = original_value
+
+
+def test_dynamic_widget_does_not_duplicate_on_rerun() -> None:
+    """Dynamically adding an element before an existing widget should not
+    leave stale widgets in the AppTest tree after a rerun.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/12566
+    """
+
+    def script():
+        import streamlit as st
+
+        if "_string_value" not in st.session_state:
+            st.session_state._string_value = "string1"
+
+        if st.session_state.get("_bool_value", False):
+            with st.container(key="k_container"):
+                st.html("<style>color: red;</style>")
+
+        with st.container():
+            st.text_input("Text", value=st.session_state._string_value)
+
+            if st.button("Button", key="k_button"):
+                st.session_state._string_value = "string2"
+                st.session_state._bool_value = True
+                st.rerun()
+
+    at = AppTest.from_function(script).run()
+    assert len(at.text_input) == 1
+    assert at.text_input[0].value == "string1"
+
+    at = at.button(key="k_button").click().run()
+    assert len(at.text_input) == 1
+    assert at.text_input[0].value == "string2"
+
+    # A subsequent run with no interaction should not raise KeyError from
+    # stale widget ids left over in the previous run's tree.
+    at = at.run()
+    assert len(at.text_input) == 1
+    assert at.text_input[0].value == "string2"
+
+
+def test_removed_widget_does_not_persist_on_rerun() -> None:
+    """A widget removed during a rerun should not remain in the AppTest tree.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/9128
+    """
+
+    def script():
+        import streamlit as st
+
+        if "started" not in st.session_state:
+            st.session_state.started = False
+
+        if not st.session_state.started:
+            with st.status("Starting", expanded=True) as status:
+                question_1 = status.text_input("Start", key="question_1")
+
+                if len(question_1) > 5:
+                    st.write("ok: started")
+                    st.session_state.started = True
+                    st.rerun()
+        else:
+            st.status("Started", state="complete", expanded=False)
+
+            with st.status("Question 2", expanded=True) as status:
+                question_2 = status.text_input("Question 2", key="question_2")
+
+                if len(question_2) > 5:
+                    st.write("ok: stopping")
+                    st.stop()
+
+    at = AppTest.from_function(script).run()
+    assert at.session_state.started is False
+    assert len(at.text_input) == 1
+    assert at.text_input[0].key == "question_1"
+
+    at = at.text_input(key="question_1").set_value("aaaaaa").run()
+    assert at.session_state.started is True
+    assert len(at.text_input) == 1
+    with pytest.raises(KeyError):
+        at.text_input(key="question_1")
+    assert at.text_input[0].key == "question_2"
+
+    at = at.text_input(key="question_2").set_value("bbbbbb").run()
+    assert len(at.text_input) == 1
+    assert at.text_input(key="question_2").value == "bbbbbb"
