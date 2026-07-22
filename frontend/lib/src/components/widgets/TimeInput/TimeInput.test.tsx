@@ -675,6 +675,51 @@ describe("TimeInput widget", () => {
       undefined
     )
   })
+
+  it("writes to WidgetStateManager synchronously on blur when inside a form", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45", formId: "form" })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const segments = screen.getAllByRole("spinbutton")
+    const minuteSegment = segments[segments.length - 1]
+    await user.click(minuteSegment)
+    await user.keyboard("30")
+
+    // Before blur: no write yet (typing defers to blur)
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+    // Blur triggers both the deferred path AND the synchronous form write
+    await user.tab()
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "12:30",
+      { fromUi: true },
+      undefined
+    )
+    // Synchronous write ensures value is available before form submit runs
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not double-write on blur when NOT inside a form", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const segments = screen.getAllByRole("spinbutton")
+    const minuteSegment = segments[segments.length - 1]
+    await user.click(minuteSegment)
+    await user.keyboard("30")
+    await user.tab()
+
+    // Only the deferred effect write — no synchronous form write
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe("TimeInput query param binding", () => {

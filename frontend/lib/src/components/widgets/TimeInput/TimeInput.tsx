@@ -38,6 +38,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
+  isInForm,
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
@@ -83,6 +84,8 @@ function TimeInput({
       }
     : undefined
 
+  const onFormClearedRef = useRef<() => void>(() => {})
+
   const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
     TimeInputProto
@@ -97,7 +100,7 @@ function TimeInput({
     queryParamBinding,
     formClearBehavior: "resetValueAndRunCallback",
     onFormCleared: () => {
-      setDisplayValue(element.default ?? null)
+      onFormClearedRef.current()
     },
   })
 
@@ -105,6 +108,7 @@ function TimeInput({
   // useEffect-delay in useBasicWidgetState that would cause React Aria
   // to see a stale value mid-render and reset its segment edit buffer.
   const [displayValue, setDisplayValue] = useState<string | null>(value)
+  onFormClearedRef.current = () => setDisplayValue(element.default ?? null)
 
   // Sync from backend when value changes externally (form clear, session
   // state update, setValue call). Uses render-time adjustment pattern:
@@ -136,6 +140,7 @@ function TimeInput({
   const theme = useEmotionTheme()
   const step = element.step ? Number(element.step) : 900
   const clearable = isNullOrUndefined(element.default) && !disabled
+  const inForm = isInForm({ formId: element.formId })
 
   const stepMins = step / 60
   const stepHours = step / 3600
@@ -161,9 +166,17 @@ function TimeInput({
       if (commitImmediatelyRef.current) {
         commitImmediatelyRef.current = false
         setValueWithSource({ value: newValue, fromUi: true })
+        if (inForm) {
+          updateWidgetMgrState(
+            element,
+            widgetMgr,
+            { value: newValue, fromUi: true },
+            fragmentId
+          )
+        }
       }
     },
-    [clearable, setValueWithSource]
+    [clearable, setValueWithSource, inForm, element, widgetMgr, fragmentId]
   )
 
   /**
@@ -178,14 +191,33 @@ function TimeInput({
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (displayValueRef.current === valueRef.current) return
       setValueWithSource({ value: displayValueRef.current, fromUi: true })
+      // Inside a form, write synchronously so that a Submit click in the same
+      // event loop gets the just-committed value. setValueWithSource defers its
+      // WidgetStateManager write to a useEffect which hasn't run yet.
+      if (inForm) {
+        updateWidgetMgrState(
+          element,
+          widgetMgr,
+          { value: displayValueRef.current, fromUi: true },
+          fragmentId
+        )
+      }
     },
-    [setValueWithSource]
+    [setValueWithSource, inForm, element, widgetMgr, fragmentId]
   )
 
   const handleClear = useCallback((): void => {
     setDisplayValue(null)
     setValueWithSource({ value: null, fromUi: true })
-  }, [setValueWithSource])
+    if (inForm) {
+      updateWidgetMgrState(
+        element,
+        widgetMgr,
+        { value: null, fromUi: true },
+        fragmentId
+      )
+    }
+  }, [setValueWithSource, inForm, element, widgetMgr, fragmentId])
 
   /**
    * Intercept ArrowUp/Down on the spinbutton segments (capture phase, before
@@ -210,6 +242,14 @@ function TimeInput({
       if (e.key === "Enter") {
         if (displayValueRef.current !== valueRef.current) {
           setValueWithSource({ value: displayValueRef.current, fromUi: true })
+          if (inForm) {
+            updateWidgetMgrState(
+              element,
+              widgetMgr,
+              { value: displayValueRef.current, fromUi: true },
+              fragmentId
+            )
+          }
         }
         return
       }
@@ -281,6 +321,10 @@ function TimeInput({
       stepHours,
       handleChange,
       setValueWithSource,
+      inForm,
+      element,
+      widgetMgr,
+      fragmentId,
     ]
   )
 
