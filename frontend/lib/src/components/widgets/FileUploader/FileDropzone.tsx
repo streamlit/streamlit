@@ -73,7 +73,7 @@ const FileDropzone = ({
 
       return (
         <StyledFileDropzoneSection
-          {...getRootProps()}
+          {...getRootProps({ tabIndex: -1 })}
           data-testid="stFileUploaderDropzone"
           isDisabled={disabled}
           isDragActive={isDragActive}

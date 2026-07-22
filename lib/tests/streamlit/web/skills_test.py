@@ -16,21 +16,17 @@
 
 from __future__ import annotations
 
-import io
 import os
-import tarfile
-from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
-from urllib.error import URLError
+import subprocess
+import sys
+from pathlib import Path
+from unittest.mock import patch
 
 import click
 import pytest
 from click.testing import CliRunner
 
 from streamlit.web import cli, skills
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _skip_if_symlinks_not_supported(tmp_path: Path) -> None:
@@ -61,6 +57,25 @@ def mock_source_skills_dir(tmp_path: Path) -> Path:
     skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text("# Test Skill\n", encoding="utf-8")
     return source_dir
+
+
+@pytest.fixture
+def mock_meta_skill_dir(tmp_path: Path) -> Path:
+    """Create a mock bundled meta-skill directory.
+
+    Mirrors the layout vendored in the wheel: a thin ``SKILL.md`` router plus a
+    ``scripts/discover.py`` under ``.agents/meta-skill/developing-with-streamlit``.
+    Returns the ``.agents/meta-skill`` dir (the source passed to the copy step),
+    matching what :func:`skills._get_meta_skill_dir` returns.
+    """
+    meta_dir = tmp_path / "streamlit" / ".agents" / "meta-skill"
+    skill_dir = meta_dir / "developing-with-streamlit"
+    (skill_dir / "scripts").mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text("# Meta Skill\n", encoding="utf-8")
+    (skill_dir / "scripts" / "discover.py").write_text(
+        "print('discover')\n", encoding="utf-8"
+    )
+    return meta_dir
 
 
 class TestGetSourceSkillsDir:
@@ -122,8 +137,10 @@ class TestGenerateGitignoreSnippet:
             skill_names, target_dirs, project_root
         )
 
-        assert "# Streamlit agent skills" in result
-        assert ".agents/skills/developing-with-streamlit/" in result
+        assert result == (
+            "# Streamlit agent skills (environment-specific symlinks)\n"
+            ".agents/skills/developing-with-streamlit"
+        )
 
     def test_generates_snippet_for_multiple_targets(self, tmp_path: Path) -> None:
         """Generates entries for both .agents and .claude target directories."""
@@ -138,8 +155,9 @@ class TestGenerateGitignoreSnippet:
             skill_names, target_dirs, project_root
         )
 
-        assert ".agents/skills/developing-with-streamlit/" in result
-        assert ".claude/skills/developing-with-streamlit/" in result
+        assert ".agents/skills/developing-with-streamlit" in result
+        assert ".claude/skills/developing-with-streamlit" in result
+        assert "developing-with-streamlit/" not in result
 
     def test_generates_snippet_for_multiple_skills(self, tmp_path: Path) -> None:
         """Generates entries for all discovered skills."""
@@ -151,8 +169,10 @@ class TestGenerateGitignoreSnippet:
             skill_names, target_dirs, project_root
         )
 
-        assert ".agents/skills/developing-with-streamlit/" in result
-        assert ".agents/skills/debugging-apps/" in result
+        assert ".agents/skills/developing-with-streamlit" in result
+        assert ".agents/skills/debugging-apps" in result
+        assert "developing-with-streamlit/" not in result
+        assert "debugging-apps/" not in result
 
 
 class TestFindProjectRoot:
@@ -168,7 +188,10 @@ class TestFindProjectRoot:
     ) -> None:
         """Uses cwd when .agents or .claude directory exists."""
         (tmp_path / marker_dir).mkdir()
-        with patch("pathlib.Path.cwd", return_value=tmp_path):
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
             result = skills._find_project_root()
         assert result == tmp_path
 
@@ -178,7 +201,10 @@ class TestFindProjectRoot:
         subdir = tmp_path / "sub" / "dir"
         subdir.mkdir(parents=True)
 
-        with patch("pathlib.Path.cwd", return_value=subdir):
+        with (
+            patch("pathlib.Path.cwd", return_value=subdir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
             result = skills._find_project_root()
         assert result == tmp_path
 
@@ -187,7 +213,10 @@ class TestFindProjectRoot:
         subdir = tmp_path / "sub" / "dir"
         subdir.mkdir(parents=True)
 
-        with patch("pathlib.Path.cwd", return_value=subdir):
+        with (
+            patch("pathlib.Path.cwd", return_value=subdir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
             result = skills._find_project_root()
         assert result == subdir
 
@@ -198,7 +227,10 @@ class TestFindProjectRoot:
         subdir.mkdir()
         (subdir / ".agents").mkdir()
 
-        with patch("pathlib.Path.cwd", return_value=subdir):
+        with (
+            patch("pathlib.Path.cwd", return_value=subdir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
             result = skills._find_project_root()
         assert result == subdir
 
@@ -302,6 +334,59 @@ class TestFindProjectRoot:
         # git root detection skip home). The function correctly avoids treating
         # home directory as a project even when it has agent directories.
         assert result == home
+
+    def test_falls_back_to_cwd_when_cwd_is_ancestor_of_app(
+        self, tmp_path: Path
+    ) -> None:
+        """No marker, but cwd is an ancestor of the app dir: install into cwd.
+
+        Mirrors ``cd repo && streamlit run sub/app.py`` with no project marker —
+        the developer expects skills in ``repo``, not the nested app-script dir.
+        """
+        repo = tmp_path / "repo"
+        app_dir = repo / "sub" / "app"
+        app_dir.mkdir(parents=True)
+        with (
+            patch("pathlib.Path.cwd", return_value=repo),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            result = skills._find_project_root(app_dir)
+        assert result == repo
+
+    def test_falls_back_to_start_when_cwd_unrelated_to_app(
+        self, tmp_path: Path
+    ) -> None:
+        """No marker and cwd is NOT an ancestor of the app dir: use the app dir.
+
+        Mirrors ``cd /tmp && streamlit run /proj/app.py`` — the unrelated cwd
+        must never become the install root.
+        """
+        unrelated = tmp_path / "elsewhere"
+        unrelated.mkdir()
+        app_dir = tmp_path / "proj" / "app"
+        app_dir.mkdir(parents=True)
+        with (
+            patch("pathlib.Path.cwd", return_value=unrelated),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            result = skills._find_project_root(app_dir)
+        assert result == app_dir
+
+    def test_does_not_fall_back_to_home_even_when_cwd_is_home_ancestor(
+        self, tmp_path: Path
+    ) -> None:
+        """No marker and cwd is home (an ancestor of the app dir): use the app
+        dir, never install project-local skills into the home directory.
+        """
+        home = tmp_path / "home"
+        app_dir = home / "proj" / "app"
+        app_dir.mkdir(parents=True)
+        with (
+            patch("pathlib.Path.cwd", return_value=home),
+            patch("pathlib.Path.home", return_value=home),
+        ):
+            result = skills._find_project_root(app_dir)
+        assert result == app_dir
 
 
 class TestGetProjectTargetDirs:
@@ -607,6 +692,12 @@ class TestInstallSkillSymlink:
         assert success
         assert target.is_symlink()
         assert ".agents/skills/developing-with-streamlit" in result.installed
+        # The replacement must RESOLVE to the real source, not recreate a
+        # still-dangling link that reuses the old (broken) target string.
+        assert (
+            target.resolve()
+            == (mock_source_skills_dir / "developing-with-streamlit").resolve()
+        )
 
 
 class TestInstallSkillCopy:
@@ -817,7 +908,7 @@ class TestInstallSkillsCli:
         assert "Installed:" in result.output
 
     def test_skills_global_flag_triggers_global_install(
-        self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
+        self, runner: CliRunner, tmp_path: Path, mock_meta_skill_dir: Path
     ) -> None:
         """The --global flag triggers global installation mode."""
         home = tmp_path / "home"
@@ -826,9 +917,7 @@ class TestInstallSkillsCli:
         with (
             patch("pathlib.Path.home", return_value=home),
             patch.object(
-                skills,
-                "_download_global_skill",
-                return_value=mock_source_skills_dir / "developing-with-streamlit",
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
             ),
         ):
             result = runner.invoke(cli.main, ["skills", "--global", "--yes"])
@@ -868,13 +957,15 @@ class TestInstallSkillsCli:
         self, runner: CliRunner, tmp_path: Path
     ) -> None:
         """Fails when bundled skills directory doesn't exist."""
-        with patch.object(
-            skills, "_get_source_skills_dir", return_value=tmp_path / "nonexistent"
-        ):
+        missing = tmp_path / "nonexistent"
+        with patch.object(skills, "_get_source_skills_dir", return_value=missing):
             result = runner.invoke(cli.main, ["skills", "--yes"])
 
         assert result.exit_code != 0
         assert "not found" in result.output
+        # The absolute server path must not leak into the error (the same message
+        # is shown verbatim in the in-app nudge toast).
+        assert str(missing) not in result.output
 
     def test_skills_installs_to_agents_skills(
         self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
@@ -974,28 +1065,33 @@ class TestInstallSkillsCli:
         assert "Up to date:" in result.output
 
     def test_skills_global_installs_to_home_dirs(
-        self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
+        self, runner: CliRunner, tmp_path: Path, mock_meta_skill_dir: Path
     ) -> None:
-        """Global install copies skills to home directories."""
+        """Global install copies the meta-skill to home directories."""
         home = tmp_path / "home"
         (home / ".claude").mkdir(parents=True)
 
         with (
             patch("pathlib.Path.home", return_value=home),
             patch.object(
-                skills,
-                "_download_global_skill",
-                return_value=mock_source_skills_dir / "developing-with-streamlit",
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
             ),
         ):
             result = runner.invoke(cli.main, ["skills", "-g", "-y"])
 
         assert result.exit_code == 0
-        assert (home / ".agents" / "skills" / "developing-with-streamlit").is_dir()
-        assert (home / ".claude" / "skills" / "developing-with-streamlit").is_dir()
+        agents_skill = home / ".agents" / "skills" / "developing-with-streamlit"
+        claude_skill = home / ".claude" / "skills" / "developing-with-streamlit"
+        assert agents_skill.is_dir()
+        assert claude_skill.is_dir()
+        # The version-agnostic meta-skill (SKILL.md + scripts/discover.py) is what
+        # lands globally — not the version-matched content skill.
+        assert (agents_skill / "SKILL.md").is_file()
+        assert (agents_skill / "scripts" / "discover.py").is_file()
+        assert (claude_skill / "scripts" / "discover.py").is_file()
 
     def test_skills_global_rerun_reports_up_to_date(
-        self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
+        self, runner: CliRunner, tmp_path: Path, mock_meta_skill_dir: Path
     ) -> None:
         """Global install reports up to date when managed copy is unchanged."""
         home = tmp_path / "home"
@@ -1004,9 +1100,7 @@ class TestInstallSkillsCli:
         with (
             patch("pathlib.Path.home", return_value=home),
             patch.object(
-                skills,
-                "_download_global_skill",
-                return_value=mock_source_skills_dir / "developing-with-streamlit",
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
             ),
         ):
             runner.invoke(cli.main, ["skills", "-g", "-y"])
@@ -1102,7 +1196,9 @@ class TestInstallProjectSkillsConflicts:
             result = runner.invoke(cli.main, ["skills", "--yes"])
 
         assert result.exit_code != 0
-        assert "No skills were installed due to conflicts" in result.output
+        # The error names the specific conflicting path, not a vague "conflicts".
+        assert ".agents/skills/developing-with-streamlit" in result.output
+        assert "already exist" in result.output
 
 
 class TestInstallProjectSkillsCancellation:
@@ -1134,100 +1230,6 @@ class TestInstallProjectSkillsCancellation:
         assert not (
             project_dir / ".agents" / "skills" / "developing-with-streamlit"
         ).exists()
-
-
-class TestDownloadGlobalSkill:
-    """Tests for _download_global_skill."""
-
-    def test_raises_on_network_error(self) -> None:
-        """Raises ClickException on network failure."""
-        with patch.object(skills.request, "urlopen", side_effect=URLError("Network")):
-            with pytest.raises(click.ClickException, match="Failed to download"):
-                skills._download_global_skill(
-                    "https://example.com/test.tar.gz", "skill"
-                )
-
-    def test_raises_on_empty_archive(self, tmp_path: Path) -> None:
-        """Raises ClickException when archive is empty."""
-        # Create an empty tar.gz
-        tar_buffer = io.BytesIO()
-        with tarfile.open(fileobj=tar_buffer, mode="w:gz"):
-            pass  # Empty archive
-        tar_buffer.seek(0)
-
-        mock_response = MagicMock()
-        mock_response.read.return_value = tar_buffer.getvalue()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-
-        with patch.object(skills.request, "urlopen", return_value=mock_response):
-            with pytest.raises(click.ClickException, match="archive is empty"):
-                skills._download_global_skill(
-                    "https://example.com/test.tar.gz", "skill"
-                )
-
-    def test_raises_on_missing_skill(self, tmp_path: Path) -> None:
-        """Raises ClickException when skill not found in archive."""
-        # Create archive with a different skill
-        tar_buffer = io.BytesIO()
-        with tarfile.open(fileobj=tar_buffer, mode="w:gz") as tar:
-            # Add a root directory
-            root_info = tarfile.TarInfo(name="repo-v1/")
-            root_info.type = tarfile.DIRTYPE
-            root_info.mode = 0o755  # Ensure directory is traversable
-            tar.addfile(root_info)
-            # Add a different skill
-            other_skill = tarfile.TarInfo(name="repo-v1/other-skill/")
-            other_skill.type = tarfile.DIRTYPE
-            other_skill.mode = 0o755
-            tar.addfile(other_skill)
-        tar_buffer.seek(0)
-
-        mock_response = MagicMock()
-        mock_response.read.return_value = tar_buffer.getvalue()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-
-        with patch.object(skills.request, "urlopen", return_value=mock_response):
-            with pytest.raises(click.ClickException, match="not found in downloaded"):
-                skills._download_global_skill(
-                    "https://example.com/test.tar.gz", "missing-skill"
-                )
-
-    def test_extracts_skill_successfully(self, tmp_path: Path) -> None:
-        """Successfully extracts skill from valid archive."""
-        # Create archive with the expected skill
-        tar_buffer = io.BytesIO()
-        with tarfile.open(fileobj=tar_buffer, mode="w:gz") as tar:
-            # Add root directory
-            root_info = tarfile.TarInfo(name="repo-v1/")
-            root_info.type = tarfile.DIRTYPE
-            root_info.mode = 0o755  # Ensure directory is traversable
-            tar.addfile(root_info)
-            # Add skill directory
-            skill_dir = tarfile.TarInfo(name="repo-v1/test-skill/")
-            skill_dir.type = tarfile.DIRTYPE
-            skill_dir.mode = 0o755
-            tar.addfile(skill_dir)
-            # Add SKILL.md file
-            skill_md = tarfile.TarInfo(name="repo-v1/test-skill/SKILL.md")
-            content = b"# Test Skill\n"
-            skill_md.size = len(content)
-            tar.addfile(skill_md, io.BytesIO(content))
-        tar_buffer.seek(0)
-
-        mock_response = MagicMock()
-        mock_response.read.return_value = tar_buffer.getvalue()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-
-        with patch.object(skills.request, "urlopen", return_value=mock_response):
-            result = skills._download_global_skill(
-                "https://example.com/test.tar.gz", "test-skill"
-            )
-
-        assert result.name == "test-skill"
-        assert (result / "SKILL.md").is_file()
 
 
 class TestSkillCopyMatches:
@@ -1376,6 +1378,11 @@ class TestInstallSkillSymlinkEdgeCases:
         assert success
         assert len(result.installed) == 1
         assert target.is_symlink()
+        # The replacement resolves to the real source, not the unrelated dir.
+        assert (
+            target.resolve()
+            == (mock_source_skills_dir / "developing-with-streamlit").resolve()
+        )
 
     def test_returns_false_when_symlink_creation_fails(
         self, tmp_path: Path, mock_source_skills_dir: Path
@@ -1437,7 +1444,7 @@ class TestGlobalInstallationConflicts:
     """Tests for global installation conflicts."""
 
     def test_raises_when_all_targets_skipped(
-        self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
+        self, runner: CliRunner, tmp_path: Path, mock_meta_skill_dir: Path
     ) -> None:
         """Raises ClickException when all targets are skipped due to conflicts."""
         home = tmp_path / "home"
@@ -1452,22 +1459,22 @@ class TestGlobalInstallationConflicts:
         with (
             patch("pathlib.Path.home", return_value=home),
             patch.object(
-                skills,
-                "_download_global_skill",
-                return_value=mock_source_skills_dir / "developing-with-streamlit",
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
             ),
         ):
             result = runner.invoke(cli.main, ["skills", "--global", "--yes"])
 
         assert result.exit_code != 0
-        assert "No skills were installed due to conflicts" in result.output
+        # The error names the specific conflicting path, not a vague "conflicts".
+        assert ".agents/skills/developing-with-streamlit" in result.output
+        assert "already exist" in result.output
 
 
 class TestInteractiveModeSelection:
     """Tests for interactive mode selection."""
 
     def test_interactive_selects_global_mode(
-        self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
+        self, runner: CliRunner, tmp_path: Path, mock_meta_skill_dir: Path
     ) -> None:
         """Interactive prompt can select global installation mode."""
         home = tmp_path / "home"
@@ -1479,9 +1486,7 @@ class TestInteractiveModeSelection:
             patch.object(skills, "_prompt_install_mode", return_value="global"),
             patch.object(skills, "_confirm_global_installation", return_value=True),
             patch.object(
-                skills,
-                "_download_global_skill",
-                return_value=mock_source_skills_dir / "developing-with-streamlit",
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
             ),
         ):
             mock_sys.stdin.isatty.return_value = True
@@ -1505,6 +1510,340 @@ class TestIsStreamlitOwnedSymlinkErrorPaths:
         assert skills._is_streamlit_owned_symlink(link, {"developing-with-streamlit"})
 
 
+def _evaluate_nudge(
+    tmp_path: Path,
+    *,
+    headless: bool = False,
+    hide_welcome: bool = False,
+    agents: tuple[str, ...] = ("claude",),
+    installed_skills: tuple[str, ...] = (),
+    marker_exists: bool = False,
+) -> bool:
+    """Run ``should_show_skills_nudge`` with the given conditions patched in."""
+    marker = tmp_path / ".skills_nudge_dismissed"
+    if marker_exists:
+        marker.touch()
+
+    options = {"server.headless": headless, "logger.hideWelcomeMessage": hide_welcome}
+
+    with (
+        patch("streamlit.config.get_option", side_effect=options.__getitem__),
+        patch.object(skills, "_nudge_dismissed_marker_path", return_value=marker),
+        patch(
+            "streamlit.web.skills.detect_installed_agents",
+            return_value=list(agents),
+        ),
+        patch(
+            "streamlit.web.skills.detect_installed_skills",
+            return_value=list(installed_skills),
+        ),
+    ):
+        return skills.should_show_skills_nudge()
+
+
+def test_should_show_skills_nudge_when_all_conditions_met(tmp_path: Path) -> None:
+    """The nudge is recommended when an agent is present and skills are absent."""
+    assert _evaluate_nudge(tmp_path) is True
+
+
+def test_should_show_skills_nudge_hidden_when_headless(tmp_path: Path) -> None:
+    """No nudge in headless mode (deployments, CI, SiS)."""
+    assert _evaluate_nudge(tmp_path, headless=True) is False
+
+
+def test_should_show_skills_nudge_hidden_when_welcome_message_hidden(
+    tmp_path: Path,
+) -> None:
+    """No nudge when the welcome message is suppressed via config."""
+    assert _evaluate_nudge(tmp_path, hide_welcome=True) is False
+
+
+def test_should_show_skills_nudge_hidden_when_marker_exists(tmp_path: Path) -> None:
+    """No nudge once the user has permanently dismissed it."""
+    assert _evaluate_nudge(tmp_path, marker_exists=True) is False
+
+
+def test_should_show_skills_nudge_hidden_when_no_agent(tmp_path: Path) -> None:
+    """No nudge when no agent harness is detected on the system."""
+    assert _evaluate_nudge(tmp_path, agents=()) is False
+
+
+def test_should_show_skills_nudge_hidden_when_skills_installed(tmp_path: Path) -> None:
+    """No nudge when the bundled skills are already installed."""
+    assert (
+        _evaluate_nudge(
+            tmp_path,
+            installed_skills=("home:claude:developing-with-streamlit",),
+        )
+        is False
+    )
+
+
+def test_should_show_skills_nudge_returns_false_on_error() -> None:
+    """A detection failure suppresses the nudge rather than raising."""
+    with patch("streamlit.config.get_option", side_effect=RuntimeError("boom")):
+        assert skills.should_show_skills_nudge() is False
+
+
+def test_write_nudge_dismissed_marker_creates_file(tmp_path: Path) -> None:
+    """Writing the marker creates the file (and any missing parent dirs)."""
+    marker = tmp_path / ".streamlit" / ".skills_nudge_dismissed"
+    with patch.object(skills, "_nudge_dismissed_marker_path", return_value=marker):
+        skills.write_nudge_dismissed_marker()
+        # A second call must not raise even though the marker already exists.
+        skills.write_nudge_dismissed_marker()
+
+    assert marker.is_file()
+
+
+def test_nudge_dismissed_marker_path_under_streamlit_dir() -> None:
+    """The marker lives under the user's ``.streamlit`` config directory."""
+    path = skills._nudge_dismissed_marker_path()
+    assert path.name == ".skills_nudge_dismissed"
+    assert path.parent.name == ".streamlit"
+
+
+class TestSummarizeInstall:
+    """Tests for summarize_install (the user-facing in-app nudge summary)."""
+
+    def test_reports_distinct_install_locations(self) -> None:
+        """Newly installed skills are summarized by their parent directories."""
+        result = skills._InstallResult(
+            installed=[
+                ".agents/skills/developing-with-streamlit",
+                ".claude/skills/developing-with-streamlit",
+            ]
+        )
+        assert (
+            skills.summarize_install(result)
+            == "Installed to .agents/skills, .claude/skills."
+        )
+
+    def test_deduplicates_and_sorts_locations(self) -> None:
+        """Multiple skills under one directory collapse to a single location."""
+        result = skills._InstallResult(
+            installed=[
+                ".claude/skills/b",
+                ".agents/skills/a",
+                ".agents/skills/b",
+            ]
+        )
+        assert (
+            skills.summarize_install(result)
+            == "Installed to .agents/skills, .claude/skills."
+        )
+
+    def test_reports_already_up_to_date(self) -> None:
+        """When nothing new was installed, report the up-to-date state."""
+        result = skills._InstallResult(up_to_date=[".agents/skills/foo"])
+        assert skills.summarize_install(result) == "Skills are already up to date."
+
+    def test_installed_takes_precedence_over_up_to_date(self) -> None:
+        """A mixed result leads with what was newly installed, not up-to-date."""
+        result = skills._InstallResult(
+            installed=[".agents/skills/foo"], up_to_date=[".claude/skills/foo"]
+        )
+        assert skills.summarize_install(result) == "Installed to .agents/skills."
+
+    def test_empty_result_has_no_summary(self) -> None:
+        """An empty result yields no summary text (nothing to report)."""
+        assert skills.summarize_install(skills._InstallResult()) == ""
+
+    def test_collapses_absolute_paths_to_harness_skills(self) -> None:
+        """When install paths are absolute (app run from a subdirectory), the
+        summary still collapses to the concise ``<harness>/skills`` label.
+        """
+        result = skills._InstallResult(
+            installed=[
+                "/home/user/repo/.agents/skills/developing-with-streamlit",
+                "/home/user/repo/.claude/skills/developing-with-streamlit",
+            ]
+        )
+        assert (
+            skills.summarize_install(result)
+            == "Installed to .agents/skills, .claude/skills."
+        )
+
+    def test_global_install_keeps_tilde_prefix(self) -> None:
+        """A global (home) install keeps its ``~`` so it isn't mislabeled as
+        project-local. (Global fallback display paths are home-relative.)
+        """
+        result = skills._InstallResult(
+            installed=["~/.agents/skills/developing-with-streamlit"]
+        )
+        assert skills.summarize_install(result) == "Installed to ~/.agents/skills."
+
+    def test_reports_skipped_alongside_installed(self) -> None:
+        """A partial install (some installed, some skipped) is not presented as
+        a clean success: the skipped skills are surfaced too.
+        """
+        result = skills._InstallResult(
+            installed=[".agents/skills/foo"],
+            skipped=[".claude/skills/foo (existing file or directory)"],
+        )
+        assert skills.summarize_install(result) == (
+            "Installed to .agents/skills. 1 skill skipped due to conflicts."
+        )
+
+    def test_reports_skipped_alongside_up_to_date(self) -> None:
+        """Skipped skills are surfaced even when nothing new was installed, so an
+        up-to-date result with conflicts isn't mistaken for fully installed.
+        """
+        result = skills._InstallResult(
+            up_to_date=[".agents/skills/foo"],
+            skipped=[
+                ".claude/skills/foo (existing symlink)",
+                ".agents/skills/bar (existing file)",
+            ],
+        )
+        assert skills.summarize_install(result) == (
+            "Skills are already up to date. 2 skills skipped due to conflicts."
+        )
+
+
+class TestConflictError:
+    """_conflict_error names the specific conflicting paths (the message the
+    in-app nudge shows verbatim), collapsed so it never leaks an absolute path.
+    """
+
+    def test_names_paths_collapsed_to_harness_tail(self) -> None:
+        """Absolute target paths collapse to the concise <harness>/skills/<skill>
+        tail, and multiple conflicts read as a plural list."""
+        err = skills._conflict_error(
+            [
+                (
+                    "/abs/tmp/proj/.agents/skills/developing-with-streamlit "
+                    "(existing file or directory)"
+                ),
+                (
+                    "/abs/tmp/proj/.claude/skills/developing-with-streamlit "
+                    "(existing file or directory)"
+                ),
+            ]
+        )
+        message = err.format_message()
+        assert "/abs/tmp/proj" not in message
+        assert ".agents/skills/developing-with-streamlit" in message
+        assert ".claude/skills/developing-with-streamlit" in message
+        assert "already exist." in message
+        assert "Remove them and try again." in message
+
+    def test_single_conflict_reads_singular(self) -> None:
+        """A lone conflict uses singular phrasing ("exists" / "it")."""
+        err = skills._conflict_error(
+            [".agents/skills/developing-with-streamlit (existing symlink)"]
+        )
+        message = err.format_message()
+        assert ".agents/skills/developing-with-streamlit already exists." in message
+        assert "Remove it and try again." in message
+
+
+class TestInstallSkillsReturnsResult:
+    """install_skills returns the structured result for callers (e.g. the nudge)."""
+
+    def test_project_install_returns_installed_paths(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A project-mode install returns the newly created skill paths."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            result = skills.install_skills(yes=True)
+
+        assert any("developing-with-streamlit" in path for path in result.installed)
+        # A fresh install into an empty project skips nothing.
+        assert result.skipped == []
+
+
+class TestInstallDetectRoundtrip:
+    """A successful one-click install must land where the nudge's skill
+    detection scans, so ``should_show_skills_nudge`` returns ``False``
+    afterwards and the nudge stops re-appearing — even when the install root is
+    neither the app dir nor the git root.
+
+    This is the regression guard for the install/detection project-root
+    divergence. Detection now resolves its project root via the very same
+    ``skills._find_project_root`` the installer uses, so the two cannot drift;
+    this end-to-end test confirms the install->detect roundtrip closes. The
+    pre-existing tests only covered the standard ``.git``-at-the-root layout,
+    which masked the original bug.
+    """
+
+    @pytest.mark.parametrize("with_git", [True, False])
+    def test_detection_sees_install_in_agent_config_ancestor(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, with_git: bool
+    ) -> None:
+        """Install lands in a ``.claude`` ancestor between the app dir and the
+        (optional) git root; detection must still find it. ``with_git=True`` is
+        the monorepo/per-package case; ``with_git=False`` is the no-git case.
+        """
+
+        _skip_if_symlinks_not_supported(tmp_path)
+
+        # ``resolve()`` the base so the relative install symlink never dangles
+        # through a symlinked ancestor (e.g. macOS /var -> /private/var).
+        base = tmp_path.resolve()
+
+        # Isolated HOME: an agent harness present, but no skills installed there.
+        home = base / "home"
+        (home / ".claude").mkdir(parents=True)
+        monkeypatch.setenv("HOME", str(home))
+
+        # Bundled source skill the installer symlinks to.
+        source_dir = base / "pkg" / ".agents" / "skills"
+        skill_dir = source_dir / "developing-with-streamlit"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("# Skill\n", encoding="utf-8")
+
+        # Layout: per-package ``.claude`` one level in, app nested below it. The
+        # install root (the package) is neither the app dir nor the git root.
+        repo = base / "repo"
+        repo.mkdir()
+        if with_git:
+            (repo / ".git").mkdir()
+        package = repo / "package"
+        (package / ".claude").mkdir(parents=True)
+        app_dir = package / "src"
+        app_dir.mkdir()
+
+        def clear_caches() -> None:
+            skills._detect_installed_skills_cached.cache_clear()
+            skills._detect_installed_agents_cached.cache_clear()
+
+        with (
+            patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
+            # Not headless / welcome message not hidden, so only detection gates.
+            patch("streamlit.config.get_option", return_value=False),
+        ):
+            clear_caches()
+            # Pre-install the nudge is recommended (agent present, no skills).
+            assert skills.should_show_skills_nudge(str(app_dir)) is True
+
+            skills.install_skills(global_mode=False, yes=True, app_dir=str(app_dir))
+
+            # Mimic the in-app handler invalidating the detection cache.
+            skills.clear_installed_skills_cache()
+            clear_caches()
+
+            # The install landed in the package's agent-config dirs...
+            assert (
+                package / ".claude" / "skills" / "developing-with-streamlit"
+            ).exists()
+            # ...and detection now sees it, so the nudge is suppressed. Without
+            # the project-root unification, both of these would be the
+            # pre-install values (empty / True) and the nudge would re-appear.
+            assert skills.detect_installed_skills(str(app_dir)) != []
+            assert skills.should_show_skills_nudge(str(app_dir)) is False
+
+
 class TestGenerateGitignoreSnippetEdgeCases:
     """Edge cases for _generate_gitignore_snippet."""
 
@@ -1520,7 +1859,8 @@ class TestGenerateGitignoreSnippetEdgeCases:
         )
 
         # Snippet should contain the absolute path of the unrelated dir
-        assert f"{unrelated_dir}/my-skill/" in result
+        assert f"{unrelated_dir}/my-skill" in result
+        assert "my-skill/" not in result
 
 
 class TestGetDisplayPath:
@@ -1676,7 +2016,7 @@ class TestInstallProjectSkillsFallbackErrors:
         ("global_install_side_effect", "match"),
         [
             (click.exceptions.Abort(), "Installation incomplete"),
-            (click.ClickException("download failure"), "download failure"),
+            (click.ClickException("global copy failure"), "global copy failure"),
         ],
         ids=["user_aborted_global_install", "global_install_click_exception"],
     )
@@ -1747,30 +2087,241 @@ class TestInstallSkillCopyTempCleanup:
         assert not leftover_temp.exists()
 
 
-class TestInstallGlobalSkillsCleanup:
-    """Tests for temp directory cleanup at the end of _install_global_skills."""
+class TestGetMetaSkillDir:
+    """Tests for _get_meta_skill_dir."""
 
-    def test_cleans_up_streamlit_skills_prefixed_temp_dir(
-        self, tmp_path: Path, mock_source_skills_dir: Path
+    def test_returns_meta_skill_path_in_package(self) -> None:
+        """Returns <streamlit package>/.agents/meta-skill, distinct from content."""
+        result = skills._get_meta_skill_dir()
+        assert result.name == "meta-skill"
+        assert result.parent.name == ".agents"
+        # The meta-skill dir must be separate from the version-matched content
+        # skills dir, so project-mode discovery never treats it as a content skill.
+        assert result != skills._get_source_skills_dir()
+
+
+class TestInstallGlobalSkillsMetaSkill:
+    """Global install copies the bundled meta-skill from local disk (no network)."""
+
+    def test_global_install_never_hits_network(
+        self, runner: CliRunner, tmp_path: Path, mock_meta_skill_dir: Path
     ) -> None:
-        """Removes temp directories that follow the streamlit-skills- naming convention."""
+        """A global install must not open a network connection (any transport).
+
+        Regression guard for issue #15933: the old implementation downloaded the
+        skill from GitHub, which failed ~12% of the time on locked-down Windows.
+        Block the network at the socket layer (rather than patching one HTTP
+        client) so a reintroduced download via urllib, requests, httpx, urllib3,
+        etc. all fail the test; the copy-from-local-disk install must still
+        succeed with zero connections.
+        """
+        import socket
+
         home = tmp_path / "home"
         home.mkdir(parents=True)
 
-        # Simulate the layout created by _download_global_skill:
-        # /tmp/streamlit-skills-XXXX/archive_root/<skill_name>/SKILL.md
-        temp_root = tmp_path / "streamlit-skills-test"
-        archive_root = temp_root / "archive-root"
-        skill_dir = archive_root / "developing-with-streamlit"
-        skill_dir.mkdir(parents=True)
-        (skill_dir / "SKILL.md").write_text("# Test Skill\n", encoding="utf-8")
+        def _blocked(*_args: object, **_kwargs: object) -> None:
+            raise AssertionError("global install must not open a network connection")
 
         with (
             patch("pathlib.Path.home", return_value=home),
-            patch.object(skills, "_download_global_skill", return_value=skill_dir),
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            patch.object(socket.socket, "connect", _blocked),
+            patch.object(socket.socket, "connect_ex", _blocked),
         ):
-            skills._install_global_skills(yes=True)
+            result = runner.invoke(cli.main, ["skills", "-g", "-y"])
 
-        # The temp root was cleaned up because its name starts with
-        # "streamlit-skills-".
-        assert not temp_root.exists()
+        assert result.exit_code == 0
+        assert (
+            home
+            / ".agents"
+            / "skills"
+            / "developing-with-streamlit"
+            / "scripts"
+            / "discover.py"
+        ).is_file()
+
+    def test_global_install_missing_meta_skill_errors_without_leaking_path(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        """A missing bundled meta-skill fails with a generic, path-free message."""
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+        missing = tmp_path / "nonexistent-meta-skill"
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(skills, "_get_meta_skill_dir", return_value=missing),
+        ):
+            result = runner.invoke(cli.main, ["skills", "-g", "-y"])
+
+        assert result.exit_code != 0
+        assert "was not found" in result.output
+        # The server-side absolute path must not leak into the user-facing error.
+        assert str(missing) not in result.output
+
+    def test_global_install_requires_discover_py_not_just_skill_md(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        """SKILL.md alone is not enough — discover.py must be present too.
+
+        The meta-skill's SKILL.md is inert without scripts/discover.py (it just
+        routes the agent into that script). If a stripped wheel or a too-narrow
+        package-data glob shipped SKILL.md only, the install must error rather
+        than report success for a skill that fails the moment an agent runs it.
+        """
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+        # Meta-skill dir with SKILL.md but NO scripts/discover.py.
+        meta_dir = tmp_path / "meta-skill"
+        (meta_dir / "developing-with-streamlit").mkdir(parents=True)
+        (meta_dir / "developing-with-streamlit" / "SKILL.md").write_text(
+            "# Meta Skill\n", encoding="utf-8"
+        )
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(skills, "_get_meta_skill_dir", return_value=meta_dir),
+        ):
+            result = runner.invoke(cli.main, ["skills", "-g", "-y"])
+
+        assert result.exit_code != 0
+        assert "was not found" in result.output
+        # Nothing should have been copied to the global target.
+        assert not (home / ".agents" / "skills" / "developing-with-streamlit").exists()
+
+
+class TestMetaSkillPackaging:
+    """Guards that the vendored meta-skill files actually ship in the wheel."""
+
+    def test_package_data_globs_cover_vendored_meta_skill(self) -> None:
+        """The setuptools ``package-data`` globs must match both vendored files.
+
+        Every other test reads the vendored files straight from the on-disk
+        checkout, so they stay green even if the ``package-data`` globs were
+        wrong or removed — the failure would only surface for real pip-installed
+        users, exactly the "global install broken on a real machine" class this
+        change exists to prevent. This asserts the declared globs, applied to the
+        real package dir, include ``SKILL.md`` and ``scripts/discover.py``.
+        """
+        import glob as globmod
+
+        import toml
+
+        pyproject = Path(__file__).resolve().parents[3] / "pyproject.toml"
+        if not pyproject.is_file():  # pragma: no cover - unusual layout
+            pytest.skip("lib/pyproject.toml not found in this layout")
+
+        globs = toml.load(pyproject)["tool"]["setuptools"]["package-data"]["streamlit"]
+        # <streamlit pkg>/.agents/skills -> <streamlit pkg>
+        pkg_dir = skills._get_source_skills_dir().parents[1]
+
+        matched: set[str] = set()
+        for pattern in globs:
+            matched.update(
+                Path(hit).as_posix()
+                for hit in globmod.glob(pattern, root_dir=pkg_dir, recursive=True)
+            )
+
+        assert ".agents/meta-skill/developing-with-streamlit/SKILL.md" in matched
+        assert (
+            ".agents/meta-skill/developing-with-streamlit/scripts/discover.py"
+            in matched
+        )
+
+    @pytest.mark.slow
+    def test_built_wheel_contains_vendored_meta_skill(self, tmp_path: Path) -> None:
+        """A real built wheel must contain SKILL.md AND scripts/discover.py.
+
+        The glob-match test above checks the declared package-data patterns
+        against on-disk files, but not that the build backend actually ships
+        them in the wheel (MANIFEST/include-package-data/backend quirks could
+        still drop a file). A missing ``discover.py`` would break every global
+        install deterministically — the exact failure this change removes — so
+        build the wheel and assert both files are inside it.
+        """
+        import zipfile
+
+        lib_dir = Path(__file__).resolve().parents[3]  # .../lib
+        if not (lib_dir / "pyproject.toml").is_file():  # pragma: no cover
+            pytest.skip("lib/pyproject.toml not found in this layout")
+
+        out_dir = tmp_path / "dist"
+        # --no-isolation reuses the current env's build backend (setuptools is
+        # already installed), so this is a fast file-copy+zip, not a full env
+        # bootstrap. Skip gracefully if the build tooling is unavailable.
+        build = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "build",
+                "--wheel",
+                "--no-isolation",
+                "--outdir",
+                str(out_dir),
+                str(lib_dir),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:  # pragma: no cover - env-dependent
+            pytest.skip(f"wheel build unavailable here: {build.stderr[-400:]}")
+
+        wheels = list(out_dir.glob("*.whl"))
+        assert wheels, "no wheel was produced"
+        names = zipfile.ZipFile(wheels[0]).namelist()
+        meta = "streamlit/.agents/meta-skill/developing-with-streamlit"
+        assert f"{meta}/SKILL.md" in names
+        assert f"{meta}/scripts/discover.py" in names
+
+
+class TestVendoredMetaSkillDiscovery:
+    """Compatibility contract: the vendored discover.py resolves bundled content."""
+
+    def test_discover_py_resolves_bundled_content_skill(self, tmp_path: Path) -> None:
+        """Running the vendored meta-skill ``discover.py`` resolves the installed
+        Streamlit's bundled content ``SKILL.md``.
+
+        This is the contract the global install (and any frozen external copy of
+        the meta-skill) depends on: ``discover.py`` must find
+        ``<streamlit>/.agents/skills/developing-with-streamlit/SKILL.md``. Runs
+        under the test interpreter (which has Streamlit installed), so no network
+        and no reliance on the download path.
+        """
+        discover_py = (
+            skills._get_meta_skill_dir()
+            / "developing-with-streamlit"
+            / "scripts"
+            / "discover.py"
+        )
+        content_skill = (
+            skills._get_source_skills_dir() / "developing-with-streamlit" / "SKILL.md"
+        )
+        if not discover_py.is_file() or not content_skill.is_file():
+            pytest.skip(
+                "vendored meta-skill or bundled content not present in this install"
+            )
+
+        # Pin discover.py's interpreter detection to this test's own interpreter
+        # (which has Streamlit) by pointing VIRTUAL_ENV at its venv root. discover.py
+        # re-detects the project interpreter from VIRTUAL_ENV/PATH rather than
+        # reusing the launching sys.executable, so without this the test would fail
+        # (not skip) whenever the first python on PATH lacks Streamlit — e.g. when
+        # run outside ``uv``.
+        venv_root = os.path.dirname(os.path.dirname(sys.executable))
+        result = subprocess.run(
+            [sys.executable, str(discover_py), "--project-dir", str(tmp_path)],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+            env={**os.environ, "VIRTUAL_ENV": venv_root},
+        )
+
+        assert result.returncode == 0, result.stderr
+        assert os.path.realpath(result.stdout.strip()) == os.path.realpath(
+            content_skill
+        )

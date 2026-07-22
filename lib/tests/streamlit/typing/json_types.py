@@ -90,4 +90,4 @@ if TYPE_CHECKING:
     json({"data": "value"}, expanded="true")  # type: ignore[arg-type]
 
     # Passing expanded as positional argument (should be keyword-only)
-    json({"data": "value"}, True)  # type: ignore[misc]
+    json({"data": "value"}, True)  # type: ignore[call-arg]

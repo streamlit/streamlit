@@ -30,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 42
+IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 36
 
 
 def check_image_source_error_count(messages: list[str], expected_count: int):
@@ -102,23 +102,6 @@ def test_image_formats(app: Page):
     )
     expect(get_image(app, "GIF as PNG.").locator("img")).to_have_attribute(
         "src", re.compile(r"^.*\.png$")
-    )
-
-
-def test_use_column_width_parameter(app: Page, assert_snapshot: ImageCompareFunction):
-    columns_container = (
-        get_element_by_key(app, "use_column_width")
-        .get_by_test_id("stHorizontalBlock")
-        .first
-    )
-    expect(columns_container).to_be_visible()
-    columns_container.scroll_into_view_if_needed()
-    expect_no_skeletons(columns_container)
-    assert_snapshot(columns_container, name="st_image-use_column_width")
-
-    expect(app.get_by_test_id("stMainBlockContainer")).to_contain_text(
-        "The use_column_width parameter has been deprecated and will be removed in a "
-        "future release. Please utilize the width parameter instead."
     )
 
 
@@ -218,19 +201,25 @@ def test_svg_images(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 def set_fullscreen(image_wrapper: Locator, open: bool):
+    toolbar = image_wrapper.get_by_test_id("stElementToolbar")
     fullscreen_button = image_wrapper.get_by_role(
         "button", name="Fullscreen" if open else "Close fullscreen"
     )
+    # The toolbar (and its fullscreen button) only becomes interactive on hover
+    # and fades in via an opacity transition. In webkit a click dispatched while
+    # the toolbar is still fading in can be swallowed, leaving fullscreen
+    # un-toggled. Hover first and wait for the toolbar to be fully opaque before
+    # clicking (mirrors the pattern in shared/toolbar_utils.py).
+    image_wrapper.hover()
+    expect(toolbar).to_have_css("opacity", "1")
     expect(fullscreen_button).to_be_visible()
     fullscreen_button.click()
-    # Wait for the fullscreen CSS transition to complete by checking position style
-    # The stFullScreenFrame element (grandparent of stImage, parent of image_wrapper)
-    # becomes position:fixed when open
-    fullscreen_frame = image_wrapper.locator("..")
-    if open:
-        expect(fullscreen_frame).to_have_css("position", "fixed")
-    else:
-        expect(fullscreen_frame).to_have_css("position", "static")
+    # Wait for the toolbar button to flip to its opposite label, which confirms
+    # the fullscreen state has finished toggling before we take a snapshot.
+    toggled_button = image_wrapper.get_by_role(
+        "button", name="Close fullscreen" if open else "Fullscreen"
+    )
+    expect(toggled_button).to_be_visible()
 
 
 # SVGs without width or height are not rendered correctly in Firefox
@@ -365,3 +354,16 @@ def test_image_link_parameter(app: Page):
     # Test image WITHOUT link does not have a link wrapper
     unlinked_image = get_image(app, "Black Square as JPEG.")
     expect(unlinked_image.get_by_test_id("stImageLink")).to_have_count(0)
+
+
+def test_image_sanitizes_dangerous_link(app: Page):
+    """Test that a dangerous javascript: link URL is neutralized to '#'.
+
+    This relies on real-browser URL normalization that jsdom cannot fully
+    replicate, so it complements the frontend unit tests.
+    """
+    dangerous_image = get_image(app, "Image with dangerous link.")
+    link = dangerous_image.get_by_test_id("stImageLink")
+
+    expect(link).to_have_attribute("href", "#")
+    expect(link).to_have_attribute("target", "_self")

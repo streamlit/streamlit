@@ -26,10 +26,13 @@ import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
 
 function translateGapWidth(
-  gap: streamlit.GapSize | undefined,
+  gap: streamlit.IGapConfig | undefined,
   theme: EmotionTheme
 ): string {
-  switch (gap) {
+  if (typeof gap?.pixelGap === "number") {
+    return `${gap.pixelGap}px`
+  }
+  switch (gap?.gapSize) {
     case streamlit.GapSize.XXSMALL:
       return theme.spacing.twoXS
     case streamlit.GapSize.XSMALL:
@@ -143,7 +146,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
 interface StyledColumnProps {
   weight: number
-  gap: streamlit.GapSize | undefined
+  gap: streamlit.IGapConfig | undefined
   showBorder: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
 }
@@ -169,18 +172,24 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       },
       ...(verticalAlignment === VerticalAlignment.BOTTOM && {
         marginTop: "auto",
-        // Add margin to the first checkbox/toggle within the column to align it
-        // better with other input widgets.
-        [`& ${StyledElementContainer}:last-of-type > ${StyledCheckbox}`]: {
-          marginBottom: theme.spacing.sm,
-        },
+        // Align the last direct-child checkbox/toggle with other input widgets.
+        // Scoped to the column's own stVerticalBlock so nested containers
+        // (e.g. horizontal containers of checkboxes) do not also get matched
+        // (issue #13162).
+        [`& > .stVerticalBlock > ${StyledElementContainer}:last-of-type > ${StyledCheckbox}`]:
+          {
+            marginBottom: theme.spacing.sm,
+          },
       }),
       ...(verticalAlignment === VerticalAlignment.TOP && {
-        // Add margin to the first checkbox/toggle within the column to align it
-        // better with other input widgets.
-        [`& ${StyledElementContainer}:first-of-type > ${StyledCheckbox}`]: {
-          marginTop: theme.spacing.sm,
-        },
+        // Align the first direct-child checkbox/toggle with other input
+        // widgets. Scoped to the column's own stVerticalBlock so nested
+        // containers (e.g. horizontal containers of checkboxes) do not also
+        // get matched (issue #13162).
+        [`& > .stVerticalBlock > ${StyledElementContainer}:first-of-type > ${StyledCheckbox}`]:
+          {
+            marginTop: theme.spacing.sm,
+          },
       }),
       ...(verticalAlignment === VerticalAlignment.CENTER && {
         marginTop: "auto",
@@ -239,7 +248,7 @@ const getJustifyContent = (
 
 export interface StyledFlexContainerBlockProps {
   direction: React.CSSProperties["flexDirection"]
-  gap?: streamlit.GapSize | undefined
+  gap?: streamlit.IGapConfig | undefined
   flex?: React.CSSProperties["flex"]
   // This marks the prop as a transient property so it is
   // not passed to the DOM. It overlaps with a valid attribute

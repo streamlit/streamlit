@@ -29,6 +29,14 @@ interface DataFrameCapabilities {
   canSearch: boolean
   /** Whether CSV export is enabled. */
   canExportCsv: boolean
+  /**
+   * Whether the column statistics submenu can be shown. Only enabled for
+   * read-only, non-empty, eagerly-loaded tables: statistics are derived from
+   * the original data and would be stale for edited tables (e.g.
+   * st.data_editor), meaningless for empty tables, and incomplete for lazy
+   * dataframes (the bound Quiver only holds the loaded chunks, not all rows).
+   */
+  canShowColumnStatistics: boolean
   /** Whether cell editing is enabled. */
   canEdit: boolean
   /** Whether adding rows is enabled. */
@@ -39,6 +47,8 @@ interface DataFrameCapabilities {
   isEmptyTable: boolean
   /** Whether the table exceeds the large table threshold. */
   isLargeTable: boolean
+  /** Whether the dataframe is rendered in lazy (chunk-loaded) mode. */
+  isLazy: boolean
   /** Whether the device primarily uses touch input. */
   isTouchDevice: boolean
   /** Whether column resizing via drag is supported. Disabled on touch devices. */
@@ -58,6 +68,14 @@ interface UseDataFrameCapabilitiesParams {
   numDataRows: number
   /** Number of data columns in the table. */
   numDataColumns: number
+  /** Whether the dataframe is rendered in lazy (chunk-loaded) mode. */
+  isLazy?: boolean
+  /** Whether the lazy source supports server-side sorting. */
+  lazySortable?: boolean
+  /** Whether the dataframe contains interactive ButtonColumn widgets. */
+  hasButtonColumnInteractions?: boolean
+  /** Whether data export functionality is disabled by app config. */
+  disableDataExport: boolean
 }
 
 /**
@@ -91,6 +109,10 @@ function useDataFrameCapabilities({
   disabled,
   numDataRows,
   numDataColumns,
+  isLazy = false,
+  lazySortable = false,
+  hasButtonColumnInteractions = false,
+  disableDataExport,
 }: UseDataFrameCapabilitiesParams): DataFrameCapabilities {
   return useMemo(() => {
     const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
@@ -107,17 +129,33 @@ function useDataFrameCapabilities({
     )
     const isLargeTable = numDataRows > LARGE_TABLE_ROWS_THRESHOLD
 
-    const canSort =
-      !isLargeTable &&
-      !isEmptyTable &&
-      editingMode !== DYNAMIC &&
-      editingMode !== ADD_ONLY
+    // In lazy mode, sorting is handled server-side and gated on the source's
+    // `sortable` capability (not the large-table threshold). ButtonColumn click
+    // payloads use original row positions, which server-side sorting cannot
+    // currently remap, so sorting is disabled when interactive buttons exist.
+    // Search and CSV export are disabled because they would only operate on
+    // loaded chunks.
+    const canSort = isLazy
+      ? lazySortable && !hasButtonColumnInteractions && !isEmptyTable
+      : !isLargeTable &&
+        !isEmptyTable &&
+        editingMode !== DYNAMIC &&
+        editingMode !== ADD_ONLY
 
-    const canSearch = !isEmptyTable
+    const canSearch = !isLazy && !isEmptyTable
 
-    const canExportCsv = !isLargeTable && !isEmptyTable
+    const canExportCsv =
+      !isLazy && !disableDataExport && !isLargeTable && !isEmptyTable
 
-    const canEdit = !isEmptyTable && editingMode !== READ_ONLY && !disabled
+    // Statistics are computed over the locally-available Quiver, so they are
+    // only meaningful for read-only, non-empty, eagerly-loaded dataframes.
+    // Editable tables would show stale (pre-edit) stats, and lazy dataframes
+    // only hold the loaded chunks rather than all rows.
+    const canShowColumnStatistics =
+      !isLazy && !isEmptyTable && editingMode === READ_ONLY
+
+    const canEdit =
+      !isLazy && !isEmptyTable && editingMode !== READ_ONLY && !disabled
 
     const canAddRows =
       !isEmptyTable &&
@@ -139,17 +177,28 @@ function useDataFrameCapabilities({
       canSort,
       canSearch,
       canExportCsv,
+      canShowColumnStatistics,
       canEdit,
       canAddRows,
       canDeleteRows,
       isEmptyTable,
       isLargeTable,
+      isLazy,
       isTouchDevice,
       canResizeColumns,
       supportsFillHandle,
       supportsRectangleSelection,
     }
-  }, [editingMode, disabled, numDataRows, numDataColumns])
+  }, [
+    editingMode,
+    disabled,
+    numDataRows,
+    numDataColumns,
+    isLazy,
+    lazySortable,
+    hasButtonColumnInteractions,
+    disableDataExport,
+  ])
 }
 
 export default useDataFrameCapabilities

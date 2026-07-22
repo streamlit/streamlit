@@ -32,6 +32,7 @@ import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
 
 import {
   StyledCaption,
@@ -97,6 +98,8 @@ const Image = ({
   link?: string
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
+  const isLinkBlocked = link ? isDangerousLinkUri(link) : false
+  const href = isLinkBlocked ? BLOCKED_LINK_URI : link
 
   const imageElement = (
     <img
@@ -113,12 +116,15 @@ const Image = ({
       data-testid="stImageContainer"
       shouldStretch={shouldStretch}
     >
-      {link ? (
+      {href ? (
         <StyledImageLink
-          href={link}
-          target="_blank"
+          href={href}
+          target={isLinkBlocked ? "_self" : "_blank"}
           rel="noreferrer"
-          aria-label={image.caption || link}
+          onClick={isLinkBlocked ? event => event.preventDefault() : undefined}
+          // For blocked links, fall back to the image's alt text instead of the
+          // neutralized "#" href, which is meaningless to screen readers.
+          aria-label={image.caption || (isLinkBlocked ? undefined : link)}
           data-testid="stImageLink"
         >
           {imageElement}

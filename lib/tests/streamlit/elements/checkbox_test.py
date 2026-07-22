@@ -24,6 +24,7 @@ from streamlit.elements.lib.policies import _LOGGER
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.runtime.state.widgets import register_widget_from_metadata
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -420,3 +421,37 @@ hello
 
         assert "invalid-value" in str(exc.value)
         assert "query-params" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_persist_state_passed_to_metadata(
+        self, _name: str, widget_func: object
+    ) -> None:
+        """Test that persist_state is threaded onto the widget's WidgetMetadata."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched:
+            widget_func("the label", key="my_widget", persist_state="session")
+
+        metadata = patched.call_args[0][0]
+        assert metadata.persist_state == "session"
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_persist_state_without_key_raises(
+        self, _name: str, widget_func: object
+    ) -> None:
+        """Test that persist_state without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            widget_func("the label", persist_state="session")
+
+        assert "must have a unique 'key' parameter" in str(exc.value)

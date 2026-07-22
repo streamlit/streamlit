@@ -58,6 +58,23 @@ fixed_width_tabs = st.tabs(["width_test_1", "width_test_2", "width_test_3"], wid
 for i, tab in enumerate(fixed_width_tabs):
     tab.write(f"Hello {i}")
 
+# Fixed pixel height — active tab panel scrolls when content overflows.
+with st.container(key="tabs_fixed_height_container"):
+    fixed_height_tabs = st.tabs(["height_pixel_1", "height_pixel_2"], height=200)
+    with fixed_height_tabs[0]:
+        st.write("First fixed-height tab")
+        st.write("More content " * 60)
+    with fixed_height_tabs[1]:
+        st.write("Second fixed-height tab")
+
+# Stretch height — expands to fill a fixed-height parent container.
+with st.container(height=300, key="tabs_stretch_height_container"):
+    stretch_tabs = st.tabs(["stretch_1", "stretch_2"], height="stretch")
+    with stretch_tabs[0]:
+        st.write("Stretched tab content")
+    with stretch_tabs[1]:
+        st.write("Second stretched tab content")
+
 # Tabs layout tests.
 tab_with_code_1, tab_with_code_2 = st.tabs(["Tab 1", "Tab 2"])
 
@@ -279,3 +296,36 @@ st.write(
     f"Tabs callback args result: "
     f"{st.session_state.get('tabs_cb_args_result', 'Not called')}"
 )
+
+# ============================================================================
+# Ordinary tabs with widget-triggered rerun
+# ============================================================================
+
+rerun_tab_names = ["Rerun All", "Rerun Indy", "Rerun Clarksville", "Rerun Fort Wayne"]
+rerun_tabs = st.tabs(rerun_tab_names)
+
+for rerun_tab, rerun_tab_name in zip(rerun_tabs, rerun_tab_names, strict=True):
+    with rerun_tab:
+        st.write(f"{rerun_tab_name} tab marker")
+        st.line_chart([1, 2, 3])
+        st.selectbox(
+            "Rerun tab select",
+            ["A", "B", "C"],
+            key=f"{rerun_tab_name}_select",
+        )
+
+# ============================================================================
+# Nested tabs with a rerun triggered from a doubly-nested widget
+# ============================================================================
+
+outer_tabs = st.tabs(["Outer A", "Outer B"])
+with outer_tabs[0]:
+    st.write("Outer A marker")
+    inner_tabs = st.tabs(["Inner 1", "Inner 2"])
+    with inner_tabs[0]:
+        st.write("Inner 1 marker")
+        st.button("Nested rerun button", key="nested_rerun_button")
+    with inner_tabs[1]:
+        st.write("Inner 2 marker")
+with outer_tabs[1]:
+    st.write("Outer B marker")

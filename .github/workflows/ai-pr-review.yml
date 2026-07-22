@@ -149,7 +149,7 @@ jobs:
           echo "html_url=$(echo "$PR_DATA" | jq -r '.html_url')" >> "$GITHUB_OUTPUT"
 
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Use SHA instead of branch name to support fork PRs
           ref: ${{ steps.pr-info.outputs.head_sha }}
@@ -228,7 +228,7 @@ jobs:
           fi
 
       - name: Upload review artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: review-output-${{ steps.sanitize.outputs.model_id }}
           path: |
@@ -254,12 +254,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
       - name: Download all review artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: review-output-*
           path: reviews/
@@ -386,7 +386,7 @@ jobs:
           fi
 
       - name: Upload consolidated artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: review-output-consolidated
           path: |
@@ -426,7 +426,7 @@ jobs:
       - name: Download consolidated review
         id: download-consolidated
         if: needs.consolidate-reviews.result == 'success'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           name: review-output-consolidated
@@ -436,7 +436,7 @@ jobs:
         # When consolidation fails or wasn't run, fall back to posting just the judge model's review.
         # This provides a deterministic fallback rather than randomly selecting from multiple reviews.
         if: steps.download-consolidated.outcome != 'success' && needs.parse-models.outputs.has_key == 'true'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           name: review-output-${{ needs.parse-models.outputs.judge_model_id }}

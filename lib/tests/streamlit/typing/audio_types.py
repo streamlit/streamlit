@@ -98,4 +98,4 @@ if TYPE_CHECKING:
     audio("audio.wav", width="content")  # type: ignore[arg-type]
 
     # Passing sample_rate as positional argument (should be keyword-only)
-    audio("audio.wav", "audio/wav", 0, 44100)  # type: ignore[misc]
+    audio("audio.wav", "audio/wav", 0, 44100)  # type: ignore[call-arg]

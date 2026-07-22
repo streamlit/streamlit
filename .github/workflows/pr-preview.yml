@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 1
 
@@ -36,7 +36,7 @@ jobs:
       - if: ${{ env.AWS_ACCESS_KEY_ID != '' }}
         name: Create or update comment (Building)
         id: initial-comment
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
         with:
@@ -105,7 +105,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -122,12 +122,12 @@ jobs:
         run: |
           make frontend
       - name: Upload Bundle Stats JSON
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bundle_analysis_json
           path: frontend/app/bundle-analysis.json
       - name: Upload Bundle Stats HTML
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bundle_analysis_html
           path: frontend/app/bundle-analysis.html
@@ -150,7 +150,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -177,7 +177,7 @@ jobs:
             exit 1
           fi
       - name: Store Whl File
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: whl_file
           path: lib/dist/*.whl
@@ -223,7 +223,7 @@ jobs:
           echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
       - if: steps.exports.outputs.enable-setup == 'true' && success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request'
         name: Set S3 URL as Github Status
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           S3_URL: ${{ steps.exports.outputs.s3-url }}
         with:
@@ -258,7 +258,7 @@ jobs:
     steps:
       - name: Compare wheel sizes
         id: compare-sizes
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const threshold = parseFloat(process.env.SIZE_CHANGE_THRESHOLD);
@@ -349,7 +349,7 @@ jobs:
 
       - name: Add PR comment for significant size change
         if: success() && fromJSON(steps.compare-sizes.outputs.result).is_significant
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const result = JSON.parse(process.env.COMPARE_RESULT);
@@ -428,14 +428,14 @@ jobs:
 
     steps:
       - name: Download current bundle analysis
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: bundle_analysis_json
           path: current_bundle
 
       - name: Get latest develop run ID
         id: get-latest-run
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const { data: runs } = await github.rest.actions.listWorkflowRuns({
@@ -455,7 +455,7 @@ jobs:
             core.setOutput('run_id', runs.workflow_runs[0].id);
 
       - name: Download develop bundle analysis
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           repository: streamlit/streamlit
@@ -465,7 +465,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compare bundle sizes and comment
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const fs = require('fs');
@@ -630,7 +630,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -639,7 +639,7 @@ jobs:
         run: corepack enable
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: ".nvmrc"
           cache: "yarn"
@@ -666,7 +666,7 @@ jobs:
           echo "package-built=true" >> $GITHUB_OUTPUT
 
       - name: Store npm package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: component-v2-lib-package
           path: frontend/component-v2-lib/*.tgz
@@ -687,7 +687,7 @@ jobs:
 
     steps:
       - name: Checkout Core Previews Repo
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: streamlit/core-previews
           # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo.
@@ -732,12 +732,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 1
 
       - name: Update comment (Ready)
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             // Find the existing comment
