@@ -1182,6 +1182,73 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowUp}")
     expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
   })
+
+  it("blur clears paste error state", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<TimeInput {...props} />)
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("25:00")
+
+    // Error is active
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+
+    // Blur the widget by tabbing out
+    await user.tab()
+    await user.tab()
+
+    expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+  })
+
+  it("blur clears paste error and commits typed value when both are pending", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+
+    // Type a digit (changes displayValue but doesn't commit yet)
+    await user.keyboard("11")
+
+    // Now paste an invalid value — sets pasteOverride + validationError
+    await user.paste("25:00")
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+
+    // Blur commits the typed value AND clears paste error
+    await user.tab()
+    await user.tab()
+
+    expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+    // The typed value (11:45) was committed
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "11:45",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("Enter clears paste error state", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<TimeInput {...props} />)
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("25:00")
+
+    // Error is active
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+
+    // Enter should dismiss the paste error
+    await user.keyboard("{Enter}")
+    expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+  })
 })
 
 describe("TimeInput query param binding", () => {

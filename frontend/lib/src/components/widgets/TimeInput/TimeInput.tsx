@@ -118,11 +118,6 @@ function TimeInput({
   // useEffect-delay in useBasicWidgetState that would cause React Aria
   // to see a stale value mid-render and reset its segment edit buffer.
   const [displayValue, setDisplayValue] = useState<string | null>(value)
-  onFormClearedRef.current = () => {
-    setDisplayValue(element.default ?? null)
-    setValidationError(null)
-    setPasteOverride(null)
-  }
 
   const [validationError, setValidationError] = useState<string | null>(null)
 
@@ -133,6 +128,12 @@ function TimeInput({
     hour: string
     minute: string
   } | null>(null)
+
+  onFormClearedRef.current = () => {
+    setDisplayValue(element.default ?? null)
+    setValidationError(null)
+    setPasteOverride(null)
+  }
 
   // Sync from backend when value changes externally (form clear, session
   // state update, setValue call). Uses render-time adjustment pattern:
@@ -219,6 +220,8 @@ function TimeInput({
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
+      setPasteOverride(null)
+      setValidationError(null)
       if (displayValueRef.current === valueRef.current) return
       setValueWithSource({ value: displayValueRef.current, fromUi: true })
       // Inside a form, write synchronously so that a Submit click in the same
@@ -350,6 +353,8 @@ function TimeInput({
 
       // Enter commits the current display value, matching st.number_input.
       if (e.key === "Enter") {
+        setPasteOverride(null)
+        setValidationError(null)
         if (displayValueRef.current !== valueRef.current) {
           setValueWithSource({ value: displayValueRef.current, fromUi: true })
           if (inForm) {
