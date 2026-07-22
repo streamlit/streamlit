@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import pytest
@@ -52,6 +51,30 @@ def test_from_file_str():
 def test_from_file_path():
     script = AppTest.from_file(Path("../test_data/widgets_script.py"))
     script.run()
+
+
+def test_from_file_resolves_relative_path_from_calling_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    cwd_script = tmp_path / "test_data/main.py"
+    cwd_script.parent.mkdir()
+    cwd_script.write_text(
+        'import streamlit as st\nst.text("wrong main page")\n', encoding="utf-8"
+    )
+    monkeypatch.chdir(tmp_path)
+
+    at = AppTest.from_file("test_data/main.py").run()
+
+    assert at.text[0].value == "main page"
+
+
+def test_from_file_raises_immediately_for_missing_script():
+    missing_script = Path(__file__).parent / "test_data/missing.py"
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        AppTest.from_file("test_data/missing.py")
+
+    assert str(missing_script.resolve()) in str(exc_info.value)
 
 
 def test_get_query_params():
@@ -207,21 +230,41 @@ def test_trigger_recursion():
     at.button[0].click().run()
 
 
-def test_switch_page():
+def test_switch_page_uses_paths_relative_to_main_script():
     at = AppTest.from_file("test_data/main.py").run()
     assert at.text[0].value == "main page"
 
     at.switch_page("pages/page1.py").run()
     assert at.text[0].value == "page 1"
 
-    with pytest.raises(
-        ValueError,
-        match=re.compile(
-            r".*make sure the page given is relative to the main script.*"
-        ),
-    ):
-        # Pages must be relative to main script path
-        at.switch_page("test_data/pages/page1.py")
+    invalid_page_path = "test_data/pages/page1.py"
+    with pytest.raises(ValueError, match="relative to the main script") as exc_info:
+        at.switch_page(invalid_page_path)
+
+    expected_path = (Path(__file__).parent / "test_data" / invalid_page_path).resolve()
+    assert "relative to the main script" in str(exc_info.value)
+    assert str(expected_path) in str(exc_info.value)
+
+
+def test_switch_page_preserves_main_script_for_page_links(tmp_path: Path):
+    main_script = tmp_path / "main.py"
+    page_script = tmp_path / "pages/register.py"
+    page_script.parent.mkdir()
+    main_script.write_text(
+        'import streamlit as st\nst.page_link("pages/register.py", label="Register")\n',
+        encoding="utf-8",
+    )
+    page_script.write_text(
+        'import streamlit as st\nst.page_link("main.py", label="Main")\n'
+        'st.text("register page")\n',
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(main_script).run()
+    at.switch_page("pages/register.py").run()
+
+    assert not at.exception
+    assert at.text[0].value == "register page"
 
 
 def test_switch_page_widgets():
