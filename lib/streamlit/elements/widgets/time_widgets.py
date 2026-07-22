@@ -462,6 +462,10 @@ class TimeInputSerde:
     value: time | None
     step: int = 900
 
+    @property
+    def _wire_fmt(self) -> str:
+        return "%H:%M:%S" if self.step % 60 != 0 else "%H:%M"
+
     def deserialize(self, ui_value: str | None) -> time | None:
         if ui_value is None:
             return self.value
@@ -470,24 +474,28 @@ class TimeInputSerde:
         # (e.g., ?time=14:37 with step=900) are accepted as-is.
         # Consider snapping to the nearest valid step for consistency
         # with the UI. See also SliderSerde.deserialize.
+        parsed: time | None = None
         try:
-            return datetime.strptime(ui_value, "%H:%M:%S").time()
+            parsed = datetime.strptime(ui_value, "%H:%M:%S").time()
         except ValueError:
-            pass
-        try:
-            return datetime.strptime(ui_value, "%H:%M").time()
-        except ValueError:
-            pass
-        # Unparseable URL query param value — revert to default.
-        return self.value
+            try:
+                parsed = datetime.strptime(ui_value, "%H:%M").time()
+            except ValueError:
+                pass
+        if parsed is None:
+            return self.value
+        # Strip seconds when step is minute-granular so the returned value is
+        # consistent regardless of how the value arrived (query-param, session state).
+        if self.step % 60 == 0:
+            parsed = parsed.replace(second=0, microsecond=0)
+        return parsed
 
     def serialize(self, v: datetime | time | None) -> str | None:
         if v is None:
             return None
         if isinstance(v, datetime):
             v = v.time()
-        fmt = "%H:%M:%S" if self.step % 60 != 0 else "%H:%M"
-        return time.strftime(v, fmt)
+        return time.strftime(v, self._wire_fmt)
 
 
 def _to_date(v: date) -> date:
@@ -1014,9 +1022,9 @@ class TimeWidgetsMixin:
         if parsed_time is not None and step % 60 == 0:
             parsed_time = parsed_time.replace(second=0, microsecond=0)
 
-        _wire_fmt = "%H:%M:%S" if step % 60 != 0 else "%H:%M"
+        serde = TimeInputSerde(parsed_time, step=step)
         if parsed_time is not None:
-            time_input_proto.default = parsed_time.strftime(_wire_fmt)
+            time_input_proto.default = parsed_time.strftime(serde._wire_fmt)
         time_input_proto.form_id = current_form_id(self.dg)
         time_input_proto.step = step
         time_input_proto.disabled = disabled
@@ -1030,12 +1038,15 @@ class TimeWidgetsMixin:
         if bind == "query-params" and key is not None:
             time_input_proto.query_param_key = str(key)
 
+        if hour_cycle not in {12, 24, "localized"}:
+            raise StreamlitAPIException(
+                f"`hour_cycle` must be 12, 24, or 'localized' but got {hour_cycle!r}."
+            )
         if hour_cycle == "localized":
             time_input_proto.hour_cycle = 0
-        elif hour_cycle in {12, 24}:
+        else:
             time_input_proto.hour_cycle = hour_cycle
 
-        serde = TimeInputSerde(parsed_time, step=step)
         widget_state = register_widget(
             time_input_proto.id,
             on_change_handler=on_change,

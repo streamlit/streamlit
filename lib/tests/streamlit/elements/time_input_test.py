@@ -313,6 +313,25 @@ def test_time_input_interaction():
     assert time_input.value is None
 
 
+def test_time_input_interaction_with_seconds():
+    """Test AppTest round-trip with sub-minute step preserves seconds."""
+
+    def script():
+        from datetime import time
+
+        import streamlit as st
+
+        st.time_input("seconds", value=time(10, 0, 0), step=30)
+
+    at = AppTest.from_function(script).run()
+    ti = at.time_input[0]
+    assert ti.value == time(10, 0, 0)
+
+    at = ti.set_value(time(14, 30, 45)).run()
+    ti = at.time_input[0]
+    assert ti.value == time(14, 30, 45)
+
+
 def test_None_session_state_value_retained():
     def script():
         import streamlit as st
@@ -448,6 +467,21 @@ def test_convert_timelike_to_time_invalid_raises(
         _convert_timelike_to_time(invalid_input)  # type: ignore[arg-type]
 
 
+def test_convert_timelike_to_time_now_preserves_seconds() -> None:
+    """The 'now' keyword preserves seconds but strips microseconds."""
+    frozen_now = datetime(2026, 6, 11, 14, 30, 45, 123456)
+
+    class _FrozenDatetime(datetime):
+        @classmethod
+        def now(cls, tz: object = None) -> datetime:  # type: ignore[override]
+            return frozen_now
+
+    with patch("streamlit.elements.widgets.time_widgets.datetime", _FrozenDatetime):
+        result = _convert_timelike_to_time("now")
+        assert result == time(14, 30, 45)
+        assert result.microsecond == 0
+
+
 def test_convert_datelike_to_date_today_keyword() -> None:
     """The string ``"today"`` resolves to today's date."""
     # Freeze time so the comparison cannot flake across a midnight boundary.
@@ -574,6 +608,16 @@ class TestTimeInputSerdeNew(DeltaGeneratorTestCase):
         serde = TimeInputSerde(value=time(0, 0), step=900)
         assert serde.deserialize("14:30") == time(14, 30)
 
+    def test_serde_deserialize_strips_seconds_for_minute_step(self):
+        """HH:MM:SS input has seconds stripped when step is minute-granular."""
+        serde = TimeInputSerde(value=time(0, 0), step=900)
+        assert serde.deserialize("14:30:45") == time(14, 30, 0)
+
+    def test_serde_deserialize_preserves_seconds_for_sub_minute_step(self):
+        """HH:MM:SS input preserves seconds when step < 60."""
+        serde = TimeInputSerde(value=time(0, 0), step=30)
+        assert serde.deserialize("14:30:45") == time(14, 30, 45)
+
 
 class TestHourCycleProtoField(DeltaGeneratorTestCase):
     """Tests that hour_cycle is correctly written to the proto."""
@@ -595,3 +639,10 @@ class TestHourCycleProtoField(DeltaGeneratorTestCase):
         st.time_input("label", time(8, 45), hour_cycle="localized")
         el = self.get_delta_from_queue().new_element
         assert el.time_input.hour_cycle == 0
+
+    def test_invalid_hour_cycle_raises(self):
+        """Invalid hour_cycle values raise StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match=r"`hour_cycle` must be"):
+            st.time_input("label", time(8, 45), hour_cycle=6)  # type: ignore[arg-type]
+        with pytest.raises(StreamlitAPIException, match=r"`hour_cycle` must be"):
+            st.time_input("label", time(8, 45), hour_cycle="auto")  # type: ignore[arg-type]

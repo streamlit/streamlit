@@ -90,7 +90,10 @@ function stringToTime(value: string): Time {
 }
 
 /** Converts a React Aria Time object back to the wire format (HH:MM or HH:MM:SS). */
-function timeToString(value: TimeValue, granularity: "minute" | "second"): string {
+function timeToString(
+  value: TimeValue,
+  granularity: "minute" | "second"
+): string {
   const hh = String(value.hour).padStart(2, "0")
   const mm = String(value.minute).padStart(2, "0")
   if (granularity === "second") {
@@ -147,6 +150,7 @@ function TimeInput({
   const [pasteOverride, setPasteOverride] = useState<{
     hour: string
     minute: string
+    second?: string
   } | null>(null)
 
   onFormClearedRef.current = () => {
@@ -253,7 +257,15 @@ function TimeInput({
       setValidationError(null)
       setPasteOverride(null)
     },
-    [clearable, setValueWithSource, step, inForm, element, widgetMgr, fragmentId]
+    [
+      clearable,
+      setValueWithSource,
+      step,
+      inForm,
+      element,
+      widgetMgr,
+      fragmentId,
+    ]
   )
 
   /**
@@ -305,27 +317,41 @@ function TimeInput({
     (e: ClipboardEvent<HTMLDivElement>): void => {
       if (disabled) return
       const text = e.clipboardData.getData("text").trim()
+      const granularity = stepToGranularity(step)
 
-      // Full time paste: HH:MM (with colon) or HHMM / HMM (3-4 digits, no colon)
-      const colonMatch = /^(\d{1,2}):(\d{2})$/.exec(text)
-      const bareMatch = !colonMatch ? /^(\d{1,2})(\d{2})$/.exec(text) : null
-      const match = colonMatch ?? bareMatch
+      // Full time paste: HH:MM:SS or HH:MM (with colon) or HHMM / HMM (3-4 digits, no colon)
+      const colonMatchFull = /^(\d{1,2}):(\d{2}):(\d{2})$/.exec(text)
+      const colonMatch = !colonMatchFull
+        ? /^(\d{1,2}):(\d{2})$/.exec(text)
+        : null
+      const bareMatch =
+        !colonMatchFull && !colonMatch ? /^(\d{1,2})(\d{2})$/.exec(text) : null
+      const match = colonMatchFull ?? colonMatch ?? bareMatch
       if (match) {
         const hours = Number(match[1])
         const minutes = Number(match[2])
+        const seconds = match[3] !== undefined ? Number(match[3]) : 0
         e.preventDefault()
-        if (hours > 23 || minutes > 59) {
+        if (hours > 23 || minutes > 59 || seconds > 59) {
           setPasteOverride({
             hour: String(hours).padStart(2, "0"),
             minute: String(minutes).padStart(2, "0"),
+            second:
+              granularity === "second"
+                ? String(seconds).padStart(2, "0")
+                : undefined,
           })
-          setValidationError(
-            "Time is out of range. Hours must be 0–23, minutes 0–59."
-          )
+          const parts = ["Hours must be 0–23", "minutes 0–59"]
+          if (granularity === "second") parts.push("seconds 0–59")
+          setValidationError(`Time is out of range. ${parts.join(", ")}.`)
           return
         }
         commitImmediatelyRef.current = true
-        handleChange(new Time(hours, minutes))
+        handleChange(
+          granularity === "second"
+            ? new Time(hours, minutes, seconds)
+            : new Time(hours, minutes)
+        )
         return
       }
 
@@ -343,15 +369,45 @@ function TimeInput({
         const currentMinute = current
           ? String(current.minute).padStart(2, "0")
           : "00"
+        const currentSecond = current
+          ? String(current.second).padStart(2, "0")
+          : "00"
         e.preventDefault()
 
         if (segmentType === "hour" && numValue <= 23) {
           commitImmediatelyRef.current = true
-          handleChange(new Time(numValue, current ? current.minute : 0))
+          handleChange(
+            new Time(
+              numValue,
+              current ? current.minute : 0,
+              granularity === "second" ? (current ? current.second : 0) : 0
+            )
+          )
         } else if (segmentType === "minute" && numValue <= 59) {
           commitImmediatelyRef.current = true
-          handleChange(new Time(current ? current.hour : 0, numValue))
+          handleChange(
+            new Time(
+              current ? current.hour : 0,
+              numValue,
+              granularity === "second" ? (current ? current.second : 0) : 0
+            )
+          )
+        } else if (segmentType === "second" && numValue <= 59) {
+          commitImmediatelyRef.current = true
+          handleChange(
+            new Time(
+              current ? current.hour : 0,
+              current ? current.minute : 0,
+              numValue
+            )
+          )
         } else {
+          const maxLabel =
+            segmentType === "hour"
+              ? "Hours must be 0–23."
+              : segmentType === "second"
+                ? "Seconds must be 0–59."
+                : "Minutes must be 0–59."
           setPasteOverride({
             hour:
               segmentType === "hour"
@@ -361,9 +417,15 @@ function TimeInput({
               segmentType === "minute"
                 ? String(numValue).padStart(2, "0")
                 : currentMinute,
+            second:
+              granularity === "second"
+                ? segmentType === "second"
+                  ? String(numValue).padStart(2, "0")
+                  : currentSecond
+                : undefined,
           })
           setValidationError(
-            `Value is out of range for ${segmentType}. ${segmentType === "hour" ? "Hours must be 0–23." : "Minutes must be 0–59."}`
+            `Value is out of range for ${segmentType}. ${maxLabel}`
           )
         }
         return
@@ -372,10 +434,14 @@ function TimeInput({
       // Unrecognized format containing a colon — show error
       if (text.includes(":")) {
         e.preventDefault()
-        setValidationError("Invalid time format. Please use HH:MM.")
+        setValidationError(
+          granularity === "second"
+            ? "Invalid time format. Please use HH:MM:SS or HH:MM."
+            : "Invalid time format. Please use HH:MM."
+        )
       }
     },
-    [disabled, displayValue, handleChange]
+    [disabled, displayValue, handleChange, step]
   )
 
   /**
@@ -569,6 +635,8 @@ function TimeInput({
                     if (pasteOverride) {
                       if (type === "hour") return pasteOverride.hour
                       if (type === "minute") return pasteOverride.minute
+                      if (type === "second" && pasteOverride.second)
+                        return pasteOverride.second
                     }
                     if (!isPlaceholder) return text
                     if (type === "hour")
@@ -616,7 +684,7 @@ function TimeInput({
           {validationError && (
             <StyledVisuallyHidden id={validationErrorId} role="alert">
               {pasteOverride
-                ? `Error: time ${pasteOverride.hour}:${pasteOverride.minute} is invalid. ${validationError}`
+                ? `Error: time ${pasteOverride.hour}:${pasteOverride.minute}${pasteOverride.second ? `:${pasteOverride.second}` : ""} is invalid. ${validationError}`
                 : `Error: ${validationError}`}
             </StyledVisuallyHidden>
           )}

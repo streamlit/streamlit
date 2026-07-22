@@ -1581,4 +1581,135 @@ describe("TimeInput hour cycle", () => {
     const segments = screen.getAllByRole("spinbutton")
     expect(segments[0]).toHaveTextContent(expected)
   })
+
+  it("shows four segments (H:M:S + dayPeriod) when hourCycle=12 and step<60", () => {
+    const props = getProps({ hourCycle: 12, default: "14:30:15", step: 30 })
+    render(<TimeInput {...props} />)
+
+    const segments = screen.getAllByRole("spinbutton")
+    // hour, minute, second, dayPeriod
+    expect(segments).toHaveLength(4)
+    // 14:30 in 12h = 2:30 PM
+    expect(segments[0]).toHaveAttribute("aria-valuenow", "2")
+    expect(segments[1]).toHaveAttribute("aria-valuenow", "30")
+    expect(segments[2]).toHaveAttribute("aria-valuenow", "15")
+  })
+})
+
+describe("TimeInput paste with seconds granularity", () => {
+  it.each([
+    { desc: "HH:MM:SS", paste: "14:30:45", expected: "14:30:45" },
+    {
+      desc: "HH:MM (seconds default to 0)",
+      paste: "08:30",
+      expected: "08:30:00",
+    },
+  ])("accepts valid full paste: $desc", async ({ paste, expected }) => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:44:15", step: 30 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste(paste)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      expected,
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it.each([
+    {
+      desc: "out-of-range seconds (08:30:99)",
+      paste: "08:30:99",
+      expectedDigits: ["08", "30", "99"],
+    },
+    {
+      desc: "out-of-range hours (25:30:00)",
+      paste: "25:30:00",
+      expectedDigits: ["25", "30", "00"],
+    },
+  ])(
+    "shows error and does not commit for invalid paste: $desc",
+    async ({ paste, expectedDigits }) => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:44:15", step: 30 })
+      vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TimeInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+      const [hourSegment] = screen.getAllByRole("spinbutton")
+      await user.click(hourSegment)
+      await user.paste(paste)
+
+      expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+      expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+      const segments = screen.getAllByRole("spinbutton")
+      expect(segments[0]).toHaveTextContent(expectedDigits[0])
+      expect(segments[1]).toHaveTextContent(expectedDigits[1])
+      expect(segments[2]).toHaveTextContent(expectedDigits[2])
+    }
+  )
+
+  it.each([{ desc: "valid (45)", paste: "45", expected: "12:44:45" }])(
+    "partial digit paste into seconds segment commits: $desc",
+    async ({ paste, expected }) => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:44:15", step: 30 })
+      vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TimeInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+      const segments = screen.getAllByRole("spinbutton")
+      const secondSegment = segments[2]
+      await user.click(secondSegment)
+      await user.paste(paste)
+
+      expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+        props.element,
+        expected,
+        { fromUi: true },
+        undefined
+      )
+      expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+    }
+  )
+
+  it.each([{ desc: "out-of-range (75)", paste: "75" }])(
+    "partial digit paste into seconds segment shows error: $desc",
+    async ({ paste }) => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:44:15", step: 30 })
+      vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TimeInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+      const segments = screen.getAllByRole("spinbutton")
+      const secondSegment = segments[2]
+      await user.click(secondSegment)
+      await user.paste(paste)
+
+      expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+      expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+      expect(secondSegment).toHaveTextContent(paste)
+    }
+  )
+
+  it("alert includes seconds when paste override has second field", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:44:15", step: 30 })
+    render(<TimeInput {...props} />)
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("08:30:99")
+
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent("time 08:30:99 is invalid")
+  })
 })
