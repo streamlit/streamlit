@@ -118,6 +118,11 @@ class SafeSessionState:
         with self._lock:
             return key in self._state
 
+    def get(self, key: str, default: Any = None) -> Any:
+        self._yield_callback()
+        with self._lock:
+            return self._state.get(key, default)
+
     def __getattr__(self, key: str) -> Any:
         try:
             return self[key]
