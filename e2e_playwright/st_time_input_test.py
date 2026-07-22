@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-NUM_TIME_INPUTS = 20
+NUM_TIME_INPUTS = 21
 
 
 def test_time_input_widget_rendering(
@@ -554,3 +554,71 @@ def test_seconds_arrow_key_snaps_to_step(app: Page):
     second_segment.press("ArrowDown")
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Value seconds:", "08:45:30")
+
+
+# --- Form support: InputInstructions + Enter-to-submit ---
+
+
+def test_input_instructions_shows_press_enter_to_apply_when_dirty(app: Page):
+    """InputInstructions shows 'Press Enter to apply' when value is changed outside a form."""
+    # Use the standalone (non-form) widget so inForm=false.
+    time_input = get_time_input(app, "Label")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    minute_segment = time_display.get_by_role("spinbutton").nth(1)
+
+    minute_segment.click()
+    # Type a digit to make the widget dirty.
+    minute_segment.press("3")
+
+    expect(time_input.get_by_test_id("InputInstructions")).to_have_text(
+        "Press Enter to apply"
+    )
+
+
+def test_input_instructions_shows_press_enter_to_submit_form(app: Page):
+    """InputInstructions shows 'Press Enter to submit form' when inside an enter_to_submit form."""
+    time_input = get_time_input(app, "Form time input (enter to submit)")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    hour_segment = time_display.get_by_role("spinbutton").first
+
+    # Just focusing the widget in a form with enter_to_submit=True should show the hint.
+    hour_segment.click()
+
+    expect(time_input.get_by_test_id("InputInstructions")).to_have_text(
+        "Press Enter to submit form"
+    )
+
+
+def test_enter_key_submits_form(app: Page):
+    """Pressing Enter inside an enter_to_submit form submits the form."""
+    time_input = get_time_input(app, "Form time input (enter to submit)")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    hour_segment = time_display.get_by_role("spinbutton").first
+
+    # Change the hour value.
+    hour_segment.click()
+    hour_segment.press("ArrowUp")
+
+    # Press Enter to submit the form.
+    hour_segment.press("Enter")
+    wait_for_app_run(app)
+
+    # The submitted value should be reflected in the app output.
+    expect_markdown(app, "Form enter time: 10:00:00")
+
+
+def test_input_instructions_hidden_after_blur(app: Page):
+    """InputInstructions disappears after the widget loses focus (commit clears dirty)."""
+    time_input = get_time_input(app, "Label")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    minute_segment = time_display.get_by_role("spinbutton").nth(1)
+
+    minute_segment.click()
+    minute_segment.press("3")
+    expect(time_input.get_by_test_id("InputInstructions")).to_be_visible()
+
+    # Click elsewhere to blur the widget.
+    app.click("body")
+    wait_for_app_run(app)
+
+    expect(time_input.get_by_test_id("InputInstructions")).not_to_be_visible()

@@ -37,6 +37,7 @@ import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import Icon from "~lib/components/shared/Icon/Icon"
+import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
@@ -45,7 +46,9 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme/utils"
 import {
   isInForm,
   isNullOrUndefined,
@@ -79,7 +82,7 @@ export interface Props {
  * discard minute components from values like "12:45" that can arrive via
  * query-params or session state.
  *
- * Note: `step` also controls arrow-key behaviour via `handleArrowKeyCapture`.
+ * Note: `step` also controls arrow-key behaviour via `handleKeyCapture`.
  */
 function stepToGranularity(stepSeconds: number): "minute" | "second" {
   return stepSeconds % 60 !== 0 ? "second" : "minute"
@@ -144,6 +147,15 @@ function TimeInput({
   // to see a stale value mid-render and reset its segment edit buffer.
   const [displayValue, setDisplayValue] = useState<string | null>(value)
 
+  // Tracks whether the user has a pending (uncommitted) edit. Drives the
+  // "Press Enter to apply/submit form" hint via InputInstructions.
+  // Explicit state — NOT derived from (displayValue !== value) — to avoid a
+  // one-render flicker after arrow-key/immediate commits where value still
+  // reflects the previous async update cycle. See plan for full rationale.
+  const [dirty, setDirty] = useState(false)
+
+  const [isFocused, setIsFocused] = useState(false)
+
   const [validationError, setValidationError] = useState<string | null>(null)
 
   // If a user pastes an out-of-range value (e.g. "08:99"), the Time object
@@ -157,6 +169,7 @@ function TimeInput({
 
   onFormClearedRef.current = () => {
     setDisplayValue(element.default ?? null)
+    setDirty(false)
     setValidationError(null)
     setPasteOverride(null)
   }
@@ -176,7 +189,8 @@ function TimeInput({
     }
   }
 
-  // Stable refs used in blur/arrow handlers to avoid stale closure issues.
+  // Refs mirror display/committed values so blur and key handlers always
+  // read the latest without needing those values in their dependency arrays.
   const displayValueRef = useRef(displayValue)
   displayValueRef.current = displayValue
   const valueRef = useRef(value)
@@ -185,7 +199,7 @@ function TimeInput({
   /**
    * Arrow-key presses commit immediately (like the +/- buttons on
    * st.number_input); typed digits commit only on blur. This flag is set
-   * in handleArrowKeyCapture and consumed + reset in handleChange so that
+   * in handleKeyCapture and consumed + reset in handleChange so that
    * the two paths share a single commit call-site.
    */
   const commitImmediatelyRef = useRef(false)
@@ -200,6 +214,18 @@ function TimeInput({
 
   const stepMins = step / 60
   const stepHours = step / 3600
+
+  const { width, elementRef } = useCalculatedDimensions()
+
+  // Show "Press Enter to apply" when focused (and the widget is wide enough).
+  const shouldShowInstructions =
+    isFocused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
+
+  // Drives InputInstructions: show submit hint if in a form and the form allows
+  // Enter-to-submit; outside a form, show "apply" hint when there's a dirty edit.
+  const allowEnterToSubmit = inForm
+    ? widgetMgr.allowFormEnterToSubmit(element.formId)
+    : dirty
 
   // Prop passed to react-aria <TimeField>. For "localized" we pass undefined
   // so react-aria uses the configured locale via I18nProvider.
@@ -232,7 +258,7 @@ function TimeInput({
    * reruns while the user is still editing).
    *
    * Arrow keys: commit immediately via commitImmediatelyRef set in
-   * handleArrowKeyCapture, matching the st.number_input +/- button behaviour.
+   * handleKeyCapture, matching the st.number_input +/- button behaviour.
    */
   const handleChange = useCallback(
     (newTime: TimeValue | null): void => {
@@ -247,6 +273,7 @@ function TimeInput({
       setDisplayValue(newValue)
       if (commitImmediatelyRef.current) {
         commitImmediatelyRef.current = false
+        setDirty(false)
         setValueWithSource({ value: newValue, fromUi: true })
         if (inForm) {
           updateWidgetMgrState(
@@ -256,6 +283,9 @@ function TimeInput({
             fragmentId
           )
         }
+      } else {
+        // Typed / deferred path — mark as dirty so InputInstructions can show.
+        setDirty(true)
       }
       setValidationError(null)
       setPasteOverride(null)
@@ -281,8 +311,10 @@ function TimeInput({
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
+      setIsFocused(false)
       setPasteOverride(null)
       setValidationError(null)
+      setDirty(false)
       if (displayValueRef.current === valueRef.current) return
       setValueWithSource({ value: displayValueRef.current, fromUi: true })
       // Inside a form, write synchronously so that a Submit click in the same
@@ -302,6 +334,7 @@ function TimeInput({
 
   const handleClear = useCallback((): void => {
     setDisplayValue(null)
+    setDirty(false)
     setValidationError(null)
     setPasteOverride(null)
     if (valueRef.current === null) return
@@ -448,20 +481,19 @@ function TimeInput({
   )
 
   /**
-   * Intercept ArrowUp/Down on the spinbutton segments (capture phase, before
-   * react-aria's own handler) so the minute/hour increments honour `step`.
+   * Capture-phase key handler for spinbutton segments. Handles:
+   * - Enter: commits the current display value and submits the form.
+   * - ArrowUp/Down: increments/decrements by `step` (overriding react-aria's
+   *   default ±1). The capture phase + stopImmediatePropagation prevents
+   *   react-aria from also applying its own change on top of ours.
    *
-   * Without this, react-aria always increments by ±1 unit regardless of step.
-   * The capture phase + stopImmediatePropagation prevents react-aria from also
-   * applying its own ±1 change on top of ours.
-   *
-   * Formula:
+   * Arrow formula:
    *   ArrowUp   → floor(current / step) * step + step  (next boundary above)
    *   ArrowDown → ceil(current / step)  * step - step  (next boundary below)
    * This ensures that an off-step value always moves toward the nearest valid
    * boundary in the pressed direction, matching the original widget behaviour.
    */
-  const handleArrowKeyCapture = useCallback(
+  const handleKeyCapture = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       const target = e.target as HTMLElement
       if (target.getAttribute("role") !== "spinbutton") return
@@ -471,6 +503,7 @@ function TimeInput({
       if (e.key === "Enter") {
         setPasteOverride(null)
         setValidationError(null)
+        setDirty(false)
         if (displayValueRef.current !== valueRef.current) {
           setValueWithSource({ value: displayValueRef.current, fromUi: true })
           if (inForm) {
@@ -481,6 +514,18 @@ function TimeInput({
               fragmentId
             )
           }
+        }
+        // NOTE: `validationError` reads the value from BEFORE the
+        // `setValidationError(null)` call above takes effect (React state
+        // updates aren't synchronous within the same handler), so this
+        // correctly reflects whatever error was visible when Enter was pressed
+        // — e.g. a paste-triggered out-of-range error — and blocks form
+        // submission while it's showing, matching NumberInput's pattern.
+        if (
+          !validationError &&
+          widgetMgr.allowFormEnterToSubmit(element.formId)
+        ) {
+          widgetMgr.submitForm(element.formId, fragmentId)
         }
         return
       }
@@ -594,6 +639,7 @@ function TimeInput({
       disabled,
       displayValue,
       pasteOverride,
+      validationError,
       step,
       stepMins,
       stepHours,
@@ -607,7 +653,7 @@ function TimeInput({
   )
 
   return (
-    <div className="stTimeInput" data-testid="stTimeInput">
+    <div className="stTimeInput" data-testid="stTimeInput" ref={elementRef}>
       <WidgetLabel
         label={element.label}
         disabled={disabled}
@@ -623,9 +669,10 @@ function TimeInput({
         <StyledTimeInputWrapper
           data-testid="stTimeInputTimeDisplay"
           data-disabled={disabled || undefined}
+          onFocus={() => setIsFocused(true)}
           onBlur={handleBlur}
           data-has-error={validationError ? "" : undefined}
-          onKeyDownCapture={handleArrowKeyCapture}
+          onKeyDownCapture={handleKeyCapture}
           onPaste={handlePaste}
         >
           <I18nProvider locale={locale}>
@@ -713,6 +760,14 @@ function TimeInput({
           )}
         </StyledTimeInputWrapper>
       </StyledTimeFieldContainer>
+      {shouldShowInstructions && (
+        <InputInstructions
+          dirty={dirty}
+          value={displayValue ?? ""}
+          inForm={inForm}
+          allowEnterToSubmit={allowEnterToSubmit}
+        />
+      )}
     </div>
   )
 }
