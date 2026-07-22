@@ -983,9 +983,10 @@ class TimeWidgetsMixin:
         parsed_time: time | None
         parsed_time = None if value is None else _convert_timelike_to_time(value)
 
-        # Normalize early: strip seconds for minute-granular steps before ID
-        # computation so the widget identity stays stable when value carries
-        # live seconds (e.g. value=datetime.now()).
+        # Strip seconds for minute-granular steps before ID computation so
+        # the widget identity stays stable when value carries live seconds
+        # (e.g. value=datetime.now()). For sub-minute steps, seconds are
+        # meaningful and a stable key should be provided for dynamic values.
         _step_secs = (
             step.seconds
             if isinstance(step, timedelta)
@@ -993,7 +994,7 @@ class TimeWidgetsMixin:
             if isinstance(step, int)
             else 0
         )
-        if parsed_time is not None and _step_secs % 60 == 0:
+        if parsed_time is not None and _step_secs > 0 and _step_secs % 60 == 0:
             parsed_time = parsed_time.replace(second=0, microsecond=0)
 
         element_id = compute_and_register_element_id(
