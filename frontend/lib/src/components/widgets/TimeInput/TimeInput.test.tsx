@@ -22,7 +22,7 @@ import {
   TimeInput as TimeInputProto,
 } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import TimeInput, { Props } from "./TimeInput"
@@ -1555,32 +1555,29 @@ describe("TimeInput hour cycle", () => {
     expect(dayPeriodSegment).toBeNull()
   })
 
-  it("renders without crashing when hourCycle=0 (localized)", () => {
-    // hourCycle=0 maps to undefined (browser locale) — should not crash
-    const props = getProps({ hourCycle: 0, default: "08:45" })
-    render(<TimeInput {...props} />)
+  it.each([
+    {
+      locale: "en-US",
+      expectedPlaceholder: "hh",
+      desc: "12-hour locale (en-US)",
+    },
+    {
+      locale: "de-DE",
+      expectedPlaceholder: "HH",
+      desc: "24-hour locale (de-DE)",
+    },
+  ])(
+    "shows $expectedPlaceholder placeholder for $desc when hourCycle is localized",
+    ({ locale, expectedPlaceholder }) => {
+      const props = getProps({ hourCycle: 0, default: undefined })
+      renderWithContexts(<TimeInput {...props} />, {
+        libConfigContext: { locale },
+      })
 
-    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
-    expect(timeDisplay).toBeInTheDocument()
-    // At least 2 spinbutton segments must be present
-    const segments = screen.getAllByRole("spinbutton")
-    expect(segments.length).toBeGreaterThanOrEqual(2)
-  })
-
-  it("uses locale-appropriate hour placeholder when hourCycle is localized", () => {
-    // Mirror the component's Intl probe to derive the expected placeholder without
-    // needing a constructor-compatible mock of Intl.DateTimeFormat.
-    const hc = new Intl.DateTimeFormat(undefined, {
-      hour: "numeric",
-    }).resolvedOptions().hourCycle
-    const expected = hc === "h11" || hc === "h12" ? "hh" : "HH"
-
-    const props = getProps({ hourCycle: 0, default: undefined })
-    render(<TimeInput {...props} />)
-
-    const segments = screen.getAllByRole("spinbutton")
-    expect(segments[0]).toHaveTextContent(expected)
-  })
+      const segments = screen.getAllByRole("spinbutton")
+      expect(segments[0]).toHaveTextContent(expectedPlaceholder)
+    }
+  )
 
   it("shows four segments (H:M:S + dayPeriod) when hourCycle=12 and step<60", () => {
     const props = getProps({ hourCycle: 12, default: "14:30:15", step: 30 })

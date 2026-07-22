@@ -21,6 +21,7 @@ import {
   memo,
   ReactElement,
   useCallback,
+  useContext,
   useId,
   useMemo,
   useRef,
@@ -30,10 +31,11 @@ import {
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { Time } from "@internationalized/date"
-import { type TimeValue } from "react-aria-components"
+import { I18nProvider, type TimeValue } from "react-aria-components"
 
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
@@ -191,6 +193,7 @@ function TimeInput({
   const id = useId()
   const validationErrorId = `${id}-validation-error`
   const theme = useEmotionTheme()
+  const { locale } = useContext(LibConfigContext)
   const step = element.step ? Number(element.step) : 900
   const clearable = isNullOrUndefined(element.default) && !disabled
   const inForm = isInForm({ formId: element.formId })
@@ -199,27 +202,28 @@ function TimeInput({
   const stepHours = step / 3600
 
   // Prop passed to react-aria <TimeField>. For "localized" (element.hourCycle === 0)
-  // we pass undefined so react-aria uses the browser locale itself.
+  // we pass undefined so react-aria uses the configured locale via I18nProvider.
   const hourCycleProp: 12 | 24 | undefined =
     element.hourCycle === 0
-      ? undefined // localized — let browser locale decide
+      ? undefined // localized — let I18nProvider locale decide
       : element.hourCycle === 12
         ? 12
         : 24 // default: 24-hour (backward compatible)
 
   // For placeholder rendering we need to know whether the resolved display is
-  // 12-hour, even when element.hourCycle === 0 (localized). Probe Intl so the
-  // empty-state "hh"/"HH" hint matches what react-aria actually renders.
+  // 12-hour, even when element.hourCycle === 0 (localized). Probe Intl with
+  // the configured locale so the empty-state "hh"/"HH" hint matches what
+  // react-aria actually renders.
   const placeholderIs12Hour = useMemo((): boolean => {
     if (element.hourCycle === 12) return true
     if (element.hourCycle === 0) {
-      const hc = new Intl.DateTimeFormat(undefined, {
+      const hc = new Intl.DateTimeFormat(locale, {
         hour: "numeric",
       }).resolvedOptions().hourCycle
       return hc === "h11" || hc === "h12"
     }
     return false
-  }, [element.hourCycle])
+  }, [element.hourCycle, locale])
 
   /**
    * Called by TimeField on every committed segment change.
@@ -609,47 +613,51 @@ function TimeInput({
           onKeyDownCapture={handleArrowKeyCapture}
           onPaste={handlePaste}
         >
-          <StyledTimeField
-            aria-label={element.label}
-            aria-describedby={validationError ? validationErrorId : undefined}
-            isInvalid={!!validationError}
-            value={
-              isNullOrUndefined(displayValue)
-                ? null
-                : stringToTime(displayValue)
-            }
-            onChange={handleChange}
-            granularity={stepToGranularity(step)}
-            hourCycle={hourCycleProp}
-            shouldForceLeadingZeros
-            isDisabled={disabled}
-          >
-            <StyledTimeFieldInput>
-              {segment => (
-                <StyledTimeSegment segment={segment}>
-                  {({ text, isPlaceholder, type }) => {
-                    // Override visible text only — React Aria still controls
-                    // aria-valuenow/aria-valuetext from the last valid Time, so
-                    // screen readers may announce stale values during the brief
-                    // error window. Mitigated by role="alert" + aria-invalid.
-                    if (pasteOverride) {
-                      if (type === "hour") return pasteOverride.hour
-                      if (type === "minute") return pasteOverride.minute
-                      if (type === "second" && pasteOverride.second)
-                        return pasteOverride.second
-                    }
-                    if (!isPlaceholder) return text
-                    if (type === "hour")
-                      return placeholderIs12Hour ? "hh" : "HH"
-                    if (type === "minute") return "mm"
-                    if (type === "second") return "ss"
-                    // dayPeriod (AM/PM) — react-aria's default text is correct
-                    return text
-                  }}
-                </StyledTimeSegment>
-              )}
-            </StyledTimeFieldInput>
-          </StyledTimeField>
+          <I18nProvider locale={locale}>
+            <StyledTimeField
+              aria-label={element.label}
+              aria-describedby={
+                validationError ? validationErrorId : undefined
+              }
+              isInvalid={!!validationError}
+              value={
+                isNullOrUndefined(displayValue)
+                  ? null
+                  : stringToTime(displayValue)
+              }
+              onChange={handleChange}
+              granularity={stepToGranularity(step)}
+              hourCycle={hourCycleProp}
+              shouldForceLeadingZeros
+              isDisabled={disabled}
+            >
+              <StyledTimeFieldInput>
+                {segment => (
+                  <StyledTimeSegment segment={segment}>
+                    {({ text, isPlaceholder, type }) => {
+                      // Override visible text only — React Aria still controls
+                      // aria-valuenow/aria-valuetext from the last valid Time, so
+                      // screen readers may announce stale values during the brief
+                      // error window. Mitigated by role="alert" + aria-invalid.
+                      if (pasteOverride) {
+                        if (type === "hour") return pasteOverride.hour
+                        if (type === "minute") return pasteOverride.minute
+                        if (type === "second" && pasteOverride.second)
+                          return pasteOverride.second
+                      }
+                      if (!isPlaceholder) return text
+                      if (type === "hour")
+                        return placeholderIs12Hour ? "hh" : "HH"
+                      if (type === "minute") return "mm"
+                      if (type === "second") return "ss"
+                      // dayPeriod (AM/PM) — react-aria's default text is correct
+                      return text
+                    }}
+                  </StyledTimeSegment>
+                )}
+              </StyledTimeFieldInput>
+            </StyledTimeField>
+          </I18nProvider>
           {validationError && (
             <StyledErrorIconContainer data-testid="stTimeInputError">
               <Tooltip

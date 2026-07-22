@@ -157,14 +157,6 @@ v_12h = st.time_input(
 )
 st.write("Value 12h:", v_12h)
 
-v_localized = st.time_input(
-    "Time input (localized)",
-    time(8, 45),
-    hour_cycle="localized",
-    key="time_input_localized",
-)
-st.write("Value localized:", v_localized)
-
 v_12h_seconds = st.time_input(
     "Time input (12h + seconds)",
     time(14, 30, 15),

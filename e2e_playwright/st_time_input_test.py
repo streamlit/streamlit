@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-NUM_TIME_INPUTS = 21
+NUM_TIME_INPUTS = 20
 
 
 def test_time_input_widget_rendering(
@@ -102,10 +102,6 @@ def test_time_input_widget_rendering(
     assert_snapshot(
         get_time_input(themed_app, "Time input (12-hour)"),
         name="st_time_input-hour_cycle_12",
-    )
-    assert_snapshot(
-        get_time_input(themed_app, "Time input (localized)"),
-        name="st_time_input-hour_cycle_localized",
     )
     assert_snapshot(
         get_time_input(themed_app, "Time input (12h + seconds)"),
