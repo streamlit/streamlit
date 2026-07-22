@@ -410,85 +410,69 @@ def _paste_into(locator: Locator, text: str) -> None:
     )
 
 
-def test_paste_valid_time(app: Page):
-    """Test that pasting valid time values (with colon and bare digits) commits."""
-    time_display = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
-        "stTimeInputTimeDisplay"
-    )
-    hour_segment = time_display.locator("[role='spinbutton']").first
+def test_paste_behavior(app: Page):
+    """Test paste scenarios: valid formats, invalid with error/recovery, partial digits, empty field."""
+    # --- Valid paste: HH:MM and HHMM ---
+    time_input_1 = get_time_input(app, "Time input 1 (8:45)")
+    time_display_1 = time_input_1.get_by_test_id("stTimeInputTimeDisplay")
+    hour_segment = time_display_1.locator("[role='spinbutton']").first
+    minute_segment = time_display_1.locator("[role='spinbutton']").last
     hour_segment.click()
 
-    # HH:MM format with colon
     _paste_into(hour_segment, "14:30")
     wait_for_app_run(app)
     expect_markdown(app, "Value 1: 14:30:00")
 
-    # HHMM format without colon
     _paste_into(hour_segment, "2215")
     wait_for_app_run(app)
     expect_markdown(app, "Value 1: 22:15:00")
 
-
-def test_paste_invalid_time_shows_error_and_recovers(app: Page):
-    """Test that invalid paste shows error without committing, and valid paste recovers."""
-    time_input = get_time_input(app, "Time input 1 (8:45)")
-    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
-    hour_segment = time_display.locator("[role='spinbutton']").first
-    minute_segment = time_display.locator("[role='spinbutton']").last
-    hour_segment.click()
-
-    # Paste out-of-range value
+    # --- Invalid paste shows error, does not commit ---
     _paste_into(hour_segment, "08:99")
-
-    # Error icon is visible, invalid digits displayed, value NOT committed
-    expect(time_input.get_by_test_id("stTimeInputError")).to_be_visible()
+    expect(time_input_1.get_by_test_id("stTimeInputError")).to_be_visible()
     expect(hour_segment).to_have_text("08")
     expect(minute_segment).to_have_text("99")
-    expect_markdown(app, "Value 1: 08:45:00")
+    expect_markdown(app, "Value 1: 22:15:00")
 
-    # Paste valid value to recover
+    # --- Recovery via valid paste ---
     _paste_into(hour_segment, "10:30")
     wait_for_app_run(app)
-
-    expect(time_input.get_by_test_id("stTimeInputError")).not_to_be_visible()
+    expect(time_input_1.get_by_test_id("stTimeInputError")).not_to_be_visible()
     expect_markdown(app, "Value 1: 10:30:00")
 
-
-def test_paste_invalid_time_arrow_key_reverts(app: Page):
-    """Test that ArrowUp after invalid paste reverts to prior valid value."""
-    time_input = get_time_input(app, "Time input 1 (8:45)")
-    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
-    minute_segment = time_display.locator("[role='spinbutton']").last
-    hour_segment = time_display.locator("[role='spinbutton']").first
-    hour_segment.click()
-
-    # Paste invalid
+    # --- Arrow key revert after invalid paste ---
     _paste_into(hour_segment, "08:99")
-    expect(time_input.get_by_test_id("stTimeInputError")).to_be_visible()
+    expect(time_input_1.get_by_test_id("stTimeInputError")).to_be_visible()
 
-    # Press ArrowUp to revert
     minute_segment.click()
     minute_segment.press("ArrowUp")
 
-    # Error cleared, original value restored
-    expect(time_input.get_by_test_id("stTimeInputError")).not_to_be_visible()
-    expect(hour_segment).to_have_text("08")
-    expect(minute_segment).to_have_text("45")
-    # Still not committed (no change from original)
-    expect_markdown(app, "Value 1: 08:45:00")
+    expect(time_input_1.get_by_test_id("stTimeInputError")).not_to_be_visible()
+    expect(hour_segment).to_have_text("10")
+    expect(minute_segment).to_have_text("30")
+    expect_markdown(app, "Value 1: 10:30:00")
 
-
-def test_paste_partial_digit_into_segment(app: Page):
-    """Test that pasting a partial digit into minute segment works."""
-    time_display = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
-        "stTimeInputTimeDisplay"
-    )
-    minute_segment = time_display.locator("[role='spinbutton']").last
+    # --- Partial digit into segment ---
     minute_segment.click()
     _paste_into(minute_segment, "22")
     wait_for_app_run(app)
+    expect_markdown(app, "Value 1: 10:22:00")
 
-    expect_markdown(app, "Value 1: 08:22:00")
+    # --- Paste into empty (cleared) field ---
+    time_input_8 = get_time_input(app, "Time input 8 (empty)")
+    time_display_8 = time_input_8.get_by_test_id("stTimeInputTimeDisplay")
+    hour_segment_8 = time_display_8.locator("[role='spinbutton']").first
+    minute_segment_8 = time_display_8.locator("[role='spinbutton']").last
+    hour_segment_8.click()
+
+    _paste_into(hour_segment_8, "16:45")
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 8: 16:45:00")
+
+    minute_segment_8.click()
+    _paste_into(minute_segment_8, "30")
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 8: 16:30:00")
 
 
 def test_paste_error_state_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
@@ -504,27 +488,6 @@ def test_paste_error_state_snapshot(app: Page, assert_snapshot: ImageCompareFunc
     expect(time_input.get_by_test_id("stTimeInputError")).to_be_visible()
 
     assert_snapshot(time_input, name="st_time_input-paste_error_state")
-
-
-def test_paste_into_empty_cleared_field(app: Page):
-    """Test that pasting into an empty (cleared) time input works."""
-    time_input = get_time_input(app, "Time input 8 (empty)")
-    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
-    hour_segment = time_display.locator("[role='spinbutton']").first
-    hour_segment.click()
-
-    _paste_into(hour_segment, "16:45")
-    wait_for_app_run(app)
-
-    expect_markdown(app, "Value 8: 16:45:00")
-
-    # Partial paste into empty field: paste single digit into minute segment
-    minute_segment = time_display.locator("[role='spinbutton']").last
-    minute_segment.click()
-    _paste_into(minute_segment, "30")
-    wait_for_app_run(app)
-
-    expect_markdown(app, "Value 8: 16:30:00")
 
 
 def test_paste_in_form_context(app: Page):

@@ -786,6 +786,25 @@ describe("TimeInput widget", () => {
     )
   })
 
+  it("accepts pasted 3-digit HMM values without colon", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("930")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "09:30",
+      { fromUi: true },
+      undefined
+    )
+  })
+
   it.each([
     {
       desc: "bare HHMM (2599)",
@@ -965,8 +984,9 @@ describe("TimeInput widget", () => {
 
   it("clear button dismisses paste override on clearable input", async () => {
     const user = userEvent.setup()
-    const props = getProps({ default: undefined, value: "10:00" })
+    const props = getProps({ default: undefined })
     vi.spyOn(props.widgetMgr, "setStringValue")
+    vi.spyOn(props.widgetMgr, "getStringValue").mockReturnValue("10:00")
     render(<TimeInput {...props} />)
     vi.mocked(props.widgetMgr.setStringValue).mockClear()
 
@@ -988,6 +1008,26 @@ describe("TimeInput widget", () => {
       { fromUi: true },
       undefined
     )
+  })
+
+  it("clear button on empty value dismisses paste error without triggering rerun", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: undefined, value: undefined })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("25:00")
+
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+
+    // Click clear — value is already null so no value write should happen
+    await user.click(screen.getByTestId("stTimeInputClearButton"))
+
+    expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
   })
 
   it("clears paste override and error when backend value changes externally", async () => {

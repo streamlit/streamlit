@@ -121,8 +121,8 @@ function TimeInput({
 
   const [validationError, setValidationError] = useState<string | null>(null)
 
-  // When an out-of-range value is pasted (e.g. "08:99"), we can't represent it
-  // with a Time object. Store the raw digits here to override segment rendering
+  // If a user pastes an out-of-range value (e.g. "08:99"), the Time object
+  // can't represent it. Store the raw digits here to override segment rendering
   // while keeping the TimeField value at the last valid state.
   const [pasteOverride, setPasteOverride] = useState<{
     hour: string
@@ -241,6 +241,9 @@ function TimeInput({
 
   const handleClear = useCallback((): void => {
     setDisplayValue(null)
+    setValidationError(null)
+    setPasteOverride(null)
+    if (valueRef.current === null) return
     setValueWithSource({ value: null, fromUi: true })
     if (inForm) {
       updateWidgetMgrState(
@@ -250,8 +253,6 @@ function TimeInput({
         fragmentId
       )
     }
-    setValidationError(null)
-    setPasteOverride(null)
   }, [setValueWithSource, inForm, element, widgetMgr, fragmentId])
 
   const handlePaste = useCallback(
@@ -371,8 +372,8 @@ function TimeInput({
 
       if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return
 
-      // When an invalid paste is displayed, arrow keys simply revert to the
-      // prior valid value rather than computing a new step from it.
+      // If the widget displays an invalid paste, arrow keys simply revert to
+      // the prior valid value rather than computing a new step from it.
       if (pasteOverride) {
         e.preventDefault()
         e.stopPropagation()
