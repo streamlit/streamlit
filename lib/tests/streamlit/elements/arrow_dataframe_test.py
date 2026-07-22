@@ -21,11 +21,13 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pytest
 from pandas.io.formats.style_render import StylerRenderer as Styler
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.dataframe.lazy_df_source import InMemoryDataframeSource
 from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     is_pandas_version_less_than,
@@ -41,6 +43,7 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.proto.Dataframe_pb2 import LazyDataframe as LazyDataframeProto
 from streamlit.testing.v1 import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
@@ -1451,3 +1454,153 @@ def test_selection_state_is_read_only() -> None:
     assert result.selection.rows == []
     assert result.selection.columns == []
     assert result.selection.cells == []
+
+
+class ArrowDataFrameLazyTest(DeltaGeneratorTestCase):
+    """Tests for lazy delivery mode of st.dataframe."""
+
+    def _last_dataframe_proto(self) -> DataframeProto:
+        return self.get_delta_from_queue().new_element.dataframe
+
+    def test_auto_lazy_large_pandas_dataframe(self):
+        """Large in-memory pandas dataframes auto-switch to lazy for lazy=None."""
+        df = pd.DataFrame({"a": np.arange(150_001)})
+        st.dataframe(df)
+
+        proto = self._last_dataframe_proto()
+        assert proto.HasField("lazy_data")
+        assert proto.lazy_data.row_count == 150_001
+        assert proto.lazy_data.sortable is True
+        assert (
+            proto.lazy_data.access_mode == LazyDataframeProto.AccessMode.RANDOM_ACCESS
+        )
+        assert proto.lazy_data.source_id != ""
+        assert proto.lazy_data.page_size > 0
+        # The eager arrow_data field stays empty in lazy mode.
+        assert proto.arrow_data.data == b""
+        # The initial chunk carries the schema + first rows.
+        assert len(proto.lazy_data.initial_chunk.data) > 0
+
+    def test_small_pandas_dataframe_stays_eager(self):
+        """Small in-memory dataframes are not auto-lazy for lazy=None."""
+        df = pd.DataFrame({"a": [1, 2, 3]})
+        st.dataframe(df)
+
+        proto = self._last_dataframe_proto()
+        assert not proto.HasField("lazy_data")
+        assert proto.arrow_data.data != b""
+
+    def test_lazy_false_forces_eager_for_large_dataframe(self):
+        """lazy=False keeps eager rendering even for a large dataframe."""
+        df = pd.DataFrame({"a": np.arange(150_001)})
+        st.dataframe(df, lazy=False)
+
+        proto = self._last_dataframe_proto()
+        assert not proto.HasField("lazy_data")
+        assert proto.arrow_data.data != b""
+
+    def test_lazy_true_small_dataframe_stays_eager(self):
+        """lazy=True keeps eager rendering for small inputs (<= 1000 rows)."""
+        df = pd.DataFrame({"a": np.arange(500)})
+        st.dataframe(df, lazy=True)
+
+        proto = self._last_dataframe_proto()
+        assert not proto.HasField("lazy_data")
+        assert proto.arrow_data.data != b""
+
+    def test_lazy_true_medium_dataframe_is_lazy(self):
+        """lazy=True uses lazy delivery for inputs above the small threshold."""
+        df = pd.DataFrame({"a": np.arange(5_000)})
+        st.dataframe(df, lazy=True)
+
+        proto = self._last_dataframe_proto()
+        assert proto.HasField("lazy_data")
+        assert proto.lazy_data.row_count == 5_000
+
+    def test_lazy_true_small_generator_is_not_consumed_twice(self):
+        """Counting a one-shot input for lazy mode preserves its eager rows."""
+        st.dataframe(({"a": value} for value in range(3)), lazy=True)
+
+        proto = self._last_dataframe_proto()
+        assert not proto.HasField("lazy_data")
+        assert convert_arrow_bytes_to_pandas_df(proto.arrow_data.data)[
+            "a"
+        ].tolist() == [0, 1, 2]
+
+    def test_lazy_true_styler_raises(self):
+        """lazy=True with a pandas Styler raises a StreamlitAPIException."""
+        df = pd.DataFrame({"a": [1, 2, 3]})
+        with pytest.raises(StreamlitAPIException):
+            st.dataframe(df.style.highlight_max(axis=0), lazy=True)
+
+    def test_lazy_true_multiindex_columns_raises(self):
+        """lazy=True rejects a dataframe with MultiIndex columns."""
+        columns = pd.MultiIndex.from_tuples([("g", "a"), ("g", "b")])
+        df = pd.DataFrame(np.arange(10_000).reshape(-1, 2), columns=columns)
+        with pytest.raises(StreamlitAPIException, match="multi-level"):
+            st.dataframe(df, lazy=True)
+
+    def test_lazy_true_with_on_select_raises(self):
+        """lazy=True together with on_select raises a StreamlitAPIException."""
+        df = pd.DataFrame({"a": np.arange(5_000)})
+        with pytest.raises(StreamlitAPIException):
+            st.dataframe(df, lazy=True, on_select="rerun")
+
+    def test_lazy_none_with_on_select_stays_eager(self):
+        """lazy=None falls back to eager when on_select is set, even if large."""
+        df = pd.DataFrame({"a": np.arange(150_001)})
+        st.dataframe(df, lazy=None, on_select="rerun", key="lazy_sel")
+
+        proto = self._last_dataframe_proto()
+        assert not proto.HasField("lazy_data")
+        assert proto.arrow_data.data != b""
+
+    def test_lazy_dataframe_registers_source(self):
+        """Rendering a lazy dataframe registers a source in the manager."""
+        from streamlit.runtime import get_instance
+
+        df = pd.DataFrame({"a": np.arange(5_000)})
+        st.dataframe(df, lazy=True)
+
+        proto = self._last_dataframe_proto()
+        mgr = get_instance().dataframe_source_mgr
+        # The registered source can serve a chunk for the rendered source id.
+        arrow_bytes, offset = mgr.load_chunk(
+            mgr._sources[proto.lazy_data.source_id].session_id,
+            proto.lazy_data.source_id,
+            0,
+            10,
+            None,
+        )
+        assert offset == 0
+        assert len(arrow_bytes) > 0
+
+    def test_lazy_dataframe_load_failure_does_not_register_source(self):
+        """A failed initial load leaves no orphaned manager registration."""
+        from streamlit.runtime import get_instance
+
+        source = InMemoryDataframeSource(pa.table({"a": list(range(5_000))}))
+        mgr = get_instance().dataframe_source_mgr
+        source_count = mgr.get_source_count()
+
+        with (
+            patch(
+                "streamlit.elements.arrow.dataframe_source.resolve_lazy_source",
+                return_value=source,
+            ),
+            patch.object(source, "load_rows", side_effect=RuntimeError("boom")),
+            pytest.raises(RuntimeError, match="boom"),
+        ):
+            st.dataframe(pd.DataFrame({"a": [1]}), lazy=True)
+
+        assert mgr.get_source_count() == source_count
+
+    def test_lazy_column_config_applied(self):
+        """Column configuration is applied to lazy dataframes."""
+        df = pd.DataFrame({"a": np.arange(5_000), "b": np.arange(5_000)})
+        st.dataframe(df, lazy=True, column_order=["b", "a"], hide_index=True)
+
+        proto = self._last_dataframe_proto()
+        assert proto.HasField("lazy_data")
+        assert list(proto.column_order) == ["b", "a"]
+        assert proto.columns != ""

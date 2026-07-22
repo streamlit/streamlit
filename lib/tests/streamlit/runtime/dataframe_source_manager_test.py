@@ -1,0 +1,287 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Unit tests for the session-scoped lazy dataframe source manager."""
+
+from __future__ import annotations
+
+from unittest.mock import patch
+
+import pyarrow as pa
+import pytest
+
+from streamlit.dataframe.lazy_df_source import (
+    AccessMode,
+    InMemoryDataframeSource,
+    SortSpec,
+)
+from streamlit.dataframe_util import convert_arrow_bytes_to_pandas_df
+from streamlit.runtime.dataframe_source_manager import (
+    DataframeSourceError,
+    DataframeSourceManager,
+)
+
+
+def _make_source(num_rows: int = 1000) -> InMemoryDataframeSource:
+    """Build an in-memory source with ``num_rows`` rows."""
+    return InMemoryDataframeSource(
+        pa.table({"a": list(range(num_rows)), "b": [x * 2 for x in range(num_rows)]})
+    )
+
+
+class _UnknownSizeSource:
+    """A fake sequential-style source that reports an unknown (None) row count.
+
+    Simulates a future unknown-size source so the manager's out-of-bounds guard
+    can be exercised without a real streaming source.
+    """
+
+    def __init__(self, table: pa.Table) -> None:
+        self._table = table
+        self.load_rows_calls = 0
+
+    @property
+    def row_count(self) -> int | None:
+        return None
+
+    @property
+    def schema(self) -> pa.Schema:
+        return self._table.schema
+
+    @property
+    def sortable(self) -> bool:
+        return False
+
+    @property
+    def access_mode(self) -> AccessMode:
+        return AccessMode.SEQUENTIAL
+
+    def load_rows(
+        self, offset: int, limit: int, *, sort: SortSpec | None = None
+    ) -> pa.Table:
+        self.load_rows_calls += 1
+        return self._table.slice(offset, limit)
+
+
+def _register(
+    mgr: DataframeSourceManager,
+    *,
+    session_id: str = "s1",
+    coordinates: str = "1.0.0",
+    fragment_id: str | None = None,
+    num_rows: int = 1000,
+):
+    """Register a source under a given session id (patches the active session)."""
+    with (
+        patch(
+            "streamlit.runtime.dataframe_source_manager._get_session_id",
+            return_value=session_id,
+        ),
+        patch(
+            "streamlit.runtime.dataframe_source_manager._get_fragment_id",
+            return_value=fragment_id,
+        ),
+    ):
+        return mgr.register_source(_make_source(num_rows), coordinates)
+
+
+def test_register_source_returns_unique_ids() -> None:
+    """Each registration gets a unique source id."""
+    mgr = DataframeSourceManager()
+    reg1 = _register(mgr, coordinates="1.0.0")
+    reg2 = _register(mgr, coordinates="1.0.1")
+    assert reg1.source_id != reg2.source_id
+    assert mgr.get_source_count() == 2
+
+
+def test_load_chunk_returns_requested_rows() -> None:
+    """A valid chunk request returns the requested Arrow rows."""
+    mgr = DataframeSourceManager()
+    reg = _register(mgr)
+    arrow_bytes, offset = mgr.load_chunk(reg.session_id, reg.source_id, 100, 5, None)
+    assert offset == 100
+    df = convert_arrow_bytes_to_pandas_df(arrow_bytes)
+    assert df["a"].tolist() == [100, 101, 102, 103, 104]
+
+
+def test_load_chunk_applies_sort() -> None:
+    """A chunk request with sort state returns sorted rows."""
+    mgr = DataframeSourceManager()
+    reg = _register(mgr)
+    arrow_bytes, _ = mgr.load_chunk(
+        reg.session_id,
+        reg.source_id,
+        0,
+        3,
+        SortSpec("a", descending=True),
+    )
+    df = convert_arrow_bytes_to_pandas_df(arrow_bytes)
+    assert df["a"].tolist() == [999, 998, 997]
+
+
+def test_load_chunk_unknown_source_raises() -> None:
+    """Requesting an unknown source id raises a DataframeSourceError."""
+    mgr = DataframeSourceManager()
+    with pytest.raises(DataframeSourceError, match="not found"):
+        mgr.load_chunk("s1", "missing", 0, 5, None)
+
+
+def test_load_chunk_wrong_session_raises() -> None:
+    """A source registered for one session cannot be read by another."""
+    mgr = DataframeSourceManager()
+    reg = _register(mgr, session_id="s1")
+    with pytest.raises(DataframeSourceError, match="does not belong"):
+        mgr.load_chunk("other", reg.source_id, 0, 5, None)
+
+
+def test_load_chunk_negative_offset_raises() -> None:
+    """A negative offset is rejected."""
+    mgr = DataframeSourceManager()
+    reg = _register(mgr)
+    with pytest.raises(DataframeSourceError, match="non-negative"):
+        mgr.load_chunk(reg.session_id, reg.source_id, -1, 5, None)
+
+
+def test_load_chunk_caps_limit() -> None:
+    """The chunk limit is capped at MAX_CHUNK_ROWS."""
+    mgr = DataframeSourceManager()
+    reg = _register(mgr, num_rows=20_000)
+    arrow_bytes, _ = mgr.load_chunk(reg.session_id, reg.source_id, 0, 1_000_000, None)
+    df = convert_arrow_bytes_to_pandas_df(arrow_bytes)
+    # Capped to MAX_CHUNK_ROWS (10_000), not the full 20_000 rows.
+    assert len(df) == 10_000
+
+
+def test_load_chunk_out_of_bounds_offset_returns_empty_chunk() -> None:
+    """An offset at/after the row count returns a schema-only chunk without querying."""
+    mgr = DataframeSourceManager()
+    reg = _register(mgr, num_rows=1000)
+    # Spy on load_rows to confirm the out-of-bounds request is short-circuited
+    # before any row query runs.
+    with patch.object(
+        reg.source, "load_rows", wraps=reg.source.load_rows
+    ) as load_rows_spy:
+        arrow_bytes, offset = mgr.load_chunk(
+            reg.session_id, reg.source_id, 1000, 5, None
+        )
+
+    assert offset == 1000
+    load_rows_spy.assert_not_called()
+    df = convert_arrow_bytes_to_pandas_df(arrow_bytes)
+    # Empty rows, but the schema (columns) is preserved for the frontend.
+    assert len(df) == 0
+    assert list(df.columns) == ["a", "b"]
+
+
+def test_load_chunk_unknown_row_count_skips_short_circuit() -> None:
+    """A source with ``row_count=None`` is queried instead of short-circuited.
+
+    Unknown-size (future sequential) sources cannot prove an offset is out of
+    bounds up front, so ``load_chunk`` must delegate to the source rather than
+    returning a schema-only chunk without loading.
+    """
+    mgr = DataframeSourceManager()
+    source = _UnknownSizeSource(pa.table({"a": [0, 1, 2]}))
+    with patch(
+        "streamlit.runtime.dataframe_source_manager._get_session_id",
+        return_value="s1",
+    ):
+        reg = mgr.register_source(source, "1.0.0")
+
+    arrow_bytes, offset = mgr.load_chunk(reg.session_id, reg.source_id, 0, 3, None)
+
+    assert offset == 0
+    # The source was queried (not short-circuited to an empty chunk).
+    assert source.load_rows_calls == 1
+    df = convert_arrow_bytes_to_pandas_df(arrow_bytes)
+    assert df["a"].tolist() == [0, 1, 2]
+
+
+def test_re_register_same_coordinates_orphans_previous() -> None:
+    """Re-registering at the same coordinates orphans the old source on prune."""
+    mgr = DataframeSourceManager()
+    reg1 = _register(mgr, coordinates="1.0.0")
+    reg2 = _register(mgr, coordinates="1.0.0")
+    assert reg1.source_id != reg2.source_id
+    assert mgr.get_source_count() == 2
+
+    mgr.remove_orphaned_sources()
+    # The first source is now orphaned and removed; the second remains.
+    assert mgr.get_source_count() == 1
+    with pytest.raises(DataframeSourceError):
+        mgr.load_chunk(reg1.session_id, reg1.source_id, 0, 5, None)
+    # The new source still works.
+    mgr.load_chunk(reg2.session_id, reg2.source_id, 0, 5, None)
+
+
+def test_clear_session_refs_then_prune_removes_sources() -> None:
+    """Clearing a session's refs and pruning removes its sources."""
+    mgr = DataframeSourceManager()
+    reg = _register(mgr, session_id="s1")
+    mgr.clear_session_refs("s1")
+    mgr.remove_orphaned_sources()
+    assert mgr.get_source_count() == 0
+    with pytest.raises(DataframeSourceError):
+        mgr.load_chunk(reg.session_id, reg.source_id, 0, 5, None)
+
+
+def test_clear_session_refs_only_affects_target_session() -> None:
+    """Clearing one session's refs does not remove another session's sources."""
+    mgr = DataframeSourceManager()
+    reg_s1 = _register(mgr, session_id="s1", coordinates="1.0.0")
+    reg_s2 = _register(mgr, session_id="s2", coordinates="1.0.0")
+
+    mgr.clear_session_refs("s1")
+    mgr.remove_orphaned_sources()
+
+    with pytest.raises(DataframeSourceError):
+        mgr.load_chunk(reg_s1.session_id, reg_s1.source_id, 0, 5, None)
+    # s2's source is still available.
+    mgr.load_chunk(reg_s2.session_id, reg_s2.source_id, 0, 5, None)
+
+
+def test_clear_session_refs_only_affects_target_fragments() -> None:
+    """Fragment reruns prune only refs owned by rerun fragments."""
+    mgr = DataframeSourceManager()
+    body = _register(mgr, coordinates="body", fragment_id=None)
+    frag_a = _register(mgr, coordinates="frag-a", fragment_id="a")
+    frag_b = _register(mgr, coordinates="frag-b", fragment_id="b")
+
+    mgr.clear_session_refs("s1", fragment_ids=["a"])
+    mgr.remove_orphaned_sources()
+
+    with pytest.raises(DataframeSourceError):
+        mgr.load_chunk(frag_a.session_id, frag_a.source_id, 0, 5, None)
+
+    mgr.load_chunk(body.session_id, body.source_id, 0, 5, None)
+    mgr.load_chunk(frag_b.session_id, frag_b.source_id, 0, 5, None)
+
+
+def test_clear_session_refs_fragment_empty_list_is_noop() -> None:
+    """An empty fragment-id list leaves existing refs untouched."""
+    mgr = DataframeSourceManager()
+    reg = _register(mgr, coordinates="frag-a", fragment_id="a")
+
+    mgr.clear_session_refs("s1", fragment_ids=[])
+    mgr.remove_orphaned_sources()
+
+    mgr.load_chunk(reg.session_id, reg.source_id, 0, 5, None)
+
+
+def test_clear_all_for_session() -> None:
+    """``clear_all_for_session`` clears refs and prunes in one call."""
+    mgr = DataframeSourceManager()
+    _register(mgr, session_id="s1")
+    mgr.clear_all_for_session("s1")
+    assert mgr.get_source_count() == 0
