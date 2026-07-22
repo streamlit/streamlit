@@ -1064,8 +1064,42 @@ describe("TimeInput widget", () => {
 
     const alert = screen.getByRole("alert")
     expect(alert).toHaveTextContent(
-      "Error: Time is out of range. Hours must be 0–23, minutes 0–59."
+      "Error: time 25:00 is invalid. Time is out of range. Hours must be 0–23, minutes 0–59."
     )
+  })
+
+  it("alert includes displayed digits when they differ from accessible value", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    render(<TimeInput {...props} />)
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("25:99")
+
+    // Accessible values still reflect the last valid time
+    expect(hourSegment).toHaveAttribute("aria-valuenow", "12")
+    expect(minuteSegment).toHaveAttribute("aria-valuenow", "45")
+    // But alert communicates what is visually displayed
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent("time 25:99 is invalid")
+  })
+
+  it("alert uses generic message when no paste override is active", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    render(<TimeInput {...props} />)
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("ab:cd")
+
+    // Unrecognized colon format — error without pasteOverride
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent(
+      "Error: Invalid time format. Please use HH:MM."
+    )
+    expect(alert).not.toHaveTextContent("is invalid")
   })
 
   it("accepts paste into an empty (cleared) field", async () => {
@@ -1087,6 +1121,66 @@ describe("TimeInput widget", () => {
     )
     expect(hourSegment).toHaveTextContent("16")
     expect(minuteSegment).toHaveTextContent("45")
+  })
+
+  it("clears paste error state when form is cleared", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form", default: "12:45" })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+    render(<TimeInput {...props} />)
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("25:00")
+
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+    expect(hourSegment).toHaveTextContent("25")
+
+    // Submit form (triggers form clear)
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
+
+    // Paste error and override should be cleared
+    expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+    expect(hourSegment).toHaveTextContent("12")
+    expect(minuteSegment).toHaveTextContent("45")
+  })
+
+  it("ignores paste when widget is disabled", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" }, true)
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("08:30")
+
+    // Should not commit and not show error — paste is silently ignored
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+    expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+    expect(hourSegment).toHaveAttribute("aria-valuenow", "12")
+  })
+
+  it("arrow key dismisses paste error on empty (cleared) field", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: undefined, value: undefined })
+    render(<TimeInput {...props} />)
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("25:99")
+
+    // Error is active on an empty field
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+    expect(hourSegment).toHaveTextContent("25")
+    expect(minuteSegment).toHaveTextContent("99")
+
+    // Arrow key should dismiss the error even though displayValue is null
+    await user.keyboard("{ArrowUp}")
+    expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
   })
 })
 

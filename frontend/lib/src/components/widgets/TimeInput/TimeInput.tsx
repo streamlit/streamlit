@@ -118,7 +118,11 @@ function TimeInput({
   // useEffect-delay in useBasicWidgetState that would cause React Aria
   // to see a stale value mid-render and reset its segment edit buffer.
   const [displayValue, setDisplayValue] = useState<string | null>(value)
-  onFormClearedRef.current = () => setDisplayValue(element.default ?? null)
+  onFormClearedRef.current = () => {
+    setDisplayValue(element.default ?? null)
+    setValidationError(null)
+    setPasteOverride(null)
+  }
 
   const [validationError, setValidationError] = useState<string | null>(null)
 
@@ -249,6 +253,7 @@ function TimeInput({
 
   const handlePaste = useCallback(
     (e: ClipboardEvent<HTMLDivElement>): void => {
+      if (disabled) return
       const text = e.clipboardData.getData("text").trim()
 
       // Full time paste: HH:MM (with colon) or HHMM / HMM (3-4 digits, no colon)
@@ -320,7 +325,7 @@ function TimeInput({
         setValidationError("Invalid time format. Please use HH:MM.")
       }
     },
-    [displayValue, handleChange]
+    [disabled, displayValue, handleChange]
   )
 
   /**
@@ -359,8 +364,7 @@ function TimeInput({
         return
       }
 
-      if (!displayValue || (e.key !== "ArrowUp" && e.key !== "ArrowDown"))
-        return
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return
 
       // When an invalid paste is displayed, arrow keys simply revert to the
       // prior valid value rather than computing a new step from it.
@@ -372,6 +376,8 @@ function TimeInput({
         setValidationError(null)
         return
       }
+
+      if (!displayValue) return
 
       // Arrow key on an existing value always commits immediately (like the
       // +/- buttons on st.number_input). Set the flag after the paste-override
@@ -530,7 +536,9 @@ function TimeInput({
             )}
           {validationError && (
             <StyledVisuallyHidden id={validationErrorId} role="alert">
-              {`Error: ${validationError}`}
+              {pasteOverride
+                ? `Error: time ${pasteOverride.hour}:${pasteOverride.minute} is invalid. ${validationError}`
+                : `Error: ${validationError}`}
             </StyledVisuallyHidden>
           )}
         </StyledTimeInputWrapper>
