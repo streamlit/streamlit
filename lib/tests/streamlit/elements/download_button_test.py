@@ -206,7 +206,10 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
                 f.write("a,b\n")
             with open(path, "rb") as data:
                 st.download_button(
-                    "Download", data=data, file_name="custom.bin", mime="application/x-foo"
+                    "Download",
+                    data=data,
+                    file_name="custom.bin",
+                    mime="application/x-foo",
                 )
 
         c = self.get_delta_from_queue().new_element.download_button
