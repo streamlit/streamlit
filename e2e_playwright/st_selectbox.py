@@ -264,6 +264,19 @@ v25 = st.selectbox(
 )
 st.write("value 25:", v25)
 
+# Regression test for https://github.com/streamlit/streamlit/issues/16003:
+# fuzzy (default) filter mode must keep non-contiguous matches. The react-aria
+# ComboBox used to apply its own "contains" filter on top of Streamlit's fuzzy
+# result, dropping matches whose query is not a contiguous substring (e.g. "ape"
+# fuzzy-matches "Apple", and "aple" is not a contiguous substring of any option).
+v26 = st.selectbox(
+    "selectbox 26 (fuzzy filter mode)",
+    ["Apple", "Apricot", "Banana", "Cherry", "Grape"],
+    index=None,
+    key="selectbox_26",
+)
+st.write("value 26:", v26)
+
 # --- Bound widgets (query-params) ---
 
 v_bound = st.selectbox(
