@@ -186,19 +186,6 @@ red_bgr_img = np.array(red_image)[..., ["BGR".index(s) for s in "RGB"]]
 st.image(red_bgr_img, caption="BGR channel (red).", channels="BGR", width=100)
 st.image(red_bgr_img, caption="RGB channel (blue).", channels="RGB", width=100)
 
-st.header("use_column_width parameter (deprecated)")
-
-with st.container(key="use_column_width"):
-    col1, col2, col3, col4 = st.columns(4)
-    col1.image(img)  # 100 px
-    col1.image(img, use_column_width="auto")  # 100 px
-    col1.image(img, use_column_width="never")  # 100 px
-    col1.image(img, use_column_width=False)  # 100 px
-
-    col2.image(img, use_column_width="always")  # column width
-    col2.image(img, use_column_width=True)  # column width
-    col2.image(img800, use_column_width="auto")  # column width
-
 st.header("List of images")
 
 st.image(

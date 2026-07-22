@@ -21,7 +21,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, cast
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -42,8 +42,6 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import Width
 
-UseColumnWith: TypeAlias = Literal["auto", "always", "never"] | bool | None
-
 
 class ImageMixin:
     @gather_metrics("image")
@@ -54,7 +52,6 @@ class ImageMixin:
         #  by way of overload
         caption: str | list[str] | None = None,
         width: Width = "content",
-        use_column_width: UseColumnWith = None,
         clamp: bool = False,
         channels: Channels = "RGB",
         output_format: ImageFormatOrAuto = "auto",
@@ -111,17 +108,6 @@ class ImageMixin:
 
             When using an SVG image without a default width, use ``"stretch"``
             or an integer.
-        use_column_width : "auto", "always", "never", or bool
-            If "auto", set the image's width to its natural size,
-            but do not exceed the width of the column.
-            If "always" or True, set the image's width to the column width.
-            If "never" or False, set the image's width to its natural size.
-            Note: if set, `use_column_width` takes precedence over the `width` parameter.
-
-            .. deprecated::
-                ``use_column_width`` is deprecated and will be removed in a future
-                release. Please use the ``width`` parameter instead.
-
         clamp : bool
             Whether to clamp image pixel values to a valid range (0-255 per
             channel). This is only used for byte array images; the parameter is
@@ -173,23 +159,6 @@ class ImageMixin:
            height: 710px
 
         """
-
-        if use_column_width is not None:
-            if use_container_width is not None:
-                raise StreamlitAPIException(
-                    "`use_container_width` and `use_column_width` cannot be set at the same time.",
-                    "Please utilize `use_container_width` since `use_column_width` is deprecated.",
-                )
-
-            show_deprecation_warning(
-                "The `use_column_width` parameter has been deprecated and will be removed "
-                "in a future release. Please utilize the `width` parameter instead."
-            )
-            if use_column_width in {"auto", "never"} or use_column_width is False:
-                width = "content"
-            elif use_column_width == "always" or use_column_width is True:
-                width = "stretch"
-
         if use_container_width is not None:
             show_deprecation_warning(
                 make_deprecated_name_warning(
