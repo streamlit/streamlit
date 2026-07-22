@@ -497,6 +497,10 @@ function TimeInput({
               {segment => (
                 <StyledTimeSegment segment={segment}>
                   {({ text, isPlaceholder, type }) => {
+                    // Override visible text only — React Aria still controls
+                    // aria-valuenow/aria-valuetext from the last valid Time, so
+                    // screen readers may announce stale values during the brief
+                    // error window. Mitigated by role="alert" + aria-invalid.
                     if (pasteOverride) {
                       if (type === "hour") return pasteOverride.hour
                       if (type === "minute") return pasteOverride.minute
