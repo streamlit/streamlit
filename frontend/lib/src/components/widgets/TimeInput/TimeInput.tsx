@@ -143,10 +143,10 @@ function TimeInput({
   const [prevValue, setPrevValue] = useState(value)
   if (prevValue !== value) {
     setPrevValue(value)
+    setValidationError(null)
+    setPasteOverride(null)
     if (displayValue === prevValue) {
       setDisplayValue(value)
-      setValidationError(null)
-      setPasteOverride(null)
     }
   }
 

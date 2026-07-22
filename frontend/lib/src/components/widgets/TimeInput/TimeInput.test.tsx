@@ -1067,6 +1067,42 @@ describe("TimeInput widget", () => {
     expect(minuteSegment).toHaveTextContent("30")
   })
 
+  it("clears paste error on external update even with uncommitted local edits", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:45" })
+    const { rerender } = render(<TimeInput {...props} />)
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+
+    // Type a digit (changes displayValue, creating uncommitted local edit)
+    await user.click(hourSegment)
+    await user.keyboard("11")
+
+    // Now paste invalid — sets pasteOverride + validationError
+    await user.paste("25:00")
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+
+    // External value update arrives while local edit + paste error are active
+    const updatedElement = TimeInputProto.create({
+      id: "123",
+      label: "Label",
+      default: "12:45",
+      value: "15:30",
+      setValue: true,
+      step: 900,
+    })
+    rerender(
+      <TimeInput
+        element={updatedElement}
+        disabled={false}
+        widgetMgr={props.widgetMgr}
+      />
+    )
+
+    // Paste error should be cleared even though displayValue !== prevValue
+    expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+  })
+
   it("typed input after arrow-key revert still defers commit to blur", async () => {
     const user = userEvent.setup()
     const props = getProps({ default: "12:45" })
