@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 28
+NUM_SELECTBOXES = 29
 
 
 def get_selectbox_input(
@@ -151,6 +151,7 @@ def test_selectbox_has_correct_initial_values(app: Page):
     expect_markdown(app, "value 21: None")
     expect_markdown(app, "value 22: None")
     expect_markdown(app, "value 23: None")
+    expect_markdown(app, "value 26: None")
 
 
 def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFunction):
@@ -687,6 +688,43 @@ def test_selectbox_virtualizes_large_option_list(
     selectbox_input.fill("Option 987")
     selectbox_input.press("Enter")
     expect_markdown(app, "value 25: Option 987")
+
+
+def test_selectbox_fuzzy_filter_mode_keeps_non_contiguous_matches(app: Page):
+    """Regression test for https://github.com/streamlit/streamlit/issues/16003.
+
+    Fuzzy (default) filtering must keep non-contiguous matches. The react-aria
+    ComboBox used to apply its own "contains" filter on top of Streamlit's fuzzy
+    result, dropping matches whose query is not a contiguous substring.
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 26 (fuzzy filter mode)")
+    selectbox_input.click()
+    selectbox_input.fill("ape")
+
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    options = selection_dropdown.get_by_role("option")
+    # "Grape" (contains "ape") and "Apple" (fuzzy A-p-...-e) both match; the
+    # contiguous match ranks first in the fuzzy-sorted result.
+    expect(options).to_have_count(2)
+    expect(options.nth(0)).to_have_text("Grape")
+    expect(options.nth(1)).to_have_text("Apple")
+    # Non-matching options must NOT be shown, and there must be no empty state.
+    expect(
+        selection_dropdown.get_by_role("option", name="Banana", exact=True)
+    ).to_have_count(0)
+    expect(
+        selection_dropdown.get_by_role("option", name="No results", exact=True)
+    ).to_have_count(0)
+
+    # A query that is not a contiguous substring of any option must still
+    # fuzzy-match: "aple" -> "Apple" only (A-p-l-e), without falling back to the
+    # "No results" empty state.
+    selectbox_input.fill("aple")
+    expect(options).to_have_count(1)
+    expect(options.nth(0)).to_have_text("Apple")
+
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 26: Apple")
 
 
 # --- Query param binding tests ---
