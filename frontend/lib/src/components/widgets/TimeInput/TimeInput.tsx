@@ -256,11 +256,7 @@ function TimeInput({
         return
       }
 
-      if (
-        disabled ||
-        !displayValue ||
-        (e.key !== "ArrowUp" && e.key !== "ArrowDown")
-      )
+      if (!displayValue || (e.key !== "ArrowUp" && e.key !== "ArrowDown"))
         return
 
       // Arrow key on an existing value always commits immediately (like the
