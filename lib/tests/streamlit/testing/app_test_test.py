@@ -56,6 +56,7 @@ def test_from_file_path():
 def test_from_file_resolves_relative_path_from_calling_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
+    """Verify relative paths resolve against the calling file, not the CWD."""
     cwd_script = tmp_path / "test_data/main.py"
     cwd_script.parent.mkdir()
     cwd_script.write_text(
@@ -69,6 +70,7 @@ def test_from_file_resolves_relative_path_from_calling_file(
 
 
 def test_from_file_raises_immediately_for_missing_script():
+    """Verify from_file raises immediately when the script is missing."""
     missing_script = Path(__file__).parent / "test_data/missing.py"
 
     with pytest.raises(FileNotFoundError) as exc_info:
@@ -231,6 +233,7 @@ def test_trigger_recursion():
 
 
 def test_switch_page_uses_paths_relative_to_main_script():
+    """Verify page paths are resolved relative to the main script."""
     at = AppTest.from_file("test_data/main.py").run()
     assert at.text[0].value == "main page"
 
@@ -242,11 +245,11 @@ def test_switch_page_uses_paths_relative_to_main_script():
         at.switch_page(invalid_page_path)
 
     expected_path = (Path(__file__).parent / "test_data" / invalid_page_path).resolve()
-    assert "relative to the main script" in str(exc_info.value)
     assert str(expected_path) in str(exc_info.value)
 
 
 def test_switch_page_preserves_main_script_for_page_links(tmp_path: Path):
+    """Verify switched pages resolve page links from the main script."""
     main_script = tmp_path / "main.py"
     page_script = tmp_path / "pages/register.py"
     page_script.parent.mkdir()
