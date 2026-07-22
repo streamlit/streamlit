@@ -28,7 +28,12 @@ from streamlit.elements.lib.utils import (
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import AnyNumber, clean_text, from_number
+from streamlit.string_util import (
+    AnyNumber,
+    clean_text,
+    from_number,
+    validate_icon_or_emoji,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -99,6 +104,7 @@ class MetricMixin:
         delta_color: DeltaColor = "normal",
         *,
         help: str | None = None,
+        icon: str | None = None,
         label_visibility: LabelVisibility = "visible",
         border: bool = False,
         width: Width = "stretch",
@@ -175,6 +181,25 @@ class MetricMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
+        icon : str or None
+            An optional emoji or icon to display next to the metric label. If
+            ``icon`` is ``None`` (default), no icon is displayed. If ``icon``
+            is a string, the following options are valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -366,6 +391,20 @@ class MetricMixin:
                     https://doc-metric-example5.streamlit.app/
                     height: 300px
 
+                **Example 6: Show an icon**
+
+                Add an icon before the label with the ``icon`` parameter.
+
+                >>> import streamlit as st
+                >>>
+                >>> st.metric(
+                ...     "Temperature", "70 °F", "1.2 °F", icon=":material/thermostat:"
+                ... )
+
+                .. output::
+                    https://doc-metric-example6.streamlit.app/
+                    height: 210px
+
         """
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -376,6 +415,7 @@ class MetricMixin:
         metric_proto.show_border = border
         if help is not None:
             metric_proto.help = dedent(help)
+        metric_proto.icon = validate_icon_or_emoji(icon)
 
         color_and_direction = _determine_delta_color_and_direction(
             cast("DeltaColor", clean_text(delta_color)), delta
