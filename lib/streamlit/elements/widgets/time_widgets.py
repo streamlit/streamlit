@@ -92,7 +92,8 @@ _DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
 
 def _convert_timelike_to_time(value: TimeValue) -> time:
     if value == "now":
-        # Set value default. Preserve seconds but strip microseconds.
+        # Preserve seconds but strip microseconds. Callers strip seconds
+        # for minute-granular steps before ID computation and serialization.
         return datetime.now().time().replace(microsecond=0)
 
     if isinstance(value, str):
@@ -992,7 +993,7 @@ class TimeWidgetsMixin:
             if isinstance(step, timedelta)
             else step
             if isinstance(step, int)
-            else 0
+            else 0  # Invalid type; validation raises below.
         )
         if parsed_time is not None and _step_secs > 0 and _step_secs % 60 == 0:
             parsed_time = parsed_time.replace(second=0, microsecond=0)
