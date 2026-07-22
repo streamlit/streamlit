@@ -59,10 +59,10 @@ export interface SkillsInstallCalloutProps {
  * a one-click way to give it version-matched Streamlit knowledge at the moment
  * a developer hits an error.
  *
- * It deliberately reads as one more action on the error — same text tone, a
- * hairline divider, a small sparkle accent, and a quiet (secondary) button —
- * rather than a dominant panel, so it coexists with the existing Copy / Ask
- * links instead of overpowering them.
+ * It deliberately reads as one more line on the error — it sits inside the error
+ * box and inherits its tint and text color, with a small sparkle accent and an
+ * underlined text action — rather than a dominant panel, so it coexists with the
+ * existing Copy / Ask links instead of overpowering them.
  *
  * Not dismissable by the user (no ✕ / snooze / "don't show again"): it clears
  * on a successful install (after a brief confirmation) or when the parent stops
@@ -122,17 +122,17 @@ function SkillsInstallCallout({
     : isError
       ? ":material/error:"
       : ":material/auto_awesome:"
+  // Idle/installing/error share the error box's text color so the callout
+  // blends into the box; success flips to green to signal the install landed.
   const iconColor = isSuccess
     ? theme.colors.greenColor
-    : isError
-      ? theme.colors.redTextColor
-      : theme.colors.primary
+    : theme.colors.redTextColor
 
   const message = isSuccess
     ? "Skills installed — your AI assistant is ready to help."
     : isError
       ? `Couldn't install skills. ${errorMessage}`
-      : "Install Streamlit's skills so your AI assistant can fix errors like this."
+      : "Install Streamlit’s skills so your AI assistant can fix errors like this."
 
   return (
     <StyledSkillsInstallCallout

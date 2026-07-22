@@ -15,7 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 export const StyledStackTraceRow = styled.div(({ theme }) => ({
   marginTop: theme.spacing.sm,
@@ -64,43 +63,36 @@ export const StyledExceptionWrapper = styled.div(({ theme }) => ({
 }))
 
 /**
- * Inline "install Streamlit skills" call-to-action shown beneath an error in
- * local development, styled as a tasteful "tip" band: a brand-accent left
- * stripe + a faint accent tint, so it draws the eye without the mass of a card
- * and reads as a peer of the error's Copy / Ask links rather than overpowering
- * them.
+ * Inline "install Streamlit skills" call-to-action shown at the foot of an error
+ * box in local development. It lives *inside* the error's AlertContainer and
+ * inherits its tint and text color (no separate band, wash, or accent stripe),
+ * so it reads as one more line on the error — a peer of the Copy / Ask links —
+ * rather than a panel that overpowers them.
  */
 export const StyledSkillsInstallCallout = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   flexWrap: "wrap",
   gap: theme.spacing.sm,
-  marginTop: theme.spacing.sm,
-  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-  borderLeft: `0.1875rem solid ${theme.colors.primary}`,
-  borderRadius: `0 ${theme.radii.default} ${theme.radii.default} 0`,
-  // Faint wash of the brand accent (≈8%) — a hint of color, not a panel.
-  backgroundColor: transparentize(theme.colors.primary, 0.92),
-  color: theme.colors.bodyText,
-  fontSize: theme.fontSizes.sm,
+  color: "inherit",
 }))
 
 export const StyledSkillsInstallCalloutText = styled.div({
-  flex: "1 1 auto",
+  // Don't grow: the action sits directly after the copy (per the design pass),
+  // not pushed to the far edge like the right-aligned Copy / Ask links.
+  flex: "0 1 auto",
 })
 
 /**
- * The callout's action. A text-style link-button (brand accent, underlined) —
- * the same lightweight treatment as the sibling "Copy" / "Ask …" links — so the
- * CTA reads as a peer action rather than out-weighing the error or its links.
+ * The callout's action: a text link-button that inherits the error box's text
+ * color and underline treatment — the same lightweight look as the sibling
+ * "Copy" / "Ask …" links — so the CTA reads as a peer action.
  */
 export const StyledSkillsInstallCalloutButton = styled.button(({ theme }) => ({
   all: "unset",
   cursor: "pointer",
   whiteSpace: "nowrap",
-  color: theme.colors.primary,
-  fontWeight: theme.fontWeights.bold,
-  fontSize: theme.fontSizes.sm,
+  color: "inherit",
   textDecoration: "underline",
   borderRadius: theme.radii.default,
   "&:focus-visible": {
