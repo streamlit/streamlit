@@ -366,3 +366,18 @@ if st.button("Open Fast Dialog"):
 
 if st.button("Open Slow Dialog"):
     slow_dialog()
+
+
+# Regression coverage for #16005: widgets inside an st.popover that is opened
+# inside an st.dialog should be interactable (the popover body must not be
+# occluded by the dialog's React Aria overlay).
+@st.dialog("Dialog with popover")
+def dialog_with_popover() -> None:
+    st.write("dialog content")
+    with st.popover("Open popover"):
+        fruit = st.selectbox("Fruit", ["Apple", "Banana", "Cherry"])
+        st.write(f"picked: {fruit}")
+
+
+if st.button("Open Dialog with Popover"):
+    dialog_with_popover()

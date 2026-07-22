@@ -796,7 +796,6 @@ class ConfigTest(unittest.TestCase):
                 "server.corsAllowedOrigins",
                 "server.customComponentBaseUrlPath",
                 "server.disconnectedSessionTTL",
-                "server.enableArrowTruncation",
                 "server.enableCORS",
                 "server.enableExpensiveMemoryStats",
                 "server.enableStaticServing",
