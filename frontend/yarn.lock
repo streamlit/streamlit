@@ -11204,9 +11204,9 @@ __metadata:
   linkType: hard
 
 "immutable@npm:^4.0.0":
-  version: 4.3.8
-  resolution: "immutable@npm:4.3.8"
-  checksum: 10c0/3de58996305a0faf6ef3fc0685f996c42653ad757760214f5aec7d4a6b59ea7abb882522c5f9a61776fae88c0b45e08eb77cbded5a4f57745ec7c63f9642e44b
+  version: 4.3.9
+  resolution: "immutable@npm:4.3.9"
+  checksum: 10c0/394faa90ac8f2f62824e6c639705efdb8313787d6bc7864e28a48ee36aa2ba4b724eaf54a701ad991c278967a412b09143dd24fd19e3e2b0204eb481a5afa6ef
   languageName: node
   linkType: hard
 
