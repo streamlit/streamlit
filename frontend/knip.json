@@ -5,9 +5,7 @@
   "ignoreUnresolved": [],
   "ignoreIssues": {
     "component-lib/src/ArrowTable.ts": ["exports", "types"],
-    "app/src/util/reactUidCompat.ts": ["files"],
-    "lib/src/hooks/useSelectCommon.ts": ["files"],
-    "lib/src/components/shared/Dropdown/VirtualDropdown.tsx": ["exports"]
+    "app/src/util/reactUidCompat.ts": ["files"]
   },
   "rules": {
     "devDependencies": "off",
