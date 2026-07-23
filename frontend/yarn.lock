@@ -3753,7 +3753,7 @@ __metadata:
     re-resizable: "npm:^6.11.2"
     react-aria-components: "npm:^1.19.0"
     react-color: "npm:^2.18.1"
-    react-dropzone: "npm:^17.0.0"
+    react-dropzone: "npm:^19.0.0"
     react-feather: "npm:^2.0.10"
     react-map-gl: "npm:^5.3.21"
     react-markdown: "npm:^10.1.0"
@@ -9957,12 +9957,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"file-selector@npm:^2.1.0":
-  version: 2.1.2
-  resolution: "file-selector@npm:2.1.2"
-  dependencies:
-    tslib: "npm:^2.7.0"
-  checksum: 10c0/fe827e0e95410aacfcc3eabc38c29cc36055257f03c1c06b631a2b5af9730c142ad2c52f5d64724d02231709617bda984701f52bd1f4b7aca50fb6585a27c1d2
+"file-selector@npm:^4.0.1":
+  version: 4.0.2
+  resolution: "file-selector@npm:4.0.2"
+  checksum: 10c0/41c099650b097315dcd34c2082cf2fae5846d57fd37cd56b4068f75bce40915bc5a16d19b8c55eeeb4c629f71daa60a631fa02b0ab3f18e79fbff8ddb8810426
   languageName: node
   linkType: hard
 
@@ -15463,15 +15461,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dropzone@npm:^17.0.0":
-  version: 17.0.0
-  resolution: "react-dropzone@npm:17.0.0"
+"react-dropzone@npm:^19.0.0":
+  version: 19.0.0
+  resolution: "react-dropzone@npm:19.0.0"
   dependencies:
     attr-accept: "npm:^2.2.5"
-    file-selector: "npm:^2.1.0"
+    file-selector: "npm:^4.0.1"
   peerDependencies:
+    "@types/react": "*"
     react: ">= 18"
-  checksum: 10c0/4a9f017bf7f2d96eb9ab983fcc3e0bab0a4e3b7aeecb3273448ec2424b284739fea211b696bb4bc2db9f8f6ca66c96279f6235fc4badfd62f73adcfc36a398d3
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+  checksum: 10c0/09fe3e727d8f8d1e8c5df187c040e63470e8c65557736ed66339b2edc650314cca254e7378fb6bf1aab252e709346e64510fdcf49ef0d655f007662d6086fe1b
   languageName: node
   linkType: hard
 
@@ -17717,7 +17719,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:2, tslib@npm:^2.0.0, tslib@npm:^2.0.1, tslib@npm:^2.0.3, tslib@npm:^2.1.0, tslib@npm:^2.4.0, tslib@npm:^2.6.2, tslib@npm:^2.7.0, tslib@npm:^2.8.0, tslib@npm:^2.8.1, tslib@npm:~2.8.1":
+"tslib@npm:2, tslib@npm:^2.0.0, tslib@npm:^2.0.1, tslib@npm:^2.0.3, tslib@npm:^2.1.0, tslib@npm:^2.4.0, tslib@npm:^2.6.2, tslib@npm:^2.8.0, tslib@npm:^2.8.1, tslib@npm:~2.8.1":
   version: 2.8.1
   resolution: "tslib@npm:2.8.1"
   checksum: 10c0/9c4759110a19c53f992d9aae23aac5ced636e99887b51b9e61def52611732872ff7668757d4e4c61f19691e36f4da981cd9485e869b4a7408d689f6bf1f14e62
