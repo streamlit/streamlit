@@ -312,6 +312,7 @@ function DataFrame({
     editStateHydrationCount,
     updateNumRows,
     syncEditState,
+    flushEditState,
     createSyncSelectionState,
     onFormCleared: handleFormCleared,
     loadInitialSelectionState,
@@ -323,6 +324,47 @@ function DataFrame({
     originalNumRows,
     originalColumns,
   })
+
+  const flushEditStateOnFinishedEditingRef = useRef(false)
+  const handleOutsideClick = useCallback(
+    (event: MouseEvent | TouchEvent): boolean => {
+      const target = event.target
+      flushEditStateOnFinishedEditingRef.current =
+        target instanceof Node &&
+        resizableContainerRef.current !== null &&
+        !resizableContainerRef.current.contains(target)
+
+      // Glide calls onFinishedEditing synchronously for an outside click. Clear
+      // the flag after the current event so other ways of closing the editor
+      // keep the normal debounce behavior.
+      queueMicrotask(() => {
+        flushEditStateOnFinishedEditingRef.current = false
+      })
+      // Always return true to keep glide's default containment check. This
+      // callback is used only for its side effect of arming the flush flag, not
+      // to change whether the click is treated as outside the editor.
+      return true
+    },
+    [resizableContainerRef]
+  )
+
+  const handleFinishedEditing = useCallback(
+    (_newValue: GridCell | undefined, [moveX, moveY]: Item): void => {
+      // moveX/moveY are non-zero only for keyboard completions (e.g. Enter/Tab),
+      // which never arm the flag. The guard is belt-and-suspenders to ensure we
+      // only flush on the outside-click path.
+      const shouldFlush =
+        flushEditStateOnFinishedEditingRef.current &&
+        moveX === 0 &&
+        moveY === 0
+      flushEditStateOnFinishedEditingRef.current = false
+
+      if (shouldFlush) {
+        flushEditState()
+      }
+    },
+    [flushEditState]
+  )
 
   const { getCellContent: getOriginalCellContent } = useDataLoader(
     data,
@@ -1324,6 +1366,9 @@ function DataFrame({
             fillHandle: supportsFillHandle,
             // Support editing:
             onCellEdited,
+            // Flush edits before an outside click can trigger a rerun.
+            isOutsideClick: handleOutsideClick,
+            onFinishedEditing: handleFinishedEditing,
             // Support pasting data for bulk editing:
             onPaste,
             // Support deleting cells & rows:

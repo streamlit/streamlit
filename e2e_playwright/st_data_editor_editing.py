@@ -160,3 +160,21 @@ cell_editing_result = st.data_editor(
 )
 
 st.write("Edited DF:", str(cell_editing_result))
+
+overlay_submit_result = st.data_editor(
+    pd.DataFrame({"value": ["original"]}),
+    hide_index=True,
+    width="content",
+    column_config={"value": st.column_config.TextColumn(width="small")},
+    key="overlay_submit_editor",
+)
+
+if st.button("Submit edit"):
+    st.session_state.submitted_value = overlay_submit_result.loc[0, "value"]
+
+st.markdown(
+    "<div data-testid='submitted-value'>"
+    f"{st.session_state.get('submitted_value', 'not submitted')}"
+    "</div>",
+    unsafe_allow_html=True,
+)
