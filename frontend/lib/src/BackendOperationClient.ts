@@ -39,12 +39,12 @@ const DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS = 120_000
 /**
  * Timeout for skills-install requests (3 minutes).
  *
- * The default 30s is too short here: a project-mode install is fast (it just
- * creates symlinks), but `streamlit skills` falls back to downloading the
- * skills archive from GitHub when symlinks aren't supported (e.g. Windows
- * without Developer Mode). That download can exceed 30s on a slow network,
- * which would surface a spurious "install failed" in the toast while the
- * server keeps installing. We use the same generous budget as deferred files.
+ * The default 30s is too short here: an install does real filesystem I/O -
+ * copying the bundled meta-skill/content skills into project or home dirs -
+ * which can be slow on locked-down machines (antivirus scans, networked or
+ * OneDrive-backed home directories). A too-short timeout would surface a
+ * spurious "install failed" in the toast while the server keeps installing.
+ * We use the same generous budget as deferred files.
  */
 const INSTALL_SKILLS_REQUEST_TIMEOUT_MS = 180_000
 

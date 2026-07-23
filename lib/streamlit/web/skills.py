@@ -342,31 +342,38 @@ def _install_skill_symlink(
     target_path = target_dir / skill_name
     rel_target_path = _get_display_path(target_path, Path.cwd())
 
-    # Ensure parent directory exists
-    target_dir.mkdir(parents=True, exist_ok=True)
+    # Pre-symlink filesystem work (creating the parent dir, inspecting or removing
+    # an existing target) runs under one guard: any OSError here means we can't
+    # lay the symlink, so return False and let the caller fall back to a global
+    # copy - never let it escape and get misbooked as a hard write_failed.
+    try:
+        # Ensure parent directory exists
+        target_dir.mkdir(parents=True, exist_ok=True)
 
-    if target_path.exists() or target_path.is_symlink():
-        # Target exists - check if it's a matching symlink
-        if target_path.is_symlink():
-            try:
-                resolved = target_path.resolve()
-                if resolved == source_path.resolve():
-                    result.up_to_date.append(str(rel_target_path))
+        if target_path.exists() or target_path.is_symlink():
+            # Target exists - check if it's a matching symlink
+            if target_path.is_symlink():
+                try:
+                    resolved = target_path.resolve()
+                    if resolved == source_path.resolve():
+                        result.up_to_date.append(str(rel_target_path))
+                        return True
+                except (OSError, ValueError):
+                    # Broken symlink or resolution error - check ownership below
+                    pass
+
+                # Check if it's a Streamlit-owned symlink we can replace
+                if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
+                    target_path.unlink()
+                else:
+                    result.skipped.append(f"{rel_target_path} (existing symlink)")
                     return True
-            except (OSError, ValueError):
-                # Broken symlink or resolution error - check ownership pattern below
-                pass
-
-            # Check if it's a Streamlit-owned symlink we can replace
-            if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
-                target_path.unlink()
             else:
-                result.skipped.append(f"{rel_target_path} (existing symlink)")
+                # Regular file or directory - skip
+                result.skipped.append(f"{rel_target_path} (existing file or directory)")
                 return True
-        else:
-            # Regular file or directory - skip
-            result.skipped.append(f"{rel_target_path} (existing file or directory)")
-            return True
+    except (OSError, NotImplementedError):
+        return False
 
     # Compute the relative symlink target from the REAL (symlink-resolved) paths
     # of both ends. os.path.relpath counts ``..`` levels against the logical
@@ -462,30 +469,39 @@ def _install_skill_copy(
 
 
 def _print_result(result: _InstallResult) -> None:
-    """Print the installation result summary."""
-    if result.installed:
-        click.secho("\n✓ Installed:", fg="green", bold=True)
-        for path in result.installed:
-            click.echo(
-                f"  {click.style('→', fg='green')} {click.style(path, fg='cyan')}"
-            )
+    """Print the installation result summary.
 
-    if result.up_to_date:
-        click.secho("\n● Up to date:", fg="blue", bold=True)
-        for path in result.up_to_date:
-            click.echo(
-                f"  {click.style('→', fg='blue')} {click.style(path, fg='cyan')}"
-            )
+    Purely cosmetic. It runs after the install has committed (and, for the
+    in-app nudge, inside an ``asyncio.to_thread`` worker whose stdout is the
+    server's), so a broken/closed stream must never raise here and flip a real
+    outcome into a mislabeled failure - all output is swallowed on I/O error.
+    """
+    try:
+        if result.installed:
+            click.secho("\n✓ Installed:", fg="green", bold=True)
+            for path in result.installed:
+                click.echo(
+                    f"  {click.style('→', fg='green')} {click.style(path, fg='cyan')}"
+                )
 
-    if result.skipped:
-        click.secho("\n⚠ Skipped due to conflicts:", fg="yellow", bold=True)
-        for path in result.skipped:
-            click.echo(f"  {click.style('→', fg='yellow')} {path}")
+        if result.up_to_date:
+            click.secho("\n● Up to date:", fg="blue", bold=True)
+            for path in result.up_to_date:
+                click.echo(
+                    f"  {click.style('→', fg='blue')} {click.style(path, fg='cyan')}"
+                )
 
-    if result.errored:
-        click.secho("\n✗ Failed to write:", fg="red", bold=True)
-        for path in result.errored:
-            click.echo(f"  {click.style('→', fg='red')} {path}")
+        if result.skipped:
+            click.secho("\n⚠ Skipped due to conflicts:", fg="yellow", bold=True)
+            for path in result.skipped:
+                click.echo(f"  {click.style('→', fg='yellow')} {path}")
+
+        if result.errored:
+            click.secho("\n✗ Failed to write:", fg="red", bold=True)
+            for path in result.errored:
+                click.echo(f"  {click.style('→', fg='red')} {path}")
+    except (OSError, ValueError):
+        pass
 
 
 def _prompt_install_mode() -> str:
@@ -743,30 +759,41 @@ def _install_project_skills(
     # Report results
     _print_result(result)
 
-    if result.installed or result.up_to_date:
-        click.echo()
-        click.secho("✨ Successfully installed to ", fg="green", bold=True, nl=False)
-        click.secho(str(project_root), fg="bright_blue")
-        if result.installed:
-            click.echo()
-            click.secho("Note: ", fg="bright_black", bold=True, nl=False)
-            click.secho(
-                "Installed skills are symlinks to your local Streamlit environment.",
-                fg="bright_black",
-            )
-            click.secho(
-                "      They generally should not be committed to git.",
-                fg="bright_black",
-            )
-        click.echo()
-        click.secho("Recommended .gitignore snippet:", fg="bright_black", bold=True)
-        gitignore_snippet = _generate_gitignore_snippet(
-            skills, target_dirs, project_root
-        )
-        for line in gitignore_snippet.splitlines():
-            click.secho(f"  {line}", fg="bright_black")
-    elif result.errored:
+    # A write failure on ANY target is a hard failure, even if another target
+    # succeeded - otherwise a partial install (e.g. ~/.agents ok but ~/.claude
+    # denied) reports success and drops skillsNudgeInstallFailed:write_failed.
+    if result.errored:
         raise _write_error(result.errored)
+
+    if result.installed or result.up_to_date:
+        # Decorative output only - a broken/closed server stdout must never turn
+        # a committed install into a reported (mis)failure.
+        try:
+            click.echo()
+            click.secho(
+                "✨ Successfully installed to ", fg="green", bold=True, nl=False
+            )
+            click.secho(str(project_root), fg="bright_blue")
+            if result.installed:
+                click.echo()
+                click.secho("Note: ", fg="bright_black", bold=True, nl=False)
+                click.secho(
+                    "Installed skills are symlinks to your local Streamlit environment.",
+                    fg="bright_black",
+                )
+                click.secho(
+                    "      They generally should not be committed to git.",
+                    fg="bright_black",
+                )
+            click.echo()
+            click.secho("Recommended .gitignore snippet:", fg="bright_black", bold=True)
+            gitignore_snippet = _generate_gitignore_snippet(
+                skills, target_dirs, project_root
+            )
+            for line in gitignore_snippet.splitlines():
+                click.secho(f"  {line}", fg="bright_black")
+        except (OSError, ValueError):
+            pass
     elif result.skipped:
         raise _conflict_error(result.skipped)
 
@@ -833,26 +860,35 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
     # Report results
     _print_result(result)
 
-    if result.installed or result.up_to_date:
-        click.echo()
-        click.secho(
-            "✨ Successfully installed globally",
-            fg="green",
-            bold=True,
-        )
-        if result.installed:
-            click.echo()
-            click.secho("Note: ", fg="bright_black", bold=True, nl=False)
-            click.secho(
-                "Global skills include a discover.py script that finds",
-                fg="bright_black",
-            )
-            click.secho(
-                "      project-specific bundled skills at runtime.",
-                fg="bright_black",
-            )
-    elif result.errored:
+    # A write failure on ANY target is a hard failure, even if another target
+    # succeeded - otherwise a partial install (e.g. ~/.agents ok but ~/.claude
+    # denied) reports success and drops skillsNudgeInstallFailed:write_failed.
+    if result.errored:
         raise _write_error(result.errored)
+
+    if result.installed or result.up_to_date:
+        # Decorative output only - a broken/closed server stdout must never turn
+        # a committed install into a reported (mis)failure.
+        try:
+            click.echo()
+            click.secho(
+                "✨ Successfully installed globally",
+                fg="green",
+                bold=True,
+            )
+            if result.installed:
+                click.echo()
+                click.secho("Note: ", fg="bright_black", bold=True, nl=False)
+                click.secho(
+                    "Global skills include a discover.py script that finds",
+                    fg="bright_black",
+                )
+                click.secho(
+                    "      project-specific bundled skills at runtime.",
+                    fg="bright_black",
+                )
+        except (OSError, ValueError):
+            pass
     elif result.skipped:
         raise _conflict_error(result.skipped)
 
@@ -951,6 +987,13 @@ def summarize_install(result: _InstallResult) -> str:
         count = len(result.skipped)
         noun = "skill" if count == 1 else "skills"
         parts.append(f"{count} {noun} skipped due to conflicts.")
+    if result.errored:
+        # Defensive: the install path raises on any errored target before the
+        # success summary is built, so this normally can't be reached - but if a
+        # write failure ever slips through, never present it as a clean success.
+        count = len(result.errored)
+        noun = "skill" if count == 1 else "skills"
+        parts.append(f"{count} {noun} failed to write.")
     return " ".join(parts)
 
 

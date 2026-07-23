@@ -7304,14 +7304,15 @@ describe("Skills install nudge", () => {
 
   it("appends the server failure reason to the install-failed label", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    // The server classifies the failure (e.g. the Windows symlink → GitHub
-    // download fallback) and the rejected error carries a machine-readable reason.
+    // The server classifies the failure (e.g. a filesystem write failure on a
+    // locked-down target dir) and the rejected error carries a machine-readable
+    // reason from the fixed vocabulary.
     vi.spyOn(
       BackendOperationClient.prototype,
       "requestInstallSkills"
     ).mockRejectedValue(
-      Object.assign(new Error("Failed to download skills from GitHub"), {
-        reason: "download_failed",
+      Object.assign(new Error("Could not write ~/.claude/skills/..."), {
+        reason: "write_failed",
       })
     )
     renderApp(getProps())
@@ -7324,7 +7325,7 @@ describe("Skills install nudge", () => {
     // The reason is a label suffix (mirroring skillsNudgeSuppressedNonLocal:<locality>)
     // so the funnel can break install failures down by cause.
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
-      label: "skillsNudgeInstallFailed:download_failed",
+      label: "skillsNudgeInstallFailed:write_failed",
     })
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallFailed",

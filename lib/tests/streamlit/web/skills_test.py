@@ -1440,6 +1440,37 @@ class TestInstallSkillSymlinkEdgeCases:
 
         assert not success
 
+    def test_returns_false_when_prework_fails_for_fallback(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A filesystem error in the symlink PRE-work returns False (-> fallback).
+
+        Regression (adversarial-sweep #2): mkdir / existence-check / unlink ran
+        outside the guard, so an OSError there escaped and was booked as a hard
+        write_failed AND bypassed the symlink->global fallback. It must instead
+        return False so the caller falls back to a global copy.
+        """
+        target_dir = tmp_path / "project" / ".agents" / "skills"
+        result = skills._InstallResult()
+
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            patch.object(
+                skills.Path, "mkdir", side_effect=OSError("Permission denied")
+            ),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert not success
+        assert not result.errored
+        assert not result.installed
+
 
 class TestPromptInstallModeRetry:
     """Tests for _prompt_install_mode retry behavior."""
@@ -1532,6 +1563,39 @@ class TestGlobalInstallationConflicts:
         assert exc.value.reason == "write_failed"
         # Must NOT be misclassified as a conflict.
         assert "already exist" not in exc.value.format_message()
+
+    def test_partial_write_failure_reports_write_failed_not_success(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """One target succeeds, another OSErrors -> hard write_failed, not success.
+
+        Regression (critical, adversarial-sweep #1): _get_global_target_dirs
+        returns TWO targets when ~/.claude exists. If ~/.agents copies OK
+        (result.installed non-empty) but ~/.claude raises OSError (result.errored),
+        the success branch used to win over the errored branch, so the install
+        returned success and emitted NO skillsNudgeInstallFailed:write_failed on
+        the exact Windows cohort under study. Any errored target must fail loud.
+        """
+        home = tmp_path / "home"
+        # ~/.claude present -> _get_global_target_dirs yields both targets.
+        (home / ".claude").mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            # First target (~/.agents) copies fine; second (~/.claude) fails.
+            patch.object(
+                skills.shutil,
+                "copytree",
+                side_effect=[None, OSError("Permission denied")],
+            ),
+            pytest.raises(skills._InstallError) as exc,
+        ):
+            skills._install_global_skills(yes=True)
+
+        assert exc.value.reason == "write_failed"
 
 
 class TestInteractiveModeSelection:
@@ -1748,6 +1812,18 @@ class TestSummarizeInstall:
         assert skills.summarize_install(result) == (
             "Installed to .agents/skills. 1 skill skipped due to conflicts."
         )
+
+    def test_reports_errored_alongside_installed(self) -> None:
+        """Defensive: if a write failure ever reaches the summary, it is surfaced
+        rather than a mixed result being presented as a clean success.
+        """
+        result = skills._InstallResult(
+            installed=[".agents/skills/foo"],
+            errored=[".claude/skills/foo (copy failed: Permission denied)"],
+        )
+        summary = skills.summarize_install(result)
+        assert "Installed to .agents/skills." in summary
+        assert "1 skill failed to write." in summary
 
     def test_reports_skipped_alongside_up_to_date(self) -> None:
         """Skipped skills are surfaced even when nothing new was installed, so an

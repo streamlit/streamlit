@@ -1608,11 +1608,11 @@ export class App extends PureComponent<Props, State> {
         return result.detail ?? undefined
       })
       .catch((error: unknown) => {
-        // A dropped or timed-out connection during a long install (e.g. the
-        // GitHub global fallback) rejects the request even though the server
-        // install may have completed. Count it separately — not as a failure,
-        // which would over-count the funnel — and surface a reassuring,
-        // retry-friendly message; re-install is idempotent.
+        // A dropped or timed-out connection during a long install rejects the
+        // request even though the server install may have completed. Count it
+        // separately — not as a failure, which would over-count the funnel —
+        // and surface a reassuring, retry-friendly message; re-install is
+        // idempotent.
         if (isSkillsNudgeDroppedConnection(error)) {
           this.trackSkillsNudge("skillsNudgeInstallDropped")
           throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)

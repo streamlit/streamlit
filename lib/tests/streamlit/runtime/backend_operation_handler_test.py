@@ -305,6 +305,32 @@ def test_install_skills_handler_does_not_leak_os_error_path() -> None:
     assert not response.HasField("install_skills")
 
 
+def test_install_skills_handler_ignores_foreign_reason_attribute() -> None:
+    """A non-_InstallError exception exposing a str ``.reason`` must NOT be emitted.
+
+    Regression (adversarial-sweep): the handler used to ``getattr(ex, 'reason')``,
+    so any exception with a free-form str ``.reason`` (e.g. UnicodeDecodeError)
+    would leak an unbounded, attacker-influenced telemetry label and break the
+    fixed vocabulary. The reason is now trusted ONLY from skills._InstallError;
+    a non-OSError foreign exception is classified ``unknown``.
+    """
+    foreign = ValueError("boom")
+    foreign.reason = "attacker-controlled-label"  # type: ignore[attr-defined]
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch("streamlit.web.skills.install_skills", side_effect=foreign),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_reason == "unknown"
+    assert "attacker-controlled-label" not in response.error_reason
+
+
 def test_install_skills_handler_refuses_without_agent_harness() -> None:
     """The install ACTION is gated on safety, not the nudge's display predicate:
     with no agent harness present (and not headless) the request is anomalous,
