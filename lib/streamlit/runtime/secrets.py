@@ -627,8 +627,6 @@ class Secrets(Mapping[str, Any]):
     def __repr__(self) -> str:
         # If the runtime is NOT initialized, it is a method call outside
         # the streamlit app, so we avoid reading the secrets file as it may not exist.
-        # If the runtime is initialized, preserve the store's structure but redact
-        # values so implicit rendering cannot disclose credentials.
         """A redacted string representation of the secrets store. Thread-safe."""
         if not runtime.exists():
             return f"{self.__class__.__name__}"

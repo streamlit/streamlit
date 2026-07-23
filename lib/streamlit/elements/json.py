@@ -39,9 +39,7 @@ if TYPE_CHECKING:
 
 
 def _ensure_serialization(o: object) -> str | list[Any] | dict[str, Any]:
-    """A repr function for json.dumps default arg, which tries to serialize sets
-    as lists.
-    """
+    """Redact secrets and serialize sets for the json.dumps default argument."""
     if isinstance(o, (AttrDict, Secrets)):
         return _redact_secrets(o)
     return list(o) if isinstance(o, set) else repr(o)
