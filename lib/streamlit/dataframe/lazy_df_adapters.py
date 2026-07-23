@@ -279,13 +279,14 @@ class SnowparkDataframeSource:
         # (e.g. a client requesting a window larger than the cached page) fall
         # through to a fresh query so we don't under-return rows.
         cached = self._initial_table
-        if (
-            sort is None
-            and offset == 0
-            and cached is not None
-            and (limit <= cached.num_rows or cached.num_rows < DEFAULT_PAGE_SIZE)
-        ):
-            return cached.slice(0, limit)
+        if sort is None and offset == 0 and cached is not None:
+            # The cached page covers the request when it holds at least
+            # ``limit`` rows, or it already is the entire (sub-page) dataset.
+            cache_covers_request = (
+                limit <= cached.num_rows or cached.num_rows < DEFAULT_PAGE_SIZE
+            )
+            if cache_covers_request:
+                return cached.slice(0, limit)
 
         if offset > self._DEEP_OFFSET_WARNING_THRESHOLD:
             with self._lock:
@@ -337,13 +338,16 @@ class SnowparkDataframeSource:
                 for index, name in enumerate(column_names)
                 if index != sort_column_index
             ]
+            # Snowpark's ``sort`` takes an ``ascending`` flag, the inverse of
+            # SortSpec's ``descending``.
+            sort_ascending = not sort.descending
             full_ordering = (
                 [sort_column, *others],
-                [not sort.descending, *([True] * len(others))],
+                [sort_ascending, *([True] * len(others))],
             )
             primary_ordering: tuple[list[str], list[bool]] = (
                 [sort_column],
-                [not sort.descending],
+                [sort_ascending],
             )
         else:
             full_ordering = (column_names, [True] * len(column_names))
