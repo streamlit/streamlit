@@ -69,7 +69,7 @@ become several rows tall.
 
 ### Current behavior audit
 
-A local audit against the current codebase used the same content at four viewport widths.
+A local audit against the current codebase used the same content at three viewport widths.
 Representative results:
 
 | Element | 1280 px | 800 px | 390 px |
@@ -262,10 +262,11 @@ for column, image in zip(thumbnail_columns, images):
 
 - Relative widths from `spec` remain unchanged.
 - Columns may shrink with the group as they do above the current mobile breakpoint.
-- Each column retains a usable minimum width rather than shrinking to zero. Once the
+- Each column retains a usable minimum width rather than shrinking to zero. This is a new
+  layout invariant that the implementation defines for `wrap=False` columns (today a
+  column can shrink toward zero), not a reference to an existing CSS `min-width`. Once the
   columns reach that minimum and still do not fit, the column group scrolls horizontally
-  rather than overflowing the page. The implementation must define this column-level
-  minimum-width invariant so content is never shrunk below a readable width.
+  rather than overflowing the page, so content is never shrunk below a readable width.
 - `wrap=True` keeps the current breakpoint and stacking behavior.
 
 This addresses the request to disable column responsiveness in #5003. It does not address
@@ -476,6 +477,13 @@ A follow-up should compare a generic `max_lines: int | None` API with targeted a
 ellipsis for widget labels. Adding `wrap` to every text-bearing widget in this project
 would create a much larger API surface.
 
+### Tooltips for truncated labels
+
+The initial release omits an automatic tooltip so authors opt into extra text explicitly
+through the existing `help` parameter. A follow-up can evaluate adding a native
+`title`-attribute tooltip that reveals the full text on hover whenever a single-label
+control ellipsizes its label.
+
 ### Configurable column wrapping threshold
 
 `st.columns(wrap=False)` covers layouts that must never stack. It does not cover #6592,
@@ -533,7 +541,7 @@ No new user event is required; this is a render-time layout option.
 | Item | ✅ or comment |
 | --- | --- |
 | Works on SiS, Cloud, etc? | ✅ Frontend-only behavior; no platform-specific API |
-| No breaking API changes | No Python API break; the intentional `st.menu_button` visual change (constrained, long labels wrap by default instead of ellipsizing) must be called out as a breaking change in the implementation PR's release notes |
+| No breaking API changes | ⚠️ No Python API break, but one intentional visual breaking change: `st.menu_button` labels wrap by default instead of ellipsizing, so constrained, long labels render differently. Must be called out as a breaking change in the implementation PR's release notes |
 | No new dependencies | ✅ Uses native flex and overflow behavior |
 | Metrics collected | ✅ Page profiling for explicit `wrap=False` |
 | Any security/legal impact? | ✅ None |
