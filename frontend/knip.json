@@ -2,10 +2,12 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "tags": ["-lintignore"],
   "ignoreBinaries": ["streamlit"],
-  "ignoreUnresolved": ["^\\./proto(?:\\.js)?$"],
+  "ignoreUnresolved": [],
   "ignoreIssues": {
     "component-lib/src/ArrowTable.ts": ["exports", "types"],
-    "app/src/util/reactUidCompat.ts": ["files"]
+    "app/src/util/reactUidCompat.ts": ["files"],
+    "lib/src/hooks/useSelectCommon.ts": ["files"],
+    "lib/src/components/shared/Dropdown/VirtualDropdown.tsx": ["exports"]
   },
   "rules": {
     "devDependencies": "off",
