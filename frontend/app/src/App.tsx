@@ -1618,7 +1618,7 @@ export class App extends PureComponent<Props, State> {
           throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
         }
         // Append the server's machine-readable failure reason (e.g. "conflict",
-        // "download_failed", "symlinks_unsupported") as a label suffix — mirroring
+        // "source_missing", "symlinks_unsupported") as a label suffix — mirroring
         // `skillsNudgeSuppressedNonLocal:<locality>` — so the install-failure rate
         // can be broken down by cause. The reason is a fixed server-side vocabulary
         // (never user input), safe to emit as a label.
