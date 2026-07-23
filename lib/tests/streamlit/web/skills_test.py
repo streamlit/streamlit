@@ -1367,7 +1367,9 @@ class TestInstallSkillCopyEdgeCases:
 
         with (
             patch("pathlib.Path.home", return_value=tmp_path),
-            patch.object(skills.Path, "mkdir", side_effect=OSError("Permission denied")),
+            patch.object(
+                skills.Path, "mkdir", side_effect=OSError("Permission denied")
+            ),
         ):
             skills._install_skill_copy(
                 "developing-with-streamlit",
