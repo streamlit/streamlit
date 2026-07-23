@@ -172,9 +172,7 @@ overlay_submit_result = st.data_editor(
 if st.button("Submit edit"):
     st.session_state.submitted_value = overlay_submit_result.loc[0, "value"]
 
-st.markdown(
-    "<div data-testid='submitted-value'>"
-    f"{st.session_state.get('submitted_value', 'not submitted')}"
-    "</div>",
-    unsafe_allow_html=True,
+st.write(
+    "Submitted value:",
+    st.session_state.get("submitted_value", "not submitted"),
 )

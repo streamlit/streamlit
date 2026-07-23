@@ -337,7 +337,7 @@ def test_clicking_button_commits_open_cell_editor(app: Page) -> None:
     cell_overlay.locator(".gdg-input").fill("edited")
 
     # Sanity check that nothing has been submitted yet.
-    expect(app.locator("[data-testid='submitted-value']")).to_have_text("not submitted")
+    expect_prefixed_markdown(app, "Submitted value:", "not submitted")
 
     # Clicking the button closes the overlay during pointerdown and triggers a
     # rerun during click. The pending edit must be synced before that rerun.
@@ -346,7 +346,7 @@ def test_clicking_button_commits_open_cell_editor(app: Page) -> None:
 
     # Without flushing the pending edit, the button click would commit the
     # pre-edit value ("original") instead of "edited".
-    expect(app.locator("[data-testid='submitted-value']")).to_have_text("edited")
+    expect_prefixed_markdown(app, "Submitted value:", "edited")
 
 
 def _test_number_cell_editing(
