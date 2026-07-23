@@ -216,15 +216,13 @@ class SnowparkDataframeSource:
         # initial chunk request does not re-query.
         self._initial_table: pa.Table | None = None
         self._warned_deep_offset = False
-        # Whether ordering by every column works for this dataframe. Flipped to
-        # False the first time a full ORDER BY fails at query time (e.g. an
-        # unorderable column type like GEOGRAPHY) so later chunks skip straight
-        # to the degraded path instead of re-running—and re-logging—the
-        # known-bad query on every page. Orderability is a property of the
-        # dataframe's columns, so this is safe to reuse across chunks and sort
-        # specs. A one-off non-ordering failure would also disable the full
-        # ordering for this short-lived, per-render source, which we accept over
-        # paying the failed query on every page.
+        # Whether a full ORDER BY works for this dataframe. Orderability depends
+        # on column types (e.g. GEOGRAPHY cannot be ordered), not the query, so
+        # this is safe to reuse across chunks and sort specs. Set to False on
+        # the first failure so later chunks skip the known-bad query instead of
+        # retrying (and re-logging) it on every page. A one-off non-ordering
+        # error also disables full ordering for this short-lived, per-render
+        # source, which we accept over paying the failed query per page.
         self._all_columns_orderable = True
         # Guards lazy metadata initialization and the one-shot warning flag.
         # Chunk requests run in worker threads (asyncio.to_thread), so concurrent
@@ -397,9 +395,9 @@ class SnowparkDataframeSource:
         with self._query_lock:
             frame = self._df
             if order_by:
-                # Snowpark's ``DataFrame.sort`` accepts column names plus a
-                # per-column ``ascending`` flag, so we avoid importing
-                # ``snowflake.snowpark``.
+                # Pass column names directly to avoid importing
+                # ``snowflake.snowpark``; ``DataFrame.sort`` accepts names plus
+                # a per-column ``ascending`` flag.
                 frame = frame.sort(*order_by, ascending=ascending)
 
             # Snowpark's limit supports an offset keyword for range queries.

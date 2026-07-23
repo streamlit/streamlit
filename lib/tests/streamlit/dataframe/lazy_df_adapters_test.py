@@ -293,7 +293,7 @@ def test_snowpark_schema_caches_first_page_and_exposes_capabilities() -> None:
     source = SnowparkDataframeSource(fake)
 
     assert source.schema.names == ["a", "b"]
-    assert source.schema.names == ["a", "b"]
+    _ = source.schema  # A second access must reuse the cache, not re-query.
     assert fake.limit_calls == [(DEFAULT_PAGE_SIZE, 0)]
     assert source.sortable is True
     assert source.access_mode is AccessMode.RANDOM_ACCESS
