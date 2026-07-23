@@ -16,6 +16,7 @@
 
 import { forwardRef } from "react"
 
+import { type GridCell } from "@glideapps/glide-data-grid"
 import { act, screen } from "@testing-library/react"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
@@ -76,6 +77,7 @@ describe("DataFrame widget", () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -161,6 +163,107 @@ describe("DataFrame widget", () => {
       })
     )
   })
+
+  const renderEditableDataFrame = (): {
+    widgetMgr: WidgetStateManager
+    updatedCell: GridCell
+  } => {
+    vi.useFakeTimers()
+    const widgetMgr = {
+      getStringValue: vi.fn(),
+      setStringValue: vi.fn(),
+    } as unknown as WidgetStateManager
+
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.FIXED)}
+        widgetMgr={widgetMgr}
+      />
+    )
+
+    const dataEditorProps = dataEditorMockFn.mock.lastCall?.[0]
+    const updatedCell = {
+      ...dataEditorProps.getCellContent([1, 0]),
+      data: 999,
+      displayData: "999",
+    }
+    return { widgetMgr, updatedCell }
+  }
+
+  it("flushes a pending edit when clicking outside the data editor", () => {
+    const { widgetMgr, updatedCell } = renderEditableDataFrame()
+    const dataEditorProps = dataEditorMockFn.mock.lastCall?.[0]
+
+    act(() => {
+      const pointerDownEvent = new MouseEvent("pointerdown")
+      Object.defineProperty(pointerDownEvent, "target", {
+        value: document.body,
+      })
+      expect(dataEditorProps.isOutsideClick(pointerDownEvent)).toBe(true)
+      dataEditorProps.onCellEdited([1, 0], updatedCell)
+      dataEditorProps.onFinishedEditing(updatedCell, [0, 0])
+    })
+    expect(widgetMgr.setStringValue).toHaveBeenCalledOnce()
+
+    act(() => {
+      vi.runAllTimers()
+    })
+    expect(widgetMgr.setStringValue).toHaveBeenCalledOnce()
+  })
+
+  it("keeps a pending edit debounced when clicking another grid cell", () => {
+    const { widgetMgr, updatedCell } = renderEditableDataFrame()
+    const dataEditorProps = dataEditorMockFn.mock.lastCall?.[0]
+
+    const pointerDownEvent = new MouseEvent("pointerdown")
+    Object.defineProperty(pointerDownEvent, "target", {
+      value: screen.getByTestId("mock-data-editor"),
+    })
+
+    act(() => {
+      expect(dataEditorProps.isOutsideClick(pointerDownEvent)).toBe(true)
+      dataEditorProps.onCellEdited([1, 0], updatedCell)
+      dataEditorProps.onFinishedEditing(updatedCell, [0, 0])
+    })
+    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.runAllTimers()
+    })
+    expect(widgetMgr.setStringValue).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    ["Enter", [0, 1], true],
+    ["Tab", [1, 0], true],
+    ["a zero-movement editor completion", [0, 0], false],
+  ] as const)(
+    "keeps pending edits debounced for %s",
+    (_key, movement, armOutsideClick) => {
+      const { widgetMgr, updatedCell } = renderEditableDataFrame()
+      const dataEditorProps = dataEditorMockFn.mock.lastCall?.[0]
+      let outsideClickResult: boolean | undefined
+
+      act(() => {
+        if (armOutsideClick) {
+          const pointerDownEvent = new MouseEvent("pointerdown")
+          Object.defineProperty(pointerDownEvent, "target", {
+            value: document.body,
+          })
+          outsideClickResult = dataEditorProps.isOutsideClick(pointerDownEvent)
+        }
+        dataEditorProps.onCellEdited([1, 0], updatedCell)
+        dataEditorProps.onFinishedEditing(updatedCell, movement)
+      })
+      expect(outsideClickResult).toBe(armOutsideClick ? true : undefined)
+      expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+      act(() => {
+        vi.runAllTimers()
+      })
+      expect(widgetMgr.setStringValue).toHaveBeenCalledOnce()
+    }
+  )
 
   it("shows search when Ctrl+F is pressed and search is enabled", () => {
     render(<DataFrame {...props} />)
