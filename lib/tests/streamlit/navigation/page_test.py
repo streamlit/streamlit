@@ -92,7 +92,7 @@ class StPagesTest(DeltaGeneratorTestCase):
             ("path_object", Path("\\\\server\\share\\page.py")),
         ]
     )
-    @patch("streamlit.navigation.page.env_util.IS_WINDOWS", True)
+    @patch("streamlit.env_util.IS_WINDOWS", True)
     def test_rejects_windows_network_paths_before_resolving(
         self, _name: str, page: str | Path
     ) -> None:
@@ -115,7 +115,7 @@ class StPagesTest(DeltaGeneratorTestCase):
             ("path_object", Path("page\x00.py")),
         ]
     )
-    @patch("streamlit.navigation.page.env_util.IS_WINDOWS", False)
+    @patch("streamlit.env_util.IS_WINDOWS", False)
     def test_rejects_null_byte_paths_on_all_platforms(
         self, _name: str, page: str | Path
     ) -> None:
@@ -128,7 +128,7 @@ class StPagesTest(DeltaGeneratorTestCase):
 
         resolve.assert_not_called()
 
-    @patch("streamlit.navigation.page.env_util.IS_WINDOWS", False)
+    @patch("streamlit.env_util.IS_WINDOWS", False)
     def test_allows_network_style_paths_on_non_windows(self) -> None:
         """Network-style paths are only blocked on Windows, where SMB auto-connects."""
         # On POSIX these are ordinary paths with no SMB auto-connect, so st.Page
