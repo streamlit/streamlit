@@ -124,6 +124,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `improving-python-coverage` | When you want to systematically improve Python test coverage with high-value test cases |
 | `reviewing-readability` | When reviewing a PR, branch, or changes for comment, docstring, and naming readability — produces findings with concrete proposed rewrites |
 | `reviewing-pr-description` | When reviewing a PR's title and description for clarity and conciseness |
+| `triaging-issues` | When given a GitHub issue to take end-to-end — orchestrates reproduce, verdict review, and optional publish of a live repro |
 | `reproducing-issues` | When given a GitHub issue to reproduce, triage, or verify — investigates read-only and produces a repro bundle (app, notes, evidence) |
 | `publishing-issue-repros` | When publishing a repro bundle to the st-issues repo (deploys to issues.streamlit.app) |
 

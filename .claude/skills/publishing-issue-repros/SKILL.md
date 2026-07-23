@@ -78,6 +78,8 @@ The app deploys automatically to `https://issues.streamlit.app/?issue=gh-<N>` wi
 
 ## Related skills
 
+- [triaging-issues](../triaging-issues/SKILL.md): orchestrates investigation, verdict
+  review, and this publish phase end-to-end.
 - [reproducing-issues](../reproducing-issues/SKILL.md): produces the bundle this skill
   publishes.
 - [creating-pull-requests](../creating-pull-requests/SKILL.md): PR conventions if

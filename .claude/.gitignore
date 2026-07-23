@@ -36,6 +36,7 @@ skills/*
 !skills/improving-python-coverage/
 !skills/reproducing-issues/
 !skills/publishing-issue-repros/
+!skills/triaging-issues/
 
 # Allow agents
 !agents/
@@ -54,4 +55,3 @@ commands/*
 !commands/reviewing-local-changes.md
 !commands/fixing-pr.md
 !commands/qa-testing-feature.md
-!commands/reproduce-issue.md

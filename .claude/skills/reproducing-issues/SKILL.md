@@ -211,6 +211,8 @@ publish.
 
 ## Related skills
 
+- [triaging-issues](../triaging-issues/SKILL.md): orchestrates this investigate phase
+  with verdict review and optional publishing.
 - [publishing-issue-repros](../publishing-issue-repros/SKILL.md): publish the bundle to
   st-issues.
 - [debugging-streamlit](../debugging-streamlit/SKILL.md): `make debug` and Playwright
