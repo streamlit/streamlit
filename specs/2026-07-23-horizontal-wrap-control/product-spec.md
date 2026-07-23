@@ -1,0 +1,531 @@
+---
+author: lukasmasuch
+created: 2026-07-23
+---
+
+# Control wrapping in horizontal layouts and controls
+
+## Summary
+
+Add a keyword-only `wrap: bool = True` parameter to horizontal layout collections,
+multi-item controls, and wrapping button-like commands. Setting `wrap=False` keeps the
+controlled content to one row: collections use local horizontal scrolling, while a button
+keeps its standard height and ellipsizes its label.
+
+This is an opt-in layout control. Existing apps keep their current responsive behavior,
+except `st.menu_button`, whose label changes from always ellipsized to wrapping by default
+for consistency with other buttons. The initial API covers `st.container`, `st.columns`,
+`st.multiselect`, `st.pills`, `st.segmented_control`, `st.button`,
+`st.download_button`, `st.link_button`, `st.form_submit_button`, `st.popover`,
+`st.menu_button`, `st.checkbox`, and `st.toggle`.
+
+## Problem
+
+Streamlit currently decides when horizontal content moves to another row. The default is
+generally useful, but it can make compact layouts unstable:
+
+- A horizontal toolbar becomes two or three rows as its container narrows.
+- Selected values make `st.multiselect` taller than adjacent controls.
+- `st.pills` and `st.segmented_control` consume several rows on mobile.
+- A long button label wraps and makes one action taller than adjacent actions.
+- A checkbox or toggle with a long label becomes taller than neighboring toolbar
+  controls.
+- `st.columns` stacks on small screens even when the app author needs a small grid or
+  a row of controls to remain horizontal.
+
+App authors often discover these changes only after deploying, when an app is viewed in
+a sidebar, embedded iframe, split window, laptop display, or phone. Their current options
+are to accept the layout change, restructure the app around another command, or inject
+CSS that depends on Streamlit's private DOM.
+
+### User requests
+
+**Horizontal layouts**
+
+- [#12582](https://github.com/streamlit/streamlit/issues/12582) requests wrap control
+  for horizontal `st.container`.
+- [#5003](https://github.com/streamlit/streamlit/issues/5003) requests a way to keep
+  `st.columns` horizontal on mobile.
+- [#6592](https://github.com/streamlit/streamlit/issues/6592) requests configurable
+  column responsiveness and shows that the current fixed breakpoint is not suitable for
+  every layout.
+
+**Horizontal option and selection collections**
+
+- [#12644](https://github.com/streamlit/streamlit/issues/12644) requests a fixed-height,
+  horizontally scrollable `st.multiselect`.
+- [#13516](https://github.com/streamlit/streamlit/issues/13516) requests a single-row,
+  horizontally scrollable `st.segmented_control` on mobile.
+- [#12645](https://github.com/streamlit/streamlit/issues/12645) reports that wrapped
+  pills and segments lose the expected alignment.
+- [#12038](https://github.com/streamlit/streamlit/issues/12038) reports uneven option
+  widths after pills and segments wrap with `width="stretch"`.
+
+The multiselect requests [#8671](https://github.com/streamlit/streamlit/issues/8671) and
+[#9085](https://github.com/streamlit/streamlit/issues/9085) were partially addressed by
+capping the widget's height and adding vertical scrolling. That prevents unbounded growth,
+but the control can still become several rows tall.
+
+### Current behavior audit
+
+A local audit against the current codebase used the same content at four viewport widths.
+Representative results:
+
+| Element | 1280 px | 800 px | 390 px |
+| --- | ---: | ---: | ---: |
+| Three widget labels in columns | 24 / 24 / 24 px | 24 / 45 / 24 px | Columns stack; all 24 px |
+| Three buttons in columns | 40 / 40 / 40 px | 40 / 55 / 40 px | Columns stack; all 40 px |
+| `st.multiselect` with 12 selected values | 101 px | 134 px | 184 px, then scrolls vertically |
+| `st.pills` or `st.segmented_control` with 8 options | 60 px | 96 px | 132 px |
+| Horizontal radio with three long options | 40 px | 40 px | 61 px |
+
+The remaining problem is primarily the number of item rows, plus long labels inside
+standard buttons.
+
+### Goals
+
+- Let app authors opt out of item wrapping where keeping a compact row is more important
+  than showing every item at once.
+- Use one simple parameter with the same promise across the applicable commands:
+  keep the controlled content in one row.
+- Keep overflow local to the element so an app does not gain a page-level horizontal
+  scrollbar.
+- Let app authors keep buttons at their standard height without hiding the entire action.
+- Use the same default behavior for all button-like controls.
+
+### Non-goals
+
+- Guarantee that arbitrary elements placed side by side have equal height.
+- Control line wrapping inside general text, labels above input widgets, or radio option
+  labels.
+- Let authors configure the breakpoint or minimum width at which `st.columns` wraps.
+- Improve how wrapped rows distribute or align their items.
+- Add a general CSS overflow API with clipping, truncation, or always-visible scrollbars.
+
+## Proposal
+
+### API
+
+Add `wrap` as a keyword-only parameter:
+
+```python
+st.container(
+    ...,
+    horizontal: bool = False,
+    wrap: bool = True,  # NEW
+    ...,
+)
+
+st.columns(
+    spec,
+    *,
+    ...,
+    wrap: bool = True,  # NEW
+)
+
+st.multiselect(
+    label,
+    options,
+    ...,
+    *,
+    ...,
+    wrap: bool = True,  # NEW
+)
+
+st.pills(
+    label,
+    options,
+    *,
+    ...,
+    wrap: bool = True,  # NEW
+)
+
+st.segmented_control(
+    label,
+    options,
+    *,
+    ...,
+    wrap: bool = True,  # NEW
+)
+
+st.button(
+    label,
+    ...,
+    *,
+    ...,
+    wrap: bool = True,  # NEW
+)
+
+# Add the same keyword-only parameter to:
+# st.download_button, st.link_button, st.form_submit_button, and st.popover.
+
+st.menu_button(
+    label,
+    options,
+    ...,
+    *,
+    ...,
+    wrap: bool = True,  # NEW
+)
+
+# Add wrap: bool = True to both binary controls:
+# st.checkbox and st.toggle.
+```
+
+| Value | Collections and multi-item controls | Single-label controls |
+| --- | --- | --- |
+| `True` (default) | Items move to additional rows when they cannot fit. | The label can wrap and increase the control height. |
+| `False` | Items remain in one row and the element scrolls horizontally if needed. | The control keeps its standard height and ellipsizes an overflowing label. |
+
+`wrap` is layout-only. Changing it must not reset a widget's value or session state.
+
+### What `wrap` controls
+
+The controlled content differs by command, but the promise is always the same: it stays
+in one row when `wrap=False`.
+
+| Command | Content controlled by `wrap` | Overflow behavior with `wrap=False` |
+| --- | --- | --- |
+| `st.container(horizontal=True)` | Direct child elements | Scroll the container |
+| `st.columns` | Column containers | Shrink columns, then scroll the group if needed |
+| `st.multiselect` | Selected-value chips in the closed control | Scroll the chip area |
+| `st.pills` | Option buttons | Scroll the option group |
+| `st.segmented_control` | Option buttons | Scroll the option group |
+| `st.button`, `st.download_button`, `st.link_button`, `st.form_submit_button` | Label inside the button | Ellipsize the label |
+| `st.popover` | Label inside the popover trigger | Ellipsize the label; keep the chevron visible |
+| `st.menu_button` | Label inside the menu trigger | Ellipsize the label; keep the expansion icon visible |
+| `st.checkbox` | Label beside the checkbox | Ellipsize the label; keep the indicator visible |
+| `st.toggle` | Label beside the switch | Ellipsize the label; keep the switch visible |
+
+Except for the explicitly listed single-label controls, the parameter does not change
+wrapping inside an item. For example, `wrap=False` on `st.columns` keeps columns in one
+row but does not change a long input-widget label inside a column.
+
+### Shared no-wrap behavior
+
+When `wrap=False` on a collection:
+
+- The collection uses one horizontal row.
+- Overflow is contained by that command, never by the full app page.
+- Native horizontal scrolling is enabled only when the items cannot shrink enough to fit.
+- Touch, trackpad, mouse shift-wheel, and keyboard scrolling continue to use browser-native
+  behavior.
+- Keyboard focus automatically scrolls an off-screen interactive item into view.
+- Existing item width and minimum-width rules still apply unless a command-specific rule
+  below overrides them.
+- No content is removed from the DOM, preserving accessible names and keyboard order.
+
+When `wrap=False` on a single-label control:
+
+- The outer control keeps its current standard single-row height.
+- Button icons, keyboard shortcuts, expansion icons, checkbox indicators, toggle
+  switches, and help icons remain visible.
+- Only the text portion of the label shrinks and renders an ellipsis.
+- The full label remains the control's accessible name.
+- No automatic tooltip is added in the initial release. Authors can use the existing
+  `help` parameter when the full wording is important.
+
+### Command-specific behavior
+
+#### `st.container`
+
+`wrap` applies only when `horizontal=True`.
+
+```python
+import streamlit as st
+
+with st.container(horizontal=True, wrap=False):
+    for label in ("Edit", "Duplicate", "Archive", "Delete"):
+        st.button(label)
+```
+
+The buttons stay in one row. If their combined minimum widths exceed the container, the
+container scrolls horizontally.
+
+Passing `wrap=False` with `horizontal=False` raises a `StreamlitAPIException` explaining
+that no horizontal collection exists to wrap. The default `wrap=True` remains valid for
+vertical containers so existing calls do not need to specify both parameters.
+
+#### `st.columns`
+
+`wrap=False` disables responsive stacking and keeps the columns in the row described by
+`spec`.
+
+```python
+import streamlit as st
+
+thumbnail_columns = st.columns(6, gap="xsmall", wrap=False)
+for column, image in zip(thumbnail_columns, images):
+    column.image(image)
+```
+
+- Relative widths from `spec` remain unchanged.
+- Columns may shrink with the group as they do above the current mobile breakpoint.
+- If child minimum widths prevent further shrinking, the column group scrolls rather
+  than overflowing the page.
+- `wrap=True` keeps the current breakpoint and stacking behavior.
+
+This addresses the request to disable column responsiveness in #5003. It does not address
+the opposite request in #6592 to wrap sooner or at a configurable threshold.
+
+#### `st.multiselect`
+
+`wrap=False` keeps selected chips in a single, control-height row:
+
+```python
+import streamlit as st
+
+regions = st.multiselect(
+    "Regions",
+    ["Africa", "Asia", "Europe", "North America", "Oceania", "South America"],
+    default=["Asia", "Europe", "North America"],
+    wrap=False,
+)
+```
+
+- Only the selected-chip area scrolls. The clear and dropdown controls stay pinned.
+- Focusing the input or adding a selection scrolls the newest selection and input into
+  view.
+- Removing a chip preserves the nearest useful scroll position.
+- The open dropdown is unchanged.
+- An empty value renders exactly like today's empty multiselect.
+- Excluding its external label, the closed control keeps the same height at every
+  viewport width and selection count.
+
+#### `st.pills` and `st.segmented_control`
+
+`wrap=False` keeps all options in a horizontally scrollable row:
+
+```python
+import streamlit as st
+
+period = st.segmented_control(
+    "Period",
+    ["Today", "7 days", "30 days", "Quarter", "Year", "All time"],
+    default="30 days",
+    wrap=False,
+)
+```
+
+- Option buttons retain their current minimum height and single-line labels.
+- With `width="content"`, options use their natural widths.
+- With `width="stretch"`, options distribute across the available width when they fit.
+  If they do not fit, they stop shrinking below their usable minimum width and the group
+  scrolls.
+- On initial render, a selected option that would otherwise be off-screen is scrolled
+  into view. Keyboard focus does the same while navigating.
+- Selection behavior, return values, and callbacks are unchanged.
+- Excluding the external widget label, the option group keeps the same one-row height at
+  every viewport width and option count.
+
+#### Buttons and button-like triggers
+
+`wrap=False` keeps a button aligned with neighboring controls even when its label is too
+long for the available width:
+
+```python
+import streamlit as st
+
+left, middle, right = st.columns(3)
+left.button("Edit", width="stretch", wrap=False)
+middle.button(
+    "Regenerate the complete report",
+    width="stretch",
+    wrap=False,
+    help="Regenerate the complete report",
+)
+right.button("Export", width="stretch", wrap=False)
+```
+
+The middle button remains the same height as its neighbors and displays a label like
+`"Regenerate the complete…"`.
+
+The behavior applies consistently to:
+
+- `st.button`
+- `st.download_button`
+- `st.link_button`
+- `st.form_submit_button`
+- the trigger button rendered by `st.popover`
+- `st.menu_button`
+
+For labels with Markdown, ellipsis applies to the rendered inline label as a whole.
+Icons and shortcuts are not ellipsized. The button's return value, navigation or download
+behavior, callback, and form behavior are unchanged.
+
+`st.menu_button` currently behaves like `wrap=False`. This proposal intentionally changes
+its default visual behavior to match every other button-like command: labels wrap by
+default, and authors use `wrap=False` when fixed toolbar height is more important.
+This changes only the trigger label; menu option labels are unaffected.
+
+`st.page_link` is not included because its navigation-row design already keeps labels to
+one line and is not intended to grow like a general-purpose button.
+
+#### `st.checkbox` and `st.toggle`
+
+`wrap=False` keeps a binary control to one line in compact filters and toolbars:
+
+```python
+import streamlit as st
+
+with st.container(horizontal=True, wrap=False):
+    show_archived = st.checkbox(
+        "Include archived projects",
+        wrap=False,
+        help="Include archived projects in the results",
+    )
+    live_updates = st.toggle("Enable live updates", wrap=False)
+```
+
+- The checkbox indicator or toggle switch retains its size and never shrinks.
+- The label consumes the remaining width and ellipsizes when necessary.
+- The optional help icon remains visible.
+- `width="content"` and `width="stretch"` continue to determine the control's available
+  width. Ellipsis appears only when that width constrains the label.
+- `label_visibility="hidden"` and `"collapsed"` are unchanged.
+- The boolean value, callback, query-parameter binding, and session state are unchanged.
+
+The default remains `wrap=True` because the label communicates what state is being
+changed. Truncation should require an explicit decision by the app author.
+
+### Why a boolean
+
+For the commands in scope, there are two useful modes: allow the controlled content to
+use another row or keep it to one row. A collection scrolls because clipping would make
+interactive or selected items unusable. A single-label control can stay operable while
+its visual label is ellipsized because its full accessible name and optional `help`
+remain available.
+
+This is a genuinely binary choice and follows the existing `st.code(wrap_lines=...)`
+precedent. Breakpoint control for columns and truncation for text are separate behaviors,
+not additional values of this parameter.
+
+## Alternatives considered
+
+### Option A: Shared `wrap: bool` parameter — preferred
+
+```python
+st.segmented_control("View", options, wrap=False)
+```
+
+- **Pros:** Short, discoverable, and consistent; gives all button-like controls the same
+  default; maps directly to the user-visible one-row choice.
+- **Cons:** The different overflow treatments must be documented; adding the parameter
+  to thirteen commands increases the API surface; `st.menu_button` has an intentional
+  visual default change.
+
+### Option B: `overflow: Literal["wrap", "scroll"]`
+
+```python
+st.segmented_control("View", options, overflow="scroll")
+```
+
+- **Pros:** Names both resulting behaviors and could grow to more overflow modes.
+- **Cons:** Exposes CSS-oriented vocabulary; suggests clipping or other modes that are not
+  useful for interactive items; is inaccurate when columns or stretch-width children can
+  shrink enough that no scrolling occurs.
+
+### Option C: Element-specific parameters
+
+Examples include `height` on `st.multiselect`, `responsive` on `st.columns`,
+`overflow` on `st.container`, and `max_lines` on buttons.
+
+- **Pros:** Each API can model every element-specific nuance.
+- **Cons:** Users must learn different controls for the same basic item-flow decision;
+  behavior becomes harder to compose and document.
+
+### Option D: Put `wrap` only on containers
+
+```python
+with st.container(horizontal=True, wrap=False):
+    st.segmented_control("View", options)
+```
+
+- **Pros:** Smallest API surface.
+- **Cons:** A parent container cannot control wrapping inside a child widget or button.
+  Pills, segments, and multiselect chips would continue to add internal rows, and long
+  button labels could still increase height.
+
+### Option E: Change defaults automatically
+
+Examples include never wrapping on mobile, truncating all widget labels, or disabling
+wrapping whenever an element is in `st.columns`.
+
+- **Pros:** Existing apps benefit without code changes.
+- **Cons:** No default is correct for both content visibility and compactness; changing
+  existing apps would be visually breaking and context-dependent behavior would be hard
+  to predict.
+
+## Out of scope and follow-ups
+
+### Text and non-button label line wrapping
+
+[#12583](https://github.com/streamlit/streamlit/issues/12583) asks for non-wrapping
+`st.markdown` and `st.text`. Widget labels can also change height at intermediate widths,
+as the audit shows. This refers to labels displayed above inputs such as `st.selectbox`;
+checkbox and toggle labels are covered by this proposal. Other labels need a separate
+design because truncating descriptive content has different usability and API trade-offs
+from truncating a compact control label.
+
+A follow-up should compare a generic `max_lines: int | None` API with targeted automatic
+ellipsis for widget labels. Adding `wrap` to every text-bearing widget in this project
+would create a much larger API surface.
+
+### Configurable column wrapping threshold
+
+`st.columns(wrap=False)` covers layouts that must never stack. It does not cover #6592,
+where columns should stack **earlier** based on their content or a custom minimum width.
+A follow-up can investigate a `min_width` parameter or container-query-based automatic
+behavior after the binary opt-out is validated.
+
+### Wrapped-row alignment and distribution
+
+This proposal offers a single-row alternative for #12645 and #12038 but does not change
+`wrap=True`. Better alignment and balanced row distribution can be implemented
+independently without an API change.
+
+### Horizontal radio layout
+
+[#7184](https://github.com/streamlit/streamlit/issues/7184) primarily requests that radio
+options distribute across the available width. `st.pills` and `st.segmented_control`
+already serve compact horizontal selection better, so `st.radio` is excluded from the
+initial API.
+
+## Success measures
+
+- Page profiling records explicit `wrap=False` usage by command family.
+- Qualitatively, related issues and support requests stop relying on DOM-targeting CSS.
+- After approximately six months, compare adoption across the command families before
+  considering text line limits or configurable column breakpoints.
+
+No new user event is required; this is a render-time layout option.
+
+## Documentation and testing
+
+- Add parameter documentation and a compact-toolbar example to each command.
+- Add one guide example comparing wrapping and horizontally scrolling option groups.
+- Add one guide example showing a no-wrap toolbar that combines
+  `st.container(horizontal=True, wrap=False)` and `st.button(wrap=False)`.
+- Add frontend tests for no-wrap styles, scoped overflow, focus visibility, and pinned
+  multiselect controls.
+- Add button tests for ellipsis, icons, shortcuts, Markdown, accessible names, and
+  popover/menu expansion icons.
+- Add checkbox and toggle tests for ellipsis, fixed indicators, help icons, label
+  visibility, and accessible names.
+- Add E2E coverage at desktop, intermediate, and phone widths in Chromium, Firefox, and
+  WebKit.
+- Test touch-style horizontal scrolling and keyboard navigation.
+- Verify light/dark themes, sidebar, dialog, form, popover, fragment, and embedded iframe
+  contexts.
+- Verify old protobuf messages retain today's wrapping behavior.
+
+## Checklist
+
+| Item | ✅ or comment |
+| --- | --- |
+| Works on SiS, Cloud, etc? | ✅ Frontend-only behavior; no platform-specific API |
+| No breaking API changes | No Python API break; intentional visual change for constrained, long `st.menu_button` labels |
+| No new dependencies | ✅ Uses native flex and overflow behavior |
+| Metrics collected | ✅ Page profiling for explicit `wrap=False` |
+| Any security/legal impact? | ✅ None |
+| Any docs changes needed? | ✅ API docs and layout examples |
