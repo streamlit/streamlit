@@ -1029,7 +1029,7 @@ _create_option(
 _create_option(
     "server.allowedHosts",
     description="""
-        Allowed list of hostnames for incoming WebSocket connections.
+        Allow-list of hostnames for incoming WebSocket connections.
 
         Use this option to protect against DNS rebinding attacks when the
         hostnames used to access the app are known. Ports in the Host header are

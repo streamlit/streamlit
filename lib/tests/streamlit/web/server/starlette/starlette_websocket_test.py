@@ -376,6 +376,7 @@ class TestIsOriginAllowed:
             ("attacker.example.net:8501", False),
             ("[::1]:8501", True),
             ("app.example.com:not-a-port", False),
+            ("user:pass@app.example.com:8501", False),
             (None, False),
         ],
         ids=[
@@ -386,6 +387,7 @@ class TestIsOriginAllowed:
             "disallowed_host",
             "ipv6_host",
             "invalid_port",
+            "embedded_credentials",
             "missing_host",
         ],
     )
