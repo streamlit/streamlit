@@ -471,12 +471,17 @@ class ScriptRunContextTest(unittest.TestCase):
         assert ctx.shared.tracked_commands == ()
         assert ctx.shared.tracked_commands_count == 0
 
-    def test_run_wrapper_accepts_positional_args(self):
-        """The _run_with_thread_state wrapper must accept positional arguments.
+    def test_run_wrapper_tolerates_extra_positional_arg_from_thread_wrapper(self):
+        """The _run_with_thread_state wrapper must tolerate an extra positional
+        argument without forwarding it to the bound original run().
 
-        Regression test for GitHub issue #15374: some threading patterns call
-        thread.run() with positional arguments. The wrapper installed by
-        add_script_run_ctx must handle this gracefully to avoid TypeError.
+        Regression test for GitHub issues #15374 and #16139: third-party thread
+        wrappers (most notably Sentry's ThreadingIntegration) treat our
+        replacement ``run`` as an unbound function and re-invoke it with the
+        thread instance as the first positional argument. The original ``run``
+        we captured is already bound and takes no positional arguments, so
+        forwarding that argument raised ``TypeError: run() takes 1 positional
+        argument but 2 were given``.
         """
         pages_manager = PagesManager("/main/script/path")
         enable_mpa_v2_mode(pages_manager)
@@ -484,20 +489,22 @@ class ScriptRunContextTest(unittest.TestCase):
 
         ThreadState.initialize(fragment_id="test_fragment")
 
-        received_args: list[object] = []
+        run_calls: list[object] = []
 
-        class ThreadWithRunArgs(threading.Thread):
-            """Thread subclass whose run() accepts extra arguments."""
+        class NoArgRunThread(threading.Thread):
+            """Thread whose run() takes no args, like threading.Thread/Timer."""
 
-            def run(self, *args: object) -> None:
-                received_args.extend(args)
+            def run(self) -> None:
+                run_calls.append(ThreadState.get().fragment_id)
 
-        t = ThreadWithRunArgs()
+        t = NoArgRunThread()
         add_script_run_ctx(t, ctx)
 
-        t.run("test_arg")
+        # Simulate the Sentry ThreadingIntegration calling pattern: the wrapper
+        # is invoked with the thread instance as an extra positional argument.
+        t.run(t)
 
-        assert received_args == ["test_arg"]
+        assert run_calls == ["test_fragment"]
 
 
 def test_script_run_context_attr_name_reexported_from_leaf_module() -> None:
