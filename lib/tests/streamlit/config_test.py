@@ -790,6 +790,7 @@ class ConfigTest(unittest.TestCase):
                 "mapbox.token",
                 "secrets.files",
                 "server.address",
+                "server.allowedHosts",
                 "server.allowRunOnSave",
                 "server.baseUrlPath",
                 "server.cookieSecret",
