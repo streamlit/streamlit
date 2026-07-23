@@ -77,7 +77,13 @@ class _InstallResult:
 
     installed: list[str] = field(default_factory=list)
     up_to_date: list[str] = field(default_factory=list)
+    # Pre-existing files/symlinks we won't overwrite - a genuine "conflict".
     skipped: list[str] = field(default_factory=list)
+    # Filesystem failures during copy (OSError: permissions, disk space, locked
+    # files). Tracked separately from ``skipped`` so a write failure is never
+    # misreported as a "conflict" - both in the CLI summary and, crucially, in
+    # the nudge's install-failure telemetry reason.
+    errored: list[str] = field(default_factory=list)
 
 
 def _get_source_skills_dir() -> Path:
@@ -446,7 +452,9 @@ def _install_skill_copy(
         temp_path = target_path.with_name(f".{skill_name}.tmp")
         if temp_path.exists() and target_path.exists():
             shutil.rmtree(temp_path, ignore_errors=True)
-        result.skipped.append(f"{rel_target_path} (copy failed: {e})")
+        # A write failure, not a conflict - record it in ``errored`` so it is
+        # classified as such (reason="write_failed"), not "conflict".
+        result.errored.append(f"{rel_target_path} (copy failed: {e})")
 
 
 def _print_result(result: _InstallResult) -> None:
@@ -469,6 +477,11 @@ def _print_result(result: _InstallResult) -> None:
         click.secho("\n⚠ Skipped due to conflicts:", fg="yellow", bold=True)
         for path in result.skipped:
             click.echo(f"  {click.style('→', fg='yellow')} {path}")
+
+    if result.errored:
+        click.secho("\n✗ Failed to write:", fg="red", bold=True)
+        for path in result.errored:
+            click.echo(f"  {click.style('→', fg='red')} {path}")
 
 
 def _prompt_install_mode() -> str:
@@ -590,6 +603,30 @@ def _conflict_error(skipped: list[str]) -> _InstallError:
         f"{joined} already exist{'' if plural else 's'}. "
         f"Remove {'them' if plural else 'it'} and try again.",
         reason="conflict",
+    )
+
+
+def _write_error(errored: list[str]) -> _InstallError:
+    """Build a "couldn't write" error for filesystem failures during copy.
+
+    Distinct from :func:`_conflict_error`: ``errored`` entries are ``OSError``
+    failures (permissions, disk space, locked files), not pre-existing files.
+    Keeping them apart stops the nudge's failure telemetry from misreporting a
+    write failure as a ``conflict``. Like the conflict message this is shown
+    verbatim in the nudge, so it collapses paths to the
+    ``<harness>/skills/<skill>`` tail and never echoes the raw ``OSError`` text
+    (which can embed an absolute server path).
+    """
+    paths = []
+    for entry in errored:
+        raw = entry.split(" (", 1)[0]
+        parts = Path(raw).parts
+        paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
+    joined = ", ".join(paths)
+    return _InstallError(
+        f"Could not write {joined}. Check folder permissions and free disk "
+        "space, then try again.",
+        reason="write_failed",
     )
 
 
@@ -724,6 +761,8 @@ def _install_project_skills(
         )
         for line in gitignore_snippet.splitlines():
             click.secho(f"  {line}", fg="bright_black")
+    elif result.errored:
+        raise _write_error(result.errored)
     elif result.skipped:
         raise _conflict_error(result.skipped)
 
@@ -808,6 +847,8 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
                 "      project-specific bundled skills at runtime.",
                 fg="bright_black",
             )
+    elif result.errored:
+        raise _write_error(result.errored)
     elif result.skipped:
         raise _conflict_error(result.skipped)
 

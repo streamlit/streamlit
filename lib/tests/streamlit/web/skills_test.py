@@ -1317,7 +1317,10 @@ class TestInstallSkillCopyEdgeCases:
                 {"developing-with-streamlit"},
             )
 
-        assert any("copy failed" in s for s in result.skipped)
+        assert any("copy failed" in s for s in result.errored)
+        # Regression (Greptile P1): a write failure must land in ``errored``,
+        # never ``skipped`` - otherwise the caller labels it reason="conflict".
+        assert not result.skipped
 
     def test_preserves_existing_directory_on_copy_failure(
         self, tmp_path: Path, mock_source_skills_dir: Path
@@ -1346,7 +1349,8 @@ class TestInstallSkillCopyEdgeCases:
         # Original should be preserved with old content
         assert target.is_dir()
         assert (target / "SKILL.md").read_text() == "# Old version\n"
-        assert any("copy failed" in s for s in result.skipped)
+        assert any("copy failed" in s for s in result.errored)
+        assert not result.skipped
 
 
 class TestInstallSkillSymlinkEdgeCases:
@@ -1468,6 +1472,35 @@ class TestGlobalInstallationConflicts:
         # The error names the specific conflicting path, not a vague "conflicts".
         assert ".agents/skills/developing-with-streamlit" in result.output
         assert "already exist" in result.output
+
+    def test_copy_failure_reports_write_failed_not_conflict(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """A filesystem copy failure raises reason='write_failed', not 'conflict'.
+
+        Regression for the Greptile P1: an ``OSError`` during the global copy
+        (permissions, disk space, locked dir) used to land in ``skipped`` and be
+        labeled ``conflict``, so the nudge's failure telemetry misclassified
+        write failures - the dominant residual Windows cause - as conflicts.
+        """
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            patch.object(
+                skills.shutil, "copytree", side_effect=OSError("Permission denied")
+            ),
+            pytest.raises(skills._InstallError) as exc,
+        ):
+            skills._install_global_skills(yes=True)
+
+        assert exc.value.reason == "write_failed"
+        # Must NOT be misclassified as a conflict.
+        assert "already exist" not in exc.value.format_message()
 
 
 class TestInteractiveModeSelection:
