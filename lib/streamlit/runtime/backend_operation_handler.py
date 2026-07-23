@@ -264,14 +264,19 @@ class InstallSkillsHandler(BackendOperationHandler):
                 else "Failed to install skills."
             )
             # ``skills._InstallError`` carries a bounded, machine-readable ``reason``
-            # (e.g. "conflict", "source_missing", "symlinks_unsupported") that the
-            # client forwards to telemetry so the nudge's install-failure rate can
-            # be split by cause. Any other exception is classified "unknown".
-            reason = getattr(ex, "reason", "unknown")
+            # (e.g. "conflict", "write_failed", "source_missing") that the client
+            # forwards to telemetry so the nudge's install-failure rate can be
+            # split by cause. A bare ``OSError`` that escaped the installer
+            # (e.g. a permission error creating the target dir, before the copy's
+            # own try/except) is a filesystem write failure - classify it as such
+            # rather than burying it in "unknown". Anything else is "unknown".
+            reason = getattr(ex, "reason", None)
+            if not isinstance(reason, str):
+                reason = "write_failed" if isinstance(ex, OSError) else "unknown"
             return BackendOperationResponse(
                 request_id=request.request_id,
                 error_msg=detail or "Failed to install skills.",
-                error_reason=reason if isinstance(reason, str) else "unknown",
+                error_reason=reason,
             )
 
         # Invalidate the cached "skills installed" detection so a later session

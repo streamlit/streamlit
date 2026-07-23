@@ -408,31 +408,35 @@ def _install_skill_copy(
     target_path = target_dir / skill_name
     rel_target_path = _get_display_path(target_path, Path.home(), use_tilde=True)
 
-    # Ensure parent directory exists
-    target_dir.mkdir(parents=True, exist_ok=True)
-
-    old_target_to_remove: Path | None = None
-
-    if target_path.exists() or target_path.is_symlink():
-        # Target exists - check if we can replace it
-        if target_path.is_symlink():
-            if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
-                target_path.unlink()
-            else:
-                result.skipped.append(f"{rel_target_path} (existing symlink)")
-                return
-        elif target_path.is_dir():
-            if _skill_copy_matches(source_path, target_path):
-                result.up_to_date.append(str(rel_target_path))
-                return
-            # Defer removal until after successful copy to ensure atomicity
-            old_target_to_remove = target_path
-        else:
-            result.skipped.append(f"{rel_target_path} (existing file)")
-            return
-
-    # Copy skill directory - use temp location first to ensure atomicity
+    # All filesystem work runs under one try so a failure at ANY step - creating
+    # the target dir, removing an old streamlit-owned symlink, or the copy itself
+    # - is recorded as a write failure (reason="write_failed") instead of
+    # escaping as an uncaught OSError the caller can only classify as "unknown".
     try:
+        # Ensure parent directory exists
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        old_target_to_remove: Path | None = None
+
+        if target_path.exists() or target_path.is_symlink():
+            # Target exists - check if we can replace it
+            if target_path.is_symlink():
+                if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
+                    target_path.unlink()
+                else:
+                    result.skipped.append(f"{rel_target_path} (existing symlink)")
+                    return
+            elif target_path.is_dir():
+                if _skill_copy_matches(source_path, target_path):
+                    result.up_to_date.append(str(rel_target_path))
+                    return
+                # Defer removal until after successful copy to ensure atomicity
+                old_target_to_remove = target_path
+            else:
+                result.skipped.append(f"{rel_target_path} (existing file)")
+                return
+
+        # Copy skill directory - use temp location first to ensure atomicity
         if old_target_to_remove is not None:
             # Copy to temp location, then swap
             temp_path = target_path.with_name(f".{skill_name}.tmp")

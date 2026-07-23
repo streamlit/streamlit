@@ -248,14 +248,15 @@ def test_install_skills_handler_reports_failure() -> None:
 def test_install_skills_handler_forwards_failure_reason() -> None:
     """A ``skills._InstallError`` propagates its machine-readable ``reason`` into
     the response's ``error_reason`` so the client can split install-failure
-    telemetry by cause (e.g. the Windows symlink → GitHub-download fallback)."""
+    telemetry by cause (e.g. conflict vs. write_failed vs. source_missing)."""
     with (
         patch("streamlit.config.get_option", return_value=False),
         patch.object(skills, "detect_installed_agents", return_value=["claude"]),
         patch(
             "streamlit.web.skills.install_skills",
             side_effect=skills._InstallError(
-                "Failed to download skills from GitHub", reason="download_failed"
+                "developing-with-streamlit already exists. Remove it and try again.",
+                reason="conflict",
             ),
         ),
     ):
@@ -265,18 +266,24 @@ def test_install_skills_handler_forwards_failure_reason() -> None:
             )
         )
 
-    assert response.error_msg == "Failed to download skills from GitHub"
-    assert response.error_reason == "download_failed"
+    assert response.error_msg == (
+        "developing-with-streamlit already exists. Remove it and try again."
+    )
+    assert response.error_reason == "conflict"
     assert not response.HasField("install_skills")
 
 
 def test_install_skills_handler_does_not_leak_os_error_path() -> None:
-    """A non-``ClickException`` (e.g. ``OSError``) yields a generic message.
+    """A non-``ClickException`` ``OSError`` yields a generic message but a
+    ``write_failed`` reason.
 
     ``click.ClickException`` messages are developer-authored and safe to show in
-    the browser toast, but a raw ``OSError`` can embed an absolute server path.
-    The handler must forward only the former verbatim and replace anything else
-    with a generic string, so a server path can never leak into the nudge.
+    the browser toast, but a raw ``OSError`` can embed an absolute server path -
+    so the message is replaced with a generic string. The reason, however, is
+    still meaningful: a bare ``OSError`` escaping the installer (e.g. a
+    permission error creating the target dir, before the copy's own try/except)
+    is a filesystem write failure, so it's classified ``write_failed`` rather
+    than buried in ``unknown``.
     """
     with (
         patch("streamlit.config.get_option", return_value=False),
@@ -294,6 +301,7 @@ def test_install_skills_handler_does_not_leak_os_error_path() -> None:
 
     assert response.error_msg == "Failed to install skills."
     assert "/absolute/server/path" not in response.error_msg
+    assert response.error_reason == "write_failed"
     assert not response.HasField("install_skills")
 
 

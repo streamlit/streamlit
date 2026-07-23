@@ -1352,6 +1352,35 @@ class TestInstallSkillCopyEdgeCases:
         assert any("copy failed" in s for s in result.errored)
         assert not result.skipped
 
+    def test_reports_mkdir_failure_as_error(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A permission error creating the target dir is an error, not a skip.
+
+        Regression: the mkdir/existence checks ran outside the copy try/except,
+        so a permission-denied mkdir escaped as an uncaught OSError (which the
+        handler could only classify as 'unknown'). It must land in ``errored``
+        so it maps to reason='write_failed'.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        result = skills._InstallResult()
+
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            patch.object(skills.Path, "mkdir", side_effect=OSError("Permission denied")),
+        ):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert result.errored
+        assert not result.skipped
+        assert not result.installed
+
 
 class TestInstallSkillSymlinkEdgeCases:
     """Additional edge case tests for _install_skill_symlink."""
