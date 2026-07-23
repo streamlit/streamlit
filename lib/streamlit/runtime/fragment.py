@@ -37,6 +37,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
     ScriptRunContext,
     ThreadState,
     get_script_run_ctx,
@@ -541,7 +542,11 @@ def _fragment(
             # is established below, this will be initialized with the fragment's
             # delta path. Without this, we would inherit the delta path from the
             # parent scope.
-            with ThreadState.scoped(fragment_id=fragment_id, delta_path=None):
+            with ThreadState.scoped(
+                fragment_id=fragment_id,
+                delta_path=None,
+                run_location=RunLocation.FRAGMENT,
+            ):
                 result = None
                 with active_hash_context:
                     container_ctx = (

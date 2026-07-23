@@ -46,6 +46,7 @@ from streamlit.runtime.runtime_util import (
     get_max_widget_state_size_bytes,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
     ThreadState,
     get_script_run_ctx,
 )
@@ -341,11 +342,10 @@ class WStates(MutableMapping[str, Any]):
         args = metadata.callback_args or ()
         kwargs = metadata.callback_kwargs or {}
 
-        ctx = get_script_run_ctx()
-        if ctx and metadata.fragment_id is not None:
-            with ThreadState.scoped(in_fragment_callback=True):
-                callback(*args, **kwargs)
-        else:
+        with ThreadState.scoped(
+            run_location=RunLocation.CALLBACK,
+            fragment_id=metadata.fragment_id,
+        ):
             callback(*args, **kwargs)
 
 
@@ -913,16 +913,10 @@ class SessionState:
         """
         from streamlit.runtime.scriptrunner import RerunException
 
-        ctx = get_script_run_ctx()
-        if ctx and cb_metadata.fragment_id is not None:
-            with ThreadState.scoped(in_fragment_callback=True):
-                try:
-                    callback_fn(*cb_args, **cb_kwargs)
-                except RerunException:
-                    get_dg_singleton_instance().main_dg.warning(
-                        "Calling st.rerun() within a callback is a no-op."
-                    )
-        else:
+        with ThreadState.scoped(
+            run_location=RunLocation.CALLBACK,
+            fragment_id=cb_metadata.fragment_id,
+        ):
             try:
                 callback_fn(*cb_args, **cb_kwargs)
             except RerunException:
