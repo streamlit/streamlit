@@ -504,7 +504,8 @@ def test_paste_error_state_snapshot(app: Page, assert_snapshot: ImageCompareFunc
 
 def test_paste_in_form_context(app: Page):
     """Test that paste works inside a form and value is submitted correctly."""
-    time_input = get_time_input(app, "Form time input")
+    form = app.get_by_test_id("stForm").first
+    time_input = form.get_by_test_id("stTimeInput")
     time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
     hour_segment = time_display.locator("[role='spinbutton']").first
     hour_segment.click()
@@ -516,7 +517,7 @@ def test_paste_in_form_context(app: Page):
     expect(app.get_by_text("Form time:")).not_to_be_visible()
 
     # Submit the form
-    app.get_by_role("button", name="Submit").click()
+    form.get_by_role("button", name="Submit").click()
     wait_for_app_run(app)
 
     expect_markdown(app, "Form time: 14:30:00")
@@ -527,7 +528,7 @@ def test_paste_in_form_context(app: Page):
     expect(time_input.get_by_test_id("stTimeInputError")).to_be_visible()
 
     # Submit form — should still submit the last committed value (14:30)
-    app.get_by_role("button", name="Submit").click()
+    form.get_by_role("button", name="Submit").click()
     wait_for_app_run(app)
 
     expect_markdown(app, "Form time: 14:30:00")
@@ -561,8 +562,8 @@ def test_seconds_arrow_key_snaps_to_step(app: Page):
 
 def test_input_instructions_shows_press_enter_to_apply_when_dirty(app: Page):
     """InputInstructions shows 'Press Enter to apply' when value is changed outside a form."""
-    # Use the standalone (non-form) widget so inForm=false.
-    time_input = get_time_input(app, "Label")
+    # Use a standalone (non-form) widget so inForm=false.
+    time_input = get_time_input(app, "Time input 1 (8:45)")
     time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
     minute_segment = time_display.get_by_role("spinbutton").nth(1)
 
@@ -609,7 +610,7 @@ def test_enter_key_submits_form(app: Page):
 
 def test_input_instructions_hidden_after_blur(app: Page):
     """InputInstructions disappears after the widget loses focus (commit clears dirty)."""
-    time_input = get_time_input(app, "Label")
+    time_input = get_time_input(app, "Time input 1 (8:45)")
     time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
     minute_segment = time_display.get_by_role("spinbutton").nth(1)
 
@@ -617,8 +618,8 @@ def test_input_instructions_hidden_after_blur(app: Page):
     minute_segment.press("3")
     expect(time_input.get_by_test_id("InputInstructions")).to_be_visible()
 
-    # Click elsewhere to blur the widget.
-    app.click("body")
+    # Blur the segment to commit and clear dirty state.
+    minute_segment.blur()
     wait_for_app_run(app)
 
     expect(time_input.get_by_test_id("InputInstructions")).not_to_be_visible()

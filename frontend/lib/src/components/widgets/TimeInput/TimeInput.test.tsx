@@ -1393,36 +1393,27 @@ describe("TimeInput widget", () => {
       expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
     })
 
-    it("shows 'Press Enter to submit form' hint when inside an enter_to_submit form", async () => {
-      const user = userEvent.setup()
-      const props = getProps({ formId: "form" })
-      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
-      render(<TimeInput {...props} />)
+    it.each([
+      { allowEnter: true, expected: "Press Enter to submit form" },
+      { allowEnter: false, expected: "" },
+    ])(
+      "in-form hint text when allowFormEnterToSubmit=$allowEnter",
+      async ({ allowEnter, expected }) => {
+        const user = userEvent.setup()
+        const props = getProps({ formId: "form" })
+        vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+          allowEnter
+        )
+        render(<TimeInput {...props} />)
 
-      const [hourSegment] = screen.getAllByRole("spinbutton")
-      await user.click(hourSegment)
+        const [hourSegment] = screen.getAllByRole("spinbutton")
+        await user.click(hourSegment)
 
-      // Just focusing a form widget with allowFormEnterToSubmit=true should
-      // show the hint (inForm=true, allowEnterToSubmit=true).
-      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-        "Press Enter to submit form"
-      )
-    })
-
-    it("shows empty instructions when inside a form with enter_to_submit=False", async () => {
-      const user = userEvent.setup()
-      const props = getProps({ formId: "form" })
-      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
-        false
-      )
-      render(<TimeInput {...props} />)
-
-      const [hourSegment] = screen.getAllByRole("spinbutton")
-      await user.click(hourSegment)
-
-      // allowEnterToSubmit=false in this form — instructions renders with no content.
-      expect(screen.getByTestId("InputInstructions")).toHaveTextContent("")
-    })
+        expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+          expected
+        )
+      }
+    )
 
     it("calls submitForm on Enter when inside a form with allowFormEnterToSubmit=true", async () => {
       const user = userEvent.setup()
@@ -1442,21 +1433,34 @@ describe("TimeInput widget", () => {
       )
     })
 
-    it("does NOT call submitForm on Enter when allowFormEnterToSubmit=false", async () => {
-      const user = userEvent.setup()
-      const props = getProps({ default: "12:45", formId: "form" })
-      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
-        false
-      )
-      vi.spyOn(props.widgetMgr, "submitForm")
-      render(<TimeInput {...props} />)
+    it.each([
+      {
+        scenario: "allowFormEnterToSubmit=false",
+        formId: "form",
+        allowEnter: false,
+      },
+      { scenario: "not in a form (no formId)", formId: "", allowEnter: false },
+    ])(
+      "does NOT call submitForm on Enter when $scenario",
+      async ({ formId, allowEnter }) => {
+        const user = userEvent.setup()
+        const props = getProps({
+          default: "12:45",
+          ...(formId ? { formId } : {}),
+        })
+        vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+          allowEnter
+        )
+        vi.spyOn(props.widgetMgr, "submitForm")
+        render(<TimeInput {...props} />)
 
-      const [hourSegment] = screen.getAllByRole("spinbutton")
-      await user.click(hourSegment)
-      await user.keyboard("{Enter}")
+        const [hourSegment] = screen.getAllByRole("spinbutton")
+        await user.click(hourSegment)
+        await user.keyboard("{Enter}")
 
-      expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
-    })
+        expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+      }
+    )
 
     it("does NOT call submitForm on Enter when a validation error is showing", async () => {
       const user = userEvent.setup()
@@ -1467,24 +1471,9 @@ describe("TimeInput widget", () => {
 
       const [hourSegment] = screen.getAllByRole("spinbutton")
       await user.click(hourSegment)
-      // Paste an invalid value to trigger a validation error.
       await user.paste("25:00")
       expect(screen.getByTestId("stTimeInputError")).toBeVisible()
 
-      await user.keyboard("{Enter}")
-
-      expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
-    })
-
-    it("does NOT call submitForm on Enter when NOT in a form (no formId)", async () => {
-      const user = userEvent.setup()
-      // No formId -> allowFormEnterToSubmit returns false for empty/invalid formId.
-      const props = getProps({ default: "12:45" })
-      vi.spyOn(props.widgetMgr, "submitForm")
-      render(<TimeInput {...props} />)
-
-      const [hourSegment] = screen.getAllByRole("spinbutton")
-      await user.click(hourSegment)
       await user.keyboard("{Enter}")
 
       expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
