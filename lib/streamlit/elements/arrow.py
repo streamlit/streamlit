@@ -838,18 +838,18 @@ class ArrowMixin:
             - ``None`` (default): Streamlit chooses automatically. In-memory
               ``pandas`` and ``polars`` dataframes and ``pyarrow.Table`` objects
               are loaded lazily when they have more than 150,000 rows.
-              Unevaluated objects, such as a Polars ``LazyFrame``, are loaded
-              lazily when they have more than 10,000 rows. Everything else is
-              loaded eagerly, including the capped preview for unsupported
-              unevaluated objects.
+              Unevaluated objects, such as a Polars ``LazyFrame`` or Snowpark
+              dataframe, are loaded lazily when they have more than 10,000
+              rows. Everything else is loaded eagerly, including the capped
+              preview for unsupported unevaluated objects.
             - ``True``: Always load rows lazily. For inputs that support lazy
-              access natively (for example, a Polars ``LazyFrame``), Streamlit
-              reads rows directly from the source. Other supported inputs are
-              held in the app server's memory and served in chunks. Small
-              datasets (1,000 rows or fewer) are still loaded eagerly as an
-              optimization. If lazy loading is incompatible with the data or the
-              other parameters (for example, dataframes with multi-level,
-              ``MultiIndex``, column headers), Streamlit raises a
+              access natively (for example, a Polars ``LazyFrame`` or Snowpark
+              dataframe), Streamlit reads rows directly from the source. Other
+              supported inputs are held in the app server's memory and served
+              in chunks. Small datasets (1,000 rows or fewer) are still loaded
+              eagerly as an optimization. If lazy loading is incompatible with
+              the data or the other parameters (for example, dataframes with
+              multi-level, ``MultiIndex``, column headers), Streamlit raises a
               ``StreamlitAPIException``.
             - ``False``: Never load rows lazily. Streamlit loads data eagerly
               and uses the capped preview for unevaluated data objects.

@@ -336,9 +336,10 @@ def _validate_lazy_columns(data: object) -> None:
 def _try_create_native_source(data: object) -> DataframeSource | None:
     """Return a native lazy adapter for an unevaluated object, or ``None``.
 
-    Available adapters (currently Polars ``LazyFrame``) are registered here.
-    Objects without a ready adapter return ``None`` so the caller can fall back
-    to the capped-preview path (``lazy=None``) or raise (``lazy=True``).
+    Available adapters (Polars ``LazyFrame``, Snowpark ``DataFrame``/``Table``)
+    are registered here. Objects without a ready adapter return ``None`` so the
+    caller can fall back to the capped-preview path (``lazy=None``) or raise
+    (``lazy=True``).
     """
     from streamlit.dataframe import lazy_df_adapters
 
@@ -428,10 +429,11 @@ def resolve_lazy_source(
         return None
 
     # 1) Native adapter for supported unevaluated objects (currently Polars
-    # LazyFrame). For ``lazy=True``, known small sources keep eager rendering as
-    # the bounded small-data optimization. For ``lazy=None``, compatible
-    # unevaluated sources auto-switch to lazy only above the existing
-    # capped-preview threshold; smaller sources preserve today's eager path.
+    # LazyFrame and Snowpark DataFrame/Table). For ``lazy=True``, known small
+    # sources keep eager rendering as the bounded small-data optimization. For
+    # ``lazy=None``, compatible unevaluated sources auto-switch to lazy only
+    # above the existing capped-preview threshold; smaller sources preserve
+    # today's eager path.
     native = _try_create_native_source(data)
     if native is not None:
         # TODO(lazy-dataframe): For ``lazy=None`` this reads ``row_count`` on
@@ -440,7 +442,8 @@ def resolve_lazy_source(
         # count/scan re-run each time, even when the size hasn't changed.
         # Consider caching the count across reruns, gating auto-lazy on a cheap
         # row-count capability, or deferring the count until the frontend first
-        # requests a chunk.
+        # requests a chunk. A Snowpark source has the same cost concern because
+        # ``DataFrame.count()`` executes a separate Snowflake query.
         native_row_count = _get_native_row_count(native, lazy)
         if native_row_count is None:
             return None

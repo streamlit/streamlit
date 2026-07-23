@@ -72,6 +72,20 @@ class _UnknownRowCountSource:
         return pa.table({"a": []}, schema=self.schema)
 
 
+class _SnowparkShapedSource:
+    """Minimal row-count stub for Snowpark resolution behavior."""
+
+    def __init__(self, row_count: int | None, *, count_raises: bool = False) -> None:
+        self._row_count = row_count
+        self._count_raises = count_raises
+
+    @property
+    def row_count(self) -> int | None:
+        if self._count_raises:
+            raise RuntimeError("Snowflake count query failed")
+        return self._row_count
+
+
 def test_in_memory_source_exposes_metadata() -> None:
     """The in-memory source reports row count, schema, and capability flags."""
     source = InMemoryDataframeSource(_make_table(10))
@@ -403,6 +417,89 @@ def test_resolve_forced_lazy_unknown_row_count_native_source_raises(
 
     with pytest.raises(StreamlitAPIException, match="known row count"):
         resolve_lazy_source(object(), True, is_selection_activated=False)
+
+
+@pytest.mark.parametrize(
+    ("lazy", "row_count", "expected_lazy"),
+    [
+        (None, UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD, False),
+        (None, UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD + 1, True),
+        (True, FORCED_LAZY_MIN_ROWS, False),
+        (True, FORCED_LAZY_MIN_ROWS + 1, True),
+    ],
+)
+def test_resolve_snowpark_native_source_thresholds(
+    monkeypatch: pytest.MonkeyPatch,
+    lazy: bool | None,
+    row_count: int,
+    expected_lazy: bool,
+) -> None:
+    """Snowpark sources use the generic auto and forced lazy thresholds."""
+    native_source = _SnowparkShapedSource(row_count)
+    monkeypatch.setattr(
+        dataframe_source, "_try_create_native_source", lambda _data: native_source
+    )
+
+    resolved = resolve_lazy_source(object(), lazy, is_selection_activated=False)
+
+    if expected_lazy:
+        assert resolved is native_source
+    else:
+        assert resolved is None
+
+
+def test_resolve_snowpark_count_failure_falls_back_for_auto(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An unavailable Snowpark count preserves the auto preview fallback."""
+    native_source = _SnowparkShapedSource(None, count_raises=True)
+    info_messages: list[str] = []
+
+    def record_info(message: str, *args: object, **_kwargs: object) -> None:
+        info_messages.append(message % args)
+
+    monkeypatch.setattr(
+        dataframe_source, "_try_create_native_source", lambda _data: native_source
+    )
+    monkeypatch.setattr(dataframe_source._LOGGER, "info", record_info)
+
+    resolved = resolve_lazy_source(object(), None, is_selection_activated=False)
+
+    assert resolved is None
+    assert len(info_messages) == 1
+    assert "Could not determine row count" in info_messages[0]
+
+
+def test_resolve_snowpark_count_failure_raises_when_forced(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An explicit lazy request surfaces a failed Snowpark count as an API error."""
+    native_source = _SnowparkShapedSource(None, count_raises=True)
+    monkeypatch.setattr(
+        dataframe_source, "_try_create_native_source", lambda _data: native_source
+    )
+
+    with pytest.raises(StreamlitAPIException, match="could not determine"):
+        resolve_lazy_source(object(), True, is_selection_activated=False)
+
+
+def test_resolve_lazy_false_bypasses_snowpark_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """lazy=False preserves the capped preview without constructing an adapter."""
+    adapter_calls = 0
+
+    def create_native_source(_data: object) -> _SnowparkShapedSource:
+        nonlocal adapter_calls
+        adapter_calls += 1
+        return _SnowparkShapedSource(UNEVALUATED_AUTO_LAZY_ROW_THRESHOLD + 1)
+
+    monkeypatch.setattr(
+        dataframe_source, "_try_create_native_source", create_native_source
+    )
+
+    assert resolve_lazy_source(object(), False, is_selection_activated=False) is None
+    assert adapter_calls == 0
 
 
 @pytest.mark.require_integration
