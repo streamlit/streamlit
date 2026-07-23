@@ -61,10 +61,11 @@ CSS that depends on Streamlit's private DOM.
 - [#12038](https://github.com/streamlit/streamlit/issues/12038) reports uneven option
   widths after pills and segments wrap with `width="stretch"`.
 
-The multiselect requests [#8671](https://github.com/streamlit/streamlit/issues/8671) and
-[#9085](https://github.com/streamlit/streamlit/issues/9085) were partially addressed by
-capping the widget's height and adding vertical scrolling. That prevents unbounded growth,
-but the control can still become several rows tall.
+A previous change partially addressed the multiselect requests
+[#8671](https://github.com/streamlit/streamlit/issues/8671) and
+[#9085](https://github.com/streamlit/streamlit/issues/9085) by capping the widget's height
+and adding vertical scrolling. That prevents unbounded growth, but the control can still
+become several rows tall.
 
 ### Current behavior audit
 
@@ -261,8 +262,10 @@ for column, image in zip(thumbnail_columns, images):
 
 - Relative widths from `spec` remain unchanged.
 - Columns may shrink with the group as they do above the current mobile breakpoint.
-- If child minimum widths prevent further shrinking, the column group scrolls rather
-  than overflowing the page.
+- Each column retains a usable minimum width rather than shrinking to zero. Once the
+  columns reach that minimum and still do not fit, the column group scrolls horizontally
+  rather than overflowing the page. The implementation must define this column-level
+  minimum-width invariant so content is never shrunk below a readable width.
 - `wrap=True` keeps the current breakpoint and stacking behavior.
 
 This addresses the request to disable column responsiveness in #5003. It does not address
@@ -397,8 +400,10 @@ its visual label is ellipsized because its full accessible name and optional `he
 remain available.
 
 This is a genuinely binary choice and follows the existing `st.code(wrap_lines=...)`
-precedent. Breakpoint control for columns and truncation for text are separate behaviors,
-not additional values of this parameter.
+precedent. The parameter is named `wrap` rather than `wrap_lines` because it controls
+whether items flow onto additional rows in a layout, whereas `wrap_lines` controls
+line wrapping of text within a code block. Breakpoint control for columns and truncation
+for text are separate behaviors, not additional values of this parameter.
 
 ## Alternatives considered
 
@@ -489,11 +494,13 @@ independently without an API change.
 [#7184](https://github.com/streamlit/streamlit/issues/7184) primarily requests that radio
 options distribute across the available width. `st.pills` and `st.segmented_control`
 already serve compact horizontal selection better, so `st.radio` is excluded from the
-initial API.
+initial API. `st.radio(horizontal=True)` could technically accept `wrap` for consistency,
+but it is left out to keep the initial surface minimal; it can adopt the same one-row
+contract in a follow-up if demand warrants.
 
 ## Success measures
 
-- Page profiling records explicit `wrap=False` usage by command family.
+- Page profiling will record explicit `wrap=False` usage by command family.
 - Qualitatively, related issues and support requests stop relying on DOM-targeting CSS.
 - After approximately six months, compare adoption across the command families before
   considering text line limits or configurable column breakpoints.
@@ -517,14 +524,16 @@ No new user event is required; this is a render-time layout option.
 - Test touch-style horizontal scrolling and keyboard navigation.
 - Verify light/dark themes, sidebar, dialog, form, popover, fragment, and embedded iframe
   contexts.
-- Verify old protobuf messages retain today's wrapping behavior.
+- Verify old protobuf messages retain today's wrapping behavior, with the sole
+  exception of `st.menu_button`: a message without the `wrap` field falls back to the new
+  wrap-by-default behavior, matching the intentional change described above.
 
 ## Checklist
 
 | Item | ✅ or comment |
 | --- | --- |
 | Works on SiS, Cloud, etc? | ✅ Frontend-only behavior; no platform-specific API |
-| No breaking API changes | No Python API break; intentional visual change for constrained, long `st.menu_button` labels |
+| No breaking API changes | No Python API break; the intentional `st.menu_button` visual change (constrained, long labels wrap by default instead of ellipsizing) must be called out as a breaking change in the implementation PR's release notes |
 | No new dependencies | ✅ Uses native flex and overflow behavior |
 | Metrics collected | ✅ Page profiling for explicit `wrap=False` |
 | Any security/legal impact? | ✅ None |
