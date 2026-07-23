@@ -89,6 +89,7 @@ class StPagesTest(DeltaGeneratorTestCase):
             ("forward_then_backslash_unc", "/\\server\\share\\page.py"),
             ("backslash_then_forward_unc", "\\/server/share/page.py"),
             ("extended_unc", "\\\\?\\UNC\\server\\share\\page.py"),
+            ("device_namespace", "\\\\.\\device\\page.py"),
             ("path_object", Path("\\\\server\\share\\page.py")),
         ]
     )
