@@ -1813,18 +1813,6 @@ class TestSummarizeInstall:
             "Installed to .agents/skills. 1 skill skipped due to conflicts."
         )
 
-    def test_reports_errored_alongside_installed(self) -> None:
-        """Defensive: if a write failure ever reaches the summary, it is surfaced
-        rather than a mixed result being presented as a clean success.
-        """
-        result = skills._InstallResult(
-            installed=[".agents/skills/foo"],
-            errored=[".claude/skills/foo (copy failed: Permission denied)"],
-        )
-        summary = skills.summarize_install(result)
-        assert "Installed to .agents/skills." in summary
-        assert "1 skill failed to write." in summary
-
     def test_reports_skipped_alongside_up_to_date(self) -> None:
         """Skipped skills are surfaced even when nothing new was installed, so an
         up-to-date result with conflicts isn't mistaken for fully installed.

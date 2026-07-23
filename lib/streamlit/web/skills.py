@@ -469,39 +469,30 @@ def _install_skill_copy(
 
 
 def _print_result(result: _InstallResult) -> None:
-    """Print the installation result summary.
+    """Print the installation result summary."""
+    if result.installed:
+        click.secho("\n✓ Installed:", fg="green", bold=True)
+        for path in result.installed:
+            click.echo(
+                f"  {click.style('→', fg='green')} {click.style(path, fg='cyan')}"
+            )
 
-    Purely cosmetic. It runs after the install has committed (and, for the
-    in-app nudge, inside an ``asyncio.to_thread`` worker whose stdout is the
-    server's), so a broken/closed stream must never raise here and flip a real
-    outcome into a mislabeled failure - all output is swallowed on I/O error.
-    """
-    try:
-        if result.installed:
-            click.secho("\n✓ Installed:", fg="green", bold=True)
-            for path in result.installed:
-                click.echo(
-                    f"  {click.style('→', fg='green')} {click.style(path, fg='cyan')}"
-                )
+    if result.up_to_date:
+        click.secho("\n● Up to date:", fg="blue", bold=True)
+        for path in result.up_to_date:
+            click.echo(
+                f"  {click.style('→', fg='blue')} {click.style(path, fg='cyan')}"
+            )
 
-        if result.up_to_date:
-            click.secho("\n● Up to date:", fg="blue", bold=True)
-            for path in result.up_to_date:
-                click.echo(
-                    f"  {click.style('→', fg='blue')} {click.style(path, fg='cyan')}"
-                )
+    if result.skipped:
+        click.secho("\n⚠ Skipped due to conflicts:", fg="yellow", bold=True)
+        for path in result.skipped:
+            click.echo(f"  {click.style('→', fg='yellow')} {path}")
 
-        if result.skipped:
-            click.secho("\n⚠ Skipped due to conflicts:", fg="yellow", bold=True)
-            for path in result.skipped:
-                click.echo(f"  {click.style('→', fg='yellow')} {path}")
-
-        if result.errored:
-            click.secho("\n✗ Failed to write:", fg="red", bold=True)
-            for path in result.errored:
-                click.echo(f"  {click.style('→', fg='red')} {path}")
-    except (OSError, ValueError):
-        pass
+    if result.errored:
+        click.secho("\n✗ Failed to write:", fg="red", bold=True)
+        for path in result.errored:
+            click.echo(f"  {click.style('→', fg='red')} {path}")
 
 
 def _prompt_install_mode() -> str:
@@ -766,34 +757,27 @@ def _install_project_skills(
         raise _write_error(result.errored)
 
     if result.installed or result.up_to_date:
-        # Decorative output only - a broken/closed server stdout must never turn
-        # a committed install into a reported (mis)failure.
-        try:
+        click.echo()
+        click.secho("✨ Successfully installed to ", fg="green", bold=True, nl=False)
+        click.secho(str(project_root), fg="bright_blue")
+        if result.installed:
             click.echo()
+            click.secho("Note: ", fg="bright_black", bold=True, nl=False)
             click.secho(
-                "✨ Successfully installed to ", fg="green", bold=True, nl=False
+                "Installed skills are symlinks to your local Streamlit environment.",
+                fg="bright_black",
             )
-            click.secho(str(project_root), fg="bright_blue")
-            if result.installed:
-                click.echo()
-                click.secho("Note: ", fg="bright_black", bold=True, nl=False)
-                click.secho(
-                    "Installed skills are symlinks to your local Streamlit environment.",
-                    fg="bright_black",
-                )
-                click.secho(
-                    "      They generally should not be committed to git.",
-                    fg="bright_black",
-                )
-            click.echo()
-            click.secho("Recommended .gitignore snippet:", fg="bright_black", bold=True)
-            gitignore_snippet = _generate_gitignore_snippet(
-                skills, target_dirs, project_root
+            click.secho(
+                "      They generally should not be committed to git.",
+                fg="bright_black",
             )
-            for line in gitignore_snippet.splitlines():
-                click.secho(f"  {line}", fg="bright_black")
-        except (OSError, ValueError):
-            pass
+        click.echo()
+        click.secho("Recommended .gitignore snippet:", fg="bright_black", bold=True)
+        gitignore_snippet = _generate_gitignore_snippet(
+            skills, target_dirs, project_root
+        )
+        for line in gitignore_snippet.splitlines():
+            click.secho(f"  {line}", fg="bright_black")
     elif result.skipped:
         raise _conflict_error(result.skipped)
 
@@ -867,28 +851,23 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
         raise _write_error(result.errored)
 
     if result.installed or result.up_to_date:
-        # Decorative output only - a broken/closed server stdout must never turn
-        # a committed install into a reported (mis)failure.
-        try:
+        click.echo()
+        click.secho(
+            "✨ Successfully installed globally",
+            fg="green",
+            bold=True,
+        )
+        if result.installed:
             click.echo()
+            click.secho("Note: ", fg="bright_black", bold=True, nl=False)
             click.secho(
-                "✨ Successfully installed globally",
-                fg="green",
-                bold=True,
+                "Global skills include a discover.py script that finds",
+                fg="bright_black",
             )
-            if result.installed:
-                click.echo()
-                click.secho("Note: ", fg="bright_black", bold=True, nl=False)
-                click.secho(
-                    "Global skills include a discover.py script that finds",
-                    fg="bright_black",
-                )
-                click.secho(
-                    "      project-specific bundled skills at runtime.",
-                    fg="bright_black",
-                )
-        except (OSError, ValueError):
-            pass
+            click.secho(
+                "      project-specific bundled skills at runtime.",
+                fg="bright_black",
+            )
     elif result.skipped:
         raise _conflict_error(result.skipped)
 
@@ -987,13 +966,6 @@ def summarize_install(result: _InstallResult) -> str:
         count = len(result.skipped)
         noun = "skill" if count == 1 else "skills"
         parts.append(f"{count} {noun} skipped due to conflicts.")
-    if result.errored:
-        # Defensive: the install path raises on any errored target before the
-        # success summary is built, so this normally can't be reached - but if a
-        # write failure ever slips through, never present it as a clean success.
-        count = len(result.errored)
-        noun = "skill" if count == 1 else "skills"
-        parts.append(f"{count} {noun} failed to write.")
     return " ".join(parts)
 
 
