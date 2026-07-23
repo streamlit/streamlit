@@ -363,8 +363,8 @@ class TestParseUserCookieSigned:
         assert result["is_logged_in"] is True
 
 
-class TestIsOriginAllowed:
-    """Tests for _is_origin_allowed function (Origin validation for WebSocket)."""
+class TestIsHostAllowed:
+    """Tests for _is_host_allowed function."""
 
     @pytest.mark.parametrize(
         ("host", "expected"),
@@ -377,6 +377,7 @@ class TestIsOriginAllowed:
             ("[::1]:8501", True),
             ("app.example.com:not-a-port", False),
             ("user:pass@app.example.com:8501", False),
+            ("app.example.com/evil", False),
             (None, False),
         ],
         ids=[
@@ -388,6 +389,7 @@ class TestIsOriginAllowed:
             "ipv6_host",
             "invalid_port",
             "embedded_credentials",
+            "path_component",
             "missing_host",
         ],
     )
@@ -416,6 +418,10 @@ class TestIsOriginAllowed:
         assert _is_host_allowed("dynamic-proxy.example.com:8501") is True
         assert _is_host_allowed("dynamic-proxy.example.com:not-a-port") is False
         assert _is_host_allowed(None) is False
+
+
+class TestIsOriginAllowed:
+    """Tests for _is_origin_allowed function (Origin validation for WebSocket)."""
 
     @patch_config_options({"server.allowedHosts": ["app.example.com"]})
     def test_rejects_same_origin_connection_with_disallowed_host(self) -> None:
