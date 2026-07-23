@@ -472,16 +472,12 @@ class ScriptRunContextTest(unittest.TestCase):
         assert ctx.shared.tracked_commands_count == 0
 
     def test_run_wrapper_tolerates_extra_positional_arg_from_thread_wrapper(self):
-        """The _run_with_thread_state wrapper must tolerate an extra positional
-        argument without forwarding it to the bound original run().
+        """The wrapper must tolerate an extra positional argument without
+        forwarding it to the already-bound original run().
 
-        Regression test for GitHub issues #15374 and #16139: third-party thread
-        wrappers (most notably Sentry's ThreadingIntegration) treat our
-        replacement ``run`` as an unbound function and re-invoke it with the
-        thread instance as the first positional argument. The original ``run``
-        we captured is already bound and takes no positional arguments, so
-        forwarding that argument raised ``TypeError: run() takes 1 positional
-        argument but 2 were given``.
+        Regression test for GitHub issues #15374 and #16139, where a thread
+        wrapper (Sentry's ThreadingIntegration) re-invokes the wrapper with the
+        thread as an extra positional arg; forwarding it raised a TypeError.
         """
         pages_manager = PagesManager("/main/script/path")
         enable_mpa_v2_mode(pages_manager)
