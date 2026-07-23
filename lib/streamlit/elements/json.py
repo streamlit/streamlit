@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, cast
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.secrets import AttrDict, Secrets, _redact_secrets
 from streamlit.type_util import (
     dump_pydantic_sequence,
     is_custom_dict,
@@ -37,10 +38,12 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
 
-def _ensure_serialization(o: object) -> str | list[Any]:
+def _ensure_serialization(o: object) -> str | list[Any] | dict[str, Any]:
     """A repr function for json.dumps default arg, which tries to serialize sets
     as lists.
     """
+    if isinstance(o, (AttrDict, Secrets)):
+        return _redact_secrets(o)
     return list(o) if isinstance(o, set) else repr(o)
 
 
@@ -108,14 +111,16 @@ class JsonMixin:
 
         """
 
-        if is_custom_dict(body):
+        if isinstance(body, (AttrDict, Secrets)):
+            body = _redact_secrets(body)
+        elif is_custom_dict(body):
             is_user = isinstance(body, UserInfoProxy)
-            body = body.to_dict()  # ty: ignore[unresolved-attribute]
+            body = body.to_dict()
             if is_user and "tokens" in body:
                 body["tokens"] = dict.fromkeys(body["tokens"], "***")
 
         if is_namedtuple(body):
-            body = body._asdict()  # ty: ignore[unresolved-attribute]
+            body = body._asdict()
 
         if isinstance(
             body, (ChainMap, types.MappingProxyType, UserDict)
@@ -128,9 +133,9 @@ class JsonMixin:
                     body = dump_pydantic_sequence(body)
                 except AttributeError:
                     # Fallback to list(body) if it contains non-Pydantic models:
-                    body = list(body)  # ty: ignore[invalid-argument-type]
+                    body = list(body)
             else:
-                body = list(body)  # ty: ignore[invalid-argument-type]
+                body = list(body)
 
         if not isinstance(body, str):
             try:

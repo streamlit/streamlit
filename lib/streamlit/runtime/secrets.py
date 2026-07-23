@@ -41,6 +41,7 @@ SecretsValue = (
 
 # Allowed scalar types for secrets values
 _ALLOWED_SCALAR_TYPES: Final[frozenset[type]] = frozenset({str, int, float, bool})
+_REDACTED_VALUE: Final = "***"
 
 
 def _validate_secrets_value(value: Any, path: str = "") -> None:
@@ -186,6 +187,19 @@ def _convert_to_dict(obj: Mapping[str, Any] | AttrDict) -> dict[str, Any]:
     return {k: v.to_dict() if isinstance(v, AttrDict) else v for k, v in obj.items()}
 
 
+def _redact_secrets(obj: Mapping[str, Any]) -> dict[str, Any]:
+    """Replace secret values with a display-safe placeholder."""
+
+    def redact(value: Any) -> Any:
+        if isinstance(value, Mapping):
+            return _redact_secrets(value)
+        if isinstance(value, list):
+            return [redact(item) for item in value]
+        return _REDACTED_VALUE
+
+    return {key: redact(value) for key, value in obj.items()}
+
+
 def _missing_attr_error_message(attr_name: str) -> str:
     return secret_error_messages_singleton.get_missing_attr_message(attr_name)
 
@@ -229,7 +243,7 @@ class AttrDict(Mapping[str, Any]):
             raise AttributeError(_missing_attr_error_message(attr_name))
 
     def __repr__(self) -> str:
-        return repr(self.__nested_secrets__)
+        return repr(_redact_secrets(self.__nested_secrets__))
 
     def __setitem__(self, key: str, value: Any) -> NoReturn:
         raise TypeError("Secrets does not support item assignment.")
@@ -613,12 +627,12 @@ class Secrets(Mapping[str, Any]):
     def __repr__(self) -> str:
         # If the runtime is NOT initialized, it is a method call outside
         # the streamlit app, so we avoid reading the secrets file as it may not exist.
-        # If the runtime is initialized, display the contents of the file and
-        # the file must already exist.
-        """A string representation of the contents of the dict. Thread-safe."""
+        # If the runtime is initialized, preserve the store's structure but redact
+        # values so implicit rendering cannot disclose credentials.
+        """A redacted string representation of the secrets store. Thread-safe."""
         if not runtime.exists():
             return f"{self.__class__.__name__}"
-        return repr(self._parse())
+        return repr(_redact_secrets(self._parse()))
 
     def __len__(self) -> int:
         """The number of entries in the dict. Thread-safe."""
