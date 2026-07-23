@@ -350,9 +350,9 @@ function DataFrame({
 
   const handleFinishedEditing = useCallback(
     (_newValue: GridCell | undefined, [moveX, moveY]: Item): void => {
-      // moveX/moveY are non-zero only for keyboard completions (e.g. Enter/Tab),
-      // which never arm the flag. The guard is belt-and-suspenders to ensure we
-      // only flush on the outside-click path.
+      // Keyboard completions (Enter/Tab) report non-zero movement and do not
+      // arm the flag. This guard ensures we flush only for the outside-click
+      // path.
       const shouldFlush =
         flushEditStateOnFinishedEditingRef.current &&
         moveX === 0 &&
