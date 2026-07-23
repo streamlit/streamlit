@@ -31,8 +31,9 @@ allowedHosts = ["app.example.com", "*.example.com"]
 
 Entries match hostnames without ports and are case-insensitive. A leading `*.`
 matches subdomains but not the base domain, so add the base domain separately when
-both should be allowed. The default empty list accepts any Host header for
-compatibility with dynamic reverse proxies and custom domains.
+both should be allowed. An entry of `*` accepts any syntactically valid Host
+header. The default empty list disables Host validation for compatibility with
+dynamic reverse proxies and custom domains.
 
 ## Basic ASGI wrapper
 

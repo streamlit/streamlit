@@ -163,8 +163,7 @@ def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
     Returns
     -------
     bool
-        True if:
-        - The Host header is allowed (or server.allowedHosts is not configured)
+        False if the Host header is disallowed. Otherwise, True if:
         - The origin is None (browser didn't send Origin header, allowed per spec)
         - The origin matches the host (same-origin request)
         - The origin is in the allowed origins list (is_url_from_allowed_origins)

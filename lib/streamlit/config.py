@@ -1033,7 +1033,8 @@ _create_option(
 
         Use this option to protect against DNS rebinding attacks when the
         hostnames used to access the app are known. Ports in the Host header are
-        ignored. Wildcard subdomains are supported with a leading `*.`.
+        ignored. Wildcard subdomains are supported with a leading `*.`. Use `*`
+        to accept any valid Host header.
 
         If this list is empty (the default), Streamlit accepts any Host header
         to preserve compatibility with dynamically configured reverse proxies

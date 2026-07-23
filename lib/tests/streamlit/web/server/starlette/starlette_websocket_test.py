@@ -408,6 +408,13 @@ class TestIsOriginAllowed:
         assert _is_host_allowed("dynamic-proxy.example.com:8501") is True
         assert _is_host_allowed(None) is True
 
+    @patch_config_options({"server.allowedHosts": ["*"]})
+    def test_global_host_wildcard_allows_any_valid_host(self) -> None:
+        """Test that the global wildcard accepts any valid Host header."""
+        assert _is_host_allowed("dynamic-proxy.example.com:8501") is True
+        assert _is_host_allowed("dynamic-proxy.example.com:not-a-port") is False
+        assert _is_host_allowed(None) is False
+
     @patch_config_options({"server.allowedHosts": ["app.example.com"]})
     def test_rejects_same_origin_connection_with_disallowed_host(self) -> None:
         """Test that same-origin comparison cannot bypass Host validation."""
