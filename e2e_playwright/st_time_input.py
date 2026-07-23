@@ -153,14 +153,14 @@ v_seconds = st.time_input(
 st.write("Value seconds:", v_seconds)
 
 v_12h = st.time_input(
-    "Time input (12-hour)", time(8, 45), hour_cycle=12, key="time_input_12h"
+    "Time input (12-hour)", time(8, 45), format="12h", key="time_input_12h"
 )
 st.write("Value 12h:", v_12h)
 
 v_12h_seconds = st.time_input(
     "Time input (12h + seconds)",
     time(14, 30, 15),
-    hour_cycle=12,
+    format="12h",
     step=30,
     key="time_input_12h_seconds",
 )

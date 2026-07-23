@@ -201,29 +201,29 @@ function TimeInput({
   const stepMins = step / 60
   const stepHours = step / 3600
 
-  // Prop passed to react-aria <TimeField>. For "localized" (element.hourCycle === 0)
+  // Prop passed to react-aria <TimeField>. For "localized" (element.format === 0)
   // we pass undefined so react-aria uses the configured locale via I18nProvider.
   const hourCycleProp: 12 | 24 | undefined =
-    element.hourCycle === 0
+    element.format === 0
       ? undefined // localized — let I18nProvider locale decide
-      : element.hourCycle === 12
+      : element.format === 12
         ? 12
         : 24 // default: 24-hour (backward compatible)
 
   // For placeholder rendering we need to know whether the resolved display is
-  // 12-hour, even when element.hourCycle === 0 (localized). Probe Intl with
+  // 12-hour, even when element.format === 0 (localized). Probe Intl with
   // the configured locale so the empty-state "hh"/"HH" hint matches what
   // react-aria actually renders.
   const placeholderIs12Hour = useMemo((): boolean => {
-    if (element.hourCycle === 12) return true
-    if (element.hourCycle === 0) {
+    if (element.format === 12) return true
+    if (element.format === 0) {
       const hc = new Intl.DateTimeFormat(locale, {
         hour: "numeric",
       }).resolvedOptions().hourCycle
       return hc === "h11" || hc === "h12"
     }
     return false
-  }, [element.hourCycle, locale])
+  }, [element.format, locale])
 
   /**
    * Called by TimeField on every committed segment change.

@@ -559,7 +559,7 @@ def test_parse_date_value_returns_dates_and_range_flag(
 
 
 # ---------------------------------------------------------------------------
-# New tests for step validation, serde, and hour_cycle proto field
+# New tests for step validation, serde, and format proto field
 # ---------------------------------------------------------------------------
 
 
@@ -619,30 +619,30 @@ class TestTimeInputSerdeNew(DeltaGeneratorTestCase):
         assert serde.deserialize("14:30:45") == time(14, 30, 45)
 
 
-class TestHourCycleProtoField(DeltaGeneratorTestCase):
-    """Tests that hour_cycle is correctly written to the proto."""
+class TestFormatProtoField(DeltaGeneratorTestCase):
+    """Tests that format is correctly written to the proto."""
 
-    def test_hour_cycle_12_sets_proto(self):
-        """hour_cycle=12 writes 12 to proto."""
-        st.time_input("label", time(8, 45), hour_cycle=12)
+    def test_format_12h_sets_proto(self):
+        """format='12h' writes 12 to proto."""
+        st.time_input("label", time(8, 45), format="12h")
         el = self.get_delta_from_queue().new_element
-        assert el.time_input.hour_cycle == 12
+        assert el.time_input.format == 12
 
-    def test_hour_cycle_24_sets_proto(self):
-        """hour_cycle=24 (default) writes 24 to proto."""
-        st.time_input("label", time(8, 45), hour_cycle=24)
+    def test_format_24h_sets_proto(self):
+        """format='24h' (default) writes 24 to proto."""
+        st.time_input("label", time(8, 45), format="24h")
         el = self.get_delta_from_queue().new_element
-        assert el.time_input.hour_cycle == 24
+        assert el.time_input.format == 24
 
-    def test_hour_cycle_localized_sets_proto_to_0(self):
-        """hour_cycle='localized' writes 0 to proto."""
-        st.time_input("label", time(8, 45), hour_cycle="localized")
+    def test_format_localized_sets_proto_to_0(self):
+        """format='localized' writes 0 to proto."""
+        st.time_input("label", time(8, 45), format="localized")
         el = self.get_delta_from_queue().new_element
-        assert el.time_input.hour_cycle == 0
+        assert el.time_input.format == 0
 
-    def test_invalid_hour_cycle_raises(self):
-        """Invalid hour_cycle values raise StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException, match=r"`hour_cycle` must be"):
-            st.time_input("label", time(8, 45), hour_cycle=6)  # type: ignore[arg-type]
-        with pytest.raises(StreamlitAPIException, match=r"`hour_cycle` must be"):
-            st.time_input("label", time(8, 45), hour_cycle="auto")  # type: ignore[arg-type]
+    def test_invalid_format_raises(self):
+        """Invalid format values raise StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match=r"`format` must be"):
+            st.time_input("label", time(8, 45), format="6h")  # type: ignore[arg-type]
+        with pytest.raises(StreamlitAPIException, match=r"`format` must be"):
+            st.time_input("label", time(8, 45), format="auto")  # type: ignore[arg-type]

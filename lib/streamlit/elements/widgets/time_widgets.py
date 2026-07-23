@@ -683,7 +683,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
-        hour_cycle: Literal[12, 24, "localized"] = 24,
+        format: Literal["12h", "24h", "localized"] = "24h",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -704,7 +704,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
-        hour_cycle: Literal[12, 24, "localized"] = 24,
+        format: Literal["12h", "24h", "localized"] = "24h",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -725,7 +725,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
-        hour_cycle: Literal[12, 24, "localized"] = 24,
+        format: Literal["12h", "24h", "localized"] = "24h",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -837,18 +837,18 @@ class TimeWidgetsMixin:
             Any valid time may be entered regardless of the step value. Step
             does not restrict or snap the entered value.
 
-        hour_cycle : 12, 24, or "localized"
+        format : "12h", "24h", or "localized"
             Controls whether the hour is displayed in 12-hour or 24-hour
-            format. Defaults to ``24``.
+            format. Defaults to ``"24h"``.
 
-            - ``24`` (default): hours are displayed from 0 to 23.
-            - ``12``: hours are displayed from 1 to 12 with an AM/PM
+            - ``"24h"`` (default): hours are displayed from 0 to 23.
+            - ``"12h"``: hours are displayed from 1 to 12 with an AM/PM
               indicator.
             - ``"localized"``: the format is determined by the user's
               browser locale (may be 12-hour or 24-hour depending on
               the locale).
 
-            The ``hour_cycle`` setting is a display preference only and does
+            The ``format`` setting is a display preference only and does
             not affect the returned ``datetime.time`` value, which always
             uses 24-hour representation.
 
@@ -945,7 +945,7 @@ class TimeWidgetsMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             step=step,
-            hour_cycle=hour_cycle,
+            format=format,
             width=width,
             bind=bind,
             persist_state=persist_state,
@@ -965,7 +965,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
-        hour_cycle: Literal[12, 24, "localized"] = 24,
+        format: Literal["12h", "24h", "localized"] = "24h",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -1009,7 +1009,7 @@ class TimeWidgetsMixin:
             value=parsed_time if isinstance(value, (datetime, time)) else value,
             help=help,
             step=step,
-            hour_cycle=hour_cycle,
+            format=format,
             width=width,
         )
         del value
@@ -1048,14 +1048,12 @@ class TimeWidgetsMixin:
         if bind == "query-params" and key is not None:
             time_input_proto.query_param_key = str(key)
 
-        if hour_cycle not in {12, 24, "localized"}:
+        if format not in {"12h", "24h", "localized"}:
             raise StreamlitAPIException(
-                f"`hour_cycle` must be 12, 24, or 'localized' but got {hour_cycle!r}."
+                f"`format` must be '12h', '24h', or 'localized' but got {format!r}."
             )
-        if hour_cycle == "localized":
-            time_input_proto.hour_cycle = 0
-        else:
-            time_input_proto.hour_cycle = hour_cycle
+        _format_to_proto = {"localized": 0, "12h": 12, "24h": 24}
+        time_input_proto.format = _format_to_proto[format]
 
         widget_state = register_widget(
             time_input_proto.id,

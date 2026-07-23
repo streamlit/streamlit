@@ -101,7 +101,7 @@ def test_time_input_widget_rendering(
     )
     assert_snapshot(
         get_time_input(themed_app, "Time input (12-hour)"),
-        name="st_time_input-hour_cycle_12",
+        name="st_time_input-format_12h",
     )
     assert_snapshot(
         get_time_input(themed_app, "Time input (12h + seconds)"),
