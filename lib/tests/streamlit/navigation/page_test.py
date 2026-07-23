@@ -116,11 +116,14 @@ class StPagesTest(DeltaGeneratorTestCase):
             ("path_object", Path("page\x00.py")),
         ]
     )
-    @patch("streamlit.env_util.IS_WINDOWS", False)
     def test_rejects_null_byte_paths_on_all_platforms(
         self, _name: str, page: str | Path
     ) -> None:
-        """Null-byte paths are rejected on every platform before filesystem access."""
+        """Null-byte paths are rejected on every platform before filesystem access.
+
+        The null-byte check runs unconditionally before the Windows-gated UNC
+        check, so this test intentionally uses the real ``IS_WINDOWS`` value.
+        """
         with (
             patch("pathlib.Path.resolve") as resolve,
             pytest.raises(StreamlitAPIException, match="null bytes"),
@@ -133,8 +136,10 @@ class StPagesTest(DeltaGeneratorTestCase):
     def test_allows_network_style_paths_on_non_windows(self) -> None:
         """Network-style paths are only blocked on Windows, where SMB auto-connects."""
         # On POSIX these are ordinary paths with no SMB auto-connect, so st.Page
-        # must not reject them.
-        assert st.Page("//server/share/page.py") is not None
+        # must not reject them. The meaningful assertion is that no exception is
+        # raised and the path is accepted as a regular filesystem page.
+        page = st.Page("//server/share/page.py")
+        assert isinstance(page._page, Path)
 
     @parameterized.expand(
         [

@@ -32,6 +32,7 @@ class TestIsWindowsUncPath:
             pytest.param("/\\server\\share\\page.py", id="forward_then_backslash_unc"),
             pytest.param("\\/server/share/page.py", id="backslash_then_forward_unc"),
             pytest.param("\\\\?\\UNC\\server\\share\\page.py", id="extended_unc"),
+            pytest.param("\\\\?\\C:\\Windows\\page.py", id="extended_length_local"),
             pytest.param("\\\\.\\device\\page.py", id="device_namespace"),
         ],
     )
@@ -40,6 +41,8 @@ class TestIsWindowsUncPath:
 
         Windows normalizes ``/`` to ``\\`` before resolving, so mixed leading
         separators (``/\\``, ``\\/``) are UNC roots too and must be caught.
+        Extended-length local paths (``\\\\?\\C:\\...``) are also rejected
+        fail-closed: any ``\\\\``-prefixed input is treated as a network path.
         """
         assert is_windows_unc_path(path)
 
