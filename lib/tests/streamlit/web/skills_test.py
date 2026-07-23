@@ -2086,7 +2086,7 @@ class TestProjectInstallWouldBeRefused:
 class TestNudgeSuppressedWhenInstallWouldConflict:
     """End-to-end: when a non-managed file/dir occupies every install target the
     marker-based detection can't see it (no SKILL.md), but the installer refuses
-    with reason='conflict'. The show-gate must suppress the nudge so the user is
+    with a conflict error. The show-gate must suppress the nudge so the user is
     not stuck in an unbreakable nudge -> install -> conflict loop. Ties the gate's
     suppression to the installer's refusal on identical filesystem state.
     """
@@ -2145,9 +2145,9 @@ class TestNudgeSuppressedWhenInstallWouldConflict:
             # ...but the gate suppresses because the install can only conflict.
             assert skills.should_show_skills_nudge(str(app_dir)) is False
             # ...and the install does deterministically refuse with a conflict.
-            with pytest.raises(skills._InstallError) as exc:
+            with pytest.raises(click.ClickException) as exc:
                 skills.install_skills(global_mode=False, yes=True, app_dir=str(app_dir))
-            assert exc.value.reason == "conflict"
+            assert "already exist" in str(exc.value)
 
     def test_partial_conflict_still_nudges(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -2191,7 +2191,7 @@ class TestNudgeSuppressedWhenInstallWouldConflict:
     ) -> None:
         """Windows-without-Developer-Mode audience: symlinks unsupported, so the
         install falls back to a global COPY. When a real file occupies every
-        global target the copy also refuses (reason='conflict'); the gate must
+        global target the copy also refuses with a conflict error; the gate must
         suppress that loop too."""
         base = tmp_path.resolve()
 
@@ -2221,9 +2221,9 @@ class TestNudgeSuppressedWhenInstallWouldConflict:
             self._clear_caches()
             assert skills.detect_installed_skills(str(app_dir)) == []
             assert skills.should_show_skills_nudge(str(app_dir)) is False
-            with pytest.raises(skills._InstallError) as exc:
+            with pytest.raises(click.ClickException) as exc:
                 skills.install_skills(global_mode=False, yes=True, app_dir=str(app_dir))
-            assert exc.value.reason == "conflict"
+            assert "already exist" in str(exc.value)
 
 
 class TestGenerateGitignoreSnippetEdgeCases:

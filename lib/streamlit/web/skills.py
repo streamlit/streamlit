@@ -1184,7 +1184,7 @@ def should_show_skills_nudge(app_dir: str | None = None) -> bool:
         # No SKILL.md marker found. Also suppress when a one-click project
         # install would deterministically refuse at every target (a stray
         # non-managed file/dir occupies the installer's target), so the developer
-        # isn't nudged toward an action that can only fail with reason="conflict".
+        # isn't nudged toward an action that can only fail with a conflict.
         return not _project_install_would_be_refused(app_dir)
     except Exception:  # pragma: no cover - defensive
         return False
