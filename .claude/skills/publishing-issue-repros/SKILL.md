@@ -32,7 +32,7 @@ The bundle at `$OUT_DIR/gh-<N>/` must contain at least `app.py`, `NOTES.md`, and
 ## Preconditions
 
 Before publishing, confirm:
-- `app.py` exists and compiles: `python -m py_compile "$OUT_DIR/gh-<N>/app.py"`.
+- `app.py` exists and compiles: `python -m py_compile "${OUT_DIR:-work-tmp/debug}/gh-<N>/app.py"`.
 - `result.json` exists. Any verdict can be published — record it in the commit message
   so reviewers know the bundle's status.
 
@@ -52,7 +52,9 @@ DEST="${ST_ISSUES_DIR:-$HOME/dev/st-issues}/issues/gh-<N>"
 [ -f "$SRC/NOTES.md" ] || { echo "Error: $SRC/NOTES.md not found"; exit 1; }
 [ -f "$SRC/result.json" ] || { echo "Error: $SRC/result.json not found"; exit 1; }
 
-[ -d "$DEST" ] && echo "Refreshing existing repro for gh-<N>"
+# "Add" for a new repro, "Refresh" if the destination already exists — capture
+# this before mkdir so the commit message reflects it:
+VERB="Add"; [ -d "$DEST" ] && VERB="Refresh"
 mkdir -p "$DEST"
 cp "$SRC/app.py" "$SRC/NOTES.md" "$DEST/"
 if [ -f "$SRC/requirements.txt" ]; then
@@ -61,10 +63,13 @@ else
   rm -f "$DEST/requirements.txt"  # drop stale deps when refreshing
 fi
 
+# Record the bundle's verdict from result.json so reviewers see the status:
+VERDICT=$(python -c "import json,sys; print(json.load(open(sys.argv[1]))['verdict'])" "$SRC/result.json")
+
 cd "${ST_ISSUES_DIR:-$HOME/dev/st-issues}"
 python -m py_compile "issues/gh-<N>/app.py"
 git add "issues/gh-<N>/"
-git commit -m "Add reproduction for issue #<N>: <Short Title>"
+git commit -m "$VERB reproduction for issue #<N>: <Short Title> (verdict: $VERDICT)"
 git push origin main
 ```
 

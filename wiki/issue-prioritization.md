@@ -185,3 +185,7 @@ calibrate; the "why" shows the deciding criterion.
 - **P3** — [#15921](https://github.com/streamlit/streamlit/issues/15921):
   Keyboard focus indicator moves twice on the file-uploader control on Windows.
   Real but minor, specific to one control + platform, low reach.
+- **P4** — [#12872](https://github.com/streamlit/streamlit/issues/12872):
+  `st.color_picker` should have a 40px minimum width. A valid but purely cosmetic
+  papercut affecting a niche layout with little demand — worth revisiting only if
+  more users ask for it.

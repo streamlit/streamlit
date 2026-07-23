@@ -9,7 +9,7 @@ This wiki contains documentation for the Streamlit development process.
 - [New Feature Guide](new-feature-guide.md): Implementation order for new elements, widgets, and features.
 - [Running e2e tests and updating snapshots](running-e2e-tests.md): How to run e2e tests and update snapshots.
 - [Pull Requests](pull-requests.md): Branch naming, labeling, writing principles, and PR description guidelines.
-- [Issue Prioritization](issue-prioritization.md): Definitions and actions for the `priority:P0`–`priority:P3` levels.
+- [Issue Prioritization](issue-prioritization.md): Definitions and actions for the `priority:P0`–`priority:P4` levels.
 
 ## Development Guides
 

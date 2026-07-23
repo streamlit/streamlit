@@ -102,7 +102,7 @@ behavior. See [reference.md](reference.md) for the template.
 
 Validate syntax:
 ```bash
-python -m py_compile "$OUT_DIR/gh-<N>/repro_gh_<N>.py"
+python -m py_compile "${OUT_DIR:-work-tmp/debug}/gh-<N>/repro_gh_<N>.py"
 ```
 
 ### Step 3: Verify with Playwright
@@ -124,7 +124,7 @@ Playwright script:
 ```bash
 uv venv /tmp/st-<version> --python 3.13
 uv pip install --python /tmp/st-<version>/bin/python "streamlit==<version>"
-/tmp/st-<version>/bin/streamlit run "$OUT_DIR/gh-<N>/repro_gh_<N>.py" \
+/tmp/st-<version>/bin/streamlit run "${OUT_DIR:-work-tmp/debug}/gh-<N>/repro_gh_<N>.py" \
   --server.port 8600 --server.headless true
 ```
 
@@ -189,7 +189,7 @@ particular, measure reach by the *broken behavior*, not the affected surface.
 
 Validate:
 ```bash
-python -m py_compile "$OUT_DIR/gh-<N>/app.py"
+python -m py_compile "${OUT_DIR:-work-tmp/debug}/gh-<N>/app.py"
 ```
 
 ### Step 6: Write result.json
