@@ -893,23 +893,15 @@ class SessionState:
         cb_args: WidgetArgs,
         cb_kwargs: dict[str, Any],
     ) -> None:
-        """Execute a widget callback with fragment-aware context.
+        """Execute a widget callback in callback run context.
 
-        If the widget belongs to a fragment, temporarily marks the current
-        script context as being inside a fragment callback to adapt rerun
-        semantics. Attempts to call ``st.rerun()`` inside a widget callback are
-        converted to a user-visible warning and treated as a no-op.
+        Sets ``run_location=RunLocation.CALLBACK`` and binds ``fragment_id``
+        from the widget's metadata for the duration of the callback. The
+        derived ``in_fragment_callback`` property gates fragment-specific
+        behavior when ``fragment_id`` is non-None.
 
-        Parameters
-        ----------
-        callback_fn : WidgetCallback
-            The user-provided callback to execute.
-        cb_metadata : WidgetMetadata[Any]
-            Metadata of the widget associated with the callback.
-        cb_args : WidgetArgs
-            Positional arguments passed to the callback.
-        cb_kwargs : dict[str, Any]
-            Keyword arguments passed to the callback.
+        Attempts to call ``st.rerun()`` inside a widget callback are converted
+        to a user-visible warning and treated as a no-op.
         """
         from streamlit.runtime.scriptrunner import RerunException
 

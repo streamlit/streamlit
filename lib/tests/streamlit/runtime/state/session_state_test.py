@@ -134,6 +134,7 @@ def _create_persist_state_metadata(
 
 class WStateTests(unittest.TestCase):
     def setUp(self):
+        ThreadState.initialize()
         wstates = WStates()
         self.wstates = wstates
 
@@ -557,8 +558,8 @@ def test_callbacks_with_rerun():
 def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
     """Ensure fragment callback context flag is cleared on RerunException.
 
-    This guards against leaving `ctx.in_fragment_callback` stuck to True if
-    a callback raises, which could contaminate subsequent runs.
+    This guards against leaving ``ThreadState.get().in_fragment_callback`` stuck
+    to True if a callback raises, which could contaminate subsequent runs.
     """
     from streamlit.runtime.scriptrunner import RerunException
 
