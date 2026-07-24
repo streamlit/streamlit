@@ -555,10 +555,11 @@ def test_callbacks_with_rerun():
 
 
 def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
-    """Fragment callback run_location is cleared after a callback raises RerunException.
+    """in_fragment_callback is cleared after a callback raises RerunException.
 
-    Guards against leaving ``run_location`` stuck at CALLBACK if a callback
-    raises, which could contaminate subsequent code.
+    Guards against leaving ``ThreadState.in_fragment_callback`` stuck at True
+    (run_location stuck at CALLBACK) if a callback raises, which could
+    contaminate subsequent code.
     """
     from streamlit.runtime.scriptrunner import RerunData, RerunException
 
@@ -659,13 +660,13 @@ def test_callbacks_single_default_does_not_force_rerun() -> None:
     mock_ctx.script_requests.request_rerun.assert_not_called()
 
 
-def test_callbacks_two_callbacks_one_reruns_one_normal_yields_full_app() -> None:
-    """Two callbacks: one calls st.rerun(), one returns normally → single full-app rerun.
+def test_callbacks_two_callbacks_one_reruns_one_normal_yields_single_rerun() -> None:
+    """Two callbacks: one calls st.rerun(), one returns normally → one rerun request.
 
     When one callback calls a plain ``st.rerun()`` and another returns normally,
     both contribute ``kept_default`` votes. The re-queued rerun is the only request;
-    no extra forced rerun is generated since there is no conflict between targeted
-    and default votes.
+    the code adds no extra forced rerun since targeted and default votes don't
+    conflict.
     """
     from streamlit.runtime.scriptrunner import RerunData, RerunException
 
@@ -702,7 +703,7 @@ def test_callbacks_two_callbacks_one_reruns_one_normal_yields_full_app() -> None
 
 
 def test_fragment_callback_rerun_requeued() -> None:
-    """A fragment widget callback calling st.rerun() gets the rerun re-queued correctly."""
+    """A fragment widget callback calling st.rerun() re-queues the rerun."""
     from streamlit.runtime.scriptrunner import RerunData, RerunException
 
     requeue_calls: list[RerunData] = []

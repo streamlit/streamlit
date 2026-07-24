@@ -250,7 +250,7 @@ class ScriptRequests:
                 else:
                     # No full-app rerun in play — accumulate every fragment / targeted
                     # rerun into one ordered pass (deduped, order-preserving). Preempt
-                    # iff any part is fragment-scoped.
+                    # only if any part is fragment-scoped.
                     fragment_id_queue = [*self._rerun_data.fragment_id_queue]
                     for fragment_id in new_data.fragment_id_queue:
                         if fragment_id not in fragment_id_queue:

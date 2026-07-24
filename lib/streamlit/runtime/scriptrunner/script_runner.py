@@ -720,9 +720,9 @@ class ScriptRunner:
                         self._session_state.on_script_will_rerun(
                             rerun_data.widget_states
                         )
-                        # A rerun queued by a widget callback (e.g. a keyed
-                        # st.rerun("<fragment key>")) must preempt this run before
-                        # the body executes.
+                        # A rerun queued by a widget callback (e.g.
+                        # st.rerun(scope="fragment")) must preempt this run
+                        # before the body executes.
                         self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()

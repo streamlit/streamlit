@@ -236,6 +236,7 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.fragment_id_queue == ["frag_a", "frag_b"]
         assert reqs._rerun_data.is_fragment_scoped_rerun is False
 
+    def test_on_script_yield_with_no_request(self):
         """Return None; remain in the CONTINUE state."""
         reqs = ScriptRequests()
         result = reqs.on_scriptrunner_yield()

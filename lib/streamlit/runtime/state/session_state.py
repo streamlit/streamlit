@@ -586,7 +586,7 @@ class PersistedWidgetTracker:
 
 @dataclass(slots=True)
 class _CallbackRerunVotes:
-    """Tallies how the callbacks fired in one interaction want the rerun scoped.
+    """Tallies how each callback in one interaction wants the rerun scoped.
 
     ``requested_targeted`` is set when a callback asks for a fragment/keyed
     rerun; ``kept_default`` is set when a callback returns normally (keeping the
@@ -920,8 +920,8 @@ class SessionState:
 
         Sets ``run_location=RunLocation.CALLBACK`` and binds ``fragment_id``
         from the widget's metadata for the duration of the callback. When
-        ``st.rerun()`` is called inside a widget callback, the rerun request
-        is re-queued so that it takes effect after all callbacks have run and
+        ``st.rerun()`` is called inside a widget callback, Streamlit re-queues
+        the rerun request so it takes effect after all callbacks have run and
         the current script body has completed.
 
         Parameters
@@ -956,8 +956,8 @@ class SessionState:
         those targets; one that returns normally or issues a plain
         ``st.rerun()`` keeps the interaction's default rerun. When ``st.rerun``
         is called inside a callback, ``on_scriptrunner_yield`` has already
-        consumed the request, so it is re-queued here to honor the caller's
-        intent after all callbacks have run.
+        consumed the request, so this method re-queues it here to honor the
+        caller's intent after all callbacks have run.
         """
         from streamlit.runtime.scriptrunner import RerunException
 
