@@ -16,6 +16,7 @@
 
 import {
   ClipboardEvent,
+  KeyboardEvent,
   memo,
   ReactElement,
   useCallback,
@@ -101,6 +102,21 @@ export interface SingleDateInputProps {
 }
 
 /**
+ * Tabbable descendants of the calendar popover, in DOM order: the
+ * prev/next nav buttons and month/year `Select` triggers all render as
+ * native `<button>`s, and exactly one grid cell has `tabIndex=0` at a time
+ * (React Aria's roving-tabindex pattern) — every other cell is `-1` and
+ * excluded here.
+ */
+function getFocusableCalendarElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'button, [role="spinbutton"], [role="button"], [tabindex]'
+    )
+  ).filter(el => el.tabIndex >= 0 && !(el as HTMLButtonElement).disabled)
+}
+
+/**
  * Renders `state.segments` reordered to match `format` instead of the
  * locale-derived order React Aria would otherwise use — the Phase 0 spike's
  * chosen strategy (manual reordering via `useDateFieldState`, not
@@ -155,6 +171,9 @@ function SingleDateInput({
   const errorId = `${id}-error`
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
+  // Guards against `handleFocus` reopening the popover it's in the middle
+  // of closing — see `focusLastFieldSegment` below.
+  const isRestoringFocusRef = useRef(false)
 
   // useDatePickerState is used in fully controlled mode — value/onChange are
   // always the parent's, so the hook acts purely as a field/calendar
@@ -184,12 +203,49 @@ function SingleDateInput({
     flipOptions: isInSidebar ? false : undefined,
   })
 
+  // `triggerRef` is `StyledDateInputWrapper`, a plain (non-focusable) div —
+  // calling `.focus()` on it directly is a no-op, so closing the popover
+  // while focus is inside it (e.g. via Escape or selecting a date with
+  // Enter — see `restoreFocusFn` below and `handleCalendarChange`) would
+  // otherwise drop focus to `<body>` once the popover's DOM (and whatever
+  // grid cell was focused) unmounts. Focus the last segment instead,
+  // mirroring where `handleFieldKeyDown`'s forward-Tab entry came from.
+  //
+  // The `isRestoringFocusRef` guard exists because that same segment sits
+  // inside `StyledDateInputWrapper`, whose `onFocus` (`handleFocus` below)
+  // reopens the popover on *any* focus — including this programmatic one —
+  // which would otherwise immediately undo the very close this runs after.
+  // `.focus()` dispatches its `focus`/bubbling `onFocus` synchronously, so
+  // the ref is safe to clear right after the call returns.
+  const focusLastFieldSegment = useCallback((): void => {
+    const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
+      '[role="spinbutton"]'
+    )
+    const lastSegment = segments?.[segments.length - 1]
+    isRestoringFocusRef.current = true
+    if (lastSegment) {
+      lastSegment.focus()
+    } else {
+      triggerRef.current?.focus()
+    }
+    isRestoringFocusRef.current = false
+  }, [])
+
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: state.isOpen,
     onClose: () => state.setOpen(false),
     floatingSetFn: refs.setFloating,
     referenceSetFn: refs.setReference,
-    restoreFocusFn: () => triggerRef.current?.focus(),
+    restoreFocusFn: focusLastFieldSegment,
+    // Escape while the month/year dropdown (`CalendarPopoverHeader`) is
+    // open should close just that dropdown, not the whole calendar
+    // popover — without this, this hook's document-capture-phase Escape
+    // listener always wins the race against that dropdown's own (bubble-
+    // phase) Escape handling on its nested Select popover. (Outside-*click*
+    // dismissal for that same dropdown doesn't need a matching exclusion
+    // here: `HeaderPickerSelect` handles it directly via its own
+    // `useOverlayDismissal` instance, scoped to just its own trigger/panel.)
+    excludeSelectors: ['[data-testid="stDateInputHeaderPickerPopover"]'],
   })
 
   const setTriggerRef = useCallback(
@@ -201,16 +257,29 @@ function SingleDateInput({
   )
 
   // Selecting a date from the calendar grid closes the popover (matching
-  // BaseWeb's single-date behavior); typing/pasting into the field does not.
+  // BaseWeb's single-date behavior); typing/pasting into the field does
+  // not. Also restores focus to the field — without this, selecting via
+  // Enter on a focused grid cell (see the popover's Tab-trap below) would
+  // drop focus to `<body>` the same way an unguarded Escape did.
   const handleCalendarChange = useCallback(
     (date: CalendarDate): void => {
       state.setValue(date)
       state.setOpen(false)
+      focusLastFieldSegment()
     },
-    [state]
+    [state, focusLastFieldSegment]
   )
 
+  // Also wired to `onClickCapture` (not just `onFocus`): clicking a segment
+  // that's already focused — e.g. right after Escape/selection restores
+  // focus there, see `focusLastFieldSegment` — doesn't fire a new `focus`
+  // event, so `onFocus` alone would leave the popover closed despite the
+  // click. Must be the *capture*-phase click, not bubble-phase `onClick`:
+  // React Aria's segment press handling calls `stopPropagation()` on its
+  // own click, which would otherwise swallow it before it bubbles back up
+  // to this wrapper.
   const handleFocus = useCallback((): void => {
+    if (isRestoringFocusRef.current) return
     if (!disabled) state.setOpen(true)
   }, [disabled, state])
 
@@ -253,6 +322,73 @@ function SingleDateInput({
     [disabled, format, state, value, minDate]
   )
 
+  /**
+   * Tab from the field's last segment jumps straight into the open
+   * calendar's currently-focused date cell, so arrow keys/Enter work on it
+   * immediately — matching the old BaseWeb `Datepicker` (where ArrowDown
+   * from its plain-text input did the same). Segments themselves keep
+   * their native spinbutton arrow-key semantics (increment/decrement), so
+   * this can only be triggered via Tab, not arrow keys, unlike BaseWeb's
+   * un-segmented input. The popover renders in a `FloatingPortal` (outside
+   * the field's DOM position), so without this, Tab would otherwise skip
+   * over it entirely and land on whatever's next on the page.
+   */
+  const handleFieldKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>): void => {
+      if (e.key !== "Tab" || e.shiftKey || !state.isOpen) return
+      const wrapper = triggerRef.current
+      const calendar = refs.floating.current
+      if (!wrapper || !calendar) return
+
+      const segments = wrapper.querySelectorAll<HTMLElement>(
+        '[role="spinbutton"]'
+      )
+      const lastSegment = segments[segments.length - 1]
+      if (e.target !== lastSegment) return
+
+      const focusedCell = calendar.querySelector<HTMLElement>(
+        '[role="button"][tabindex="0"]'
+      )
+      if (!focusedCell) return
+      e.preventDefault()
+      focusedCell.focus()
+    },
+    [state.isOpen, refs.floating]
+  )
+
+  /**
+   * Full focus trap while the popover is open: Tab/Shift+Tab cycle among
+   * the popover's own focusable elements (prev/next nav, month/year
+   * selects, the one tabbable grid cell) and wrap at both ends instead of
+   * escaping to the rest of the page. `handleFieldKeyDown` is the only way
+   * in (Tab from the field's last segment); the only ways out are
+   * selecting a date or Escape (both already close the popover and, for
+   * Escape, restore focus to the field via `useOverlayDismissal`) — Tab no
+   * longer returns focus to the field directly, since a trap means you
+   * can't tab *out* of it at all.
+   */
+  const handleCalendarKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>): void => {
+      if (e.key !== "Tab") return
+      const calendar = refs.floating.current
+      if (!calendar) return
+
+      const focusable = getFocusableCalendarElements(calendar)
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+
+      if (e.shiftKey && e.target === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && e.target === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    },
+    [refs.floating]
+  )
+
   return (
     <StyledDateFieldContainer>
       <StyledDateInputWrapper
@@ -261,7 +397,9 @@ function SingleDateInput({
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
         onFocus={handleFocus}
+        onClickCapture={handleFocus}
         onPaste={handlePaste}
+        onKeyDown={handleFieldKeyDown}
       >
         <I18nProvider locale="en-US">
           <StyledDateField>
@@ -317,6 +455,7 @@ function SingleDateInput({
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDateInputCalendar"
+            onKeyDown={handleCalendarKeyDown}
           >
             {/* Scoped separately from the typed field's fixed en-US
                 I18nProvider — calendar month/weekday text follows the
@@ -344,7 +483,9 @@ function SingleDateInput({
                     )}
                   </CalendarGridHeader>
                   <CalendarGridBody>
-                    {date => <StyledCalendarCell date={date} />}
+                    {date => (
+                      <StyledCalendarCell date={date} $isRangeMode={false} />
+                    )}
                   </CalendarGridBody>
                 </StyledCalendarGrid>
               </StyledCalendarRoot>

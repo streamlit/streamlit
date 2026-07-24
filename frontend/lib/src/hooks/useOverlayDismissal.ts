@@ -122,6 +122,16 @@ export function useOverlayDismissal({
       const isEscape = e.key === "Escape"
       const isTab = closeOnTab && e.key === "Tab"
       if (!isEscape && !isTab) return
+      // Same exclusion as handlePointerDown: if focus is inside a nested
+      // overlay (e.g. DateInput's own month/year dropdown), let that
+      // overlay's own Escape handling close just itself instead of also
+      // dismissing this outer one. Only relevant for Escape — Tab has no
+      // such nested-overlay case among current consumers.
+      if (isEscape) {
+        const target = e.target as Element
+        if (excludeSelectorsRef.current?.some(sel => target.closest(sel)))
+          return
+      }
       // stopPropagation and preventDefault only for Escape — Tab must
       // propagate so parent focus managers (FocusLock, dialogs) can handle it.
       if (isEscape) {

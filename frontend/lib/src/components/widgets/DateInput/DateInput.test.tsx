@@ -697,10 +697,17 @@ describe("DateInput widget", () => {
       // <select> elements), so assert on their *names* rather than on
       // "no comboboxes at all" — quick select would show as a combobox
       // with a different accessible name (e.g. a date-range preset list).
-      const comboboxNames = screen
-        .queryAllByRole("combobox")
+      // The calendar's own month/year pickers are buttons that open a
+      // listbox (`aria-haspopup="listbox"`), so assert on their *names*
+      // rather than on "no buttons at all" — quick select would show as a
+      // combobox with a different accessible name (e.g. a date-range
+      // preset list), which stays absent here.
+      const pickerNames = screen
+        .queryAllByRole("button", { expanded: false })
+        .filter(el => el.getAttribute("aria-haspopup") === "listbox")
         .map(el => el.getAttribute("aria-label"))
-      expect(comboboxNames.sort()).toEqual(["month", "year"])
+      expect(pickerNames.sort()).toEqual(["month", "year"])
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
     })
 
     describe("quick select range", () => {

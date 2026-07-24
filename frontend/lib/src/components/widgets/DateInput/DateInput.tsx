@@ -19,6 +19,7 @@ import {
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react"
@@ -332,6 +333,19 @@ function DateInput({
     () => isoToCalendarDate(value[0] ?? "") ?? null,
     [value]
   )
+
+  // Keep the calendar's visible month in sync with `value` even when it
+  // changes via direct segment editing rather than through the calendar
+  // itself (prev/next, month/year pickers, or clicking a date all drive
+  // `focusedValue` via `onFocusChange` already). Without this, e.g. typing
+  // "02" into the month segment while the popover is open leaves the
+  // calendar showing whatever month it last displayed instead of jumping
+  // to February.
+  useEffect(() => {
+    if (!element.isRange && singleValue) {
+      setFocusedValue(singleValue)
+    }
+  }, [element.isRange, singleValue])
 
   if (!element.isRange) {
     return (
