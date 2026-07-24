@@ -485,6 +485,66 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert self._storage.contains("some_key")
         assert not self._storage.contains("some_other_key")
 
+    def test_resolve_target_returns_ids_for_named_fragment(self):
+        """resolve_target with a single name returns the registered fragment id."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+
+        result = self._storage.resolve_target("charts")
+
+        assert result == ["frag_a"]
+
+    def test_resolve_target_multiple_call_sites(self):
+        """One key registered at multiple call sites resolves to all ids."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+        self._storage.register("frag_b", "fragment_b", target_key="charts")
+
+        result = self._storage.resolve_target("charts")
+
+        assert result == ["frag_a", "frag_b"]
+
+    def test_resolve_target_list_of_names(self):
+        """A list of keys resolves to the union in stable order with deduplication."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+        self._storage.register("frag_b", "fragment_b", target_key="table")
+
+        result = self._storage.resolve_target(["charts", "table"])
+
+        assert result == ["frag_a", "frag_b"]
+
+    def test_resolve_target_unknown_name_raises(self):
+        """Resolving a name with no registered fragment raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="No fragment found for target"):
+            self._storage.resolve_target("unknown")
+
+    def test_remove_prunes_target_key_index(self):
+        """Removing a fragment drops it from the name index."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+
+        self._storage.delete("frag_a")
+
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("charts")
+
+    def test_clear_prunes_target_key_index(self):
+        """clear() drops all fragments from the name index."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+
+        self._storage.clear()
+
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("charts")
+
+    def test_reregister_with_new_key_repoints_index(self):
+        """Re-registering the same fragment id under a new key detaches the old name."""
+        self._storage.register("frag_a", "fragment_a", target_key="old_name")
+
+        # Re-register with a different key.
+        self._storage.register("frag_a", "fragment_a", target_key="new_name")
+
+        assert self._storage.resolve_target("new_name") == ["frag_a"]
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("old_name")
+
 
 def test_has_lock() -> None:
     """MemoryFragmentStorage should expose a threading.Lock for concurrent register/clear."""
@@ -2390,3 +2450,66 @@ class NestedFragmentContainerRerunTest(DeltaGeneratorTestCase):
             f"{recorded_fragment_ids[0]!r}."
         )
         assert recorded_fragment_ids == initial_run_ids
+
+
+@pytest.mark.parametrize("reserved_key", ["app", "fragment"])
+def test_fragment_reserved_key_raises(reserved_key: str) -> None:
+    """@st.fragment(key=<reserved>) raises StreamlitAPIException immediately."""
+    with pytest.raises(StreamlitAPIException, match="reserved name"):
+        fragment(key=reserved_key)
+
+
+def test_fragment_duplicate_key_different_definitions_raises() -> None:
+    """Two different fragment definitions sharing a key raise StreamlitDuplicateElementKey."""
+    from streamlit.errors import StreamlitDuplicateElementKey
+
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_storage = MemoryFragmentStorage()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.cursors = {}
+
+    ThreadState.initialize()
+
+    @fragment(key="shared_key")
+    def fragment_alpha() -> None:
+        pass
+
+    @fragment(key="shared_key")
+    def fragment_beta() -> None:
+        pass
+
+    with patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx):
+        fragment_alpha()
+        with pytest.raises(StreamlitDuplicateElementKey):
+            fragment_beta()
+
+
+def test_fragment_same_definition_multiple_call_sites_no_collision() -> None:
+    """The same fragment definition called from multiple sites (e.g. in a loop)
+    does not raise a duplicate-key error: register_fragment_user_key returns True
+    for the same definition_id even if called multiple times with the same key.
+    """
+    shared = SharedRunState()
+
+    definition_id = "mymodule.my_fragment"
+
+    assert shared.register_fragment_user_key("multi_site", definition_id) is True
+    # Second call site of the same fragment definition — must succeed (not a collision).
+    assert shared.register_fragment_user_key("multi_site", definition_id) is True
+
+
+def test_fragment_different_definitions_same_key_collide() -> None:
+    """Two different fragment definitions using the same key in one run collide:
+    register_fragment_user_key returns False for the second definition_id.
+    """
+    shared = SharedRunState()
+
+    assert (
+        shared.register_fragment_user_key("shared_key", "mymodule.fragment_alpha")
+        is True
+    )
+    assert (
+        shared.register_fragment_user_key("shared_key", "mymodule.fragment_beta")
+        is False
+    )
