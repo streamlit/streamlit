@@ -301,3 +301,24 @@ exp_b = st.expander("Multi exp B", key="multi_exp_b", on_change="rerun")
 with exp_b:
     st.write("Expander B content")
     st.button("Close B", on_click=close_multi_exp_b, key="close_multi_exp_b_btn")
+
+# ============================================================================
+# bind="query-params" Tests
+# ============================================================================
+
+with st.expander(
+    "Query param bound expander",
+    key="qp_exp",
+    bind="query-params",
+):
+    st.write("Query param expander content")
+
+st.write(f"QP expander state: {st.session_state.get('qp_exp')}")
+
+with st.expander(
+    "Query param bound expanded=True",
+    expanded=True,
+    key="qp_exp_true",
+    bind="query-params",
+):
+    st.write("Starts expanded, bind=query-params")

@@ -17,7 +17,12 @@ from typing import Final
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -28,7 +33,7 @@ from e2e_playwright.shared.app_utils import (
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
-NUMBER_OF_EXPANDERS: Final = 27
+NUMBER_OF_EXPANDERS: Final = 29
 
 
 def test_expander_displays_correctly(
@@ -480,3 +485,66 @@ def test_programmatic_close_does_not_reopen_other_expander(app: Page):
 
     # Expander A must NOT have reopened (the bug from #14943)
     expect(exp_a.get_by_text("Expander A content")).not_to_be_visible()
+
+
+# --- bind="query-params" Tests ---
+
+
+def test_expander_query_param_binding_url_updates_on_toggle(app: Page):
+    """Test that toggling a bound expander updates the browser URL."""
+    exp = get_element_by_key(app, "qp_exp")
+
+    # Initially collapsed — URL must not have the param
+    expect(app).not_to_have_url(re.compile(r"[?&]qp_exp="))
+
+    # Expand it — URL should gain ?qp_exp=true
+    exp.locator("summary").click()
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"qp_exp=true"))
+    expect(exp.get_by_text("Query param expander content")).to_be_visible()
+
+    # Collapse it — URL param should be removed (default state = collapsed)
+    exp.locator("summary").click()
+    wait_for_app_run(app)
+
+    expect(app).not_to_have_url(re.compile(r"[?&]qp_exp="))
+    expect(exp.get_by_text("Query param expander content")).not_to_be_visible()
+
+
+def test_expander_query_param_seeding_from_url(page: Page, app_base_url: str):
+    """Test that a bound expander starts expanded when seeded from URL."""
+    page.goto(build_app_url(app_base_url, query={"qp_exp": "true"}))
+    wait_for_app_loaded(page)
+
+    exp = get_element_by_key(page, "qp_exp")
+    expect(exp.get_by_text("Query param expander content")).to_be_visible()
+    expect(page).to_have_url(re.compile(r"qp_exp=true"))
+
+    # URL must NOT show the param for the other bound expander (it is collapsed by URL)
+    expect(page).not_to_have_url(re.compile(r"[?&]qp_exp_true="))
+
+
+def test_expander_query_param_default_expanded_true_url_cleared(app: Page):
+    """Test that a bound expander with expanded=True has no URL param in default state."""
+    exp = get_element_by_key(app, "qp_exp_true")
+
+    # Starts expanded (default) — URL must NOT have the param (default state = expanded)
+    expect(app).not_to_have_url(re.compile(r"[?&]qp_exp_true="))
+    expect(exp.get_by_text("Starts expanded, bind=query-params")).to_be_visible()
+
+    # Collapse it — URL should gain the param (non-default state)
+    exp.locator("summary").click()
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"qp_exp_true=false"))
+    expect(exp.get_by_text("Starts expanded, bind=query-params")).not_to_be_visible()
+
+
+def test_expander_query_param_session_state_reflects_url(page: Page, app_base_url: str):
+    """Test that session_state reflects the URL-seeded expander value."""
+    page.goto(build_app_url(app_base_url, query={"qp_exp": "true"}))
+    wait_for_app_loaded(page)
+
+    # The app writes st.session_state.get('qp_exp') to the page
+    expect(page.get_by_text("QP expander state: True", exact=True)).to_be_visible()
