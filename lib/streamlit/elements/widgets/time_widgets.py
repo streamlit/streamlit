@@ -989,7 +989,7 @@ class TimeWidgetsMixin:
         # (e.g. value=datetime.now()). For sub-minute steps, seconds are
         # meaningful and a stable key should be provided for dynamic values.
         _step_secs = (
-            step.seconds
+            int(step.total_seconds())
             if isinstance(step, timedelta)
             else step
             if isinstance(step, int)
@@ -1025,7 +1025,7 @@ class TimeWidgetsMixin:
                 f"`step` can only be `int` or `timedelta` but {type(step)} is provided."
             )
         if isinstance(step, timedelta):
-            step = step.seconds
+            step = int(step.total_seconds())
         if step < 1 or step > timedelta(hours=23).seconds:
             raise StreamlitAPIException(
                 f"`step` must be between 1 second and 23 hours but is currently set to {step} seconds."
