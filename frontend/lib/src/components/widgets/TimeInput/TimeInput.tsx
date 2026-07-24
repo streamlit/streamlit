@@ -151,7 +151,7 @@ function TimeInput({
   // "Press Enter to apply/submit form" hint via InputInstructions.
   // Explicit state — NOT derived from (displayValue !== value) — to avoid a
   // one-render flicker after arrow-key/immediate commits where value still
-  // reflects the previous async update cycle. See plan for full rationale.
+  // reflects the previous async update cycle.
   const [dirty, setDirty] = useState(false)
 
   const [isFocused, setIsFocused] = useState(false)
@@ -331,6 +331,10 @@ function TimeInput({
     },
     [setValueWithSource, inForm, element, widgetMgr, fragmentId]
   )
+
+  const handleFocus = useCallback((): void => {
+    setIsFocused(true)
+  }, [])
 
   const handleClear = useCallback((): void => {
     setDisplayValue(null)
@@ -669,7 +673,7 @@ function TimeInput({
         <StyledTimeInputWrapper
           data-testid="stTimeInputTimeDisplay"
           data-disabled={disabled || undefined}
-          onFocus={() => setIsFocused(true)}
+          onFocus={handleFocus}
           onBlur={handleBlur}
           data-has-error={validationError ? "" : undefined}
           onKeyDownCapture={handleKeyCapture}
