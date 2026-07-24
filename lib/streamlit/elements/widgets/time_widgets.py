@@ -482,7 +482,7 @@ class TimeInputSerde:
             try:
                 parsed = datetime.strptime(ui_value, "%H:%M").time()
             except ValueError:
-                pass
+                pass  # Neither format matched; handled below.
         if parsed is None:
             return self.value
         # Strip seconds when step is minute-granular so the returned value is
