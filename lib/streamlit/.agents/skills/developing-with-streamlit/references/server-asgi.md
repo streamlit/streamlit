@@ -17,24 +17,6 @@ Use `st.App` for:
 
 Do not use it just to set ports, headless mode, theme options, or regular Streamlit config. Use `.streamlit/config.toml` or `streamlit run` flags for those.
 
-## WebSocket Host allow-list
-
-For an app exposed at known hostnames, configure `server.allowedHosts` to restrict
-the Host headers accepted for incoming WebSocket connections and help protect against
-DNS rebinding attacks:
-
-```toml
-# .streamlit/config.toml
-[server]
-allowedHosts = ["app.example.com", "*.example.com"]
-```
-
-Entries match hostnames without ports and are case-insensitive. A leading `*.`
-matches subdomains but not the base domain, so add the base domain separately when
-both should be allowed. An entry of `*` accepts any syntactically valid Host
-header. The default empty list disables Host validation for compatibility with
-dynamic reverse proxies and custom domains.
-
 ## Basic ASGI wrapper
 
 Keep the Streamlit UI in a normal script, then create a separate ASGI wrapper.
