@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-NUM_TIME_INPUTS = 16
+NUM_TIME_INPUTS = 17
 
 
 def test_time_input_widget_rendering(
@@ -388,3 +388,134 @@ def test_time_input_query_param_step_not_snapped(page: Page, app_base_url: str):
 
     expect_prefixed_markdown(page, "Bound step time:", "09:17:00")
     expect(page).to_have_url(re.compile(r"bound_step_time=09%3A17"))
+
+
+# --- Paste behavior tests ---
+
+
+def _paste_into(locator: Locator, text: str) -> None:
+    """Simulate a paste event with the given text on a Playwright locator."""
+    locator.evaluate(
+        """(el, text) => {
+            const dt = new DataTransfer();
+            dt.setData('text/plain', text);
+            const event = new ClipboardEvent('paste', {
+                bubbles: true,
+                cancelable: true,
+            });
+            Object.defineProperty(event, 'clipboardData', { value: dt });
+            el.dispatchEvent(event);
+        }""",
+        text,
+    )
+
+
+def test_paste_behavior(app: Page):
+    """Test paste scenarios: valid formats, invalid with error/recovery, partial digits, empty field."""
+    # --- Valid paste: HH:MM and HHMM ---
+    time_input_1 = get_time_input(app, "Time input 1 (8:45)")
+    time_display_1 = time_input_1.get_by_test_id("stTimeInputTimeDisplay")
+    hour_segment = time_display_1.locator("[role='spinbutton']").first
+    minute_segment = time_display_1.locator("[role='spinbutton']").last
+    hour_segment.click()
+
+    _paste_into(hour_segment, "14:30")
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 1: 14:30:00")
+
+    _paste_into(hour_segment, "2215")
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 1: 22:15:00")
+
+    # --- Invalid paste shows error, does not commit ---
+    _paste_into(hour_segment, "08:99")
+    expect(time_input_1.get_by_test_id("stTimeInputError")).to_be_visible()
+    expect(hour_segment).to_have_text("08")
+    expect(minute_segment).to_have_text("99")
+    expect_markdown(app, "Value 1: 22:15:00")
+
+    # --- Recovery via valid paste ---
+    _paste_into(hour_segment, "10:30")
+    wait_for_app_run(app)
+    expect(time_input_1.get_by_test_id("stTimeInputError")).not_to_be_visible()
+    expect_markdown(app, "Value 1: 10:30:00")
+
+    # --- Arrow key revert after invalid paste ---
+    _paste_into(hour_segment, "08:99")
+    expect(time_input_1.get_by_test_id("stTimeInputError")).to_be_visible()
+
+    minute_segment.click()
+    minute_segment.press("ArrowUp")
+
+    expect(time_input_1.get_by_test_id("stTimeInputError")).not_to_be_visible()
+    expect(hour_segment).to_have_text("10")
+    expect(minute_segment).to_have_text("30")
+    expect_markdown(app, "Value 1: 10:30:00")
+
+    # --- Partial digit into segment ---
+    minute_segment.click()
+    _paste_into(minute_segment, "22")
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 1: 10:22:00")
+
+    # --- Paste into empty (cleared) field ---
+    time_input_8 = get_time_input(app, "Time input 8 (empty)")
+    time_display_8 = time_input_8.get_by_test_id("stTimeInputTimeDisplay")
+    hour_segment_8 = time_display_8.locator("[role='spinbutton']").first
+    minute_segment_8 = time_display_8.locator("[role='spinbutton']").last
+    hour_segment_8.click()
+
+    _paste_into(hour_segment_8, "16:45")
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 8: 16:45:00")
+
+    minute_segment_8.click()
+    _paste_into(minute_segment_8, "30")
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 8: 16:30:00")
+
+
+def test_paste_error_state_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
+    """Snapshot test for the error visual (red border + error icon)."""
+    time_input = get_time_input(app, "Time input 1 (8:45)")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    hour_segment = time_display.locator("[role='spinbutton']").first
+    hour_segment.click()
+
+    _paste_into(hour_segment, "25:00")
+
+    # Wait for error icon to appear
+    expect(time_input.get_by_test_id("stTimeInputError")).to_be_visible()
+
+    assert_snapshot(time_input, name="st_time_input-paste_error_state")
+
+
+def test_paste_in_form_context(app: Page):
+    """Test that paste works inside a form and value is submitted correctly."""
+    time_input = get_time_input(app, "Form time input")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    hour_segment = time_display.locator("[role='spinbutton']").first
+    hour_segment.click()
+
+    # Paste a valid time
+    _paste_into(hour_segment, "14:30")
+
+    # Value should NOT commit until form is submitted (form widgets defer)
+    expect(app.get_by_text("Form time:")).not_to_be_visible()
+
+    # Submit the form
+    app.get_by_role("button", name="Submit").click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Form time: 14:30:00")
+
+    # Test invalid paste in form doesn't block submission of prior valid value
+    hour_segment.click()
+    _paste_into(hour_segment, "99:99")
+    expect(time_input.get_by_test_id("stTimeInputError")).to_be_visible()
+
+    # Submit form — should still submit the last committed value (14:30)
+    app.get_by_role("button", name="Submit").click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Form time: 14:30:00")
