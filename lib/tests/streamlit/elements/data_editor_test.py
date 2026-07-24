@@ -566,6 +566,102 @@ class DataEditorUtilTest(unittest.TestCase):
         expected_df = pd.DataFrame({"col1": [1, 2, 10]}, index=expected_index)
         pd.testing.assert_frame_equal(df, expected_df, check_dtype=False)
 
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_apply_row_additions_existing_index_is_skipped(self, mock_logger):
+        """Test that an added row cannot overwrite an existing index value."""
+        df = pd.DataFrame(
+            {
+                "role": ["viewer", "viewer"],
+                "balance": [100, 200],
+            },
+            index=["victim@corp.com", "other@corp.com"],
+        )
+        original_df = df.copy()
+        added_rows: list[dict[str, Any]] = [
+            {
+                "_index": "victim@corp.com",
+                "role": "admin",
+                "balance": 0,
+            },
+        ]
+
+        _apply_row_additions(
+            df, added_rows, determine_dataframe_schema(df, _get_arrow_schema(df))
+        )
+
+        pd.testing.assert_frame_equal(df, original_df)
+        mock_logger.warning.assert_called_once_with(
+            "Cannot add row because its index value already exists. "
+            "Row addition skipped."
+        )
+
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_apply_row_additions_skips_only_duplicate_in_batch(self, mock_logger):
+        """Test that a duplicate index is skipped while other additions still apply."""
+        df = pd.DataFrame(
+            {
+                "role": ["viewer", "viewer"],
+                "balance": [100, 200],
+            },
+            index=["victim@corp.com", "other@corp.com"],
+        )
+        added_rows: list[dict[str, Any]] = [
+            {"_index": "victim@corp.com", "role": "admin", "balance": 0},
+            {"_index": "new@corp.com", "role": "viewer", "balance": 300},
+        ]
+
+        _apply_row_additions(
+            df, added_rows, determine_dataframe_schema(df, _get_arrow_schema(df))
+        )
+
+        # The colliding row is skipped, but the unique row is still added.
+        expected_df = pd.DataFrame(
+            {
+                "role": ["viewer", "viewer", "viewer"],
+                "balance": [100, 200, 300],
+            },
+            index=["victim@corp.com", "other@corp.com", "new@corp.com"],
+        )
+        pd.testing.assert_frame_equal(df, expected_df, check_dtype=False)
+        mock_logger.warning.assert_called_once_with(
+            "Cannot add row because its index value already exists. "
+            "Row addition skipped."
+        )
+
+    def test_apply_dataframe_edits_delete_then_re_add_same_index(self):
+        """Test re-adding a deleted index value succeeds (deletions run first)."""
+        df = pd.DataFrame(
+            {
+                "role": ["viewer", "viewer"],
+                "balance": [100, 200],
+            },
+            index=["victim@corp.com", "other@corp.com"],
+        )
+
+        # Delete the first row and re-add a row reusing its index value in the
+        # same batch. Deletions run before additions, so the re-added label is
+        # no longer present and the addition must not be rejected as a duplicate.
+        _apply_dataframe_edits(
+            df,
+            {
+                "deleted_rows": [0],
+                "added_rows": [
+                    {"_index": "victim@corp.com", "role": "admin", "balance": 0},
+                ],
+                "edited_rows": {},
+            },
+            determine_dataframe_schema(df, _get_arrow_schema(df)),
+        )
+
+        expected_df = pd.DataFrame(
+            {
+                "role": ["viewer", "admin"],
+                "balance": [200, 0],
+            },
+            index=["other@corp.com", "victim@corp.com"],
+        )
+        pd.testing.assert_frame_equal(df, expected_df, check_dtype=False)
+
     def test_apply_row_additions_range_index_with_value(self):
         r"""Test adding row to RangeIndex with explicit _index provided
         (should still auto-increment)."""
