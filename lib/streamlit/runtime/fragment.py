@@ -502,10 +502,21 @@ def _fragment(
             if ctx is None:  # pragma: no cover - defensive
                 raise RuntimeError("ctx is None. This should never happen.")
 
-            if ctx.fragment_ids_this_run:
-                # This script run is a run of one or more fragments. We restore the
-                # state of ctx.cursors and dg_stack to the snapshots we took when this
-                # fragment was declared.
+            if ctx.fragment_ids_this_run and fragment_id in ctx.fragment_ids_this_run:
+                # This wrapped_fragment is being invoked directly by the script
+                # runner as a top-level fragment rerun (not through ``wrap`` from
+                # an enclosing scope). Restore the ctx.cursors and dg_stack state
+                # to the snapshots we took when this fragment was declared.
+                #
+                # Nested fragments called via ``wrap`` from an already-rerunning
+                # parent (i.e. ``fragment_ids_this_run`` is set but doesn't
+                # include this fragment) must NOT restore here: the parent's
+                # execution has already advanced the enclosing cursors, and
+                # replacing the dg_stack with deep copies would sever the
+                # nested fragment's writes from the enclosing scope's cursor
+                # state. That in turn can cause sibling nested fragments to
+                # compute colliding fragment ids and overwrite each other's
+                # deltas (see #12514).
                 ctx.cursors = deepcopy(cursors_snapshot)
                 context_dg_stack.set(deepcopy(dg_stack_snapshot))
 
