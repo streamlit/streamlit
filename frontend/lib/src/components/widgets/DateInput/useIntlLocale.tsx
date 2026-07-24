@@ -19,31 +19,7 @@ import { useMemo } from "react"
 import type { Day, Locale } from "date-fns"
 import { enUS } from "date-fns/locale/en-US"
 
-type IntlWeekInfo = {
-  firstDay: number
-  weekend: number[]
-  minimalDays?: number
-}
-
-/**
- * Retrieves the week information for a given locale.
- * Note: Firefox does not yet support the `weekInfo` property /`getWeekInfo`
- * function on `Intl.Locale`.
- *
- * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Locale/getWeekInfo
- * @param {Intl.Locale} intlLocale - The locale for which to retrieve week
- * information.
- */
-/** Extended Intl.Locale with weekInfo support (not yet in all TS lib versions). */
-type IntlLocaleWithWeekInfo = Intl.Locale & {
-  getWeekInfo?: () => IntlWeekInfo
-  weekInfo?: IntlWeekInfo
-}
-
-const getWeekInfo = (intlLocale: Intl.Locale): IntlWeekInfo | null => {
-  const locale = intlLocale as IntlLocaleWithWeekInfo
-  return locale?.getWeekInfo?.() ?? locale?.weekInfo ?? null
-}
+import { getWeekInfoForLocale } from "./weekInfo"
 
 /**
  * Returns an augmented en-US locale with the weekStartsOn option set to the
@@ -52,18 +28,17 @@ const getWeekInfo = (intlLocale: Intl.Locale): IntlWeekInfo | null => {
  * This is used as a stop-gap solution since date-fns is a large library and we
  * don't want to include all locales in the wheel file.
  *
+ * Note: this hook is consumed by `DateTimeInput.tsx` (BaseWeb) only —
+ * `DateInput.tsx` derives its own `firstDayOfWeek` via `useFirstDayOfWeek.ts`,
+ * which shares the underlying `getWeekInfoForLocale` helper but returns
+ * React Aria's `"sun"|"mon"|...` shape instead of a date-fns `Locale`.
+ *
  * @param locale  The locale for which to retrieve week information.
  * @returns The augmented locale, or en-US if the week information could not be
  * retrieved.
  */
 export const useIntlLocale = (locale: string): Locale => {
-  const weekInfo = useMemo(() => {
-    try {
-      return getWeekInfo(new Intl.Locale(locale))
-    } catch {
-      return getWeekInfo(new Intl.Locale("en-US"))
-    }
-  }, [locale])
+  const weekInfo = useMemo(() => getWeekInfoForLocale(locale), [locale])
 
   if (!weekInfo) {
     return enUS

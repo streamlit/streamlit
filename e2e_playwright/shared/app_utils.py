@@ -377,6 +377,31 @@ def get_date_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
     return element
 
 
+def type_date(date_input_field: Locator, *parts: str) -> None:
+    """Type digits into a single-mode DateInput's segments, on-screen order.
+
+    Single-mode `st.date_input` renders its typed field as a sequence of
+    `role="spinbutton"` segments (year/month/day, React Aria `DateField`)
+    rather than a single free-text `<input>`, so values must be typed
+    segment-by-segment. Range-mode `date_input` still uses a plain `<input>`
+    (BaseWeb) and should keep using `.fill()`/`.type()` directly.
+
+    Parameters
+    ----------
+    date_input_field : Locator
+        The `stDateInputField` locator (the segmented field container) for a
+        single-date, non-range `date_input`.
+
+    *parts : str
+        Digit strings for each segment, in the same left-to-right order the
+        segments are rendered in (which follows the widget's `format`), e.g.
+        ``type_date(field, "1970", "01", "02")`` for a `YYYY/MM/DD` field.
+    """
+    spinbuttons = date_input_field.get_by_role("spinbutton")
+    for i, part in enumerate(parts):
+        spinbuttons.nth(i).press_sequentially(part)
+
+
 def get_slider(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a slider with the given label.
 
