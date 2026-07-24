@@ -595,9 +595,7 @@ class CachedFunc(Generic[P, R]):
             # itself the coroutine type, so the cast is accurate.
             return cast(
                 "R",
-                self._get_or_create_cached_value_async(
-                    args, kwargs, spinner_message
-                ),
+                self._get_or_create_cached_value_async(args, kwargs, spinner_message),
             )
 
         return self._get_or_create_cached_value(args, kwargs, spinner_message)

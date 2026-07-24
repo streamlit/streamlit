@@ -23,12 +23,14 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Both cache decorators, so shared behavior can be parametrized across them.
 CACHE_DECORATORS: list[tuple[str, Any]] = [
@@ -47,7 +49,7 @@ def _clear_caches() -> Any:
     st.cache_resource.clear()
 
 
-@pytest.mark.parametrize("name, decorator", CACHE_DECORATORS)
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
 def test_async_first_call_runs_then_cached(name: str, decorator: Callable) -> None:
     """The body runs on the first await and is skipped (cached) on the second."""
     calls: list[int] = []
@@ -63,7 +65,7 @@ def test_async_first_call_runs_then_cached(name: str, decorator: Callable) -> No
     assert calls == [2]
 
 
-@pytest.mark.parametrize("name, decorator", CACHE_DECORATORS)
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
 def test_async_body_runs_once_across_repeated_awaits(
     name: str, decorator: Callable
 ) -> None:
@@ -84,7 +86,7 @@ def test_async_body_runs_once_across_repeated_awaits(
     assert calls == [7]
 
 
-@pytest.mark.parametrize("name, decorator", CACHE_DECORATORS)
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
 def test_async_different_args_produce_different_entries(
     name: str, decorator: Callable
 ) -> None:
@@ -104,7 +106,7 @@ def test_async_different_args_produce_different_entries(
     assert calls == [1, 2]
 
 
-@pytest.mark.parametrize("name, decorator", CACHE_DECORATORS)
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
 def test_async_call_returns_awaitable(name: str, decorator: Callable) -> None:
     """Calling a decorated coroutine function returns an awaitable, not the value."""
 
