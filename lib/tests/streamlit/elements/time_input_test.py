@@ -643,6 +643,6 @@ class TestFormatProtoField(DeltaGeneratorTestCase):
     def test_invalid_format_raises(self):
         """Invalid format values raise StreamlitAPIException."""
         with pytest.raises(StreamlitAPIException, match=r"`format` must be"):
-            st.time_input("label", time(8, 45), format="6h")  # type: ignore[arg-type]
+            st.time_input("label", time(8, 45), format="6h", key="fmt_6h")  # type: ignore[arg-type]
         with pytest.raises(StreamlitAPIException, match=r"`format` must be"):
-            st.time_input("label", time(8, 45), format="auto")  # type: ignore[arg-type]
+            st.time_input("label", time(8, 45), format="auto", key="fmt_auto")  # type: ignore[arg-type]

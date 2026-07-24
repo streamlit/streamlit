@@ -1009,7 +1009,6 @@ class TimeWidgetsMixin:
             value=parsed_time if isinstance(value, (datetime, time)) else value,
             help=help,
             step=step,
-            format=format,
             width=width,
         )
         del value
