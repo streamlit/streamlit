@@ -50,7 +50,7 @@ def _is_file(obj: str) -> bool:
     """Check if obj is a file path, without throwing if not."""
 
     # Skip filesystem check for long strings (likely HTML content) or strings
-    # containing '<' (likely HTML tags) to avoid unnecessary I/O
+    # containing '<' (likely HTML tags) to avoid unnecessary I/O.
     if len(obj) > _MAX_PATH_LENGTH or "<" in obj:
         return False
 

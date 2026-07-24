@@ -114,6 +114,6 @@ st.iframe(
     height="content",
 )
 
-# Example 9: String file path migration warning
+# Example 8: String file path migration warning
 st.subheader("String file path")
 st.iframe(str(STATIC_DIR / "test_div.html"), height=80)

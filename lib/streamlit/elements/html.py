@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast
@@ -199,7 +198,7 @@ def _is_file(obj: str) -> bool:
         return False
 
     try:
-        return os.path.isfile(obj)
+        return Path(obj).is_file()
     except (TypeError, OSError, ValueError):
         # ValueError can be raised on some platforms for strings with null bytes.
         return False
