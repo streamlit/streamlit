@@ -24,7 +24,7 @@ import threading
 import time
 from abc import abstractmethod
 from collections import defaultdict
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -848,8 +848,11 @@ class CachedFunc(Generic[P, R]):
             with self._info.cached_message_replay_ctx.calling_cached_function(
                 self._info.func
             ):
+                # `is_async` guarantees the call returns a coroutine; cast so the
+                # type checker allows awaiting it (the wrapper's `R` is the coroutine
+                # type for an `async def`, not the awaited value type).
                 computed_value = await cast(
-                    "Awaitable[R]", self._info.func(*func_args, **func_kwargs)
+                    "Any", self._info.func(*func_args, **func_kwargs)
                 )
 
             return self._store_computed_value(cache, value_key, computed_value)
