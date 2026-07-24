@@ -205,7 +205,37 @@ class ScriptRequestsTest(unittest.TestCase):
         reqs.request_rerun(RerunData(fragment_id_queue=[]))
         assert reqs._rerun_data.fragment_id_queue == []
 
-    def test_on_script_yield_with_no_request(self):
+    def test_request_rerun_merges_fragment_id_queues(self):
+        """Two fragment_id_queue requests union with dedup and preserved order."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_a", "frag_b"]))
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_b", "frag_c"]))
+        assert reqs._rerun_data.fragment_id_queue == ["frag_a", "frag_b", "frag_c"]
+
+    def test_full_app_rerun_pending_not_downgraded_by_targeted(self):
+        """A pending full-app rerun is not downgraded when a targeted rerun arrives."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData())  # full-app: empty queue, not fragment-scoped
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_x"]))  # targeted
+        assert reqs._rerun_data.fragment_id_queue == []
+        assert reqs._rerun_data.is_fragment_scoped_rerun is False
+
+    def test_targeted_then_full_collapses_to_full_app_rerun(self):
+        """A targeted rerun followed by a full-app rerun collapses to full-app."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_x"]))  # targeted first
+        reqs.request_rerun(RerunData())  # full-app arrives second
+        assert reqs._rerun_data.fragment_id_queue == []
+        assert reqs._rerun_data.is_fragment_scoped_rerun is False
+
+    def test_two_targeted_reruns_union_without_full_app(self):
+        """Two targeted reruns with no full-app rerun union into one deduped pass."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_a"]))
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_b", "frag_a"]))
+        assert reqs._rerun_data.fragment_id_queue == ["frag_a", "frag_b"]
+        assert reqs._rerun_data.is_fragment_scoped_rerun is False
+
         """Return None; remain in the CONTINUE state."""
         reqs = ScriptRequests()
         result = reqs.on_scriptrunner_yield()

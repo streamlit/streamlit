@@ -136,6 +136,9 @@ class WStateTests(unittest.TestCase):
     def setUp(self):
         wstates = WStates()
         self.wstates = wstates
+        # WStates.call_callback uses ThreadState.scoped, which requires ThreadState to
+        # be initialised on the current thread.
+        ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
         widget_state = WidgetStateProto()
         widget_state.id = "widget_id_1"
@@ -534,9 +537,7 @@ class SessionStateTest(DeltaGeneratorTestCase):
 
 
 def test_callbacks_with_rerun():
-    """Calling 'rerun' from within a widget callback
-    is disallowed and results in a warning.
-    """
+    """st.rerun() inside a widget callback queues a real rerun instead of warning."""
 
     def script():
         import streamlit as st
@@ -550,31 +551,29 @@ def test_callbacks_with_rerun():
     at = AppTest.from_function(script).run()
     at.checkbox[0].check().run()
     assert at.session_state["message"] == "ran callback"
-    warning = at.warning[0]
-    assert "no-op" in warning.value
+    assert len(at.warning) == 0
 
 
 def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
-    """Ensure fragment callback context flag is cleared on RerunException.
+    """Fragment callback run_location is cleared after a callback raises RerunException.
 
-    This guards against leaving `ctx.in_fragment_callback` stuck to True if
-    a callback raises, which could contaminate subsequent runs.
+    Guards against leaving ``run_location`` stuck at CALLBACK if a callback
+    raises, which could contaminate subsequent code.
     """
-    from streamlit.runtime.scriptrunner import RerunException
+    from streamlit.runtime.scriptrunner import RerunData, RerunException
 
     ss = SessionState()
     wid = "w-frag"
 
-    # A callback that raises RerunException
     def cb() -> None:
-        raise RerunException(None)
+        raise RerunException(RerunData())
 
     meta = WidgetMetadata(
         id=wid,
         deserializer=lambda v: v,
         serializer=lambda v: v,
         value_type="int_value",
-        callbacks={"change": cb},
+        callback=cb,  # path 1: single callback, fires on value change
         fragment_id="frag-1",
     )
 
@@ -583,18 +582,161 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
     ss._new_widget_state.set_from_value(wid, 2)  # ensure _widget_changed is True
 
     mock_ctx = MagicMock()
-    # Self-contained: initialize ThreadState so this test doesn't depend on
-    # test ordering or another fixture having seeded the ContextVar.
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
     with patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        # Callbacks internally catch RerunException and log a warning.
         ss._call_callbacks()
 
     assert ThreadState.get().in_fragment_callback is False
+    # Rerun is re-queued rather than swallowed.
+    mock_ctx.script_requests.request_rerun.assert_called_once()
+
+
+def test_single_callback_rerun_is_queued() -> None:
+    """st.rerun() in a path-1 callback re-queues the rerun instead of warning."""
+    from streamlit.runtime.scriptrunner import RerunData, RerunException
+
+    requeue_calls: list[RerunData] = []
+
+    def cb() -> None:
+        raise RerunException(RerunData())
+
+    ss = SessionState()
+    wid = "w1"
+    meta = WidgetMetadata(
+        id=wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type="int_value",
+        callback=cb,
+    )
+    ss._set_widget_metadata(meta)
+    ss._old_state[wid] = 0
+    ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    assert len(requeue_calls) == 1
+
+
+def test_callbacks_single_default_does_not_force_rerun() -> None:
+    """A callback returning normally does not itself queue a rerun request."""
+    ss = SessionState()
+    wid = "w1"
+    meta = WidgetMetadata(
+        id=wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type="int_value",
+        callback=lambda: None,
+    )
+    ss._set_widget_metadata(meta)
+    ss._old_state[wid] = 0
+    ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    mock_ctx.script_requests.request_rerun.assert_not_called()
+
+
+def test_callbacks_two_callbacks_one_reruns_one_normal_yields_full_app() -> None:
+    """Two callbacks: one calls st.rerun(), one returns normally → single full-app rerun.
+
+    When one callback calls a plain ``st.rerun()`` and another returns normally,
+    both contribute ``kept_default`` votes. The re-queued rerun is the only request;
+    no extra forced rerun is generated since there is no conflict between targeted
+    and default votes.
+    """
+    from streamlit.runtime.scriptrunner import RerunData, RerunException
+
+    ss = SessionState()
+    wid1, wid2 = "w1", "w2"
+
+    def cb_rerun() -> None:
+        raise RerunException(RerunData())
+
+    for wid, cb in [(wid1, cb_rerun), (wid2, lambda: None)]:
+        meta = WidgetMetadata(
+            id=wid,
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="int_value",
+            callback=cb,
+        )
+        ss._set_widget_metadata(meta)
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    # Only the re-queued rerun from the explicit st.rerun() call. No extra forced
+    # rerun because both callbacks voted "kept_default" — no conflict.
+    assert mock_ctx.script_requests.request_rerun.call_count == 1
+
+
+def test_fragment_callback_rerun_requeued() -> None:
+    """A fragment widget callback calling st.rerun() gets the rerun re-queued correctly."""
+    from streamlit.runtime.scriptrunner import RerunData, RerunException
+
+    requeue_calls: list[RerunData] = []
+
+    def cb() -> None:
+        raise RerunException(RerunData())
+
+    ss = SessionState()
+    wid = "w-frag"
+    meta = WidgetMetadata(
+        id=wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type="int_value",
+        callback=cb,
+        fragment_id="frag-1",
+    )
+    ss._set_widget_metadata(meta)
+    ss._old_state[wid] = 0
+    ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    assert len(requeue_calls) == 1
 
 
 def test_updates():
