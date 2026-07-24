@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 import streamlit as st
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 st.header("st.iframe examples")
 
@@ -109,3 +113,7 @@ st.iframe(
     width="content",
     height="content",
 )
+
+# Example 9: String file path migration warning
+st.subheader("String file path")
+st.iframe(str(STATIC_DIR / "test_div.html"), height=80)

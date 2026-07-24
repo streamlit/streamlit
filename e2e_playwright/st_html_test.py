@@ -17,6 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    expect_warning,
     get_expander,
 )
 
@@ -133,11 +134,20 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stHtml")
 
 
-def test_html_from_file_str(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that we can load HTML files from str paths."""
+def test_html_from_string_file_path(app: Page):
+    """Test that string file paths show a warning and aren't read."""
+    expect_warning(
+        app,
+        "Passing a local file path as a string to st.html is no longer supported.",
+    )
+
     html_elements = app.get_by_test_id("stHtml")
     expect(html_elements).to_have_count(ST_HTML_ELEMENTS)
-    assert_snapshot(html_elements.nth(3), name="st_html-file_str")
+    string_path_element = html_elements.nth(3)
+    expect(string_path_element).to_contain_text("test_div.html")
+    expect(string_path_element).not_to_contain_text(
+        "This is a div with some inline styles."
+    )
 
 
 def test_html_from_file_path(app: Page, assert_snapshot: ImageCompareFunction):

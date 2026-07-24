@@ -61,7 +61,7 @@ with st.expander("HTML Elements for Spacing Test", expanded=True):
     )
     st.write("After tag")
 st.write("## Style test")
-# Test that we can load HTML files from str paths
+# Test that string file paths show a migration warning and aren't read
 HTML_PATH = STATIC_DIR / "test_div.html"
 st.html(str(HTML_PATH))
 # Test that we can load HTML files from Path objects
