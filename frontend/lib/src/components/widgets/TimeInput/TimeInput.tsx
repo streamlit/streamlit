@@ -188,6 +188,8 @@ function TimeInput({
     (newTime: TimeValue | null): void => {
       if (newTime === null && !clearable) {
         commitImmediatelyRef.current = false
+        setValidationError(null)
+        setPasteOverride(null)
         return
       }
       const newValue = newTime ? timeToString(newTime) : null
