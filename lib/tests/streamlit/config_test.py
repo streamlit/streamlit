@@ -779,6 +779,7 @@ class ConfigTest(unittest.TestCase):
                 "logger.hideWelcomeMessage",
                 "logger.level",
                 "logger.messageFormat",
+                "runner.cacheBackgroundRefreshMaxWorkers",
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
                 "runner.parallelMaxWorkers",

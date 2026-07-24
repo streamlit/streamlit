@@ -807,6 +807,23 @@ _create_option(
     type_=int,
 )
 
+_create_option(
+    "runner.cacheBackgroundRefreshMaxWorkers",
+    description="""
+        Maximum number of concurrent background refreshes for cached functions
+        that use refresh_mode="background" (@st.cache_data / @st.cache_resource).
+        Sizes a single, process-wide thread pool shared by all such functions;
+        when it is saturated, extra refreshes are skipped (the stale value is
+        still served) rather than queued.
+
+        Set to 0 to disable background refresh entirely: stale entries are then
+        recomputed by a blocking foreground call at hard expiry (2 x ttl).
+    """,
+    visibility="hidden",
+    default_val=4,
+    type_=int,
+)
+
 # Config Section: Server #
 
 _create_section("server", "Settings for the Streamlit server")
