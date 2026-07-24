@@ -26,6 +26,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     reset_hovering,
     select_selectbox_option,
+    type_time,
 )
 
 
@@ -79,8 +80,10 @@ def change_widget_values(app: Page):
     form_1.get_by_test_id("stTextInput").locator("input").fill("bar")
 
     # Change the time input value.
-    form_1.get_by_test_id("stTimeInput").locator("input").click()
-    app.locator('[data-baseweb="popover"]').locator("li").nth(0).click()
+    time_display = form_1.get_by_test_id("stTimeInput").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    type_time(time_display, "00", "00")
 
     # Change the toggle value.
     click_toggle(app, "Toggle Input")

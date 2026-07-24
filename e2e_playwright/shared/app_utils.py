@@ -99,6 +99,35 @@ def get_time_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
     return element
 
 
+def type_time(time_display: Locator, hour: str, minute: str) -> None:
+    """Type a time into a TimeInput's spinbutton segments.
+
+    Uses press_sequentially (key events per character) rather than fill() to
+    exercise the real keystroke handling path through React Aria's digit
+    buffering logic.
+
+    After typing, blurs the minute spinbutton so the widget commits the value
+    to the backend (commit is deferred to blur, matching st.number_input
+    semantics).
+
+    Parameters
+    ----------
+    time_display : Locator
+        The stTimeInputTimeDisplay locator containing the spinbuttons.
+
+    hour : str
+        Two-digit hour string (e.g. "08").
+
+    minute : str
+        Two-digit minute string (e.g. "45").
+    """
+    spinbuttons = time_display.get_by_role("spinbutton")
+    spinbuttons.first.press_sequentially(hour)
+    spinbuttons.last.press_sequentially(minute)
+    # Blur triggers the deferred commit to the backend.
+    spinbuttons.last.blur()
+
+
 def get_datetime_input(
     locator: Locator | Page, label: str | re.Pattern[str]
 ) -> Locator:

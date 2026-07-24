@@ -32,6 +32,7 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_element_by_key,
     get_time_input,
+    type_time,
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
@@ -115,66 +116,92 @@ def test_time_input_has_correct_initial_values(app: Page):
     expect_markdown(app, "Value 9: 08:50:00")
 
 
-def test_handles_time_selection(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that selection of a time via the dropdown works correctly."""
-    get_time_input(app, "Time input 1 (8:45)").locator("input").click()
-
-    # Take a snapshot of the time selection dropdown:
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    assert_snapshot(selection_dropdown, name="st_time_input-selection_dropdown")
-    # Select the first option:
-    selection_dropdown.get_by_text("00:00").first.click()
+def test_handles_time_selection(app: Page):
+    """Test that selection of a time via the segmented input works correctly."""
+    time_display = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    type_time(time_display, "00", "00")
+    wait_for_app_run(app)
     # Check that selection worked:
     expect_markdown(app, "Value 1: 00:00:00")
 
 
-def test_correct_menu_font_colors(
+def test_focused_segment_colors(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that it uses the correct colors in the popover menu."""
-    get_time_input(themed_app, "Time input 1 (8:45)").locator("input").click()
+    """Test that the focused segment uses the correct theme colors."""
+    time_input = get_time_input(themed_app, "Time input 1 (8:45)")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    time_display.locator("[role='spinbutton']").first.click()
 
-    # Take a snapshot of the time selection dropdown:
-    selection_dropdown = themed_app.locator('[data-baseweb="popover"]').first
-
-    # Hover over another option (scroll into view first for consistent scroll position):
-    target = selection_dropdown.get_by_text("08:30")
-    target.scroll_into_view_if_needed()
-    target.hover()
-
-    # Take a screenshot
-    assert_snapshot(selection_dropdown, name="st_time_input-menu_colors")
+    # Take a screenshot of the time input with its segment focused:
+    assert_snapshot(time_input, name="st_time_input-focused_segment")
 
 
-def test_handles_step_correctly(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the step parameter is correctly applied."""
-    get_time_input(app, "Time input 7 (step=60)").locator("input").click()
-
-    # Take a snapshot of the time selection dropdown:
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    assert_snapshot(selection_dropdown, name="st_time_input-step_60_dropdown")
-    # Select the second option:
-    selection_dropdown.get_by_text("00:01").first.click()
-    # Check that selection worked:
+def test_handles_step_correctly(app: Page):
+    """Test that the step parameter allows any minute-precision value to be entered."""
+    time_display = get_time_input(app, "Time input 7 (step=60)").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    type_time(time_display, "00", "01")
+    wait_for_app_run(app)
+    # Check that selection worked (step does not restrict entered values):
     expect_markdown(app, "Value 7: 00:01:00")
 
 
+def test_arrow_keys_respect_step(app: Page):
+    """Test that ArrowUp/Down snap to step boundaries on the minute segment.
+
+    step=900 (15 min, the default): ArrowUp from 08:45 → 09:00 (next 15-min
+    boundary above), ArrowDown → 08:45 again.
+    step=60  (1 min): ArrowUp gives the react-aria default of ±1 minute.
+    """
+    # --- step=900 (default, Time input 1 starts at 08:45) ---
+    minute_sp = (
+        get_time_input(app, "Time input 1 (8:45)")
+        .get_by_test_id("stTimeInputTimeDisplay")
+        .locator("[role='spinbutton']")
+        .last  # minute segment
+    )
+    minute_sp.click()
+    minute_sp.press("ArrowUp")
+    wait_for_app_run(app)
+    # floor(525/15)*15 + 15 = 525 + 15 = 540 → 09:00
+    expect_markdown(app, "Value 1: 09:00:00")
+
+    minute_sp.press("ArrowDown")
+    wait_for_app_run(app)
+    # ceil(540/15)*15 - 15 = 540 - 15 = 525 → 08:45
+    expect_markdown(app, "Value 1: 08:45:00")
+
+    # --- step=60 (Time input 7 starts at 08:45): react-aria default ±1 min ---
+    minute_sp_60 = (
+        get_time_input(app, "Time input 7 (step=60)")
+        .get_by_test_id("stTimeInputTimeDisplay")
+        .locator("[role='spinbutton']")
+        .last
+    )
+    minute_sp_60.click()
+    minute_sp_60.press("ArrowUp")
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 7: 08:46:00")
+
+
 def test_handles_time_selection_via_typing(app: Page):
-    """Test that selection of a time via typing works correctly."""
-    time_input_field = get_time_input(app, "Time input 1 (8:45)").locator("input")
+    """Test that entering a time via keyboard works correctly."""
+    time_display = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
 
-    # Type an option:
-    time_input_field.type("00:15")
-    time_input_field.press("Enter")
-
-    # Check that selection worked:
+    # Type 00:15 using digit keys:
+    type_time(time_display, "00", "15")
+    wait_for_app_run(app)
     expect_markdown(app, "Value 1: 00:15:00")
 
-    # Type an another option that doesn't exist in the dropdown:
-    time_input_field.type("00:16")
-    time_input_field.press("Enter")
-
-    # Check that selection worked:
+    # Re-focus the hour segment, then type a different value:
+    type_time(time_display, "00", "16")
+    wait_for_app_run(app)
     expect_markdown(app, "Value 1: 00:16:00")
 
 
@@ -183,34 +210,35 @@ def test_empty_time_input_behaves_correctly(
 ):
     """Test that st.time_input behaves correctly when empty (no initial value)."""
     empty_time_input = get_time_input(app, "Time input 8 (empty)")
-    empty_time_input_field = empty_time_input.locator("input")
+    time_display = empty_time_input.get_by_test_id("stTimeInputTimeDisplay")
 
-    # Type an option:
-    empty_time_input_field.type("00:15")
-    empty_time_input_field.press("Enter")
-
+    type_time(time_display, "00", "15")
+    wait_for_app_run(app)
     expect_markdown(app, "Value 8: 00:15:00")
 
     assert_snapshot(empty_time_input, name="st_time_input-clearable_input")
 
-    # Clear the input:
+    # Clear the input via the clear button:
     empty_time_input.get_by_test_id("stTimeInputClearButton").click()
 
     # Should be empty again:
     expect_markdown(app, "Value 8: None")
 
 
-def test_keeps_value_on_selection_close(app: Page):
-    """Test that the selection is kept when the dropdown is closed."""
-    get_time_input(app, "Time input 1 (8:45)").locator("input").click()
+def test_keeps_value_on_blur_without_edit(app: Page):
+    """Test that clicking away without editing leaves the value unchanged."""
+    time_display = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    # Focus a spinbutton directly so blur is meaningful
+    segment = time_display.locator("[role='spinbutton']").first
+    segment.click()
+    expect(segment).to_be_focused()
 
-    # Check if popover is visible:
-    expect(app.locator('[data-baseweb="popover"]').first).to_be_visible()
-
-    # Click outside to close the dropdown:
+    # Click outside to blur the input without making any changes:
     app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
 
-    # Check if value is still initial value:
+    # Value should remain the initial value:
     expect_markdown(app, "Value 1: 08:45:00")
 
 
@@ -220,25 +248,23 @@ def test_handles_callback_on_change_correctly(app: Page):
     expect_markdown(app, "Value 6: 08:45:00")
     expect_markdown(app, "time input changed: False")
 
-    get_time_input(app, "Time input 6 (with callback)").locator("input").click()
-
-    # Select last option:
-    time_dropdown = app.locator('[data-baseweb="popover"]').first
-    time_dropdown.get_by_text("00:00").first.click()
-    # Wait for app to process the change before checking values
+    callback_input = get_time_input(app, "Time input 6 (with callback)").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    type_time(callback_input, "00", "00")
+    # Wait for app to process the change before checking values:
     wait_for_app_run(app)
 
     # Check that selection worked:
     expect_markdown(app, "Value 6: 00:00:00")
     expect_markdown(app, "time input changed: True")
 
-    # Change different input to trigger delta path change
-    empty_time_input_field = get_time_input(app, "Time input 1 (8:45)").locator("input")
-
-    # Type an option:
-    empty_time_input_field.type("00:15")
-    empty_time_input_field.press("Enter")
-    # Wait for app to process the change before checking values
+    # Change a different input to trigger delta path change:
+    other_input = get_time_input(app, "Time input 1 (8:45)").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    type_time(other_input, "00", "15")
+    # Wait for app to process the change before checking values:
     wait_for_app_run(app)
 
     expect_markdown(app, "Value 1: 00:15:00")
@@ -270,10 +296,9 @@ def test_dynamic_time_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_time_input, "initial help")
 
-    # Type something and submit
-    input_field = dynamic_time_input.locator("input")
-    input_field.type("00:15")
-    input_field.press("Enter")
+    # Type a new time via the segmented input:
+    time_display = dynamic_time_input.get_by_test_id("stTimeInputTimeDisplay")
+    type_time(time_display, "00", "15")
     wait_for_app_loaded(app)
 
     expect_prefixed_markdown(app, "Initial time input value:", "00:15:00")
@@ -313,19 +338,16 @@ def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFu
     time_input_widgets = app.get_by_test_id("stTimeInput")
     expect(time_input_widgets).to_have_count(NUM_TIME_INPUTS)
 
-    # Click on the first time input to open the dropdown
-    get_time_input(app, "Time input 1 (8:45)").locator("input").click()
+    time_input = get_time_input(app, "Time input 1 (8:45)")
 
-    # Wait for the dropdown to be visible before taking snapshot
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    expect(selection_dropdown).to_be_visible()
+    # Take a snapshot of the time input with the custom theme:
+    assert_snapshot(time_input, name="st_time_input-custom-theme")
 
-    # Take a snapshot of the time selection dropdown:
-    assert_snapshot(selection_dropdown, name="st_time_input-dropdown-custom-theme")
-    # Take a snapshot of the time input:
-    assert_snapshot(
-        get_time_input(app, "Time input 1 (8:45)"), name="st_time_input-custom-theme"
-    )
+    # Click the hour spinbutton to focus it and snapshot the active/focused state:
+    time_input.get_by_test_id("stTimeInputTimeDisplay").locator(
+        "[role='spinbutton']"
+    ).first.click()
+    assert_snapshot(time_input, name="st_time_input-focused-custom-theme")
 
 
 # --- Query param binding tests ---
