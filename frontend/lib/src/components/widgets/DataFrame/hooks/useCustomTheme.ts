@@ -19,7 +19,7 @@ import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
 import { lighten, mix, transparentize } from "color2k"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { convertRemToPx } from "~lib/theme/utils"
+import { blend, convertRemToPx } from "~lib/theme/utils"
 
 export type CustomGridTheme = {
   // The theme configuration for the glide-data-grid
@@ -64,6 +64,20 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
         `<svg xmlns="http://www.w3.org/2000/svg" height="40" viewBox="0 96 960 960" width="40" fill="${p.bgColor}"><path d="m800.641 679.743-64.384-64.384 29-29q7.156-6.948 17.642-6.948 10.485 0 17.742 6.948l29 29q6.948 7.464 6.948 17.95 0 10.486-6.948 17.434l-29 29Zm-310.64 246.256v-64.383l210.82-210.821 64.384 64.384-210.821 210.82h-64.383Zm-360-204.872v-50.254h289.743v50.254H130.001Zm0-162.564v-50.255h454.615v50.255H130.001Zm0-162.307v-50.255h454.615v50.255H130.001Z"/></svg>`,
     }
 
+    // glide-data-grid renders on a canvas and stacks semi-transparent
+    // header fills (base + hover/focus overlays) without clearing between
+    // paints, which produces color shifts / flicker when either color has
+    // an alpha channel. Flatten alpha against the app background so
+    // glide-data-grid always receives fully opaque colors. See #11950.
+    const flatHeaderBg = blend(
+      theme.colors.dataframeHeaderBackgroundColor,
+      theme.colors.bgColor
+    )
+    const flatHeaderBgHovered = blend(
+      transparentize(theme.colors.darkenedBgMix100, 0.9),
+      flatHeaderBg
+    )
+
     const glideTheme = {
       // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
       accentColor: theme.colors.primary,
@@ -77,9 +91,9 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       // Header styling:
       bgIconHeader: theme.colors.fadedText60,
       fgIconHeader: theme.colors.white,
-      bgHeader: theme.colors.dataframeHeaderBackgroundColor,
-      bgHeaderHasFocus: transparentize(theme.colors.darkenedBgMix100, 0.9),
-      bgHeaderHovered: transparentize(theme.colors.darkenedBgMix100, 0.9),
+      bgHeader: flatHeaderBg,
+      bgHeaderHasFocus: flatHeaderBgHovered,
+      bgHeaderHovered: flatHeaderBgHovered,
       textHeader: theme.colors.fadedText60,
       textHeaderSelected: theme.colors.white,
       textGroupHeader: theme.colors.fadedText60,
