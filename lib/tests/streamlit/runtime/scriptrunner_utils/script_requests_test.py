@@ -236,6 +236,26 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.fragment_id_queue == ["frag_a", "frag_b"]
         assert reqs._rerun_data.is_fragment_scoped_rerun is False
 
+    def test_union_keeps_fragment_scope_when_either_rerun_is_scoped(self):
+        """Unioning targeted reruns stays fragment-scoped if either request was."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_a"]))
+        reqs.request_rerun(
+            RerunData(fragment_id_queue=["frag_b"], is_fragment_scoped_rerun=True)
+        )
+        assert reqs._rerun_data.fragment_id_queue == ["frag_a", "frag_b"]
+        assert reqs._rerun_data.is_fragment_scoped_rerun is True
+
+    def test_full_app_clears_pending_fragment_scoped_rerun(self):
+        """A full-app rerun drops a pending fragment-scoped rerun's scope and queue."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(
+            RerunData(fragment_id_queue=["frag_x"], is_fragment_scoped_rerun=True)
+        )
+        reqs.request_rerun(RerunData())  # full-app arrives second
+        assert reqs._rerun_data.fragment_id_queue == []
+        assert reqs._rerun_data.is_fragment_scoped_rerun is False
+
     def test_on_script_yield_with_no_request(self):
         """Return None; remain in the CONTINUE state."""
         reqs = ScriptRequests()

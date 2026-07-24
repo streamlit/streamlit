@@ -740,6 +740,109 @@ def test_fragment_callback_rerun_requeued() -> None:
     assert len(requeue_calls) == 1
 
 
+def test_callbacks_targeted_and_default_force_full_app_rerun() -> None:
+    """A targeted rerun losing to a kept default is upgraded to a forced full-app rerun.
+
+    One callback requests a fragment-scoped rerun while another returns normally
+    (keeping the default). The kept default must win, so after both callbacks run
+    the code forces an explicit full-app rerun: the fragment-scoped re-queue plus
+    the forced full-app request, and the forced request carries no fragment scope
+    and no widget_states (so it does not re-fire callbacks).
+    """
+    from streamlit.runtime.scriptrunner import RerunData, RerunException
+
+    requeue_calls: list[RerunData] = []
+
+    def cb_targeted() -> None:
+        raise RerunException(
+            RerunData(fragment_id_queue=["frag-1"], is_fragment_scoped_rerun=True)
+        )
+
+    ss = SessionState()
+    wid1, wid2 = "w1", "w2"
+    for wid, cb in [(wid1, cb_targeted), (wid2, lambda: None)]:
+        meta = WidgetMetadata(
+            id=wid,
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="int_value",
+            callback=cb,
+        )
+        ss._set_widget_metadata(meta)
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    # The targeted re-queue plus one forced full-app rerun.
+    assert len(requeue_calls) == 2
+    forced = requeue_calls[-1]
+    assert forced.fragment_id_queue == []
+    assert forced.is_fragment_scoped_rerun is False
+    assert forced.widget_states is None
+
+
+def test_callbacks_all_targeted_do_not_force_full_app_rerun() -> None:
+    """With no kept default, targeted reruns are re-queued as-is and none is forced.
+
+    When every callback requests a fragment-scoped rerun, there is no conflicting
+    default to satisfy, so the code only re-queues each request and never adds a
+    forced full-app rerun.
+    """
+    from streamlit.runtime.scriptrunner import RerunData, RerunException
+
+    requeue_calls: list[RerunData] = []
+
+    def cb_frag_1() -> None:
+        raise RerunException(
+            RerunData(fragment_id_queue=["frag-1"], is_fragment_scoped_rerun=True)
+        )
+
+    def cb_frag_2() -> None:
+        raise RerunException(
+            RerunData(fragment_id_queue=["frag-2"], is_fragment_scoped_rerun=True)
+        )
+
+    ss = SessionState()
+    for wid, cb in [("w1", cb_frag_1), ("w2", cb_frag_2)]:
+        meta = WidgetMetadata(
+            id=wid,
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="int_value",
+            callback=cb,
+        )
+        ss._set_widget_metadata(meta)
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    # Only the two targeted re-queues; no forced full-app rerun was added.
+    assert len(requeue_calls) == 2
+    assert all(d.is_fragment_scoped_rerun for d in requeue_calls)
+
+
 def test_updates():
     at = AppTest.from_file("test_data/linked_sliders.py").run()
     assert at.slider.values == [-100.0, -148.0]
