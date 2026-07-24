@@ -103,7 +103,9 @@ describe("Popover container", () => {
     await new Promise(resolve => setTimeout(resolve, 60))
 
     await user.click(screen.getByText("outside"))
-    expect(screen.queryByText("test")).not.toBeInTheDocument()
+    // Children stay mounted (display: none) after close so heavy widgets don't
+    // pay their mount cost again on reopen — assert on visibility, not presence.
+    expect(screen.queryByText("test")).not.toBeVisible()
   })
 
   it("stays open when interacting with a Streamlit overlay root", async () => {

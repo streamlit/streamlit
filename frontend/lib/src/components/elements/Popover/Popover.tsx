@@ -100,6 +100,15 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // Single state with optimistic updates for instant UI feedback.
   const [open, setOpen] = useState(initialOpen)
 
+  // Once opened, keep the popover body mounted so its children (which may
+  // include heavy widgets like large selectboxes) don't pay their mount cost
+  // again on every reopen. Visibility is controlled by CSS + aria-hidden.
+  // Defers the initial mount cost until the popover is first opened.
+  const [hasEverOpened, setHasEverOpened] = useState(initialOpen)
+  if (open && !hasEverOpened) {
+    setHasEverOpened(true)
+  }
+
   // Sync backend state changes (for programmatic control via session_state).
   // Uses render-time comparison instead of useEffect — no DOM side effects needed.
   useExecuteWhenChanged(() => {
@@ -402,7 +411,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           </BaseButton>
         </BaseButtonTooltip>
       </div>
-      {open && (
+      {hasEverOpened && (
         <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <StyledPopoverBody
             ref={setFloatingRef}
@@ -413,9 +422,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             data-st-overlay-root="true"
             role="dialog"
             aria-label={element.label}
+            aria-hidden={!open}
             style={floatingStyles}
             $stretchWidth={stretchWidth}
             $calculatedWidth={calculatedWidth}
+            $hidden={!open}
           >
             {children}
           </StyledPopoverBody>

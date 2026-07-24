@@ -22,7 +22,8 @@ import { hasLightBackgroundColor } from "~lib/theme/getColors"
 export const StyledPopoverBody = styled.div<{
   $stretchWidth?: boolean
   $calculatedWidth?: number
-}>(({ theme, $stretchWidth, $calculatedWidth = 0 }) => {
+  $hidden?: boolean
+}>(({ theme, $stretchWidth, $calculatedWidth = 0, $hidden }) => {
   const isLight = hasLightBackgroundColor(theme)
   return {
     boxSizing: "border-box",
@@ -41,6 +42,7 @@ export const StyledPopoverBody = styled.div<{
     [`@media (max-width: ${theme.breakpoints.sm})`]: {
       maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
     },
+    ...($hidden && { display: "none" }),
   }
 })
 
