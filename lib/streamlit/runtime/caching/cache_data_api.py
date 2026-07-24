@@ -523,9 +523,12 @@ class CacheDataAPI:
         <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
 
         .. note::
-            Caching async functions is not supported. To upvote this feature,
-            see GitHub issue `#8308
-            <https://github.com/streamlit/streamlit/issues/8308>`_.
+            You can decorate a coroutine function (``async def``). Calling the
+            decorated function returns an awaitable; ``await`` it to run the
+            coroutine on a cache miss and cache its awaited result (the inert
+            value, not the coroutine object). On a hit, the cached result is
+            returned without re-running the function. The caller is responsible
+            for driving the coroutine (e.g. with ``asyncio.run``).
 
         Parameters
         ----------

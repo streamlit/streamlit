@@ -24,7 +24,7 @@ import threading
 import time
 from abc import abstractmethod
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -493,6 +493,7 @@ class CachedFuncInfo(Generic[P, R]):
         self.show_time = show_time
         self.scope = scope
         self.refresh_mode = refresh_mode
+        self.is_async = inspect.iscoroutinefunction(func)
 
     @property
     def cache_type(self) -> CacheType:
@@ -586,6 +587,18 @@ class CachedFunc(Generic[P, R]):
                 spinner_message = f"Running `{name}()`."
             else:
                 spinner_message = f"Running `{name}(...)`."
+
+        if self._info.is_async:
+            # For a coroutine function, return an awaitable. Awaiting it performs the
+            # cache lookup and, on a miss, awaits the underlying coroutine and caches
+            # its awaited result. For an `async def`, the wrapper's return type `R` is
+            # itself the coroutine type, so the cast is accurate.
+            return cast(
+                "R",
+                self._get_or_create_cached_value_async(
+                    args, kwargs, spinner_message
+                ),
+            )
 
         return self._get_or_create_cached_value(args, kwargs, spinner_message)
 
@@ -707,47 +720,139 @@ class CachedFunc(Generic[P, R]):
             ):
                 computed_value = self._info.func(*func_args, **func_kwargs)
 
-            # We've computed our value, and now we need to write it back to the cache
-            # along with any "replay messages" that were generated during value computation.
-            captured_messages = (
-                self._info.cached_message_replay_ctx._most_recent_messages
-            )
-            if self._info.refresh_mode == "background":
-                # Background mode never replays cached st.* output. If the function
-                # issued any display commands, warn the user (they render live now but
-                # won't reappear on later hits), and store no messages.
-                if captured_messages:
-                    self._emit_background_display_warning()
-                messages: list[MsgData] = []
-            else:
-                messages = captured_messages
-            try:
-                cache.write_result(value_key, computed_value, messages)
-                # A successful (re)compute clears any prior background-refresh failure
-                # cooldown, so a later stale window can refresh again even if an earlier
-                # refresh failed and the entry then hard-expired and recomputed here.
-                cache.clear_refresh_cooldown(value_key)
-                return computed_value
-            except (CacheError, RuntimeError) as ex:
-                # An exception was thrown while we tried to write to the cache. Report
-                # it to the user. (We catch `RuntimeError` here because it will be
-                # raised by Apache Spark if we do not collect dataframe before
-                # using `st.cache_data`.)
-                if is_unevaluated_data_object(computed_value):
-                    # If the returned value is an unevaluated dataframe, raise an error.
-                    # Unevaluated dataframes are not yet in the local memory, which also
-                    # means they cannot be properly cached (serialized).
-                    raise UnevaluatedDataFrameError(
-                        f"The function {get_cached_func_name_md(self._info.func)} is "
-                        "decorated with `st.cache_data` but it returns an unevaluated "
-                        f"data object of type `{type_util.get_fqn_type(computed_value)}`. "
-                        "Please convert the object to a serializable format "
-                        "(e.g. Pandas DataFrame) before returning it, so "
-                        "`st.cache_data` can serialize and cache it."
-                    ) from ex
-                raise UnserializableReturnValueError(
-                    return_value=computed_value, func=self._info.func
+            return self._store_computed_value(cache, value_key, computed_value)
+
+    def _store_computed_value(
+        self,
+        cache: Cache[R],
+        value_key: str,
+        computed_value: R,
+    ) -> R:
+        """Write a freshly computed value back to the cache and return it.
+
+        Shared by the sync and async cache-miss paths. The value has already been
+        computed (or awaited); this captures any replay messages, applies the
+        background-mode display rules, and translates serialization failures into the
+        user-facing cache errors.
+        """
+        # We've computed our value, and now we need to write it back to the cache
+        # along with any "replay messages" that were generated during value computation.
+        captured_messages = self._info.cached_message_replay_ctx._most_recent_messages
+        if self._info.refresh_mode == "background":
+            # Background mode never replays cached st.* output. If the function
+            # issued any display commands, warn the user (they render live now but
+            # won't reappear on later hits), and store no messages.
+            if captured_messages:
+                self._emit_background_display_warning()
+            messages: list[MsgData] = []
+        else:
+            messages = captured_messages
+        try:
+            cache.write_result(value_key, computed_value, messages)
+            # A successful (re)compute clears any prior background-refresh failure
+            # cooldown, so a later stale window can refresh again even if an earlier
+            # refresh failed and the entry then hard-expired and recomputed here.
+            cache.clear_refresh_cooldown(value_key)
+            return computed_value
+        except (CacheError, RuntimeError) as ex:
+            # An exception was thrown while we tried to write to the cache. Report
+            # it to the user. (We catch `RuntimeError` here because it will be
+            # raised by Apache Spark if we do not collect dataframe before
+            # using `st.cache_data`.)
+            if is_unevaluated_data_object(computed_value):
+                # If the returned value is an unevaluated dataframe, raise an error.
+                # Unevaluated dataframes are not yet in the local memory, which also
+                # means they cannot be properly cached (serialized).
+                raise UnevaluatedDataFrameError(
+                    f"The function {get_cached_func_name_md(self._info.func)} is "
+                    "decorated with `st.cache_data` but it returns an unevaluated "
+                    f"data object of type `{type_util.get_fqn_type(computed_value)}`. "
+                    "Please convert the object to a serializable format "
+                    "(e.g. Pandas DataFrame) before returning it, so "
+                    "`st.cache_data` can serialize and cache it."
                 ) from ex
+            raise UnserializableReturnValueError(
+                return_value=computed_value, func=self._info.func
+            ) from ex
+
+    async def _get_or_create_cached_value_async(
+        self,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+        spinner_message: str | None = None,
+    ) -> R:
+        """Await-aware counterpart of ``_get_or_create_cached_value``.
+
+        Returns the cached result on a hit; on a miss, awaits the underlying
+        coroutine and caches its awaited result. Background refresh of stale entries
+        is intentionally not driven here (it recomputes off the script thread, which
+        cannot await a coroutine); async caches use the foreground path only.
+        """
+        cache = self._info.get_function_cache(self._function_key)
+
+        value_key = _make_value_key(
+            cache_type=self._info.cache_type,
+            func=self._info.func,
+            func_args=func_args,
+            func_kwargs=func_kwargs,
+            hash_funcs=self._info.hash_funcs,
+        )
+
+        try:
+            cached_result = cache.read_result(value_key)
+        except CacheKeyNotFoundError:
+            # Hard miss: fall through to the awaiting compute below.
+            pass
+        else:
+            return self._handle_cache_hit(cached_result)
+
+        is_nested_cache_function = in_cached_function.get()
+        spinner_or_no_context = (
+            get_dg_singleton_instance().main_dg.spinner(
+                spinner_message, _cache=True, show_time=self._info.show_time
+            )
+            if spinner_message is not None and not is_nested_cache_function
+            else contextlib.nullcontext()
+        )
+        with spinner_or_no_context:
+            return await self._handle_cache_miss_async(
+                cache, value_key, func_args, func_kwargs
+            )
+
+    async def _handle_cache_miss_async(
+        self,
+        cache: Cache[R],
+        value_key: str,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+    ) -> R:
+        """Await the underlying coroutine on a miss and cache its awaited result.
+
+        Mirrors ``_handle_cache_miss`` (including the double-checked locking) but
+        awaits the coroutine returned by the cached function before storing it, so the
+        cache holds the inert awaited value rather than a coroutine object.
+        """
+        with cache.compute_value_lock(value_key):
+            # We've acquired the lock - but another thread may have acquired it first
+            # and already computed the value. So we need to test for a cache hit again,
+            # before computing.
+            try:
+                cached_result = cache.read_result(value_key)
+                # Another thread computed the value before us. Early exit!
+                return self._handle_cache_hit(cached_result)
+            except CacheKeyNotFoundError:
+                # No cache hit -> we will await the cached function below.
+                pass
+
+            # We acquired the lock before any other thread. Await the value!
+            with self._info.cached_message_replay_ctx.calling_cached_function(
+                self._info.func
+            ):
+                computed_value = await cast(
+                    "Awaitable[R]", self._info.func(*func_args, **func_kwargs)
+                )
+
+            return self._store_computed_value(cache, value_key, computed_value)
 
     def _maybe_trigger_background_refresh(
         self,

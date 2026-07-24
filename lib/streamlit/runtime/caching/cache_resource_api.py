@@ -412,17 +412,21 @@ class CacheResourceAPI:
         To learn more about caching, see `Caching overview
         <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
 
+        .. note::
+            You can decorate a coroutine function (``async def``). Calling the
+            decorated function returns an awaitable; ``await`` it to run the
+            coroutine on a cache miss and cache its awaited result. On a hit, the
+            cached result is returned without re-running the function. The caller
+            is responsible for driving the coroutine (e.g. with ``asyncio.run``).
+
         .. warning::
-            Async objects are not officially supported in Streamlit. Caching
-            async objects or objects that reference async objects may have
-            unintended consequences. For example, Streamlit may close event
-            loops in its normal operation and make the cached object raise an
-            ``Event loop closed`` error.
+            Caching a live, event-loop-bound async object (such as an async
+            client) is not supported. Streamlit may close event loops in its
+            normal operation and make such a cached object raise an
+            ``Event loop closed`` error. Cache inert results instead.
 
             To upvote official ``asyncio`` support, see GitHub issue `#8488
-            <https://github.com/streamlit/streamlit/issues/8488>`_. To upvote
-            support for caching async functions, see GitHub issue `#8308
-            <https://github.com/streamlit/streamlit/issues/8308>`_.
+            <https://github.com/streamlit/streamlit/issues/8488>`_.
 
         Parameters
         ----------
