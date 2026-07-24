@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import time
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from itertools import dropwhile
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, NoReturn
@@ -28,7 +28,6 @@ from streamlit.errors import (
     StreamlitInvalidLayoutContextError,
     StreamlitInvalidParameterTypeError,
     StreamlitPageNotFoundError,
-    StreamlitValueError,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import Page, _validate_registered_page
@@ -42,11 +41,16 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
     ThreadState,
 )
 
 if TYPE_CHECKING:
     from streamlit.runtime.state.query_params import QueryParams, QueryParamsInput
+
+_KEYED_RERUN_ALLOWED_LOCATIONS: frozenset[RunLocation] = frozenset(
+    {RunLocation.CALLBACK}
+)
 
 
 @gather_metrics("stop")
@@ -77,10 +81,23 @@ def stop() -> NoReturn:  # type: ignore[misc] # ty: ignore[invalid-return-type]
 
 def _new_fragment_id_queue(
     ctx: ScriptRunContext,
-    scope: Literal["app", "fragment"],
+    scope: str | Sequence[str],
 ) -> list[str]:
     if scope == "app":
         return []
+
+    if scope != "fragment":
+        # Any scope other than the reserved "app"/"fragment" level names is one or
+        # more fragment keys: an event-scoped rerun of the named fragment(s).
+        ts = ThreadState.get()
+        if ts.run_location not in _KEYED_RERUN_ALLOWED_LOCATIONS:
+            raise StreamlitAPIException(
+                "Passing a fragment key to ``st.rerun()`` is only allowed from a "
+                "widget callback (e.g. ``on_change`` / ``on_click``). Calling it "
+                "from the main script body or a fragment body would abort the "
+                "current run."
+            )
+        return ctx.fragment_storage.resolve_target(scope)
 
     # > scope == "fragment"
     curr_queue = ctx.fragment_ids_this_run
@@ -148,8 +165,7 @@ def _set_query_params_for_switch(
 
 @gather_metrics("rerun")
 def rerun(  # type: ignore[misc]
-    *,  # The scope argument can only be passed via keyword.
-    scope: Literal["app", "fragment"] = "app",
+    scope: Literal["app", "fragment"] | str | Sequence[str] = "app",
 ) -> NoReturn:  # ty: ignore[invalid-return-type]
     """Rerun the script immediately.
 
@@ -163,20 +179,26 @@ def rerun(  # type: ignore[misc]
 
     Parameters
     ----------
-    scope : "app" or "fragment"
-        Specifies what part of the app should rerun. If ``scope`` is ``"app"``
-        (default), the full app reruns. If ``scope`` is ``"fragment"``,
-        Streamlit only reruns the fragment from which this command is called.
+    scope : "app", "fragment", str, or list of str
+        Specifies what part of the app should rerun.
 
-        Setting ``scope="fragment"`` is only valid inside a fragment during a
-        fragment rerun. If ``st.rerun(scope="fragment")`` is called during a
-        full-app rerun or outside of a fragment, Streamlit will raise a
-        ``StreamlitAPIException``.
+        - ``"app"`` (default): the full app reruns.
+        - ``"fragment"``: Streamlit only reruns the fragment from which this
+          command is called. Only valid inside a fragment during a fragment
+          rerun. Raises ``StreamlitAPIException`` during a full-app rerun or
+          outside of a fragment.
+        - A fragment key (str) or list of fragment keys: reruns the named
+          fragment(s). The key must match the ``key`` argument passed to
+          ``@st.fragment(key=...)``. This form is only valid from a widget
+          callback (``on_change`` / ``on_click``); calling it from the main
+          script body or a fragment body raises ``StreamlitAPIException``. An
+          empty list is a no-op — it does not trigger any rerun.
 
     """
-
-    if scope not in {"app", "fragment"}:
-        raise StreamlitValueError("scope", ["'app'", "'fragment'"])
+    # An explicitly empty list of keys means "rerun nothing"; do not degrade to
+    # a full-app rerun just because the caller's list happened to be empty.
+    if not isinstance(scope, str) and not scope:
+        return  # type: ignore[misc]  # ty: ignore[invalid-return-type]
 
     ctx = get_script_run_ctx()
 
@@ -184,13 +206,14 @@ def rerun(  # type: ignore[misc]
         query_string = ctx.query_string
         page_script_hash = ctx.page_script_hash
         cached_message_hashes = ctx.cached_message_hashes
+        fragment_id_queue = _new_fragment_id_queue(ctx, scope)
 
         ctx.script_requests.request_rerun(
             RerunData(
                 query_string=query_string,
                 page_script_hash=page_script_hash,
-                fragment_id_queue=_new_fragment_id_queue(ctx, scope),
-                is_fragment_scoped_rerun=scope == "fragment",
+                fragment_id_queue=fragment_id_queue,
+                is_fragment_scoped_rerun=scope != "app",
                 cached_message_hashes=cached_message_hashes,
                 context_info=ctx.context_info,
             )
