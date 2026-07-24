@@ -195,27 +195,31 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // keyboard activation, which can dispatch a `click` with no prior pointerdown.
   const interactionInsideRef = useRef(false)
 
-  // When inside the sidebar, adjust Floating UI middleware so the popover can
-  // escape the sidebar's `overflow: auto` clipping rect and stay within the
-  // viewport. Two things are needed:
+  // Adjust Floating UI middleware so the popover stays within the viewport
+  // even when the app is embedded inside a narrow iframe (e.g. Medium
+  // oEmbed, #9340) or rendered inside the sidebar's `overflow: auto` column.
+  // Two things are needed:
   //
   // 1. Override the shift/flip boundary to `document.documentElement` so the
   //    popover (portalled to document.body with `position: fixed`) is bounded
-  //    by the viewport rather than the sidebar. `document.documentElement`
-  //    (the <html> element) is used rather than `document.body` because
-  //    Streamlit's `.stApp` uses `position: absolute; inset: 0`, which leaves
-  //    document.body sized 0x0 — a body boundary would always report overflow
-  //    and re-introduce the same flip. Without this override, shift squishes
-  //    the popover (whose min-width exceeds the sidebar column) against the
-  //    sidebar's edge.
+  //    by the viewport rather than the sidebar or any `.stApp` clipping
+  //    ancestor. `document.documentElement` (the <html> element) is used
+  //    rather than `document.body` because Streamlit's `.stApp` uses
+  //    `position: absolute; inset: 0`, which leaves document.body sized 0x0
+  //    — a body boundary would always report overflow. Without this override,
+  //    shift squishes a sidebar popover against the sidebar's edge.
   //
-  // 2. Add a `size` middleware that clamps the popover's maxHeight to the
-  //    available space at the chosen placement. Without this, when the popover
-  //    is taller than the space both above and below the trigger, `flip` picks
-  //    the less-overflowing side and the popover extends off-screen (bug in
-  //    #9387: popover clipped above the viewport top). `size` sits after
-  //    `flip` so it constrains the height to whichever side `flip` landed on,
-  //    causing the internal `overflow: auto` on StyledPopoverBody to kick in.
+  // 2. Add a `size` middleware that clamps the popover's max height AND max
+  //    width to the available space at the chosen placement. Without the
+  //    height clamp, when the popover is taller than the space both above
+  //    and below the trigger, `flip` picks the less-overflowing side and the
+  //    popover extends off-screen (bug in #9387). Without the width clamp,
+  //    the popover's baseline `maxWidth: contentMaxWidth` (~704px) can
+  //    exceed a narrow oembed iframe's width, so `shift` shoves it against
+  //    an edge and the far side is clipped by the iframe (bug in #9340).
+  //    `size` sits after `flip` so it constrains dimensions relative to
+  //    whichever side `flip` landed on; the internal `overflow: auto` on
+  //    StyledPopoverBody handles scrolling when clamped.
   const shiftPadding = 8
   const overlayOptions = useMemo(() => {
     const base = {
@@ -223,22 +227,31 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       placement: "bottom-start" as const,
       offsetPx: convertRemToPx(theme.spacing.twoXS),
     }
-    if (!isInSidebar || typeof document === "undefined") {
+    if (typeof document === "undefined") {
       return base
     }
     const boundary = document.documentElement
     const sizeMiddleware: Middleware = size({
       padding: shiftPadding,
       boundary,
-      apply({ availableHeight, elements }) {
+      apply({ availableHeight, availableWidth, elements }) {
         // Clamp strictly to Floating UI's measured space so the popover never
-        // extends past the viewport, even in very short viewports where both
+        // extends past the viewport, even in very small viewports where both
         // sides of the trigger have limited room. The internal `overflow:
         // auto` on StyledPopoverBody handles the scroll.
         const clampedHeight = Math.max(Math.floor(availableHeight), 0)
+        const clampedWidth = Math.max(Math.floor(availableWidth), 0)
         elements.floating.style.maxHeight = `${clampedHeight}px`
+        elements.floating.style.maxWidth = `${clampedWidth}px`
       },
     })
+    if (!isInSidebar) {
+      // Outside the sidebar we still need `size` to prevent overflow of a
+      // narrow embed viewport, but we don't need to override flip/shift
+      // boundaries — the defaults already resolve to the viewport for
+      // `position: fixed` floating elements.
+      return { ...base, extraMiddleware: [sizeMiddleware] }
+    }
     return {
       ...base,
       flipOptions: { boundary },

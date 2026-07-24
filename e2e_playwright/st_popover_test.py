@@ -178,6 +178,39 @@ def test_popover_in_sidebar_stays_within_viewport(app: Page):
     )
 
 
+def test_popover_stays_within_narrow_viewport(app: Page):
+    """A popover must render fully within a narrow viewport (e.g. an app
+    embedded via oEmbed inside a narrow host iframe). Regression test for
+    https://github.com/streamlit/streamlit/issues/9340.
+
+    Before the fix, the popover body's baseline `max-width` (~704px) exceeded
+    a narrow embed viewport's width. `shift` would push the popover against
+    an edge, but the far side stayed off-screen and was clipped by the host
+    iframe. The `size` middleware now clamps `max-width` to the available
+    space at the chosen placement so the popover always fits.
+    """
+    # Simulate a narrow oembed iframe (e.g. a Medium post).
+    app.set_viewport_size({"width": 520, "height": 800})
+
+    popover_body = open_popover(app, "popover 3 (with widgets)")
+    expect_markdown(popover_body, "Hello World 👋")
+
+    viewport = app.viewport_size
+    assert viewport is not None, "viewport_size must be set for this test"
+
+    body_box = popover_body.bounding_box()
+    assert body_box is not None, "popover body must have a bounding box"
+
+    # Before #9340 was fixed the popover body extended past the viewport's
+    # right edge (its max-width was 704px). A 1px epsilon guards against
+    # subpixel layout differences across browsers.
+    epsilon = 1
+    assert body_box["x"] >= -epsilon, f"popover body extends off left edge: {body_box}"
+    assert body_box["x"] + body_box["width"] <= viewport["width"] + epsilon, (
+        f"popover body extends past right edge: {body_box}, viewport={viewport}"
+    )
+
+
 def test_popover_container_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
