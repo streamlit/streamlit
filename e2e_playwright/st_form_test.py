@@ -54,7 +54,7 @@ def change_widget_values(app: Page):
 
     # Change the multiselect value.
     form_1.get_by_test_id("stMultiSelect").locator("input").click()
-    app.locator("[data-baseweb='popover'] >> li").nth(0).click()
+    app.get_by_role("option").first.click()
 
     # Change the number input value.
     form_1.get_by_test_id("stNumberInput").locator("input").fill("42")

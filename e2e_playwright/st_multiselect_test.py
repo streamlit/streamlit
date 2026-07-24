@@ -49,7 +49,6 @@ def select_for_multiselect(
     """Select an option from a multiselect widget identified by its label."""
     ms = get_multiselect(page, label)
     ms.scroll_into_view_if_needed()
-    page.wait_for_timeout(200)
     ms.locator("input").click()
     page.get_by_role("option", name=option_text, exact=True).first.click()
     if close_after_selecting:
@@ -205,9 +204,7 @@ def test_multiselect_long_values_in_narrow_column(
 def test_multiselect_register_callback(app: Page):
     """Should call the callback when an option is selected."""
     ms = get_multiselect(app, "multiselect 11")
-    # Scroll into view first, then wait, then click
     ms.scroll_into_view_if_needed()
-    app.wait_for_timeout(500)
     ms.locator("input").click()
     app.get_by_role("option", name="male", exact=True).first.click()
     wait_for_app_run(app)
@@ -230,8 +227,6 @@ def test_multiselect_max_selections_1(app: Page):
     """
     select_for_multiselect(app, "multiselect 9", "male", True)
     ms = get_multiselect(app, "multiselect 9")
-    ms.scroll_into_view_if_needed()
-    app.wait_for_timeout(200)
     ms.locator("input").click()
     expect(app.get_by_test_id("stMultiSelectDropdown")).to_have_text(
         "You can only select up to 1 option. Remove an option first.",
@@ -408,10 +403,8 @@ def test_multiselect_accept_new_options(app: Page):
     """
     # Get the last multiselect (index 13)
     multiselect_elem = get_multiselect(app, "multiselect 14 - accept new options")
-
-    # Scroll into view then click to open dropdown
     multiselect_elem.scroll_into_view_if_needed()
-    app.wait_for_timeout(200)
+
     input_elem = multiselect_elem.locator("input")
     input_elem.click()
 
@@ -455,7 +448,9 @@ def test_multiselect_accept_new_options(app: Page):
     # Verify that this option was not added as it would have exceeded max_selections
     expect_text(app, "value 14: ['mango', 'grape', 'apple']")
 
-    # Close the dropdown (still open from failed "berries" attempt) then remove a tag
+    # Close the dropdown (still open from failed "berries" attempt) then remove a tag.
+    # Two Escapes: first clears filter text, second closes the dropdown.
+    input_elem.press("Escape")
     input_elem.press("Escape")
     del_from_multiselect(app, "multiselect 14 - accept new options", "mango")
 
@@ -486,15 +481,13 @@ def test_multiselect_empty_options_with_accept_new_options(app: Page):
     multiselect_elem = get_multiselect(
         app, "multiselect 16 - empty options with accept_new_options"
     )
+    multiselect_elem.scroll_into_view_if_needed()
 
     # Verify the initial placeholder shows "Add options"
     expect(multiselect_elem.locator("input")).to_have_attribute(
         "placeholder", "Add options"
     )
 
-    # Scroll into view then click to open input field
-    multiselect_elem.scroll_into_view_if_needed()
-    app.wait_for_timeout(200)
     input_elem = multiselect_elem.locator("input")
     input_elem.click()
 
@@ -619,6 +612,7 @@ def test_multiselect_custom_objects_without_eq(app: Page):
 def test_multiselect_prefix_filter_mode_matches_prefix_only(app: Page):
     """Test that prefix mode only shows prefix matches and keeps bulk actions in sync."""
     input_elem = _get_multiselect_input(app, "multiselect 21 (filter_mode='prefix')")
+    input_elem.click()
     input_elem.type("A123")
 
     options = app.get_by_role("option")
@@ -643,13 +637,13 @@ def test_multiselect_contains_filter_mode_matches_substrings(app: Page):
 
 
 def test_multiselect_filter_mode_none_disables_typing_but_keeps_selection(app: Page):
-    """Test that filter_mode=None keeps the input readonly while leaving selection enabled."""
+    """Test that filter_mode=None keeps typing disabled while leaving selection enabled."""
     ms = get_multiselect(app, "multiselect 23 (filter_mode=None)")
     input_elem = ms.locator("input").first
-    expect(input_elem).to_have_attribute("readonly", "")
+    expect(input_elem).to_have_attribute("inputmode", "none")
+    expect(input_elem).not_to_have_attribute("readonly", "")
 
     ms.scroll_into_view_if_needed()
-    app.wait_for_timeout(200)
     input_elem.click()
     options = app.get_by_role("option")
     expect(options).to_have_count(4)
@@ -709,7 +703,6 @@ def test_multiselect_query_param_default_override(page: Page, app_base_url: str)
     # Clear and set back to default ["Red", "Green"]
     ms_default = get_multiselect(page, "Bound multiselect with default")
     ms_default.scroll_into_view_if_needed()
-    page.wait_for_timeout(200)
     ms_default.locator('button[aria-label="Clear all"]').first.click()
     wait_for_app_run(page)
     select_for_multiselect(page, "Bound multiselect with default", "Red", True)
