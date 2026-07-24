@@ -16,7 +16,7 @@
 
 import { memo } from "react"
 
-import Dropzone, { FileRejection } from "react-dropzone"
+import Dropzone, { DropzoneInputProps, FileRejection } from "react-dropzone"
 
 import BaseButton, {
   BaseButtonKind,
@@ -67,7 +67,7 @@ const FileDropzone = ({
     useFsAccessApi={false}
   >
     {({ getRootProps, getInputProps, isDragActive }) => {
-      const inputProps = getInputProps({
+      const inputProps: DropzoneInputProps = getInputProps({
         multiple: multiple || !!acceptDirectory,
       })
 
