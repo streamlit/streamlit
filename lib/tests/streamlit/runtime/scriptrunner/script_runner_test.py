@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 import time
@@ -1601,6 +1602,57 @@ class ScriptRunnerTest(unittest.TestCase):
             shutdown_data["client_state"].page_script_hash
             == "74c2683ab3d8427292ef911e1e05a630"
         )
+
+    def test_event_loop_installed_on_script_thread(self):
+        """asyncio.get_event_loop() succeeds on the script thread because a
+        persistent, non-running loop is installed for the session."""
+        scriptrunner = TestScriptRunner("asyncio_event_loop.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        captured = scriptrunner._session_state["captured_loops"]
+        assert isinstance(captured[0], asyncio.AbstractEventLoop)
+        # The loop is only installed, never run.
+        assert scriptrunner._session_state["loop_running"] is False
+
+    def test_event_loop_persists_across_reruns(self):
+        """The same loop object is current on every rerun of a session."""
+        scriptrunner = TestScriptRunner("asyncio_event_loop.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        captured = scriptrunner._session_state["captured_loops"]
+        assert len(captured) == 2
+        assert captured[0] is captured[1]
+
+    def test_asyncio_run_unaffected_by_persistent_loop(self):
+        """User code calling asyncio.run() keeps working: our loop never runs,
+        so there is no nested-loop conflict, and asyncio.run() closes its own
+        temporary loop rather than ours."""
+        scriptrunner = TestScriptRunner("asyncio_event_loop.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        assert scriptrunner._session_state["asyncio_run_result"] == 42
+        # asyncio.run() must not have closed the persistent loop.
+        assert scriptrunner._session_state["persistent_loop_closed_mid_run"] is False
+
+    def test_event_loop_closed_on_shutdown(self):
+        """The persistent loop is closed and detached when the thread stops."""
+        scriptrunner = TestScriptRunner("asyncio_event_loop.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        loop = scriptrunner._session_state["captured_loops"][0]
+        assert loop.is_closed()
+        assert scriptrunner._event_loop is None
 
     def _assert_no_exceptions(self, scriptrunner: TestScriptRunner) -> None:
         """Assert that no uncaught exceptions were thrown in the
