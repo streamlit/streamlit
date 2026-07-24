@@ -66,18 +66,19 @@ UserInfoType: TypeAlias = dict[str, str | bool | dict[str, str] | None]
 
 
 class RunLocation(Enum):
-    """The execution phase of the current call site.
+    """The execution phase of the currently running Streamlit code.
 
-    There are two orthogonal axes when code runs inside Streamlit:
+    Tracks which of three phases is active on the current thread:
 
-    * **Phase** — whether we are in the main script body, a fragment body, or a
-      widget/event callback.  ``RunLocation`` tracks the phase.
-    * **Fragment identity** — which ``@st.fragment`` we are associated with, if
-      any.  ``FragmentThreadState.fragment_id`` tracks this independently.
+    - ``MAIN_SCRIPT`` — the top-level app script body is running.
+    - ``FRAGMENT`` — a ``@st.fragment`` body is executing.
+    - ``CALLBACK`` — a widget callback (``on_change``, ``on_click``, etc.)
+      is executing.
 
-    The two axes are independent: a callback for a widget defined inside
-    fragment ``bar`` has ``run_location=CALLBACK`` *and*
-    ``fragment_id="bar"``.
+    ``CALLBACK`` does not encode whether the triggering widget belongs to a
+    fragment; ``FragmentThreadState.fragment_id`` tracks that separately.
+    A callback for a widget inside a fragment has ``run_location=CALLBACK``
+    *and* a non-``None`` ``fragment_id``.
     """
 
     MAIN_SCRIPT = "main_script"
