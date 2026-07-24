@@ -148,6 +148,13 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
             == "<style>h1 {\n  color: red;\n}\n\nh2 {\n  color: blue;\n}\n</style>"
         )
 
+    def test_st_html_with_file(self):
+        """Test st.html with a file."""
+        st.html(pathlib.Path(__file__).parent / "test_html.js")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.html.body.strip() == "<button>Corgi</button>"
+
     def test_st_html_with_string_file_path(self):
         """Test st.html warns and doesn't read a string file path."""
         file_path = str(pathlib.Path(__file__).parent / "test_html.js")
