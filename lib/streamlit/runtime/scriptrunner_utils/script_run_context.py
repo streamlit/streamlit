@@ -74,11 +74,6 @@ class RunLocation(Enum):
     - ``FRAGMENT`` — a ``@st.fragment`` body is executing.
     - ``CALLBACK`` — a widget callback (``on_change``, ``on_click``, etc.)
       is executing.
-
-    ``CALLBACK`` does not encode whether the triggering widget belongs to a
-    fragment; ``FragmentThreadState.fragment_id`` tracks that separately.
-    A callback for a widget inside a fragment has ``run_location=CALLBACK``
-    *and* a non-``None`` ``fragment_id``.
     """
 
     MAIN_SCRIPT = "main_script"
