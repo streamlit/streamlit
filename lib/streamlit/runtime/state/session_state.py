@@ -916,13 +916,13 @@ class SessionState:
         cb_args: WidgetArgs,
         cb_kwargs: dict[str, Any],
     ) -> None:
-        """Execute a widget callback with fragment-aware context.
+        """Execute a widget callback in callback run context.
 
-        If the widget belongs to a fragment, temporarily marks the current
-        script context as being inside a fragment callback to adapt rerun
-        semantics.  When ``st.rerun()`` is called inside a widget callback,
-        the rerun request is re-queued so that it takes effect after all
-        callbacks have run and the current script body has completed.
+        Sets ``run_location=RunLocation.CALLBACK`` and binds ``fragment_id``
+        from the widget's metadata for the duration of the callback. When
+        ``st.rerun()`` is called inside a widget callback, the rerun request
+        is re-queued so that it takes effect after all callbacks have run and
+        the current script body has completed.
 
         Parameters
         ----------
