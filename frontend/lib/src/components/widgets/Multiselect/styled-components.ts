@@ -41,28 +41,28 @@ function getRightInset(theme: EmotionTheme): string {
  * Unlike the Selectbox trigger, this has variable height (grows with tags)
  * up to a max-height that cuts through the 5th tag row.
  */
-export const StyledTrigger = styled(Group)<{ $maxHeight: string }>(
-  ({ theme, $maxHeight }) => ({
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "stretch",
-    width: "100%",
-    minHeight: theme.sizes.minElementHeight,
-    maxHeight: $maxHeight,
-    borderLeftWidth: theme.sizes.borderWidth,
-    borderRightWidth: theme.sizes.borderWidth,
-    borderTopWidth: theme.sizes.borderWidth,
-    borderBottomWidth: theme.sizes.borderWidth,
-    borderStyle: "solid",
-    borderColor: getBorderColor(theme.colors, false),
-    boxSizing: "border-box",
-    borderRadius: theme.radii.default,
-    backgroundColor: theme.colors.secondaryBg,
-    "&[data-focus-within]": {
-      borderColor: getBorderColor(theme.colors, true),
-    },
-  })
-)
+export const StyledTrigger = styled(Group, {
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
+})<{ $maxHeight: string }>(({ theme, $maxHeight }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "stretch",
+  width: "100%",
+  minHeight: theme.sizes.minElementHeight,
+  maxHeight: $maxHeight,
+  borderLeftWidth: theme.sizes.borderWidth,
+  borderRightWidth: theme.sizes.borderWidth,
+  borderTopWidth: theme.sizes.borderWidth,
+  borderBottomWidth: theme.sizes.borderWidth,
+  borderStyle: "solid",
+  borderColor: getBorderColor(theme.colors, false),
+  boxSizing: "border-box",
+  borderRadius: theme.radii.default,
+  backgroundColor: theme.colors.secondaryBg,
+  "&[data-focus-within]": {
+    borderColor: getBorderColor(theme.colors, true),
+  },
+}))
 
 /**
  * Scrollable area inside the trigger that holds tags + the filter input.
@@ -79,6 +79,7 @@ export const StyledTagsContainer = styled.div(({ theme }) => ({
   paddingTop: theme.sizes.tagMarginInsideBorder,
   paddingBottom: theme.spacing.none,
   paddingRight: theme.spacing.none,
+  cursor: "text",
 }))
 
 /** Individual removable tag pill displaying a selected value. */
@@ -146,11 +147,13 @@ export const StyledFilterInput = styled(Input, {
     marginBottom: theme.sizes.tagMarginInsideBorder,
     marginTop: theme.spacing.none,
     marginLeft: theme.spacing.none,
-    // When values exist, size to content; otherwise fill for placeholder
+    // When values exist, collapse to content width (fieldSizing: content grows
+    // as the user types). width:0 prevents the browser's intrinsic input width
+    // (~150px) from forcing a wrap to a new line below tags.
     flexGrow: $hasValues ? 0 : 1,
     flexShrink: 1,
-    minWidth: $hasValues ? "4rem" : theme.spacing.threeXS,
-    width: $hasValues ? undefined : "100%",
+    minWidth: $hasValues ? "0.5rem" : theme.spacing.threeXS,
+    width: $hasValues ? 0 : "100%",
     fieldSizing: $hasValues ? "content" : undefined,
     border: "none",
     outline: "none",
@@ -207,11 +210,16 @@ export const StyledClearButton = styled(Button)(({ theme }) => ({
   padding: theme.spacing.threeXS,
   width: theme.sizes.clearIconSize,
   border: "none",
+  outline: "none",
+  borderRadius: theme.radii.default,
   background: "transparent",
   cursor: "pointer",
   color: theme.colors.grayTextColor,
   "&:hover, &[data-hovered]": {
     color: theme.colors.bodyText,
+  },
+  "&:focus-visible": {
+    boxShadow: theme.shadows.focusRing,
   },
 }))
 

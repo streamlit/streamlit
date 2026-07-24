@@ -616,7 +616,8 @@ describe("Multiselect widget", () => {
     render(<Multiselect {...props} />)
     const input = screen.getByRole("combobox")
 
-    expect(input).toHaveAttribute("readonly")
+    expect(input).toHaveAttribute("inputmode", "none")
+    expect(input).not.toHaveAttribute("readonly")
 
     await user.click(input)
     expect(screen.queryAllByRole("option")).toHaveLength(4)

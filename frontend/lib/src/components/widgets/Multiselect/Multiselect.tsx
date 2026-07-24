@@ -185,6 +185,7 @@ const Multiselect: FC<Props> = props => {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
   const tagsContainerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const scrollTopRef = useRef(0)
 
   const queryParamBinding = element.queryParamKey
@@ -400,6 +401,18 @@ const Multiselect: FC<Props> = props => {
     setValueWithSource({ value: [], fromUi: true })
   }, [setValueWithSource])
 
+  const handleContainerClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>): void => {
+      if (disabled) return
+      const target = e.target as HTMLElement
+      // Ignore clicks on buttons and tags — only empty space triggers focus/open
+      if (target.closest("button") || target.closest("[data-tag]")) return
+      inputRef.current?.focus()
+      openDropdownRef.current?.()
+    },
+    [disabled]
+  )
+
   const handleInputPointerDown = useCallback((): void => {
     if (disabled) return
     openDropdownRef.current?.()
@@ -430,9 +443,11 @@ const Multiselect: FC<Props> = props => {
 
       if (e.key === "Escape") {
         if (filterActiveRef.current) {
+          // Layered: first Escape clears filter (keeps dropdown open),
+          // RAC handles the next Escape to close the dropdown.
           e.preventDefault()
+          e.stopPropagation()
           setInputValue("")
-          closeDropdownRef.current?.()
           return
         }
         if (!isOpenRef.current && isClearable && value.length > 0) {
@@ -513,11 +528,14 @@ const Multiselect: FC<Props> = props => {
     return keys
   }, [value, element.options])
 
+  // Only use readOnly for mobile small-list case. Never for isFilterNone —
+  // readOnly breaks RAC keyboard navigation (Arrow/Enter). isFilterNone uses
+  // inputMode="none" + character blocking in the capture handler instead.
   const inputReadOnly =
-    isFilterNone ||
-    (isMobile() &&
-      element.options.length <= 10 &&
-      !(element.acceptNewOptions ?? false))
+    !isFilterNone &&
+    isMobile() &&
+    element.options.length <= 10 &&
+    !(element.acceptNewOptions ?? false)
 
   return (
     <div className="stMultiSelect" data-testid="stMultiSelect">
@@ -552,17 +570,22 @@ const Multiselect: FC<Props> = props => {
             closeRef={closeDropdownRef}
             focusedKeyRef={focusedKeyRef}
           />
-          <StyledTrigger ref={refs.setReference} $maxHeight={maxHeight}>
+          <StyledTrigger
+            ref={refs.setReference}
+            $maxHeight={maxHeight}
+            onClick={handleContainerClick}
+          >
             <StyledTagsContainer
               ref={tagsContainerRef}
               onScroll={handleTagsScroll}
             >
               {value.map(v => (
-                <StyledTag key={v} $disabled={disabled}>
+                <StyledTag key={v} $disabled={disabled} data-tag="">
                   <StyledTagText title={v}>{v}</StyledTagText>
                   {!disabled && (
                     <StyledTagRemoveButton
                       aria-label={`Remove ${v}`}
+                      tabIndex={-1}
                       onClick={e => {
                         e.stopPropagation()
                         handleRemoveTag(v)
@@ -587,6 +610,7 @@ const Multiselect: FC<Props> = props => {
                 </StyledTag>
               ))}
               <StyledFilterInput
+                ref={inputRef}
                 placeholder={value.length === 0 ? placeholder : ""}
                 readOnly={inputReadOnly}
                 inputMode={isFilterNone ? "none" : undefined}
@@ -611,6 +635,7 @@ const Multiselect: FC<Props> = props => {
             )}
             <StyledOpenButton
               aria-label="Open"
+              excludeFromTabOrder
               onPress={() => openDropdownRef.current?.()}
             >
               <KeyboardArrowDown
