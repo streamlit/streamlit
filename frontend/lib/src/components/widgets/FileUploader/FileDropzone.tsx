@@ -71,6 +71,17 @@ const FileDropzone = ({
         multiple: multiple || !!acceptDirectory,
       })
 
+      // react-dropzone v19.0.1+ hides the file input in-flow (display: block)
+      // instead of using position: absolute. Since this input is a direct
+      // child of the flex dropzone section (which uses `gap`), keeping it
+      // in-flow adds an extra gap before the upload button and shifts the
+      // layout. Pin it back to position: absolute so the hidden input stays
+      // out of the flow and doesn't affect the dropzone layout.
+      const inputStyle: React.CSSProperties = {
+        ...inputProps.style,
+        position: "absolute",
+      }
+
       return (
         <StyledFileDropzoneSection
           {...getRootProps({ tabIndex: -1 })}
@@ -84,6 +95,7 @@ const FileDropzone = ({
             data-testid="stFileUploaderDropzoneInput"
             {...inputProps}
             {...(acceptDirectory && { webkitdirectory: "" })}
+            style={inputStyle}
           />
           {isDragActive && (
             <StyledDragDropOverlay>

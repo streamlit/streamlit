@@ -52,6 +52,17 @@ describe("FileDropzone widget", () => {
     expect(dropzone).toHaveAttribute("tabindex", "-1")
   })
 
+  it("keeps the hidden file input out of the layout flow", () => {
+    // react-dropzone v19.0.1+ hides the input in-flow (display: block), which
+    // would add an extra flex gap before the upload button. We pin it back to
+    // position: absolute so it does not affect the dropzone layout.
+    const props = getProps()
+    render(<FileDropzone {...props} />)
+
+    const input = screen.getByTestId("stFileUploaderDropzoneInput")
+    expect(input).toHaveStyle({ position: "absolute" })
+  })
+
   it("renders dropzone without extensions", () => {
     const props = getProps({
       acceptedTypes: [],
