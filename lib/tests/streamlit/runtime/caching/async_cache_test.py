@@ -1,0 +1,225 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Tests for async-aware @st.cache_data and @st.cache_resource.
+
+These cover decorating coroutine functions (``async def``): the decorator caches
+the awaited result (an inert value) rather than the coroutine object. Coroutines
+are driven with ``asyncio.run`` to mirror how a user drives them from a script.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import inspect
+from collections.abc import Callable
+from typing import Any
+
+import pytest
+
+import streamlit as st
+
+# Both cache decorators, so shared behavior can be parametrized across them.
+CACHE_DECORATORS: list[tuple[str, Any]] = [
+    ("cache_data", st.cache_data),
+    ("cache_resource", st.cache_resource),
+]
+
+
+@pytest.fixture(autouse=True)
+def _clear_caches() -> Any:
+    """Clear both caches around every test so entries don't leak between tests."""
+    st.cache_data.clear()
+    st.cache_resource.clear()
+    yield
+    st.cache_data.clear()
+    st.cache_resource.clear()
+
+
+@pytest.mark.parametrize("name, decorator", CACHE_DECORATORS)
+def test_async_first_call_runs_then_cached(name: str, decorator: Callable) -> None:
+    """The body runs on the first await and is skipped (cached) on the second."""
+    calls: list[int] = []
+
+    @decorator
+    async def load(x: int) -> int:
+        calls.append(x)
+        await asyncio.sleep(0)
+        return x * 10
+
+    assert asyncio.run(load(2)) == 20
+    assert asyncio.run(load(2)) == 20
+    assert calls == [2]
+
+
+@pytest.mark.parametrize("name, decorator", CACHE_DECORATORS)
+def test_async_body_runs_once_across_repeated_awaits(
+    name: str, decorator: Callable
+) -> None:
+    """Repeated awaits with the same args run the body exactly once."""
+    calls: list[int] = []
+
+    @decorator
+    async def load(x: int) -> int:
+        calls.append(x)
+        await asyncio.sleep(0)
+        return x
+
+    async def main() -> list[int]:
+        # Await the same key several times sequentially.
+        return [await load(7), await load(7), await load(7)]
+
+    assert asyncio.run(main()) == [7, 7, 7]
+    assert calls == [7]
+
+
+@pytest.mark.parametrize("name, decorator", CACHE_DECORATORS)
+def test_async_different_args_produce_different_entries(
+    name: str, decorator: Callable
+) -> None:
+    """Different args are cached separately and each runs the body once."""
+    calls: list[int] = []
+
+    @decorator
+    async def load(x: int) -> int:
+        calls.append(x)
+        await asyncio.sleep(0)
+        return x + 1
+
+    assert asyncio.run(load(1)) == 2
+    assert asyncio.run(load(2)) == 3
+    # A repeat of an existing arg is a hit and does not re-run the body.
+    assert asyncio.run(load(1)) == 2
+    assert calls == [1, 2]
+
+
+@pytest.mark.parametrize("name, decorator", CACHE_DECORATORS)
+def test_async_call_returns_awaitable(name: str, decorator: Callable) -> None:
+    """Calling a decorated coroutine function returns an awaitable, not the value."""
+
+    @decorator
+    async def load() -> int:
+        await asyncio.sleep(0)
+        return 42
+
+    awaitable = load()
+    assert inspect.isawaitable(awaitable)
+    assert asyncio.run(awaitable) == 42
+
+
+def test_cache_data_async_does_not_raise_unserializable() -> None:
+    """cache_data caches the awaited result, not the (unpicklable) coroutine.
+
+    Previously this raised ``UnserializableReturnValueError`` because the decorator
+    tried to pickle the returned coroutine object.
+    """
+
+    @st.cache_data
+    async def load() -> dict[str, str]:
+        await asyncio.sleep(0)
+        return {"env": "prod"}
+
+    assert asyncio.run(load()) == {"env": "prod"}
+    assert asyncio.run(load()) == {"env": "prod"}
+
+
+def test_cache_resource_async_does_not_raise_coroutine_reuse() -> None:
+    """cache_resource re-serves the awaited result without re-awaiting a coroutine.
+
+    Previously the second access raised
+    ``RuntimeError: cannot reuse already awaited coroutine`` because the coroutine
+    object itself was cached and awaited again.
+    """
+
+    @st.cache_resource
+    async def load() -> dict[str, str]:
+        await asyncio.sleep(0)
+        return {"env": "prod"}
+
+    assert asyncio.run(load()) == {"env": "prod"}
+    assert asyncio.run(load()) == {"env": "prod"}
+
+
+def test_cache_resource_async_returns_same_object() -> None:
+    """cache_resource returns the identical cached object across awaits."""
+
+    @st.cache_resource
+    async def load() -> list[int]:
+        await asyncio.sleep(0)
+        return [1, 2, 3]
+
+    first = asyncio.run(load())
+    second = asyncio.run(load())
+    assert first is second
+
+
+def test_cache_data_async_returns_copies() -> None:
+    """cache_data returns an equal-but-distinct copy of the awaited result."""
+
+    @st.cache_data
+    async def load() -> list[int]:
+        await asyncio.sleep(0)
+        return [1, 2, 3]
+
+    first = asyncio.run(load())
+    second = asyncio.run(load())
+    assert first == second
+    # cache_data serializes results, so each caller gets its own copy.
+    assert first is not second
+
+
+def test_async_underscore_arg_is_not_hashed() -> None:
+    """Underscore-prefixed args are excluded from the key, as for sync functions."""
+    calls: list[int] = []
+
+    @st.cache_data
+    async def load(_conn: object, n: int) -> int:
+        calls.append(n)
+        await asyncio.sleep(0)
+        return n
+
+    assert asyncio.run(load(object(), 5)) == 5
+    # A different _conn but the same n is still a cache hit (body not re-run).
+    assert asyncio.run(load(object(), 5)) == 5
+    assert calls == [5]
+
+
+def test_async_max_entries_still_evicts() -> None:
+    """The max_entries option still bounds the async cache and evicts old entries."""
+    calls: list[int] = []
+
+    @st.cache_data(max_entries=1)
+    async def load(x: int) -> int:
+        calls.append(x)
+        await asyncio.sleep(0)
+        return x
+
+    assert asyncio.run(load(1)) == 1
+    # Adding a second entry evicts the first (max_entries=1).
+    assert asyncio.run(load(2)) == 2
+    # Re-accessing the evicted entry recomputes it.
+    assert asyncio.run(load(1)) == 1
+    assert calls == [1, 2, 1]
+
+
+def test_sync_function_path_is_unchanged() -> None:
+    """Sync cached functions still return values directly, not awaitables."""
+
+    @st.cache_data
+    def load(x: int) -> int:
+        return x + 1
+
+    result = load(1)
+    assert result == 2
+    assert not inspect.isawaitable(result)
