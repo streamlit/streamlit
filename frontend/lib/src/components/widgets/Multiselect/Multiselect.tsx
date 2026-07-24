@@ -570,7 +570,13 @@ const Multiselect: FC<Props> = props => {
               },
             },
             InputContainer: {
-              style: ({ $isFocused }: { $isFocused: boolean }) => ({
+              style: ({
+                $isFocused,
+                $isEmpty,
+              }: {
+                $isFocused: boolean
+                $isEmpty: boolean
+              }) => ({
                 // Height matches tags
                 height: theme.sizes.elementHighlightHeight,
                 // Alignment and left margin to match tags (ValueContainer padding)
@@ -580,8 +586,13 @@ const Multiselect: FC<Props> = props => {
                 // Bottom margin required to size the container correctly if the
                 // input is orphaned on a new line (in focus)
                 marginBottom: theme.sizes.tagMarginInsideBorder,
-                // Stack input when not focused to prevent premature line wrap
-                position: $isFocused ? "relative" : "absolute",
+                // Stack input absolutely only when there are no selected tags
+                // AND the control is unfocused, so the empty input doesn't push
+                // the placeholder around. When tags exist, keep the input inline
+                // (position: relative) so the caret renders after the tags —
+                // otherwise an absolutely-positioned input overlaps the tags at
+                // the top-left of the flex container. See #16133.
+                position: $isEmpty && !$isFocused ? "absolute" : "relative",
                 width: "fit-content",
                 flexGrow: 0,
                 // Center input vertically
