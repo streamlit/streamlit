@@ -222,6 +222,32 @@ def test_install_skills_handler_installs_in_project_mode() -> None:
         response.install_skills.detail == "Installed to .agents/skills, .claude/skills."
     )
     assert response.error_msg == ""
+    # A normal project (symlink) install did not take the global fallback.
+    assert response.install_skills.used_global_fallback is False
+
+
+def test_install_skills_handler_forwards_global_fallback_flag() -> None:
+    """A fallback install (symlinks unsupported -> global copy) forwards
+    used_global_fallback so the frontend can emit the countable
+    skillsNudgeInstallSucceeded:global_fallback label (decision A).
+    """
+    install_result = skills._InstallResult(
+        installed=["~/.agents/skills/foo"], used_global_fallback=True
+    )
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch("streamlit.web.skills.install_skills", return_value=install_result),
+        patch.object(skills, "clear_installed_skills_cache"),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.HasField("install_skills")
+    assert response.install_skills.used_global_fallback is True
 
 
 def test_install_skills_handler_reports_failure() -> None:

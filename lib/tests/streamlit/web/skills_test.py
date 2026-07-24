@@ -2186,6 +2186,72 @@ class TestInstallProjectSkillsFallbackErrors:
                 skills._install_project_skills(yes=True)
 
 
+class TestInstallProjectSkillsFallbackSignal:
+    """used_global_fallback marks installs that took the symlink->global path."""
+
+    @pytest.mark.parametrize(
+        "symlinks_supported",
+        [False, True],
+        ids=["fallback_via_precheck", "fallback_via_symlink_failure"],
+    )
+    def test_fallback_sets_used_global_fallback(
+        self,
+        tmp_path: Path,
+        mock_source_skills_dir: Path,
+        symlinks_supported: bool,
+    ) -> None:
+        """A successful symlink->global fallback flags used_global_fallback.
+
+        (decision A) so the Windows-no-Dev-Mode cohort - symlinks unsupported,
+        silently rerouted to a global copy - is countable in telemetry as
+        skillsNudgeInstallSucceeded:global_fallback rather than invisible.
+        """
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch.object(
+                skills, "_symlinks_supported", return_value=symlinks_supported
+            ),
+            # Force the per-skill symlink to fail (only reached when symlinks are
+            # "supported" but a link can't be laid); harmless on the pre-check path.
+            patch.object(skills, "_install_skill_symlink", return_value=False),
+            patch.object(
+                skills,
+                "_install_global_skills",
+                return_value=skills._InstallResult(
+                    installed=["~/.agents/skills/developing-with-streamlit"]
+                ),
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            result = skills._install_project_skills(yes=True)
+
+        assert result.used_global_fallback is True
+
+    def test_project_symlink_install_has_no_fallback_flag(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A normal project (symlink) install does NOT set used_global_fallback."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch.object(skills, "_symlinks_supported", return_value=True),
+            patch.object(skills, "_install_skill_symlink", return_value=True),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            result = skills._install_project_skills(yes=True)
+
+        assert result.used_global_fallback is False
+
+
 class TestInstallSkillCopyTempCleanup:
     """Tests for temp file cleanup paths in _install_skill_copy."""
 

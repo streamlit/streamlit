@@ -41,8 +41,8 @@ class _InstallError(click.ClickException):
 
     Behaves like a normal ``click.ClickException`` — its ``format_message`` still
     supplies the user-facing text shown in the CLI and the in-app nudge — but also
-    carries a bounded ``reason`` (e.g. ``"conflict"``, ``"source_missing"``,
-    ``"symlinks_unsupported"``) that the backend-operation handler forwards to the
+    carries a bounded ``reason`` (e.g. ``"conflict"``, ``"write_failed"``,
+    ``"source_missing"``) that the backend-operation handler forwards to the
     client so the nudge's install-failure telemetry can be split by cause. The
     reason is a fixed vocabulary set at each raise site, never user input, so it is
     safe to emit as a telemetry label suffix.
@@ -84,6 +84,10 @@ class _InstallResult:
     # misreported as a "conflict" - both in the CLI summary and, crucially, in
     # the nudge's install-failure telemetry reason.
     errored: list[str] = field(default_factory=list)
+    # True when project (symlink) install fell back to a global copy because
+    # symlinks aren't supported (e.g. Windows without Developer Mode). Surfaced
+    # to telemetry so that cohort is countable - see InstallSkillsResponsePayload.
+    used_global_fallback: bool = False
 
 
 def _get_source_skills_dir() -> Path:
@@ -688,7 +692,9 @@ def _install_project_skills(
                 "Developer Mode to use project installs."
             )
             click.echo()
-            return _install_global_skills(yes=yes)
+            global_result = _install_global_skills(yes=yes)
+            global_result.used_global_fallback = True
+            return global_result
 
         raise _InstallError(
             "Symlinks not supported. Use --global for global installation.",
@@ -729,7 +735,9 @@ def _install_project_skills(
         click.echo("Falling back to global installation mode...")
         click.echo()
         try:
-            return _install_global_skills(yes=yes)
+            global_result = _install_global_skills(yes=yes)
+            global_result.used_global_fallback = True
+            return global_result
         except click.ClickException:
             # Global install failed - partial project symlinks remain as fallback
             raise

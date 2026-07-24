@@ -32,6 +32,7 @@ import {
   setSkillsNudgeDismissed,
   setSkillsNudgeSnoozed,
   SKILLS_NUDGE_DROPPED_MESSAGE,
+  SKILLS_NUDGE_REFUSAL_REASONS,
 } from "@streamlit/app/src/components/SkillsNudgeToast/skillsNudge"
 import SkillsNudgeToast from "@streamlit/app/src/components/SkillsNudgeToast/SkillsNudgeToast"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget/StatusWidget"
@@ -1604,7 +1605,16 @@ export class App extends PureComponent<Props, State> {
         // — no need to also write the permanent "don't show again" flag here,
         // which would conflate "installed" with a permanent opt-out. The card
         // shows its own success confirmation and auto-dismisses.
-        this.trackSkillsNudge("skillsNudgeInstallSucceeded")
+        //
+        // Tag installs that took the symlink -> global-copy fallback (symlinks
+        // unsupported, e.g. Windows without Developer Mode) so that cohort is
+        // countable — a fallback install is otherwise indistinguishable from a
+        // project install in the success telemetry.
+        this.trackSkillsNudge(
+          result.usedGlobalFallback
+            ? "skillsNudgeInstallSucceeded:global_fallback"
+            : "skillsNudgeInstallSucceeded"
+        )
         return result.detail ?? undefined
       })
       .catch((error: unknown) => {
@@ -1617,17 +1627,19 @@ export class App extends PureComponent<Props, State> {
           this.trackSkillsNudge("skillsNudgeInstallDropped")
           throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
         }
-        // Append the server's machine-readable failure reason (e.g. "conflict",
-        // "source_missing", "symlinks_unsupported") as a label suffix — mirroring
-        // `skillsNudgeSuppressedNonLocal:<locality>` — so the install-failure rate
-        // can be broken down by cause. The reason is a fixed server-side vocabulary
-        // (never user input), safe to emit as a label.
+        // Append the server's machine-readable reason as a label suffix —
+        // mirroring `skillsNudgeSuppressedNonLocal:<locality>` — so outcomes split
+        // by cause (e.g. "conflict", "write_failed", "source_missing"). Safety-gate
+        // refusals (headless / no_agent / non_loopback) are installs we refused to
+        // attempt, not failures, so they go under a distinct
+        // `skillsNudgeInstallRefused:<reason>` and never inflate the failure rate.
+        // Reasons are a fixed server-side vocabulary (never user input).
         const reason = (error as { reason?: string } | null)?.reason
-        this.trackSkillsNudge(
-          reason
-            ? `skillsNudgeInstallFailed:${reason}`
+        const eventName =
+          reason && SKILLS_NUDGE_REFUSAL_REASONS.has(reason)
+            ? "skillsNudgeInstallRefused"
             : "skillsNudgeInstallFailed"
-        )
+        this.trackSkillsNudge(reason ? `${eventName}:${reason}` : eventName)
         // Re-throw so the toast renders its error state.
         throw error
       })

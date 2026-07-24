@@ -122,9 +122,9 @@ message BackendOperationResponse {
 
   // Machine-readable, bounded failure classification (empty on success).
   // Parallels the human-readable error_msg. For the one-click skills install
-  // this is the cause of the failure (e.g. "conflict", "source_missing",
-  // "symlinks_unsupported"), forwarded to telemetry so the nudge's
-  // install-failure rate can be broken down by cause.
+  // this is the cause of the failure (e.g. "conflict", "write_failed",
+  // "source_missing"), forwarded to telemetry so the nudge's install-failure
+  // rate can be broken down by cause.
   string error_reason = 7;
 
   oneof payload {
@@ -153,6 +153,12 @@ message DeferredFileResponsePayload {
 message InstallSkillsResponsePayload {
   // Optional human-readable detail about the install outcome.
   string detail = 1;
+
+  // True when the install took the symlink -> global-copy fallback (symlinks
+  // unsupported, e.g. Windows without Developer Mode). Lets the nudge telemetry
+  // count that cohort (skillsNudgeInstallSucceeded:global_fallback) since a
+  // fallback install is otherwise indistinguishable from a project install.
+  bool used_global_fallback = 2;
 }
 
 // Acknowledgement payload for dismissing the skills nudge. Carries no data;

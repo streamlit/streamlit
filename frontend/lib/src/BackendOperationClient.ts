@@ -214,12 +214,14 @@ export class BackendOperationClient {
    * @returns A promise that resolves with an optional outcome detail, or
    * rejects with the server-provided error message on failure.
    */
-  public requestInstallSkills(): Promise<{ detail?: string | null }> {
-    return this.request<{ detail?: string | null }>(
-      "installSkills",
-      {},
-      INSTALL_SKILLS_REQUEST_TIMEOUT_MS
-    )
+  public requestInstallSkills(): Promise<{
+    detail?: string | null
+    usedGlobalFallback?: boolean
+  }> {
+    return this.request<{
+      detail?: string | null
+      usedGlobalFallback?: boolean
+    }>("installSkills", {}, INSTALL_SKILLS_REQUEST_TIMEOUT_MS)
   }
 
   /**

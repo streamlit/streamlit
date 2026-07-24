@@ -290,7 +290,8 @@ class InstallSkillsHandler(BackendOperationHandler):
         return BackendOperationResponse(
             request_id=request.request_id,
             install_skills=InstallSkillsResponsePayload(
-                detail=skills.summarize_install(result)
+                detail=skills.summarize_install(result),
+                used_global_fallback=result.used_global_fallback,
             ),
         )
 

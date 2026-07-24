@@ -122,3 +122,17 @@ export function isSkillsNudgeDroppedConnection(error: unknown): boolean {
     message === REQUEST_TIMED_OUT_MESSAGE
   )
 }
+
+/**
+ * Server-side safety-gate reasons: the install was *refused before it was
+ * attempted* (headless server, no agent harness present, or a non-loopback
+ * connection), not an install that ran and failed. These must be tracked
+ * distinctly (`skillsNudgeInstallRefused:<reason>`) so they don't inflate the
+ * genuine install-failure rate. Kept in sync with the gate reasons emitted by
+ * ``InstallSkillsHandler`` in ``backend_operation_handler.py``.
+ */
+export const SKILLS_NUDGE_REFUSAL_REASONS: ReadonlySet<string> = new Set([
+  "headless",
+  "no_agent",
+  "non_loopback",
+])
