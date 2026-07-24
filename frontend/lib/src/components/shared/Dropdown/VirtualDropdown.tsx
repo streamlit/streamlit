@@ -112,6 +112,11 @@ const VirtualDropdown = forwardRef<HTMLUListElement, VirtualDropdownProps>(
             // one on the popover, so we need to remove it here.
             boxShadow: "none",
             overflow: "hidden",
+            // Match the current region's background instead of BaseWeb's
+            // `menuFill`, which resolves to the sidebar's
+            // `secondaryBackgroundColor` when both sidebar bg colors are
+            // configured — causing the goldenrod dropdown in #11348.
+            backgroundColor: theme.colors.bgColor,
           }}
           ref={ref}
           data-testid="stSelectboxVirtualDropdownEmpty"
@@ -180,6 +185,11 @@ const VirtualDropdown = forwardRef<HTMLUListElement, VirtualDropdownProps>(
           // Somehow this adds an additional shadow, even though we already have
           // one on the popover, so we need to remove it here.
           boxShadow: "none",
+          // Match the current region's background instead of BaseWeb's
+          // `menuFill`, which resolves to the sidebar's
+          // `secondaryBackgroundColor` when both sidebar bg colors are
+          // configured — causing the goldenrod dropdown in #11348.
+          backgroundColor: theme.colors.bgColor,
         }}
         data-testid="stSelectboxVirtualDropdown"
       >
