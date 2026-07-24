@@ -868,12 +868,11 @@ class SessionState:
         # Path 1: single callback.
         changed_widget_ids_for_single_callback = [
             wid
-            for wid in self._new_widget_state.states
-            if wid in self._new_widget_state.widget_metadata
-            and self._new_widget_state.widget_metadata[wid].callback is not None
-            and self._new_widget_state.widget_metadata[wid].value_type
-            != "trigger_value"
-            and self._widget_changed(wid)
+            for wid in self._new_widget_state
+            if self._widget_changed(wid)
+            and (metadata := self._new_widget_state.widget_metadata.get(wid))
+            is not None
+            and metadata.callback is not None
         ]
 
         for wid in changed_widget_ids_for_single_callback:
