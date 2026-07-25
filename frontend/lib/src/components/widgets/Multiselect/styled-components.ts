@@ -159,7 +159,7 @@ export const StyledFilterInput = styled(Input, {
     lineHeight: theme.lineHeights.inputWidget,
     fontWeight: theme.fontWeights.normal,
     color: theme.colors.bodyText,
-    paddingLeft: theme.spacing.sm,
+    paddingLeft: theme.spacing.twoXS,
     paddingRight: theme.spacing.twoXS,
     paddingTop: theme.spacing.none,
     paddingBottom: theme.spacing.none,
