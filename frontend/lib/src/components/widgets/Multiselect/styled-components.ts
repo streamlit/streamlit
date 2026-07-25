@@ -130,7 +130,6 @@ export const StyledTagRemoveButton = styled.button<{ $disabled?: boolean }>(
     color: "inherit",
     pointerEvents: $disabled ? "none" : "auto",
     flexShrink: 0,
-    lineHeight: "normal",
   })
 )
 
@@ -143,15 +142,16 @@ export const StyledFilterInput = styled(Input, {
 })<{ $typingDisabled?: boolean; $hasValues?: boolean }>(
   ({ theme, $typingDisabled, $hasValues }) => ({
     height: theme.sizes.elementHighlightHeight,
-    minHeight: theme.sizes.elementHighlightHeight,
-    alignSelf: "flex-start",
     marginBottom: theme.sizes.tagMarginInsideBorder,
     marginTop: theme.spacing.none,
     marginLeft: theme.spacing.none,
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: $hasValues ? 0 : "100%",
-    minWidth: $hasValues ? "3rem" : theme.spacing.threeXS,
+    minWidth: $hasValues ? theme.spacing.sm : theme.spacing.threeXS,
+    "&:focus": {
+      minWidth: "3rem",
+    },
     border: "none",
     outline: "none",
     background: "transparent",
