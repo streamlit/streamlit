@@ -125,7 +125,7 @@ export const StyledTagRemoveButton = styled.button<{ $disabled?: boolean }>(
     border: "none",
     background: "transparent",
     padding: theme.spacing.none,
-    paddingLeft: theme.spacing.twoXS,
+    paddingLeft: theme.spacing.sm,
     cursor: $disabled ? "not-allowed" : "pointer",
     color: "inherit",
     pointerEvents: $disabled ? "none" : "auto",
@@ -135,7 +135,7 @@ export const StyledTagRemoveButton = styled.button<{ $disabled?: boolean }>(
 )
 
 /**
- * Filter input inline with tags. Grows to fit content via `fieldSizing: content`.
+ * Filter input inline with tags. Fills remaining space on the current flex line.
  * When no tags are present, it fills the available width for placeholder display.
  */
 export const StyledFilterInput = styled(Input, {
@@ -143,18 +143,15 @@ export const StyledFilterInput = styled(Input, {
 })<{ $typingDisabled?: boolean; $hasValues?: boolean }>(
   ({ theme, $typingDisabled, $hasValues }) => ({
     height: theme.sizes.elementHighlightHeight,
+    minHeight: theme.sizes.elementHighlightHeight,
     alignSelf: "flex-start",
     marginBottom: theme.sizes.tagMarginInsideBorder,
     marginTop: theme.spacing.none,
     marginLeft: theme.spacing.none,
-    // When values exist, collapse to content width (fieldSizing: content grows
-    // as the user types). width:0 prevents the browser's intrinsic input width
-    // (~150px) from forcing a wrap to a new line below tags.
-    flexGrow: $hasValues ? 0 : 1,
+    flexGrow: 1,
     flexShrink: 1,
-    minWidth: $hasValues ? "0.5rem" : theme.spacing.threeXS,
-    width: $hasValues ? 0 : "100%",
-    fieldSizing: $hasValues ? "content" : undefined,
+    flexBasis: $hasValues ? 0 : "100%",
+    minWidth: $hasValues ? "3rem" : theme.spacing.threeXS,
     border: "none",
     outline: "none",
     background: "transparent",
@@ -188,6 +185,7 @@ export const StyledOpenButton = styled(Button)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  alignSelf: "center",
   flexShrink: 0,
   paddingRight: theme.spacing.sm,
   paddingLeft: theme.spacing.twoXS,
@@ -206,9 +204,11 @@ export const StyledClearButton = styled(Button)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  alignSelf: "center",
   flexShrink: 0,
   padding: theme.spacing.threeXS,
   width: theme.sizes.clearIconSize,
+  height: theme.sizes.clearIconSize,
   border: "none",
   outline: "none",
   borderRadius: theme.radii.default,
@@ -236,6 +236,11 @@ export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
     zIndex: getOverlayZIndex(theme),
     maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
     overflow: "hidden",
+    opacity: 1,
+    transition: "opacity 120ms ease-out",
+    "&[data-entering], &[data-exiting]": {
+      opacity: 0,
+    },
     ...({
       position: "fixed !important",
       top: "0 !important",

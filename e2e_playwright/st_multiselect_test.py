@@ -626,6 +626,7 @@ def test_multiselect_prefix_filter_mode_matches_prefix_only(app: Page):
 def test_multiselect_contains_filter_mode_matches_substrings(app: Page):
     """Test that contains mode matches case-insensitive substrings without reordering."""
     input_elem = _get_multiselect_input(app, "multiselect 22 (filter_mode='contains')")
+    input_elem.click()
     input_elem.type("AP")
 
     options = app.get_by_role("option")
