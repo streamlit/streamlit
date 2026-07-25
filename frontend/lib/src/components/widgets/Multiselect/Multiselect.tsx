@@ -152,6 +152,36 @@ const DropdownController = memo<{
 })
 DropdownController.displayName = "DropdownController"
 
+const TagRemoveButton = memo<{
+  value: string
+  onRemove: (value: string) => void
+}>(({ value, onRemove }) => (
+  <StyledTagRemoveButton
+    aria-label={`Remove ${value}`}
+    tabIndex={-1}
+    onClick={e => {
+      e.stopPropagation()
+      onRemove(value)
+    }}
+  >
+    <svg
+      aria-hidden="true"
+      height="0.5em"
+      width="0.5em"
+      viewBox="0 0 10 10"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M9 1L5 5M1 9L5 5M5 5L1 1M5 5L9 9"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="2"
+      />
+    </svg>
+  </StyledTagRemoveButton>
+))
+TagRemoveButton.displayName = "TagRemoveButton"
+
 /** Render a single option. Cast required: styled(ListBox) erases the generic item type. */
 const renderOption = (item: unknown): ReactElement => {
   const option = item as MultiselectOption
@@ -303,11 +333,11 @@ const Multiselect: FC<Props> = props => {
       const selectedKeys = keys.map(String)
 
       // Check for bulk action keys
-      const hasBulkAction = selectedKeys.find(
+      const bulkActionKey = selectedKeys.find(
         k => k === SELECT_ALL_ID || k === SELECT_MATCHES_ID
       )
 
-      if (hasBulkAction) {
+      if (bulkActionKey) {
         // Bulk select: add all currently displayed (non-special) options
         const optionsToAdd = displayOptions
           .filter(o => !o.isBulkAction && !o.isCreatable)
@@ -422,16 +452,18 @@ const Multiselect: FC<Props> = props => {
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
       if (disabled) return
 
-      // Block character input for FILTER_MODE_NONE
-      if (
-        isFilterNone &&
-        (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") &&
-        !e.ctrlKey &&
-        !e.metaKey &&
-        !e.altKey
-      ) {
-        e.preventDefault()
-        return
+      // Block character input for FILTER_MODE_NONE, but allow Backspace
+      // through when input is empty so the tag-removal handler can process it.
+      if (isFilterNone && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const isTagRemoval =
+          e.key === "Backspace" && !e.currentTarget.value && value.length > 0
+        if (
+          !isTagRemoval &&
+          (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete")
+        ) {
+          e.preventDefault()
+          return
+        }
       }
 
       if (
@@ -528,6 +560,8 @@ const Multiselect: FC<Props> = props => {
     return keys
   }, [value, element.options])
 
+  const selectedKeysArray = useMemo(() => [...selectedKeys], [selectedKeys])
+
   // Only use readOnly for mobile small-list case. Never for isFilterNone —
   // readOnly breaks RAC keyboard navigation (Arrow/Enter). isFilterNone uses
   // inputMode="none" + character blocking in the capture handler instead.
@@ -553,7 +587,7 @@ const Multiselect: FC<Props> = props => {
       <I18nProvider locale="en-US">
         <ComboBox
           selectionMode="multiple"
-          value={[...selectedKeys]}
+          value={selectedKeysArray}
           inputValue={inputValue}
           onChange={handleChange}
           onInputChange={handleInputChange}
@@ -583,29 +617,7 @@ const Multiselect: FC<Props> = props => {
                 <StyledTag key={v} $disabled={disabled} data-tag="">
                   <StyledTagText title={v}>{v}</StyledTagText>
                   {!disabled && (
-                    <StyledTagRemoveButton
-                      aria-label={`Remove ${v}`}
-                      tabIndex={-1}
-                      onClick={e => {
-                        e.stopPropagation()
-                        handleRemoveTag(v)
-                      }}
-                    >
-                      <svg
-                        aria-hidden="true"
-                        height="0.5em"
-                        width="0.5em"
-                        viewBox="0 0 10 10"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M9 1L5 5M1 9L5 5M5 5L1 1M5 5L9 9"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeWidth="2"
-                        />
-                      </svg>
-                    </StyledTagRemoveButton>
+                    <TagRemoveButton value={v} onRemove={handleRemoveTag} />
                   )}
                 </StyledTag>
               ))}

@@ -84,9 +84,11 @@ export function useMultiselectFiltering({
     [options]
   )
 
+  const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues])
+
   const unselectedOptions = useMemo<MultiselectOption[]>(
-    () => selectOptions.filter(o => !selectedValues.includes(o.value)),
-    [selectOptions, selectedValues]
+    () => selectOptions.filter(o => !selectedSet.has(o.value)),
+    [selectOptions, selectedSet]
   )
 
   const filteredOptions = useMemo((): MultiselectOption[] => {

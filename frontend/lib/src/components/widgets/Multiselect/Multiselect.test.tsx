@@ -626,6 +626,26 @@ describe("Multiselect widget", () => {
     expect(screen.queryAllByRole("option")).toHaveLength(4)
   })
 
+  it("allows Backspace to remove last tag when filterMode is none", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [0, 1],
+      options: ["yes", "no", "maybe"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
+    })
+    render(<Multiselect {...props} />)
+    const input = screen.getByRole("combobox")
+
+    expect(screen.getByRole("button", { name: "Remove no" })).toBeVisible()
+
+    await user.click(input)
+    await user.keyboard("{Backspace}")
+
+    expect(
+      screen.queryByRole("button", { name: "Remove no" })
+    ).not.toBeInTheDocument()
+  })
+
   describe("scroll position preservation", () => {
     it("preserves scroll position when removing an item", async () => {
       const user = userEvent.setup()
