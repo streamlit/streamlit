@@ -553,8 +553,8 @@ describe("useDetailsAnimation", () => {
       const summary = screen.getByTestId("summary")
       const content = screen.getByTestId("content")
 
-      // Summary has height, but content returns 0 (e.g. content hasn't laid
-      // out yet). Pre-seed an inline lock to prove the branch clears it.
+      // Summary has height but content measures 0 (content hasn't laid out yet).
+      // animateTo locks the height, then the zero-content branch must clear it.
       mockElementHeight(details, 42)
       mockElementHeight(summary, 40)
       mockElementHeight(content, 0)

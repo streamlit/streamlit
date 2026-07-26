@@ -133,11 +133,13 @@ export function useDetailsAnimation({
    * clearing in that listener would clobber the fresh lock that callers apply
    * synchronously right after cancelling. Callers that keep animating
    * (`animateTo` / `animateResize`) re-apply `height` + `overflow` on the very
-   * next lines, so this clear is immediately overwritten for them. The one
-   * caller that does NOT re-lock — the "new expander" reset on a label change —
-   * relies on this clear so a reused `<details>` node isn't left clipped from
-   * the previous expander's interrupted animation, upholding the invariant that
-   * the element is never locked with no animation to clear it (issue #16027).
+   * next lines, so this clear is immediately overwritten for them.
+   *
+   * The one caller that does NOT re-lock is the "new expander" reset on a label
+   * change. It relies on this clear so a reused `<details>` node isn't left
+   * clipped by the previous expander's interrupted animation. This upholds the
+   * invariant that the element is never locked with no animation to clear it
+   * (issue #16027).
    */
   const cancelAnimation = useCallback((): void => {
     animationRef.current?.cancel()

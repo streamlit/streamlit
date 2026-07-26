@@ -32,16 +32,12 @@ const DEFAULT_DURATION = 500
 const DEFAULT_EASING = "cubic-bezier(0.23, 1, 0.32, 1)"
 
 /**
- * Extra time (ms) to wait past the animation duration before treating a still-
- * running animation as stalled and force-finishing it.
- *
- * After certain rapid open/close + resize interruption sequences a Web-Animations
- * effect can end up "running" but stalled — never advancing and never firing its
- * `finish` event — which permanently holds the element at a clipped height while
- * the inline `overflow: hidden` lock stays in place (issue #16027). This guard is
- * a safety net that clears such a stall by force-finishing the animation, which
- * runs the normal `finish` cleanup. The buffer is generous so it can never fire
- * for a healthy animation, which always finishes at ~`duration`.
+ * Safety net against stalled Web-Animations effects (issue #16027): some rapid
+ * open/close + resize sequences leave an animation "running" but stalled — never
+ * advancing, never firing `finish` — which permanently holds `<details>` at a
+ * clipped height with `overflow: hidden`. If an animation is still running this
+ * many ms past its duration, `animateHeight` force-finishes it so the normal
+ * `finish` cleanup runs. Generous so it never fires for a healthy animation.
  */
 const STALL_GUARD_BUFFER_MS = 1000
 
@@ -84,13 +80,7 @@ export function animateHeight(
     { duration, easing }
   )
 
-  /**
-   * Safety net for stalled animations (issue #16027). If the animation is still
-   * active well past its duration, force it to finish so the `finish` handler
-   * below clears the inline height/overflow lock instead of leaving the element
-   * permanently clipped. Cleared as soon as the animation finishes or is
-   * cancelled, so it never affects a healthy or interrupted animation.
-   */
+  /** Safety net for stalled animations; see STALL_GUARD_BUFFER_MS. Cleared on finish/cancel. */
   // eslint-disable-next-line no-restricted-globals -- Framework-agnostic animation utility manages its own timer; useTimeout is React-only.
   const stallGuard = setTimeout(() => {
     if (animation.playState !== "finished" && animation.playState !== "idle") {
