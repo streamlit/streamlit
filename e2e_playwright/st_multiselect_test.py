@@ -464,6 +464,35 @@ def test_multiselect_accept_new_options(app: Page):
     expect_text(app, "value 14: ['grape', 'apple', 'kiwi']")
 
 
+def test_multiselect_accept_new_options_no_duplicate(app: Page):
+    """Should not allow re-adding an already-selected custom value."""
+    multiselect_elem = get_multiselect(
+        app, "multiselect 16 - empty options with accept_new_options"
+    )
+    multiselect_elem.scroll_into_view_if_needed()
+    input_elem = multiselect_elem.locator("input")
+
+    # Add a custom value "cherry"
+    input_elem.click()
+    input_elem.press_sequentially("cherry")
+    expect(app.get_by_role("option", name="Add: cherry")).to_be_visible()
+    input_elem.press("Enter")
+    wait_for_app_run(app)
+
+    # Verify "cherry" was added
+    expect_text(app, "value 16: ['cherry']")
+
+    # Type "cherry" again — "Add: cherry" should NOT appear
+    input_elem.click()
+    input_elem.press_sequentially("cherry")
+    expect(app.get_by_role("option", name="Add: cherry")).not_to_be_visible()
+
+    # Pressing Enter should not create a duplicate
+    input_elem.press("Enter")
+    wait_for_app_run(app)
+    expect_text(app, "value 16: ['cherry']")
+
+
 def test_multiselect_preset_session_state(app: Page):
     """Should display values from session_state."""
     # Check the initial values from session_state

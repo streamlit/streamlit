@@ -135,8 +135,10 @@ export function useMultiselectFiltering({
 
     // "Add: ..." creatable pseudo-option
     if (acceptNewOptions && filterActive && inputValue) {
-      const exactMatch = options.some(o => o === inputValue)
-      if (!exactMatch) {
+      const alreadyExists =
+        options.some(o => o === inputValue) ||
+        selectedValues.includes(inputValue)
+      if (!alreadyExists) {
         result.push({
           id: CREATABLE_ID,
           label: `Add: ${inputValue}`,
@@ -150,6 +152,7 @@ export function useMultiselectFiltering({
   }, [
     filteredOptions,
     options,
+    selectedValues,
     filterActive,
     inputValue,
     acceptNewOptions,

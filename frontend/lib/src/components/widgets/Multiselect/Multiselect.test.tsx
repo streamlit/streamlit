@@ -566,6 +566,28 @@ describe("Multiselect widget", () => {
     expect(screen.getByText("Add: AA")).toBeInTheDocument()
   })
 
+  it("does not allow re-adding an already-selected custom value", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      options: ["apple", "banana"],
+      acceptNewOptions: true,
+    })
+    render(<Multiselect {...props} />)
+    const input = screen.getByRole("combobox")
+
+    // Add a custom value "mango"
+    await user.type(input, "mango")
+    expect(screen.getByText("Add: mango")).toBeInTheDocument()
+    await user.keyboard("{Enter}")
+
+    // Verify "mango" was added as a tag
+    expect(screen.getByText("mango")).toBeVisible()
+
+    // Type "mango" again — "Add: mango" should NOT appear
+    await user.type(input, "mango")
+    expect(screen.queryByText("Add: mango")).not.toBeInTheDocument()
+  })
+
   it("predictably produces case sensitive matches", async () => {
     const user = userEvent.setup()
     const props = getProps({

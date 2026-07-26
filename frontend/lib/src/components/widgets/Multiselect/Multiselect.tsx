@@ -316,12 +316,12 @@ const Multiselect: FC<Props> = props => {
     return "No results"
   }, [element.maxSelections, value.length])
 
-  // Preserve scroll position when tags are removed
+  // Preserve scroll position when tags are added/removed
   useLayoutEffect(() => {
     if (tagsContainerRef.current) {
       tagsContainerRef.current.scrollTop = scrollTopRef.current
     }
-  })
+  }, [value])
 
   const handleTagsScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: layout already computed during scroll event
@@ -330,8 +330,6 @@ const Multiselect: FC<Props> = props => {
 
   const handleChange = useCallback(
     (keys: Key[]): void => {
-      if (!isOpenRef.current) return
-
       const selectedKeys = keys.map(String)
 
       // Check for bulk action keys
@@ -364,6 +362,10 @@ const Multiselect: FC<Props> = props => {
           element.maxSelections > 0 &&
           value.length >= element.maxSelections
         ) {
+          return
+        }
+        if (value.includes(inputValueRef.current)) {
+          setInputValue("")
           return
         }
         const newValue = [...value, inputValueRef.current]
@@ -506,8 +508,10 @@ const Multiselect: FC<Props> = props => {
             String(focused) !== SELECT_MATCHES_ID
 
           if (!isRealOptionFocused) {
-            const exactMatch = element.options.some(o => o === currentInput)
-            if (!exactMatch) {
+            const alreadyExists =
+              element.options.some(o => o === currentInput) ||
+              value.includes(currentInput)
+            if (!alreadyExists) {
               if (
                 element.maxSelections > 0 &&
                 value.length >= element.maxSelections
@@ -599,7 +603,7 @@ const Multiselect: FC<Props> = props => {
           allowsEmptyCollection
           menuTrigger="manual"
           defaultFilter={PASS_THROUGH_FILTER}
-          aria-label={element.label}
+          aria-label={element.label || "Multiselect"}
         >
           <DropdownController
             openRef={openDropdownRef}
