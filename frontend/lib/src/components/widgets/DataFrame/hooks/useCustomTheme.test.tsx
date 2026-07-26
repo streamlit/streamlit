@@ -60,6 +60,11 @@ describe("useCustomTheme hook", () => {
     expect(getAlpha(bgHeader as string)).toBe(1)
     expect(getAlpha(bgHeaderHovered as string)).toBe(1)
     expect(getAlpha(bgHeaderHasFocus as string)).toBe(1)
+
+    // Also lock in the actual composited color: #FF00001a (rgba 255,0,0,0.1)
+    // over the mockTheme bgColor (#ffffff) yields #ffe5e5 per the blend()
+    // formula. Guards against future regressions in the color math.
+    expect(bgHeader).toBe("#ffe5e5")
   })
 
   it("returns fully opaque header background colors for the default theme", () => {
