@@ -68,10 +68,15 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
     // header fills (base + hover/focus overlays) without clearing between
     // paints, which produces color shifts / flicker when either color has
     // an alpha channel. Flatten alpha against the app background so
-    // glide-data-grid always receives fully opaque colors. See #11950.
+    // glide-data-grid always receives fully opaque colors. The app
+    // background itself may also carry alpha (users can configure
+    // theme.backgroundColor as a hex+alpha or rgba value), so we first
+    // composite it over opaque white to get a guaranteed-opaque canvas
+    // backdrop before layering the header colors. See #11950.
+    const opaqueBg = blend(theme.colors.bgColor, "#ffffff")
     const flatHeaderBg = blend(
       theme.colors.dataframeHeaderBackgroundColor,
-      theme.colors.bgColor
+      opaqueBg
     )
     const flatHeaderBgHovered = blend(
       transparentize(theme.colors.darkenedBgMix100, 0.9),

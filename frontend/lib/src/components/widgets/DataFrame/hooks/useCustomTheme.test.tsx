@@ -84,4 +84,37 @@ describe("useCustomTheme hook", () => {
     expect(getAlpha(bgHeaderHovered as string)).toBe(1)
     expect(getAlpha(bgHeaderHasFocus as string)).toBe(1)
   })
+
+  it("returns fully opaque header background colors even when the app bgColor itself has an alpha channel (#11950)", () => {
+    // Users can configure theme.backgroundColor with alpha (the config is
+    // a plain string with no opacity guard). In that case, blending the
+    // header color against a translucent bgColor would leave residual
+    // alpha and reintroduce the canvas-stacking bug. The fix composites
+    // bgColor over opaque white first, so the canvas backdrop is always
+    // opaque before header colors layer on top.
+    const themeWithAlphaBg = {
+      ...mockTheme.emotion,
+      colors: {
+        ...mockTheme.emotion.colors,
+        bgColor: "#00000080", // rgba(0, 0, 0, 0.5)
+        dataframeHeaderBackgroundColor: "#FF00001a",
+      },
+    }
+
+    const wrapper = ({
+      children,
+    }: {
+      children: React.ReactNode
+    }): JSX.Element => (
+      <ThemeProvider theme={themeWithAlphaBg}>{children}</ThemeProvider>
+    )
+
+    const { result } = renderHook(() => useCustomTheme(), { wrapper })
+    const { bgHeader, bgHeaderHovered, bgHeaderHasFocus } =
+      result.current.glideTheme
+
+    expect(getAlpha(bgHeader as string)).toBe(1)
+    expect(getAlpha(bgHeaderHovered as string)).toBe(1)
+    expect(getAlpha(bgHeaderHasFocus as string)).toBe(1)
+  })
 })
