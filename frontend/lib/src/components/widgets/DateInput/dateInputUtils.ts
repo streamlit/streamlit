@@ -147,11 +147,70 @@ export function getMaxDate(element: DateInputProto): CalendarDate | undefined {
 }
 
 /**
+ * Seeds `DateInput.tsx`'s lifted `focusedValue` state (the calendar's
+ * visible month) with a concrete date rather than `null`/`undefined`.
+ *
+ * `useCalendarState`/`useRangeCalendarState` (react-stately) treat a falsy
+ * `focusedValue` prop as `undefined` internally regardless of whether we
+ * pass `null` or `undefined` ourselves, so seeding this as a real
+ * `CalendarDate` up front — rather than lazily deriving it once the user
+ * first opens the calendar — is required to keep `focusedValue` genuinely
+ * controlled for the component's entire lifetime and avoid
+ * `useControlledState`'s "component changed from uncontrolled to
+ * controlled" dev warning the first time `onFocusChange` fires.
+ */
+export function getInitialFocusedDate(
+  value: string[],
+  minDate: CalendarDate
+): CalendarDate {
+  const fromValue = value[0] ? isoToCalendarDate(value[0]) : null
+  if (fromValue) return fromValue
+  const now = today(getLocalTimeZone())
+  return now.compare(minDate) < 0 ? minDate : now
+}
+
+/**
  * Gate for enabling quick-select: only when `minDate` is more than 2 years
  * in the past. Replaces `moment().subtract(2, "years").toDate()`.
  */
 export function isOlderThanTwoYears(date: CalendarDate): boolean {
   return date.compare(today(getLocalTimeZone()).subtract({ years: 2 })) < 0
+}
+
+export interface QuickSelectPreset {
+  id: string
+  label: string
+  start: CalendarDate
+  end: CalendarDate
+}
+
+/** Range-mode quick-select presets. `end` is always today. */
+export function getQuickSelectPresets(): QuickSelectPreset[] {
+  const end = today(getLocalTimeZone())
+  return [
+    { id: "pastWeek", label: "Past Week", start: end.subtract({ weeks: 1 }) },
+    {
+      id: "pastMonth",
+      label: "Past Month",
+      start: end.subtract({ months: 1 }),
+    },
+    {
+      id: "pastThreeMonths",
+      label: "Past 3 Months",
+      start: end.subtract({ months: 3 }),
+    },
+    {
+      id: "pastSixMonths",
+      label: "Past 6 Months",
+      start: end.subtract({ months: 6 }),
+    },
+    { id: "pastYear", label: "Past Year", start: end.subtract({ years: 1 }) },
+    {
+      id: "pastTwoYears",
+      label: "Past 2 Years",
+      start: end.subtract({ years: 2 }),
+    },
+  ].map(({ id, label, start }) => ({ id, label, start, end }))
 }
 
 export type DateValidationErrorType = "Start" | "End" | null

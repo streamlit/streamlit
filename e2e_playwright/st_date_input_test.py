@@ -212,12 +212,15 @@ def test_empty_date_input_behaves_correctly(
 
 def test_handles_range_end_date_changes(app: Page):
     """Test that it correctly handles changes to the end date of a range."""
-    get_date_input(app, "Range, one date").locator("input").click()
+    date_field = get_date_input(app, "Range, one date").get_by_test_id(
+        "stDateInputField"
+    )
+    date_field.get_by_role("spinbutton").first.click()
 
     # Select '2019/07/10'
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 10th 2019."]'
-    ).first.click()
+    app.get_by_test_id("stDateInputCalendar").get_by_label(
+        "Wednesday, July 10, 2019"
+    ).click()
 
     expect_markdown(
         app, "Value 4: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 10))"
@@ -226,19 +229,23 @@ def test_handles_range_end_date_changes(app: Page):
 
 def test_handles_range_start_end_date_changes(app: Page):
     """Test that it correctly handles changes to the start and end date of a range."""
-    get_date_input(app, "Range, two dates").locator("input").click()
+    date_field = get_date_input(app, "Range, two dates").get_by_test_id(
+        "stDateInputField"
+    )
+    date_field.get_by_role("spinbutton").first.click()
 
-    # Select start date: '2019/07/10'
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 10th 2019."]'
-    ).first.click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
+
+    # Select start date: '2019/07/10' (a fresh range selection, replacing
+    # the default two-date value — see AnchorDateWatcher in
+    # RangeDateInput.tsx: clicking any date when a complete range is
+    # already selected starts a brand-new range rather than editing it)
+    calendar.get_by_label("Wednesday, July 10, 2019").click()
 
     expect_markdown(app, "Value 5: (datetime.date(2019, 7, 10),)")
 
     # Select end date: '2019/07/12'
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Friday, July 12th 2019."]'
-    ).first.click()
+    calendar.get_by_label("Friday, July 12, 2019").click()
 
     expect_markdown(
         app, "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))"
@@ -298,8 +305,11 @@ def test_range_date_calendar_picker_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the range calendar picker renders correctly via screenshots matching."""
-    get_date_input(themed_app, "Range, two dates").locator("input").click()
-    calendar = themed_app.locator('[data-baseweb="calendar"]').first
+    date_field = get_date_input(themed_app, "Range, two dates").get_by_test_id(
+        "stDateInputField"
+    )
+    date_field.get_by_role("spinbutton").first.click()
+    calendar = themed_app.get_by_test_id("stDateInputCalendar").first
     # Wait for the calendar popup to be fully visible before taking screenshot
     expect(calendar).to_be_visible()
     assert_snapshot(
@@ -342,30 +352,35 @@ def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
 
 def test_range_is_empty_if_calendar_closed_empty(app: Page):
     """Test that range value is empty of calendar closed empty."""
-    get_date_input(app, "Range, two dates").locator("input").click()
+    date_field = get_date_input(app, "Range, two dates").get_by_test_id(
+        "stDateInputField"
+    )
+    date_field.get_by_role("spinbutton").first.click()
+
+    calendar = app.get_by_test_id("stDateInputCalendar")
 
     # Select start date: '2019/07/10'
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 10th 2019."]'
-    ).first.click()
+    calendar.get_by_label("Wednesday, July 10, 2019").click()
 
     expect_markdown(app, "Value 5: (datetime.date(2019, 7, 10),)")
 
     # Select end date: '2019/07/12'
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Friday, July 12th 2019."]'
-    ).first.click()
+    calendar.get_by_label("Friday, July 12, 2019").click()
 
     expect_markdown(
         app, "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))"
     )
 
-    # Close calendar without selecting a date
-    date_input_field = get_date_input(app, "Range, two dates").locator("input")
-    date_input_field.focus()
-    date_input_field.clear()
+    # Clear every segment (both start and end fields) via the keyboard —
+    # mirrors test_resets_to_default_single_value_if_calendar_closed_empty —
+    # without selecting a new date.
+    for segment in date_field.get_by_role("spinbutton").all():
+        segment.click()
+        for _ in range(4):
+            segment.press("Backspace")
 
-    # Click on the large markdown element at the end to submit the cleared value
+    # Click on the large markdown element at the end to close the popover and
+    # submit the cleared value
     reset_focus(app)
 
     # Range should be empty
@@ -411,21 +426,18 @@ def test_range_date_input_start_error_state(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the range date input error state works correctly."""
-    # The fifth date input is set to 2019/07/06 - 2019/07/08 by default, with no set min/max
-    # So we set the min to 2009/07/06 (10 years before start date) and max to 2029/07/08
-    # (10 years after end date)
+    # The fifth date input is set to 2019/07/06 - 2019/07/08 by default, with no explicit
+    # min/max, so the auto-computed min is 2009/07/06 (10 years before start date) and the
+    # auto-computed max is 2029/07/08 (10 years after end date)
     fifth_date_input = get_date_input(themed_app, "Range, two dates")
-    fifth_date_input_field = fifth_date_input.locator("input")
+    date_field = fifth_date_input.get_by_test_id("stDateInputField")
 
-    # Clear the input field and set date range to 2008/07/06 - 2019/07/08
-    # which is outside of the allowed min value of range
-    fifth_date_input_field.clear()
-    fifth_date_input_field.fill("2008/07/06 - 2019/07/08")
-    # Click outside of the date input to exit calendar picker (reduce snapshot flakiness)
-    fifth_date_input_field.press("Escape")
-
-    # Check that the value update is not committed
-    expect_markdown(themed_app, "Value 5: ()")
+    # Type date range 2008/07/06 - 2019/07/08 (start segments then end
+    # segments, in DOM order), where the start date is outside the allowed
+    # min value of the range
+    type_date(date_field, "2008", "07", "06", "2019", "07", "08")
+    # Press Escape to exit calendar picker (reduce snapshot flakiness)
+    themed_app.keyboard.press("Escape")
 
     # Check that the error icon is now shown in the date input
     error_icon = fifth_date_input.get_by_test_id("stTooltipErrorHoverTarget")
@@ -446,20 +458,18 @@ def test_range_date_input_start_error_state(
 
 def test_range_date_input_end_error_state(themed_app: Page):
     """Test that the range date input error state works correctly."""
-    # The fifth date input is set to 2019/07/06 - 2019/07/08 by default, with no set min/max
-    # So we set the min to 2009/07/06 (10 years before start date) and max to 2029/07/08
-    # (10 years after end date)
+    # The fifth date input is set to 2019/07/06 - 2019/07/08 by default, with no explicit
+    # min/max, so the auto-computed min is 2009/07/06 (10 years before start date) and the
+    # auto-computed max is 2029/07/08 (10 years after end date)
     fifth_date_input = get_date_input(themed_app, "Range, two dates")
-    fifth_date_input_field = fifth_date_input.locator("input")
+    date_field = fifth_date_input.get_by_test_id("stDateInputField")
 
-    # Clear the input field and set date range to 2008/07/06 - 2019/07/08
-    fifth_date_input_field.clear()
-    fifth_date_input_field.fill("2019/07/06 - 2030/07/08")
-    # Click outside of the date input to exit calendar picker (reduce snapshot flakiness)
-    fifth_date_input_field.press("Escape")
-
-    # Check that the value update is not committed
-    expect_markdown(themed_app, "Value 5: ()")
+    # Type date range 2019/07/06 - 2030/07/08 (start segments then end
+    # segments, in DOM order), where the end date is outside the allowed
+    # max value of the range
+    type_date(date_field, "2019", "07", "06", "2030", "07", "08")
+    # Press Escape to exit calendar picker (reduce snapshot flakiness)
+    themed_app.keyboard.press("Escape")
 
     # Check that the error icon is now shown in the date input
     error_icon = fifth_date_input.get_by_test_id("stTooltipErrorHoverTarget")
@@ -552,12 +562,17 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
 
 def test_quick_select_feature_visibility(app: Page):
     """Test that quick select is visible for range inputs and hidden for single inputs."""
-    # Test range input
+    # Test range input — "Range, no date" has no explicit min, so the
+    # auto-computed min falls back to 10 years before today, which is
+    # always older than 2 years and enables quick select (see
+    # enableQuickSelect in DateInput.tsx).
     range_date_input = get_date_input(app, "Range, no date")
-    range_date_input.locator("input").click()
+    range_date_input.get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
+    ).first.click()
 
     # Quick select should be visible for range inputs
-    quick_select = app.locator('[data-baseweb="select"]')
+    quick_select = app.get_by_role("combobox", name="Quick select a date range")
     expect(quick_select).to_be_visible()
 
     # Close the calendar

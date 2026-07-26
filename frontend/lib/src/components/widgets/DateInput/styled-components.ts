@@ -31,6 +31,8 @@ import {
   ListBox,
   ListBoxItem,
   Popover,
+  RangeCalendar,
+  RangeCalendarProps,
   Select,
 } from "react-aria-components"
 
@@ -126,6 +128,15 @@ export const StyledDateSegment = styled(DateSegment)(({ theme }) => {
   }
 })
 
+export const StyledRangeSeparator = styled.span(({ theme }) => ({
+  color: theme.colors.fadedText60,
+  paddingLeft: theme.spacing.twoXS,
+  paddingRight: theme.spacing.twoXS,
+  flexShrink: 0,
+  userSelect: "none",
+}))
+
+
 export const StyledErrorIconContainer = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -205,6 +216,16 @@ export const StyledCalendarRoot = styled(TypedCalendar)(({ theme }) => ({
   minWidth: theme.sizes.dateInputMinWidth,
 }))
 
+const TypedRangeCalendar = RangeCalendar as ComponentType<
+  RangeCalendarProps<CalendarDate>
+>
+
+export const StyledRangeCalendarRoot = styled(TypedRangeCalendar)(
+  ({ theme }) => ({
+    fontSize: theme.fontSizes.sm,
+  })
+)
+
 export const StyledCalendarHeader = styled.header(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -253,6 +274,30 @@ export const StyledCalendarHeaderSelect = styled(Select)({
   display: "inline-flex",
   minWidth: 0,
 })
+
+export const StyledQuickSelectRow = styled.div(({ theme }) => ({
+  paddingTop: theme.spacing.xs,
+}))
+
+export const StyledQuickSelectSelect = styled.select(({ theme }) => ({
+  width: "100%",
+  height: theme.sizes.minElementHeight,
+  borderWidth: theme.sizes.borderWidth,
+  borderStyle: "solid",
+  borderColor: getBorderColor(theme.colors, false),
+  borderRadius: theme.radii.default,
+  backgroundColor: theme.colors.secondaryBg,
+  color: theme.colors.bodyText,
+  fontSize: theme.fontSizes.sm,
+  paddingLeft: theme.spacing.sm,
+  paddingRight: theme.spacing.sm,
+  cursor: "pointer",
+  "&:focus-visible": {
+    borderColor: getBorderColor(theme.colors, true),
+    outline: "none",
+  },
+}))
+
 
 export const StyledCalendarHeaderSelectTrigger = styled(Button)(
   ({ theme }) => ({
