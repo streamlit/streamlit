@@ -236,5 +236,27 @@ describe("animateHeight", () => {
 
       expect(mockAnimation.finish).not.toHaveBeenCalled()
     })
+
+    it("clears the guard when handle.cancel() drives the real wiring", () => {
+      // Wire the mock so animation.cancel() dispatches the registered `cancel`
+      // listener — the same path a real browser takes. This proves the guard
+      // is cleared through handle.cancel() → animation.cancel() → listener,
+      // not just when the listener is invoked directly.
+      mockAnimation.cancel = vi.fn(() => {
+        getListener("cancel")?.()
+      })
+
+      const handle = animateHeight(element, 0, 100, { duration: 500 })
+
+      handle.cancel()
+
+      expect(mockAnimation.cancel).toHaveBeenCalled()
+
+      // If the guard was cleared, it must not force-finish the animation
+      // after the buffer window elapses.
+      vi.advanceTimersByTime(1500)
+
+      expect(mockAnimation.finish).not.toHaveBeenCalled()
+    })
   })
 })
