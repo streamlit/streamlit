@@ -55,14 +55,8 @@ const getProps = (
 })
 
 /**
- * Both `SingleDateInput` and `RangeDateInput` render the date(s) as
- * focusable `role="spinbutton"` segments (React Aria's `DateField`) instead
- * of BaseWeb's masked-text `<input>` — there's no `stDateInputField`
- * value to assert on directly. These helpers interact with segments the
- * way a real user would (click a segment, type/backspace digits) so tests
- * exercise the same behavior the old tests did, just through the new DOM
- * shape. Mirrors `TimeInput.test.tsx`'s established rewrite pattern for
- * this exact BaseWeb-input -> RAC-segments transition.
+ * Helpers to interact with `DateField`'s `role="spinbutton"` segments the
+ * way a real user would (click, type/backspace digits).
  */
 const getSingleDateSegments = (
   region: HTMLElement
@@ -746,10 +740,8 @@ describe("DateInput widget", () => {
       const { year } = getRangeDateSegments(region, "start")
       await user.click(year)
 
-      // Quick select should be visible. Its own combobox has an accessible
-      // name ("Quick select a date range"), distinguishing it from the
-      // calendar header's month/year <select>s, which are comboboxes too.
-      const quickSelect = await screen.findByRole("combobox", {
+      // Quick select should be visible as a button trigger for the RAC Select.
+      const quickSelect = await screen.findByRole("button", {
         name: /quick select/i,
       })
       expect(quickSelect).toBeVisible()
@@ -768,7 +760,7 @@ describe("DateInput widget", () => {
       await user.click(year)
 
       // Quick select should be visible for range inputs with old minDate
-      const quickSelect = await screen.findByRole("combobox", {
+      const quickSelect = await screen.findByRole("button", {
         name: /quick select/i,
       })
       expect(quickSelect).toBeVisible()
@@ -855,16 +847,18 @@ describe("DateInput widget", () => {
         const { year } = getRangeDateSegments(region, "start")
         await user.click(year)
 
-        // Quick select should be visible
-        const quickSelect = await screen.findByRole("combobox", {
+        // Quick select button trigger should be visible
+        const quickSelect = await screen.findByRole("button", {
           name: /quick select/i,
         })
         expect(quickSelect).toBeVisible()
 
-        // Native <select> — pick "Past Week" via userEvent's selectOptions,
-        // not a click-based combobox/option interaction (that pattern only
-        // applied to BaseWeb's custom-widget Select, not a native <select>).
-        await user.selectOptions(quickSelect, "Past Week")
+        // Open the quick select dropdown and pick "Past Week"
+        await user.click(quickSelect)
+        const pastWeekOption = await screen.findByRole("option", {
+          name: "Past Week",
+        })
+        await user.click(pastWeekOption)
 
         // Expect no error icon (wait for async updates) and the selection to be committed
         await waitFor(() => {

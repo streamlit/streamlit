@@ -47,10 +47,17 @@ export const StyledDateFieldContainer = styled.div({
   width: "100%",
 })
 
-export const StyledDateField = styled.div({
-  flex: 1,
-  minWidth: 0,
-})
+export const StyledDateField = styled.div<{ $isRange?: boolean }>(
+  ({ theme, $isRange }) => ({
+    flex: $isRange ? "0 0 auto" : 1,
+    minWidth: 0,
+    ...($isRange && {
+      "&:first-of-type": {
+        paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
+      },
+    }),
+  })
+)
 
 /** Mirrors TimeInput's StyledTimeInputWrapper for cross-widget consistency. */
 export const StyledDateInputWrapper = styled.div(({ theme }) => ({
@@ -82,17 +89,21 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
 }))
 
 /** Uses RAC `Group` instead of `DateInput` to allow custom segment ordering. */
-export const StyledDateFieldInput = styled(Group)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  flex: 1,
-  minWidth: 0,
-  paddingTop: theme.spacing.sm,
-  paddingBottom: theme.spacing.sm,
-  paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
-  paddingRight: theme.spacing.sm,
-  outline: "none",
-}))
+export const StyledDateFieldInput = styled(Group)<{ $isRange?: boolean }>(
+  ({ theme, $isRange }) => ({
+    display: "flex",
+    alignItems: "center",
+    flex: 1,
+    minWidth: 0,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
+    paddingLeft: $isRange
+      ? theme.spacing.none
+      : `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
+    paddingRight: $isRange ? theme.spacing.none : theme.spacing.sm,
+    outline: "none",
+  })
+)
 
 export const StyledDateSegment = styled(DateSegment)(({ theme }) => {
   const isLightPrimary = getLuminance(theme.colors.primary) > 0.5
@@ -276,10 +287,21 @@ export const StyledCalendarHeaderSelect = styled(Select)({
 })
 
 export const StyledQuickSelectRow = styled.div(({ theme }) => ({
+  position: "relative",
   paddingTop: theme.spacing.xs,
 }))
 
-export const StyledQuickSelectSelect = styled.select(({ theme }) => ({
+export const StyledQuickSelectLabel = styled.div(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
+  color: theme.colors.fadedText60,
+  paddingBottom: theme.spacing.twoXS,
+}))
+
+export const StyledQuickSelectTrigger = styled(Button)(({ theme }) => ({
+  appearance: "none",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
   width: "100%",
   height: theme.sizes.minElementHeight,
   borderWidth: theme.sizes.borderWidth,
@@ -292,11 +314,53 @@ export const StyledQuickSelectSelect = styled.select(({ theme }) => ({
   paddingLeft: theme.spacing.sm,
   paddingRight: theme.spacing.sm,
   cursor: "pointer",
-  "&:focus-visible": {
+  "&[data-hovered]": {
+    borderColor: getBorderColor(theme.colors, true),
+  },
+  "&[data-focus-visible]": {
     borderColor: getBorderColor(theme.colors, true),
     outline: "none",
   },
 }))
+
+export const StyledQuickSelectListBox = styled(ListBox)(({ theme }) => ({
+  outline: "none",
+  maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+  overflowY: "auto",
+  overflowX: "hidden",
+  padding: theme.spacing.threeXS,
+  listStyle: "none",
+  position: "absolute",
+  left: 0,
+  right: 0,
+  marginTop: theme.spacing.twoXS,
+  borderWidth: theme.sizes.borderWidth,
+  borderStyle: "solid",
+  borderColor: getBorderColor(theme.colors, false),
+  borderRadius: theme.radii.default,
+  backgroundColor: theme.colors.bgColor,
+  boxShadow: `0 4px 16px rgba(0, 0, 0, 0.12)`,
+  zIndex: 1,
+}))
+
+export const StyledQuickSelectListBoxItem = styled(ListBoxItem)(
+  ({ theme }) => ({
+    display: "flex",
+    alignItems: "center",
+    borderRadius: theme.radii.sm,
+    padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+    cursor: "pointer",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+    outline: "none",
+    "&[data-hovered], &[data-focused]": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
+    "&[data-selected]": {
+      backgroundColor: theme.colors.darkenedBgMix25,
+    },
+  })
+)
 
 
 export const StyledCalendarHeaderSelectTrigger = styled(Button)(
@@ -384,15 +448,15 @@ export const StyledCalendarGrid = styled(CalendarGrid)(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
 }))
 
-export const StyledCalendarHeaderCell = styled(CalendarHeaderCell)(
-  ({ theme }) => ({
-    fontSize: theme.fontSizes.sm,
-    fontWeight: theme.fontWeights.semiBold,
-    color: theme.colors.bodyText,
-    paddingTop: theme.spacing.sm,
-    paddingBottom: theme.spacing.xs,
-  })
-)
+export const StyledCalendarHeaderCell = styled(CalendarHeaderCell)(({
+  theme,
+}) => ({
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.semiBold,
+  color: theme.colors.bodyText,
+  paddingTop: theme.spacing.sm,
+  paddingBottom: theme.spacing.xs,
+}))
 
 /**
  * In single mode, `data-selected` draws the solid primary circle.
@@ -412,19 +476,21 @@ export const StyledCalendarCell = styled(CalendarCell, {
     : "&[data-selected]"
 
   const cellSize = theme.sizes.smallElementHeight
+  const rangeTint = theme.colors.darkenedBgMix15
+  const primary = theme.colors.primary
 
   return {
-    boxSizing: "border-box",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    boxSizing: "border-box" as const,
     width: cellSize,
     height: cellSize,
     marginTop: theme.spacing.twoXS,
     marginBottom: theme.spacing.twoXS,
     marginLeft: "auto",
     marginRight: "auto",
-    textAlign: "center",
+    textAlign: "center" as const,
     cursor: "pointer",
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.base,
@@ -432,24 +498,50 @@ export const StyledCalendarCell = styled(CalendarCell, {
     outline: "none",
 
     ...($isRangeMode && {
+      // In-range days: stretch to fill td for seamless band
       "&[data-selected]:not([data-selection-start]):not([data-selection-end])":
         {
-          backgroundColor: theme.colors.darkenedBgMix15,
-          borderRadius: theme.radii.sm,
+          width: "auto",
+          margin: 0,
+          borderRadius: 0,
+          backgroundColor: rangeTint,
         },
+      // Start endpoint: fill td, circle via gradient
+      "&[data-selection-start]:not([data-selection-end])": {
+        width: "auto",
+        margin: 0,
+        borderRadius: 0,
+        background: `radial-gradient(circle closest-side, ${primary} 100%, transparent 100%), linear-gradient(to right, transparent 50%, ${rangeTint} 50%)`,
+        color: selectedTextColor,
+      },
+      // End endpoint: fill td, circle via gradient
+      "&[data-selection-end]:not([data-selection-start])": {
+        width: "auto",
+        margin: 0,
+        borderRadius: 0,
+        background: `radial-gradient(circle closest-side, ${primary} 100%, transparent 100%), linear-gradient(to left, transparent 50%, ${rangeTint} 50%)`,
+        color: selectedTextColor,
+      },
+      // Single-day range: just the circle
+      "&[data-selection-start][data-selection-end]": {
+        backgroundColor: primary,
+        color: selectedTextColor,
+      },
     }),
 
-    [soloSelectedSelector]: {
-      backgroundColor: theme.colors.primary,
-      color: selectedTextColor,
-    },
+    ...(!$isRangeMode && {
+      [soloSelectedSelector]: {
+        backgroundColor: primary,
+        color: selectedTextColor,
+      },
+    }),
 
     "&[data-hovered]": {
-      boxShadow: `inset 0 0 0 ${theme.sizes.borderWidth} ${theme.colors.primary}`,
+      boxShadow: `inset 0 0 0 ${theme.sizes.borderWidth} ${primary}`,
     },
 
     "&[data-focus-visible]": {
-      boxShadow: `inset 0 0 0 ${theme.sizes.borderWidth} ${theme.colors.primary}`,
+      boxShadow: `inset 0 0 0 ${theme.sizes.borderWidth} ${primary}`,
     },
 
     "&[data-selected][data-focus-visible]": {

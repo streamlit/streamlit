@@ -23,19 +23,15 @@ import { StyledDateFieldInput, StyledDateSegment } from "./styled-components"
 
 /**
  * Renders `state.segments` reordered to match `format` instead of the
- * locale-derived order React Aria would otherwise use — the Phase 0 spike's
- * chosen strategy (manual reordering via `useDateFieldState`, not
- * locale-substitution). Must be a child of `DateField` to read
+ * locale-derived order. Must be a child of `DateField` to read
  * `DateFieldStateContext`.
- *
- * Shared by `SingleDateInput` and `RangeDateInput`'s start/end fields — the
- * format-order logic is identical regardless of how many `DateField`s a
- * given mode renders.
  */
 export function ReorderedDateSegments({
   format,
+  isRange,
 }: {
   format: string
+  isRange?: boolean
 }): ReactElement | null {
   const state = useContext(DateFieldStateContext)
   if (!state) return null
@@ -43,7 +39,7 @@ export function ReorderedDateSegments({
   const segments = reorderSegments(state.segments, format)
 
   return (
-    <StyledDateFieldInput>
+    <StyledDateFieldInput $isRange={isRange}>
       {segments.map((segment, i) => (
         // Index is safe here: `segments` is a fixed-length, fixed-order
         // array derived from `format` (which doesn't change across

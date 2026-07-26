@@ -218,10 +218,7 @@ function DateInput({
     [buildErrorMessage, maxDateCalendar, minDateCalendar, resetError, setError]
   )
 
-  // Range mode's change handler (fed by RangeDateInput's CalendarDate[],
-  // 0-2 elements — see RangeDateInput's onChange contract docstring).
-  // Validates each date independently, mirroring the original BaseWeb
-  // handler's per-date loop.
+  // Range mode's change handler — validates each date independently.
   const handleRangeChange = useCallback(
     (dates: CalendarDate[]): void => {
       resetError()
@@ -327,6 +324,12 @@ function DateInput({
       setFocusedValue(now.compare(minDateCalendar) < 0 ? minDateCalendar : now)
     }
   }, [element.isRange, singleValue, minDateCalendar])
+
+  useEffect(() => {
+    if (element.isRange && rangeStartValue) {
+      setFocusedValue(rangeStartValue)
+    }
+  }, [element.isRange, rangeStartValue])
 
   return (
     <div className="stDateInput" data-testid="stDateInput">

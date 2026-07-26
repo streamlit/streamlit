@@ -15,7 +15,6 @@
  */
 
 import {
-  ChangeEvent,
   ClipboardEvent,
   memo,
   ReactElement,
@@ -28,7 +27,10 @@ import {
   useState,
 } from "react"
 
-import { ErrorOutline } from "@emotion-icons/material-outlined"
+import {
+  ErrorOutline,
+  KeyboardArrowDown,
+} from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { FloatingPortal } from "@floating-ui/react"
 import { CalendarDate } from "@internationalized/date"
@@ -60,14 +62,18 @@ import {
   StyledCalendarCell,
   StyledCalendarGrid,
   StyledCalendarHeaderCell,
+  StyledCalendarHeaderSelectChevron,
   StyledCalendarPopover,
   StyledClearButton,
   StyledDateField,
   StyledDateFieldContainer,
   StyledDateInputWrapper,
   StyledErrorIconContainer,
+  StyledQuickSelectLabel,
+  StyledQuickSelectListBox,
+  StyledQuickSelectListBoxItem,
   StyledQuickSelectRow,
-  StyledQuickSelectSelect,
+  StyledQuickSelectTrigger,
   StyledRangeCalendarRoot,
   StyledRangeSeparator,
   StyledVisuallyHidden,
@@ -101,25 +107,14 @@ export interface RangeDateInputProps {
 }
 
 /**
- * Watches `RangeCalendarStateContext`'s `anchorDate` (the date clicked to
- * begin a new range selection, exposed by `useRangeCalendarState` — see the
- * migration plan's partial-range parity item) and fires `onAnchorSelect`
- * exactly once per null→non-null transition (the first click of a new
- * selection). `RangeCalendar`'s own controlled `value`/`onChange` only fires
- * once a *complete* range is chosen (the second click) — there's no
- * built-in signal for "the user picked exactly one date so far" the way
- * BaseWeb's `Datepicker` immediately committed a one-element array after
- * the first click. Must be a child of `RangeCalendar` to read the context.
+ * Watches `RangeCalendarStateContext`'s `anchorDate` and fires `onAnchorSelect`
+ * once per null→non-null transition (first click of a new selection).
+ * `RangeCalendar`'s `onChange` only fires after a *complete* range (second
+ * click), so this provides the "one date chosen so far" signal.
  *
- * Also seeds `anchorDate` on mount when the widget already has a partial
- * value (a start date with no end date yet — e.g.
- * `st.date_input("...", [single_date])`, or mid-interaction after the first
- * click closed and reopened the popover). Without this, `RangeCalendar`'s
- * `value` prop is `null` for a partial selection (it can only represent a
- * complete `{start, end}` — see `calendarValue` below), so it has no way to
- * know a start date was already chosen; the next click would start a
- * *brand-new* selection instead of completing the existing one, unlike
- * BaseWeb's `Datepicker`, which always completed a pending partial range.
+ * Also seeds `anchorDate` on mount for partial values (start without end),
+ * so reopening the popover lets the next click complete the range rather than
+ * starting fresh.
  */
 function AnchorDateWatcher({
   seedAnchor,
@@ -188,17 +183,8 @@ function RangeDateInput({
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
   const quickSelectPresets = useMemo(() => getQuickSelectPresets(), [])
 
-  // Popover open/close is owned locally here — DateInput.tsx doesn't need
-  // to track it — mirroring SingleDateInput's use of useDatePickerState's
-  // isOpen/setOpen. Unlike single mode, range mode can't route this
-  // through a react-stately state hook: useDateRangePickerState's value
-  // prop is typed RangeValue<T> | null (both endpoints or neither), so it
-  // structurally can't represent a partial one-date selection, which this
-  // widget must support (both as a Python-provided initial value, e.g.
-  // st.date_input("...", [single_date]), and mid-interaction after the
-  // anchor click — see AnchorDateWatcher above). Composing DateField/
-  // RangeCalendar directly with our own value/onChange wiring avoids that
-  // mismatch entirely.
+  // Range mode manages its own popover state since useDateRangePickerState
+  // can't represent partial one-date selections.
   const [isOpen, setIsOpenState] = useState(false)
 
   const wasOpenRef = useRef(isOpen)
@@ -222,6 +208,7 @@ function RangeDateInput({
     floatingSetFn: refs.setFloating,
     referenceSetFn: refs.setReference,
     restoreFocusFn: () => triggerRef.current?.focus(),
+    excludeSelectors: ['[data-testid="stDateInputHeaderPickerPopover"]'],
   })
 
   const setTriggerRef = useCallback(
@@ -231,6 +218,8 @@ function RangeDateInput({
     },
     [setReferenceRef]
   )
+
+  const [isQuickSelectOpen, setIsQuickSelectOpen] = useState(false)
 
   const handleFocus = useCallback((): void => {
     if (!disabled) setIsOpenState(true)
@@ -279,8 +268,7 @@ function RangeDateInput({
     [onChange, setIsOpenState]
   )
 
-  // First click of a new range selection — see AnchorDateWatcher's
-  // docstring. Matches BaseWeb's immediate one-element commit.
+  // First click of a new range selection — see AnchorDateWatcher's docstring.
   const handleAnchorSelect = useCallback(
     (date: CalendarDate): void => {
       onChange([date])
@@ -293,11 +281,11 @@ function RangeDateInput({
   }, [onChange])
 
   const handleQuickSelect = useCallback(
-    (e: ChangeEvent<HTMLSelectElement>): void => {
-      const preset = quickSelectPresets.find(p => p.id === e.target.value)
-      e.target.value = ""
+    (presetId: string): void => {
+      const preset = quickSelectPresets.find(p => p.id === presetId)
       if (!preset) return
       onChange([preset.start, preset.end])
+      setIsQuickSelectOpen(false)
     },
     [quickSelectPresets, onChange]
   )
@@ -362,7 +350,7 @@ function RangeDateInput({
         onFocus={handleFocus}
       >
         <I18nProvider locale="en-US">
-          <StyledDateField>
+          <StyledDateField $isRange>
             <div onPaste={handleStartPaste}>
               <DateField
                 aria-label={`${label} start date`}
@@ -375,12 +363,12 @@ function RangeDateInput({
                 shouldForceLeadingZeros
                 isDisabled={disabled}
               >
-                <ReorderedDateSegments format={format} />
+                <ReorderedDateSegments format={format} isRange />
               </DateField>
             </div>
           </StyledDateField>
           <StyledRangeSeparator aria-hidden="true">–</StyledRangeSeparator>
-          <StyledDateField>
+          <StyledDateField $isRange>
             <div onPaste={handleEndPaste}>
               <DateField
                 aria-label={`${label} end date`}
@@ -393,7 +381,7 @@ function RangeDateInput({
                 shouldForceLeadingZeros
                 isDisabled={disabled}
               >
-                <ReorderedDateSegments format={format} />
+                <ReorderedDateSegments format={format} isRange />
               </DateField>
             </div>
           </StyledDateField>
@@ -465,20 +453,39 @@ function RangeDateInput({
             </I18nProvider>
             {enableQuickSelect && (
               <StyledQuickSelectRow>
-                <StyledQuickSelectSelect
+                <StyledQuickSelectLabel>
+                  Choose a date range
+                </StyledQuickSelectLabel>
+                <StyledQuickSelectTrigger
                   aria-label="Quick select a date range"
-                  value=""
-                  onChange={handleQuickSelect}
+                  aria-expanded={isQuickSelectOpen}
+                  aria-haspopup="listbox"
+                  onPress={() => setIsQuickSelectOpen(prev => !prev)}
                 >
-                  <option value="" disabled hidden>
-                    None
-                  </option>
-                  {quickSelectPresets.map(preset => (
-                    <option key={preset.id} value={preset.id}>
-                      {preset.label}
-                    </option>
-                  ))}
-                </StyledQuickSelectSelect>
+                  Select...
+                  <StyledCalendarHeaderSelectChevron>
+                    <KeyboardArrowDown size={theme.iconSizes.base} />
+                  </StyledCalendarHeaderSelectChevron>
+                </StyledQuickSelectTrigger>
+                {isQuickSelectOpen && (
+                  <StyledQuickSelectListBox
+                    aria-label="Quick select a date range"
+                    selectionMode="single"
+                    onSelectionChange={keys => {
+                      const key = [...keys][0]
+                      if (key) handleQuickSelect(String(key))
+                    }}
+                  >
+                    {quickSelectPresets.map(preset => (
+                      <StyledQuickSelectListBoxItem
+                        key={preset.id}
+                        id={preset.id}
+                      >
+                        {preset.label}
+                      </StyledQuickSelectListBoxItem>
+                    ))}
+                  </StyledQuickSelectListBox>
+                )}
               </StyledQuickSelectRow>
             )}
           </StyledCalendarPopover>
