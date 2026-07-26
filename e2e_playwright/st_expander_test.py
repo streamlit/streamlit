@@ -511,3 +511,10 @@ def test_rapid_toggle_does_not_clip_content(app: Page):
         )
 
     wait_until(app, styles_cleared, timeout=3000)
+
+    # After the ~1.5s stall-guard window, a superseded close animation must not
+    # have force-finished and slammed the expander shut. The <details> must
+    # still be open and the body text still visible.
+    app.wait_for_timeout(1600)
+    expect(details).to_have_attribute("open", "")
+    expect(body_text).to_be_visible()
