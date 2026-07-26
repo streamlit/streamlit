@@ -87,6 +87,7 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   "&[data-has-error]": {
     borderColor: theme.colors.redTextColor,
     backgroundColor: theme.colors.redBackgroundColor,
+    color: theme.colors.redTextColor,
   },
   "&[data-disabled]": {
     color: theme.colors.fadedText40,
@@ -144,6 +145,10 @@ export const StyledDateSegment = styled(DateSegment)(({ theme }) => {
     "&[data-disabled]": {
       color: "inherit",
     },
+    // Same inheritance for error state (redTextColor set on wrapper).
+    "[data-has-error] &:not([data-focused])": {
+      color: "inherit",
+    },
   }
 })
 
@@ -153,7 +158,7 @@ export const StyledErrorIconContainer = styled.div(({ theme }) => ({
   alignItems: "center",
   color: theme.colors.redTextColor,
   paddingLeft: theme.spacing.twoXS,
-  paddingRight: theme.spacing.sm,
+  paddingRight: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
   flexShrink: 0,
 }))
 
@@ -659,6 +664,11 @@ export const StyledCalendarCell = styled(CalendarCell, {
 
     "&[data-focus-visible]": {
       boxShadow: `inset 0 0 0 ${theme.sizes.borderWidth} ${theme.colors.primary}`,
+    },
+
+    "&[data-selected][data-focus-visible]": {
+      outline: `2px solid ${theme.colors.primary}`,
+      outlineOffset: "2px",
     },
 
     "&[data-disabled], &[data-unavailable]": {

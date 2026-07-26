@@ -790,6 +790,200 @@ describe("DateInput widget", () => {
   })
 })
 
+describe("DateInput keyboard navigation and focus management", () => {
+  const openCalendarAndGetGrid = async (
+    user: ReturnType<typeof userEvent.setup>
+  ): Promise<{
+    calendar: HTMLElement
+    gridCell: HTMLElement
+    segments: { year: HTMLElement; month: HTMLElement; day: HTMLElement }
+  }> => {
+    const region = screen.getByTestId("stDateInput")
+    const segments = getSingleDateSegments(region)
+    await user.click(segments.year)
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    const gridCell = within(calendar).getByRole("button", {
+      name: /January 20, 1970/,
+    })
+    return { calendar, gridCell, segments }
+  }
+
+  it("Tab from last segment focuses the calendar grid cell", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getSingleDateSegments(region)
+
+    // Focus the last segment (day)
+    await user.click(day)
+    // Calendar should be open
+    await screen.findByTestId("stDateInputCalendar")
+
+    // Tab from day segment should move focus into the calendar grid
+    await user.tab()
+    const calendar = screen.getByTestId("stDateInputCalendar")
+    const focusedCell = within(calendar).getByRole("button", {
+      name: /January 20, 1970/,
+    })
+    expect(focusedCell).toHaveFocus()
+  })
+
+  it("Tab on grid cell closes calendar and returns focus to field", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const { gridCell, segments } = await openCalendarAndGetGrid(user)
+
+    // Focus the grid cell directly
+    act(() => gridCell.focus())
+    expect(gridCell).toHaveFocus()
+
+    // Tab should close the calendar and return focus to the field
+    await user.tab()
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    // Focus should be on the last segment (day)
+    expect(segments.day).toHaveFocus()
+  })
+
+  it("Shift+Tab on grid cell moves focus to last header button", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const { calendar, gridCell } = await openCalendarAndGetGrid(user)
+
+    act(() => gridCell.focus())
+    expect(gridCell).toHaveFocus()
+
+    // Shift+Tab should move to the last header element (Next month button)
+    await user.tab({ shift: true })
+    const nextMonthBtn = within(calendar).getByLabelText("Next month")
+    expect(nextMonthBtn).toHaveFocus()
+  })
+
+  it("Shift+Tab on first header button wraps to grid cell", async () => {
+    const user = userEvent.setup()
+    // Use a value well past min so Previous month button is enabled
+    render(
+      <DateInput
+        {...getProps({ default: ["2020-06-15"], min: "2000-01-01" })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+
+    // Focus the first header button (Previous month)
+    const prevMonthBtn = within(calendar).getByLabelText("Previous month")
+    act(() => prevMonthBtn.focus())
+    expect(prevMonthBtn).toHaveFocus()
+
+    // Shift+Tab should wrap to the grid cell
+    await user.tab({ shift: true })
+    const gridCell = within(calendar).getByRole("button", {
+      name: /June 15, 2020/,
+    })
+    expect(gridCell).toHaveFocus()
+  })
+
+  it("Escape closes calendar and returns focus to field", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const { gridCell, segments } = await openCalendarAndGetGrid(user)
+
+    act(() => gridCell.focus())
+    expect(gridCell).toHaveFocus()
+
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(segments.day).toHaveFocus()
+  })
+
+  it("selecting a date closes calendar and returns focus to field", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<DateInput {...props} />)
+
+    const { calendar, segments } = await openCalendarAndGetGrid(user)
+
+    // Click a different date in the calendar
+    const otherDay = within(calendar).getByRole("button", {
+      name: /January 25, 1970/,
+    })
+    await user.click(otherDay)
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(segments.day).toHaveFocus()
+  })
+
+  it("Enter on a focused grid cell selects date and closes calendar", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const { gridCell, segments } = await openCalendarAndGetGrid(user)
+
+    act(() => gridCell.focus())
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(segments.day).toHaveFocus()
+  })
+
+  it("calendar opens when any segment receives focus", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { month } = getSingleDateSegments(region)
+
+    await user.click(month)
+    expect(
+      await screen.findByTestId("stDateInputCalendar")
+    ).toBeInTheDocument()
+  })
+
+  it("outside click closes calendar", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+  })
+})
+
 describe("DateInput query param binding", () => {
   it("registers query param binding on mount when queryParamKey is set", () => {
     const props = getProps({ queryParamKey: "my_date" })

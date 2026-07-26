@@ -74,6 +74,19 @@ import {
 import { RACFirstDayOfWeek } from "./useFirstDayOfWeek"
 import { getSafeLocale } from "./weekInfo"
 
+/**
+ * Focusable descendants of the calendar popover, in DOM order: header
+ * buttons (prev/next, month/year pickers) and exactly one grid cell with
+ * `tabIndex=0` (React Aria's roving-tabindex pattern).
+ */
+function getFocusableCalendarElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'button, [role="spinbutton"], [role="button"], [tabindex]'
+    )
+  ).filter(el => el.tabIndex >= 0 && !(el as HTMLButtonElement).disabled)
+}
+
 export interface SingleDateInputProps {
   value: CalendarDate | null
   onChange: (value: CalendarDate | null) => void
@@ -99,21 +112,6 @@ export interface SingleDateInputProps {
    * this to revert to the default value if the field was left empty,
    * matching the old `handleClose`. */
   onClose: () => void
-}
-
-/**
- * Tabbable descendants of the calendar popover, in DOM order: the
- * prev/next nav buttons and month/year `Select` triggers all render as
- * native `<button>`s, and exactly one grid cell has `tabIndex=0` at a time
- * (React Aria's roving-tabindex pattern) — every other cell is `-1` and
- * excluded here.
- */
-function getFocusableCalendarElements(container: HTMLElement): HTMLElement[] {
-  return Array.from(
-    container.querySelectorAll<HTMLElement>(
-      'button, [role="spinbutton"], [role="button"], [tabindex]'
-    )
-  ).filter(el => el.tabIndex >= 0 && !(el as HTMLButtonElement).disabled)
 }
 
 /**
@@ -357,15 +355,19 @@ function SingleDateInput({
   )
 
   /**
-   * Full focus trap while the popover is open: Tab/Shift+Tab cycle among
-   * the popover's own focusable elements (prev/next nav, month/year
-   * selects, the one tabbable grid cell) and wrap at both ends instead of
-   * escaping to the rest of the page. `handleFieldKeyDown` is the only way
-   * in (Tab from the field's last segment); the only ways out are
-   * selecting a date or Escape (both already close the popover and, for
-   * Escape, restore focus to the field via `useOverlayDismissal`) — Tab no
-   * longer returns focus to the field directly, since a trap means you
-   * can't tab *out* of it at all.
+   * Focus management for the calendar popover (non-modal popover pattern):
+   *
+   * - `handleFieldKeyDown` enters the calendar at the grid cell (skipping
+   *   the header), since the grid is the primary interaction target.
+   * - Forward Tab on the grid cell closes the calendar and returns focus
+   *   to the field (same as Escape), so the next Tab naturally moves to
+   *   the next widget on the page.
+   * - Shift+Tab from the grid cell flows naturally to the last header
+   *   button (Next month), allowing keyboard access to month/year pickers.
+   * - Tab through header buttons flows naturally in DOM order, ending back
+   *   at the grid cell.
+   * - Shift+Tab on the first header button (Previous month) wraps to the
+   *   grid cell, completing the backward cycle.
    */
   const handleCalendarKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
@@ -378,15 +380,19 @@ function SingleDateInput({
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
 
-      if (e.shiftKey && e.target === first) {
+      if (!e.shiftKey && e.target === last) {
+        // Forward Tab on the grid cell (last): close calendar, return
+        // focus to the field so next natural Tab exits the widget.
+        e.preventDefault()
+        state.setOpen(false)
+        focusLastFieldSegment()
+      } else if (e.shiftKey && e.target === first) {
+        // Backward Tab on the first header button: wrap to grid cell.
         e.preventDefault()
         last.focus()
-      } else if (!e.shiftKey && e.target === last) {
-        e.preventDefault()
-        first.focus()
       }
     },
-    [refs.floating]
+    [refs.floating, state, focusLastFieldSegment]
   )
 
   return (

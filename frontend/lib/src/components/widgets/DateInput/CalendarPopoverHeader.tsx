@@ -16,11 +16,8 @@
 
 import { ReactElement, useState } from "react"
 
-import {
-  ChevronLeft,
-  ChevronRight,
-  KeyboardArrowDown,
-} from "@emotion-icons/material-outlined"
+import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
+import { ChevronLeft, ChevronRight } from "@emotion-icons/material-rounded"
 import {
   CalendarMonthPicker,
   CalendarYearPicker,
