@@ -330,6 +330,8 @@ const Multiselect: FC<Props> = props => {
 
   const handleChange = useCallback(
     (keys: Key[]): void => {
+      if (!isOpenRef.current) return
+
       const selectedKeys = keys.map(String)
 
       // Check for bulk action keys
