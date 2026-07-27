@@ -44,7 +44,10 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import {
+  SHIFT_VIEWPORT_PADDING,
+  useFloatingOverlay,
+} from "~lib/hooks/useFloatingOverlay"
 import { convertRemToPx } from "~lib/theme/utils"
 import {
   filterSelectOptions,
@@ -219,13 +222,40 @@ const Selectbox: FC<Props> = ({
   // on both refs being mounted — the actual ComboBox open state is irrelevant
   // here since the floating element only exists in the DOM when RAC's Popover
   // renders it (i.e. when the dropdown is open).
-  const { refs, floatingStyles } = useFloatingOverlay({
-    open: true,
-    placement: "bottom-start",
-    offsetPx: convertRemToPx(theme.spacing.twoXS),
-    flipOptions: isInSidebar ? false : undefined,
-    matchTriggerWidth: true,
-  })
+  //
+  // In the sidebar, flip/shift are bounded by the viewport
+  // (document.documentElement) rather than the sidebar's `overflow: auto`
+  // clipping rect. Otherwise the dropdown cannot flip up when the trigger sits
+  // near the bottom of the sidebar and it overflows the viewport instead (issue
+  // #16181). This mirrors the sidebar handling in elements/Popover/Popover.tsx.
+  // `document.documentElement` is used rather than `document.body` because
+  // Streamlit's `.stApp` uses `position: absolute; inset: 0`, leaving
+  // document.body sized 0x0, so a body boundary would always report overflow
+  // and re-introduce the same clipping.
+  //
+  // Unlike Popover.tsx, no `size` middleware is needed here: the option list is
+  // already height-capped by CSS (`min(maxDropdownHeight, 70vh)` with internal
+  // scroll in Selectbox.styled.ts), so the dropdown cannot overflow the way
+  // arbitrary Popover content can.
+  const overlayOptions = useMemo(() => {
+    const base = {
+      open: true,
+      placement: "bottom-start" as const,
+      offsetPx: convertRemToPx(theme.spacing.twoXS),
+      matchTriggerWidth: true,
+    }
+    if (!isInSidebar || typeof document === "undefined") {
+      return base
+    }
+    const boundary = document.documentElement
+    return {
+      ...base,
+      flipOptions: { boundary },
+      shiftOptions: { boundary, padding: SHIFT_VIEWPORT_PADDING },
+    }
+  }, [theme.spacing.twoXS, isInSidebar])
+
+  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
   // Locally committed value (last value sent to Streamlit). Re-synced from
   // propValue when the backend pushes an update (form-clear, session state, etc.).
