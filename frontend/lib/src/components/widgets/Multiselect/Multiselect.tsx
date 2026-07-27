@@ -275,6 +275,11 @@ const Multiselect: FC<Props> = props => {
     maxSelections: element.maxSelections,
   })
 
+  const displayOptionsRef = useRef(displayOptions)
+  displayOptionsRef.current = displayOptions
+  const valueRef = useRef(value)
+  valueRef.current = value
+
   const isFilterNone =
     resolvedFilterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
 
@@ -333,6 +338,8 @@ const Multiselect: FC<Props> = props => {
 
   const handleChange = useCallback(
     (keys: Key[]): void => {
+      if (!isOpenRef.current) return
+
       const selectedKeys = keys.map(String)
 
       // Check for bulk action keys
@@ -342,7 +349,8 @@ const Multiselect: FC<Props> = props => {
 
       if (bulkActionKey) {
         // Bulk select: add all currently displayed (non-special) options
-        const optionsToAdd = displayOptions
+        const options = displayOptionsRef.current
+        const optionsToAdd = options
           .filter(o => !o.isBulkAction && !o.isCreatable)
           .map(o => o.value)
 
@@ -381,7 +389,9 @@ const Multiselect: FC<Props> = props => {
       // selectedKeys from RAC contains the full new selection set (option IDs)
       // We need to map IDs back to values. Bulk-action and creatable keys are
       // already handled by early returns above, so only filter undefined here.
-      const optionById = new Map(displayOptions.map(o => [o.id, o.value]))
+      const optionById = new Map(
+        displayOptionsRef.current.map(o => [o.id, o.value])
+      )
       const newValues = selectedKeys
         .map(id => optionById.get(id))
         .filter((v): v is string => v !== undefined)
@@ -402,7 +412,7 @@ const Multiselect: FC<Props> = props => {
       setValueWithSource({ value: finalValue, fromUi: true })
       setInputValue("")
     },
-    [displayOptions, element.maxSelections, setValueWithSource, value]
+    [element.maxSelections, setValueWithSource, value]
   )
 
   const handleInputChange = useCallback((text: string): void => {
@@ -421,10 +431,10 @@ const Multiselect: FC<Props> = props => {
 
   const handleRemoveTag = useCallback(
     (tagValue: string): void => {
-      const newValue = value.filter(v => v !== tagValue)
+      const newValue = valueRef.current.filter(v => v !== tagValue)
       setValueWithSource({ value: newValue, fromUi: true })
     },
-    [setValueWithSource, value]
+    [setValueWithSource]
   )
 
   const handleClearAll = useCallback((): void => {
@@ -548,16 +558,20 @@ const Multiselect: FC<Props> = props => {
   )
 
   // Compute selectedKeys for the ListBox — map selected values to option IDs
+  const optionIndexMap = useMemo(
+    () => new Map(element.options.map((opt, idx) => [opt, idx])),
+    [element.options]
+  )
   const selectedKeys = useMemo((): Set<Key> => {
     const keys = new Set<Key>()
     for (const v of value) {
-      const idx = element.options.indexOf(v)
-      if (idx !== -1) {
+      const idx = optionIndexMap.get(v)
+      if (idx !== undefined) {
         keys.add(String(idx))
       }
     }
     return keys
-  }, [value, element.options])
+  }, [value, optionIndexMap])
 
   const selectedKeysArray = useMemo(() => [...selectedKeys], [selectedKeys])
 
