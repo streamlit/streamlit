@@ -32,12 +32,12 @@ export const StyledStackTraceTitle = styled.div(({ theme }) => ({
 }))
 
 /**
- * This extra div makes sure that we also have padding on the right side of
- * the stack trace when scrolled to the right. Its `inline-block` + `minWidth:
- * 100%` combined with the inner `StyledCode`'s own `padding-right` keeps a
- * gutter visible after the last character at any scroll position; browsers
- * otherwise drop the outer `StyledStackTrace`'s own `padding-right` from the
- * scrollable overflow region. See issue #8206.
+ * Preserve a visible right-side gutter in horizontally scrolled stack
+ * traces. The inner `StyledCode` (rendered with `wrapLines={false}`) carries
+ * its own `padding-right` via `codeBlockStyle`; wrapping it in this
+ * `inline-block` + `minWidth: 100%` div guarantees the code cell always
+ * stretches to at least the outer `<pre>` width so the gutter stays inside
+ * the scrollable content. See issue #8206.
  */
 export const StyledStackTraceContent = styled.div({
   display: "inline-block",

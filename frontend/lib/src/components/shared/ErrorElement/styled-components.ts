@@ -28,11 +28,12 @@ export const StyledStackTrace = styled.pre(({ theme }) => ({
   margin: 0,
   borderRadius: theme.radii.default,
   /**
-   * `paddingRight` is applied on the inner `<code>` element (via
-   * `codeBlockStyle`'s `inline-block` + `padding-right` in `StyledCode`) so
-   * the gutter on the right survives horizontal scrolling. Browsers drop a
-   * scroll container's own right padding from its scrollable overflow. See
-   * issue #8206.
+   * The inner `StyledCode` is rendered with `wrapLines={false}`, so
+   * `codeBlockStyle` puts the right gutter on the `<code>` (`inline-block` +
+   * `padding-right`) rather than here. Browsers drop a scroll container's
+   * own right padding from its scrollable overflow region, so keeping the
+   * gutter on the inner element preserves it at max horizontal scroll.
+   * See issue #8206.
    */
   padding: theme.spacing.lg,
   paddingRight: 0,

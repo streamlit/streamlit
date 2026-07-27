@@ -171,12 +171,20 @@ def test_right_padding_preserved_on_horizontal_scroll(app: Page):
     characters don't touch the container edge.
     """
     code_blocks = app.get_by_test_id("stCode")
-    # `wide_code_block` with `wrap_lines=False` — content overflows horizontally.
+    # Index 15 is the first `wrap_lines=False` block in st_code.py; its
+    # content overflows horizontally so it must scroll to the right.
     wide_block = code_blocks.nth(15)
     wide_block.scroll_into_view_if_needed()
 
     pre = wide_block.locator("pre")
     expect(pre).to_be_visible()
+
+    # Wait for the block to actually have overflow content before measuring,
+    # otherwise `scrollWidth` / `clientWidth` may not be stable yet.
+    app.wait_for_function(
+        """(el) => el && el.scrollWidth > el.clientWidth""",
+        arg=pre.element_handle(),
+    )
 
     # Scroll the inner <pre> to its rightmost position, then measure the gap
     # between the last text glyph and the pre's right edge.
