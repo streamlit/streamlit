@@ -91,6 +91,11 @@ const VirtualDropdown = forwardRef<HTMLUListElement, VirtualDropdownProps>(
     const scrollbarGutterSize = useScrollbarGutterSize()
     const { innerHeight: windowHeight } = useWindowDimensionsContext()
 
+    // Match this region's own background. BaseWeb's `menuFill` resolves to
+    // the sidebar's `secondaryBackgroundColor` (not its `backgroundColor`)
+    // when both sidebar colors are set, giving the wrong surface. See #11348.
+    const menuFillOverride = { backgroundColor: theme.colors.bgColor }
+
     // TODO: Update to match React best practices
     // eslint-disable-next-line @eslint-react/no-children-to-array
     const children = Children.toArray(props.children) as ReactElement[]
@@ -112,11 +117,7 @@ const VirtualDropdown = forwardRef<HTMLUListElement, VirtualDropdownProps>(
             // one on the popover, so we need to remove it here.
             boxShadow: "none",
             overflow: "hidden",
-            // Match the current region's background instead of BaseWeb's
-            // `menuFill`, which resolves to the sidebar's
-            // `secondaryBackgroundColor` when both sidebar bg colors are
-            // configured — causing the goldenrod dropdown in #11348.
-            backgroundColor: theme.colors.bgColor,
+            ...menuFillOverride,
           }}
           ref={ref}
           data-testid="stSelectboxVirtualDropdownEmpty"
@@ -185,11 +186,7 @@ const VirtualDropdown = forwardRef<HTMLUListElement, VirtualDropdownProps>(
           // Somehow this adds an additional shadow, even though we already have
           // one on the popover, so we need to remove it here.
           boxShadow: "none",
-          // Match the current region's background instead of BaseWeb's
-          // `menuFill`, which resolves to the sidebar's
-          // `secondaryBackgroundColor` when both sidebar bg colors are
-          // configured — causing the goldenrod dropdown in #11348.
-          backgroundColor: theme.colors.bgColor,
+          ...menuFillOverride,
         }}
         data-testid="stSelectboxVirtualDropdown"
       >
