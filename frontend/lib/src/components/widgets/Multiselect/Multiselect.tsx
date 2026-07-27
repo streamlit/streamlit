@@ -52,7 +52,10 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import {
+  SHIFT_VIEWPORT_PADDING,
+  useFloatingOverlay,
+} from "~lib/hooks/useFloatingOverlay"
 import {
   CREATABLE_ID,
   type MultiselectOption,
@@ -257,11 +260,21 @@ const Multiselect: FC<Props> = props => {
   const closeDropdownRef = useRef<(() => void) | null>(null)
   const focusedKeyRef = useRef<Key | null>(null)
 
+  // In the sidebar, flip/shift are bounded by the viewport so the dropdown can
+  // flip up when near the bottom, rather than overflowing (see #16181).
+  const sidebarBoundary = isInSidebar
+    ? { boundary: document.documentElement }
+    : undefined
+
   const { refs, floatingStyles } = useFloatingOverlay({
     open: true,
     placement: "bottom-start",
     offsetPx: convertRemToPx(theme.spacing.twoXS),
-    flipOptions: isInSidebar ? false : undefined,
+    flipOptions: sidebarBoundary,
+    shiftOptions: sidebarBoundary && {
+      ...sidebarBoundary,
+      padding: SHIFT_VIEWPORT_PADDING,
+    },
     matchTriggerWidth: true,
   })
 
