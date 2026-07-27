@@ -1168,3 +1168,128 @@ describe("Multiselect query param binding", () => {
     expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
   })
 })
+
+describe("Multiselect tag accessibility", () => {
+  beforeEach(() => {
+    vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function getTags(): HTMLElement[] {
+    return screen.getAllByLabelText(/.*/, {
+      selector: "[data-tag]",
+    })
+  }
+
+  it("renders tags with ARIA attributes and roving tabindex", () => {
+    const props = getProps({
+      default: [0, 1, 2],
+      options: ["alpha", "beta", "gamma"],
+    })
+    render(<Multiselect {...props} />)
+
+    const tags = getTags()
+    expect(tags).toHaveLength(3)
+
+    // Each tag has correct semantics
+    expect(tags[0]).toHaveAttribute("aria-label", "alpha")
+    expect(tags[0]).toHaveAttribute("aria-roledescription", "tag")
+    expect(tags[1]).toHaveAttribute("aria-label", "beta")
+
+    // Only first tag is tabbable (roving tabindex)
+    expect(tags[0]).toHaveAttribute("tabindex", "0")
+    expect(tags[1]).toHaveAttribute("tabindex", "-1")
+    expect(tags[2]).toHaveAttribute("tabindex", "-1")
+  })
+
+  it("disables tag focus and hides remove buttons when disabled", () => {
+    const props = getProps(
+      { default: [0, 1], options: ["a", "b", "c"] },
+      { disabled: true }
+    )
+    render(<Multiselect {...props} />)
+
+    const tags = getTags()
+    expect(tags[0]).toHaveAttribute("tabindex", "-1")
+    expect(tags[1]).toHaveAttribute("tabindex", "-1")
+    expect(
+      screen.queryByRole("button", { name: "Remove a" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("navigates between tags with arrow keys, Home, and End", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [0, 1, 2],
+      options: ["a", "b", "c"],
+    })
+    render(<Multiselect {...props} />)
+
+    const tags = getTags()
+    act(() => tags[0].focus())
+    expect(tags[0]).toHaveFocus()
+
+    // ArrowRight moves to next
+    await user.keyboard("{ArrowRight}")
+    expect(tags[1]).toHaveFocus()
+    expect(tags[0]).toHaveAttribute("tabindex", "-1")
+    expect(tags[1]).toHaveAttribute("tabindex", "0")
+
+    // ArrowLeft moves back
+    await user.keyboard("{ArrowLeft}")
+    expect(tags[0]).toHaveFocus()
+
+    // End jumps to last
+    await user.keyboard("{End}")
+    expect(tags[2]).toHaveFocus()
+
+    // Home jumps to first
+    await user.keyboard("{Home}")
+    expect(tags[0]).toHaveFocus()
+
+    // ArrowRight from last moves to input
+    await user.keyboard("{End}")
+    await user.keyboard("{ArrowRight}")
+    expect(screen.getByRole("combobox")).toHaveFocus()
+  })
+
+  it("removes a tag with Delete/Backspace and moves focus appropriately", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [0, 1, 2],
+      options: ["a", "b", "c"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    const tags = getTags()
+    act(() => tags[0].focus())
+
+    // Delete removes first tag
+    await user.keyboard("{Delete}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      ["b", "c"],
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("moves focus to input when the last tag is removed", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [0],
+      options: ["a", "b", "c"],
+    })
+    render(<Multiselect {...props} />)
+
+    const tags = getTags()
+    act(() => tags[0].focus())
+
+    await user.keyboard("{Delete}")
+    expect(screen.getByRole("combobox")).toHaveFocus()
+  })
+})

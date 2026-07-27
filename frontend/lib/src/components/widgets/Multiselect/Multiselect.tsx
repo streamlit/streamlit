@@ -207,6 +207,7 @@ const Multiselect: FC<Props> = props => {
   const tagsContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const scrollTopRef = useRef(0)
+  const focusedTagIndexRef = useRef(0)
 
   const queryParamBinding = element.queryParamKey
     ? {
@@ -466,6 +467,7 @@ const Multiselect: FC<Props> = props => {
           tag.tabIndex = -1
           prev.tabIndex = 0
           prev.focus()
+          focusedTagIndexRef.current = idx - 1
         }
       } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         e.preventDefault()
@@ -474,7 +476,9 @@ const Multiselect: FC<Props> = props => {
           tag.tabIndex = -1
           next.tabIndex = 0
           next.focus()
+          focusedTagIndexRef.current = idx + 1
         } else {
+          focusedTagIndexRef.current = 0
           inputRef.current?.focus()
         }
       } else if (e.key === "Delete" || e.key === "Backspace") {
@@ -484,9 +488,12 @@ const Multiselect: FC<Props> = props => {
           const nextFocus = tags[idx + 1] ?? tags[idx - 1]
           handleTagGroupRemove(new Set([tagValue]))
           if (nextFocus && nextFocus !== tag) {
+            const nextIdx = tags.indexOf(nextFocus)
+            focusedTagIndexRef.current = e.key === "Delete" ? idx : nextIdx
             nextFocus.tabIndex = 0
             nextFocus.focus()
           } else {
+            focusedTagIndexRef.current = 0
             inputRef.current?.focus()
           }
         }
@@ -497,6 +504,7 @@ const Multiselect: FC<Props> = props => {
           tag.tabIndex = -1
           first.tabIndex = 0
           first.focus()
+          focusedTagIndexRef.current = 0
         }
       } else if (e.key === "End") {
         e.preventDefault()
@@ -505,6 +513,7 @@ const Multiselect: FC<Props> = props => {
           tag.tabIndex = -1
           last.tabIndex = 0
           last.focus()
+          focusedTagIndexRef.current = tags.length - 1
         }
       }
     },
@@ -663,6 +672,11 @@ const Multiselect: FC<Props> = props => {
     element.options.length <= 10 &&
     !(element.acceptNewOptions ?? false)
 
+  // Clamp focused tag index to valid range after tags are removed
+  if (focusedTagIndexRef.current >= value.length) {
+    focusedTagIndexRef.current = Math.max(0, value.length - 1)
+  }
+
   return (
     <div className="stMultiSelect" data-testid="stMultiSelect">
       <WidgetLabel
@@ -702,15 +716,14 @@ const Multiselect: FC<Props> = props => {
           >
             <StyledTagsContainer
               ref={tagsContainerRef}
-              role="list"
-              aria-label="Selected values"
               onScroll={handleTagsScroll}
             >
               {value.map((v, idx) => (
                 <StyledTag
                   key={v}
-                  role="listitem"
-                  tabIndex={!disabled && idx === 0 ? 0 : -1}
+                  tabIndex={
+                    !disabled && idx === focusedTagIndexRef.current ? 0 : -1
+                  }
                   aria-label={v}
                   aria-roledescription="tag"
                   $disabled={disabled}
