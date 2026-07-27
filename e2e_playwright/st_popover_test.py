@@ -203,11 +203,16 @@ def test_popover_stays_within_narrow_viewport(app: Page):
 
     # Before #9340 was fixed the popover body extended past the viewport's
     # right edge (its max-width was 704px). A 1px epsilon guards against
-    # subpixel layout differences across browsers.
+    # subpixel layout differences across browsers. Also assert vertical
+    # bounds to guard against vertical overflow regressions.
     epsilon = 1
     assert body_box["x"] >= -epsilon, f"popover body extends off left edge: {body_box}"
     assert body_box["x"] + body_box["width"] <= viewport["width"] + epsilon, (
         f"popover body extends past right edge: {body_box}, viewport={viewport}"
+    )
+    assert body_box["y"] >= -epsilon, f"popover body extends off top edge: {body_box}"
+    assert body_box["y"] + body_box["height"] <= viewport["height"] + epsilon, (
+        f"popover body extends past bottom edge: {body_box}, viewport={viewport}"
     )
 
 
