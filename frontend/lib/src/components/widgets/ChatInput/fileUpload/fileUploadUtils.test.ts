@@ -248,26 +248,46 @@ describe("fileUploadUtils", () => {
       expect(result.webkitdirectory).toBe("")
       expect(result.multiple).toBe(true)
       expect(result.accept).toBe(".txt")
+      expect(result.style).toEqual({ position: "absolute" })
     })
 
-    it("preserves original props for non-directory uploads", () => {
+    it("keeps original props and forces the input out of flow for non-directory uploads", () => {
       const inputProps = { accept: ".pdf", multiple: false }
       const result = configureFileInputProps(
         inputProps,
         AcceptFileValue.Single
       )
-      expect(result).toEqual(inputProps)
+      expect(result).toEqual({
+        ...inputProps,
+        style: { position: "absolute" },
+      })
       expect(result.webkitdirectory).toBeUndefined()
     })
 
-    it("preserves original props for multiple file uploads", () => {
+    it("keeps original props and forces the input out of flow for multiple file uploads", () => {
       const inputProps = { accept: ".jpg,.png", multiple: true }
       const result = configureFileInputProps(
         inputProps,
         AcceptFileValue.Multiple
       )
-      expect(result).toEqual(inputProps)
+      expect(result).toEqual({
+        ...inputProps,
+        style: { position: "absolute" },
+      })
       expect(result.webkitdirectory).toBeUndefined()
+    })
+
+    it("merges position: absolute into an existing input style", () => {
+      const inputProps = { style: { display: "block", height: 0 } }
+      const result = configureFileInputProps(
+        inputProps,
+        AcceptFileValue.Single
+      )
+      expect(result.style).toEqual({
+        display: "block",
+        height: 0,
+        position: "absolute",
+      })
     })
   })
 })

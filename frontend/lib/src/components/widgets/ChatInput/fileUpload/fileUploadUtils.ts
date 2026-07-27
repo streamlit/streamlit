@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { CSSProperties } from "react"
+
 import { assertNever } from "~lib/util/assertNever"
 import { isFileTypeAllowed } from "~lib/util/FileHelper"
 import { AcceptFileValue } from "~lib/util/utils"
@@ -26,15 +28,28 @@ export const configureFileInputProps = (
   inputProps: Record<string, unknown>,
   acceptFile: AcceptFileValue
 ): Record<string, unknown> => {
+  // react-dropzone v19.0.1+ hides the file input in-flow (display: block)
+  // instead of position: absolute. Keep it absolutely positioned so the hidden
+  // input stays out of the layout flow and doesn't shift the chat input's
+  // upload button (see FileDropzone for the equivalent fix).
+  const style: CSSProperties = {
+    ...(inputProps.style as CSSProperties | undefined),
+    position: "absolute",
+  }
+
   // Apply webkitdirectory attribute for directory uploads
   if (acceptFile === AcceptFileValue.Directory) {
     return {
       ...inputProps,
+      style,
       webkitdirectory: "",
       multiple: true,
     }
   }
-  return inputProps
+  return {
+    ...inputProps,
+    style,
+  }
 }
 
 /**
