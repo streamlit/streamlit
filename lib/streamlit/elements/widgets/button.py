@@ -1742,7 +1742,13 @@ def _maybe_infer_file_info(
     Explicit user-provided values always take precedence; when nothing can be
     inferred, the values are returned unchanged.
     """
-    name = getattr(data, "name", None)
+    # Reading `name` can itself raise: e.g. TextIOWrapper delegates the
+    # property to its underlying buffer, and a detached or closed stream
+    # raises ValueError/UnsupportedOperation, which getattr does not swallow.
+    try:
+        name = getattr(data, "name", None)
+    except (AttributeError, ValueError, OSError):
+        return file_name, mimetype
     # FileIO.name is an int when the object was created from a file descriptor.
     if not isinstance(name, str) or not name:
         return file_name, mimetype

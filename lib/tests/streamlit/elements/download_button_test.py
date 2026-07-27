@@ -21,6 +21,8 @@ import tempfile
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
+from streamlit.runtime.memory_media_file_storage import MemoryFile
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -165,11 +167,11 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         assert not c2.HasField("deferred_file_id")
         assert "/media/" in c2.url
 
-    def _stored_file(self, proto):
+    def _stored_file(self, proto: DownloadButtonProto) -> MemoryFile:
         """Return the MemoryFile stored for a download_button proto."""
         return self.media_file_storage.get_file(os.path.basename(proto.url))
 
-    def test_file_object_infers_file_name_and_mime(self):
+    def test_file_object_infers_file_name_and_mime(self) -> None:
         """A file object opened from disk fills in a missing file_name and
         mime from its `name` attribute."""
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -184,7 +186,7 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         assert stored.filename == "report.csv"
         assert stored.mimetype == "text/csv"
 
-    def test_raw_file_io_infers_file_name_and_mime(self):
+    def test_raw_file_io_infers_file_name_and_mime(self) -> None:
         """io.FileIO (the type mentioned in the issue) is also supported."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = os.path.join(tmp_dir, "photo.png")
@@ -198,7 +200,7 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         assert stored.filename == "photo.png"
         assert stored.mimetype == "image/png"
 
-    def test_file_object_explicit_params_take_precedence(self):
+    def test_file_object_explicit_params_take_precedence(self) -> None:
         """User-provided file_name/mime always win over inferred values."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = os.path.join(tmp_dir, "report.csv")
@@ -217,9 +219,37 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         assert stored.filename == "custom.bin"
         assert stored.mimetype == "application/x-foo"
 
-    def test_nameless_buffer_keeps_existing_behavior(self):
+    def test_nameless_buffer_keeps_existing_behavior(self) -> None:
         """In-memory buffers without a usable name are unaffected."""
         st.download_button("Download", data=io.BytesIO(b"payload"))
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename is None
+        assert stored.mimetype == "application/octet-stream"
+
+    def test_text_wrapper_over_nameless_buffer_keeps_existing_behavior(self) -> None:
+        """A TextIOWrapper over a nameless buffer must not crash: its `name`
+        property delegates to the buffer and raises AttributeError."""
+        st.download_button(
+            "Download", data=io.TextIOWrapper(io.BytesIO(b"payload"), encoding="utf-8")
+        )
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename is None
+        assert stored.mimetype == "text/plain"
+
+    def test_stream_raising_on_name_access_keeps_existing_behavior(self) -> None:
+        """A stream whose `name` property raises (e.g. a detached or closed
+        TextIOWrapper raises ValueError) must not crash inference."""
+
+        class RaisingNameBuffer(io.BytesIO):
+            @property
+            def name(self) -> str:
+                raise ValueError("underlying buffer has been detached")
+
+        st.download_button("Download", data=RaisingNameBuffer(b"payload"))
 
         c = self.get_delta_from_queue().new_element.download_button
         stored = self._stored_file(c)
