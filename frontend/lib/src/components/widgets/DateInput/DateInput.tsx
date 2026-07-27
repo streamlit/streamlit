@@ -324,10 +324,11 @@ function DateInput({
   // format, so no conversion is needed here at all (unlike the old
   // `stringsToDates(element.default)` version).
   const handleClose = useCallback((): void => {
-    if (!isEmpty) return
+    if (!isEmpty && !error) return
+    resetError()
     setValueWithSource({ value: element.default, fromUi: true })
     setIsEmpty(element.default.length === 0)
-  }, [isEmpty, element.default, setValueWithSource])
+  }, [isEmpty, error, element.default, setValueWithSource, resetError])
 
   const singleValue = useMemo(
     () => isoToCalendarDate(value[0] ?? "") ?? null,

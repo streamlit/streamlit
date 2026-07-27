@@ -982,6 +982,51 @@ describe("DateInput keyboard navigation and focus management", () => {
       ).not.toBeInTheDocument()
     })
   })
+
+  it("partially cleared segments revert to default on blur (non-clearable)", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+
+    // Clear only year and month (not day) — partial clear.
+    // clearSegment clicks the segment (opening the calendar) then
+    // backspaces all digits.
+    await clearSegment(user, year)
+    await clearSegment(user, month)
+    expect(year).toHaveTextContent("yyyy")
+    expect(month).toHaveTextContent("mm")
+    expect(day).toHaveTextContent("20")
+
+    // Close by clicking outside (same approach as the "resets" test)
+    await user.click(document.body)
+
+    // Calendar should close
+    await waitFor(
+      () => {
+        expect(
+          screen.queryByTestId("stDateInputCalendar")
+        ).not.toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
+
+    // After close, segments should revert to the default value (1970/01/20).
+    // The closeEpoch mechanism in DateInput.tsx produces a fresh CalendarDate
+    // reference, forcing useDateFieldState to rebuild segments.
+    const region2 = screen.getByTestId("stDateInput")
+    const refreshedSegments = getSingleDateSegments(region2)
+    await waitFor(
+      () => {
+        expect(refreshedSegments.year).toHaveTextContent("1970")
+      },
+      { timeout: 2000 }
+    )
+    expect(refreshedSegments.month).toHaveTextContent("01")
+    expect(refreshedSegments.day).toHaveTextContent("20")
+  })
 })
 
 describe("DateInput query param binding", () => {
