@@ -1194,9 +1194,12 @@ describe("Multiselect tag accessibility", () => {
     const tags = getTags()
     expect(tags).toHaveLength(3)
 
+    // Tags are wrapped in a group with accessible label
+    const group = screen.getByRole("group", { name: "Selected values" })
+    expect(group).toBeVisible()
+
     // Each tag has correct semantics
     expect(tags[0]).toHaveAttribute("aria-label", "alpha")
-    expect(tags[0]).toHaveAttribute("aria-roledescription", "tag")
     expect(tags[1]).toHaveAttribute("aria-label", "beta")
 
     // Only first tag is tabbable (roving tabindex)
@@ -1256,7 +1259,7 @@ describe("Multiselect tag accessibility", () => {
     expect(screen.getByRole("combobox")).toHaveFocus()
   })
 
-  it("removes a tag with Delete/Backspace and moves focus appropriately", async () => {
+  it("removes a tag with Delete key", async () => {
     const user = userEvent.setup()
     const props = getProps({
       default: [0, 1, 2],
@@ -1276,6 +1279,82 @@ describe("Multiselect tag accessibility", () => {
       { fromUi: true },
       undefined
     )
+  })
+
+  it("maintains correct tabindex after Backspace removal", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [0, 1, 2],
+      options: ["a", "b", "c"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { rerender } = render(<Multiselect {...props} />)
+
+    // Navigate to the middle tag via keyboard (ArrowRight from first)
+    let tags = getTags()
+    act(() => tags[0].focus())
+    await user.keyboard("{ArrowRight}")
+    expect(tags[1]).toHaveFocus()
+    expect(tags[1]).toHaveAttribute("tabindex", "0")
+
+    // Backspace removes focused tag; left neighbor gets tabindex=0
+    await user.keyboard("{Backspace}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      ["a", "c"],
+      { fromUi: true },
+      undefined
+    )
+
+    // Simulate rerender with updated value
+    const updatedProps = getProps({
+      default: [0, 2],
+      options: ["a", "b", "c"],
+    })
+    rerender(<Multiselect {...updatedProps} />)
+
+    tags = getTags()
+    expect(tags).toHaveLength(2)
+    // After removing middle tag, the right neighbor (now at index 1) is tabbable
+    expect(tags[0]).toHaveAttribute("tabindex", "-1")
+    expect(tags[1]).toHaveAttribute("tabindex", "0")
+  })
+
+  it("moves tabindex to left neighbor when last tag is Backspace-removed", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [0, 1, 2],
+      options: ["a", "b", "c"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { rerender } = render(<Multiselect {...props} />)
+
+    // Navigate to the last tag
+    let tags = getTags()
+    act(() => tags[0].focus())
+    await user.keyboard("{End}")
+    expect(tags[2]).toHaveFocus()
+
+    // Backspace last tag — no right neighbor, so left gets focus
+    await user.keyboard("{Backspace}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      ["a", "b"],
+      { fromUi: true },
+      undefined
+    )
+
+    const updatedProps = getProps({
+      default: [0, 1],
+      options: ["a", "b", "c"],
+    })
+    rerender(<Multiselect {...updatedProps} />)
+
+    tags = getTags()
+    expect(tags).toHaveLength(2)
+    // Left neighbor (index 1) should now be tabbable
+    expect(tags[0]).toHaveAttribute("tabindex", "-1")
+    expect(tags[1]).toHaveAttribute("tabindex", "0")
   })
 
   it("moves focus to input when the last tag is removed", async () => {

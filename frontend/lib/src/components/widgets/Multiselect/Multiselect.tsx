@@ -488,8 +488,9 @@ const Multiselect: FC<Props> = props => {
           const nextFocus = tags[idx + 1] ?? tags[idx - 1]
           handleTagGroupRemove(new Set([tagValue]))
           if (nextFocus && nextFocus !== tag) {
-            const nextIdx = tags.indexOf(nextFocus)
-            focusedTagIndexRef.current = e.key === "Delete" ? idx : nextIdx
+            // After removal, right neighbor slides to idx; left stays at idx-1
+            focusedTagIndexRef.current =
+              nextFocus === tags[idx + 1] ? idx : idx - 1
             nextFocus.tabIndex = 0
             nextFocus.focus()
           } else {
@@ -718,34 +719,39 @@ const Multiselect: FC<Props> = props => {
               ref={tagsContainerRef}
               onScroll={handleTagsScroll}
             >
-              {value.map((v, idx) => (
-                <StyledTag
-                  key={v}
-                  tabIndex={
-                    !disabled && idx === focusedTagIndexRef.current ? 0 : -1
-                  }
-                  aria-label={v}
-                  aria-roledescription="tag"
-                  $disabled={disabled}
-                  data-tag=""
-                  data-tag-index={idx}
-                  onKeyDown={disabled ? undefined : handleTagKeyDown}
-                >
-                  <StyledTagText title={v}>{v}</StyledTagText>
-                  {!disabled && (
-                    <StyledTagRemoveButton
-                      aria-label={`Remove ${v}`}
-                      tabIndex={-1}
-                      onClick={e => {
-                        e.stopPropagation()
-                        handleTagGroupRemove(new Set([v]))
-                      }}
+              {value.length > 0 && (
+                <span role="group" aria-label="Selected values">
+                  {value.map((v, idx) => (
+                    <StyledTag
+                      key={v}
+                      tabIndex={
+                        !disabled && idx === focusedTagIndexRef.current
+                          ? 0
+                          : -1
+                      }
+                      aria-label={v}
+                      $disabled={disabled}
+                      data-tag=""
+                      data-tag-index={idx}
+                      onKeyDown={disabled ? undefined : handleTagKeyDown}
                     >
-                      <TagRemoveIcon />
-                    </StyledTagRemoveButton>
-                  )}
-                </StyledTag>
-              ))}
+                      <StyledTagText title={v}>{v}</StyledTagText>
+                      {!disabled && (
+                        <StyledTagRemoveButton
+                          aria-label={`Remove ${v}`}
+                          tabIndex={-1}
+                          onClick={e => {
+                            e.stopPropagation()
+                            handleTagGroupRemove(new Set([v]))
+                          }}
+                        >
+                          <TagRemoveIcon />
+                        </StyledTagRemoveButton>
+                      )}
+                    </StyledTag>
+                  ))}
+                </span>
+              )}
               <StyledFilterInput
                 ref={inputRef}
                 placeholder={value.length === 0 ? placeholder : ""}
