@@ -64,6 +64,7 @@ import {
   SELECT_MATCHES_ID,
   useMultiselectFiltering,
 } from "~lib/hooks/useMultiselectFiltering"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isMobile } from "~lib/util/isMobile"
 import {
@@ -153,37 +154,22 @@ const DropdownController = memo<{
 })
 DropdownController.displayName = "DropdownController"
 
-// TODO(mgbarnes): Replace manual tags with RAC TagGroup for arrow-key
-// navigation and Delete-to-remove on any focused tag.
-const TagRemoveButton = memo<{
-  value: string
-  onRemove: (value: string) => void
-}>(({ value, onRemove }) => (
-  <StyledTagRemoveButton
-    aria-label={`Remove ${value}`}
-    tabIndex={-1}
-    onClick={e => {
-      e.stopPropagation()
-      onRemove(value)
-    }}
+const TagRemoveIcon: FC = () => (
+  <svg
+    aria-hidden="true"
+    height="0.5em"
+    width="0.5em"
+    viewBox="0 0 10 10"
+    xmlns="http://www.w3.org/2000/svg"
   >
-    <svg
-      aria-hidden="true"
-      height="0.5em"
-      width="0.5em"
-      viewBox="0 0 10 10"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M9 1L5 5M1 9L5 5M5 5L1 1M5 5L9 9"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="2"
-      />
-    </svg>
-  </StyledTagRemoveButton>
-))
-TagRemoveButton.displayName = "TagRemoveButton"
+    <path
+      d="M9 1L5 5M1 9L5 5M5 5L1 1M5 5L9 9"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="2"
+    />
+  </svg>
+)
 
 /** Render a single option. Cast required: styled(ListBox) erases the generic item type. */
 const renderOption = (item: unknown): ReactElement => {
@@ -217,6 +203,7 @@ const Multiselect: FC<Props> = props => {
 
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const scrollbarGutterSize = useScrollbarGutterSize()
   const tagsContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const scrollTopRef = useRef(0)
@@ -451,13 +438,77 @@ const Multiselect: FC<Props> = props => {
     }
   }, [])
 
-  const handleRemoveTag = useCallback(
-    (tagValue: string): void => {
-      const newValue = valueRef.current.filter(v => v !== tagValue)
+  const handleTagGroupRemove = useCallback(
+    (keys: Set<Key>): void => {
+      const keysToRemove = new Set([...keys].map(String))
+      const newValue = valueRef.current.filter(v => !keysToRemove.has(v))
       valueRef.current = newValue
       setValueWithSource({ value: newValue, fromUi: true })
     },
     [setValueWithSource]
+  )
+
+  const handleTagKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLSpanElement>): void => {
+      const tag = e.currentTarget
+      const container = tag.parentElement
+      if (!container) return
+
+      const tags = Array.from(
+        container.querySelectorAll<HTMLElement>("[data-tag]")
+      )
+      const idx = tags.indexOf(tag)
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault()
+        const prev = tags[idx - 1]
+        if (prev) {
+          tag.tabIndex = -1
+          prev.tabIndex = 0
+          prev.focus()
+        }
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault()
+        const next = tags[idx + 1]
+        if (next) {
+          tag.tabIndex = -1
+          next.tabIndex = 0
+          next.focus()
+        } else {
+          inputRef.current?.focus()
+        }
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault()
+        const tagValue = value[idx]
+        if (tagValue !== undefined) {
+          const nextFocus = tags[idx + 1] ?? tags[idx - 1]
+          handleTagGroupRemove(new Set([tagValue]))
+          if (nextFocus && nextFocus !== tag) {
+            nextFocus.tabIndex = 0
+            nextFocus.focus()
+          } else {
+            inputRef.current?.focus()
+          }
+        }
+      } else if (e.key === "Home") {
+        e.preventDefault()
+        const first = tags[0]
+        if (first && first !== tag) {
+          tag.tabIndex = -1
+          first.tabIndex = 0
+          first.focus()
+        }
+      } else if (e.key === "End") {
+        e.preventDefault()
+        const last = tags[tags.length - 1]
+        if (last && last !== tag) {
+          tag.tabIndex = -1
+          last.tabIndex = 0
+          last.focus()
+        }
+      }
+    },
+    [handleTagGroupRemove, value]
   )
 
   const handleClearAll = useCallback((): void => {
@@ -651,13 +702,34 @@ const Multiselect: FC<Props> = props => {
           >
             <StyledTagsContainer
               ref={tagsContainerRef}
+              role="list"
+              aria-label="Selected values"
               onScroll={handleTagsScroll}
             >
-              {value.map(v => (
-                <StyledTag key={v} $disabled={disabled} data-tag="">
+              {value.map((v, idx) => (
+                <StyledTag
+                  key={v}
+                  role="listitem"
+                  tabIndex={!disabled && idx === 0 ? 0 : -1}
+                  aria-label={v}
+                  aria-roledescription="tag"
+                  $disabled={disabled}
+                  data-tag=""
+                  data-tag-index={idx}
+                  onKeyDown={disabled ? undefined : handleTagKeyDown}
+                >
                   <StyledTagText title={v}>{v}</StyledTagText>
                   {!disabled && (
-                    <TagRemoveButton value={v} onRemove={handleRemoveTag} />
+                    <StyledTagRemoveButton
+                      aria-label={`Remove ${v}`}
+                      tabIndex={-1}
+                      onClick={e => {
+                        e.stopPropagation()
+                        handleTagGroupRemove(new Set([v]))
+                      }}
+                    >
+                      <TagRemoveIcon />
+                    </StyledTagRemoveButton>
                   )}
                 </StyledTag>
               ))}
@@ -703,7 +775,12 @@ const Multiselect: FC<Props> = props => {
             isNonModal
             $isInSidebar={isInSidebar}
             offset={0}
-            style={floatingStyles}
+            style={
+              {
+                ...floatingStyles,
+                "--scrollbar-gutter-size": `${scrollbarGutterSize}px`,
+              } as React.CSSProperties
+            }
           >
             <Virtualizer
               layout={ListLayout}
