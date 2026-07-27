@@ -40,13 +40,24 @@ export class BlockNode implements AppNode {
   // The hash of the script that created this block.
   public readonly activeScriptHash: string
 
+  /**
+   * Whether this block occupies a slot that was reserved by an `st.empty()`
+   * placeholder (i.e. it was written into an `empty` element). This is used to
+   * decide whether a re-sent `empty` from a later run should preserve this node
+   * instead of overwriting it. It is only true for content that genuinely fills
+   * an `st.empty()` slot, so unrelated content that merely shares the same delta
+   * path (e.g. after a positional shift) is not preserved.
+   */
+  public readonly isEmptySlotContent: boolean
+
   public constructor(
     activeScriptHash: string,
     children?: AppNode[],
     deltaBlock?: BlockProto,
     scriptRunId?: string,
     fragmentId?: string,
-    deltaMsgReceivedAt?: number
+    deltaMsgReceivedAt?: number,
+    isEmptySlotContent = false
   ) {
     this.activeScriptHash = activeScriptHash
     this.children = children ?? []
@@ -54,6 +65,7 @@ export class BlockNode implements AppNode {
     this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
     this.fragmentId = fragmentId
     this.deltaMsgReceivedAt = deltaMsgReceivedAt
+    this.isEmptySlotContent = isEmptySlotContent
   }
 
   /** True if this Block has no children. */

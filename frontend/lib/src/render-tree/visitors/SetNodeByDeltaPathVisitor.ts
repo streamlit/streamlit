@@ -163,7 +163,8 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
       node.deltaBlock,
       this.scriptRunId,
       node.fragmentId,
-      node.deltaMsgReceivedAt
+      node.deltaMsgReceivedAt,
+      node.isEmptySlotContent
     )
   }
 
