@@ -381,16 +381,14 @@ const Multiselect: FC<Props> = props => {
       // selectedKeys from RAC contains the full new selection set (option IDs)
       // We need to map IDs back to values. Bulk-action and creatable keys are
       // already handled by early returns above, so only filter undefined here.
+      const optionById = new Map(displayOptions.map(o => [o.id, o.value]))
       const newValues = selectedKeys
-        .map(id => {
-          const opt = displayOptions.find(o => o.id === id)
-          return opt?.value
-        })
+        .map(id => optionById.get(id))
         .filter((v): v is string => v !== undefined)
 
       // Merge with existing values that aren't in the current display
       // (already-selected items not shown in the filtered list)
-      const displayedValues = new Set(displayOptions.map(o => o.value))
+      const displayedValues = new Set(optionById.values())
       const preservedValues = value.filter(v => !displayedValues.has(v))
       const finalValue = [...preservedValues, ...newValues]
 

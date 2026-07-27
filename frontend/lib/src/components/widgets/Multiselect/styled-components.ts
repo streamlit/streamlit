@@ -242,6 +242,7 @@ export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
     "&[data-entering], &[data-exiting]": {
       opacity: 0,
     },
+    // Override RAC's imperative inline styles — Floating UI controls positioning instead.
     ...({
       position: "fixed !important",
       top: "0 !important",
