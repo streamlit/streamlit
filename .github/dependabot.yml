@@ -57,6 +57,9 @@ updates:
       - dependency-name: "@types/node"
         # Our types should match the version of node we're using as defined in `.nvmrc`
         versions: [">=25.0.0"]
+      - dependency-name: "color2k"
+        # Our Yarn patch only applies to color2k 2.0.3.
+        versions: [">=2.0.4"]
 
     groups:
       deck-gl:
@@ -207,6 +210,13 @@ updates:
       - "never-stale"
 
     groups:
+      github-actions-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
       codeql-action:
         patterns:
           - "github/codeql-action/init"

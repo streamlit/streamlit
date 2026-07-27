@@ -244,6 +244,33 @@ def test_install_skills_handler_reports_failure() -> None:
     assert not response.HasField("install_skills")
 
 
+def test_install_skills_handler_does_not_leak_os_error_path() -> None:
+    """A non-``ClickException`` (e.g. ``OSError``) yields a generic message.
+
+    ``click.ClickException`` messages are developer-authored and safe to show in
+    the browser toast, but a raw ``OSError`` can embed an absolute server path.
+    The handler must forward only the former verbatim and replace anything else
+    with a generic string, so a server path can never leak into the nudge.
+    """
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch(
+            "streamlit.web.skills.install_skills",
+            side_effect=OSError("/absolute/server/path/.agents/skills is not writable"),
+        ),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_msg == "Failed to install skills."
+    assert "/absolute/server/path" not in response.error_msg
+    assert not response.HasField("install_skills")
+
+
 def test_install_skills_handler_refuses_without_agent_harness() -> None:
     """The install ACTION is gated on safety, not the nudge's display predicate:
     with no agent harness present (and not headless) the request is anomalous,

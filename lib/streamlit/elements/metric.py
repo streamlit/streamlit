@@ -28,7 +28,12 @@ from streamlit.elements.lib.utils import (
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import AnyNumber, clean_text, from_number
+from streamlit.string_util import (
+    AnyNumber,
+    clean_text,
+    from_number,
+    validate_icon_or_emoji,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -99,6 +104,7 @@ class MetricMixin:
         delta_color: DeltaColor = "normal",
         *,
         help: str | None = None,
+        icon: str | None = None,
         label_visibility: LabelVisibility = "visible",
         border: bool = False,
         width: Width = "stretch",
@@ -141,6 +147,7 @@ class MetricMixin:
             to the delta, oriented according to its sign:
 
             - If the delta is ``None`` or an empty string, no arrow is shown.
+            - If the delta is zero, no arrow is shown and the delta is gray.
             - If the delta is a negative number or starts with a minus sign,
               the arrow points down and the delta is red.
             - Otherwise, the arrow points up and the delta is green.
@@ -155,10 +162,10 @@ class MetricMixin:
             The color of the delta and chart. This can be one of the following:
 
             - ``"normal"`` (default): The color is red when the delta is
-              negative and green otherwise.
+              negative, green when positive, and gray when zero.
             - ``"inverse"``: The color is green when the delta is negative and
-              red otherwise. This is useful when a negative change is
-              considered good, like a decrease in cost.
+              red when positive. Zero deltas are gray. This is useful when a
+              negative change is considered good, like a decrease in cost.
             - ``"off"``: The color is gray regardless of the delta.
             - A named color from the basic palette: The chart and delta are the
               specified color regardless of their value. This can be one of the
@@ -174,6 +181,25 @@ class MetricMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
+        icon : str or None
+            An optional emoji or icon to display next to the metric label. If
+            ``icon`` is ``None`` (default), no icon is displayed. If ``icon``
+            is a string, the following options are valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -235,7 +261,7 @@ class MetricMixin:
             one of the following strings:
 
             - ``"auto"`` (default): The arrow direction follows the sign of
-              ``delta``.
+              ``delta``, and no arrow is shown if ``delta`` is zero.
             - ``"up"`` or ``"down"``: The arrow is forced to point in the
               specified direction.
             - ``"off"``: No arrow is shown, but the delta value remains
@@ -365,6 +391,20 @@ class MetricMixin:
                     https://doc-metric-example5.streamlit.app/
                     height: 300px
 
+                **Example 6: Show an icon**
+
+                Add an icon before the label with the ``icon`` parameter.
+
+                >>> import streamlit as st
+                >>>
+                >>> st.metric(
+                ...     "Temperature", "70 °F", "1.2 °F", icon=":material/thermostat:"
+                ... )
+
+                .. output::
+                    https://doc-metric-example6.streamlit.app/
+                    height: 210px
+
         """
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -375,6 +415,7 @@ class MetricMixin:
         metric_proto.show_border = border
         if help is not None:
             metric_proto.help = dedent(help)
+        metric_proto.icon = validate_icon_or_emoji(icon)
 
         color_and_direction = _determine_delta_color_and_direction(
             cast("DeltaColor", clean_text(delta_color)), delta
@@ -486,12 +527,13 @@ def _determine_delta_color_and_direction(
             direction=MetricProto.MetricDirection.NONE,
         )
 
-    # Determine direction based on delta sign
-    cd_direction = (
-        MetricProto.MetricDirection.DOWN
-        if _is_negative_delta(delta)
-        else MetricProto.MetricDirection.UP
-    )
+    # Determine direction: neutral for zero, down for negative, up otherwise
+    if _is_zero_delta(delta):
+        cd_direction = MetricProto.MetricDirection.NONE
+    elif _is_negative_delta(delta):
+        cd_direction = MetricProto.MetricDirection.DOWN
+    else:
+        cd_direction = MetricProto.MetricDirection.UP
 
     # Handle explicit color names
     if delta_color in _DELTA_COLOR_TO_PROTO:
@@ -502,7 +544,9 @@ def _determine_delta_color_and_direction(
 
     # Handle "normal", "inverse", "off" modes
     is_negative = cd_direction == MetricProto.MetricDirection.DOWN
-    if delta_color == "normal":
+    if cd_direction == MetricProto.MetricDirection.NONE:
+        cd_color = MetricProto.MetricColor.GRAY
+    elif delta_color == "normal":
         cd_color = (
             MetricProto.MetricColor.RED
             if is_negative
@@ -525,3 +569,12 @@ def _determine_delta_color_and_direction(
 
 def _is_negative_delta(delta: Delta) -> bool:
     return dedent(str(delta)).startswith("-")
+
+
+def _is_zero_delta(delta: Delta) -> bool:
+    # Only the literal string "0" is a zero delta; other numeric-looking strings
+    # (e.g. "0.0", "0%") stay positive. String deltas are dedented first to match
+    # the rendered value (see _parse_delta), so " 0" is treated the same as "0".
+    if isinstance(delta, str):
+        return dedent(delta) == "0"
+    return bool(delta == 0)

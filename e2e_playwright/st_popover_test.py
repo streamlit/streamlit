@@ -17,7 +17,11 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -35,7 +39,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(27)
+    expect(popover_elements).to_have_count(29)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -117,6 +121,60 @@ def test_popover_columns(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         columns_container,
         name="st_popover-columns",
+    )
+
+
+def test_popover_in_sidebar_stays_within_viewport(app: Page):
+    """A popover opened inside the sidebar must render fully within the browser
+    viewport — the sidebar's `overflow: auto` must not clip or force-flip the
+    popover body off-screen. Regression test for
+    https://github.com/streamlit/streamlit/issues/9387.
+
+    Uses a small viewport so the popover body (which has content taller than
+    the available space) must be clamped by the `size` middleware to fit
+    within the viewport. Without the fix, shift/flip would treat the
+    sidebar's `overflow: auto` container as the boundary and render the
+    popover off-screen.
+    """
+    # Constrain viewport height so the popover content must be clamped to
+    # fit — this is what actually exercises the size middleware.
+    app.set_viewport_size({"width": 1024, "height": 600})
+
+    popover_body = open_popover(app, "popover 5 (in sidebar)")
+    expect_markdown(popover_body, "Popover in sidebar with dataframe")
+
+    viewport = app.viewport_size
+    assert viewport is not None, "viewport_size must be set for this test"
+
+    body_box = popover_body.bounding_box()
+    assert body_box is not None, "popover body must have a bounding box"
+
+    # The popover body's rect must fit entirely inside the viewport. Before the
+    # #9387 fix, shift/flip treated the sidebar's `overflow: auto` container as
+    # the boundary and squished the body against the sidebar's left edge (or
+    # flipped it off-screen), producing negative `x` / clipped `y` values.
+    # A 1px epsilon guards against subpixel layout differences across browsers.
+    epsilon = 1
+    assert body_box["x"] >= -epsilon, f"popover body extends off left edge: {body_box}"
+    assert body_box["y"] >= -epsilon, f"popover body extends off top edge: {body_box}"
+    assert body_box["x"] + body_box["width"] <= viewport["width"] + epsilon, (
+        f"popover body extends past right edge: {body_box}, viewport={viewport}"
+    )
+    assert body_box["y"] + body_box["height"] <= viewport["height"] + epsilon, (
+        f"popover body extends past bottom edge: {body_box}, viewport={viewport}"
+    )
+
+    # The popover body's minimum width (20rem = 320px) is wider than the
+    # default sidebar, so it MUST extend past the sidebar's right edge to
+    # render its content. This is the "escape the sidebar" behavior we want.
+    sidebar = app.get_by_test_id("stSidebar")
+    sidebar_box = sidebar.bounding_box()
+    assert sidebar_box is not None
+    assert (
+        body_box["x"] + body_box["width"] > sidebar_box["x"] + sidebar_box["width"]
+    ), (
+        "popover body must extend beyond the sidebar (it is portalled to body); "
+        f"body={body_box}, sidebar={sidebar_box}"
     )
 
 
@@ -419,6 +477,104 @@ def test_popover_menu_style_icons_hide_chevron(
 
     # Snapshot the container with all three menu-style icon popovers
     assert_snapshot(container, name="st_popover-menu_style_icons")
+
+
+def test_multiselect_dropdown_renders_above_popover_body(app: Page):
+    """A BaseWeb dropdown (multiselect) opened inside a popover must render above
+    the popover body, not behind it.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15959: the
+    floating-ui popover body and the BaseWeb overlay layer host both resolved to
+    the `popup` z-index, so the popover body (mounted later) painted over the
+    dropdown and hid the options.
+    """
+    popover_container = open_popover(app, "popover 20 (multiselect stacking)")
+    multiselect = popover_container.get_by_test_id("stMultiSelect")
+    expect(multiselect).to_be_visible()
+
+    # Open the multiselect dropdown.
+    multiselect.locator("input").first.click()
+    first_option = app.get_by_role("option", name="option_1", exact=True)
+    expect(first_option).to_be_visible()
+
+    # The option must be the top-most element at its own center. If the popover
+    # body painted over it (the bug), elementFromPoint returns the popover body
+    # instead of the option.
+    def option_is_on_top() -> bool:
+        return bool(
+            first_option.evaluate(
+                """(el) => {
+                const rect = el.getBoundingClientRect();
+                const topEl = document.elementFromPoint(
+                    rect.left + rect.width / 2,
+                    rect.top + rect.height / 2
+                );
+                return el === topEl || el.contains(topEl);
+            }"""
+            )
+        )
+
+    wait_until(app, lambda: option_is_on_top() is True)
+
+    # Selecting the option must work (would fail the click hit-test if occluded).
+    first_option.click()
+    wait_for_app_run(app)
+    expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(1)
+
+
+def test_date_input_selection_does_not_dismiss_popover(app: Page):
+    """Selecting a day in a date_input calendar opened inside a popover must not
+    dismiss the popover.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15959: the
+    popover read the click target at `click` time, but BaseWeb closes the
+    calendar synchronously on selection, detaching the clicked day before the
+    handler ran — so the popover treated it as an outside click and closed.
+    """
+    popover_container = open_popover(app, "popover 21 (date dismissal)")
+    date_input = popover_container.get_by_test_id("stDateInput")
+    expect(date_input).to_be_visible()
+
+    # Open the calendar.
+    date_input.locator("input").first.click()
+    calendar = app.locator('[data-baseweb="calendar"]')
+    expect(calendar).to_be_visible()
+
+    # Select a different day.
+    calendar.get_by_text("15", exact=True).first.click()
+    wait_for_app_run(app)
+
+    # The popover must still be open after the day selection.
+    expect(popover_container).to_be_visible()
+    expect(date_input).to_be_visible()
+
+
+def test_selectbox_selection_does_not_dismiss_popover(app: Page):
+    """Selecting an option in a React Aria selectbox opened inside a popover must
+    not dismiss the popover.
+
+    The selectbox dropdown (migrated to React Aria Components) portals to
+    document.body and is not tagged as a Streamlit overlay root, so it is not
+    matched by the popover's outside-click exclusions. It still does not dismiss
+    the popover because React Aria commits the selection via press events and
+    closes its own dropdown without an outside `click` reaching the popover's
+    document-level handler. This guards that contract for
+    https://github.com/streamlit/streamlit/issues/15959.
+    """
+    popover_container = open_popover(app, "popover 3 (with widgets)")
+    selectbox = popover_container.get_by_test_id("stSelectbox")
+    expect(selectbox).to_be_visible()
+
+    # Open the dropdown and select an option.
+    selectbox.locator("input").first.click()
+    option = app.get_by_role("option", name="b", exact=True)
+    expect(option).to_be_visible()
+    option.click()
+    wait_for_app_run(app)
+
+    # The popover must still be open, with the selection committed.
+    expect(popover_container).to_be_visible()
+    expect(selectbox.locator("input")).to_have_value("b")
 
 
 def test_programmatic_close_does_not_reopen_other_popover(app: Page):

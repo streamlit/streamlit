@@ -420,8 +420,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         st.image(
             imgs,
             caption=["some caption"] * 3,
-            width=200,
-            use_column_width=True,
+            width="stretch",
             clamp=True,
             output_format="PNG",
         )
@@ -465,17 +464,6 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         for idx, url in enumerate(urls):
             assert el.imgs.imgs[idx].caption == "some caption"
             assert el.imgs.imgs[idx].url == url
-
-    def test_st_image_bad_width(self):
-        """Test st.image with bad width."""
-        st.image(
-            Image.new("RGB", (64, 64), color="red"),
-            use_column_width=False,
-            width=-1234,
-        )
-
-        el = self.get_delta_from_queue().new_element
-        assert el.width_config.use_content
 
     def test_st_image_default_width(self):
         """Test st.image without specifying a use_container_width."""
@@ -521,18 +509,6 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         assert el.width_config.pixel_width == 100
-
-    def test_st_image_use_container_width_and_use_column_width(self):
-        """Test st.image with use_container_width and use_column_width."""
-        img = Image.new("RGB", (64, 64), color="red")
-
-        with pytest.raises(StreamlitAPIException) as e:
-            st.image(img, use_container_width=True, use_column_width=True)
-
-        assert (
-            "`use_container_width` and `use_column_width` cannot be set at the same time."
-            in str(e.value)
-        )
 
     def test_st_image_width_stretch(self):
         """Test st.image with width='stretch'."""
