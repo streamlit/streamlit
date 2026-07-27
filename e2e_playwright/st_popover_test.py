@@ -189,7 +189,7 @@ def test_popover_stays_within_narrow_viewport(app: Page):
     iframe. The `size` middleware now clamps `max-width` to the available
     space at the chosen placement so the popover always fits.
     """
-    # Simulate a narrow oembed iframe (e.g. a Medium post).
+    # Simulate a narrow oEmbed iframe (e.g. a Medium post).
     app.set_viewport_size({"width": 520, "height": 800})
 
     popover_body = open_popover(app, "popover 3 (with widgets)")

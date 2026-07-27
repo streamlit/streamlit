@@ -215,7 +215,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   //    and below the trigger, `flip` picks the less-overflowing side and the
   //    popover extends off-screen (bug in #9387). Without the width clamp,
   //    the popover's baseline `maxWidth: contentMaxWidth` (~704px) can
-  //    exceed a narrow oembed iframe's width, so `shift` shoves it against
+  //    exceed a narrow oEmbed iframe's width, so `shift` shoves it against
   //    an edge and the far side is clipped by the iframe (bug in #9340).
   //    `size` sits after `flip` so it constrains dimensions relative to
   //    whichever side `flip` landed on; the internal `overflow: auto` on
