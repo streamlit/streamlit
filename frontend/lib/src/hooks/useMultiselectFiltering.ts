@@ -28,9 +28,8 @@ export const SELECT_MATCHES_ID = "__select_matches__"
 export const CREATABLE_ID = "__creatable__"
 
 /**
- * Threshold at or above which "Select all" / "Select X matches" is disabled.
- * Selecting all items at once with very large option lists causes
- * severe performance issues (browser freezes, large serialization payloads).
+ * Disables bulk actions ("Select all" / "Select X matches") to avoid browser
+ * freezes and large serialization payloads on very large option lists.
  */
 const SELECT_ALL_THRESHOLD = 1000
 
@@ -57,6 +56,7 @@ interface UseMultiselectFilteringResult {
   resolvedFilterMode: streamlit.SelectWidgetFilterMode
 }
 
+/** Computes the filtered and decorated option list including bulk actions and creatable entries. */
 export function useMultiselectFiltering({
   options,
   selectedValues,

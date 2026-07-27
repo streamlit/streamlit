@@ -31,6 +31,7 @@ import {
 } from "~lib/components/shared/Base/styled-components"
 import type { EmotionTheme } from "~lib/theme/types"
 
+/** Right padding that shrinks when a scrollbar appears, keeping content aligned. */
 function getRightInset(theme: EmotionTheme): string {
   return `max(0px, calc(${theme.sizes.tagMarginInsideBorder} - var(--scrollbar-gutter-size, 0px)))`
 }
@@ -307,9 +308,6 @@ export const StyledListBoxItem = styled(ListBoxItem, {
   outline: "none",
   position: "relative",
   "&[data-hovered] [data-item-hl], &[data-focused] [data-item-hl]": {
-    backgroundColor: theme.colors.darkenedBgMix15,
-  },
-  "&[data-selected] [data-item-hl]": {
     backgroundColor: theme.colors.darkenedBgMix15,
   },
   "&[data-disabled]": {

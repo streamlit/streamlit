@@ -152,6 +152,8 @@ const DropdownController = memo<{
 })
 DropdownController.displayName = "DropdownController"
 
+// TODO(mgbarnes): Replace manual tags with RAC TagGroup for arrow-key
+// navigation and Delete-to-remove on any focused tag.
 const TagRemoveButton = memo<{
   value: string
   onRemove: (value: string) => void
@@ -307,6 +309,7 @@ const Multiselect: FC<Props> = props => {
     [theme.sizes.dropdownItemHeight]
   )
 
+  // maxSelections === 0 means "no limit"
   const noResultsMsg = useMemo(() => {
     if (element.maxSelections === 0) return "No results"
     if (value.length >= element.maxSelections) {
@@ -376,19 +379,14 @@ const Multiselect: FC<Props> = props => {
 
       // Normal toggle: compute the diff
       // selectedKeys from RAC contains the full new selection set (option IDs)
-      // We need to map IDs back to values
+      // We need to map IDs back to values. Bulk-action and creatable keys are
+      // already handled by early returns above, so only filter undefined here.
       const newValues = selectedKeys
         .map(id => {
           const opt = displayOptions.find(o => o.id === id)
           return opt?.value
         })
-        .filter(
-          (v): v is string =>
-            v !== undefined &&
-            v !== SELECT_ALL_ID &&
-            v !== SELECT_MATCHES_ID &&
-            v !== CREATABLE_ID
-        )
+        .filter((v): v is string => v !== undefined)
 
       // Merge with existing values that aren't in the current display
       // (already-selected items not shown in the filtered list)
@@ -495,19 +493,16 @@ const Multiselect: FC<Props> = props => {
       }
 
       // Creatable Enter: commit typed text as a new option.
-      // If the user arrowed to a real option (focusedKey is a regular item),
-      // let RAC handle the selection via onChange instead.
+      // Only create when no item is focused or CREATABLE_ID is focused.
+      // If focus is on a real option or bulk action, let RAC handle it.
       if (e.key === "Enter" && (element.acceptNewOptions ?? false)) {
         const currentInput = inputValueRef.current
         if (currentInput) {
           const focused = focusedKeyRef.current
-          const isRealOptionFocused =
-            notNullOrUndefined(focused) &&
-            String(focused) !== CREATABLE_ID &&
-            String(focused) !== SELECT_ALL_ID &&
-            String(focused) !== SELECT_MATCHES_ID
+          const shouldCreate =
+            !notNullOrUndefined(focused) || String(focused) === CREATABLE_ID
 
-          if (!isRealOptionFocused) {
+          if (shouldCreate) {
             const alreadyExists =
               element.options.some(o => o === currentInput) ||
               value.includes(currentInput)

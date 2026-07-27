@@ -588,6 +588,34 @@ describe("Multiselect widget", () => {
     expect(screen.queryByText("Add: mango")).not.toBeInTheDocument()
   })
 
+  it("activates bulk action via Enter when acceptNewOptions is true", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "banana", "cherry"],
+      acceptNewOptions: true,
+    })
+    render(<Multiselect {...props} />)
+    const input = screen.getByRole("combobox")
+
+    // Open dropdown and type a filter that matches multiple options
+    await user.type(input, "a")
+
+    // "Select X matches" bulk action should be visible
+    const bulkAction = screen.getByText(/Select \d+ matches/)
+    expect(bulkAction).toBeVisible()
+
+    // Press ArrowDown to focus the bulk action, then Enter to activate it
+    await user.keyboard("{ArrowDown}{Enter}")
+
+    // All matching options should now be selected as tags
+    expect(screen.getByText("apple")).toBeVisible()
+    expect(screen.getByText("banana")).toBeVisible()
+
+    // The input should NOT have created "a" as a custom value
+    expect(screen.queryByText("a", { exact: true })).not.toBeInTheDocument()
+  })
+
   it("predictably produces case sensitive matches", async () => {
     const user = userEvent.setup()
     const props = getProps({
