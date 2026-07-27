@@ -243,6 +243,14 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         const clampedWidth = Math.max(Math.floor(availableWidth), 0)
         elements.floating.style.maxHeight = `${clampedHeight}px`
         elements.floating.style.maxWidth = `${clampedWidth}px`
+        // StyledPopoverBody has an intrinsic `min-width`
+        // (`theme.sizes.minPopupWidth`, 20rem/320px). On viewports narrower
+        // than that, the min-width overrides `max-width` and the popover
+        // still overflows. Cap `min-width` at the clamped width in that case
+        // so the viewport clamp actually wins.
+        const minPopupWidthPx = convertRemToPx(theme.sizes.minPopupWidth)
+        elements.floating.style.minWidth =
+          clampedWidth < minPopupWidthPx ? `${clampedWidth}px` : ""
       },
     })
     if (!isInSidebar) {
@@ -258,7 +266,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       shiftOptions: { padding: shiftPadding, boundary },
       extraMiddleware: [sizeMiddleware],
     }
-  }, [open, theme.spacing.twoXS, isInSidebar])
+  }, [open, theme.spacing.twoXS, theme.sizes.minPopupWidth, isInSidebar])
 
   // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
   // fully replaced with FloatingPortal here because Popover has no collection

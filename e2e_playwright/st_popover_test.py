@@ -218,6 +218,32 @@ def test_popover_stays_within_narrow_viewport(app: Page):
     )
 
 
+def test_popover_fits_viewport_narrower_than_min_width(app: Page):
+    """The popover's baseline `min-width` (`theme.sizes.minPopupWidth`, 20rem
+    / 320px) is wider than a very narrow embed viewport. Without a matching
+    `min-width` clamp the styled-component's min-width overrides the viewport
+    `max-width` clamp and the body still overflows. Regression guard for the
+    P1 finding on https://github.com/streamlit/streamlit/pull/16173.
+    """
+    # 300px is narrower than the popover's 320px baseline min-width.
+    app.set_viewport_size({"width": 300, "height": 800})
+
+    popover_body = open_popover(app, "popover 3 (with widgets)")
+    expect_markdown(popover_body, "Hello World 👋")
+
+    viewport = app.viewport_size
+    assert viewport is not None, "viewport_size must be set for this test"
+
+    body_box = popover_body.bounding_box()
+    assert body_box is not None, "popover body must have a bounding box"
+
+    epsilon = 1
+    assert body_box["x"] >= -epsilon, f"popover body extends off left edge: {body_box}"
+    assert body_box["x"] + body_box["width"] <= viewport["width"] + epsilon, (
+        f"popover body extends past right edge: {body_box}, viewport={viewport}"
+    )
+
+
 def test_popover_container_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
