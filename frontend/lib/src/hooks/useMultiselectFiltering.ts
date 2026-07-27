@@ -112,7 +112,7 @@ export function useMultiselectFiltering({
 
     const result: MultiselectOption[] = []
 
-    // "Select all" / "Select X matches" pseudo-option
+    // Add a bulk action to select all currently displayed options.
     if (filteredOptions.length > 1 && options.length < SELECT_ALL_THRESHOLD) {
       if (filterActive && inputValue.trim()) {
         result.push({
@@ -133,7 +133,7 @@ export function useMultiselectFiltering({
 
     result.push(...filteredOptions)
 
-    // "Add: ..." creatable pseudo-option
+    // Allow the user to create a new option when the input doesn't match an existing one.
     if (acceptNewOptions && filterActive && inputValue) {
       const alreadyExists =
         options.some(o => o === inputValue) ||

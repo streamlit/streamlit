@@ -403,7 +403,9 @@ const Multiselect: FC<Props> = props => {
       // We need to map IDs back to values. Bulk-action and creatable keys are
       // already handled by early returns above, so only filter undefined here.
       const optionById = new Map(
-        displayOptionsRef.current.map(o => [o.id, o.value])
+        displayOptionsRef.current
+          .filter(o => !o.isBulkAction && !o.isCreatable)
+          .map(o => [o.id, o.value])
       )
       const newValues = selectedKeys
         .map(id => optionById.get(id))
@@ -516,7 +518,11 @@ const Multiselect: FC<Props> = props => {
       // Creatable Enter: commit typed text as a new option.
       // Only create when no item is focused or CREATABLE_ID is focused.
       // If focus is on a real option or bulk action, let RAC handle it.
-      if (e.key === "Enter" && (element.acceptNewOptions ?? false)) {
+      if (
+        e.key === "Enter" &&
+        !e.nativeEvent.isComposing &&
+        (element.acceptNewOptions ?? false)
+      ) {
         const currentInput = inputValueRef.current
         if (currentInput) {
           const focused = focusedKeyRef.current
@@ -570,7 +576,7 @@ const Multiselect: FC<Props> = props => {
     ]
   )
 
-  // Compute selectedKeys for the ListBox — map selected values to option IDs
+  // Map selected values to option IDs for the ComboBox selection prop
   const optionIndexMap = useMemo(
     () => new Map(element.options.map((opt, idx) => [opt, idx])),
     [element.options]
@@ -696,7 +702,7 @@ const Multiselect: FC<Props> = props => {
               layoutOptions={virtualizerLayoutOptions}
             >
               <StyledListBox
-                aria-label={element.label ?? "Multiselect options"}
+                aria-label={element.label || "Multiselect options"}
                 items={displayOptions}
                 renderEmptyState={() => (
                   <StyledEmptyState>{noResultsMsg}</StyledEmptyState>
