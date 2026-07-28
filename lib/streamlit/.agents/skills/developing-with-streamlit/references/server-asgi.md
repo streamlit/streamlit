@@ -225,25 +225,27 @@ avoids the warning.
 
 If ASGI routes or middleware need process-level state that is not a Streamlit resource, the lifespan context manager may yield a dictionary. Those values are stored on `app.state` (`app.state["ready"]` in the example above).
 
-### Proactive scheduled cache warming
+### Scheduled background refresh for specific keys
 
 `refresh_mode="background"` is the simplest way to avoid blocking on expiration when
 slightly stale data is acceptable. It is access-driven, however: refresh starts only when a
 call observes an expired entry, and that call receives the stale value.
 
-For advanced cases that need to proactively update specific global cache keys, use a lifespan
-task to clear and immediately recompute each key before its `ttl` expires. Run synchronous
-cached functions in a worker thread (via `anyio`, already a Streamlit dependency) so they
-don't block the ASGI event loop.
+For advanced cases that need the server to initiate refreshes even without user traffic, use
+a lifespan task to periodically call the cached function with the arguments for each key that
+should stay warm. Calls made while an entry is fresh are cheap cache hits. The first scheduled
+call after its `ttl` returns the stale value to the task and triggers a deduplicated background
+refresh for that specific key. Run synchronous cached functions in a worker thread (via
+`anyio`, already a Streamlit dependency) so they don't block the ASGI event loop.
 
 ```python
 # resources.py
 import streamlit as st
 
 
-@st.cache_data(ttl="10m")
-def load_metrics():
-    return fetch_metrics()
+@st.cache_data(ttl="10m", refresh_mode="background")
+def load_metrics(dataset):
+    return fetch_metrics(dataset)
 ```
 
 ```python
@@ -262,26 +264,21 @@ async def lifespan(app):
     # The Streamlit runtime is available when the user lifespan starts.
     from resources import load_metrics
 
-    def refresh_metrics():
-        # A normal call before the TTL is only a cache hit. Clear the key to force
-        # recomputation, then immediately warm it again.
-        load_metrics.clear()
-        load_metrics()
-
-    async def refresh_periodically():
+    async def touch_periodically():
         while True:
-            await anyio.sleep(300)  # Refresh every 5 minutes, before the 10-minute TTL.
+            await anyio.sleep(60)
             try:
-                await anyio.to_thread.run_sync(refresh_metrics)
+                # Only touch the cache entry for load_metrics("dashboard").
+                await anyio.to_thread.run_sync(load_metrics, "dashboard")
             except Exception:
                 logger.exception("Scheduled cache refresh failed")
 
-    # Warm the cache before serving requests. Unlike the periodic loop, this initial
-    # warm isn't wrapped in try/except, so a failure here aborts startup (fail-fast).
-    await anyio.to_thread.run_sync(refresh_metrics)
+    # Warm this specific key before serving requests. Unlike the periodic loop,
+    # this initial warm isn't wrapped in try/except, so a failure aborts startup.
+    await anyio.to_thread.run_sync(load_metrics, "dashboard")
 
     async with anyio.create_task_group() as task_group:
-        task_group.start_soon(refresh_periodically)
+        task_group.start_soon(touch_periodically)
         try:
             yield
         finally:
@@ -292,24 +289,18 @@ app = st.App("streamlit_app.py", lifespan=lifespan)
 ```
 
 This pattern works for global `st.cache_data` and `st.cache_resource` entries whose argument
-combinations are known to the scheduler. `func.clear()` drops every entry for the function, so
-re-warm each argument combination the app needs (or clear and re-warm a single combination with
-`func.clear(*args)` followed by `func(*args)`). Size the interval so each refresh finishes
-comfortably before the `ttl` elapses, counting the warm duration itself.
+combinations are known to the scheduler. Each argument combination is a separate cache key,
+so touching `load_metrics("dashboard")` does not refresh or invalidate entries for other
+datasets.
 
 Keep these caveats in mind:
 
-- **Schedule overruns fall back to a blocking recompute.** If a refresh is skipped, runs late,
-  or a slow warm overruns the remaining `ttl`, the entry expires and the next request does a
-  foreground recompute. That request receives fresh data, but it must wait.
-- **A failed warm is a cold-cache window.** Because the refresh clears before it recomputes, a
-  warm that raises leaves the entry empty until the next successful refresh or a request-side
-  recompute—not a keep-last-good-value fallback.
-- **Refresh is not an atomic replacement.** Concurrent callers never receive the old, stale
-  value, but they can wait for the in-progress computation. If uninterrupted reads and atomic
-  replacement are required, refresh a shared external store instead.
-- **Removing `clear()` doesn't refresh early.** A call made before the `ttl` is only a cache
-  hit, so it returns the current value without executing the cached function.
+- **This does not refresh before the TTL.** Calls made while the entry is fresh return the
+  current value without executing the cached function. Polling controls how soon the server
+  notices expiration and triggers background refresh.
+- **Stale values remain possible.** The scheduled touch preserves the last good value while
+  refreshing, but users can receive it until the refresh completes. If uninterrupted,
+  atomically replaced fresh reads are required, refresh a shared external store instead.
 - **Each worker warms independently.** Lifespan tasks run once per ASGI process, so a
   multi-worker deployment runs and warms every process on its own schedule.
 
