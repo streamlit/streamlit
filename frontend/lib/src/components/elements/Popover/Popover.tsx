@@ -254,9 +254,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         // artificially widening narrow content).
         elements.floating.style.minWidth = ""
         const intrinsicMinWidth =
-          parseFloat(
-            window.getComputedStyle(elements.floating).minWidth
-          ) || 0
+          parseFloat(window.getComputedStyle(elements.floating).minWidth) || 0
         if (intrinsicMinWidth > clampedWidth) {
           elements.floating.style.minWidth = `${clampedWidth}px`
         }

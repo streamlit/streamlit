@@ -219,9 +219,7 @@ def test_popover_stays_within_narrow_viewport(app: Page):
             assert body_box["y"] >= -epsilon, (
                 f"popover body extends off top edge: {body_box}"
             )
-            assert (
-                body_box["y"] + body_box["height"] <= viewport["height"] + epsilon
-            ), (
+            assert body_box["y"] + body_box["height"] <= viewport["height"] + epsilon, (
                 f"popover body extends past bottom edge: {body_box}, "
                 f"viewport={viewport}"
             )
