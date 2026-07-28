@@ -28,7 +28,7 @@ session** and never updates them afterward. Two concrete pain points result:
 `st.logout()` followed by `st.login()` — a disruptive full re-authentication and page
 reload for what is often just an expired access token.
 
-**Real-world report** ([#12696](https://github.com/streamlit/streamlit/pull/12696#issuecomment)):
+**Real-world report** ([#12696](https://github.com/streamlit/streamlit/pull/12696#issuecomment-3861008419)):
 a team running Streamlit against self-hosted GitLab with `expose_tokens = ["access"]`
 hits `401`s two hours into every session once GitLab's access token expires. They added
 `offline_access` to the scope to get a refresh token, but discovered that Streamlit's
@@ -110,6 +110,11 @@ faithful mental model (API principle #20, "one use case, one command").
 6. **Unrecoverable failure** (refresh token expired/revoked/missing): the user is logged
    out (cookies cleared) and the app reruns in the logged-out state so they can
    re-authenticate. This avoids leaving the app in a stuck "logged in but broken" state.
+
+> **Note:** Because `refresh()` triggers a rerun, calling it unconditionally at the top of
+> a script creates an infinite refresh loop — the same footgun as an unconditional
+> `st.rerun()`. Always gate it behind a button, callback, or another condition (as in the
+> examples below).
 
 ### Requirements for the refresh token
 

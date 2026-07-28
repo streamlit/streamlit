@@ -65,7 +65,8 @@ st.user.refresh()
                                              └─ 200 OK  (or 4xx on failure)
         ◄─────────────────────────────────────┘
    on 200 → send rerun BackMsg
-   on 4xx (unrecoverable) → navigate to /auth/logout (or receive cleared cookies) → reconnect
+   on 401 refresh_failed (unrecoverable) → cookies already cleared by server → reconnect (logged-out)
+   on other 4xx/5xx (recoverable) → log warning, leave app as-is
         │  BackMsg{rerun}
         └──────────────► script reruns; st.user now reflects the updated in-memory user_info
 ```
@@ -214,6 +215,11 @@ authRefresh: (authRefresh: AuthRefresh) => {
 4. On other errors: log a warning and leave the app as-is.
 5. Embedded apps: consistent with `authRedirect`, this flow is not supported when
    `isInChildFrame()` (auth is unsupported for embedded apps); no-op with a warning.
+6. Concurrent refreshes: if an `authRefresh` message arrives while a previous
+   `/auth/refresh` POST is still in flight, ignore it (debounce via an in-flight flag)
+   rather than issuing a second request. A refresh has no per-call arguments, so
+   coalescing overlapping requests avoids redundant token exchanges and a possible race
+   between two rotated refresh tokens.
 
 ### File-change summary
 
