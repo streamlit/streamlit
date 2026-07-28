@@ -57,6 +57,24 @@ def load_reference_data():
 - Reference data → `ttl="1h"` or more
 - Static data → No TTL
 
+### Background refresh (serve stale while updating)
+
+By default, when a cached entry's `ttl` expires, the next call blocks while the function
+recomputes. Use `refresh_mode="background"` to instead return the expired value immediately
+and recompute in the background—ideal when slightly stale data is acceptable but latency
+isn't.
+
+```python
+@st.cache_data(ttl="5m", refresh_mode="background")
+def get_metrics():
+    return api.fetch()
+```
+
+Requirements and caveats: a `ttl` is required, and `refresh_mode="background"` can't be
+combined with `persist`. The function can't use session-specific features (e.g.
+`st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works
+with both `st.cache_data` and `st.cache_resource`.
+
 ### Prevent unbounded cache growth
 
 **Important:** Caches without `ttl` or `max_entries` can grow indefinitely and cause memory issues. For any cached function that stores changing objects (user-specific data, parameterized queries), set limits:

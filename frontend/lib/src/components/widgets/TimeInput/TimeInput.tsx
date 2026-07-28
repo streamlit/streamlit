@@ -21,7 +21,9 @@ import {
   memo,
   ReactElement,
   useCallback,
+  useContext,
   useId,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -29,11 +31,13 @@ import {
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { Time } from "@internationalized/date"
-import { type TimeValue } from "react-aria-components"
+import { I18nProvider, type TimeValue } from "react-aria-components"
 
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import Icon from "~lib/components/shared/Icon/Icon"
+import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
@@ -42,7 +46,9 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme/utils"
 import {
   isInForm,
   isNullOrUndefined,
@@ -68,15 +74,37 @@ export interface Props {
   fragmentId?: string
 }
 
-/** Converts an HH:MM wire-format string to a React Aria Time object. */
-function stringToTime(value: string): Time {
-  const [hours, minutes] = value.split(":").map(Number)
-  return new Time(hours, minutes)
+/**
+ * Maps a step value (in seconds) to a React Aria TimeField granularity.
+ *
+ * Always returns at least "minute" because the wire format includes at
+ * minimum HH:MM — hiding minutes (hour-only granularity) would silently
+ * discard minute components from values like "12:45" that can arrive via
+ * query-params or session state.
+ *
+ * Note: `step` also controls arrow-key behaviour via `handleKeyCapture`.
+ */
+function stepToGranularity(stepSeconds: number): "minute" | "second" {
+  return stepSeconds % 60 !== 0 ? "second" : "minute"
 }
 
-/** Converts a React Aria Time object back to the HH:MM wire format. */
-function timeToString(value: TimeValue): string {
-  return `${String(value.hour).padStart(2, "0")}:${String(value.minute).padStart(2, "0")}`
+/** Converts an HH:MM or HH:MM:SS wire-format string to a React Aria Time object. */
+function stringToTime(value: string): Time {
+  const [hours, minutes, seconds = 0] = value.split(":").map(Number)
+  return new Time(hours, minutes, seconds)
+}
+
+/** Converts a React Aria Time object back to the wire format (HH:MM or HH:MM:SS). */
+function timeToString(
+  value: TimeValue,
+  granularity: "minute" | "second"
+): string {
+  const hh = String(value.hour).padStart(2, "0")
+  const mm = String(value.minute).padStart(2, "0")
+  if (granularity === "second") {
+    return `${hh}:${mm}:${String(value.second).padStart(2, "0")}`
+  }
+  return `${hh}:${mm}`
 }
 
 function TimeInput({
@@ -119,6 +147,15 @@ function TimeInput({
   // to see a stale value mid-render and reset its segment edit buffer.
   const [displayValue, setDisplayValue] = useState<string | null>(value)
 
+  // Tracks whether the user has a pending (uncommitted) edit. Drives the
+  // "Press Enter to apply/submit form" hint via InputInstructions.
+  // Explicit state — NOT derived from (displayValue !== value) — to avoid a
+  // one-render flicker after arrow-key/immediate commits where value still
+  // reflects the previous async update cycle.
+  const [dirty, setDirty] = useState(false)
+
+  const [isFocused, setIsFocused] = useState(false)
+
   const [validationError, setValidationError] = useState<string | null>(null)
 
   // If a user pastes an out-of-range value (e.g. "08:99"), the Time object
@@ -127,10 +164,12 @@ function TimeInput({
   const [pasteOverride, setPasteOverride] = useState<{
     hour: string
     minute: string
+    second?: string
   } | null>(null)
 
   onFormClearedRef.current = () => {
     setDisplayValue(element.default ?? null)
+    setDirty(false)
     setValidationError(null)
     setPasteOverride(null)
   }
@@ -150,7 +189,8 @@ function TimeInput({
     }
   }
 
-  // Stable refs used in blur/arrow handlers to avoid stale closure issues.
+  // Refs mirror display/committed values so blur and key handlers always
+  // read the latest without needing those values in their dependency arrays.
   const displayValueRef = useRef(displayValue)
   displayValueRef.current = displayValue
   const valueRef = useRef(value)
@@ -159,7 +199,7 @@ function TimeInput({
   /**
    * Arrow-key presses commit immediately (like the +/- buttons on
    * st.number_input); typed digits commit only on blur. This flag is set
-   * in handleArrowKeyCapture and consumed + reset in handleChange so that
+   * in handleKeyCapture and consumed + reset in handleChange so that
    * the two paths share a single commit call-site.
    */
   const commitImmediatelyRef = useRef(false)
@@ -167,12 +207,48 @@ function TimeInput({
   const id = useId()
   const validationErrorId = `${id}-validation-error`
   const theme = useEmotionTheme()
+  const { locale } = useContext(LibConfigContext)
   const step = element.step ? Number(element.step) : 900
   const clearable = isNullOrUndefined(element.default) && !disabled
   const inForm = isInForm({ formId: element.formId })
 
   const stepMins = step / 60
   const stepHours = step / 3600
+
+  const { width, elementRef } = useCalculatedDimensions()
+
+  // Show "Press Enter to apply" when focused (and the widget is wide enough).
+  const shouldShowInstructions =
+    isFocused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
+
+  // Drives InputInstructions: show submit hint if in a form and the form allows
+  // Enter-to-submit; outside a form, show "apply" hint when there's a dirty edit.
+  const allowEnterToSubmit = inForm
+    ? widgetMgr.allowFormEnterToSubmit(element.formId)
+    : dirty
+
+  // Prop passed to react-aria <TimeField>. For "localized" we pass undefined
+  // so react-aria uses the configured locale via I18nProvider.
+  const hourCycleProp: 12 | 24 | undefined =
+    element.format === "localized"
+      ? undefined // localized — let I18nProvider locale decide
+      : element.format === "12h"
+        ? 12
+        : 24 // default: 24-hour (backward compatible)
+
+  // For placeholder rendering we need to know whether the resolved display is
+  // 12-hour, even when format is "localized". Probe Intl with the configured
+  // locale so the empty-state "hh"/"HH" hint matches what react-aria renders.
+  const placeholderIs12Hour = useMemo((): boolean => {
+    if (element.format === "12h") return true
+    if (element.format === "localized") {
+      const hc = new Intl.DateTimeFormat(locale, {
+        hour: "numeric",
+      }).resolvedOptions().hourCycle
+      return hc === "h11" || hc === "h12"
+    }
+    return false
+  }, [element.format, locale])
 
   /**
    * Called by TimeField on every committed segment change.
@@ -182,7 +258,7 @@ function TimeInput({
    * reruns while the user is still editing).
    *
    * Arrow keys: commit immediately via commitImmediatelyRef set in
-   * handleArrowKeyCapture, matching the st.number_input +/- button behaviour.
+   * handleKeyCapture, matching the st.number_input +/- button behaviour.
    */
   const handleChange = useCallback(
     (newTime: TimeValue | null): void => {
@@ -192,10 +268,12 @@ function TimeInput({
         setPasteOverride(null)
         return
       }
-      const newValue = newTime ? timeToString(newTime) : null
+      const granularity = stepToGranularity(step)
+      const newValue = newTime ? timeToString(newTime, granularity) : null
       setDisplayValue(newValue)
       if (commitImmediatelyRef.current) {
         commitImmediatelyRef.current = false
+        setDirty(false)
         setValueWithSource({ value: newValue, fromUi: true })
         if (inForm) {
           updateWidgetMgrState(
@@ -205,11 +283,22 @@ function TimeInput({
             fragmentId
           )
         }
+      } else {
+        // Typed / deferred path — mark as dirty so InputInstructions can show.
+        setDirty(true)
       }
       setValidationError(null)
       setPasteOverride(null)
     },
-    [clearable, setValueWithSource, inForm, element, widgetMgr, fragmentId]
+    [
+      clearable,
+      setValueWithSource,
+      step,
+      inForm,
+      element,
+      widgetMgr,
+      fragmentId,
+    ]
   )
 
   /**
@@ -222,8 +311,10 @@ function TimeInput({
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
+      setIsFocused(false)
       setPasteOverride(null)
       setValidationError(null)
+      setDirty(false)
       if (displayValueRef.current === valueRef.current) return
       setValueWithSource({ value: displayValueRef.current, fromUi: true })
       // Inside a form, write synchronously so that a Submit click in the same
@@ -241,8 +332,13 @@ function TimeInput({
     [setValueWithSource, inForm, element, widgetMgr, fragmentId]
   )
 
+  const handleFocus = useCallback((): void => {
+    setIsFocused(true)
+  }, [])
+
   const handleClear = useCallback((): void => {
     setDisplayValue(null)
+    setDirty(false)
     setValidationError(null)
     setPasteOverride(null)
     if (valueRef.current === null) return
@@ -261,27 +357,41 @@ function TimeInput({
     (e: ClipboardEvent<HTMLDivElement>): void => {
       if (disabled) return
       const text = e.clipboardData.getData("text").trim()
+      const granularity = stepToGranularity(step)
 
-      // Full time paste: HH:MM (with colon) or HHMM / HMM (3-4 digits, no colon)
-      const colonMatch = /^(\d{1,2}):(\d{2})$/.exec(text)
-      const bareMatch = !colonMatch ? /^(\d{1,2})(\d{2})$/.exec(text) : null
-      const match = colonMatch ?? bareMatch
+      // Full time paste: HH:MM:SS or HH:MM (with colon) or HHMM / HMM (3-4 digits, no colon)
+      const colonMatchFull = /^(\d{1,2}):(\d{2}):(\d{2})$/.exec(text)
+      const colonMatch = !colonMatchFull
+        ? /^(\d{1,2}):(\d{2})$/.exec(text)
+        : null
+      const bareMatch =
+        !colonMatchFull && !colonMatch ? /^(\d{1,2})(\d{2})$/.exec(text) : null
+      const match = colonMatchFull ?? colonMatch ?? bareMatch
       if (match) {
         const hours = Number(match[1])
         const minutes = Number(match[2])
+        const seconds = match[3] !== undefined ? Number(match[3]) : 0
         e.preventDefault()
-        if (hours > 23 || minutes > 59) {
+        if (hours > 23 || minutes > 59 || seconds > 59) {
           setPasteOverride({
             hour: String(hours).padStart(2, "0"),
             minute: String(minutes).padStart(2, "0"),
+            second:
+              granularity === "second"
+                ? String(seconds).padStart(2, "0")
+                : undefined,
           })
-          setValidationError(
-            "Time is out of range. Hours must be 0–23, minutes 0–59."
-          )
+          const parts = ["Hours must be 0–23", "minutes 0–59"]
+          if (granularity === "second") parts.push("seconds 0–59")
+          setValidationError(`Time is out of range. ${parts.join(", ")}.`)
           return
         }
         commitImmediatelyRef.current = true
-        handleChange(new Time(hours, minutes))
+        handleChange(
+          granularity === "second"
+            ? new Time(hours, minutes, seconds)
+            : new Time(hours, minutes)
+        )
         return
       }
 
@@ -299,15 +409,45 @@ function TimeInput({
         const currentMinute = current
           ? String(current.minute).padStart(2, "0")
           : "00"
+        const currentSecond = current
+          ? String(current.second).padStart(2, "0")
+          : "00"
         e.preventDefault()
 
         if (segmentType === "hour" && numValue <= 23) {
           commitImmediatelyRef.current = true
-          handleChange(new Time(numValue, current ? current.minute : 0))
+          handleChange(
+            new Time(
+              numValue,
+              current ? current.minute : 0,
+              granularity === "second" ? (current ? current.second : 0) : 0
+            )
+          )
         } else if (segmentType === "minute" && numValue <= 59) {
           commitImmediatelyRef.current = true
-          handleChange(new Time(current ? current.hour : 0, numValue))
+          handleChange(
+            new Time(
+              current ? current.hour : 0,
+              numValue,
+              granularity === "second" ? (current ? current.second : 0) : 0
+            )
+          )
+        } else if (segmentType === "second" && numValue <= 59) {
+          commitImmediatelyRef.current = true
+          handleChange(
+            new Time(
+              current ? current.hour : 0,
+              current ? current.minute : 0,
+              numValue
+            )
+          )
         } else {
+          const maxLabel =
+            segmentType === "hour"
+              ? "Hours must be 0–23."
+              : segmentType === "second"
+                ? "Seconds must be 0–59."
+                : "Minutes must be 0–59."
           setPasteOverride({
             hour:
               segmentType === "hour"
@@ -317,9 +457,15 @@ function TimeInput({
               segmentType === "minute"
                 ? String(numValue).padStart(2, "0")
                 : currentMinute,
+            second:
+              granularity === "second"
+                ? segmentType === "second"
+                  ? String(numValue).padStart(2, "0")
+                  : currentSecond
+                : undefined,
           })
           setValidationError(
-            `Value is out of range for ${segmentType}. ${segmentType === "hour" ? "Hours must be 0–23." : "Minutes must be 0–59."}`
+            `Value is out of range for ${segmentType}. ${maxLabel}`
           )
         }
         return
@@ -328,27 +474,31 @@ function TimeInput({
       // Unrecognized format containing a colon — show error
       if (text.includes(":")) {
         e.preventDefault()
-        setValidationError("Invalid time format. Please use HH:MM.")
+        setValidationError(
+          granularity === "second"
+            ? "Invalid time format. Please use HH:MM:SS or HH:MM."
+            : "Invalid time format. Please use HH:MM."
+        )
       }
     },
-    [disabled, displayValue, handleChange]
+    [disabled, displayValue, handleChange, step]
   )
 
   /**
-   * Intercept ArrowUp/Down on the spinbutton segments (capture phase, before
-   * react-aria's own handler) so the minute/hour increments honour `step`.
+   * Capture-phase key handler for spinbutton segments. Handles:
+   * - Enter: commits the current display value and, when the form allows it
+   *   and no validation error is visible, submits the form.
+   * - ArrowUp/Down: increments/decrements by `step` (overriding react-aria's
+   *   default ±1). The capture phase + stopImmediatePropagation prevents
+   *   react-aria from also applying its own change on top of ours.
    *
-   * Without this, react-aria always increments by ±1 unit regardless of step.
-   * The capture phase + stopImmediatePropagation prevents react-aria from also
-   * applying its own ±1 change on top of ours.
-   *
-   * Formula:
+   * Arrow formula:
    *   ArrowUp   → floor(current / step) * step + step  (next boundary above)
    *   ArrowDown → ceil(current / step)  * step - step  (next boundary below)
    * This ensures that an off-step value always moves toward the nearest valid
    * boundary in the pressed direction, matching the original widget behaviour.
    */
-  const handleArrowKeyCapture = useCallback(
+  const handleKeyCapture = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       const target = e.target as HTMLElement
       if (target.getAttribute("role") !== "spinbutton") return
@@ -358,6 +508,7 @@ function TimeInput({
       if (e.key === "Enter") {
         setPasteOverride(null)
         setValidationError(null)
+        setDirty(false)
         if (displayValueRef.current !== valueRef.current) {
           setValueWithSource({ value: displayValueRef.current, fromUi: true })
           if (inForm) {
@@ -368,6 +519,18 @@ function TimeInput({
               fragmentId
             )
           }
+        }
+        // NOTE: `validationError` reads the value from BEFORE the
+        // `setValidationError(null)` call above takes effect (React state
+        // updates aren't synchronous within the same handler), so this
+        // correctly reflects whatever error was visible when Enter was pressed
+        // — e.g. a paste-triggered out-of-range error — and blocks form
+        // submission while it's showing, matching NumberInput's pattern.
+        if (
+          !validationError &&
+          widgetMgr.allowFormEnterToSubmit(element.formId)
+        ) {
+          widgetMgr.submitForm(element.formId, fragmentId)
         }
         return
       }
@@ -396,9 +559,8 @@ function TimeInput({
       const up = e.key === "ArrowUp"
       const current = stringToTime(displayValue)
 
-      if (segmentType === "minute") {
-        // Non-whole-minute steps (e.g. 90s) fall back to react-aria's default ±1.
-        // For step=60 (stepMins=1) react-aria's default ±1 is already correct.
+      if (segmentType === "minute" && step % 60 === 0) {
+        // Minute-granular step. For step=60 (stepMins=1) react-aria's ±1 is correct.
         if (!Number.isInteger(stepMins) || stepMins <= 1) return
 
         e.preventDefault()
@@ -437,12 +599,52 @@ function TimeInput({
               ? Math.floor(23 / stepHours) * stepHours
               : next
         handleChange(new Time(wrapped, 0))
+      } else if (step % 60 !== 0 && step > 1) {
+        // Non-minute-divisible step (e.g. 30s, 90s): all time segments snap
+        // using total-seconds math so the result is always a valid step boundary.
+        if (
+          segmentType !== "hour" &&
+          segmentType !== "minute" &&
+          segmentType !== "second"
+        )
+          return
+
+        e.preventDefault()
+        e.stopPropagation()
+        e.nativeEvent.stopImmediatePropagation()
+
+        const totalSecs =
+          current.hour * 3600 + current.minute * 60 + current.second
+
+        let next: number
+        if (segmentType === "second") {
+          next = up
+            ? Math.floor(totalSecs / step) * step + step
+            : Math.ceil(totalSecs / step) * step - step
+        } else {
+          // For hour/minute segments, find the next step boundary at least one
+          // segment-unit away so the displayed segment visibly changes.
+          const jumpSize = segmentType === "hour" ? 3600 : 60
+          next = up
+            ? Math.ceil((totalSecs + jumpSize) / step) * step
+            : Math.floor((totalSecs - jumpSize) / step) * step
+        }
+
+        const wrapped = ((next % 86400) + 86400) % 86400
+        handleChange(
+          new Time(
+            Math.floor(wrapped / 3600),
+            Math.floor((wrapped % 3600) / 60),
+            wrapped % 60
+          )
+        )
       }
     },
     [
       disabled,
       displayValue,
       pasteOverride,
+      validationError,
       step,
       stepMins,
       stepHours,
@@ -456,7 +658,7 @@ function TimeInput({
   )
 
   return (
-    <div className="stTimeInput" data-testid="stTimeInput">
+    <div className="stTimeInput" data-testid="stTimeInput" ref={elementRef}>
       <WidgetLabel
         label={element.label}
         disabled={disabled}
@@ -472,49 +674,57 @@ function TimeInput({
         <StyledTimeInputWrapper
           data-testid="stTimeInputTimeDisplay"
           data-disabled={disabled || undefined}
+          onFocus={handleFocus}
           onBlur={handleBlur}
           data-has-error={validationError ? "" : undefined}
-          onKeyDownCapture={handleArrowKeyCapture}
+          onKeyDownCapture={handleKeyCapture}
           onPaste={handlePaste}
         >
-          <StyledTimeField
-            aria-label={element.label}
-            aria-describedby={validationError ? validationErrorId : undefined}
-            isInvalid={!!validationError}
-            value={
-              isNullOrUndefined(displayValue)
-                ? null
-                : stringToTime(displayValue)
-            }
-            onChange={handleChange}
-            // Always "minute": the wire format is HH:MM, so hiding the minute
-            // segment would silently discard values like "12:45" from query-params
-            // or session state. `step` controls arrow-key behaviour instead.
-            granularity="minute"
-            hourCycle={24}
-            shouldForceLeadingZeros
-            isDisabled={disabled}
-          >
-            <StyledTimeFieldInput>
-              {segment => (
-                <StyledTimeSegment segment={segment}>
-                  {({ text, isPlaceholder, type }) => {
-                    // Override visible text only — React Aria still controls
-                    // aria-valuenow/aria-valuetext from the last valid Time, so
-                    // screen readers may announce stale values during the brief
-                    // error window. Mitigated by role="alert" + aria-invalid.
-                    if (pasteOverride) {
-                      if (type === "hour") return pasteOverride.hour
-                      if (type === "minute") return pasteOverride.minute
-                    }
-                    if (isPlaceholder && type === "hour") return "HH"
-                    if (isPlaceholder && type === "minute") return "mm"
-                    return text
-                  }}
-                </StyledTimeSegment>
-              )}
-            </StyledTimeFieldInput>
-          </StyledTimeField>
+          <I18nProvider locale={locale}>
+            <StyledTimeField
+              aria-label={element.label}
+              aria-describedby={
+                validationError ? validationErrorId : undefined
+              }
+              isInvalid={!!validationError}
+              value={
+                isNullOrUndefined(displayValue)
+                  ? null
+                  : stringToTime(displayValue)
+              }
+              onChange={handleChange}
+              granularity={stepToGranularity(step)}
+              hourCycle={hourCycleProp}
+              shouldForceLeadingZeros
+              isDisabled={disabled}
+            >
+              <StyledTimeFieldInput>
+                {segment => (
+                  <StyledTimeSegment segment={segment}>
+                    {({ text, isPlaceholder, type }) => {
+                      // Override visible text only — React Aria still controls
+                      // aria-valuenow/aria-valuetext from the last valid Time, so
+                      // screen readers may announce stale values during the brief
+                      // error window. Mitigated by role="alert" + aria-invalid.
+                      if (pasteOverride) {
+                        if (type === "hour") return pasteOverride.hour
+                        if (type === "minute") return pasteOverride.minute
+                        if (type === "second" && pasteOverride.second)
+                          return pasteOverride.second
+                      }
+                      if (!isPlaceholder) return text
+                      if (type === "hour")
+                        return placeholderIs12Hour ? "hh" : "HH"
+                      if (type === "minute") return "mm"
+                      if (type === "second") return "ss"
+                      // dayPeriod (AM/PM) — react-aria's default text is correct
+                      return text
+                    }}
+                  </StyledTimeSegment>
+                )}
+              </StyledTimeFieldInput>
+            </StyledTimeField>
+          </I18nProvider>
           {validationError && (
             <StyledErrorIconContainer data-testid="stTimeInputError">
               <Tooltip
@@ -549,12 +759,20 @@ function TimeInput({
           {validationError && (
             <StyledVisuallyHidden id={validationErrorId} role="alert">
               {pasteOverride
-                ? `Error: time ${pasteOverride.hour}:${pasteOverride.minute} is invalid. ${validationError}`
+                ? `Error: time ${pasteOverride.hour}:${pasteOverride.minute}${pasteOverride.second ? `:${pasteOverride.second}` : ""} is invalid. ${validationError}`
                 : `Error: ${validationError}`}
             </StyledVisuallyHidden>
           )}
         </StyledTimeInputWrapper>
       </StyledTimeFieldContainer>
+      {shouldShowInstructions && (
+        <InputInstructions
+          dirty={dirty}
+          value={displayValue ?? ""}
+          inForm={inForm}
+          allowEnterToSubmit={allowEnterToSubmit}
+        />
+      )}
     </div>
   )
 }

@@ -22,7 +22,8 @@ import {
   TimeInput as TimeInputProto,
 } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import TimeInput, { Props } from "./TimeInput"
@@ -170,7 +171,7 @@ describe("TimeInput widget", () => {
     const props = getProps()
     render(<TimeInput {...props} />)
 
-    // With hourCycle=24 there should be no AM/PM (dayPeriod) segment
+    // With format=24 there should be no AM/PM (dayPeriod) segment
     const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
     const dayPeriodSegment = timeDisplay.querySelector(
       '[data-type="dayPeriod"]'
@@ -1325,6 +1326,203 @@ describe("TimeInput widget", () => {
     await user.keyboard("{Enter}")
     expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
   })
+
+  describe("form support (InputInstructions + submitForm)", () => {
+    // useCalculatedDimensions reads element width via useResizeObserver.
+    // jsdom doesn't compute layout, so mock it to return 250px (> 180px
+    // hideWidgetDetails breakpoint) so shouldShowInstructions can become true.
+    beforeEach(() => {
+      vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+        elementRef: { current: null },
+        values: [250],
+      })
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it("InputInstructions is not visible when not focused", () => {
+      const props = getProps()
+      render(<TimeInput {...props} />)
+      expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    })
+
+    it("InputInstructions renders no message when focused but not dirty outside a form", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      render(<TimeInput {...props} />)
+
+      const [hourSegment] = screen.getAllByRole("spinbutton")
+      await user.click(hourSegment)
+
+      // Focused but value unchanged — dirty is false, so allowEnterToSubmit is
+      // false and the instructions render with no content.
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent("")
+    })
+
+    it("shows 'Press Enter to apply' hint when focused and dirty outside a form", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:45" })
+      render(<TimeInput {...props} />)
+
+      const [, minuteSegment] = screen.getAllByRole("spinbutton")
+      await user.click(minuteSegment)
+
+      // Type a digit to make the widget dirty.
+      await user.keyboard("3")
+
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+        "Press Enter to apply"
+      )
+    })
+
+    it("hides instructions after blur (commit clears dirty)", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:45" })
+      render(<TimeInput {...props} />)
+
+      const segments = screen.getAllByRole("spinbutton")
+      const minuteSegment = segments[segments.length - 1]
+      await user.click(minuteSegment)
+      await user.keyboard("3")
+      expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
+
+      // Tab out — commits, clears dirty, and loses focus.
+      await user.tab()
+      expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    })
+
+    it.each([
+      { allowEnter: true, expected: "Press Enter to submit form" },
+      { allowEnter: false, expected: "" },
+    ])(
+      "in-form hint text when allowFormEnterToSubmit=$allowEnter",
+      async ({ allowEnter, expected }) => {
+        const user = userEvent.setup()
+        const props = getProps({ formId: "form" })
+        vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+          allowEnter
+        )
+        render(<TimeInput {...props} />)
+
+        const [hourSegment] = screen.getAllByRole("spinbutton")
+        await user.click(hourSegment)
+
+        expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+          expected
+        )
+      }
+    )
+
+    it("calls submitForm on Enter when inside a form with allowFormEnterToSubmit=true", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:45", formId: "form" })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => {})
+      render(<TimeInput {...props} />)
+
+      const [hourSegment] = screen.getAllByRole("spinbutton")
+      await user.click(hourSegment)
+      await user.keyboard("{Enter}")
+
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
+        "form",
+        undefined
+      )
+    })
+
+    it.each([
+      {
+        scenario: "allowFormEnterToSubmit=false",
+        formId: "form",
+        allowEnter: false,
+      },
+      { scenario: "not in a form (no formId)", formId: "", allowEnter: false },
+    ])(
+      "does NOT call submitForm on Enter when $scenario",
+      async ({ formId, allowEnter }) => {
+        const user = userEvent.setup()
+        const props = getProps({
+          default: "12:45",
+          ...(formId ? { formId } : {}),
+        })
+        vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+          allowEnter
+        )
+        vi.spyOn(props.widgetMgr, "submitForm")
+        render(<TimeInput {...props} />)
+
+        const [hourSegment] = screen.getAllByRole("spinbutton")
+        await user.click(hourSegment)
+        await user.keyboard("{Enter}")
+
+        expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+      }
+    )
+
+    it("does NOT call submitForm on Enter when a validation error is showing", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:45", formId: "form" })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      vi.spyOn(props.widgetMgr, "submitForm")
+      render(<TimeInput {...props} />)
+
+      const [hourSegment] = screen.getAllByRole("spinbutton")
+      await user.click(hourSegment)
+      await user.paste("25:00")
+      expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+
+      await user.keyboard("{Enter}")
+
+      expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+    })
+
+    it("arrow-key immediate commit does not leave dirty=true (no transient hint flash)", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:45" })
+      render(<TimeInput {...props} />)
+
+      const [, minuteSegment] = screen.getAllByRole("spinbutton")
+      await user.click(minuteSegment)
+
+      // Arrow key triggers an immediate commit — dirty must stay false.
+      await user.keyboard("{ArrowDown}")
+
+      // Instructions should NOT show a "Press Enter to apply" message since
+      // the value was already committed (dirty=false).
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent("")
+    })
+
+    it("dirty is reset to false on form clear", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:45", formId: "form" })
+      // clearOnSubmit=true means submitting the form also fires formCleared.
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+        false
+      )
+      render(<TimeInput {...props} />)
+
+      const [, minuteSegment] = screen.getAllByRole("spinbutton")
+      await user.click(minuteSegment)
+      // Type a digit to make the widget dirty.
+      await user.keyboard("3")
+
+      // Confirm dirty hint is visible.
+      expect(screen.queryByTestId("InputInstructions")).toBeInTheDocument()
+
+      // Submit the form, which triggers formCleared signal (clearOnSubmit=true).
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      // After form clear: dirty=false, isFocused still true but allowEnterToSubmit
+      // is false (mocked) so instructions renders with no content.
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent("")
+    })
+  })
 })
 
 describe("TimeInput query param binding", () => {
@@ -1438,5 +1636,338 @@ describe("TimeInput clearable behavior", () => {
     const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
     expect(hourSegment).toHaveAttribute("aria-valuenow", "16")
     expect(minuteSegment).toHaveAttribute("aria-valuenow", "0")
+  })
+})
+
+describe("TimeInput seconds granularity", () => {
+  it("shows three segments (H:M:S) when step is not divisible by 60", () => {
+    const props = getProps({ default: "12:45:30", step: 30 })
+    render(<TimeInput {...props} />)
+
+    const segments = screen.getAllByRole("spinbutton")
+    expect(segments).toHaveLength(3)
+    expect(segments[0]).toHaveAttribute("aria-valuenow", "12")
+    expect(segments[1]).toHaveAttribute("aria-valuenow", "45")
+    expect(segments[2]).toHaveAttribute("aria-valuenow", "30")
+  })
+
+  it("shows seconds segment for step=90 (not divisible by 60)", () => {
+    const props = getProps({ default: "12:45:00", step: 90 })
+    render(<TimeInput {...props} />)
+
+    const segments = screen.getAllByRole("spinbutton")
+    expect(segments).toHaveLength(3)
+  })
+
+  it("shows ss placeholder when seconds granularity and value is null", () => {
+    const props = getProps({ default: undefined, step: 30 })
+    render(<TimeInput {...props} />)
+
+    const segments = screen.getAllByRole("spinbutton")
+    expect(segments).toHaveLength(3)
+    expect(segments[2]).toHaveTextContent("ss")
+  })
+
+  it("shows HH:MM:SS format in setStringValue when step < 60", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:44:15", step: 30 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    // ArrowDown on minute segment: snaps to boundary, value includes seconds
+    const segments = screen.getAllByRole("spinbutton")
+    const minuteSegment = segments[1]
+    await user.click(minuteSegment)
+    await user.keyboard("{ArrowDown}")
+
+    // Expect the called value to include a seconds component
+    const lastCall = vi.mocked(props.widgetMgr.setStringValue).mock.lastCall
+    expect(lastCall?.[1]).toMatch(/^\d{2}:\d{2}:\d{2}$/)
+  })
+
+  it("snaps second ArrowUp to next step boundary", async () => {
+    const user = userEvent.setup()
+    // step=30. value=12:44:15 (off-step) → ArrowUp on seconds → next boundary = 12:44:30
+    const props = getProps({ default: "12:44:15", step: 30 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const segments = screen.getAllByRole("spinbutton")
+    const secondSegment = segments[2]
+    await user.click(secondSegment)
+    await user.keyboard("{ArrowUp}")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "12:44:30",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("wraps seconds forward past midnight", async () => {
+    const user = userEvent.setup()
+    // step=30. value=23:59:30 → ArrowUp on seconds → 00:00:00 (wraps)
+    const props = getProps({ default: "23:59:30", step: 30 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const segments = screen.getAllByRole("spinbutton")
+    const secondSegment = segments[2]
+    await user.click(secondSegment)
+    await user.keyboard("{ArrowUp}")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "00:00:00",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it.each([
+    {
+      step: 30,
+      value: "08:45:30",
+      seg: 1,
+      key: "ArrowUp",
+      expected: "08:46:30",
+      desc: "minute up, step=30",
+    },
+    {
+      step: 30,
+      value: "08:45:00",
+      seg: 1,
+      key: "ArrowDown",
+      expected: "08:44:00",
+      desc: "minute down, step=30",
+    },
+    {
+      step: 30,
+      value: "08:45:30",
+      seg: 0,
+      key: "ArrowUp",
+      expected: "09:45:30",
+      desc: "hour up, step=30",
+    },
+    {
+      step: 90,
+      value: "00:01:30",
+      seg: 1,
+      key: "ArrowUp",
+      expected: "00:03:00",
+      desc: "minute up, step=90",
+    },
+  ])(
+    "snaps to step boundary on non-second segment arrow: $desc",
+    async ({ step, value, seg, key, expected }) => {
+      const user = userEvent.setup()
+      const props = getProps({ default: value, step })
+      vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TimeInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[seg])
+      await user.keyboard(`{${key}}`)
+
+      expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+        props.element,
+        expected,
+        { fromUi: true },
+        undefined
+      )
+    }
+  )
+})
+
+describe("TimeInput hour cycle", () => {
+  it("shows AM/PM segment when format=12", () => {
+    const props = getProps({ format: "12h", default: "08:45" })
+    render(<TimeInput {...props} />)
+
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
+    const dayPeriodSegment = timeDisplay.querySelector(
+      '[data-type="dayPeriod"]'
+    )
+    expect(dayPeriodSegment).toBeInTheDocument()
+  })
+
+  it("shows hh placeholder when format=12 and value is null", () => {
+    const props = getProps({ format: "12h", default: undefined })
+    render(<TimeInput {...props} />)
+
+    const segments = screen.getAllByRole("spinbutton")
+    // Hour placeholder should show "hh" for 12-hour mode
+    expect(segments[0]).toHaveTextContent("hh")
+  })
+
+  it("does not show AM/PM segment when format=24", () => {
+    const props = getProps({ format: "24h", default: "08:45" })
+    render(<TimeInput {...props} />)
+
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
+    const dayPeriodSegment = timeDisplay.querySelector(
+      '[data-type="dayPeriod"]'
+    )
+    expect(dayPeriodSegment).toBeNull()
+  })
+
+  it.each([
+    {
+      locale: "en-US",
+      expectedPlaceholder: "hh",
+      desc: "12-hour locale (en-US)",
+    },
+    {
+      locale: "de-DE",
+      expectedPlaceholder: "HH",
+      desc: "24-hour locale (de-DE)",
+    },
+  ])(
+    "shows $expectedPlaceholder placeholder for $desc when format is localized",
+    ({ locale, expectedPlaceholder }) => {
+      const props = getProps({ format: "localized", default: undefined })
+      renderWithContexts(<TimeInput {...props} />, {
+        libConfigContext: { locale },
+      })
+
+      const segments = screen.getAllByRole("spinbutton")
+      expect(segments[0]).toHaveTextContent(expectedPlaceholder)
+    }
+  )
+
+  it("shows four segments (H:M:S + dayPeriod) when format=12 and step<60", () => {
+    const props = getProps({ format: "12h", default: "14:30:15", step: 30 })
+    render(<TimeInput {...props} />)
+
+    const segments = screen.getAllByRole("spinbutton")
+    // hour, minute, second, dayPeriod
+    expect(segments).toHaveLength(4)
+    // 14:30 in 12h = 2:30 PM
+    expect(segments[0]).toHaveAttribute("aria-valuenow", "2")
+    expect(segments[1]).toHaveAttribute("aria-valuenow", "30")
+    expect(segments[2]).toHaveAttribute("aria-valuenow", "15")
+  })
+})
+
+describe("TimeInput paste with seconds granularity", () => {
+  it.each([
+    { desc: "HH:MM:SS", paste: "14:30:45", expected: "14:30:45" },
+    {
+      desc: "HH:MM (seconds default to 0)",
+      paste: "08:30",
+      expected: "08:30:00",
+    },
+  ])("accepts valid full paste: $desc", async ({ paste, expected }) => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:44:15", step: 30 })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste(paste)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      expected,
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it.each([
+    {
+      desc: "out-of-range seconds (08:30:99)",
+      paste: "08:30:99",
+      expectedDigits: ["08", "30", "99"],
+    },
+    {
+      desc: "out-of-range hours (25:30:00)",
+      paste: "25:30:00",
+      expectedDigits: ["25", "30", "00"],
+    },
+  ])(
+    "shows error and does not commit for invalid paste: $desc",
+    async ({ paste, expectedDigits }) => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:44:15", step: 30 })
+      vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TimeInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+      const [hourSegment] = screen.getAllByRole("spinbutton")
+      await user.click(hourSegment)
+      await user.paste(paste)
+
+      expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+      expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+      const segments = screen.getAllByRole("spinbutton")
+      expect(segments[0]).toHaveTextContent(expectedDigits[0])
+      expect(segments[1]).toHaveTextContent(expectedDigits[1])
+      expect(segments[2]).toHaveTextContent(expectedDigits[2])
+    }
+  )
+
+  it.each([{ desc: "valid (45)", paste: "45", expected: "12:44:45" }])(
+    "partial digit paste into seconds segment commits: $desc",
+    async ({ paste, expected }) => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:44:15", step: 30 })
+      vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TimeInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+      const segments = screen.getAllByRole("spinbutton")
+      const secondSegment = segments[2]
+      await user.click(secondSegment)
+      await user.paste(paste)
+
+      expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+        props.element,
+        expected,
+        { fromUi: true },
+        undefined
+      )
+      expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+    }
+  )
+
+  it.each([{ desc: "out-of-range (75)", paste: "75" }])(
+    "partial digit paste into seconds segment shows error: $desc",
+    async ({ paste }) => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:44:15", step: 30 })
+      vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TimeInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringValue).mockClear()
+
+      const segments = screen.getAllByRole("spinbutton")
+      const secondSegment = segments[2]
+      await user.click(secondSegment)
+      await user.paste(paste)
+
+      expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+      expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+      expect(secondSegment).toHaveTextContent(paste)
+    }
+  )
+
+  it("alert includes seconds when paste override has second field", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "12:44:15", step: 30 })
+    render(<TimeInput {...props} />)
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("08:30:99")
+
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent("time 08:30:99 is invalid")
   })
 })

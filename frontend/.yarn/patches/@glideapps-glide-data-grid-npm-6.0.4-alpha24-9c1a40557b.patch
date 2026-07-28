@@ -1,0 +1,36 @@
+diff --git a/dist/cjs/internal/data-grid-overlay-editor/data-grid-overlay-editor.js b/dist/cjs/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
+index face64122d35e884020eeabc6d96514141fc18d1..1e71f5198f0685882e1282cc2abd606d6d64a68b 100644
+--- a/dist/cjs/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
++++ b/dist/cjs/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
+@@ -45,6 +45,13 @@ const DataGridOverlayEditor = p => {
+         finished.current = true;
+     }, [onFinishEditing]);
+     const onKeyDown = React.useCallback(async (event) => {
++        // Ignore keys that are part of an in-progress IME composition
++        // (e.g. Enter that confirms a CJK IME candidate). Committing the
++        // cell here would close the editor after the first composed
++        // character. See streamlit/streamlit#16129.
++        if (event.nativeEvent?.isComposing === true || event.keyCode === 229) {
++            return;
++        }
+         let save = false;
+         if (event.key === "Escape") {
+             event.stopPropagation();
+diff --git a/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js b/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
+index face64122d35e884020eeabc6d96514141fc18d1..1e71f5198f0685882e1282cc2abd606d6d64a68b 100644
+--- a/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
++++ b/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
+@@ -45,6 +45,13 @@ const DataGridOverlayEditor = p => {
+         finished.current = true;
+     }, [onFinishEditing]);
+     const onKeyDown = React.useCallback(async (event) => {
++        // Ignore keys that are part of an in-progress IME composition
++        // (e.g. Enter that confirms a CJK IME candidate). Committing the
++        // cell here would close the editor after the first composed
++        // character. See streamlit/streamlit#16129.
++        if (event.nativeEvent?.isComposing === true || event.keyCode === 229) {
++            return;
++        }
+         let save = false;
+         if (event.key === "Escape") {
+             event.stopPropagation();
