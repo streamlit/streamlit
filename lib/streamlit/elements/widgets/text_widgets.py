@@ -476,6 +476,7 @@ class TextWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             # Text input is clearable (empty string is a valid value)
@@ -841,6 +842,7 @@ class TextWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             # Text area is clearable (empty string is a valid value)

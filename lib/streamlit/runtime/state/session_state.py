@@ -850,6 +850,13 @@ class SessionState:
         """Call callbacks for widgets whose value changed or whose trigger fired."""
         from streamlit.runtime.scriptrunner import RerunException
 
+        # Skip callbacks for disabled widgets: a disabled widget cannot be
+        # interacted with in the browser, so a reported change can only come from
+        # a stale UI or a forged message. `metadata.disabled` reflects the
+        # previous run here (callbacks run before widgets re-register), which is
+        # fine — `disabled` is not part of the widget id, so the id and its
+        # metadata stay stable across runs.
+
         # Path 1: single callback.
         changed_widget_ids_for_single_callback = [
             wid
@@ -858,6 +865,7 @@ class SessionState:
             and (metadata := self._new_widget_state.widget_metadata.get(wid))
             is not None
             and metadata.callback is not None
+            and not metadata.disabled
         ]
 
         for wid in changed_widget_ids_for_single_callback:
@@ -873,7 +881,7 @@ class SessionState:
 
         for wid in widget_ids_to_process:
             metadata = self._new_widget_state.widget_metadata.get(wid)
-            if not metadata or metadata.callbacks is None:
+            if not metadata or metadata.callbacks is None or metadata.disabled:
                 continue
 
             args = metadata.callback_args or ()
@@ -1309,6 +1317,22 @@ class SessionState:
             # Widget stopped persisting — drop any stale tracking.
             self._persist_tracker.untrack(widget_id, user_key)
 
+        # Enforce `disabled` server-side. A disabled widget cannot be interacted
+        # with in the browser, so any value arriving from the frontend must be
+        # ignored: it can only originate from a stale UI or a forged BackMsg.
+        # Discard the incoming value so resolution falls back to the widget's
+        # previous value (or its default on first registration). Programmatic
+        # st.session_state assignments are still honored, since those come from
+        # the app rather than the frontend.
+        disabled_value_discarded = False
+        if (
+            metadata.disabled
+            and widget_id in self._new_widget_state
+            and (user_key is None or user_key not in self._new_session_state)
+        ):
+            del self._new_widget_state[widget_id]
+            disabled_value_discarded = True
+
         if (
             widget_id not in self
             and (user_key is None or user_key not in self)
@@ -1413,6 +1437,7 @@ class SessionState:
             or restored_bound_value
             or restored_persisted_value
             or dropped_page_scoped_value
+            or disabled_value_discarded
         )
 
         return RegisterWidgetResult(

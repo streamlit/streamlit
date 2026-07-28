@@ -145,6 +145,8 @@ register_widget(
 - `on_script_will_rerun()`: Process widget states from browser, run callbacks
 - `on_script_finished()`: Clean up stale widgets not seen this run
 
+**Disabled widget enforcement**: `WidgetMetadata` carries a `disabled` flag (set via `register_widget(..., disabled=...)`). Because a disabled widget cannot be interacted with in the browser, this is enforced server-side to guard against a stale UI or a forged `BackMsg`: `SessionState.register_widget()` discards any incoming frontend value for a disabled widget (falling back to its previous value, or its default on first registration), and `_call_callbacks()` suppresses its `on_change`/`on_click` callback. Programmatic `st.session_state` assignments are still honored.
+
 ## Caching (`lib/streamlit/runtime/caching/`)
 
 **@st.cache_data** (`cache_data_api.py`):

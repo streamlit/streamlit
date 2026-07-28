@@ -1402,6 +1402,7 @@ class ButtonMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="trigger_value",
+            disabled=disabled,
         )
 
         if ctx:
@@ -1502,6 +1503,7 @@ class ButtonMixin:
                 serializer=serde.serialize,
                 ctx=ctx,
                 value_type="trigger_value",
+                disabled=disabled,
             )
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
@@ -1714,6 +1716,7 @@ class ButtonMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="trigger_value",
+            disabled=disabled,
         )
 
         if ctx:
