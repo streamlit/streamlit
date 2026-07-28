@@ -291,9 +291,9 @@ app = st.App("streamlit_app.py", lifespan=lifespan)
 
 This pattern works for global `st.cache_data` and `st.cache_resource` entries whose argument
 combinations are known to the scheduler. `func.clear()` drops every entry for the function, so
-re-warm each argument combination the app needs (or use `func.clear(*args)` to refresh one
-combination at a time). Size the interval so each refresh finishes comfortably before the
-`ttl` elapses, counting the warm duration itself.
+re-warm each argument combination the app needs (or clear and re-warm a single combination with
+`func.clear(*args)` followed by `func(*args)`). Size the interval so each refresh finishes
+comfortably before the `ttl` elapses, counting the warm duration itself.
 
 Keep these caveats in mind:
 
