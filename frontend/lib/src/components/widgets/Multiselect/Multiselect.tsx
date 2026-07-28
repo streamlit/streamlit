@@ -733,7 +733,11 @@ const Multiselect: FC<Props> = props => {
               onScroll={handleTagsScroll}
             >
               {value.length > 0 && (
-                <span role="group" aria-label="Selected values">
+                <span
+                  role="group"
+                  aria-label="Selected values"
+                  style={{ display: "contents" }}
+                >
                   {value.map((v, idx) => (
                     <StyledTag
                       key={v}
