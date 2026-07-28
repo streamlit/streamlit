@@ -105,11 +105,13 @@ faithful mental model (API principle #20, "one use case, one command").
    provider returns one), and refreshed identity claims.
 4. **Success:** the auth cookies are rewritten, the live session's identity is updated,
    and the app reruns. `st.user` and `st.user.tokens` now reflect the fresh values.
-5. **Recoverable failure** (e.g., transient network error): the current identity is left
-   untouched; a warning is logged; `st.user` is unchanged.
-6. **Unrecoverable failure** (refresh token expired/revoked/missing): the user is logged
-   out (cookies cleared) and the app reruns in the logged-out state so they can
-   re-authenticate. This avoids leaving the app in a stuck "logged in but broken" state.
+5. **Recoverable failure** (transient network error, or no refresh token available —
+   e.g. the provider never returned one because `offline_access` wasn't requested): the
+   current identity is left untouched; a warning is logged; `st.user` is unchanged.
+6. **Unrecoverable failure** (refresh token expired or revoked — the provider rejects the
+   grant with `invalid_grant`): the user is logged out (cookies cleared) and the app
+   reruns in the logged-out state so they can re-authenticate. This avoids leaving the app
+   in a stuck "logged in but broken" state.
 
 > **Note:** Because `refresh()` triggers a rerun, calling it unconditionally at the top of
 > a script creates an infinite refresh loop — the same footgun as an unconditional

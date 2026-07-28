@@ -76,6 +76,17 @@ the endpoint can (a) write the new cookies for future connects/reloads **and** (
 the already-connected session's in-memory `user_info` so the *current* session sees the
 new identity on its next rerun — all without a page reload.
 
+> **Deployment assumption.** The in-place session update (b) relies on the
+> `/auth/refresh` request landing on the same process that holds the live WebSocket
+> session, since sessions live in a process-local `SessionManager`. Streamlit serves each
+> app from a single server process, and multi-replica deployments already require
+> WebSocket session affinity (sticky sessions) to function at all — the same-origin POST
+> inherits that affinity. If the update still can't be applied in-process (e.g. the POST
+> is routed to a different replica), it degrades gracefully rather than erroring: the auth
+> cookies are always rewritten, so the refreshed identity is picked up on the next
+> reconnect/reload even if the *immediate* rerun would otherwise show stale claims (this
+> is the same no-op path as the identity-mismatch case in step 7).
+
 ### 1. Persist the refresh token (backend)
 
 In `_auth_callback`, keep the refresh token alongside id/access when the provider returns
@@ -116,6 +127,10 @@ navigation). Behavior:
    (`refresh_failed`).
 5. Derive refreshed claims: prefer decoding the returned `id_token`; if the grant does not
    return an `id_token`, call the provider's `userinfo_endpoint` with the new access token.
+   If neither is available (no `id_token` **and** the provider metadata exposes no
+   `userinfo_endpoint`), keep the previous identity claims and log a warning — the token
+   exchange itself still succeeded, so the new tokens are persisted and the
+   expired-access-token use case works even when claims can't be refreshed.
 6. Build the new cookie payloads (same shape as `_auth_callback`: user claims +
    `origin`/`is_logged_in`/`provider`; tokens = id/access/refresh, **preserving the old
    refresh token if the provider did not rotate it**). Write both cookies via
@@ -245,10 +260,14 @@ authRefresh: (authRefresh: AuthRefresh) => {
   request origin against `redirect_uri`. A cross-site page cannot trigger a refresh.
 - **Session-update authorization.** The `sessionId` in the request body only *routes* the
   in-memory update; the refresh itself is authorized by the httponly cookie. The endpoint
-  must verify the target session's current identity (`sub`/`origin`) matches the cookie
-  identity before applying the update, so a stray/guessed session id cannot be
-  cross-populated with a different user's identity. If it doesn't match, skip the in-memory
-  update (cookies are still rewritten for the caller's own next connect).
+  must verify the target session's current identity (`sub`, `provider`, and `origin`)
+  matches the cookie identity before applying the update, so a stray/guessed session id
+  cannot be cross-populated with a different user's identity. Binding on `provider` (or the
+  token issuer `iss`) alongside `sub` is essential because OIDC subject identifiers are
+  only unique *within* a provider — the same `sub` value issued by a different provider
+  must not be treated as the same user. The `provider` is already retained in the user
+  cookie. If it doesn't match, skip the in-memory update (cookies are still rewritten for
+  the caller's own next connect).
 - **Rotated refresh tokens.** If the provider returns a new refresh token, persist it and
   drop the old one; if not, retain the existing one so subsequent refreshes keep working.
 - **Failure hygiene.** `invalid_grant` clears cookies (forces clean re-auth); transient
