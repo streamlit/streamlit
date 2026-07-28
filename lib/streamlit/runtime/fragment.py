@@ -502,24 +502,35 @@ def _fragment(
             if ctx is None:  # pragma: no cover - defensive
                 raise RuntimeError("ctx is None. This should never happen.")
 
-            if ctx.fragment_ids_this_run and fragment_id in ctx.fragment_ids_this_run:
-                # This wrapped_fragment is being invoked directly by the script
-                # runner as a top-level fragment rerun (not through ``wrap`` from
-                # an enclosing scope). Restore the ctx.cursors and dg_stack state
-                # to the snapshots we took when this fragment was declared.
-                #
-                # Nested fragments called via ``wrap`` from an already-rerunning
-                # parent (i.e. ``fragment_ids_this_run`` is set but doesn't
-                # include this fragment) must NOT restore here: the parent's
-                # execution has already advanced the enclosing cursors, and
-                # replacing the dg_stack with deep copies would sever the
-                # nested fragment's writes from the enclosing scope's cursor
-                # state. That in turn can cause sibling nested fragments to
-                # compute colliding fragment ids and overwrite each other's
-                # deltas (see #12514).
+            # True only when the ScriptRunner invokes this fragment directly as a
+            # queued top-level rerun. ``fragment_id is None`` distinguishes that
+            # from an inline call via ``wrap`` from an enclosing fragment, which
+            # matters when a parent and its own descendant are both queued: the
+            # descendant's id is still in ``fragment_ids_this_run`` while the
+            # parent runs it inline, so queue membership alone is not enough.
+            is_queued_toplevel_rerun = bool(
+                ctx.fragment_ids_this_run
+                and fragment_id in ctx.fragment_ids_this_run
+                and ThreadState.get().fragment_id is None
+            )
+
+            if is_queued_toplevel_rerun:
+                # Restore ctx.cursors and dg_stack to the snapshots taken when
+                # this fragment was declared. Nested fragments called via ``wrap``
+                # from an already-rerunning parent must keep the parent's
+                # already-advanced cursor state instead; replacing the dg_stack
+                # with deep copies would sever their writes from the enclosing
+                # scope, making sibling nested fragments compute colliding
+                # fragment ids and overwrite each other's deltas (see #12514).
                 ctx.cursors = deepcopy(cursors_snapshot)
                 context_dg_stack.set(deepcopy(dg_stack_snapshot))
 
+            if ctx.fragment_ids_this_run:
+                # Wrapper bookkeeping runs for every fragment executing during a
+                # fragment rerun, including nested ones reached via ``wrap``:
+                # their outside-container wrappers still need their cursors reset
+                # so writes overwrite in place rather than accumulate.
+                #
                 # Evict wrappers whose outside containers will be rebuilt by this
                 # fragment, then re-emit and reset the surviving wrappers. Order
                 # matters: eviction must happen first so we don't re-emit a wrapper

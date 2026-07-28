@@ -52,7 +52,10 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ScriptRunContext,
+    ThreadState,
+)
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -2227,6 +2230,28 @@ class NestedFragmentContainerRerunTest(DeltaGeneratorTestCase):
     on rerender when the parent fragment is rerun.
     """
 
+    @staticmethod
+    def _lookup_parent_fragment_id(
+        ctx: ScriptRunContext, child_fragment_ids: list[str]
+    ) -> str:
+        """Return the id of the only registered fragment that has no parent.
+
+        The nested ``b`` fragments are registered with ``a`` as their parent, so
+        ``a`` is the sole entry in the storage's parent map pointing at ``None``.
+        """
+        parent_ids = [
+            fid
+            for fid, parent_id in ctx.fragment_storage._parent_by_id.items()
+            if parent_id is None
+        ]
+        assert len(parent_ids) == 1, (
+            f"Expected exactly one top-level fragment, got {parent_ids!r}."
+        )
+        assert parent_ids[0] not in child_fragment_ids, (
+            "The top-level fragment id must be distinct from its children's ids."
+        )
+        return parent_ids[0]
+
     def test_sibling_nested_fragments_get_distinct_ids_on_parent_rerun(
         self,
     ) -> None:
@@ -2274,13 +2299,7 @@ class NestedFragmentContainerRerunTest(DeltaGeneratorTestCase):
         # wrapped_fragment and invoke it directly, mirroring what
         # ScriptRunner does when processing a fragment rerun.
         ctx = self.script_run_ctx
-        (a_fragment_id,) = [
-            fid
-            for fid, fn in ctx.fragment_storage._fragments.items()
-            if fn.__name__ == "wrapped_fragment"
-            # Filter to the top-level fragment (a): its delta path is short.
-            and fid not in initial_run_ids
-        ]
+        a_fragment_id = self._lookup_parent_fragment_id(ctx, initial_run_ids)
         ctx.fragment_ids_this_run = [a_fragment_id]
 
         wrapped_a = ctx.fragment_storage.lookup(a_fragment_id)
@@ -2297,4 +2316,60 @@ class NestedFragmentContainerRerunTest(DeltaGeneratorTestCase):
         # The recomputed ids should match the ids assigned during the
         # initial run — deterministic identity across reruns is what makes
         # fragment storage/lookup work.
+        assert recorded_fragment_ids == initial_run_ids
+
+    def test_sibling_nested_fragments_keep_distinct_ids_when_parent_and_children_queued(
+        self,
+    ) -> None:
+        """A coalesced queue holding both the parent and its nested children must
+        still produce distinct sibling ids.
+
+        ``order_fragment_ids`` runs queued ancestors before queued descendants,
+        so the parent executes first and invokes its children inline via
+        ``wrap`` while their ids are *still* in ``fragment_ids_this_run``. Queue
+        membership alone therefore can't distinguish a ScriptRunner-driven
+        top-level replay from an inline nested call; without the additional
+        ``ThreadState.get().fragment_id is None`` guard the children would
+        restore their declaration-time snapshots mid-parent-run and collide
+        exactly as in #12514.
+        """
+        recorded_fragment_ids: list[str] = []
+
+        @fragment
+        def b(i: int) -> None:
+            recorded_fragment_ids.append(ThreadState.get().fragment_id or "")
+
+        @fragment
+        def a() -> None:
+            container = st.container()
+            with container:
+                b(1)
+            with container:
+                b(2)
+
+        # Initial full app run — registers a, b(1), b(2) with distinct ids.
+        a()
+        assert len(recorded_fragment_ids) == 2
+        initial_run_ids = recorded_fragment_ids.copy()
+        recorded_fragment_ids.clear()
+
+        ctx = self.script_run_ctx
+        a_fragment_id = self._lookup_parent_fragment_id(ctx, initial_run_ids)
+
+        # Queue the parent *and* both children, ancestors first — the ordering
+        # ScriptRunner applies via ``order_fragment_ids``.
+        ctx.fragment_ids_this_run = [a_fragment_id, *initial_run_ids]
+
+        # ScriptRunner invokes the parent first; the children are reached inline
+        # from the parent's body rather than by a second direct invocation.
+        ctx.fragment_storage.lookup(a_fragment_id)()
+
+        assert len(recorded_fragment_ids) == 2, (
+            "Both nested fragments should re-execute during the parent's rerun."
+        )
+        assert recorded_fragment_ids[0] != recorded_fragment_ids[1], (
+            "Sibling nested fragments must keep distinct ids when the parent and "
+            "children are queued together; got a collision at "
+            f"{recorded_fragment_ids[0]!r}."
+        )
         assert recorded_fragment_ids == initial_run_ids
