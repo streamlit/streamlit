@@ -135,11 +135,7 @@ describe("useCustomTheme hook", () => {
     const { result: defaultResult } = renderHook(() => useCustomTheme(), {
       wrapper: defaultWrapper,
     })
-    const defaultButtonHover = (
-      defaultResult.current.glideTheme as unknown as {
-        bgButtonHovered: string
-      }
-    ).bgButtonHovered
+    const defaultButtonHover = defaultResult.current.glideTheme.bgButtonHovered
 
     const themeWithAlphaHeader = {
       ...mockTheme.emotion,
@@ -158,15 +154,13 @@ describe("useCustomTheme hook", () => {
     const { result: customResult } = renderHook(() => useCustomTheme(), {
       wrapper: customWrapper,
     })
-    const customButtonHover = (
-      customResult.current.glideTheme as unknown as {
-        bgButtonHovered: string
-      }
-    ).bgButtonHovered
+    const customButtonHover = customResult.current.glideTheme.bgButtonHovered
 
     expect(customButtonHover).toBe(defaultButtonHover)
     // And it must differ from bgHeaderHovered when the header has a
     // custom color, otherwise there is no decoupling.
-    expect(customButtonHover).not.toBe(customResult.current.glideTheme.bgHeaderHovered)
+    expect(customButtonHover).not.toBe(
+      customResult.current.glideTheme.bgHeaderHovered
+    )
   })
 })

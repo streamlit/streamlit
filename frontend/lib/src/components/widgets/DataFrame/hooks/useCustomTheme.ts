@@ -24,7 +24,11 @@ import { blend, convertRemToPx } from "~lib/theme/utils"
 export type CustomGridTheme = {
   // The theme configuration for the glide-data-grid
   glideTheme: Partial<GlideTheme> &
-    Pick<GlideTheme, "baseFontStyle" | "cellHorizontalPadding" | "fontFamily">
+    Pick<GlideTheme, "baseFontStyle" | "cellHorizontalPadding" | "fontFamily"> & {
+      // Custom (non-glide-native) key consumed by ButtonCell for
+      // secondary-button hovers. See #11950.
+      bgButtonHovered?: string
+    }
   // The table border radius in pixels
   tableBorderRadius: string
   // The table border size in pixels
@@ -84,13 +88,10 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       transparentize(theme.colors.darkenedBgMix100, 0.9),
       flatHeaderBg
     )
-    // The pre-flatten translucent overlay that used to drive
-    // bgHeaderHovered before the #11950 fix. `bgHeaderHovered` is now
-    // opaque and header-tinted (required for the canvas paint), but it is
-    // also consumed by body-cell secondary-button hovers in ButtonCell,
-    // which want the original translucent overlay independent of any
-    // header color customization. Expose it as a separate glide-theme key
-    // so ButtonCell can read it directly.
+    // Translucent secondary-button hover for body cells — kept separate
+    // from the opaque `bgHeaderHovered` so header color customizations do
+    // not restyle buttons. Consumed by ButtonCell via a custom
+    // (non-glide-native) `bgButtonHovered` key on the returned theme.
     const buttonHoverBg = transparentize(theme.colors.darkenedBgMix100, 0.9)
 
     const glideTheme = {
@@ -109,9 +110,6 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       bgHeader: flatHeaderBg,
       bgHeaderHasFocus: flatHeaderInteractionBg,
       bgHeaderHovered: flatHeaderInteractionBg,
-      // Custom (non-glide-native) key consumed by ButtonCell for
-      // secondary-button hovers. Kept separate from `bgHeaderHovered` so
-      // customizing the header color does not restyle body-cell buttons.
       bgButtonHovered: buttonHoverBg,
       textHeader: theme.colors.fadedText60,
       textHeaderSelected: theme.colors.white,
