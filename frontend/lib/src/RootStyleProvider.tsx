@@ -65,7 +65,7 @@ export function RootStyleProvider(
   props: RootStyleProviderProps
 ): ReactElement {
   const { children, theme } = props
-  const popupZIndex = theme.emotion.zIndices.popup
+  const basewebOverlayZIndex = theme.emotion.zIndices.basewebOverlay
 
   const baseProviderOverrides = useMemo(
     () => ({
@@ -77,19 +77,22 @@ export function RootStyleProvider(
           "data-st-baseweb-layer-host": "true",
           "data-st-overlay-root": "true",
           "data-react-aria-top-layer": "true",
-          style: getBasewebLayerHostStyle(popupZIndex),
+          style: getBasewebLayerHostStyle(basewebOverlayZIndex),
         },
       },
     }),
-    [popupZIndex]
+    [basewebOverlayZIndex]
   )
 
   return (
     <BaseProvider
       theme={theme.basewebTheme}
-      // BaseWeb layers must use Streamlit's popup layer so legacy dropdowns,
-      // popovers, and calendars render above React Aria dialogs.
-      zIndex={popupZIndex}
+      // BaseWeb layers render in the basewebOverlay tier, which sits above the
+      // popup layer (React Aria dialogs, floating-ui popover body) so legacy
+      // dropdowns and calendars — including ones opened inside an st.popover —
+      // render on top, and below toast/tablePortal so toasts and dataframe
+      // overlays stay on top.
+      zIndex={basewebOverlayZIndex}
       overrides={baseProviderOverrides}
     >
       <CacheProvider value={cache}>

@@ -53,6 +53,10 @@ applyTo: "**/*.py"
 - `pyproject.toml`: Package configuration of the Streamlit library.
 - `tests`: Python unit tests (pytest).
 
+## Dependencies
+
+- Required dependencies for the Streamlit library in `pyproject.toml` must include a lower bound and an upper bound pinned to the next unreleased major version, for example `package>=1.2.3,<2`. This minimizes potential breaks from new major versions. Exemptions are allowed, but must include a clear comment explaining why the dependency should not be capped.
+
 ## Typing
 
 - Add typing annotations to every new function, method or class member.

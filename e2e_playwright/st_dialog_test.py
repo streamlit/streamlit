@@ -35,6 +35,7 @@ from e2e_playwright.shared.app_utils import (
 from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
 )
+from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 modal_test_id = "stDialog"
 
@@ -234,6 +235,31 @@ def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
     wait_for_app_run(app)
 
     expect_markdown(dialog, "Tags Value: ['Utilities']")
+
+
+def test_dialog_allows_interacting_with_widget_in_popover(app: Page):
+    """Widgets inside an st.popover opened inside an st.dialog must be
+    interactable — the popover body must not be occluded by the dialog's
+    React Aria overlay (regression coverage for #16005).
+    """
+    click_button(app, "Open Dialog with Popover")
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+
+    dialog.get_by_role("button", name="Open popover").click()
+    popover_body = app.get_by_test_id("stPopoverBody")
+    expect(popover_body).to_be_visible()
+
+    # The popover body must land above the dialog for hit-testing: its parent
+    # container (the FloatingPortal host) must not be `inert`. Without the fix,
+    # the popover body's own DIV is above the dialog visually, but its parent
+    # is marked inert by React Aria's ModalOverlay — so `elementFromPoint` at
+    # the widget's center returns the dialog rather than the widget.
+    select_selectbox_option(popover_body, "Fruit", "Banana")
+    expect_markdown(popover_body, "picked: Banana")
+
+    # The dialog must not be dismissed by the interaction inside the popover.
+    expect(dialog).to_be_visible()
 
 
 def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Page):
@@ -553,9 +579,7 @@ def test_dialog_with_chart(app: Page):
     expect(main_dialog).to_be_visible()
 
     # Check for the chart & tooltip
-    chart = main_dialog.get_by_test_id("stVegaLiteChart").locator(
-        "[role='graphics-document']"
-    )
+    chart = get_vega_graphics_document(main_dialog.get_by_test_id("stVegaLiteChart"))
     expect(chart).to_be_visible()
     # Wait for the app to fully render (helps webkit where bounding_box can be None initially)
     wait_for_app_run(app)
@@ -578,9 +602,7 @@ def test_dialog_with_layered_chart_shows_tooltips(app: Page):
     expect(main_dialog).to_have_count(1)
     expect(main_dialog).to_be_visible()
 
-    chart = main_dialog.get_by_test_id("stVegaLiteChart").locator(
-        "[role='graphics-document']"
-    )
+    chart = get_vega_graphics_document(main_dialog.get_by_test_id("stVegaLiteChart"))
     expect(chart).to_be_visible()
     wait_for_app_run(app)
     chart.scroll_into_view_if_needed()

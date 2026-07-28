@@ -77,6 +77,7 @@ export interface TabProps extends BlockPropsWithoutWidth {
     childProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
   ) => ReactElement
   width: React.CSSProperties["width"]
+  height?: React.CSSProperties["height"]
   flex: React.CSSProperties["flex"]
   fragmentId?: string
 }
@@ -87,6 +88,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     node,
     isStale,
     width,
+    height,
     flex,
     widgetMgr,
     fragmentId,
@@ -360,17 +362,21 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     ]
   )
 
+  const hasConstrainedHeight = height !== undefined
+
   return (
     <StyledTabContainer
       className={classNames("stTabs", convertKeyToClassName(userKey))}
       data-testid="stTabs"
       isOverflowing={isOverflowing}
       width={width}
+      height={height}
       flex={flex}
     >
       <StyledTabsRoot
         selectedKey={String(activeTabKey)}
         onSelectionChange={handleSelectionChange}
+        $constrainedHeight={hasConstrainedHeight}
       >
         <StyledTabList ref={tabListRef} $isStale={isStale}>
           {node.children.map(
@@ -418,6 +424,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
                 // eslint-disable-next-line @eslint-react/no-array-index-key
                 key={index}
                 shouldForceMount
+                $constrainedHeight={hasConstrainedHeight}
               >
                 {props.renderTabContent(childProps)}
               </StyledTabPanel>

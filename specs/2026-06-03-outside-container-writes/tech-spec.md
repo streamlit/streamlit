@@ -48,6 +48,7 @@ Fragments can reference containers created outside their scope:
 ```python
 outside = st.container()
 
+
 @st.fragment
 def my_fragment():
     outside.button("Click me")
@@ -320,7 +321,9 @@ executes, do two things. First, **evict** the registry entries this run will inv
 those whose container is created by this fragment's scope (see the registry lifecycle above):
 
 ```python
-def _evict_outside_wrappers(fragment_storage: FragmentStorage, fragment_id: str) -> None:
+def _evict_outside_wrappers(
+    fragment_storage: FragmentStorage, fragment_id: str
+) -> None:
     # Containers this fragment creates are about to be rebuilt; drop their wrappers.
     for key in fragment_storage.outside_wrapper_keys_created_by(fragment_id):
         del fragment_storage._outside_wrappers[key]
@@ -330,7 +333,9 @@ Then **reset** the wrappers this fragment writes through — re-emitting each an
 cursor so reused wrappers survive `ClearStaleNodeVisitor` and start at index 0:
 
 ```python
-def _reset_outside_wrappers(fragment_storage: FragmentStorage, fragment_id: str) -> None:
+def _reset_outside_wrappers(
+    fragment_storage: FragmentStorage, fragment_id: str
+) -> None:
     for key, wrapper in fragment_storage.outside_wrappers_for(fragment_id):
         # Re-emit the wrapper's add_block delta so the frontend updates its
         # scriptRunId — without this, ClearStaleNodeVisitor would GC the wrapper.
@@ -409,9 +414,10 @@ placeholder:
 ```python
 outside = st.container()
 
+
 @st.fragment
 def my_fragment():
-    placeholder = outside.empty()       # claims the slot on every run
+    placeholder = outside.empty()  # claims the slot on every run
     if st.button("Show detail"):
         placeholder.write("Detail...")  # fills it during fragment rerun
 ```

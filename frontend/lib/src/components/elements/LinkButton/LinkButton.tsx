@@ -27,6 +27,7 @@ import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonT
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
+import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import BaseLinkButton from "./BaseLinkButton"
@@ -40,6 +41,8 @@ export interface Props {
 function LinkButton(props: Readonly<Props>): ReactElement {
   const { element, widgetMgr, fragmentId } = props
   const shortcut = element.shortcut || undefined
+  const isLinkBlocked = isDangerousLinkUri(element.url)
+  const href = isLinkBlocked ? BLOCKED_LINK_URI : element.url
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -51,17 +54,18 @@ function LinkButton(props: Readonly<Props>): ReactElement {
   const anchorRef = useRef<HTMLAnchorElement | null>(null)
 
   const handleShortcut = useCallback((): void => {
-    if (element.disabled) {
+    if (element.disabled || isLinkBlocked) {
       return
     }
 
     anchorRef.current?.click()
-  }, [element.disabled])
+  }, [element.disabled, isLinkBlocked])
 
   const handleClick = useCallback(
     (event: MouseEvent<HTMLAnchorElement>): void => {
-      if (element.disabled) {
-        // Prevent the link from being followed if the button is disabled.
+      if (element.disabled || isLinkBlocked) {
+        // Prevent the link from being followed if the button is disabled or
+        // if its URI uses a dangerous scheme.
         event.preventDefault()
         return
       }
@@ -70,7 +74,7 @@ function LinkButton(props: Readonly<Props>): ReactElement {
         void widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
       }
     },
-    [element, fragmentId, widgetMgr]
+    [element, fragmentId, isLinkBlocked, widgetMgr]
   )
 
   useRegisterShortcut({
@@ -94,8 +98,8 @@ function LinkButton(props: Readonly<Props>): ReactElement {
           size={BaseButtonSize.SMALL}
           disabled={element.disabled}
           onClick={handleClick}
-          href={element.url}
-          target="_blank"
+          href={href}
+          target={isLinkBlocked ? "_self" : "_blank"}
           rel="noreferrer"
           aria-disabled={element.disabled}
         >

@@ -143,6 +143,7 @@ def check_username(value: str) -> bool | str:
         return "Username already taken."
     return True
 
+
 st.text_input("Username", validate=check_username)
 ```
 
@@ -220,7 +221,7 @@ import streamlit as st
 email = st.text_input(
     "Email address",
     validate=r"^[\w.+-]+@[\w-]+\.[\w.-]+$",
-    placeholder="you@example.com"
+    placeholder="you@example.com",
 )
 
 if email:
@@ -245,6 +246,7 @@ password = st.text_input(
 ```python
 import streamlit as st
 
+
 def check_username(value: str) -> bool | str:
     if len(value) < 3:
         return "Username must be at least 3 characters."
@@ -255,10 +257,9 @@ def check_username(value: str) -> bool | str:
         return "Username already taken. Try another one."
     return True
 
+
 username = st.text_input(
-    "Choose a username",
-    validate=check_username,
-    placeholder="Enter a unique username"
+    "Choose a username", validate=check_username, placeholder="Enter a unique username"
 )
 
 if username:
@@ -271,9 +272,7 @@ if username:
 import streamlit as st
 
 phone = st.text_input(
-    "Phone number",
-    validate=r"^\+?[\d\s-]{10,}$",
-    placeholder="+1 234 567 8900"
+    "Phone number", validate=r"^\+?[\d\s-]{10,}$", placeholder="+1 234 567 8900"
 )
 ```
 
@@ -282,6 +281,7 @@ phone = st.text_input(
 ```python
 import streamlit as st
 import re
+
 
 def validate_password(value: str) -> bool | str:
     if len(value) < 8:
@@ -294,11 +294,8 @@ def validate_password(value: str) -> bool | str:
         return "Password must contain at least one number."
     return True
 
-password = st.text_input(
-    "Create password",
-    type="password",
-    validate=validate_password
-)
+
+password = st.text_input("Create password", type="password", validate=validate_password)
 ```
 
 ### Edge cases

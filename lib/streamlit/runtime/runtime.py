@@ -34,6 +34,7 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
+from streamlit.runtime.dataframe_source_manager import DataframeSourceManager
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
@@ -217,6 +218,7 @@ class Runtime:
         self._bidi_component_registry = config.bidi_component_registry
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
+        self._dataframe_source_mgr = DataframeSourceManager()
         self._cache_storage_manager = config.cache_storage_manager
         self._script_cache = ScriptCache()
 
@@ -274,6 +276,10 @@ class Runtime:
     @property
     def media_file_mgr(self) -> MediaFileManager:
         return self._media_file_mgr
+
+    @property
+    def dataframe_source_mgr(self) -> DataframeSourceManager:
+        return self._dataframe_source_mgr
 
     @property
     def stats_mgr(self) -> StatsManager:

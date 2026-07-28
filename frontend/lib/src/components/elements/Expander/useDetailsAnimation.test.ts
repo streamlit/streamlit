@@ -537,7 +537,7 @@ describe("useDetailsAnimation", () => {
       expect(Element.prototype.animate).toHaveBeenCalledTimes(1)
     })
 
-    it("locks inline styles when content height is zero so ResizeObserver can animate later", async () => {
+    it("clears the inline lock when content height is zero (no permanent clip)", async () => {
       const user = userEvent.setup({
         advanceTimers: vi.advanceTimersByTime,
       })
@@ -553,8 +553,8 @@ describe("useDetailsAnimation", () => {
       const summary = screen.getByTestId("summary")
       const content = screen.getByTestId("content")
 
-      // Summary has height, but content returns 0 (e.g. widget mode where
-      // content hasn't loaded yet)
+      // Summary has height but content measures 0 (content hasn't laid out yet).
+      // animateTo locks the height, then the zero-content branch must clear it.
       mockElementHeight(details, 42)
       mockElementHeight(summary, 40)
       mockElementHeight(content, 0)
@@ -565,15 +565,16 @@ describe("useDetailsAnimation", () => {
 
       // No animation should have been started (nothing to animate to yet)
       expect(Element.prototype.animate).not.toHaveBeenCalled()
-      // Inline styles should remain LOCKED so the ResizeObserver can later
-      // animate from this height to the full content height once it loads
-      expect(details.style.height).toBe("42px")
-      expect(details.style.overflow).toBe("hidden")
-      // Element should still be set to open for content to render
+      // The lock must be CLEARED, not left in place: leaving overflow:hidden +
+      // a fixed height with no animation to clear it is the permanent-clip bug
+      // (issue #16027). The element sizes to its natural height instead.
+      expect(details.style.height).toBe("")
+      expect(details.style.overflow).toBe("")
+      // Element is still open so the content renders once it lays out.
       expect(details).toHaveAttribute("open")
     })
 
-    it("animates from locked height when content loads after zero-content open", async () => {
+    it("animates the reveal when content loads after a zero-content open", async () => {
       const user = userEvent.setup({
         advanceTimers: vi.advanceTimersByTime,
       })
@@ -594,21 +595,61 @@ describe("useDetailsAnimation", () => {
       mockElementHeight(summary, 40)
       mockElementHeight(content, 0)
 
-      // Click to expand — locks height at 42px (content is 0)
+      // Click to expand — contentHeight is 0, so the lock is cleared and no
+      // animation starts yet.
       await user.click(screen.getByTestId("summary"))
       ;(Element.prototype.animate as ReturnType<typeof vi.fn>).mockClear()
 
-      // Content loads: now content=200, but details is still locked at 42px
-      // (the ResizeObserver reads the locked details height)
+      // Content loads: now content=200. The ResizeObserver reads the current
+      // details height (42) and animates the reveal to the full height.
       mockElementHeight(content, 200)
-      // details stays locked at 42 since style.height="42px"
       // target = 40 + 200 + 2*1 = 242, current = 42, diff = 200 > 5
 
       fireResize()
       vi.advanceTimersByTime(50)
 
-      // ResizeObserver should trigger an animation from locked height to full
+      // ResizeObserver should trigger an animation from the current height to full
       expect(Element.prototype.animate).toHaveBeenCalledTimes(1)
+    })
+
+    it("clears the inline lock when the expander is replaced (label change)", async () => {
+      const user = userEvent.setup({
+        advanceTimers: vi.advanceTimersByTime,
+      })
+
+      const { rerender } = render(
+        createElement(TestHarness, {
+          backendExpanded: true,
+          label: "Old Label",
+        })
+      )
+
+      const details = screen.getByTestId("details")
+      const summary = screen.getByTestId("summary")
+      const content = screen.getByTestId("content")
+
+      mockElementHeight(details, 100)
+      mockElementHeight(summary, 40)
+      mockElementHeight(content, 200)
+
+      // Toggle closed: locks height + overflow while the (mock) close animation
+      // "runs" and never fires finish, so the lock persists on the node.
+      await user.click(summary)
+      expect(details.style.height).not.toBe("")
+      expect(details.style.overflow).toBe("hidden")
+
+      // A new expander reuses this <details> node (label change). cancelAnimation
+      // must clear the stale lock so the reused node isn't left clipped from the
+      // previous expander's interrupted animation (issue #16027).
+      rerender(
+        createElement(TestHarness, {
+          backendExpanded: true,
+          label: "New Label",
+        })
+      )
+
+      expect(details.style.height).toBe("")
+      expect(details.style.overflow).toBe("")
     })
 
     it("clears pending debounce timeout on unmount", () => {

@@ -60,10 +60,10 @@ dev = [
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
   "ty==0.0.56",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.15.20",
+  "ruff==0.16.0",
   # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
-  "mypy==2.1.0",
+  "mypy==2.2.0",
   # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
   # Streamlit still type-checks as Python 3.10.
   "numpy<2.5",
@@ -82,7 +82,6 @@ dev = [
   "types-requests",
   "types-setuptools",
   "types-toml",
-  "types-cachetools",
   "types-Authlib",
   # pandas-stubs have caused a couple of CI breaks, so we pin to a specific version.
   # We need to pin 2.3.3.260113 since higher versions require a min Python 3.11 support.
@@ -120,7 +119,7 @@ test = [
   # httpx2 is used by starlette's TestClient (>=1.2); httpx is still required
   # by authlib's httpx_client integration used in the auth route tests.
   "httpx>=0.24.1",
-  "httpx2>=2.0.0",
+  "httpx2>=2.7.0",
   # Playwright and E2E test dependencies:
   # We pin playwright to a minor version to avoid new browser versions breaking our CI.
   "playwright==1.61.*",
@@ -264,7 +263,6 @@ ignore = [
   "RUF052",  # Checks for dummy variables that are used.
   "RUF067",  # Checks for non empty __init__ modules.
   "RUF075",  # Checks for context managers that don't catch exceptions (new preview rule in ruff 0.15.14).
-  "RUF076",  # Checks for autouse=True in pytest.fixture decorators (new rule in ruff 0.15.17; autouse is intentional in our fixtures).
   "SIM105",  # Enforces use of contextlib.suppress.
   "SIM108",  # Enforces ternary operators instead of if-else.
   "SIM115",  # Enforces context manager for opening files.
@@ -273,6 +271,12 @@ ignore = [
   "TD002",   # Checks for missing author in TODO comment.
   "TD003",   # Checks for missing issue link in TODO comment.
   "TRY300",  # Checks for return statements in try blocks.
+  # New preview rules in ruff 0.15.22 that would migrate our existing
+  # `# noqa` comments and rule codes to the unstable `ruff:ignore` syntax and
+  # human-readable names. We keep the established conventions for now.
+  "RUF105",  # Checks for legacy `# noqa` comments (migrates them to `# ruff:ignore`).
+  "RUF106",  # Checks for rule codes in suppression comments (migrates to human-readable names).
+  "RUF201",  # Checks for rule codes in config selectors (migrates to human-readable names).
 ]
 extend-safe-fixes = ["TC002", "TC003"]
 

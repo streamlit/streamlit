@@ -270,8 +270,13 @@ describe("FileUploader widget tests", () => {
 
     fireEvent.drop(fileDropZone, {
       dataTransfer: {
-        types: ["Files", "Files", "Files"],
+        types: ["Files"],
         files: filesToUpload,
+        items: filesToUpload.map(file => ({
+          kind: "file",
+          type: file.type,
+          getAsFile: () => file,
+        })),
       },
     })
 
