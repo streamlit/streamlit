@@ -189,10 +189,12 @@ def test_popover_stays_within_narrow_viewport(app: Page):
     iframe. The `size` middleware now clamps `max-width` to the available
     space at the chosen placement so the popover always fits.
     """
-    # Simulate a narrow oEmbed iframe (e.g. a Medium post). 520px is
-    # narrower than the popover's default ~704px max-width, so pre-fix
-    # the body overflowed the viewport.
-    app.set_viewport_size({"width": 520, "height": 800})
+    # Simulate a narrow oEmbed iframe (e.g. a Medium post is ~680px wide).
+    # 640px is chosen to sit inside the bug window: above the styled-component's
+    # `@media (max-width: 576px)` CSS clamp (which independently limits width on
+    # very small viewports) but below the popover's baseline ~704px max-width.
+    # Pre-fix, `size` middleware wasn't wired here and the popover overflowed.
+    app.set_viewport_size({"width": 640, "height": 800})
 
     popover_body = open_popover(app, "popover 3 (with widgets)")
     expect_markdown(popover_body, "Hello World 👋")
