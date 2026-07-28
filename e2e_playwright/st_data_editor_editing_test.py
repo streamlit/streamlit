@@ -394,6 +394,50 @@ def test_number_cell_editing_performance(
     _test_number_cell_editing(app, assert_snapshot, skip_snapshot=True)
 
 
+def test_number_cell_editor_ignores_ime_composing_enter(app: Page) -> None:
+    """Enter during IME composition must not commit the cell.
+
+    Regression test for streamlit/streamlit#16129: with a CJK IME active,
+    the Enter that confirms the composition fires a keydown with
+    ``isComposing=true``. The overlay editor used to treat that as a
+    cell-commit, closing the editor after the first composed digit and
+    making multi-digit input impossible.
+    """
+    cell_editor = _get_editor(app, "cell_editor")
+    expect_canvas_to_be_visible(cell_editor)
+
+    click_on_cell(cell_editor, 1, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(app)
+    input_field = cell_overlay.locator(".gdg-input")
+    expect(input_field).to_be_visible()
+
+    # Simulate the Enter that confirms an IME composition. In real browsers
+    # this fires with ``isComposing=true`` / ``keyCode=229`` and must be a
+    # no-op for the cell overlay.
+    input_field.evaluate(
+        """el => {
+            el.focus();
+            el.dispatchEvent(new KeyboardEvent("keydown", {
+                key: "Enter",
+                code: "Enter",
+                keyCode: 229,
+                which: 229,
+                bubbles: true,
+                cancelable: true,
+                isComposing: true,
+            }));
+        }"""
+    )
+
+    # The editor must remain open after a composing Enter.
+    expect(cell_overlay).to_be_visible()
+    expect(input_field).to_be_visible()
+
+    # A regular (non-composing) Enter should still commit the cell.
+    app.keyboard.press("Enter")
+    expect(cell_overlay).not_to_be_visible()
+
+
 def test_text_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the text cell can be edited."""
     cell_editor = _get_editor(themed_app, "cell_editor")

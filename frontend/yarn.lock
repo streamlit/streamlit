@@ -1311,6 +1311,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@glideapps/glide-data-grid@patch:@glideapps/glide-data-grid@npm%3A6.0.4-alpha24#~/.yarn/patches/@glideapps-glide-data-grid-npm-6.0.4-alpha24-9c1a40557b.patch":
+  version: 6.0.4-alpha24
+  resolution: "@glideapps/glide-data-grid@patch:@glideapps/glide-data-grid@npm%3A6.0.4-alpha24#~/.yarn/patches/@glideapps-glide-data-grid-npm-6.0.4-alpha24-9c1a40557b.patch::version=6.0.4-alpha24&hash=8b6f4e"
+  dependencies:
+    "@linaria/react": "npm:^6.3.0"
+    canvas-hypertxt: "npm:^1.0.3"
+    react-number-format: "npm:^5.4.4"
+  peerDependencies:
+    lodash: ^4.17.19
+    marked: ^16.0.10
+    react: ^16.12.0 || 17.x || 18.x || 19.x
+    react-dom: ^16.12.0 || 17.x || 18.x || 19.x
+    react-responsive-carousel: ^3.2.7
+  checksum: 10c0/caf10dc82f75567e918f58cca10c960aec481e4f2c5cf6c9881984dbadf521a7a32c27199e6758dbf142b503b6c49bd064ced5286e498e11c05c8b00558e7155
+  languageName: node
+  linkType: hard
+
 "@hpcc-js/wasm@npm:^2.20.0":
   version: 2.22.4
   resolution: "@hpcc-js/wasm@npm:2.22.4"

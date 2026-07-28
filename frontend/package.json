@@ -40,7 +40,8 @@
     "@swc/core": "^1.15.3",
     "@typescript-eslint/utils": "^8.58.2",
     "@typescript-eslint/scope-manager": "^8.58.2",
-    "@typescript-eslint/types": "^8.58.2"
+    "@typescript-eslint/types": "^8.58.2",
+    "@glideapps/glide-data-grid@npm:6.0.4-alpha24": "patch:@glideapps/glide-data-grid@npm%3A6.0.4-alpha24#~/.yarn/patches/@glideapps-glide-data-grid-npm-6.0.4-alpha24-9c1a40557b.patch"
   },
   "browserslist": [
     ">0.2%",
