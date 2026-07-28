@@ -76,10 +76,11 @@ combined with `persist`. The function can't use session-specific features (e.g.
 with both `st.cache_data` and `st.cache_resource`.
 
 Background refresh is access-driven: it starts only after a call observes an expired entry,
-so the caller may briefly receive stale data. For advanced cases that must keep known global
-cache keys updated without ever serving stale values, use an `st.App` lifespan task to clear
-and warm them on a schedule shorter than their `ttl`. See [Scheduled cache warming for
-never-stale values](server-asgi.md#scheduled-cache-warming-for-never-stale-values).
+so the caller may briefly receive stale data. For advanced cases that need to proactively
+warm specific global cache keys before they expire, use an `st.App` lifespan task to clear and
+recompute them on a schedule shorter than their `ttl`. Concurrent callers may wait while a
+cleared entry recomputes. See [Proactive scheduled cache
+warming](server-asgi.md#proactive-scheduled-cache-warming).
 
 ### Prevent unbounded cache growth
 

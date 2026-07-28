@@ -225,16 +225,16 @@ avoids the warning.
 
 If ASGI routes or middleware need process-level state that is not a Streamlit resource, the lifespan context manager may yield a dictionary. Those values are stored on `app.state` (`app.state["ready"]` in the example above).
 
-### Scheduled cache warming for never-stale values
+### Proactive scheduled cache warming
 
 `refresh_mode="background"` is the simplest way to avoid blocking on expiration when
 slightly stale data is acceptable. It is access-driven, however: refresh starts only when a
 call observes an expired entry, and that call receives the stale value.
 
-For advanced cases that must keep known global cache keys updated without ever serving stale
-values, use a lifespan task to clear and immediately warm each key before its `ttl` expires.
-Run synchronous cached functions in a worker thread (via `anyio`, already a Streamlit
-dependency) so they don't block the ASGI event loop.
+For advanced cases that need to proactively update specific global cache keys, use a lifespan
+task to clear and immediately recompute each key before its `ttl` expires. Run synchronous
+cached functions in a worker thread (via `anyio`, already a Streamlit dependency) so they
+don't block the ASGI event loop.
 
 ```python
 # resources.py
@@ -263,6 +263,8 @@ async def lifespan(app):
     from resources import load_metrics
 
     def refresh_metrics():
+        # A normal call before the TTL is only a cache hit. Clear the key to force
+        # recomputation, then immediately warm it again.
         load_metrics.clear()
         load_metrics()
 
@@ -299,14 +301,15 @@ Keep these caveats in mind:
 
 - **Schedule overruns fall back to a blocking recompute.** If a refresh is skipped, runs late,
   or a slow warm overruns the remaining `ttl`, the entry expires and the next request does a
-  foreground recompute. That recompute still returns fresh data, so values stay never-stale
-  even though that single request is no longer never-blocking.
+  foreground recompute. That request receives fresh data, but it must wait.
 - **A failed warm is a cold-cache window.** Because the refresh clears before it recomputes, a
   warm that raises leaves the entry empty until the next successful refresh or a request-side
   recompute—not a keep-last-good-value fallback.
 - **Refresh is not an atomic replacement.** Concurrent callers never receive the old, stale
   value, but they can wait for the in-progress computation. If uninterrupted reads and atomic
   replacement are required, refresh a shared external store instead.
+- **Removing `clear()` doesn't refresh early.** A call made before the `ttl` is only a cache
+  hit, so it returns the current value without executing the cached function.
 - **Each worker warms independently.** Lifespan tasks run once per ASGI process, so a
   multi-worker deployment runs and warms every process on its own schedule.
 
