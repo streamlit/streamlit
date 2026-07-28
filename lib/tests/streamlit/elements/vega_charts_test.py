@@ -1857,16 +1857,30 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
         )
 
-    @parameterized.expand([("a.b",), ("CO2 Storage [t]",), (r"a\b",)])
-    def test_single_y_uses_safe_internal_field(self, column_name: str):
+    @parameterized.expand(
+        [
+            (chart_command, altair_type, column_name)
+            for chart_command, altair_type in ST_CHART_ARGS
+            for column_name in ("a.b", "CO2 Storage [t]", r"a\b")
+        ]
+    )
+    def test_single_y_uses_safe_internal_field(
+        self, chart_command: Callable, altair_type: str, column_name: str
+    ):
         """Single-series fields are safe even when Vega-Lite parses their names."""
         df = pd.DataFrame({column_name: [1, 2, 3]})
 
-        st.bar_chart(df)
+        chart_command(df)
 
         proto = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(proto.spec)
         output_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            # Line charts are layered as default to support better tooltips.
+            # Extract the actual line mark from the layer.
+            chart_spec = chart_spec["layer"][0]
+
         y_encoding = chart_spec["encoding"]["y"]
         y_field = y_encoding["field"]
 
@@ -1883,18 +1897,37 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         )
         assert y_tooltip["title"] == column_name
 
-    @parameterized.expand([("a.b", f"value{_PROTECTION_SUFFIX}"), ("values", "values")])
+    @parameterized.expand(
+        [
+            (chart_command, altair_type, column_name, expected_field)
+            for chart_command, altair_type in ST_CHART_ARGS
+            for column_name, expected_field in (
+                ("a.b", f"value{_PROTECTION_SUFFIX}"),
+                ("values", "values"),
+            )
+        ]
+    )
     def test_explicit_single_y_preserves_visible_titles(
-        self, column_name: str, expected_field: str
+        self,
+        chart_command: Callable,
+        altair_type: str,
+        column_name: str,
+        expected_field: str,
     ):
         """Selective aliasing preserves visible labels and safe dataset fields."""
         df = pd.DataFrame({"x": [1, 2, 3], column_name: [4, 5, 6]})
 
-        st.bar_chart(df, x="x", y=column_name)
+        chart_command(df, x="x", y=column_name)
 
         proto = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(proto.spec)
         output_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            # Line charts are layered as default to support better tooltips.
+            # Extract the actual line mark from the layer.
+            chart_spec = chart_spec["layer"][0]
+
         y_encoding = chart_spec["encoding"]["y"]
         y_tooltip = next(
             tooltip

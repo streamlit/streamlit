@@ -112,7 +112,9 @@ def _unique_internal_column_name(columns: Collection[str], preferred_name: str) 
 
 
 def _contains_vega_lite_field_access_char(column_name: str) -> bool:
-    """Return whether Vega-Lite can interpret the column name as field access."""
+    """Return True if the column name contains characters Vega-Lite treats as field
+    access.
+    """
     return any(char in column_name for char in _VEGA_LITE_FIELD_ACCESS_CHARS)
 
 
@@ -1167,8 +1169,9 @@ def _get_tooltip_encoding(
     else:
         tooltip.append(alt.Tooltip(x_column))
 
-    # If the y column name is the crazy anti-collision name we gave it, then need to set
-    # up a tooltip title so we never show the crazy name to the user.
+    # Restore the user-visible column name as the tooltip title whenever the y field
+    # uses an internal anti-collision alias (the single-y field-access rename or the
+    # melt name), so we never show the internal name to the user.
     if single_y_column_title is not None:
         tooltip.append(alt.Tooltip(y_column, title=single_y_column_title))
     elif y_column == _MELTED_Y_COLUMN_NAME:
