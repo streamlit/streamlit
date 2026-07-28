@@ -341,7 +341,7 @@ For independent slow sections, prefer `@st.fragment(parallel=True)` so each fill
 
 ## Perceived performance (loading states)
 
-The techniques above reduce _actual_ work and keep the UI fresh. When a wait is unavoidable, give immediate loading feedback so the app _feels_ responsive instead of showing greyed, stale content. These don't speed up computation — pair them with caching and fragments. See `layouts.md` for details:
+The techniques above keep the UI fresh and responsive during slow work. When a wait is unavoidable, give immediate loading feedback so the app _feels_ responsive instead of showing greyed, stale content. These don't speed up computation — pair them with caching and fragments to cut the _actual_ work. See `layouts.md` for details:
 
 - `st.spinner` — lightweight indicator wrapped around a block of slow work.
 - `st.skeleton` — animated placeholder that reserves layout space while content loads.

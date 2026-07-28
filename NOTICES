@@ -4424,7 +4424,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
 
-The following software may be included in this product: d3-axis, d3-brush, d3-chord, d3-dispatch, d3-drag, d3-force, d3-format, d3-hierarchy, d3-interpolate, d3-polygon, d3-quadtree, d3-random, d3-scale, d3-selection, d3-time-format, d3-timer, d3-transition, d3-zoom. A copy of the source code may be downloaded from https://github.com/d3/d3-axis.git (d3-axis), https://github.com/d3/d3-brush.git (d3-brush), https://github.com/d3/d3-chord.git (d3-chord), https://github.com/d3/d3-dispatch.git (d3-dispatch), https://github.com/d3/d3-drag.git (d3-drag), https://github.com/d3/d3-force.git (d3-force), https://github.com/d3/d3-format.git (d3-format), https://github.com/d3/d3-hierarchy.git (d3-hierarchy), https://github.com/d3/d3-interpolate.git (d3-interpolate), https://github.com/d3/d3-polygon.git (d3-polygon), https://github.com/d3/d3-quadtree.git (d3-quadtree), https://github.com/d3/d3-random.git (d3-random), https://github.com/d3/d3-scale.git (d3-scale), https://github.com/d3/d3-selection.git (d3-selection), https://github.com/d3/d3-time-format.git (d3-time-format), https://github.com/d3/d3-timer.git (d3-timer), https://github.com/d3/d3-transition.git (d3-transition), https://github.com/d3/d3-zoom.git (d3-zoom). This software contains the following license and notice below:
+The following software may be included in this product: d3-axis, d3-brush, d3-chord, d3-dispatch, d3-drag, d3-force, d3-hierarchy, d3-interpolate, d3-polygon, d3-quadtree, d3-random, d3-scale, d3-selection, d3-time-format, d3-timer, d3-transition, d3-zoom. A copy of the source code may be downloaded from https://github.com/d3/d3-axis.git (d3-axis), https://github.com/d3/d3-brush.git (d3-brush), https://github.com/d3/d3-chord.git (d3-chord), https://github.com/d3/d3-dispatch.git (d3-dispatch), https://github.com/d3/d3-drag.git (d3-drag), https://github.com/d3/d3-force.git (d3-force), https://github.com/d3/d3-hierarchy.git (d3-hierarchy), https://github.com/d3/d3-interpolate.git (d3-interpolate), https://github.com/d3/d3-polygon.git (d3-polygon), https://github.com/d3/d3-quadtree.git (d3-quadtree), https://github.com/d3/d3-random.git (d3-random), https://github.com/d3/d3-scale.git (d3-scale), https://github.com/d3/d3-selection.git (d3-selection), https://github.com/d3/d3-time-format.git (d3-time-format), https://github.com/d3/d3-timer.git (d3-timer), https://github.com/d3/d3-transition.git (d3-transition), https://github.com/d3/d3-zoom.git (d3-zoom). This software contains the following license and notice below:
 
 Copyright 2010-2021 Mike Bostock
 
@@ -4774,6 +4774,24 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
 ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-----
+
+The following software may be included in this product: d3-format. A copy of the source code may be downloaded from https://github.com/d3/d3-format.git. This software contains the following license and notice below:
+
+Copyright 2010-2026 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
 
 -----
 
@@ -15558,7 +15576,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 -----
 
-The following software may be included in this product: vega, vega-canvas, vega-crossfilter, vega-dataflow, vega-encode, vega-event-selector, vega-expression, vega-force, vega-format, vega-geo, vega-hierarchy, vega-label, vega-loader, vega-parser, vega-projection, vega-regression, vega-runtime, vega-scale, vega-scenegraph, vega-statistics, vega-time, vega-transforms, vega-typings, vega-util, vega-view, vega-view-transforms, vega-voronoi, vega-wordcloud. A copy of the source code may be downloaded from git+https://github.com/vega/vega.git (vega), git+https://github.com/vega/vega.git (vega-canvas), git+https://github.com/vega/vega.git (vega-crossfilter), git+https://github.com/vega/vega.git (vega-dataflow), git+https://github.com/vega/vega.git (vega-encode), git+https://github.com/vega/vega.git (vega-event-selector), git+https://github.com/vega/vega.git (vega-expression), git+https://github.com/vega/vega.git (vega-force), git+https://github.com/vega/vega.git (vega-format), git+https://github.com/vega/vega.git (vega-geo), git+https://github.com/vega/vega.git (vega-hierarchy), git+https://github.com/vega/vega.git (vega-label), git+https://github.com/vega/vega.git (vega-loader), git+https://github.com/vega/vega.git (vega-parser), git+https://github.com/vega/vega.git (vega-projection), git+https://github.com/vega/vega.git (vega-regression), git+https://github.com/vega/vega.git (vega-runtime), git+https://github.com/vega/vega.git (vega-scale), git+https://github.com/vega/vega.git (vega-scenegraph), git+https://github.com/vega/vega.git (vega-statistics), git+https://github.com/vega/vega.git (vega-time), git+https://github.com/vega/vega.git (vega-transforms), git+https://github.com/vega/vega.git (vega-typings), git+https://github.com/vega/vega.git (vega-util), git+https://github.com/vega/vega.git (vega-view), git+https://github.com/vega/vega.git (vega-view-transforms), git+https://github.com/vega/vega.git (vega-voronoi), git+https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
+The following software may be included in this product: vega, vega-canvas, vega-crossfilter, vega-dataflow, vega-encode, vega-event-selector, vega-expression, vega-force, vega-format, vega-functions, vega-geo, vega-hierarchy, vega-interpreter, vega-label, vega-loader, vega-parser, vega-projection, vega-regression, vega-runtime, vega-scale, vega-scenegraph, vega-selections, vega-statistics, vega-time, vega-transforms, vega-typings, vega-util, vega-view, vega-view-transforms, vega-voronoi, vega-wordcloud. A copy of the source code may be downloaded from git+https://github.com/vega/vega.git (vega), git+https://github.com/vega/vega.git (vega-canvas), git+https://github.com/vega/vega.git (vega-crossfilter), git+https://github.com/vega/vega.git (vega-dataflow), git+https://github.com/vega/vega.git (vega-encode), git+https://github.com/vega/vega.git (vega-event-selector), git+https://github.com/vega/vega.git (vega-expression), git+https://github.com/vega/vega.git (vega-force), git+https://github.com/vega/vega.git (vega-format), git+https://github.com/vega/vega.git (vega-functions), git+https://github.com/vega/vega.git (vega-geo), git+https://github.com/vega/vega.git (vega-hierarchy), git+https://github.com/vega/vega.git (vega-interpreter), git+https://github.com/vega/vega.git (vega-label), git+https://github.com/vega/vega.git (vega-loader), git+https://github.com/vega/vega.git (vega-parser), git+https://github.com/vega/vega.git (vega-projection), git+https://github.com/vega/vega.git (vega-regression), git+https://github.com/vega/vega.git (vega-runtime), git+https://github.com/vega/vega.git (vega-scale), git+https://github.com/vega/vega.git (vega-scenegraph), git+https://github.com/vega/vega.git (vega-selections), git+https://github.com/vega/vega.git (vega-statistics), git+https://github.com/vega/vega.git (vega-time), git+https://github.com/vega/vega.git (vega-transforms), git+https://github.com/vega/vega.git (vega-typings), git+https://github.com/vega/vega.git (vega-util), git+https://github.com/vega/vega.git (vega-view), git+https://github.com/vega/vega.git (vega-view-transforms), git+https://github.com/vega/vega.git (vega-voronoi), git+https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
 
 Copyright (c) 2015-2023, University of Washington Interactive Data Lab
 All rights reserved.

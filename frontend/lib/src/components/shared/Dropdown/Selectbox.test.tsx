@@ -25,6 +25,8 @@ import { userEvent } from "@testing-library/user-event"
 
 import { streamlit } from "@streamlit/protobuf"
 
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import * as UseFloatingOverlay from "~lib/hooks/useFloatingOverlay"
 import { render } from "~lib/test_util"
 import * as MobileUtil from "~lib/util/isMobile"
 import { LabelVisibilityOptions } from "~lib/util/utils"
@@ -881,6 +883,46 @@ describe("Selectbox widget with optional props", () => {
 
     // "AA" is case-sensitively distinct from "aa", "Aa", "aA" → Add option shown
     expect(screen.getByRole("option", { name: /Add: AA/i })).toBeVisible()
+  })
+})
+
+describe("Selectbox dropdown positioning", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Regression test for #16181: inside the sidebar, flip stays enabled and is
+  // bounded by the viewport so a trigger near the bottom flips its dropdown up
+  // instead of opening downward and overflowing. The bug set flipOptions to
+  // false, disabling flip entirely.
+  it("keeps flip enabled with a viewport boundary inside the sidebar", () => {
+    const overlaySpy = vi.spyOn(UseFloatingOverlay, "useFloatingOverlay")
+    render(
+      <IsSidebarContext.Provider value={true}>
+        <Selectbox {...getProps()} />
+      </IsSidebarContext.Provider>
+    )
+
+    const options = overlaySpy.mock.calls[0][0]
+    expect(options.flipOptions).toMatchObject({
+      boundary: document.documentElement,
+    })
+    // Preserve the shared shift padding when overriding shiftOptions, rather
+    // than falling back to Floating UI's 0 default (the reason the constant is
+    // exported).
+    expect(options.shiftOptions).toMatchObject({
+      boundary: document.documentElement,
+      padding: UseFloatingOverlay.SHIFT_VIEWPORT_PADDING,
+    })
+  })
+
+  it("uses default flip/shift behavior outside the sidebar", () => {
+    const overlaySpy = vi.spyOn(UseFloatingOverlay, "useFloatingOverlay")
+    render(<Selectbox {...getProps()} />)
+
+    const options = overlaySpy.mock.calls[0][0]
+    expect(options.flipOptions).toBeUndefined()
+    expect(options.shiftOptions).toBeUndefined()
   })
 })
 
