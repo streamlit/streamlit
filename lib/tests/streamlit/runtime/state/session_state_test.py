@@ -3762,6 +3762,38 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
+    def test_disabled_widget_drops_forged_value_alongside_programmatic_set(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A forged frontend value must not linger in widget state (or expose its
+        wire label) when a programmatic st.session_state assignment coexists. The
+        programmatic value still wins resolution, but the discarded frontend value
+        is removed from ``_new_widget_state`` rather than lingering until the next
+        compaction."""
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(widget_id, disabled=True)
+
+        self.session_state.register_widget(metadata, user_key="cb")
+        self.session_state._compact_state()
+
+        # App sets the value programmatically; the frontend also submits a forged
+        # value (delivered as a proto so its wire label is captured).
+        self.session_state._new_session_state["cb"] = "programmatic"
+        forged_proto = WidgetStateProto()
+        forged_proto.id = widget_id
+        forged_proto.string_value = "forged_value"
+        self.session_state._new_widget_state.set_widget_from_proto(forged_proto)
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "programmatic"
+        assert result.incoming_serialized_value is None
+        # The forged frontend value must not linger in the current widget state.
+        assert widget_id not in self.session_state._new_widget_state.states
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
     def test_disabled_keyless_widget_discards_incoming_value(
         self, mock_ctx: MagicMock
     ) -> None:

@@ -1317,26 +1317,31 @@ class SessionState:
             self._persist_tracker.untrack(widget_id, user_key)
 
         # Enforce `disabled` server-side. A disabled widget cannot be interacted
-        # with in the browser, so any value arriving from the frontend must be
-        # ignored: it can only originate from a stale UI or a forged BackMsg.
-        # Discard the incoming value so resolution falls back to the widget's
-        # previous value (or its default on first registration). Programmatic
-        # st.session_state assignments are still honored, since those come from
-        # the app rather than the frontend.
+        # with in the browser, so any value in widget state is a stale/forged
+        # frontend value and must be dropped, so resolution falls back to the
+        # widget's previous value (or its default on first registration).
+        # URL-seeded values are exempt: they populate widget state legitimately
+        # for bound widgets (url_value_seeded). A programmatic st.session_state
+        # assignment lives in _new_session_state and still wins during
+        # resolution, so dropping the forged widget-state entry never affects it
+        # while preventing the forged value from lingering there until compaction.
         disabled_value_discarded = False
         if (
             metadata.disabled
             and widget_id in self._new_widget_state
-            and (user_key is None or user_key not in self._new_session_state)
+            and not url_value_seeded
         ):
             del self._new_widget_state[widget_id]
-            disabled_value_discarded = True
-            # The captured wire label belongs to the discarded (stale/forged)
-            # frontend value, so it must not leak to callers. Otherwise a caller
-            # like st.selectbox could reconcile options against this attacker-
-            # controlled label (see resolve_value_against_options) and hand back
-            # an option that differs from the preserved value we resolve below.
+            # The captured wire label belongs to the dropped frontend value, so
+            # it must not leak to callers. Otherwise a caller like st.selectbox
+            # could reconcile options against this attacker-controlled label (see
+            # resolve_value_against_options) and hand back an option that differs
+            # from the value we resolve below.
             incoming_serialized_value = None
+            if user_key is None or user_key not in self._new_session_state:
+                # No programmatic value is taking over resolution, so the discard
+                # itself changes the resolved value; flag the frontend to re-sync.
+                disabled_value_discarded = True
 
         if (
             widget_id not in self
