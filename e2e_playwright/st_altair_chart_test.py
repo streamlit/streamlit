@@ -147,23 +147,36 @@ def test_download_chart_as_png(app: Page):
     download = download_info.value
     assert download.suggested_filename.endswith("_chart.png")
 
-    # Assert the exported PNG is at least 2x the on-screen canvas size so a
-    # regression in `toImageURL`'s scaleFactor semantics can't slip through.
-    # Playwright's headless Chromium reports `devicePixelRatio == 1`, so the
-    # `Math.max(2, dpr || 1)` floor in `useVegaEmbed` deterministically applies
-    # a 2x scale here.
-    canvas_bbox = chart.locator("canvas").first.bounding_box()
-    assert canvas_bbox is not None
+    # Assert the exported PNG's dimensions correspond to ~2x the on-screen
+    # chart size so a regression in `toImageURL`'s scaleFactor semantics can't
+    # slip through. Playwright's headless Chromium reports
+    # `devicePixelRatio == 1`, so the `Math.max(2, dpr || 1)` floor in
+    # `useVegaEmbed` deterministically applies a 2x scale here.
+    graphics_doc = get_vega_graphics_document(chart)
+    expect(graphics_doc).to_be_visible()
+    gd_bbox = graphics_doc.bounding_box()
+    assert gd_bbox is not None
     png_bytes = pathlib.Path(download.path()).read_bytes()
+    assert png_bytes[:8] == b"\x89PNG\r\n\x1a\n", "downloaded file is not a PNG"
     # PNG IHDR: 8-byte signature + 4-byte length + 4-byte type ("IHDR"), then
     # width (u32 big-endian) and height (u32 big-endian) at bytes 16..24.
     png_width, png_height = struct.unpack(">II", png_bytes[16:24])
-    assert png_width == round(canvas_bbox["width"] * 2), (
-        f"expected PNG width {round(canvas_bbox['width'] * 2)}, got {png_width}"
+    # Vega's `toImageURL` scales the view's width/height by scaleFactor; on-
+    # screen the same view is laid out inside the graphics-document. A tight
+    # tolerance handles Vega's internal padding differing by a few pixels from
+    # the CSS bounding box. A 1x export would fall far outside this window.
+    tolerance = 8
+    expected_width = round(gd_bbox["width"] * 2)
+    expected_height = round(gd_bbox["height"] * 2)
+    assert abs(png_width - expected_width) <= tolerance, (
+        f"PNG width {png_width} is not ~2x graphics-document width "
+        f"{gd_bbox['width']:.1f} (expected ~{expected_width}, tolerance "
+        f"{tolerance})"
     )
-    assert png_height == round(canvas_bbox["height"] * 2), (
-        f"expected PNG height {round(canvas_bbox['height'] * 2)}, "
-        f"got {png_height}"
+    assert abs(png_height - expected_height) <= tolerance, (
+        f"PNG height {png_height} is not ~2x graphics-document height "
+        f"{gd_bbox['height']:.1f} (expected ~{expected_height}, tolerance "
+        f"{tolerance})"
     )
 
 
