@@ -48,6 +48,9 @@ CSS that depends on Streamlit's private DOM.
   scrolling for `st.container`, addressed here by `st.container(horizontal=True, wrap=False)`.
 - [#5003](https://github.com/streamlit/streamlit/issues/5003) requests a way to keep
   `st.columns` horizontal on mobile.
+- [#2313](https://github.com/streamlit/streamlit/issues/2313) requests horizontal
+  scrolling for a row of wide `st.columns` (e.g. side-by-side charts) rather than
+  clipping or stacking them.
 - [#6592](https://github.com/streamlit/streamlit/issues/6592) requests configurable
   column responsiveness and shows that the current fixed breakpoint is not suitable for
   every layout.
