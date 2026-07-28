@@ -1331,6 +1331,12 @@ class SessionState:
         ):
             del self._new_widget_state[widget_id]
             disabled_value_discarded = True
+            # The captured wire label belongs to the discarded (stale/forged)
+            # frontend value, so it must not leak to callers. Otherwise a caller
+            # like st.selectbox could reconcile options against this attacker-
+            # controlled label (see resolve_value_against_options) and hand back
+            # an option that differs from the preserved value we resolve below.
+            incoming_serialized_value = None
 
         if (
             widget_id not in self
@@ -1471,10 +1477,8 @@ class SessionState:
 
         # Check priority rules - skip seeding if user/code has already set a value.
         # A disabled widget is exempt: it cannot be interacted with, so any value in
-        # _new_widget_state can only be a stale/forged frontend value. Ignore it so
-        # URL seeding still wins; the forged value is then dropped (or overwritten)
-        # by the disabled enforcement in register_widget rather than causing the
-        # widget to fall back to its default.
+        # _new_widget_state is a stale/forged frontend value. Let URL seeding proceed;
+        # disabled enforcement in register_widget then discards the forged value.
         if widget_id in self._new_widget_state and not metadata.disabled:
             return False
         is_initial_load = widget_id not in self._old_state

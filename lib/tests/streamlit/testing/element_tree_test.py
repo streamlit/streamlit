@@ -912,11 +912,11 @@ def test_format_func_accepts_formatted_labels():
 
     at = AppTest.from_function(script).run()
 
-    # Selecting an item enables the "Run multi" button (disabled while nothing is
-    # selected). This must be a separate run before the click: a disabled widget's
-    # callback is suppressed server-side, and callbacks run against the previous
-    # run's metadata, so the button must first re-register as enabled — mirroring
-    # the browser, where a disabled button cannot be clicked until a rerun enables it.
+    # The "Run multi" button is disabled until an item is selected, so it must
+    # re-register as enabled in a separate run before it can be clicked: disabled-
+    # widget callbacks are suppressed server-side, and callbacks run against the
+    # previous run's metadata. This mirrors the browser, where a disabled button
+    # cannot be clicked until a rerun enables it.
     at = at.multiselect("multi_inventory").set_value(["Inventory 1"]).run()
     at = at.button("multi_button").click().run()
 

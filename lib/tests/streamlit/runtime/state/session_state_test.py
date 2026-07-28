@@ -3827,6 +3827,59 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
 
         assert result.value == "url_value"
 
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_disabled_widget_clears_incoming_serialized_value(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """When a disabled widget's forged frontend value is discarded, the
+        captured wire label must not leak to the caller. Otherwise an
+        option-based widget (e.g. st.selectbox) could reconcile options against
+        the attacker-controlled label via ``resolve_value_against_options``,
+        handing back an option that differs from the preserved value."""
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(widget_id, disabled=True)
+
+        # Run 1: register (seeds default), then a legit user value is stored.
+        self.session_state.register_widget(metadata, user_key="cb")
+        self.session_state._new_widget_state.set_from_value(widget_id, "user_value")
+        self.session_state._compact_state()
+
+        # Run 2: the frontend sends a (forged) value while the widget is
+        # disabled. Deliver it as a serialized proto, mirroring the real
+        # frontend flow so the wire label is actually captured.
+        forged_proto = WidgetStateProto()
+        forged_proto.id = widget_id
+        forged_proto.string_value = "forged_value"
+        self.session_state._new_widget_state.set_widget_from_proto(forged_proto)
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "user_value"
+        assert result.incoming_serialized_value is None
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_enabled_widget_exposes_incoming_serialized_value(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """An enabled widget still exposes the incoming wire label so callers
+        can reconcile options against it (anti-regression for the disabled
+        wire-label fix, which must not affect the enabled path)."""
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(widget_id, disabled=False)
+
+        incoming_proto = WidgetStateProto()
+        incoming_proto.id = widget_id
+        incoming_proto.string_value = "incoming_value"
+        self.session_state._new_widget_state.set_widget_from_proto(incoming_proto)
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.incoming_serialized_value == "incoming_value"
+
 
 class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):
     """A disabled widget's on-change callback must not fire for frontend

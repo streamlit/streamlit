@@ -28,14 +28,13 @@ if "change" not in st.session_state:
     st.session_state["change"] = False
 
 
-# The tab mutations happen inside the on_click callbacks (not from the button
+# Apply the tab mutations inside the on_click callbacks (not from the button
 # return values) because every button disables itself via its own callback
-# (e.g. disabled=st.session_state.add_tab). With server-side enforcement of the
-# `disabled` parameter, a self-disabling button's trigger value is discarded on
-# the run it becomes disabled, so its return value can no longer drive the
-# mutation. The callback runs before re-registration (while the button was still
-# enabled last run), so it fires exactly once per click and is the reliable place
-# to apply the change.
+# (e.g. disabled=st.session_state.add_tab). Why this matters:
+# - Server-side `disabled` enforcement discards a self-disabling button's trigger
+#   value on the run it becomes disabled, so its return value can't drive the change.
+# - Callbacks run before re-registration (while the button was still enabled last
+#   run), so they fire exactly once per click — the reliable place to mutate.
 def _append_tab(label: str) -> None:
     if label not in st.session_state.tabs:
         st.session_state.tabs.append(label)
@@ -51,22 +50,22 @@ def _rename_tab(old_label: str, new_label: str) -> None:
         st.session_state.tabs[st.session_state.tabs.index(old_label)] = new_label
 
 
-def on_click_1():
+def _on_add_tab_3_click():
     st.session_state.add_tab = True
     _append_tab("Tab 3")
 
 
-def on_click_2():
+def _on_remove_tab_1_click():
     st.session_state.remove_1 = True
     _remove_tab("Tab 1")
 
 
-def on_click_3():
+def _on_remove_tab_2_click():
     st.session_state.remove_2 = True
     _remove_tab("Tab 2")
 
 
-def on_click_4():
+def _on_change_tabs_1_and_3_click():
     st.session_state.change = True
     st.session_state.add_tab = True
     st.session_state.remove_1 = True
@@ -75,7 +74,7 @@ def on_click_4():
     _rename_tab("Tab 3", "Tab C")
 
 
-def on_click_5():
+def _on_change_all_tabs_click():
     st.session_state.change = True
     st.session_state.add_tab = True
     st.session_state.remove_1 = True
@@ -85,7 +84,7 @@ def on_click_5():
     _rename_tab("Tab 3", "Tab C")
 
 
-def reset():
+def _on_reset_click():
     st.session_state.clear()
 
 
@@ -93,39 +92,39 @@ col1, col2, col3, col4, col5 = st.columns([0.8, 1, 1, 1.2, 1], gap="small")
 with col1:
     st.button(
         "Add Tab 3",
-        on_click=on_click_1,
+        on_click=_on_add_tab_3_click,
         disabled=st.session_state.add_tab,
         width="stretch",
     )
 with col2:
     st.button(
         "Remove Tab 1",
-        on_click=on_click_2,
+        on_click=_on_remove_tab_1_click,
         disabled=st.session_state.remove_1,
         width="stretch",
     )
 with col3:
     st.button(
         "Remove Tab 2",
-        on_click=on_click_3,
+        on_click=_on_remove_tab_2_click,
         disabled=st.session_state.remove_2,
         width="stretch",
     )
 with col4:
     st.button(
         "Change Tab 1 & 3",
-        on_click=on_click_4,
+        on_click=_on_change_tabs_1_and_3_click,
         disabled=st.session_state.change,
         width="stretch",
     )
     st.button(
         "Change All Tabs",
-        on_click=on_click_5,
+        on_click=_on_change_all_tabs_click,
         disabled=st.session_state.change,
         width="stretch",
     )
 with col5:
-    st.button("**Reset Tabs**", on_click=reset)
+    st.button("**Reset Tabs**", on_click=_on_reset_click)
 
 st.subheader("Tabs Example", divider="green")
 
