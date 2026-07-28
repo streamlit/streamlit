@@ -744,12 +744,22 @@ def create_upload_routes(
             if message["type"] == "http.request":
                 bytes_received += len(message.get("body", b""))
                 if bytes_received > max_body_bytes:
+                    # Log the streaming-cap rejection so operators can tell a
+                    # misconfigured server.maxUploadSize (legitimate uploads being
+                    # rejected) apart from an actual abuse attempt.
+                    _LOGGER.warning(
+                        "Upload rejected: request body exceeded the size limit "
+                        "while streaming (%d bytes received, cap %d bytes). If "
+                        "legitimate uploads are affected, increase "
+                        "server.maxUploadSize.",
+                        bytes_received,
+                        max_body_bytes,
+                    )
                     # Raising here aborts the multipart parse mid-stream. Starlette
                     # only closes its spooled temp files on MultiPartException /
-                    # OSError, so this HTTPException leaves that cleanup to GC once
-                    # the frames unwind - the same behavior as an upstream
-                    # ClientDisconnect. Resource use stays bounded (one in-flight
-                    # request), so this is acceptable.
+                    # OSError, so this HTTPException leaves cleanup to GC once the
+                    # frames unwind - the same as an upstream ClientDisconnect.
+                    # Resource use stays bounded to one in-flight request.
                     raise HTTPException(status_code=413, detail="File too large")
             return message
 

@@ -769,6 +769,7 @@ def test_upload_put_chunked_body_capped_before_full_read() -> None:
             "._MAX_UPLOAD_MULTIPART_OVERHEAD_BYTES",
             4096,
         ),
+        patch("streamlit.web.server.starlette.starlette_routes._LOGGER") as mock_logger,
     ):
         with pytest.raises(HTTPException) as exc_info:
             asyncio.run(endpoint(request))
@@ -780,6 +781,9 @@ def test_upload_put_chunked_body_capped_before_full_read() -> None:
     # only a handful of the 102 messages are ever read.
     assert receive_calls < len(messages)
     assert receive_calls <= 6
+    # The streaming cap logs a warning so operators can diagnose whether a
+    # misconfigured maxUploadSize is rejecting legitimate uploads.
+    mock_logger.warning.assert_called_once()
 
 
 def test_upload_put_stores_file_and_returns_204() -> None:
