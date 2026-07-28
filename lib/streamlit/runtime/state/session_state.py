@@ -1469,8 +1469,13 @@ class SessionState:
             script_hash=script_hash,
         )
 
-        # Check priority rules - skip seeding if user/code has already set a value
-        if widget_id in self._new_widget_state:  # User interacted with widget
+        # Check priority rules - skip seeding if user/code has already set a value.
+        # A disabled widget is exempt: it cannot be interacted with, so any value in
+        # _new_widget_state can only be a stale/forged frontend value. Ignore it so
+        # URL seeding still wins; the forged value is then dropped (or overwritten)
+        # by the disabled enforcement in register_widget rather than causing the
+        # widget to fall back to its default.
+        if widget_id in self._new_widget_state and not metadata.disabled:
             return False
         is_initial_load = widget_id not in self._old_state
         if not is_initial_load and user_key in self._new_session_state:

@@ -3801,6 +3801,32 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
 
         assert result.value == "url_value"
 
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_disabled_url_bound_widget_url_wins_over_forged_value(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A disabled ``bind='query-params'`` widget seeds from the URL even when
+        the frontend also submits a (forged) value on first registration. URL
+        seeding normally yields to a frontend value, but a disabled widget can't
+        be interacted with, so the URL must win instead of the widget falling back
+        to its default."""
+        ThreadState.update(active_script_hash="main_hash")
+        self.session_state.query_params.set_initial_query_params("cb=url_value")
+
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(
+            widget_id, disabled=True, bind="query-params"
+        )
+        # The frontend also submits a value for the disabled, URL-bound widget.
+        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "url_value"
+
 
 class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):
     """A disabled widget's on-change callback must not fire for frontend
