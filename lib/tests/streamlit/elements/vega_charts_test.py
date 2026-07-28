@@ -1857,6 +1857,95 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
         )
 
+    @parameterized.expand([("a.b",), ("CO2 Storage [t]",), (r"a\b",)])
+    def test_single_y_uses_safe_internal_field(self, column_name: str):
+        """Single-series fields are safe even when Vega-Lite parses their names."""
+        df = pd.DataFrame({column_name: [1, 2, 3]})
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+        output_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        y_encoding = chart_spec["encoding"]["y"]
+        y_field = y_encoding["field"]
+
+        assert y_field == f"value{_PROTECTION_SUFFIX}"
+        assert y_field in output_df
+        assert column_name not in output_df
+        assert y_encoding["title"] == ""
+        assert "color" not in chart_spec["encoding"]
+
+        y_tooltip = next(
+            tooltip
+            for tooltip in chart_spec["encoding"]["tooltip"]
+            if tooltip["field"] == y_field
+        )
+        assert y_tooltip["title"] == column_name
+
+    @parameterized.expand([("a.b", f"value{_PROTECTION_SUFFIX}"), ("values", "values")])
+    def test_explicit_single_y_preserves_visible_titles(
+        self, column_name: str, expected_field: str
+    ):
+        """Selective aliasing preserves visible labels and safe dataset fields."""
+        df = pd.DataFrame({"x": [1, 2, 3], column_name: [4, 5, 6]})
+
+        st.bar_chart(df, x="x", y=column_name)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+        output_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        y_encoding = chart_spec["encoding"]["y"]
+        y_tooltip = next(
+            tooltip
+            for tooltip in chart_spec["encoding"]["tooltip"]
+            if tooltip["field"] == y_encoding["field"]
+        )
+
+        assert y_encoding["field"] == expected_field
+        assert expected_field in output_df
+        assert y_encoding["title"] == column_name
+        if expected_field == column_name:
+            assert "title" not in y_tooltip
+        else:
+            assert y_tooltip["title"] == column_name
+        assert "color" not in chart_spec["encoding"]
+
+    def test_multiple_dotted_y_columns_keep_melted_labels(self):
+        """Multi-series dotted labels remain values in the existing melt output."""
+        df = pd.DataFrame({"x": [1, 2], "a.b": [3, 4], "CO2 Storage [t]": [5, 6]})
+
+        st.bar_chart(df, x="x", y=["a.b", "CO2 Storage [t]"])
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+        output_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+
+        assert chart_spec["encoding"]["y"]["field"] == f"value{_PROTECTION_SUFFIX}"
+        assert chart_spec["encoding"]["color"]["field"] == f"color{_PROTECTION_SUFFIX}"
+        assert set(output_df[f"color{_PROTECTION_SUFFIX}"]) == {
+            "a.b",
+            "CO2 Storage [t]",
+        }
+
+    def test_single_y_internal_field_avoids_collision(self):
+        """A user column matching the preferred generated field gets a suffix."""
+        original_column = f"value{_PROTECTION_SUFFIX}"
+        df = pd.DataFrame({original_column: [0, 1, 2], "a.b": [1, 2, 3]})
+
+        st.bar_chart(df, x=original_column, y="a.b")
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+        output_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        y_encoding = chart_spec["encoding"]["y"]
+
+        assert y_encoding["field"] == f"{original_column}-1"
+        assert y_encoding["field"] in output_df
+        assert original_column in output_df
+        assert "a.b" not in output_df
+        assert y_encoding["title"] == "a.b"
+
     @parameterized.expand(ST_CHART_ARGS)
     def test_chart_with_color_value(self, chart_command: Callable, altair_type: str):
         """Test color support for built-in charts."""
@@ -2537,6 +2626,19 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         # should appear on the y-axis.
         assert chart_spec["encoding"]["x"]["title"] == "values"
         assert chart_spec["encoding"]["y"]["title"] == "categories"
+
+    def test_bar_chart_horizontal_preserves_single_y_title(self):
+        """The semantic y title follows the value field onto the horizontal axis."""
+        df = pd.DataFrame({"categories": ["a", "b"], "a.b": [1, 2]})
+
+        st.bar_chart(df, x="categories", y="a.b", horizontal=True)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        assert chart_spec["encoding"]["x"]["field"] == f"value{_PROTECTION_SUFFIX}"
+        assert chart_spec["encoding"]["x"]["title"] == "a.b"
+        assert chart_spec["encoding"]["y"]["field"] == "categories"
 
     def test_bar_chart_sort_false_disables_default_sorting(self):
         """Test that sort=False disables default alphabetical sorting."""

@@ -18,7 +18,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
-TOTAL_BAR_CHARTS = 28
+TOTAL_BAR_CHARTS = 29
 
 
 def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -82,6 +82,7 @@ def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
         bar_chart_elements.nth(27),
         name="st_bar_chart-sort_by_x_column_multiple_y",
     )
+    assert_snapshot(bar_chart_elements.nth(28), name="st_bar_chart-dotted_column_name")
 
 
 def test_themed_bar_chart_rendering(

@@ -192,6 +192,114 @@ def test_drop_unused_columns_dedupes_and_filters_none() -> None:
 
 
 @pytest.mark.parametrize(
+    ("columns", "expected"),
+    [
+        (["x", "y"], chart_utils._MELTED_Y_COLUMN_NAME),
+        (
+            ["x", chart_utils._MELTED_Y_COLUMN_NAME],
+            f"{chart_utils._MELTED_Y_COLUMN_NAME}-1",
+        ),
+        (
+            [
+                chart_utils._MELTED_Y_COLUMN_NAME,
+                f"{chart_utils._MELTED_Y_COLUMN_NAME}-1",
+            ],
+            f"{chart_utils._MELTED_Y_COLUMN_NAME}-2",
+        ),
+    ],
+    ids=["no_collision", "one_collision", "two_collisions"],
+)
+def test_unique_internal_column_name(columns: list[str], expected: str) -> None:
+    """Generated column names avoid existing selected-data columns."""
+    assert (
+        chart_utils._unique_internal_column_name(
+            columns, chart_utils._MELTED_Y_COLUMN_NAME
+        )
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    ("column_name", "expected"),
+    [
+        ("a.b", True),
+        ("a[b", True),
+        ("a]b", True),
+        (r"a\b", True),
+        ("safe column-name", False),
+    ],
+)
+def test_contains_vega_lite_field_access_char(column_name: str, expected: bool) -> None:
+    """Only known Vega-Lite field-access characters require an alias."""
+    assert chart_utils._contains_vega_lite_field_access_char(column_name) is expected
+
+
+def test_prep_data_renames_unshared_single_y_column() -> None:
+    """A single y-only column is replaced with a safe internal field."""
+    df = pd.DataFrame({"x": [1, 2], "a.b": [3, 4]})
+
+    prepared_df, x_column, y_column, color_column, size_column, sort_column = (
+        chart_utils._prep_data(df, "x", ["a.b"], None, None)
+    )
+
+    assert x_column == "x"
+    assert y_column == chart_utils._MELTED_Y_COLUMN_NAME
+    assert color_column is None
+    assert size_column is None
+    assert sort_column is None
+    assert list(prepared_df.columns) == ["x", chart_utils._MELTED_Y_COLUMN_NAME]
+    assert "a.b" not in prepared_df
+
+
+def test_prep_data_preserves_safe_single_y_column() -> None:
+    """A safe single-y name remains visible in the serialized data."""
+    df = pd.DataFrame({"x": [1, 2], "values": [3, 4]})
+
+    prepared_df, _, y_column, _, _, _ = chart_utils._prep_data(
+        df, "x", ["values"], None, None
+    )
+
+    assert y_column == "values"
+    assert list(prepared_df.columns) == ["x", "values"]
+
+
+@pytest.mark.parametrize(
+    ("x_column", "color_column", "size_column", "sort_column"),
+    [
+        ("shared.field", None, None, None),
+        ("x", "shared.field", None, None),
+        ("x", None, "shared.field", None),
+        ("x", None, None, "shared.field"),
+    ],
+    ids=["x", "color", "size", "sort"],
+)
+def test_prep_data_copies_single_y_shared_with_another_encoding(
+    x_column: str,
+    color_column: str | None,
+    size_column: str | None,
+    sort_column: str | None,
+) -> None:
+    """A shared source field remains available to its other encoding role."""
+    df = pd.DataFrame({"x": [1, 2], "shared.field": [3, 4]})
+
+    prepared_df, _, y_column, _, _, _ = chart_utils._prep_data(
+        df,
+        x_column,
+        ["shared.field"],
+        color_column,
+        size_column,
+        sort_column,
+    )
+
+    assert y_column == chart_utils._MELTED_Y_COLUMN_NAME
+    assert "shared.field" in prepared_df
+    assert y_column in prepared_df
+    pd.testing.assert_series_equal(
+        prepared_df[y_column], prepared_df["shared.field"], check_names=False
+    )
+
+
+@pytest.mark.parametrize(
     ("chart_type", "color_column", "expected_x_field", "expected_y_field"),
     [
         (chart_utils.ChartType.VERTICAL_BAR, "color_col", "color_col", None),

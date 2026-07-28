@@ -93,11 +93,27 @@ _PROTECTION_SUFFIX: Final = " -- streamlit-generated"
 _SEPARATED_INDEX_COLUMN_NAME: Final = _SEPARATED_INDEX_COLUMN_TITLE + _PROTECTION_SUFFIX
 _MELTED_Y_COLUMN_NAME: Final = _MELTED_Y_COLUMN_TITLE + _PROTECTION_SUFFIX
 _MELTED_COLOR_COLUMN_NAME: Final = _MELTED_COLOR_COLUMN_TITLE + _PROTECTION_SUFFIX
+_VEGA_LITE_FIELD_ACCESS_CHARS: Final = frozenset({".", "[", "]", "\\"})
 
 # Name we use for a column we know doesn't exist in the data, to address a Vega-Lite
 # rendering bug
 # where empty charts need x, y encodings set in order to take up space.
 _NON_EXISTENT_COLUMN_NAME: Final = "DOES_NOT_EXIST" + _PROTECTION_SUFFIX
+
+
+def _unique_internal_column_name(columns: Collection[str], preferred_name: str) -> str:
+    """Return a generated column name that does not collide with ``columns``."""
+    name = preferred_name
+    index = 0
+    while name in columns:
+        index += 1
+        name = f"{preferred_name}-{index}"
+    return name
+
+
+def _contains_vega_lite_field_access_char(column_name: str) -> bool:
+    """Return whether Vega-Lite can interpret the column name as field access."""
+    return any(char in column_name for char in _VEGA_LITE_FIELD_ACCESS_CHARS)
 
 
 def maybe_raise_stack_warning(
@@ -144,6 +160,14 @@ def generate_chart(
     x_column = _parse_x_column(df, x_from_user)
     # Get name of columns to use for y.
     y_column_list = _parse_y_columns(df, y_from_user, x_column)
+    # Remember the original unsafe single-y column name so we can keep showing it as
+    # the axis/tooltip title after _prep_data aliases it to a safe internal field.
+    single_y_column_title = (
+        str(y_column_list[0])
+        if len(y_column_list) == 1
+        and _contains_vega_lite_field_access_char(str(y_column_list[0]))
+        else None
+    )
     # Get name of column to use for color, or constant value to use. Any/both could
     # be None.
     color_column, color_value = _parse_generic_column(df, color_from_user)
@@ -173,6 +197,7 @@ def generate_chart(
         y_axis_label,
         stack,
         sort_from_user,
+        single_y_column_title,
     )
 
     chart_width = width if isinstance(width, int) else None
@@ -223,6 +248,7 @@ def generate_chart(
                 size_column,
                 color_column,
                 color_enc,
+                single_y_column_title,
             )
         )
 
@@ -398,6 +424,30 @@ def _prep_data(
     ) = _convert_col_names_to_str_in_place(
         selected_data, x_column, y_column_list, color_column, size_column, sort_column
     )
+
+    # Vega-Lite reads `.`, `[]`, and `\` in a field name as field access syntax, so a
+    # single column like "col.name" would render blank. Alias it to a safe internal
+    # field name (its user-visible title is restored later via single_y_column_title).
+    # Multi-column charts already avoid this through the melt below.
+    if len(y_column_list) == 1 and _contains_vega_lite_field_access_char(
+        y_column_list[0]
+    ):
+        original_y_column = y_column_list[0]
+        internal_y_column = _unique_internal_column_name(
+            selected_data.columns, _MELTED_Y_COLUMN_NAME
+        )
+        other_encoding_columns = {x_column, color_column, size_column, sort_column}
+
+        if original_y_column in other_encoding_columns:
+            # The column also feeds another encoding, so renaming would strip it from
+            # that role; copy the values into the new field instead.
+            selected_data[internal_y_column] = selected_data[original_y_column].copy()
+        else:
+            selected_data = selected_data.rename(
+                columns={original_y_column: internal_y_column}
+            )
+
+        y_column_list = [internal_y_column]
 
     # Maybe melt data from wide format into long format.
     melted_data, y_column, color_column = _maybe_melt(
@@ -775,13 +825,19 @@ def _get_axis_encodings(
     y_axis_label: str | None,
     stack: bool | ChartStackType | None,
     sort_from_user: bool | str,
+    single_y_column_title: str | None = None,
 ) -> tuple[alt.X, alt.Y]:
     stack_encoding: alt.X | alt.Y
     sort_encoding: alt.X | alt.Y
     if chart_type == ChartType.HORIZONTAL_BAR:
         # Handle horizontal bar chart - switches x and y data and labels:
         x_encoding = _get_x_encoding(
-            df, y_column, y_from_user, y_axis_label, chart_type
+            df,
+            y_column,
+            y_from_user,
+            y_axis_label,
+            chart_type,
+            single_y_column_title,
         )
         y_encoding = _get_y_encoding(
             df, x_column, x_from_user, x_axis_label, chart_type
@@ -793,7 +849,12 @@ def _get_axis_encodings(
             df, x_column, x_from_user, x_axis_label, chart_type
         )
         y_encoding = _get_y_encoding(
-            df, y_column, y_from_user, y_axis_label, chart_type
+            df,
+            y_column,
+            y_from_user,
+            y_axis_label,
+            chart_type,
+            single_y_column_title,
         )
         stack_encoding = y_encoding
         sort_encoding = x_encoding
@@ -814,6 +875,7 @@ def _get_x_encoding(
     x_from_user: str | Sequence[str] | None,
     x_axis_label: str | None,
     chart_type: ChartType,
+    single_y_column_title: str | None = None,
 ) -> alt.X:
     import altair as alt
 
@@ -829,6 +891,9 @@ def _get_x_encoding(
         # Don't show a label in the x axis (not even a nice label like
         # SEPARATED_INDEX_COLUMN_TITLE) when we pull the x axis from the index.
         x_title = ""
+    elif single_y_column_title is not None:
+        x_field = x_column
+        x_title = "" if x_from_user is None else single_y_column_title
     else:
         x_field = x_column
 
@@ -859,6 +924,7 @@ def _get_y_encoding(
     y_from_user: str | Sequence[str] | None,
     y_axis_label: str | None,
     chart_type: ChartType,
+    single_y_column_title: str | None = None,
 ) -> alt.Y:
     import altair as alt
 
@@ -867,6 +933,9 @@ def _get_y_encoding(
         # Maybe a bug in vega-lite? So we pass a field that doesn't exist.
         y_field = _NON_EXISTENT_COLUMN_NAME
         y_title = ""
+    elif single_y_column_title is not None:
+        y_field = y_column
+        y_title = "" if y_from_user is None else single_y_column_title
     elif y_column == _MELTED_Y_COLUMN_NAME:
         # If the y column name is the crazy anti-collision name we gave it, then need to
         # set up a title so we never show the crazy name to the user.
@@ -1085,6 +1154,7 @@ def _get_tooltip_encoding(
     size_column: str | None,
     color_column: str | None,
     color_enc: alt.Color | alt.ColorValue | None,
+    single_y_column_title: str | None,
 ) -> list[alt.Tooltip]:
     import altair as alt
 
@@ -1099,7 +1169,9 @@ def _get_tooltip_encoding(
 
     # If the y column name is the crazy anti-collision name we gave it, then need to set
     # up a tooltip title so we never show the crazy name to the user.
-    if y_column == _MELTED_Y_COLUMN_NAME:
+    if single_y_column_title is not None:
+        tooltip.append(alt.Tooltip(y_column, title=single_y_column_title))
+    elif y_column == _MELTED_Y_COLUMN_NAME:
         tooltip.append(
             alt.Tooltip(
                 y_column,

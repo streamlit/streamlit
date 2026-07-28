@@ -96,3 +96,6 @@ st.bar_chart(df, x="b", y="a", sort="a", horizontal=True)  # horizontal, sort by
 st.bar_chart(
     df, x="a", y=["b", "c"], sort="-a"
 )  # sort by x column with multiple y columns (regression test)
+
+# Dotted single-y fields must render as literal column names, not nested field access.
+st.bar_chart(pd.DataFrame({"col.name": [1, 2, 3, 4]}))
