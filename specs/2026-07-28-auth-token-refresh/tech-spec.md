@@ -94,9 +94,7 @@ one:
 
 ```python
 tokens = {
-    k: token[k]
-    for k in ["id_token", "access_token", "refresh_token"]
-    if k in token
+    k: token[k] for k in ["id_token", "access_token", "refresh_token"] if k in token
 }
 ```
 
@@ -150,7 +148,9 @@ Add a method symmetric to the existing `clear_user_info_for_session`:
 
 ```python
 # runtime.py
-def update_user_info_for_session(self, session_id: str, user_info: UserInfoType) -> None:
+def update_user_info_for_session(
+    self, session_id: str, user_info: UserInfoType
+) -> None:
     session_info = self._session_mgr.get_session_info(session_id)
     if session_info is not None:
         session_info.session.set_user_info(user_info)
