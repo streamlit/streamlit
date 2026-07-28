@@ -197,11 +197,12 @@ from contextlib import asynccontextmanager
 
 import streamlit as st
 
-from resources import get_database, load_reference_data
-
 
 @asynccontextmanager
 async def lifespan(app):
+    # Import cached functions after st.App has started the Streamlit runtime.
+    from resources import get_database, load_reference_data
+
     print("Starting Streamlit ASGI app...")
     get_database()  # Warm st.cache_resource.
     load_reference_data()  # Warm st.cache_data.
@@ -214,7 +215,83 @@ app = st.App("streamlit_app.py", lifespan=lifespan)
 
 Put cached functions in a shared module when both the Streamlit script and the ASGI wrapper need to call them. For per-user state inside the Streamlit script, use `st.session_state`.
 
+Import cached functions inside the lifespan hook rather than at launcher module scope.
+`st.App` discovery imports the launcher before the Streamlit runtime exists, while the user
+lifespan runs after the runtime and its cache storage manager have started.
+
 If ASGI routes or middleware need process-level state that is not a Streamlit resource, the lifespan context manager may yield a dictionary. Those values are stored on `app.state` (`app.state["ready"]` in the example above).
+
+### Scheduled cache warming for never-stale values
+
+`refresh_mode="background"` is the simplest way to avoid blocking on expiration when
+slightly stale data is acceptable. It is access-driven, however: refresh starts only when a
+call observes an expired entry, and that call receives the stale value.
+
+For advanced cases that must keep known global cache keys updated without ever serving stale
+values, use a lifespan task to clear and immediately warm each key before its `ttl` expires.
+Run synchronous cached functions in a worker thread so they don't block the ASGI event loop.
+
+```python
+# resources.py
+import streamlit as st
+
+
+@st.cache_data(ttl="10m")
+def load_metrics():
+    return fetch_metrics()
+```
+
+```python
+# asgi_app.py
+import logging
+from contextlib import asynccontextmanager
+
+import anyio
+import streamlit as st
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app):
+    # The Streamlit runtime is available when the user lifespan starts.
+    from resources import load_metrics
+
+    def refresh_metrics():
+        load_metrics.clear()
+        load_metrics()
+
+    async def refresh_periodically():
+        while True:
+            await anyio.sleep(300)  # Refresh every 5 minutes, before the 10-minute TTL.
+            try:
+                await anyio.to_thread.run_sync(refresh_metrics)
+            except Exception:
+                logger.exception("Scheduled cache refresh failed")
+
+    # Warm the cache before the app starts accepting requests.
+    await anyio.to_thread.run_sync(refresh_metrics)
+
+    async with anyio.create_task_group() as task_group:
+        task_group.start_soon(refresh_periodically)
+        try:
+            yield
+        finally:
+            task_group.cancel_scope.cancel()
+
+
+app = st.App("streamlit_app.py", lifespan=lifespan)
+```
+
+This pattern works for global `st.cache_data` and `st.cache_resource` entries whose argument
+combinations are known to the scheduler. Keep the refresh interval comfortably shorter than
+the `ttl` so normal requests rarely need a foreground recomputation.
+
+Clearing and warming is not an atomic replacement. Concurrent callers never receive the old,
+stale value, but they can wait for the in-progress computation. If uninterrupted reads and
+atomic replacement are required, refresh a shared external store instead. Lifespan tasks also
+run once per ASGI process, so a multi-worker deployment runs and warms each process
+independently.
 
 ## Mount another ASGI app inside Streamlit
 
