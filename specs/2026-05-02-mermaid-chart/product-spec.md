@@ -220,12 +220,12 @@ The toolbar appears on hover over the diagram container and follows Streamlit's 
 ```python
 import streamlit as st
 
-st.mermaid_chart('''
+st.mermaid_chart("""
 graph LR
     A[Start] --> B{Decision}
     B -->|Yes| C[OK]
     B -->|No| D[Cancel]
-''')
+""")
 ```
 
 #### Sequence Diagram
@@ -233,7 +233,7 @@ graph LR
 ```python
 import streamlit as st
 
-st.mermaid_chart('''
+st.mermaid_chart("""
 sequenceDiagram
     participant User
     participant App
@@ -242,7 +242,7 @@ sequenceDiagram
     App->>Server: API request
     Server-->>App: Response
     App-->>User: Update UI
-''')
+""")
 ```
 
 #### Gantt Chart
@@ -250,7 +250,7 @@ sequenceDiagram
 ```python
 import streamlit as st
 
-st.mermaid_chart('''
+st.mermaid_chart("""
 gantt
     title Project Schedule
     dateFormat YYYY-MM-DD
@@ -260,7 +260,7 @@ gantt
     section Development
     Implementation :b1, after a2, 14d
     Testing        :b2, after b1, 7d
-''')
+""")
 ```
 
 #### Within Markdown Context

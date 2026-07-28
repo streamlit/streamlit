@@ -59,6 +59,7 @@ Callbacks execute **before** the script reruns, allowing immediate state changes
 def increment(amount):
     st.session_state.count += amount
 
+
 st.button("Add 5", on_click=increment, args=(5,))
 ```
 

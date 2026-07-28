@@ -338,11 +338,13 @@ Users can migrate with minimal changes:
 ```python
 # Before
 import streamlit.components.v1 as components
+
 components.iframe("https://example.com", height=500)
 components.html("<p>Hello</p>", height=100)
 
 # After
 import streamlit as st
+
 st.iframe("https://example.com", height=500)
 st.iframe("<p>Hello</p>", height=100)
 ```
@@ -435,9 +437,12 @@ from streamlit.starlette import App
 from starlette.routing import Mount
 from starlette.staticfiles import StaticFiles
 
-app = App("main.py", routes=[
-    Mount("/preview", app=StaticFiles(directory="./site", html=True)),
-])
+app = App(
+    "main.py",
+    routes=[
+        Mount("/preview", app=StaticFiles(directory="./site", html=True)),
+    ],
+)
 
 # In main.py
 st.iframe("/preview/", height=600)
@@ -508,6 +513,7 @@ triggering subsequent actions.
 ```python
 def handle_load():
     st.session_state.iframe_loaded = True
+
 
 st.iframe("https://example.com", on_load=handle_load)
 ```

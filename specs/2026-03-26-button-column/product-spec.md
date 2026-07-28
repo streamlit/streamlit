@@ -116,18 +116,28 @@ multi-actions, icons render via standard markdown.
 import pandas as pd
 import streamlit as st
 
-df = pd.DataFrame({
-    "name": ["Alice", "Bob", "Charlie"],
-    "email": ["alice@example.com", "bob@example.com", "charlie@example.com"],
-    # Single action button with icon
-    "view": [":material/visibility: View", ":material/visibility: View", ":material/visibility: View"],
-    # Multiple actions with icons shown in dropdown
-    "actions": [
-        [":material/edit: Edit", ":material/delete: Delete"],
-        [":material/edit: Edit", ":material/delete: Delete", ":material/archive: Archive"],
-        [":material/edit: Edit"],
-    ],
-})
+df = pd.DataFrame(
+    {
+        "name": ["Alice", "Bob", "Charlie"],
+        "email": ["alice@example.com", "bob@example.com", "charlie@example.com"],
+        # Single action button with icon
+        "view": [
+            ":material/visibility: View",
+            ":material/visibility: View",
+            ":material/visibility: View",
+        ],
+        # Multiple actions with icons shown in dropdown
+        "actions": [
+            [":material/edit: Edit", ":material/delete: Delete"],
+            [
+                ":material/edit: Edit",
+                ":material/delete: Delete",
+                ":material/archive: Archive",
+            ],
+            [":material/edit: Edit"],
+        ],
+    }
+)
 ```
 
 ### Click State
@@ -184,15 +194,19 @@ The click state is a dict with:
 import pandas as pd
 import streamlit as st
 
-df = pd.DataFrame({
-    "id": [1, 2, 3],
-    "name": ["Alice", "Bob", "Charlie"],
-    "view": [":material/visibility: View"] * 3,
-})
+df = pd.DataFrame(
+    {
+        "id": [1, 2, 3],
+        "name": ["Alice", "Bob", "Charlie"],
+        "view": [":material/visibility: View"] * 3,
+    }
+)
+
 
 def handle_view():
     click = st.session_state.view_click
     st.toast(f"Viewing row {click['row']}: {df.iloc[click['row']]['name']}")
+
 
 st.dataframe(
     df,
@@ -211,11 +225,13 @@ st.dataframe(
 import pandas as pd
 import streamlit as st
 
-df = pd.DataFrame({
-    "id": [1, 2, 3],
-    "name": ["Alice", "Bob", "Charlie"],
-    "view": [":material/visibility: View"] * 3,
-})
+df = pd.DataFrame(
+    {
+        "id": [1, 2, 3],
+        "name": ["Alice", "Bob", "Charlie"],
+        "view": [":material/visibility: View"] * 3,
+    }
+)
 
 st.dataframe(
     df,
@@ -237,15 +253,22 @@ if st.session_state.get("view_click"):
 import pandas as pd
 import streamlit as st
 
-df = pd.DataFrame({
-    "id": [1, 2, 3],
-    "name": ["Alice", "Bob", "Charlie"],
-    "actions": [
-        [":material/edit: Edit", ":material/delete: Delete"],
-        [":material/edit: Edit", ":material/delete: Delete", ":material/archive: Archive"],
-        [":material/edit: Edit"],
-    ],
-})
+df = pd.DataFrame(
+    {
+        "id": [1, 2, 3],
+        "name": ["Alice", "Bob", "Charlie"],
+        "actions": [
+            [":material/edit: Edit", ":material/delete: Delete"],
+            [
+                ":material/edit: Edit",
+                ":material/delete: Delete",
+                ":material/archive: Archive",
+            ],
+            [":material/edit: Edit"],
+        ],
+    }
+)
+
 
 def handle_action():
     click = st.session_state.action_click
@@ -257,6 +280,7 @@ def handle_action():
         st.info(f"Editing record {row_id}")
     elif "Archive" in label:
         st.success(f"Archiving record {row_id}")
+
 
 st.dataframe(
     df,
@@ -276,29 +300,41 @@ Each ButtonColumn has its own callback and key:
 import pandas as pd
 import streamlit as st
 
-df = pd.DataFrame({
-    "id": [1, 2, 3],
-    "name": ["Alice", "Bob", "Charlie"],
-    "view": [":material/visibility:"] * 3,
-    "edit": [":material/edit:"] * 3,
-    "delete": [":material/delete:"] * 3,
-})
+df = pd.DataFrame(
+    {
+        "id": [1, 2, 3],
+        "name": ["Alice", "Bob", "Charlie"],
+        "view": [":material/visibility:"] * 3,
+        "edit": [":material/edit:"] * 3,
+        "delete": [":material/delete:"] * 3,
+    }
+)
+
 
 def handle_view():
     st.info(f"Viewing record {df.iloc[st.session_state.view_click['row']]['id']}")
 
+
 def handle_edit():
     st.info(f"Editing record {df.iloc[st.session_state.edit_click['row']]['id']}")
+
 
 def handle_delete():
     st.warning(f"Deleting record {df.iloc[st.session_state.delete_click['row']]['id']}")
 
+
 st.dataframe(
     df,
     column_config={
-        "view": st.column_config.ButtonColumn("", type="tertiary", on_click=handle_view, key="view_click"),
-        "edit": st.column_config.ButtonColumn("", type="tertiary", on_click=handle_edit, key="edit_click"),
-        "delete": st.column_config.ButtonColumn("", type="tertiary", on_click=handle_delete, key="delete_click"),
+        "view": st.column_config.ButtonColumn(
+            "", type="tertiary", on_click=handle_view, key="view_click"
+        ),
+        "edit": st.column_config.ButtonColumn(
+            "", type="tertiary", on_click=handle_edit, key="edit_click"
+        ),
+        "delete": st.column_config.ButtonColumn(
+            "", type="tertiary", on_click=handle_delete, key="delete_click"
+        ),
     },
     hide_index=True,
 )

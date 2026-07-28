@@ -121,6 +121,7 @@ def render_page():
     st.title("Sales")
     st.line_chart(load_sales())
 
+
 render_page()
 ```
 
@@ -255,10 +256,14 @@ st.bar_chart(df, x="category", y="orders")
 st.scatter_chart(df, x="revenue", y="margin", color="segment")
 
 # GOOD: Altair for complex charts
-chart = alt.Chart(df).mark_line().encode(
-    x=alt.X("date:T", title="Date"),
-    y=alt.Y("revenue:Q", title="Revenue"),
-    color="region:N",
+chart = (
+    alt.Chart(df)
+    .mark_line()
+    .encode(
+        x=alt.X("date:T", title="Date"),
+        y=alt.Y("revenue:Q", title="Revenue"),
+        color="region:N",
+    )
 )
 st.altair_chart(chart)
 ```

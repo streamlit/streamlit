@@ -21,7 +21,7 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # We fix ruff to a version to be in sync with pyproject.toml:
-    rev: v0.15.22
+    rev: v0.16.0
     hooks:
       # Run the linter.
       - id: ruff-check
@@ -37,7 +37,7 @@ repos:
         entry: ./scripts/run_in_subdirectory.py frontend yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings
         files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
-        language: node
+        language: system
         pass_filenames: true
       # Single oxfmt hook for all frontend source files.
       # Uses run_in_subdirectory.py to handle path translation for subdirectory files.
@@ -47,7 +47,7 @@ repos:
         entry: ./scripts/run_in_subdirectory.py frontend yarn exec oxfmt --config ./.oxfmtrc.json
         files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
-        language: node
+        language: system
         pass_filenames: true
       - id: oxfmt-yaml
         name: Oxfmt-yaml
@@ -56,7 +56,7 @@ repos:
         # containing `..`.
         entry: yarn --cwd frontend exec oxfmt --config frontend/.oxfmtrc.json ".github/**/*.{yml,yaml}"
         files: ^.github/.*\.(yml|yaml)$
-        language: node
+        language: system
         pass_filenames: false
       - id: oxfmt-vscode-devcontainer-json
         name: Oxfmt VSCode/devcontainer JSON
@@ -65,7 +65,7 @@ repos:
         # containing `..`.
         entry: yarn --cwd frontend exec oxfmt --config frontend/.oxfmtrc.json ".vscode/*.json" ".devcontainer/*.json"
         files: ^(.vscode/.*\.json|\.devcontainer/.*\.json)$
-        language: node
+        language: system
         pass_filenames: false
       - id: license-headers
         name: Checks license headers

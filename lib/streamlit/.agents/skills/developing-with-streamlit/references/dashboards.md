@@ -77,9 +77,15 @@ Combine cards into a dashboard:
 ```python
 # KPI row
 with st.container(horizontal=True):
-    st.metric("Revenue", "$1.2M", "-7%", border=True, chart_data=rev_trend, chart_type="line")
-    st.metric("Users", "762k", "+12%", border=True, chart_data=user_trend, chart_type="line")
-    st.metric("Orders", "1.4k", "+5%", border=True, chart_data=order_trend, chart_type="bar")
+    st.metric(
+        "Revenue", "$1.2M", "-7%", border=True, chart_data=rev_trend, chart_type="line"
+    )
+    st.metric(
+        "Users", "762k", "+12%", border=True, chart_data=user_trend, chart_type="line"
+    )
+    st.metric(
+        "Orders", "1.4k", "+5%", border=True, chart_data=order_trend, chart_type="bar"
+    )
 
 # Charts row
 col1, col2 = st.columns(2)
@@ -105,13 +111,11 @@ When a dashboard has multiple cards with independent, compute-intensive data loa
 
 ```python
 @st.cache_data(ttl="15m")
-def load_revenue():
-    ...  # Slow query / API call
+def load_revenue(): ...  # Slow query / API call
 
 
 @st.cache_data(ttl="15m")
-def load_orders():
-    ...  # Independent slow query / API call
+def load_orders(): ...  # Independent slow query / API call
 
 
 @st.fragment(parallel=True)
