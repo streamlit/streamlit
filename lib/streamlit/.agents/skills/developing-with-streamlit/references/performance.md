@@ -13,6 +13,7 @@ Use for any function that loads or computes data.
 def load_data(path):
     return pd.read_csv(path)
 
+
 # GOOD: Cached
 @st.cache_data
 def load_data(path):
@@ -28,6 +29,7 @@ Use for connections, API clients, ML models—objects that can't be serialized.
 def get_client():
     return OpenAI(api_key=st.secrets["openai_key"])
 
+
 @st.cache_resource
 def load_model():
     return torch.load("model.pt")
@@ -41,6 +43,7 @@ Note: `st.connection()` already handles caching internally — don't wrap it in 
 @st.cache_data(ttl="5m")  # 5 minutes
 def get_metrics():
     return api.fetch()
+
 
 @st.cache_data(ttl="1h")  # 1 hour
 def load_reference_data():
@@ -64,10 +67,12 @@ def load_reference_data():
 def get_user_data(user_id):
     return fetch_user(user_id)
 
+
 # GOOD: Bounded cache with TTL
 @st.cache_data(ttl="1h")
 def get_user_data(user_id):
     return fetch_user(user_id)
+
 
 # GOOD: Bounded cache with max entries
 @st.cache_data(max_entries=100)
@@ -87,11 +92,13 @@ st.metric("Users", get_count())
 if st.button("Refresh"):
     st.rerun()
 
+
 # GOOD: Only fragment reruns
 @st.fragment
 def live_metrics():
     st.metric("Users", get_count())
     st.button("Refresh")
+
 
 live_metrics()
 ```
@@ -102,6 +109,7 @@ For auto-refreshing metrics, use `run_every`:
 @st.fragment(run_every="30s")
 def auto_refresh_metrics():
     st.metric("Users", get_count())
+
 
 auto_refresh_metrics()
 ```
@@ -118,30 +126,37 @@ Use `parallel=True` to run independent fragments concurrently during full app re
 def revenue():
     st.metric("Revenue", query_revenue())  # ~3s
 
+
 @st.fragment
 def users():
     st.metric("Users", query_users())  # ~3s
+
 
 @st.fragment
 def orders():
     st.metric("Orders", query_orders())  # ~3s
 
+
 revenue()
 users()
 orders()
+
 
 # GOOD: Three slow queries run concurrently (~3s total)
 @st.fragment(parallel=True)
 def revenue():
     st.metric("Revenue", query_revenue())
 
+
 @st.fragment(parallel=True)
 def users():
     st.metric("Users", query_users())
 
+
 @st.fragment(parallel=True)
 def orders():
     st.metric("Orders", query_orders())
+
 
 revenue()
 users()
@@ -311,7 +326,9 @@ st.dataframe(report.transactions)  # Depends on report
 with st.sidebar:  # Independent of the report, but stuck behind it
     st.date_input("Date range")
     st.multiselect("Regions", regions)
-st.caption("Data refreshes hourly. Email support@example.com for access.")  # Independent
+st.caption(
+    "Data refreshes hourly. Email support@example.com for access."
+)  # Independent
 ```
 
 ```python
