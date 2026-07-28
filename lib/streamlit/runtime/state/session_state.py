@@ -851,10 +851,15 @@ class SessionState:
         from streamlit.runtime.scriptrunner import RerunException
 
         # Skip callbacks for disabled widgets: a reported change can only come
-        # from a stale UI or a forged message. The metadata here reflects the
-        # previous run (callbacks run before widgets re-register), which is safe
-        # because `disabled` is not part of the widget id, so the id and its
-        # metadata stay stable across runs.
+        # from a stale UI or a forged message. Callbacks run before widgets
+        # re-register, so the metadata read here is from the previous run. That
+        # is safe regardless of whether `disabled` is part of the widget id:
+        # for most widgets the id excludes `disabled` (so the id is stable and
+        # only the enabled<->disabled edges are ambiguous, an intentional
+        # trade-off), while for widgets that encode `disabled` in the id (e.g.
+        # st.popover) each id has a fixed `disabled` and is thus stable by
+        # construction. Either way, a disabled widget's forged change is
+        # suppressed.
 
         # Path 1: single callback.
         changed_widget_ids_for_single_callback = [
