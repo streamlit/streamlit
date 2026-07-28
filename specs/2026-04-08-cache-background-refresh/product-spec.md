@@ -266,10 +266,12 @@ called out in the docstring.
 ```python
 import streamlit as st
 
+
 @st.cache_data(ttl="1h", refresh_mode="background")
 def fetch_stock_prices(symbol: str):
     """Fetch stock prices - users never wait after first call."""
     return expensive_api_call(symbol)
+
 
 # First call: blocks while fetching
 prices = fetch_stock_prices("AAPL")
@@ -286,6 +288,7 @@ def get_database_connection():
     """Connection refreshed in background to avoid stale connections."""
     return psycopg2.connect(host="localhost", database="mydb")
 
+
 conn = get_database_connection()
 ```
 
@@ -293,6 +296,7 @@ conn = get_database_connection()
 
 ```python
 import streamlit as st
+
 
 @st.cache_data(ttl="6h", refresh_mode="background")
 def fetch_daily_report():
@@ -304,6 +308,7 @@ def fetch_daily_report():
     (see the out-of-scope `max_stale` option for bridging long idle gaps).
     """
     return download_and_process_csv()  # Takes 60+ seconds
+
 
 # Instant responses while the app is used at least once per 2 x ttl
 report = fetch_daily_report()
@@ -318,6 +323,7 @@ st.dataframe(report)
 def slow_query_foreground():
     time.sleep(5)
     return fetch_data()
+
 
 # Users don't wait, as long as the app is used at least once per 2 x ttl
 @st.cache_data(ttl="1h", refresh_mode="background")
