@@ -105,12 +105,13 @@ _SAME_SITE_HEADER_VALUES: Final = {
 # App static files
 _ROUTE_APP_STATIC: Final = "app/static/{path:path}"
 
-# Extra bytes allowed on top of `server.maxUploadSize` when enforcing the upload
-# size limit at the raw-request-body level (see `_upload_put`). A multipart
-# upload body is slightly larger than the file it carries because of the
-# framing overhead (boundary lines, part headers, filename). This margin ensures
-# a legitimate file of exactly `maxUploadSize` is never rejected while streaming;
-# the exact per-file limit is still enforced after parsing.
+# Framing margin for the streaming upload-size cap in `_upload_put`: the raw
+# request body is rejected once it exceeds `server.maxUploadSize` plus this
+# margin, and the exact per-file limit is still re-checked after parsing. The
+# margin exists because a multipart body is slightly larger than the file it
+# carries (boundary lines, part headers, filename), so without it a legitimate
+# file of exactly `maxUploadSize` could be rejected while streaming. 1 MB
+# comfortably covers that framing overhead.
 _MAX_UPLOAD_MULTIPART_OVERHEAD_BYTES: Final = 1024 * 1024  # 1 MB
 
 
