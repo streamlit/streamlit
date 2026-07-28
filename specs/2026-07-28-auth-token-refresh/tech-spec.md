@@ -176,9 +176,26 @@ def refresh(self) -> None:
         return
     if not is_authlib_installed():
         raise StreamlitMissingAuthlibError()
-    validate_auth_credentials("default")  # or the active provider
-    if not _get_user_info().get("is_logged_in"):
+
+    user_info = _get_user_info()
+    if not user_info.get("is_logged_in"):
         raise StreamlitAuthError("st.user.refresh() requires a logged-in user.")
+
+    # Identities that don't come from OIDC login (trusted user headers or a
+    # host-provided identity) have no refresh token: documented no-op with a
+    # warning, not an error (product spec behavior #1).
+    if not _is_oidc_login(user_info):
+        _LOGGER.warning(
+            "st.user.refresh() is a no-op for non-OIDC (header/host) identities."
+        )
+        return
+
+    # Resolve the provider the user actually logged in with — the same value the
+    # /auth/refresh endpoint reads back from the user cookie — so named providers
+    # (e.g. st.login("google")) validate and refresh correctly instead of always
+    # assuming a "default" auth section.
+    provider = _get_provider_from_user_info(user_info)
+    validate_auth_credentials(provider)
 
     base_path = config.get_option("server.baseUrlPath")
     fwd_msg = ForwardMsg()
@@ -192,6 +209,12 @@ Notes:
 - Validation is synchronous (fail fast). The token exchange itself is async via the
   frontend round-trip, so `refresh()` returns `None` and the fresh values appear on the
   triggered rerun — identical mental model to `st.login()`/`st.logout()`.
+- The precondition ordering mirrors the product spec's behavior contract: not
+  logged in / auth not configured → raise; logged in via a non-OIDC identity
+  (trusted headers or host) → no-op with a warning; logged in via OIDC → enqueue the
+  refresh. Provider resolution and validation reuse the *active* provider from the user
+  cookie (the same one `/auth/refresh` uses), so named-provider logins are handled
+  identically to the implicit `default` provider.
 - `AUTH_REFRESH_ENDPOINT = "/auth/refresh"` alongside the existing endpoint constants.
 
 ### 5. Protobuf: `AuthRefresh` message
