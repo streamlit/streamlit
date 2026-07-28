@@ -78,10 +78,20 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       theme.colors.dataframeHeaderBackgroundColor,
       opaqueBg
     )
-    const flatHeaderBgHovered = blend(
+    // Drives both bgHeaderHovered and bgHeaderHasFocus — glide paints them
+    // on the canvas, so this must stay opaque (see #11950).
+    const flatHeaderInteractionBg = blend(
       transparentize(theme.colors.darkenedBgMix100, 0.9),
       flatHeaderBg
     )
+    // The pre-flatten translucent overlay that used to drive
+    // bgHeaderHovered before the #11950 fix. `bgHeaderHovered` is now
+    // opaque and header-tinted (required for the canvas paint), but it is
+    // also consumed by body-cell secondary-button hovers in ButtonCell,
+    // which want the original translucent overlay independent of any
+    // header color customization. Expose it as a separate glide-theme key
+    // so ButtonCell can read it directly.
+    const buttonHoverBg = transparentize(theme.colors.darkenedBgMix100, 0.9)
 
     const glideTheme = {
       // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
@@ -97,8 +107,12 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       bgIconHeader: theme.colors.fadedText60,
       fgIconHeader: theme.colors.white,
       bgHeader: flatHeaderBg,
-      bgHeaderHasFocus: flatHeaderBgHovered,
-      bgHeaderHovered: flatHeaderBgHovered,
+      bgHeaderHasFocus: flatHeaderInteractionBg,
+      bgHeaderHovered: flatHeaderInteractionBg,
+      // Custom (non-glide-native) key consumed by ButtonCell for
+      // secondary-button hovers. Kept separate from `bgHeaderHovered` so
+      // customizing the header color does not restyle body-cell buttons.
+      bgButtonHovered: buttonHoverBg,
       textHeader: theme.colors.fadedText60,
       textHeaderSelected: theme.colors.white,
       textGroupHeader: theme.colors.fadedText60,

@@ -117,4 +117,56 @@ describe("useCustomTheme hook", () => {
     expect(getAlpha(bgHeaderHovered as string)).toBe(1)
     expect(getAlpha(bgHeaderHasFocus as string)).toBe(1)
   })
+
+  it("keeps bgButtonHovered independent of dataframeHeaderBackgroundColor customizations", () => {
+    // Regression guard: the pre-#11950 code piped a translucent overlay
+    // through bgHeaderHovered, which was also consumed by body-cell
+    // secondary-button hovers in ButtonCell. Now bgHeaderHovered is
+    // opaque + header-tinted, and body-cell buttons read the separate
+    // bgButtonHovered key. Customizing dataframeHeaderBackgroundColor
+    // must not change bgButtonHovered.
+    const defaultWrapper = ({
+      children,
+    }: {
+      children: React.ReactNode
+    }): JSX.Element => (
+      <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
+    )
+    const { result: defaultResult } = renderHook(() => useCustomTheme(), {
+      wrapper: defaultWrapper,
+    })
+    const defaultButtonHover = (
+      defaultResult.current.glideTheme as unknown as {
+        bgButtonHovered: string
+      }
+    ).bgButtonHovered
+
+    const themeWithAlphaHeader = {
+      ...mockTheme.emotion,
+      colors: {
+        ...mockTheme.emotion.colors,
+        dataframeHeaderBackgroundColor: "#FF00001a",
+      },
+    }
+    const customWrapper = ({
+      children,
+    }: {
+      children: React.ReactNode
+    }): JSX.Element => (
+      <ThemeProvider theme={themeWithAlphaHeader}>{children}</ThemeProvider>
+    )
+    const { result: customResult } = renderHook(() => useCustomTheme(), {
+      wrapper: customWrapper,
+    })
+    const customButtonHover = (
+      customResult.current.glideTheme as unknown as {
+        bgButtonHovered: string
+      }
+    ).bgButtonHovered
+
+    expect(customButtonHover).toBe(defaultButtonHover)
+    // And it must differ from bgHeaderHovered when the header has a
+    // custom color, otherwise there is no decoupling.
+    expect(customButtonHover).not.toBe(customResult.current.glideTheme.bgHeaderHovered)
+  })
 })
