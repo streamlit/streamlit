@@ -24,7 +24,10 @@ import { blend, convertRemToPx } from "~lib/theme/utils"
 export type CustomGridTheme = {
   // The theme configuration for the glide-data-grid
   glideTheme: Partial<GlideTheme> &
-    Pick<GlideTheme, "baseFontStyle" | "cellHorizontalPadding" | "fontFamily"> & {
+    Pick<
+      GlideTheme,
+      "baseFontStyle" | "cellHorizontalPadding" | "fontFamily"
+    > & {
       // Custom (non-glide-native) key consumed by ButtonCell for
       // secondary-button hovers. See #11950.
       bgButtonHovered?: string
