@@ -713,7 +713,7 @@ describe("useVegaEmbed hook", () => {
       await expect(result.current.exportToPng()).resolves.toBeNull()
     })
 
-    it("exports the vega view as a PNG data URL at HiDPI scale", async () => {
+    it("exports the vega view as a PNG with at least 2x scale", async () => {
       const element: VegaLiteChartElement = {
         id: "chartId",
         data: null,
@@ -725,24 +725,32 @@ describe("useVegaEmbed hook", () => {
         formId: "",
       }
 
-      const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
-
-      const containerRef = { current: document.createElement("div") }
-      await act(async () => {
-        await result.current.createView(containerRef, {})
+      const originalDpr = window.devicePixelRatio
+      Object.defineProperty(window, "devicePixelRatio", {
+        value: 1,
+        configurable: true,
       })
 
-      await expect(result.current.exportToPng()).resolves.toBe(
-        "data:image/png;base64,mock"
-      )
-      // We upscale the exported PNG to avoid blurry downloads on HiDPI
-      // displays. The scale factor is at least 2x, matching
-      // `Math.max(2, window.devicePixelRatio || 1)` in useVegaEmbed.
-      const expectedScaleFactor = Math.max(2, window.devicePixelRatio || 1)
-      expect(mockVegaView.toImageURL).toHaveBeenCalledWith(
-        "png",
-        expectedScaleFactor
-      )
+      try {
+        const { result } = renderHook(() =>
+          useVegaEmbed(element, mockWidgetMgr)
+        )
+
+        const containerRef = { current: document.createElement("div") }
+        await act(async () => {
+          await result.current.createView(containerRef, {})
+        })
+
+        await expect(result.current.exportToPng()).resolves.toBe(
+          "data:image/png;base64,mock"
+        )
+        expect(mockVegaView.toImageURL).toHaveBeenCalledWith("png", 2)
+      } finally {
+        Object.defineProperty(window, "devicePixelRatio", {
+          value: originalDpr,
+          configurable: true,
+        })
+      }
     })
 
     it("uses window.devicePixelRatio when it exceeds 2x", async () => {

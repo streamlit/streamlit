@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pathlib
+import struct
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -141,7 +144,27 @@ def test_download_chart_as_png(app: Page):
     with app.expect_download() as download_info:
         download_button.click()
 
-    assert download_info.value.suggested_filename.endswith("_chart.png")
+    download = download_info.value
+    assert download.suggested_filename.endswith("_chart.png")
+
+    # Assert the exported PNG is at least 2x the on-screen canvas size so a
+    # regression in `toImageURL`'s scaleFactor semantics can't slip through.
+    # Playwright's headless Chromium reports `devicePixelRatio == 1`, so the
+    # `Math.max(2, dpr || 1)` floor in `useVegaEmbed` deterministically applies
+    # a 2x scale here.
+    canvas_bbox = chart.locator("canvas").first.bounding_box()
+    assert canvas_bbox is not None
+    png_bytes = pathlib.Path(download.path()).read_bytes()
+    # PNG IHDR: 8-byte signature + 4-byte length + 4-byte type ("IHDR"), then
+    # width (u32 big-endian) and height (u32 big-endian) at bytes 16..24.
+    png_width, png_height = struct.unpack(">II", png_bytes[16:24])
+    assert png_width == round(canvas_bbox["width"] * 2), (
+        f"expected PNG width {round(canvas_bbox['width'] * 2)}, got {png_width}"
+    )
+    assert png_height == round(canvas_bbox["height"] * 2), (
+        f"expected PNG height {round(canvas_bbox['height'] * 2)}, "
+        f"got {png_height}"
+    )
 
 
 def test_show_chart_data_button(app: Page, assert_snapshot: ImageCompareFunction):
