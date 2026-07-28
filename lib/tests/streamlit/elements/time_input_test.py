@@ -623,22 +623,22 @@ class TestFormatProtoField(DeltaGeneratorTestCase):
     """Tests that format is correctly written to the proto."""
 
     def test_format_12h_sets_proto(self):
-        """format='12h' writes 12 to proto."""
+        """format='12h' writes '12h' to proto."""
         st.time_input("label", time(8, 45), format="12h")
         el = self.get_delta_from_queue().new_element
-        assert el.time_input.format == 12
+        assert el.time_input.format == "12h"
 
     def test_format_24h_sets_proto(self):
-        """format='24h' (default) writes 24 to proto."""
+        """format='24h' (default) writes '24h' to proto."""
         st.time_input("label", time(8, 45), format="24h")
         el = self.get_delta_from_queue().new_element
-        assert el.time_input.format == 24
+        assert el.time_input.format == "24h"
 
-    def test_format_localized_sets_proto_to_0(self):
-        """format='localized' writes 0 to proto."""
+    def test_format_localized_sets_proto(self):
+        """format='localized' writes 'localized' to proto."""
         st.time_input("label", time(8, 45), format="localized")
         el = self.get_delta_from_queue().new_element
-        assert el.time_input.format == 0
+        assert el.time_input.format == "localized"
 
     def test_invalid_format_raises(self):
         """Invalid format values raise StreamlitAPIException."""

@@ -1588,7 +1588,7 @@ describe("TimeInput seconds granularity", () => {
 
 describe("TimeInput hour cycle", () => {
   it("shows AM/PM segment when format=12", () => {
-    const props = getProps({ format: 12, default: "08:45" })
+    const props = getProps({ format: "12h", default: "08:45" })
     render(<TimeInput {...props} />)
 
     const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
@@ -1599,7 +1599,7 @@ describe("TimeInput hour cycle", () => {
   })
 
   it("shows hh placeholder when format=12 and value is null", () => {
-    const props = getProps({ format: 12, default: undefined })
+    const props = getProps({ format: "12h", default: undefined })
     render(<TimeInput {...props} />)
 
     const segments = screen.getAllByRole("spinbutton")
@@ -1608,7 +1608,7 @@ describe("TimeInput hour cycle", () => {
   })
 
   it("does not show AM/PM segment when format=24", () => {
-    const props = getProps({ format: 24, default: "08:45" })
+    const props = getProps({ format: "24h", default: "08:45" })
     render(<TimeInput {...props} />)
 
     const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
@@ -1632,7 +1632,7 @@ describe("TimeInput hour cycle", () => {
   ])(
     "shows $expectedPlaceholder placeholder for $desc when format is localized",
     ({ locale, expectedPlaceholder }) => {
-      const props = getProps({ format: 0, default: undefined })
+      const props = getProps({ format: "localized", default: undefined })
       renderWithContexts(<TimeInput {...props} />, {
         libConfigContext: { locale },
       })
@@ -1643,7 +1643,7 @@ describe("TimeInput hour cycle", () => {
   )
 
   it("shows four segments (H:M:S + dayPeriod) when format=12 and step<60", () => {
-    const props = getProps({ format: 12, default: "14:30:15", step: 30 })
+    const props = getProps({ format: "12h", default: "14:30:15", step: 30 })
     render(<TimeInput {...props} />)
 
     const segments = screen.getAllByRole("spinbutton")

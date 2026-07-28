@@ -770,9 +770,9 @@ class TimeWidgetsMixin:
               ``None`` until the user selects a time.
 
             Any seconds in the initial value are only preserved in the returned
-            ``datetime.time`` when ``step`` is set to a sub-minute value
-            (``step < 60``). With the default step, seconds are stripped from
-            the initial value.
+            ``datetime.time`` when ``step`` is not a whole number of minutes
+            (``step % 60 != 0``). With the default step, seconds are stripped
+            from the initial value.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
@@ -829,7 +829,8 @@ class TimeWidgetsMixin:
 
             - If ``step`` is divisible by 60: hour and minute components
               are shown. Arrow keys snap to the nearest step boundary.
-            - Otherwise (sub-minute step): hour, minute, and second
+            - Otherwise (``step`` is not a whole number of minutes,
+              i.e. ``step % 60 != 0``): hour, minute, and second
               components are shown, and the returned ``datetime.time``
               includes seconds. Arrow keys snap to the nearest step
               boundary across the full time value.
@@ -1051,8 +1052,7 @@ class TimeWidgetsMixin:
             raise StreamlitAPIException(
                 f"`format` must be '12h', '24h', or 'localized' but got {format!r}."
             )
-        _format_to_proto = {"localized": 0, "12h": 12, "24h": 24}
-        time_input_proto.format = _format_to_proto[format]
+        time_input_proto.format = format
 
         widget_state = register_widget(
             time_input_proto.id,
