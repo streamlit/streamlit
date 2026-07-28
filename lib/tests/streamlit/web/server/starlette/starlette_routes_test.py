@@ -546,12 +546,27 @@ def test_media_endpoint_missing_file_returns_404() -> None:
     assert response.status_code == 404
 
 
-def test_media_endpoint_sandboxes_active_content() -> None:
-    """Media responses cannot execute caller-controlled active content."""
+@pytest.mark.parametrize(
+    ("mimetype", "expected_csp"),
+    [
+        # Active-document types are sandboxed so injected scripts cannot run in
+        # the app's origin when the media URL is navigated to directly.
+        ("text/html", "sandbox"),
+        ("image/svg+xml", "sandbox"),
+        # Passive types (e.g. PDFs served as iframe documents via st.iframe, or
+        # images) are not sandboxed so their inline rendering keeps working.
+        ("application/pdf", None),
+        ("image/png", None),
+    ],
+)
+def test_media_endpoint_sandboxes_only_active_content(
+    mimetype: str, expected_csp: str | None
+) -> None:
+    """Media responses sandbox active-document types and always block sniffing."""
     storage = MemoryMediaFileStorage("/media")
     file_id = storage.load_and_get_id(
         b"<script>document.cookie</script>",
-        "text/html",
+        mimetype,
         MediaFileKind.MEDIA,
     )
     routes = create_media_routes(storage, "")
@@ -559,8 +574,21 @@ def test_media_endpoint_sandboxes_active_content() -> None:
     response = _client_for(routes).get(f"/media/{file_id}")
 
     assert response.status_code == 200
-    assert response.headers["content-type"] == "text/html; charset=utf-8"
-    assert response.headers["content-security-policy"] == "sandbox"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers.get("content-security-policy") == expected_csp
+
+
+def test_media_endpoint_downloadable_blocks_sniffing() -> None:
+    """Downloadable responses still get the nosniff header (defense-in-depth)."""
+    storage = MemoryMediaFileStorage("/media")
+    file_id = storage.load_and_get_id(
+        b"payload", "text/csv", MediaFileKind.DOWNLOADABLE, "data.csv"
+    )
+    routes = create_media_routes(storage, "")
+
+    response = _client_for(routes).get(f"/media/{file_id}")
+
+    assert response.status_code == 200
     assert response.headers["x-content-type-options"] == "nosniff"
 
 
