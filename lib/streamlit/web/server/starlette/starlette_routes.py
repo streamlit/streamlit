@@ -548,7 +548,13 @@ def create_media_routes(
         except MediaFileStorageError as exc:
             raise HTTPException(status_code=404, detail="File not found") from exc
 
-        headers: dict[str, str] = {}
+        # Media contents and MIME types can originate from user uploads. Keep
+        # them inline for normal media playback, but prevent active content from
+        # executing with the Streamlit app's origin on direct navigation.
+        headers = {
+            "Content-Security-Policy": "sandbox",
+            "X-Content-Type-Options": "nosniff",
+        }
 
         if media_file.kind == MediaFileKind.DOWNLOADABLE:
             filename = media_file.filename

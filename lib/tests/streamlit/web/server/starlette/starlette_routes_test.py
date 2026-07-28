@@ -546,6 +546,24 @@ def test_media_endpoint_missing_file_returns_404() -> None:
     assert response.status_code == 404
 
 
+def test_media_endpoint_sandboxes_active_content() -> None:
+    """Media responses cannot execute caller-controlled active content."""
+    storage = MemoryMediaFileStorage("/media")
+    file_id = storage.load_and_get_id(
+        b"<script>document.cookie</script>",
+        "text/html",
+        MediaFileKind.MEDIA,
+    )
+    routes = create_media_routes(storage, "")
+
+    response = _client_for(routes).get(f"/media/{file_id}")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/html; charset=utf-8"
+    assert response.headers["content-security-policy"] == "sandbox"
+    assert response.headers["x-content-type-options"] == "nosniff"
+
+
 def test_media_endpoint_downloadable_without_filename_uses_default() -> None:
     """A downloadable file without a filename gets a generated default name."""
     storage = MemoryMediaFileStorage("/media")
