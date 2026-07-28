@@ -131,6 +131,11 @@ def _create_persist_state_metadata(
 
 class WStateTests(unittest.TestCase):
     def setUp(self):
+        # call_callback() enters ThreadState.scoped(), which needs the
+        # thread-local ThreadState seeded. Initialize it here so tests that
+        # invoke callbacks don't depend on an earlier test having done so.
+        ThreadState.initialize()
+
         wstates = WStates()
         self.wstates = wstates
 
@@ -531,8 +536,8 @@ class SessionStateTest(DeltaGeneratorTestCase):
 
 
 def test_callbacks_with_rerun():
-    """Calling 'rerun' from within a widget callback
-    is disallowed and results in a warning.
+    """st.rerun() inside a widget callback is deferred and runs after the script
+    body completes — no warning is emitted.
     """
 
     def script():
@@ -547,8 +552,34 @@ def test_callbacks_with_rerun():
     at = AppTest.from_function(script).run()
     at.checkbox[0].check().run()
     assert at.session_state["message"] == "ran callback"
-    warning = at.warning[0]
-    assert "no-op" in warning.value
+    # Rerun from a callback is now honored: deferred until after the script body
+    # completes, so no "no-op" warning should appear.
+    assert len(at.warning) == 0
+
+
+def test_callbacks_with_targeted_rerun():
+    """st.rerun(target=...) inside a widget callback re-runs the named fragment
+    after the current script body completes — no warning is emitted.
+    """
+
+    def script():
+        import streamlit as st
+
+        @st.fragment(key="my_frag")
+        def my_frag():
+            st.write("in fragment")
+
+        def callback():
+            st.session_state["message"] = "ran callback"
+            st.rerun(target="my_frag")
+
+        my_frag()
+        st.checkbox("cb", on_change=callback)
+
+    at = AppTest.from_function(script).run()
+    at.checkbox[0].check().run()
+    assert at.session_state["message"] == "ran callback"
+    assert len(at.warning) == 0
 
 
 def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
@@ -582,13 +613,13 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
     mock_ctx = MagicMock()
     # Self-contained: initialize ThreadState so this test doesn't depend on
     # test ordering or another fixture having seeded the ContextVar.
-    ThreadState.initialize(in_fragment_callback=False)
+    ThreadState.initialize()
 
     with patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        # Callbacks internally catch RerunException and log a warning.
+        # Callbacks internally catch RerunException and re-queue the rerun.
         ss._call_callbacks()
 
     assert ThreadState.get().in_fragment_callback is False
@@ -1473,6 +1504,161 @@ def test_json_trigger_aggregator_routes_to_named_callback() -> None:
 
     ss._call_callbacks()
     assert called == ["submit"]
+
+
+def _make_rerun_ctx() -> tuple[MagicMock, Any]:
+    """A mock ScriptRunContext backed by a real ScriptRequests in CONTINUE state."""
+    from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
+
+    requests = ScriptRequests()
+    ctx = MagicMock()
+    ctx.script_requests = requests
+    ctx.query_string = ""
+    ctx.page_script_hash = ""
+    ctx.cached_message_hashes = frozenset()
+    ctx.context_info = None
+    return ctx, requests
+
+
+def _add_single_callback_widget(ss: SessionState, wid: str, cb: Any) -> None:
+    """Register a changed int widget with a single (Path 1) callback."""
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id=wid,
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="int_value",
+            callback=cb,
+        )
+    )
+    ss._old_state[wid] = 1
+    ss._new_widget_state.set_from_value(wid, 2)
+
+
+def test_callbacks_mixed_targeted_and_default_coalesce_to_full_app() -> None:
+    """A callback that keeps its default rerun beats another's targeted rerun."""
+    from streamlit.runtime.scriptrunner import RerunException
+    from streamlit.runtime.scriptrunner_utils.script_requests import (
+        RerunData,
+        ScriptRequestType,
+    )
+
+    ctx, requests = _make_rerun_ctx()
+    ss = SessionState()
+
+    def targeted_cb() -> None:
+        raise RerunException(
+            RerunData(fragment_id_queue=["charts"], is_fragment_scoped_rerun=True)
+        )
+
+    def plain_cb() -> None:
+        pass  # keeps the default full-app rerun
+
+    _add_single_callback_widget(ss, "w_targeted", targeted_cb)
+    _add_single_callback_widget(ss, "w_plain", plain_cb)
+
+    ThreadState.initialize()
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=ctx,
+    ):
+        ss._call_callbacks()
+
+    assert requests._state == ScriptRequestType.RERUN
+    assert requests._rerun_data.fragment_id_queue == []
+    assert requests._rerun_data.is_fragment_scoped_rerun is False
+
+
+def test_callbacks_all_targeted_union_without_full_app() -> None:
+    """With every fired callback targeting, the targets are unioned, not full-app."""
+    from streamlit.runtime.scriptrunner import RerunException
+    from streamlit.runtime.scriptrunner_utils.script_requests import (
+        RerunData,
+        ScriptRequestType,
+    )
+
+    ctx, requests = _make_rerun_ctx()
+    ss = SessionState()
+
+    def charts_cb() -> None:
+        raise RerunException(
+            RerunData(fragment_id_queue=["charts"], is_fragment_scoped_rerun=True)
+        )
+
+    def table_cb() -> None:
+        raise RerunException(
+            RerunData(fragment_id_queue=["table"], is_fragment_scoped_rerun=True)
+        )
+
+    _add_single_callback_widget(ss, "w_charts", charts_cb)
+    _add_single_callback_widget(ss, "w_table", table_cb)
+
+    ThreadState.initialize()
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=ctx,
+    ):
+        ss._call_callbacks()
+
+    assert requests._state == ScriptRequestType.RERUN
+    assert set(requests._rerun_data.fragment_id_queue) == {"charts", "table"}
+    assert requests._rerun_data.is_fragment_scoped_rerun is True
+
+
+def test_callbacks_single_default_does_not_force_rerun() -> None:
+    """A lone callback that keeps its default requests no rerun (no spurious restart)."""
+    from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequestType
+
+    ctx, requests = _make_rerun_ctx()
+    ss = SessionState()
+
+    def plain_cb() -> None:
+        pass
+
+    _add_single_callback_widget(ss, "w_plain", plain_cb)
+
+    ThreadState.initialize()
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=ctx,
+    ):
+        ss._call_callbacks()
+
+    assert requests._state == ScriptRequestType.CONTINUE
+
+
+def test_callbacks_targeted_and_explicit_full_rerun_is_full_app() -> None:
+    """An explicit plain st.rerun() in a callback beats another's targeted rerun."""
+    from streamlit.runtime.scriptrunner import RerunException
+    from streamlit.runtime.scriptrunner_utils.script_requests import (
+        RerunData,
+        ScriptRequestType,
+    )
+
+    ctx, requests = _make_rerun_ctx()
+    ss = SessionState()
+
+    def targeted_cb() -> None:
+        raise RerunException(
+            RerunData(fragment_id_queue=["charts"], is_fragment_scoped_rerun=True)
+        )
+
+    def full_cb() -> None:
+        raise RerunException(RerunData())  # plain st.rerun() -> full app
+
+    _add_single_callback_widget(ss, "w_targeted", targeted_cb)
+    _add_single_callback_widget(ss, "w_full", full_cb)
+
+    ThreadState.initialize()
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=ctx,
+    ):
+        ss._call_callbacks()
+
+    assert requests._state == ScriptRequestType.RERUN
+    assert requests._rerun_data.fragment_id_queue == []
+    assert requests._rerun_data.is_fragment_scoped_rerun is False
 
 
 def _dummy_serializer(x):

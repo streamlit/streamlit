@@ -33,6 +33,7 @@ def test_reset_clears_all_fields() -> None:
     shared.widget_user_keys_this_run.check_and_add("key")
     shared.form_ids_this_run.check_and_add("form")
     shared.new_fragment_ids.check_and_add("fragment")
+    shared.register_fragment_user_key("frag_key", "definition")
     shared.track_command(_make_command("markdown"), max_per_command=5)
 
     shared.reset()
@@ -41,9 +42,25 @@ def test_reset_clears_all_fields() -> None:
     assert "key" not in shared.widget_user_keys_this_run
     assert "form" not in shared.form_ids_this_run
     assert "fragment" not in shared.new_fragment_ids
+    # The freed key can be claimed by a different definition after reset.
+    assert shared.register_fragment_user_key("frag_key", "other_definition") is True
     assert shared.tracked_commands == ()
     assert shared.tracked_commands_count == 0
     assert shared.command_count_for("markdown") == 0
+
+
+def test_register_fragment_user_key_same_definition_is_allowed() -> None:
+    """Re-claiming a key with the same definition (multiple call sites) succeeds."""
+    shared = SharedRunState()
+    assert shared.register_fragment_user_key("charts", "mod.charts") is True
+    assert shared.register_fragment_user_key("charts", "mod.charts") is True
+
+
+def test_register_fragment_user_key_different_definition_collides() -> None:
+    """A key already held by another definition this run cannot be re-claimed."""
+    shared = SharedRunState()
+    assert shared.register_fragment_user_key("charts", "mod.charts") is True
+    assert shared.register_fragment_user_key("charts", "mod.other") is False
 
 
 def test_track_command_appends_and_counts() -> None:

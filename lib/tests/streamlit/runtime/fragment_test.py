@@ -33,6 +33,7 @@ from streamlit.errors import (
     FragmentHandledException,
     FragmentStorageKeyError,
     StreamlitAPIException,
+    StreamlitDuplicateElementKey,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -52,7 +53,10 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
+    ThreadState,
+)
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -165,6 +169,54 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert len(self._storage._fragments) == 1
         assert self._storage._fragments["some_key"] == "some_fragment"
         assert "some_other_key" not in self._storage._parent_by_id
+
+    def test_resolve_target_returns_ids_for_named_fragment(self):
+        """resolve_target maps a target key to its registered fragment ids."""
+        self._storage.register("frag_id_1", "frag_1", target_key="my_fragment")
+        result = self._storage.resolve_target("my_fragment")
+        assert result == ["frag_id_1"]
+
+    def test_resolve_target_multiple_call_sites(self):
+        """resolve_target expands one name to all registered call-site ids."""
+        self._storage.register("frag_id_1", "frag_1", target_key="shared")
+        self._storage.register("frag_id_2", "frag_2", target_key="shared")
+        result = self._storage.resolve_target("shared")
+        assert result == ["frag_id_1", "frag_id_2"]
+
+    def test_resolve_target_list_of_names(self):
+        """resolve_target accepts a list and deduplicates across names."""
+        self._storage.register("frag_id_a", "frag_a", target_key="name_a")
+        self._storage.register("frag_id_b", "frag_b", target_key="name_b")
+        result = self._storage.resolve_target(["name_a", "name_b"])
+        assert result == ["frag_id_a", "frag_id_b"]
+
+    def test_resolve_target_unknown_name_raises(self):
+        """resolve_target raises StreamlitAPIException for an unknown name."""
+        with pytest.raises(StreamlitAPIException, match="No fragment found for target"):
+            self._storage.resolve_target("nonexistent")
+
+    def test_remove_prunes_target_key_index(self):
+        """Deleting a fragment removes it from the target key index."""
+        self._storage.register("frag_id_1", "frag_1", target_key="my_fragment")
+        self._storage.delete("frag_id_1")
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("my_fragment")
+
+    def test_clear_prunes_target_key_index(self):
+        """clear() removes evicted fragments from the target key index."""
+        self._storage.register("frag_id_1", "frag_1", target_key="my_fragment")
+        self._storage.clear()
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("my_fragment")
+
+    def test_reregister_with_new_key_repoints_index(self):
+        """Re-registering a fragment id with a different key updates the index."""
+        self._storage.register("frag_id_1", "frag_1", target_key="old_key")
+        self._storage.register("frag_id_1", "frag_1", target_key="new_key")
+
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("old_key")
+        assert self._storage.resolve_target("new_key") == ["frag_id_1"]
 
     def _make_wrapper(
         self, dg_id: str, *, creating_fragment_id: str | None = None
@@ -2199,3 +2251,184 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
                 _check_not_parallel_worker("@st.dialog")
 
         assert ThreadState.get().is_parallel_worker is True
+
+
+# --------------------------------------------------------------------------- #
+# RunLocation and multi-call-site tests                                        #
+# --------------------------------------------------------------------------- #
+
+
+def test_run_location_is_fragment_inside_wrapped_fragment() -> None:
+    """run_location is FRAGMENT while executing inside a @st.fragment body."""
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_storage = MemoryFragmentStorage()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.cursors = {}
+
+    captured_location: RunLocation | None = None
+
+    @fragment
+    def my_fragment() -> None:
+        nonlocal captured_location
+        captured_location = ThreadState.get().run_location
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        patch("streamlit.container"),
+    ):
+        ThreadState.initialize()
+        my_fragment()
+
+    assert captured_location is RunLocation.FRAGMENT
+
+
+def test_run_location_is_main_script_outside_fragment() -> None:
+    """run_location is MAIN_SCRIPT when ThreadState is at its default."""
+    ThreadState.initialize()
+    assert ThreadState.get().run_location is RunLocation.MAIN_SCRIPT
+
+
+def test_in_fragment_callback_derived_from_run_location() -> None:
+    """in_fragment_callback is True only when CALLBACK and fragment_id is set."""
+    ThreadState.initialize(run_location=RunLocation.CALLBACK, fragment_id="frag")
+    assert ThreadState.get().in_fragment_callback is True
+
+    # CALLBACK without a fragment_id is not a fragment callback.
+    ThreadState.initialize(run_location=RunLocation.CALLBACK, fragment_id=None)
+    assert ThreadState.get().in_fragment_callback is False
+
+    # FRAGMENT run_location is not a callback.
+    ThreadState.initialize(run_location=RunLocation.FRAGMENT, fragment_id="frag")
+    assert ThreadState.get().in_fragment_callback is False
+
+    # MAIN_SCRIPT run_location is not a callback.
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT, fragment_id="frag")
+    assert ThreadState.get().in_fragment_callback is False
+
+
+def test_fragment_key_multi_call_site_no_duplicate_key_error() -> None:
+    """Calling @st.fragment(key=...) from multiple sites must not raise DuplicateElementKey.
+
+    Removing key= from the auto-created container means that the two call sites
+    emit plain (keyless) containers, so no duplicate-key collision occurs.
+    """
+    storage = MemoryFragmentStorage()
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_storage = storage
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.cursors = {}
+
+    container_call_count = 0
+
+    class FakeContainerCtx:
+        def __enter__(self) -> FakeContainerCtx:  # noqa: PYI034
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            pass
+
+    def fake_container(**kwargs: object) -> FakeContainerCtx:
+        nonlocal container_call_count
+        # The key= argument must NOT be passed (Change 4 fix).
+        assert "key" not in kwargs, (
+            "container() must not receive key= from fragment wrapper"
+        )
+        container_call_count += 1
+        return FakeContainerCtx()
+
+    @fragment(key="shared_fragment")
+    def shared_frag() -> None:
+        pass
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        patch("streamlit.container", side_effect=fake_container),
+    ):
+        ThreadState.initialize()
+        # Simulate two call sites by calling the same keyed fragment twice.
+        # Neither call should raise a DuplicateElementKey exception because
+        # the container is now created without key=.
+        shared_frag()
+        shared_frag()
+
+    # Both calls must have created a container without raising.
+    assert container_call_count == 2
+
+
+@pytest.mark.parametrize("reserved_key", ["app", "fragment"])
+def test_fragment_reserved_key_raises(reserved_key: str) -> None:
+    """@st.fragment(key=...) rejects the reserved level names "app" and "fragment"."""
+    with pytest.raises(StreamlitAPIException, match="reserved name"):
+
+        @fragment(key=reserved_key)
+        def _frag() -> None:
+            pass
+
+
+class _FakeContainerCtx:
+    def __enter__(self) -> _FakeContainerCtx:  # noqa: PYI034
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        pass
+
+
+def _make_fragment_ctx() -> MagicMock:
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_storage = MemoryFragmentStorage()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.cursors = {}
+    return mock_ctx
+
+
+def test_fragment_duplicate_key_across_definitions_raises() -> None:
+    """Two different fragment definitions sharing a key in one run collide."""
+    mock_ctx = _make_fragment_ctx()
+
+    @fragment(key="dup")
+    def frag_a() -> None:
+        pass
+
+    @fragment(key="dup")
+    def frag_b() -> None:
+        pass
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        patch("streamlit.container", side_effect=lambda **_: _FakeContainerCtx()),
+    ):
+        ThreadState.initialize()
+        frag_a()
+        with pytest.raises(StreamlitDuplicateElementKey):
+            frag_b()
+
+
+def test_fragment_same_key_allowed_after_run_reset() -> None:
+    """A key freed by resetting the per-run state can be reused on the next run."""
+    mock_ctx = _make_fragment_ctx()
+
+    @fragment(key="dup")
+    def frag_a() -> None:
+        pass
+
+    @fragment(key="dup")
+    def frag_b() -> None:
+        pass
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        patch("streamlit.container", side_effect=lambda **_: _FakeContainerCtx()),
+    ):
+        ThreadState.initialize()
+        frag_a()
+        mock_ctx.shared.reset()
+        # After a fresh run the key is free again, so a different definition may
+        # claim it without colliding.
+        frag_b()
