@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     assert_type(write({"key": "value"}), None)
     assert_type(write([1, 2, 3]), None)
 
-    # No arguments are allowed
+    # A no-argument call is valid and returns None
     assert_type(write(), None)
 
     # unsafe_allow_html parameter (keyword-only)
