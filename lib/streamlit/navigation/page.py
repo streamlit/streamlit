@@ -19,7 +19,9 @@ import types
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+from streamlit import env_util
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.path_security import is_windows_unc_path
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.source_util import page_icon_and_name
@@ -326,6 +328,22 @@ class StreamlitPage:
 
             self._can_be_called: bool = False
             return
+
+        if isinstance(page, (str, Path)):
+            page_path = str(page)
+            if "\x00" in page_path:
+                raise StreamlitAPIException(
+                    "Unable to create Page. Page paths must not contain null bytes."
+                )
+
+            # Reject UNC paths before resolve/is_file can initiate an SMB connection
+            # and disclose the server process's Windows credentials. Absolute and
+            # drive-local paths (e.g. "C:\\...") are intentionally still allowed, as
+            # passing an absolute page path is part of the public st.Page contract.
+            if env_util.IS_WINDOWS and is_windows_unc_path(page_path):
+                raise StreamlitAPIException(
+                    "Unable to create Page. Network paths are not supported."
+                )
 
         main_path = ctx.pages_manager.main_script_parent
         if isinstance(page, str):

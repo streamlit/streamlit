@@ -295,3 +295,18 @@ v_bound_clear = st.selectbox(
     bind="query-params",
 )
 st.write("bound select clear value:", v_bound_clear)
+
+# Regression test for https://github.com/streamlit/streamlit/issues/16181:
+# a selectbox near the bottom of the sidebar must flip its dropdown up and stay
+# within the viewport instead of opening downward and overflowing. The
+# fixed-height spacer pushes the trigger toward the bottom so there is
+# insufficient room below for the dropdown.
+with st.sidebar:
+    st.container(height=500, border=False)
+    v_sidebar_bottom = st.selectbox(
+        "sidebar selectbox (bottom)",
+        [f"Option {i}" for i in range(1, 8)],
+        index=None,
+        key="sidebar_bottom_select",
+    )
+    st.write("sidebar bottom value:", v_sidebar_bottom)

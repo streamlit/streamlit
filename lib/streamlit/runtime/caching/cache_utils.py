@@ -24,6 +24,7 @@ import time
 from abc import abstractmethod
 from collections import defaultdict
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -41,9 +42,11 @@ from typing_extensions import ParamSpec
 from streamlit import type_util, util
 from streamlit.dataframe_util import is_unevaluated_data_object
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.logger import get_logger
+from streamlit.runtime.caching import cache_background_refresh
 from streamlit.runtime.caching.cache_errors import (
+    CachedStFunctionInBackgroundModeWarning,
     CacheError,
     CacheKeyNotFoundError,
     UnevaluatedDataFrameError,
@@ -86,6 +89,59 @@ OnRelease: TypeAlias = Callable[[Any], None]
 CacheScope: TypeAlias = Literal["global", "session"]
 
 
+# How a cache entry is refreshed once its ttl expires.
+RefreshMode: TypeAlias = Literal["foreground", "background"]
+
+# The hard-expiration TTL for background refresh caches is this multiple of the
+# user-facing freshness TTL.
+BACKGROUND_REFRESH_TTL_MULTIPLIER: Final = 2
+
+# How long (in seconds) to wait before retrying a background refresh after a failure,
+# so a persistently failing upstream isn't retried on every rerun.
+_FAILURE_COOLDOWN_SECONDS: Final = 60.0
+
+
+@dataclass
+class CacheReadResult(Generic[R]):
+    """The result of a cache read together with its freshness.
+
+    ``is_stale`` is only ever ``True`` for ``refresh_mode="background"`` caches when
+    the entry is within the stale grace window ``[ttl, 2*ttl)``. Fresh hits and any
+    foreground-mode read report ``is_stale=False``.
+    """
+
+    result: CachedResult[R]
+    is_stale: bool
+
+
+def validate_refresh_mode(refresh_mode: str, ttl_seconds: float | None) -> None:
+    """Validate the ``refresh_mode`` parameter shared by both cache decorators.
+
+    Parameters
+    ----------
+    refresh_mode : str
+        The user-provided ``refresh_mode`` value.
+    ttl_seconds : float or None
+        The resolved ttl in seconds (``None`` if no ttl was provided).
+
+    Raises
+    ------
+    StreamlitValueError
+        Raised if ``refresh_mode`` is not a valid value.
+    StreamlitAPIException
+        Raised if ``refresh_mode="background"`` is used without a positive ttl.
+    """
+    if refresh_mode not in {"foreground", "background"}:
+        raise StreamlitValueError("refresh_mode", ["foreground", "background"])
+
+    if refresh_mode == "background" and (ttl_seconds is None or ttl_seconds <= 0):
+        raise StreamlitAPIException(
+            "The 'refresh_mode=\"background\"' option requires a 'ttl' value. "
+            "Background refresh only makes sense when cache entries can expire. Set "
+            'a \'ttl\' (e.g. ttl="1h") or use refresh_mode="foreground".'
+        )
+
+
 def get_session_id_or_throw() -> str:
     """Returns the active session ID from the thread-local run context.
 
@@ -114,6 +170,44 @@ class Cache(Generic[R]):
     def __init__(self) -> None:
         self._value_locks: dict[str, threading.Lock] = defaultdict(threading.Lock)
         self._value_locks_lock = threading.Lock()
+        # Whether this cache is still attached to its manager. Set to False when the
+        # cache is replaced (param change), or when the owning session / all caches
+        # are cleared. A background refresh that completes for a detached cache is
+        # discarded rather than written back.
+        self._active = True
+        # Bumped whenever the *whole* cache is cleared. A background refresh captures
+        # the generation at trigger time and is discarded if it changed since then
+        # (guards the clear-then-repopulate case).
+        self._generation = 0
+        # Maps value_key -> a counter bumped each time that key is individually cleared
+        # (func.clear(*args)). A background refresh captures its key's counter at trigger
+        # time and is discarded if it changed since then, so a per-key clear (which does
+        # not bump _generation) can't let an older refresh clobber a freshly recomputed
+        # value. Absent keys read as 0.
+        self._key_generations: dict[str, int] = {}
+        # Guards _generation, _key_generations, and the per-key failure cooldowns.
+        self._refresh_state_lock = threading.Lock()
+        # Maps value_key -> monotonic time until which a failed refresh won't retry.
+        self._refresh_cooldowns: dict[str, float] = {}
+
+    @property
+    def is_active(self) -> bool:
+        """Whether this cache is still attached to its manager."""
+        return self._active
+
+    @property
+    def generation(self) -> int:
+        """A counter that increments each time the whole cache is cleared."""
+        return self._generation
+
+    def key_generation(self, value_key: str) -> int:
+        """The per-key clear counter, captured when a background refresh is triggered."""
+        with self._refresh_state_lock:
+            return self._key_generations.get(value_key, 0)
+
+    def mark_detached(self) -> None:
+        """Mark this cache as detached so in-flight background refreshes discard."""
+        self._active = False
 
     @abstractmethod
     def read_result(self, value_key: str) -> CachedResult[R]:
@@ -129,6 +223,30 @@ class Cache(Generic[R]):
         """
         raise NotImplementedError
 
+    def read_result_and_freshness(self, value_key: str) -> CacheReadResult[R]:
+        """Read a value together with its freshness.
+
+        Delegates to ``read_result`` and to ``_is_stale``. Foreground caches are never
+        stale; background-mode caches override ``_is_stale`` to detect entries in the
+        stale grace window ``[ttl, 2*ttl)``.
+
+        Raises
+        ------
+        CacheKeyNotFoundError
+            Raised if value_key is not in the cache (or, for ``cache_resource``, if a
+            configured ``validate`` callable rejects the cached value).
+        """
+        result = self.read_result(value_key)
+        return CacheReadResult(result, is_stale=self._is_stale(result))
+
+    def _is_stale(self, _result: CachedResult[R]) -> bool:
+        """Whether a present entry is past its fresh ttl.
+
+        Always ``False`` for foreground caches. Background-mode caches override this to
+        report entries in the stale grace window ``[ttl, 2*ttl)``.
+        """
+        return False
+
     @abstractmethod
     def write_result(self, value_key: str, value: R, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache, overwriting any existing
@@ -143,6 +261,63 @@ class Cache(Generic[R]):
         # We *could* `del self._value_locks[value_key]` here, since nobody will be taking
         # a compute_value_lock for this value_key after the result is written.
         raise NotImplementedError
+
+    def write_background_refresh_result(
+        self,
+        value_key: str,
+        value: R,
+        *,
+        expected_generation: int,
+        expected_key_generation: int,
+    ) -> None:
+        """Write back the result of a background refresh, unless it is orphaned.
+
+        The write is discarded (not applied) if the cache was detached, the whole
+        cache or the specific key was cleared since the refresh was triggered, or the
+        entry is no longer present (hard-evicted, LRU-evicted, or cleared).
+        ``cache_resource`` also releases the replaced resource on success and the
+        freshly produced resource on a discard so nothing leaks.
+        """
+        raise NotImplementedError
+
+    def _refresh_is_orphaned(
+        self, value_key: str, *, expected_generation: int, expected_key_generation: int
+    ) -> bool:
+        """Whether an in-flight background refresh must be discarded on write-back.
+
+        ``True`` if the cache detached, the whole cache was cleared, or this specific
+        key was individually cleared since the refresh was triggered.
+        """
+        with self._refresh_state_lock:
+            return (
+                not self._active
+                or self._generation != expected_generation
+                or self._key_generations.get(value_key, 0) != expected_key_generation
+            )
+
+    def in_refresh_cooldown(self, value_key: str) -> bool:
+        """Whether a recent background-refresh failure is still on cooldown."""
+        with self._refresh_state_lock:
+            cooldown_until = self._refresh_cooldowns.get(value_key)
+            if cooldown_until is None:
+                return False
+            if TTLCACHE_TIMER() < cooldown_until:
+                return True
+            # Cooldown elapsed: forget it so a retry can run.
+            del self._refresh_cooldowns[value_key]
+            return False
+
+    def mark_refresh_failed(self, value_key: str) -> None:
+        """Record a background-refresh failure and start its retry cooldown."""
+        with self._refresh_state_lock:
+            self._refresh_cooldowns[value_key] = (
+                TTLCACHE_TIMER() + _FAILURE_COOLDOWN_SECONDS
+            )
+
+    def clear_refresh_cooldown(self, value_key: str) -> None:
+        """Clear any failure cooldown for a key after a successful refresh."""
+        with self._refresh_state_lock:
+            self._refresh_cooldowns.pop(value_key, None)
 
     def compute_value_lock(self, value_key: str) -> threading.Lock:
         """Return the lock that should be held while computing a new cached value.
@@ -164,6 +339,19 @@ class Cache(Generic[R]):
                 self._value_locks.clear()
             elif key in self._value_locks:
                 del self._value_locks[key]
+        with self._refresh_state_lock:
+            if not key:
+                # A whole-cache clear bumps the generation so in-flight background
+                # refreshes triggered before the clear are discarded on write-back.
+                self._generation += 1
+                self._refresh_cooldowns.clear()
+                self._key_generations.clear()
+            else:
+                # A per-key clear bumps just that key's generation so an in-flight
+                # refresh for the same key (triggered before the clear) is discarded
+                # rather than clobbering a freshly recomputed value.
+                self._key_generations[key] = self._key_generations.get(key, 0) + 1
+                self._refresh_cooldowns.pop(key, None)
         self._clear(key=key)
 
     @abstractmethod
@@ -186,12 +374,14 @@ class CachedFuncInfo(Generic[P, R]):
         show_spinner: bool | str,
         show_time: bool = False,
         scope: CacheScope = "global",
+        refresh_mode: RefreshMode = "foreground",
     ) -> None:
         self.func = func
         self.hash_funcs = hash_funcs
         self.show_spinner = show_spinner
         self.show_time = show_time
         self.scope = scope
+        self.refresh_mode = refresh_mode
 
     @property
     def cache_type(self) -> CacheType:
@@ -301,9 +491,20 @@ class CachedFunc(Generic[P, R]):
             hash_funcs=self._info.hash_funcs,
         )
 
-        with contextlib.suppress(CacheKeyNotFoundError):
-            cached_result = cache.read_result(value_key)
-            return self._handle_cache_hit(cached_result)
+        try:
+            read = cache.read_result_and_freshness(value_key)
+        except CacheKeyNotFoundError:
+            # Hard miss (never computed or past the hard-eviction bound): fall through
+            # to a blocking foreground compute below.
+            pass
+        else:
+            if read.is_stale:
+                # Background mode, stale grace window: return the stale value now and
+                # kick off a single deduplicated background refresh (no spinner).
+                self._maybe_trigger_background_refresh(
+                    cache, value_key, func_args, func_kwargs
+                )
+            return self._handle_cache_hit(read.result)
 
         # only show spinner if there is a message to show and always only for the
         # outermost cache function if cache functions are nested, because the outermost
@@ -329,11 +530,14 @@ class CachedFunc(Generic[P, R]):
         """Handle a cache hit: replay the result's cached messages, and return its
         value.
         """
-        replay_cached_messages(
-            result,
-            self._info.cache_type,
-            self._info.func,
-        )
+        # In background mode we never replay cached st.* output (the stored messages
+        # are empty anyway); output only renders live during the actual miss/refresh.
+        if self._info.refresh_mode != "background":
+            replay_cached_messages(
+                result,
+                self._info.cache_type,
+                self._info.func,
+            )
         return result.value
 
     def _handle_cache_miss(
@@ -386,9 +590,24 @@ class CachedFunc(Generic[P, R]):
 
             # We've computed our value, and now we need to write it back to the cache
             # along with any "replay messages" that were generated during value computation.
-            messages = self._info.cached_message_replay_ctx._most_recent_messages
+            captured_messages = (
+                self._info.cached_message_replay_ctx._most_recent_messages
+            )
+            if self._info.refresh_mode == "background":
+                # Background mode never replays cached st.* output. If the function
+                # issued any display commands, warn the user (they render live now but
+                # won't reappear on later hits), and store no messages.
+                if captured_messages:
+                    self._emit_background_display_warning()
+                messages: list[MsgData] = []
+            else:
+                messages = captured_messages
             try:
                 cache.write_result(value_key, computed_value, messages)
+                # A successful (re)compute clears any prior background-refresh failure
+                # cooldown, so a later stale window can refresh again even if an earlier
+                # refresh failed and the entry then hard-expired and recomputed here.
+                cache.clear_refresh_cooldown(value_key)
                 return computed_value
             except (CacheError, RuntimeError) as ex:
                 # An exception was thrown while we tried to write to the cache. Report
@@ -410,6 +629,107 @@ class CachedFunc(Generic[P, R]):
                 raise UnserializableReturnValueError(
                     return_value=computed_value, func=self._info.func
                 ) from ex
+
+    def _maybe_trigger_background_refresh(
+        self,
+        cache: Cache[R],
+        value_key: str,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+    ) -> None:
+        """Trigger a deduplicated background refresh for a stale entry.
+
+        Skips the refresh if a recent failure's cooldown is still active or another
+        compute/refresh already holds the per-key lock. The per-key compute lock
+        doubles as the "refresh in flight" flag and is handed to the worker, which
+        releases it when done.
+        """
+        if cache.in_refresh_cooldown(value_key):
+            return
+
+        # A non-blocking acquire of the per-key compute lock deduplicates refreshes: a
+        # failure means a foreground compute or another refresh is already in flight.
+        lock = cache.compute_value_lock(value_key)
+        if not lock.acquire(blocking=False):
+            return
+
+        # Triggering must never fail the stale-serve path or leak the per-key lock. When
+        # the task is scheduled, the worker owns the lock and releases it; otherwise we
+        # release it here (in the finally) so the key can be retried on a later access.
+        scheduled = False
+        try:
+            expected_generation = cache.generation
+            expected_key_generation = cache.key_generation(value_key)
+            scheduled = (
+                cache_background_refresh.get_background_refresh_manager().submit(
+                    lambda: self._run_background_refresh(
+                        cache,
+                        value_key,
+                        func_args,
+                        func_kwargs,
+                        lock,
+                        expected_generation,
+                        expected_key_generation,
+                    )
+                )
+            )
+        except Exception:
+            _LOGGER.warning(
+                "Failed to trigger background cache refresh.", exc_info=True
+            )
+        finally:
+            if not scheduled:
+                # Saturated pool, degraded runtime, or scheduling error: keep serving
+                # stale and retry on a later access.
+                lock.release()
+
+    def _run_background_refresh(
+        self,
+        cache: Cache[R],
+        value_key: str,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+        lock: threading.Lock,
+        expected_generation: int,
+        expected_key_generation: int,
+    ) -> None:
+        """Recompute a stale entry off the script thread and write it back.
+
+        Runs without a ScriptRunContext, so the cached function must be context-free
+        (session-bound APIs and st.* display commands do not resolve here). Never
+        raises: failures log a warning and start a per-key retry cooldown. The
+        compute lock is always released.
+        """
+        try:
+            new_value = self._info.func(*func_args, **func_kwargs)
+            cache.write_background_refresh_result(
+                value_key,
+                new_value,
+                expected_generation=expected_generation,
+                expected_key_generation=expected_key_generation,
+            )
+            cache.clear_refresh_cooldown(value_key)
+        except Exception as ex:
+            cache.mark_refresh_failed(value_key)
+            _LOGGER.warning(
+                "Background cache refresh failed for %s: %s",
+                getattr(self._info.func, "__qualname__", "?"),
+                ex,
+            )
+        finally:
+            lock.release()
+
+    def _emit_background_display_warning(self) -> None:
+        """Warn that display output won't replay on hits in background mode."""
+        from streamlit import exception
+
+        # We use an exception here to show a proper stack trace pointing at the user's
+        # cached function (same channel as the cached-widget warning).
+        exception(
+            CachedStFunctionInBackgroundModeWarning(
+                self._info.cache_type, self._info.func
+            )
+        )
 
     @overload
     def clear(self) -> None: ...
