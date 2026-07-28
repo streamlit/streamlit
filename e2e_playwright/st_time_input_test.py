@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-NUM_TIME_INPUTS = 17
+NUM_TIME_INPUTS = 20
 
 
 def test_time_input_widget_rendering(
@@ -94,6 +94,18 @@ def test_time_input_widget_rendering(
     assert_snapshot(
         get_time_input(themed_app, "Time input 12 (width='stretch')"),
         name="st_time_input-width_stretch",
+    )
+    assert_snapshot(
+        get_time_input(themed_app, "Time input (step=30, seconds)"),
+        name="st_time_input-seconds_step30",
+    )
+    assert_snapshot(
+        get_time_input(themed_app, "Time input (12-hour)"),
+        name="st_time_input-format_12h",
+    )
+    assert_snapshot(
+        get_time_input(themed_app, "Time input (12h + seconds)"),
+        name="st_time_input-12h_seconds",
     )
 
 
@@ -519,3 +531,26 @@ def test_paste_in_form_context(app: Page):
     wait_for_app_run(app)
 
     expect_markdown(app, "Form time: 14:30:00")
+
+
+# --- Seconds granularity and hour cycle tests ---
+
+
+def test_seconds_arrow_key_snaps_to_step(app: Page):
+    """ArrowUp/Down on the seconds segment snaps to step boundaries (step=30)."""
+    time_input = get_time_input(app, "Time input (step=30, seconds)")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    spinbuttons = time_display.get_by_role("spinbutton")
+    second_segment = spinbuttons.nth(2)
+
+    # Initial value is 08:45:30. ArrowUp on seconds → next step boundary.
+    # totalSecs = 8*3600 + 45*60 + 30 = 31530. floor(31530/30)*30 + 30 = 31560 → 08:46:00
+    second_segment.click()
+    second_segment.press("ArrowUp")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Value seconds:", "08:46:00")
+
+    # ArrowDown → ceil(31560/30)*30 - 30 = 31560 - 30 = 31530 → 08:45:30
+    second_segment.press("ArrowDown")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Value seconds:", "08:45:30")

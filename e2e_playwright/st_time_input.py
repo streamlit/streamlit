@@ -146,3 +146,22 @@ else:
         step=60,
     )
     st.write("Initial time input value:", tval)
+
+v_seconds = st.time_input(
+    "Time input (step=30, seconds)", time(8, 45, 30), step=30, key="time_input_seconds"
+)
+st.write("Value seconds:", v_seconds)
+
+v_12h = st.time_input(
+    "Time input (12-hour)", time(8, 45), format="12h", key="time_input_12h"
+)
+st.write("Value 12h:", v_12h)
+
+v_12h_seconds = st.time_input(
+    "Time input (12h + seconds)",
+    time(14, 30, 15),
+    format="12h",
+    step=30,
+    key="time_input_12h_seconds",
+)
+st.write("Value 12h+sec:", v_12h_seconds)
