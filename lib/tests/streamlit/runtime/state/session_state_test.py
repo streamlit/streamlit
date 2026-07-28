@@ -3645,7 +3645,11 @@ class SanitizeUrlArrayTest(unittest.TestCase):
 
 
 def _create_disabled_test_metadata(
-    widget_id: str, *, disabled: bool, callback: Any = None
+    widget_id: str,
+    *,
+    disabled: bool,
+    callback: Any = None,
+    bind: BindOption = None,
 ) -> WidgetMetadata:
     """Create simple string-widget metadata for `disabled` enforcement tests."""
     return WidgetMetadata(
@@ -3655,6 +3659,7 @@ def _create_disabled_test_metadata(
         value_type="string_value",
         callback=callback,
         disabled=disabled,
+        bind=bind,
     )
 
 
@@ -3771,6 +3776,30 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
         result = self.session_state.register_widget(metadata, user_key=None)
 
         assert result.value == "default"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_disabled_url_bound_widget_keeps_seeded_value(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A URL-seeded value for a disabled ``bind='query-params'`` widget is
+        preserved, not discarded. URL seeding writes into both widget state and
+        session state, so it counts as a programmatic (app-driven) assignment
+        rather than a frontend interaction — the enforcement guard must not fire
+        (and must not raise) in this case."""
+        ThreadState.update(active_script_hash="main_hash")
+        self.session_state.query_params.set_initial_query_params("cb=url_value")
+
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(
+            widget_id, disabled=True, bind="query-params"
+        )
+
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "url_value"
 
 
 class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):

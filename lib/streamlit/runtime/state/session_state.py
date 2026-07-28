@@ -850,11 +850,10 @@ class SessionState:
         """Call callbacks for widgets whose value changed or whose trigger fired."""
         from streamlit.runtime.scriptrunner import RerunException
 
-        # Skip callbacks for disabled widgets: a disabled widget cannot be
-        # interacted with in the browser, so a reported change can only come from
-        # a stale UI or a forged message. `metadata.disabled` reflects the
-        # previous run here (callbacks run before widgets re-register), which is
-        # fine — `disabled` is not part of the widget id, so the id and its
+        # Skip callbacks for disabled widgets: a reported change can only come
+        # from a stale UI or a forged message. The metadata here reflects the
+        # previous run (callbacks run before widgets re-register), which is safe
+        # because `disabled` is not part of the widget id, so the id and its
         # metadata stay stable across runs.
 
         # Path 1: single callback.
