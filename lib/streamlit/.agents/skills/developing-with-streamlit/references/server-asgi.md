@@ -298,6 +298,10 @@ Keep these caveats in mind:
 - **This does not refresh before the TTL.** Calls made while the entry is fresh return the
   current value without executing the cached function. Polling controls how soon the server
   notices expiration and triggers background refresh.
+- **Poll well under `2 × ttl`.** Background refresh serves the stale value for only one extra
+  `ttl`; past `2 × ttl` the entry is hard-evicted and the next call (including a scheduled
+  touch) blocks on a foreground recompute. Keep the polling interval comfortably below
+  `2 × ttl` so outages don't turn a touch into a blocking rebuild.
 - **Stale values remain possible.** The scheduled touch preserves the last good value while
   refreshing, but users can receive it until the refresh completes. If uninterrupted,
   atomically replaced fresh reads are required, refresh a shared external store instead.
