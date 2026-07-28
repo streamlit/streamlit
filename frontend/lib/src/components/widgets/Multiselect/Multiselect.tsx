@@ -141,7 +141,7 @@ const DropdownController = memo<{
   const state = useContext(ComboBoxStateContext)
   useEffect(() => {
     if (state) {
-      openRef.current = () => state.open(null, "manual")
+      openRef.current = () => state.open("first", "manual")
       closeRef.current = () => state.close()
     }
     return () => {
