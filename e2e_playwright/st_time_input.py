@@ -115,6 +115,14 @@ with st.form("time_form"):
 if submitted:
     st.write("Form time:", form_time)
 
+# --- Form context: enter_to_submit ---
+# Set enter_to_submit=True explicitly so the E2E suite can verify the hint
+# text and Enter-key submission path.
+with st.form("time_form_enter", enter_to_submit=True):
+    form_enter_time = st.time_input("Form time input (enter to submit)", time(9, 0))
+    st.form_submit_button("Submit enter form")
+st.write("Form enter time:", form_enter_time)
+
 if st.toggle("Update time input props"):
     tval = st.time_input(
         "Updated dynamic time input",

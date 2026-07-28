@@ -22,6 +22,7 @@ import {
   TimeInput as TimeInputProto,
 } from "@streamlit/protobuf"
 
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -1324,6 +1325,203 @@ describe("TimeInput widget", () => {
     // Enter should dismiss the paste error
     await user.keyboard("{Enter}")
     expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
+  })
+
+  describe("form support (InputInstructions + submitForm)", () => {
+    // useCalculatedDimensions reads element width via useResizeObserver.
+    // jsdom doesn't compute layout, so mock it to return 250px (> 180px
+    // hideWidgetDetails breakpoint) so shouldShowInstructions can become true.
+    beforeEach(() => {
+      vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+        elementRef: { current: null },
+        values: [250],
+      })
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it("InputInstructions is not visible when not focused", () => {
+      const props = getProps()
+      render(<TimeInput {...props} />)
+      expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    })
+
+    it("InputInstructions renders no message when focused but not dirty outside a form", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      render(<TimeInput {...props} />)
+
+      const [hourSegment] = screen.getAllByRole("spinbutton")
+      await user.click(hourSegment)
+
+      // Focused but value unchanged — dirty is false, so allowEnterToSubmit is
+      // false and the instructions render with no content.
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent("")
+    })
+
+    it("shows 'Press Enter to apply' hint when focused and dirty outside a form", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:45" })
+      render(<TimeInput {...props} />)
+
+      const [, minuteSegment] = screen.getAllByRole("spinbutton")
+      await user.click(minuteSegment)
+
+      // Type a digit to make the widget dirty.
+      await user.keyboard("3")
+
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+        "Press Enter to apply"
+      )
+    })
+
+    it("hides instructions after blur (commit clears dirty)", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:45" })
+      render(<TimeInput {...props} />)
+
+      const segments = screen.getAllByRole("spinbutton")
+      const minuteSegment = segments[segments.length - 1]
+      await user.click(minuteSegment)
+      await user.keyboard("3")
+      expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
+
+      // Tab out — commits, clears dirty, and loses focus.
+      await user.tab()
+      expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    })
+
+    it.each([
+      { allowEnter: true, expected: "Press Enter to submit form" },
+      { allowEnter: false, expected: "" },
+    ])(
+      "in-form hint text when allowFormEnterToSubmit=$allowEnter",
+      async ({ allowEnter, expected }) => {
+        const user = userEvent.setup()
+        const props = getProps({ formId: "form" })
+        vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+          allowEnter
+        )
+        render(<TimeInput {...props} />)
+
+        const [hourSegment] = screen.getAllByRole("spinbutton")
+        await user.click(hourSegment)
+
+        expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+          expected
+        )
+      }
+    )
+
+    it("calls submitForm on Enter when inside a form with allowFormEnterToSubmit=true", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:45", formId: "form" })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => {})
+      render(<TimeInput {...props} />)
+
+      const [hourSegment] = screen.getAllByRole("spinbutton")
+      await user.click(hourSegment)
+      await user.keyboard("{Enter}")
+
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
+        "form",
+        undefined
+      )
+    })
+
+    it.each([
+      {
+        scenario: "allowFormEnterToSubmit=false",
+        formId: "form",
+        allowEnter: false,
+      },
+      { scenario: "not in a form (no formId)", formId: "", allowEnter: false },
+    ])(
+      "does NOT call submitForm on Enter when $scenario",
+      async ({ formId, allowEnter }) => {
+        const user = userEvent.setup()
+        const props = getProps({
+          default: "12:45",
+          ...(formId ? { formId } : {}),
+        })
+        vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+          allowEnter
+        )
+        vi.spyOn(props.widgetMgr, "submitForm")
+        render(<TimeInput {...props} />)
+
+        const [hourSegment] = screen.getAllByRole("spinbutton")
+        await user.click(hourSegment)
+        await user.keyboard("{Enter}")
+
+        expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+      }
+    )
+
+    it("does NOT call submitForm on Enter when a validation error is showing", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:45", formId: "form" })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      vi.spyOn(props.widgetMgr, "submitForm")
+      render(<TimeInput {...props} />)
+
+      const [hourSegment] = screen.getAllByRole("spinbutton")
+      await user.click(hourSegment)
+      await user.paste("25:00")
+      expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+
+      await user.keyboard("{Enter}")
+
+      expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+    })
+
+    it("arrow-key immediate commit does not leave dirty=true (no transient hint flash)", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:45" })
+      render(<TimeInput {...props} />)
+
+      const [, minuteSegment] = screen.getAllByRole("spinbutton")
+      await user.click(minuteSegment)
+
+      // Arrow key triggers an immediate commit — dirty must stay false.
+      await user.keyboard("{ArrowDown}")
+
+      // Instructions should NOT show a "Press Enter to apply" message since
+      // the value was already committed (dirty=false).
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent("")
+    })
+
+    it("dirty is reset to false on form clear", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: "12:45", formId: "form" })
+      // clearOnSubmit=true means submitting the form also fires formCleared.
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+        false
+      )
+      render(<TimeInput {...props} />)
+
+      const [, minuteSegment] = screen.getAllByRole("spinbutton")
+      await user.click(minuteSegment)
+      // Type a digit to make the widget dirty.
+      await user.keyboard("3")
+
+      // Confirm dirty hint is visible.
+      expect(screen.queryByTestId("InputInstructions")).toBeInTheDocument()
+
+      // Submit the form, which triggers formCleared signal (clearOnSubmit=true).
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      // After form clear: dirty=false, isFocused still true but allowEnterToSubmit
+      // is false (mocked) so instructions renders with no content.
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent("")
+    })
   })
 })
 
