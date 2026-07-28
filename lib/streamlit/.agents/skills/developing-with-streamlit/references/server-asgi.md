@@ -217,10 +217,11 @@ Put cached functions in a shared module when both the Streamlit script and the A
 
 Import and call cached functions inside the lifespan hook rather than at launcher module
 scope. The launcher module is imported before Streamlit starts its runtime, so a module-scope
-`@st.cache_data` or `@st.cache_resource` there is validated against a temporary in-memory
-storage manager and logs a `No runtime found` warning at decoration. The user lifespan runs
-after the runtime and its cache storage manager have started, so importing and warming inside
-it avoids that warning and binds each cache to the real storage manager.
+`@st.cache_data` decoration is validated against a temporary in-memory storage manager and
+logs a `No runtime found` warning (`@st.cache_resource` doesn't use that decoration-time
+path). Either way, the real cache storage is only selected when a cached function is first
+called, so warming inside the lifespan—after the runtime has started—uses the real cache and
+avoids the warning.
 
 If ASGI routes or middleware need process-level state that is not a Streamlit resource, the lifespan context manager may yield a dictionary. Those values are stored on `app.state` (`app.state["ready"]` in the example above).
 
@@ -289,8 +290,10 @@ app = st.App("streamlit_app.py", lifespan=lifespan)
 ```
 
 This pattern works for global `st.cache_data` and `st.cache_resource` entries whose argument
-combinations are known to the scheduler. Size the interval so each refresh finishes
-comfortably before the `ttl` elapses, counting the warm duration itself.
+combinations are known to the scheduler. `func.clear()` drops every entry for the function, so
+re-warm each argument combination the app needs (or use `func.clear(*args)` to refresh one
+combination at a time). Size the interval so each refresh finishes comfortably before the
+`ttl` elapses, counting the warm duration itself.
 
 Keep these caveats in mind:
 
