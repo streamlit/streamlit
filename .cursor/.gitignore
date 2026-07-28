@@ -5,6 +5,8 @@
 !.gitignore
 !hooks.json
 !worktrees.json
+!environment.json
+!Dockerfile
 
 # Allow specific commands
 !commands/

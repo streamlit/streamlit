@@ -34,14 +34,14 @@
 
 - Prefer `make` targets for all dev tasks (tests, lint, format, builds).
 - Always use `uv run` to run any Python command (e.g. `uv run streamlit`, `uv run pytest`, `uv run ruff`, `uv run mypy`, etc.).
-- Always use `uv run` for git commands that trigger hooks (e.g. `uv run git commit`, `uv run git push`). Pre-commit hooks require the uv environment to run linters and formatters.
+- **Important:** Always use `uv run` for git commands that trigger hooks (e.g. `uv run git commit`, `uv run git push`). Pre-commit hooks require the uv environment to run linters and formatters.
 - For Python unit tests: `uv run pytest` commands are allowed and encouraged for running specific tests during development.
 - For E2E tests: `uv run pytest` commands targeting `e2e_playwright/` files are blocked by policy.
   Use `make run-e2e-test <filename>` instead.
 
 ## `make` commands
 
-Selection of `make` commands for development (run in the repo root):
+Selection of `make` commands for development (**Important: run from the repo root**):
 
 - `help`: Show all available make commands. [~1s]
 - `check`: Run all checks (format, lint, types, unit tests) on changed files only. Add `E2E_CHECK=true` to include E2E tests. [varies by changes]
@@ -99,3 +99,17 @@ Selection of `make` commands for development (run in the repo root):
 - **E2E Tests**: Test the entire app logic end-to-end with Playwright. Located at `e2e_playwright/<name>_test.py` with app code in `e2e_playwright/<name>.py`. User-facing features should be covered by E2E tests (e.g., parameters and commands in the public `st.` API).
 - **(Python) Type Tests**: Verify public API typing with mypy `assert_type`. Located at `lib/tests/streamlit/typing/<command>_types.py`.
 - Prefer running specific tests / test scripts for newly added tests instead the entire test suite.
+
+## Cursor Cloud specific instructions
+
+The environment is configured via `.cursor/environment.json`, which installs system dependencies (Node.js 24, protoc, rsync) via a Dockerfile and runs `make init` to install all project dependencies.
+
+### Services
+
+| Service | How to start | Default port |
+|---------|-------------|-------------|
+| Streamlit backend | `uv run streamlit run <script.py> --server.headless=true` | 8501 |
+| Frontend dev server | `make frontend-dev` | 3000 |
+| Both (recommended) | `make debug <script.py>` | 3001 (frontend), 8501 (backend) |
+
+For standard build/test/lint commands, see the `make` commands section above.
