@@ -254,6 +254,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         // artificially widening narrow content).
         elements.floating.style.minWidth = ""
         const intrinsicMinWidth =
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Inside Floating UI's `size.apply`; layout has already been read to compute `availableWidth`, and the popover is only mounted when open, so the extra style read is bounded and only fires on open/scroll/resize (via `autoUpdate`), not per animation frame. The value gained — correctly capping the intrinsic min-width including the stretch case `max($calculatedWidth, 10rem)` without threading `$stretchWidth`/`$calculatedWidth` down here — outweighs the cost.
           parseFloat(window.getComputedStyle(elements.floating).minWidth) || 0
         if (intrinsicMinWidth > clampedWidth) {
           elements.floating.style.minWidth = `${clampedWidth}px`
