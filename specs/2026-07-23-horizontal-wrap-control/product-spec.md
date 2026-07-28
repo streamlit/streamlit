@@ -228,8 +228,32 @@ When `wrap=False` on a single-label control:
   switches, and help icons remain visible.
 - Only the text portion of the label shrinks and renders an ellipsis.
 - The full label remains the control's accessible name.
-- No automatic tooltip is added in the initial release. Authors can use the existing
-  `help` parameter when the full wording is important.
+- When the label is actually truncated and no `help` is set, hovering the control reveals
+  the full label in a tooltip (see "Tooltip for truncated labels").
+
+### Tooltip for truncated labels
+
+When a single-label control ellipsizes its label, hovering it reveals the full label in a
+tooltip so the wording stays recoverable without changing the app. The rules:
+
+- **Only when truncated.** The tooltip appears only when the label is actually clipped.
+  The frontend detects this by comparing the label's rendered width to its available
+  width (rechecked on resize); no CSS/HTML feature reveals truncated text on its own
+  (`text-overflow: ellipsis` adds no tooltip, and a static `title` would also show on
+  labels that fit).
+- **Only when `help` is unset.** If `help` is passed, its tooltip takes precedence and no
+  separate label tooltip is added, so the two never compete. `help` stays the way to add
+  context beyond the label.
+- **Plain text.** For Markdown labels the tooltip shows the plain-text label (the same
+  text used as the accessible name); tooltips do not render inline Markdown or icons.
+- **Reuses Streamlit's tooltip** rather than the native `title` attribute, for consistent
+  styling with `help`.
+
+Screen-reader users already receive the full label as the control's accessible name, so
+this tooltip is a visual aid for pointer users and, like `help`, does not apply on touch.
+It covers the button-like controls (`st.button`, `st.download_button`, `st.link_button`,
+`st.form_submit_button`, `st.popover`, `st.menu_button`) and applies the same rule to
+`st.checkbox` and `st.toggle`.
 
 ### Deterministic height
 
@@ -348,17 +372,13 @@ import streamlit as st
 
 left, middle, right = st.columns(3)
 left.button("Edit", width="stretch", wrap=False)
-middle.button(
-    "Regenerate the complete report",
-    width="stretch",
-    wrap=False,
-    help="Regenerate the complete report",
-)
+middle.button("Regenerate the complete report", width="stretch", wrap=False)
 right.button("Export", width="stretch", wrap=False)
 ```
 
 The middle button remains the same height as its neighbors and displays a label like
-`"Regenerate the complete…"`.
+`"Regenerate the complete…"`. Because no `help` is set, hovering the button reveals the
+full label.
 
 The behavior applies consistently to:
 
@@ -399,6 +419,8 @@ with st.container(horizontal=True, wrap=False):
 
 - The checkbox indicator or toggle switch retains its size and never shrinks.
 - The label consumes the remaining width and ellipsizes when necessary.
+- When the label is truncated and no `help` is set, hovering the control reveals the full
+  label in a tooltip.
 - The optional help icon remains visible.
 - `width="content"` and `width="stretch"` continue to determine the control's available
   width. Ellipsis appears only when that width constrains the label.
@@ -413,8 +435,8 @@ changed. Truncation should require an explicit decision by the app author.
 For the commands in scope, there are two useful modes: allow the controlled content to
 use another row or keep it to one row. A collection scrolls because clipping would make
 interactive or selected items unusable. A single-label control can stay operable while
-its visual label is ellipsized because its full accessible name and optional `help`
-remain available.
+its visual label is ellipsized because its full accessible name remains available and a
+hover tooltip reveals the full label (or `help`, when set).
 
 This is a genuinely binary choice and follows the existing `st.code(wrap_lines=...)`
 precedent. The parameter is named `wrap` rather than `wrap_lines` because it controls
@@ -493,13 +515,6 @@ A follow-up should compare a generic `max_lines: int | None` API with targeted a
 ellipsis for widget labels. Adding `wrap` to every text-bearing widget in this project
 would create a much larger API surface.
 
-### Tooltips for truncated labels
-
-The initial release omits an automatic tooltip so authors opt into extra text explicitly
-through the existing `help` parameter. A follow-up can evaluate adding a native
-`title`-attribute tooltip that reveals the full text on hover whenever a single-label
-control ellipsizes its label.
-
 ### Configurable column wrapping threshold
 
 `st.columns(wrap=False)` covers layouts that must never stack. It does not cover #6592,
@@ -522,15 +537,6 @@ initial API. `st.radio(horizontal=True)` could technically accept `wrap` for con
 but it is left out to keep the initial surface minimal; it can adopt the same one-row
 contract in a follow-up if demand warrants.
 
-## Success measures
-
-- Page profiling will record explicit `wrap=False` usage by command family.
-- Qualitatively, related issues and support requests stop relying on DOM-targeting CSS.
-- After approximately six months, compare adoption across the command families before
-  considering text line limits or configurable column breakpoints.
-
-No new user event is required; this is a render-time layout option.
-
 ## Documentation and testing
 
 - Add parameter documentation and a compact-toolbar example to each command.
@@ -541,6 +547,8 @@ No new user event is required; this is a render-time layout option.
   multiselect controls.
 - Add button tests for ellipsis, icons, shortcuts, Markdown, accessible names, and
   popover/menu expansion icons.
+- Add tests that the truncated-label tooltip appears only when the label is clipped and
+  no `help` is set, defers to `help` when present, and uses plain text for Markdown labels.
 - Add checkbox and toggle tests for ellipsis, fixed indicators, help icons, label
   visibility, and accessible names.
 - Add E2E coverage at desktop, intermediate, and phone widths in Chromium, Firefox, and
