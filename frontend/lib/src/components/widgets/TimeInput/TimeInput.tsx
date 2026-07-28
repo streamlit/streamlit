@@ -486,7 +486,8 @@ function TimeInput({
 
   /**
    * Capture-phase key handler for spinbutton segments. Handles:
-   * - Enter: commits the current display value and submits the form.
+   * - Enter: commits the current display value and, when the form allows it
+   *   and no validation error is visible, submits the form.
    * - ArrowUp/Down: increments/decrements by `step` (overriding react-aria's
    *   default ±1). The capture phase + stopImmediatePropagation prevents
    *   react-aria from also applying its own change on top of ours.

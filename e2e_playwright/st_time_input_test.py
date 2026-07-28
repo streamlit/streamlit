@@ -504,7 +504,9 @@ def test_paste_error_state_snapshot(app: Page, assert_snapshot: ImageCompareFunc
 
 def test_paste_in_form_context(app: Page):
     """Test that paste works inside a form and value is submitted correctly."""
-    form = app.get_by_test_id("stForm").first
+    form = app.get_by_test_id("stForm").filter(
+        has=app.get_by_text("Form time input", exact=True)
+    )
     time_input = form.get_by_test_id("stTimeInput")
     time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
     hour_segment = time_display.locator("[role='spinbutton']").first
@@ -560,66 +562,51 @@ def test_seconds_arrow_key_snaps_to_step(app: Page):
 # --- Form support: InputInstructions + Enter-to-submit ---
 
 
-def test_input_instructions_shows_press_enter_to_apply_when_dirty(app: Page):
-    """InputInstructions shows 'Press Enter to apply' when value is changed outside a form."""
-    # Use a standalone (non-form) widget so inForm=false.
+def test_input_instructions_outside_form(app: Page):
+    """InputInstructions shows 'Press Enter to apply' when dirty and hides after blur."""
     time_input = get_time_input(app, "Time input 1 (8:45)")
     time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
     minute_segment = time_display.get_by_role("spinbutton").nth(1)
 
+    # Focus alone does not show an instruction (not dirty, not in form).
     minute_segment.click()
-    # Type a digit to make the widget dirty.
-    minute_segment.press("3")
+    expect(time_input.get_by_test_id("InputInstructions")).to_have_text("")
 
+    # Type a digit to make the widget dirty — hint appears.
+    minute_segment.press("3")
     expect(time_input.get_by_test_id("InputInstructions")).to_have_text(
         "Press Enter to apply"
     )
 
+    # Blur commits and clears dirty — hint disappears.
+    minute_segment.blur()
+    wait_for_app_run(app)
+    expect(time_input.get_by_test_id("InputInstructions")).not_to_be_visible()
 
-def test_input_instructions_shows_press_enter_to_submit_form(app: Page):
-    """InputInstructions shows 'Press Enter to submit form' when inside an enter_to_submit form."""
+
+def test_form_enter_to_submit(app: Page):
+    """Enter-to-submit form shows hint on focus and submits on Enter with dirty edit."""
     time_input = get_time_input(app, "Form time input (enter to submit)")
     time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
     hour_segment = time_display.get_by_role("spinbutton").first
 
-    # Just focusing the widget in a form with enter_to_submit=True should show the hint.
+    # Focusing in a form with enter_to_submit=True shows the submit hint.
     hour_segment.click()
-
     expect(time_input.get_by_test_id("InputInstructions")).to_have_text(
         "Press Enter to submit form"
     )
 
+    # Type digits to make the widget dirty (exercises the commit-then-submit path
+    # rather than ArrowUp which commits immediately).
+    hour_segment.press("1")
+    hour_segment.press("0")
 
-def test_enter_key_submits_form(app: Page):
-    """Pressing Enter inside an enter_to_submit form submits the form."""
-    time_input = get_time_input(app, "Form time input (enter to submit)")
-    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
-    hour_segment = time_display.get_by_role("spinbutton").first
-
-    # Change the hour value.
-    hour_segment.click()
-    hour_segment.press("ArrowUp")
-
-    # Press Enter to submit the form.
+    # Press Enter to commit the pending edit and submit the form.
     hour_segment.press("Enter")
     wait_for_app_run(app)
 
     # The submitted value should be reflected in the app output.
     expect_markdown(app, "Form enter time: 10:00:00")
 
-
-def test_input_instructions_hidden_after_blur(app: Page):
-    """InputInstructions disappears after the widget loses focus (commit clears dirty)."""
-    time_input = get_time_input(app, "Time input 1 (8:45)")
-    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
-    minute_segment = time_display.get_by_role("spinbutton").nth(1)
-
-    minute_segment.click()
-    minute_segment.press("3")
-    expect(time_input.get_by_test_id("InputInstructions")).to_be_visible()
-
-    # Blur the segment to commit and clear dirty state.
-    minute_segment.blur()
-    wait_for_app_run(app)
-
-    expect(time_input.get_by_test_id("InputInstructions")).not_to_be_visible()
+    # Must NOT happen: the non-enter form must not have been submitted.
+    expect(app.get_by_text("Form time:", exact=True)).not_to_be_visible()

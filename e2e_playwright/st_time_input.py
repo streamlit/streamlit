@@ -116,8 +116,8 @@ if submitted:
     st.write("Form time:", form_time)
 
 # --- Form context: enter_to_submit ---
-# Explicit enter_to_submit=True (the default) — used by E2E tests to verify
-# the "Press Enter to submit form" hint and Enter-key form submission.
+# Set enter_to_submit=True explicitly so the E2E suite can verify the hint
+# text and Enter-key submission path.
 with st.form("time_form_enter", enter_to_submit=True):
     form_enter_time = st.time_input("Form time input (enter to submit)", time(9, 0))
     st.form_submit_button("Submit enter form")

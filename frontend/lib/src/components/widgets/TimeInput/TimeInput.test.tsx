@@ -1348,7 +1348,7 @@ describe("TimeInput widget", () => {
       expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
     })
 
-    it("InputInstructions is not visible when focused but not dirty (outside form)", async () => {
+    it("InputInstructions renders no message when focused but not dirty outside a form", async () => {
       const user = userEvent.setup()
       const props = getProps()
       render(<TimeInput {...props} />)
