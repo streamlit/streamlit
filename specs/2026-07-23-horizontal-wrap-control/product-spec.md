@@ -44,6 +44,8 @@ CSS that depends on Streamlit's private DOM.
 
 - [#12582](https://github.com/streamlit/streamlit/issues/12582) requests wrap control
   for horizontal `st.container`.
+- [#9544](https://github.com/streamlit/streamlit/issues/9544) requests horizontal
+  scrolling for `st.container`, addressed here by `st.container(horizontal=True, wrap=False)`.
 - [#5003](https://github.com/streamlit/streamlit/issues/5003) requests a way to keep
   `st.columns` horizontal on mobile.
 - [#6592](https://github.com/streamlit/streamlit/issues/6592) requests configurable
@@ -226,6 +228,21 @@ When `wrap=False` on a single-label control:
 - No automatic tooltip is added in the initial release. Authors can use the existing
   `help` parameter when the full wording is important.
 
+### Deterministic height
+
+A shared benefit of `wrap=False` is that the controlled content stays at a deterministic
+height that no longer depends on the viewport width:
+
+- Multi-item controls (`st.multiselect`, `st.pills`, `st.segmented_control`) render their
+  control body at the same one-row height at every viewport width and item or selection
+  count. This excludes the external widget label, which can still wrap.
+- Single-label controls keep their standard single-row height because the label
+  ellipsizes instead of growing onto another line.
+
+This does not extend to `st.container(horizontal=True)` and `st.columns`: `wrap=False`
+fixes them to a single row, but each child element can still reflow internally, so the
+row's height continues to depend on its content.
+
 ### Command-specific behavior
 
 #### `st.container`
@@ -293,8 +310,6 @@ regions = st.multiselect(
 - Removing a chip preserves the nearest useful scroll position.
 - The open dropdown is unchanged.
 - An empty value renders exactly like today's empty multiselect.
-- Excluding its external label, the closed control keeps the same height at every
-  viewport width and selection count.
 
 #### `st.pills` and `st.segmented_control`
 
@@ -319,8 +334,6 @@ period = st.segmented_control(
 - On initial render, a selected option that would otherwise be off-screen is scrolled
   into view. Keyboard focus does the same while navigating.
 - Selection behavior, return values, and callbacks are unchanged.
-- Excluding the external widget label, the option group keeps the same one-row height at
-  every viewport width and option count.
 
 #### Buttons and button-like triggers
 
