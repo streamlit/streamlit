@@ -553,6 +553,9 @@ def test_media_endpoint_missing_file_returns_404() -> None:
         # the app's origin when the media URL is navigated to directly.
         ("text/html", "sandbox"),
         ("image/svg+xml", "sandbox"),
+        # A charset parameter must be stripped before matching so real-world
+        # Content-Types (e.g. "text/html; charset=utf-8") still get sandboxed.
+        ("text/html; charset=utf-8", "sandbox"),
         # Passive types (e.g. PDFs served as iframe documents via st.iframe, or
         # images) are not sandboxed so their inline rendering keeps working.
         ("application/pdf", None),

@@ -563,12 +563,10 @@ def create_media_routes(
         except MediaFileStorageError as exc:
             raise HTTPException(status_code=404, detail="File not found") from exc
 
-        # Media contents and MIME types can originate from user uploads. Always
-        # block MIME sniffing so a declared type cannot be reinterpreted as an
-        # executable document, and additionally sandbox responses whose declared
-        # type could run active content in the app's origin on direct
-        # navigation. Passive types (images, audio, video, PDFs) are left
-        # un-sandboxed so their inline rendering keeps working.
+        # Media contents and MIME types can originate from user uploads, so
+        # always block MIME sniffing and additionally sandbox active-document
+        # types (see _ACTIVE_DOCUMENT_MIME_TYPES) so uploaded content cannot run
+        # in the app's origin on direct navigation.
         headers: dict[str, str] = {"X-Content-Type-Options": "nosniff"}
         base_mimetype = (media_file.mimetype or "").split(";", 1)[0].strip().lower()
         if base_mimetype in _ACTIVE_DOCUMENT_MIME_TYPES:
