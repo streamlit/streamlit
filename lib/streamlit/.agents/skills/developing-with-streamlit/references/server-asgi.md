@@ -216,7 +216,7 @@ app = st.App("streamlit_app.py", lifespan=lifespan)
 Put cached functions in a shared module when both the Streamlit script and the ASGI wrapper need to call them. For per-user state inside the Streamlit script, use `st.session_state`.
 
 Import and call cached functions inside the lifespan hook rather than at launcher module
-scope. `st.App` imports the launcher before the Streamlit runtime exists, so a module-scope
+scope. The launcher module is imported before Streamlit starts its runtime, so a module-scope
 `@st.cache_data` or `@st.cache_resource` there is validated against a temporary in-memory
 storage manager and logs a `No runtime found` warning at decoration. The user lifespan runs
 after the runtime and its cache storage manager have started, so importing and warming inside
@@ -273,7 +273,8 @@ async def lifespan(app):
             except Exception:
                 logger.exception("Scheduled cache refresh failed")
 
-    # Warm the cache before the app starts accepting requests.
+    # Warm the cache before serving requests. Unlike the periodic loop, this initial
+    # warm isn't wrapped in try/except, so a failure here aborts startup (fail-fast).
     await anyio.to_thread.run_sync(refresh_metrics)
 
     async with anyio.create_task_group() as task_group:
@@ -289,19 +290,22 @@ app = st.App("streamlit_app.py", lifespan=lifespan)
 
 This pattern works for global `st.cache_data` and `st.cache_resource` entries whose argument
 combinations are known to the scheduler. Size the interval so each refresh finishes
-comfortably before the `ttl` elapses, counting the warm duration itself: if a refresh is
-skipped, runs late, or a slow warm overruns the remaining `ttl`, the entry expires and the
-next request falls back to a blocking foreground recompute. That recompute still returns fresh
-data, so the values stay never-stale even though that single request is no longer
-never-blocking.
+comfortably before the `ttl` elapses, counting the warm duration itself.
 
-Clearing and warming is not an atomic replacement. Concurrent callers never receive the old,
-stale value, but they can wait for the in-progress computation. Because the refresh clears
-before it recomputes, a warm that raises leaves the entry empty until the next successful
-refresh or a request-side recompute—so treat a failed refresh as a cold-cache window, not a
-keep-last-good-value fallback. If uninterrupted reads and atomic replacement are required,
-refresh a shared external store instead. Lifespan tasks also run once per ASGI process, so a
-multi-worker deployment runs and warms each process independently.
+Keep these caveats in mind:
+
+- **Schedule overruns fall back to a blocking recompute.** If a refresh is skipped, runs late,
+  or a slow warm overruns the remaining `ttl`, the entry expires and the next request does a
+  foreground recompute. That recompute still returns fresh data, so values stay never-stale
+  even though that single request is no longer never-blocking.
+- **A failed warm is a cold-cache window.** Because the refresh clears before it recomputes, a
+  warm that raises leaves the entry empty until the next successful refresh or a request-side
+  recompute—not a keep-last-good-value fallback.
+- **Refresh is not an atomic replacement.** Concurrent callers never receive the old, stale
+  value, but they can wait for the in-progress computation. If uninterrupted reads and atomic
+  replacement are required, refresh a shared external store instead.
+- **Each worker warms independently.** Lifespan tasks run once per ASGI process, so a
+  multi-worker deployment runs and warms every process on its own schedule.
 
 ## Mount another ASGI app inside Streamlit
 
