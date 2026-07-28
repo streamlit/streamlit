@@ -103,24 +103,15 @@ export interface SingleDateInputProps {
   locale: string
   firstDayOfWeek: RACFirstDayOfWeek
   isInSidebar: boolean
-  /** Lifted calendar-visible-month state, owned by `DateInput.tsx` — see the
-   * migration plan's future-extensibility note on a possible single/range toggle. */
   focusedValue: CalendarDate | null
   onFocusChange: (value: CalendarDate) => void
-  /** Called whenever the popover transitions from open to closed, for any
-   * reason (outside click, Escape, or date selection). `DateInput.tsx` uses
-   * this to revert to the default value if the field was left empty,
-   * matching the old `handleClose`. */
+  /** Called when popover closes (outside click, Escape, or date selection).
+   * Parent uses this to revert to default if the field was left empty. */
   onClose: () => void
 }
 
-/**
- * Renders `state.segments` reordered to match `format` instead of the
- * locale-derived order React Aria would otherwise use — the Phase 0 spike's
- * chosen strategy (manual reordering via `useDateFieldState`, not
- * locale-substitution). Must be a child of `DateField` to read
- * `DateFieldStateContext`.
- */
+/** Renders segments reordered to match `format` instead of the locale-derived
+ * order. Must be a child of `DateField` to read `DateFieldStateContext`. */
 function ReorderedDateSegments({
   format,
 }: {
@@ -173,12 +164,7 @@ function SingleDateInput({
   // of closing — see `focusLastFieldSegment` below.
   const isRestoringFocusRef = useRef(false)
 
-  // useDatePickerState is used in fully controlled mode — value/onChange are
-  // always the parent's, so the hook acts purely as a field/calendar
-  // coordinator (state.setValue) rather than a second source of truth. Only
-  // isOpen/setOpen are owned locally by the hook, since DateInput.tsx
-  // doesn't need to track open/close state itself. See the migration plan's
-  // state-management parity checklist.
+  // Fully controlled: value/onChange from parent, only isOpen is local.
   const state = useDatePickerState({
     value,
     onChange,
@@ -201,20 +187,9 @@ function SingleDateInput({
     flipOptions: isInSidebar ? false : undefined,
   })
 
-  // `triggerRef` is `StyledDateInputWrapper`, a plain (non-focusable) div —
-  // calling `.focus()` on it directly is a no-op, so closing the popover
-  // while focus is inside it (e.g. via Escape or selecting a date with
-  // Enter — see `restoreFocusFn` below and `handleCalendarChange`) would
-  // otherwise drop focus to `<body>` once the popover's DOM (and whatever
-  // grid cell was focused) unmounts. Focus the last segment instead,
-  // mirroring where `handleFieldKeyDown`'s forward-Tab entry came from.
-  //
-  // The `isRestoringFocusRef` guard exists because that same segment sits
-  // inside `StyledDateInputWrapper`, whose `onFocus` (`handleFocus` below)
-  // reopens the popover on *any* focus — including this programmatic one —
-  // which would otherwise immediately undo the very close this runs after.
-  // `.focus()` dispatches its `focus`/bubbling `onFocus` synchronously, so
-  // the ref is safe to clear right after the call returns.
+  // Restores focus to the last date segment when the popover closes.
+  // isRestoringFocusRef prevents handleFocus from reopening the popover
+  // in response to this programmatic focus.
   const focusLastFieldSegment = useCallback((): void => {
     const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
       '[role="spinbutton"]'
@@ -235,14 +210,8 @@ function SingleDateInput({
     floatingSetFn: refs.setFloating,
     referenceSetFn: refs.setReference,
     restoreFocusFn: focusLastFieldSegment,
-    // Escape while the month/year dropdown (`CalendarPopoverHeader`) is
-    // open should close just that dropdown, not the whole calendar
-    // popover — without this, this hook's document-capture-phase Escape
-    // listener always wins the race against that dropdown's own (bubble-
-    // phase) Escape handling on its nested Select popover. (Outside-*click*
-    // dismissal for that same dropdown doesn't need a matching exclusion
-    // here: `HeaderPickerSelect` handles it directly via its own
-    // `useOverlayDismissal` instance, scoped to just its own trigger/panel.)
+    // Exclude the month/year picker popover so Escape closes it first,
+    // not the whole calendar.
     excludeSelectors: ['[data-testid="stDateInputHeaderPickerPopover"]'],
   })
 
@@ -254,11 +223,7 @@ function SingleDateInput({
     [setReferenceRef]
   )
 
-  // Selecting a date from the calendar grid closes the popover (matching
-  // BaseWeb's single-date behavior); typing/pasting into the field does
-  // not. Also restores focus to the field — without this, selecting via
-  // Enter on a focused grid cell (see the popover's Tab-trap below) would
-  // drop focus to `<body>` the same way an unguarded Escape did.
+  // Selecting a date closes the popover and restores focus to the field.
   const handleCalendarChange = useCallback(
     (date: CalendarDate): void => {
       state.setValue(date)
@@ -268,14 +233,8 @@ function SingleDateInput({
     [state, focusLastFieldSegment]
   )
 
-  // Also wired to `onClickCapture` (not just `onFocus`): clicking a segment
-  // that's already focused — e.g. right after Escape/selection restores
-  // focus there, see `focusLastFieldSegment` — doesn't fire a new `focus`
-  // event, so `onFocus` alone would leave the popover closed despite the
-  // click. Must be the *capture*-phase click, not bubble-phase `onClick`:
-  // React Aria's segment press handling calls `stopPropagation()` on its
-  // own click, which would otherwise swallow it before it bubbles back up
-  // to this wrapper.
+  // Wired to onClickCapture: clicking an already-focused segment doesn't
+  // re-fire onFocus. Capture phase needed because RAC stops propagation.
   const handleFocus = useCallback((): void => {
     if (isRestoringFocusRef.current) return
     if (!disabled) state.setOpen(true)
@@ -285,13 +244,8 @@ function SingleDateInput({
     state.setValue(null)
   }, [state])
 
-  /**
-   * Intercepts paste directly rather than relying on `DateField`'s built-in
-   * paste handling, which parses clipboard text using the locale-derived
-   * segment order from the field's `I18nProvider` — out of sync with the
-   * manually reordered segments rendered here. See the migration plan's
-   * paste-handling parity item and `TimeInput.tsx`'s `handlePaste` precedent.
-   */
+  // Custom paste: DateField's built-in paste uses the locale-derived segment
+  // order (en-US), which is out of sync with our reordered segments.
   const handlePaste = useCallback(
     (e: ClipboardEvent<HTMLDivElement>): void => {
       if (disabled) return
@@ -320,17 +274,9 @@ function SingleDateInput({
     [disabled, format, state, value, minDate]
   )
 
-  /**
-   * Tab from the field's last segment jumps straight into the open
-   * calendar's currently-focused date cell, so arrow keys/Enter work on it
-   * immediately — matching the old BaseWeb `Datepicker` (where ArrowDown
-   * from its plain-text input did the same). Segments themselves keep
-   * their native spinbutton arrow-key semantics (increment/decrement), so
-   * this can only be triggered via Tab, not arrow keys, unlike BaseWeb's
-   * un-segmented input. The popover renders in a `FloatingPortal` (outside
-   * the field's DOM position), so without this, Tab would otherwise skip
-   * over it entirely and land on whatever's next on the page.
-   */
+  // Tab from the last segment moves focus into the calendar popover.
+  // Without this, FloatingPortal puts the calendar outside DOM order so
+  // Tab would skip over it entirely.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.key !== "Tab" || e.shiftKey || !state.isOpen) return
@@ -354,21 +300,8 @@ function SingleDateInput({
     [state.isOpen, refs.floating]
   )
 
-  /**
-   * Focus management for the calendar popover (non-modal popover pattern):
-   *
-   * - `handleFieldKeyDown` enters the calendar at the grid cell (skipping
-   *   the header), since the grid is the primary interaction target.
-   * - Forward Tab on the grid cell closes the calendar and returns focus
-   *   to the field (same as Escape), so the next Tab naturally moves to
-   *   the next widget on the page.
-   * - Shift+Tab from the grid cell flows naturally to the last header
-   *   button (Next month), allowing keyboard access to month/year pickers.
-   * - Tab through header buttons flows naturally in DOM order, ending back
-   *   at the grid cell.
-   * - Shift+Tab on the first header button (Previous month) wraps to the
-   *   grid cell, completing the backward cycle.
-   */
+  // Tab trap: forward-Tab on last element closes popover, Shift+Tab on
+  // first wraps to the grid cell.
   const handleCalendarKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.key !== "Tab") return
@@ -381,13 +314,10 @@ function SingleDateInput({
       const last = focusable[focusable.length - 1]
 
       if (!e.shiftKey && e.target === last) {
-        // Forward Tab on the grid cell (last): close calendar, return
-        // focus to the field so next natural Tab exits the widget.
         e.preventDefault()
         state.setOpen(false)
         focusLastFieldSegment()
       } else if (e.shiftKey && e.target === first) {
-        // Backward Tab on the first header button: wrap to grid cell.
         e.preventDefault()
         last.focus()
       }
@@ -463,11 +393,8 @@ function SingleDateInput({
             data-testid="stDateInputCalendar"
             onKeyDown={handleCalendarKeyDown}
           >
-            {/* Scoped separately from the typed field's fixed en-US
-                I18nProvider — calendar month/weekday text follows the
-                visitor's locale, matching the old useIntlLocale-driven
-                BaseWeb behavior. `safeLocale` guards against I18nProvider
-                throwing on a malformed locale string (see getSafeLocale). */}
+            {/* Calendar locale is the visitor's locale (not the field's
+                fixed en-US). safeLocale guards against malformed tags. */}
             <I18nProvider locale={safeLocale}>
               <StyledCalendarRoot
                 aria-label="Calendar."

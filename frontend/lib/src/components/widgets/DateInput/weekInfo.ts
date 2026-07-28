@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-/**
- * Shared `Intl.Locale.getWeekInfo()` helper, extracted so both
- * `useIntlLocale.tsx` (BaseWeb's `DateTimeInput`, via date-fns) and
- * `useFirstDayOfWeek.ts` (React Aria's `DateInput`) can derive "what day
- * does the week start on for this locale" from the same source, without
- * either hook depending on the other.
- */
+/** Shared `Intl.Locale.getWeekInfo()` helper for locale-aware week start. */
 
 export interface IntlWeekInfo {
   firstDay: number

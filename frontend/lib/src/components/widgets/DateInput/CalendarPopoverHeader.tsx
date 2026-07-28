@@ -41,22 +41,12 @@ import {
   StyledCalendarHeadingFallback,
 } from "./styled-components"
 
-/** Structurally identical across `CalendarMonthPickerItem`/
- * `CalendarYearPickerItem` (`{id, date, formatted}`) — declared locally
- * so `HeaderPickerSelect` below can serve both pickers without importing
- * either concrete type. */
 interface HeaderPickerItem {
   id: number
   formatted: string
 }
 
-/**
- * Render a single month/year row. The item is received untyped because
- * emotion's `styled(ListBox)` erases React Aria's generic item type (same
- * issue as `renderOption` in `Selectbox.tsx`), so it's asserted back to
- * `HeaderPickerItem`. Defined at module scope for a stable identity across
- * renders.
- */
+// Item is untyped because styled(ListBox) erases RAC's generic.
 const renderPickerItem = (item: unknown): ReactElement => {
   const pickerItem = item as HeaderPickerItem
   return (
@@ -66,29 +56,13 @@ const renderPickerItem = (item: unknown): ReactElement => {
   )
 }
 
-/** Stable no-op passed as `useOverlayDismissal`'s `floatingSetFn` — this
- * popover doesn't use Floating UI (see docstring below), so there's no
- * positioning ref to also notify when the panel mounts/unmounts. */
 const noop = (): void => {}
 
 /**
- * One `<Select>` for month or year, wired to `CalendarMonthPicker`'s/
- * `CalendarYearPicker`'s render-prop data. A single generic component
- * (rather than duplicating this block per picker) since both hand back the
- * identical `{ 'aria-label', value, onChange, items }` shape — see the
- * docstring below for why this composes RAC's own `Select`/`Popover`/
- * `ListBox` rather than a native `<select>`.
- *
- * `isOpen`/`onOpenChange` are controlled (rather than left to `Select`'s
- * own internal state) so this can pair with `isNonModal` on the popover:
- * by default RAC's `Popover` marks the entire rest of the page `inert`
- * while open (via `ariaHideOutside`) to implement its own outside-click
- * dismissal — but "the entire rest of the page" also includes the outer
- * calendar popover this picker lives inside, making every other control in
- * it (day cells, nav buttons, the weekday header) briefly unclickable.
- * `isNonModal` opts out of that, at the cost of RAC's built-in
- * outside-click dismissal (tied to the same flag), so `useOverlayDismissal`
- * reimplements just that part, scoped to this picker's own trigger/panel.
+ * Controlled Select so we can use `isNonModal` on the popover — without it,
+ * RAC marks the rest of the page (including the outer calendar) as inert.
+ * `useOverlayDismissal` provides the outside-click dismissal that isNonModal
+ * disables.
  */
 function HeaderPickerSelect({
   ariaLabel,
@@ -139,34 +113,10 @@ function HeaderPickerSelect({
 }
 
 /**
- * Shared prev/next navigation + month/year pickers for the calendar popover,
- * used by both `SingleDateInput` and (Branch 2) `RangeDateInput`. Must be
- * rendered as a child of `Calendar`/`RangeCalendar` — it reads calendar
- * state from React Aria's `CalendarStateContext`/`RangeCalendarStateContext`
- * via `CalendarMonthPicker`/`CalendarYearPicker`.
- *
- * `CalendarMonthPicker`/`CalendarYearPicker` are headless render-prop
- * components (confirmed via direct inspection of
- * `react-aria-components@1.19.0`'s `Calendar.mjs`/`useCalendarMonthPicker.d.ts`):
- * they hand back a plain `{ 'aria-label', value, onChange, items }` data
- * shape, not a pre-built dropdown. This was originally rendered as a native
- * `<select>` to sidestep a nested-popover-inside-popover concern, but a
- * native select's *open* dropdown list is painted entirely by the OS/browser
- * (checkmarks, vibrancy/blur, platform-default month abbreviations) with
- * essentially no CSS control — visibly inconsistent with the rest of
- * Streamlit's dropdowns. Composing RAC's own `Select`/`Popover`/`ListBox`
- * (the same primitives `Selectbox`'s combobox popover is built from)
- * instead gives full styling control over the open list too. Unlike
- * `Selectbox`/`Multiselect`, this `Popover` deliberately skips
- * `useFloatingOverlay`/Floating UI and just uses RAC's own default
- * `useOverlayPosition` anchoring — nesting a second Floating UI instance
- * inside the outer calendar popover's own Floating UI-positioned container
- * would add coordination complexity this small, always-on-screen dropdown
- * doesn't need.
- *
- * `format="long"` on `CalendarMonthPicker` requests full month names
- * ("January") to match the old BaseWeb `Datepicker`'s month dropdown — RAC's
- * default (no `format`) is abbreviated ("Jan").
+ * Shared calendar header (prev/next nav + month/year pickers).
+ * Must be a child of `Calendar`/`RangeCalendar` to access calendar state.
+ * Uses RAC `Select`/`Popover`/`ListBox` (not native `<select>`) for
+ * consistent styling with other Streamlit dropdowns.
  */
 export function CalendarPopoverHeader(): ReactElement {
   return (

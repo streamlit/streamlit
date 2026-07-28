@@ -25,17 +25,9 @@ import type { DateSegment as IDateSegment } from "react-stately"
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 /**
- * Shared date logic for the React Aria-based `DateInput` (`SingleDateInput`/
- * `RangeDateInput`). Replaces `moment`/`date-fns` entirely for this
- * component: `@internationalized/date`'s `parseDate()`/`CalendarDate.toString()`
- * round-trip the wire format (ISO 8601, `YYYY-MM-DD`) exactly, since Python
- * never sends "moment objects" — only native `date`/`datetime`/`str` values,
- * serialized to plain ISO strings (see `_parse_date_value` and
- * `time_widgets.py`'s `date.strftime(v, "%Y-%m-%d")`). `element.format`'s
- * "moment notation" (`YYYY/MM/DD` etc.) is just a familiar token-naming
- * convention for the docs, not a runtime dependency on the `moment` package.
- * `date-fns` remains a dependency of `useIntlLocale.tsx` for `DateTimeInput`
- * (BaseWeb, out of scope here) only.
+ * Date utilities using `@internationalized/date`. Wire format is always
+ * ISO 8601 (`YYYY-MM-DD`). `element.format` (e.g. `YYYY/MM/DD`) controls
+ * display order only — it's not a moment/date-fns runtime dependency.
  */
 
 export type FormatToken = "Y" | "M" | "D"
@@ -77,16 +69,8 @@ function makeLiteralSegment(text: string): IDateSegment {
 }
 
 /**
- * Reorders a `DateField`'s `segments` (from `useDateFieldState`) to match
- * `format`'s order/separator instead of the locale-derived order React Aria
- * would otherwise use, splicing in literal separator segments between them.
- *
- * This is the Phase 0 spike's chosen strategy (see the migration plan):
- * `react-aria`/`react-aria-components` key every segment mutation
- * (`state.increment`, `state.setSegment`, `state.clearSegment`) by
- * `segment.type`, and keyboard segment-to-segment navigation walks DOM/tab
- * order via `focusManager`, not the internal array order — so reordering the
- * array we render from can't desync interaction or accessibility behavior.
+ * Reorders segments to match `format`'s order/separator. Safe because RAC
+ * keys mutations by segment.type and navigation uses DOM order, not array order.
  */
 export function reorderSegments(
   segments: readonly IDateSegment[],
@@ -124,17 +108,7 @@ export function calendarDateToIso(value: CalendarDate): string {
   return value.toString()
 }
 
-/**
- * Converts a native JS `Date` (as emitted by the still-BaseWeb-backed range
- * mode's `onChange`) to a `CalendarDate` by extracting its local
- * year/month/day components and discarding any time-of-day.
- *
- * This conversion *is* the fix for the old `normalizeToStartOfDay` bug
- * workaround (BaseWeb's quick select emits noon, not midnight — see
- * streamlit/streamlit#12293): `CalendarDate` has no time component to get
- * wrong, so extracting just Y/M/D here can't reproduce that bug, regardless
- * of what time-of-day the source `Date` carries.
- */
+/** Converts a native JS `Date` to a `CalendarDate`, discarding time-of-day. */
 export function dateToCalendarDate(date: Date): CalendarDate {
   return new CalendarDate(
     date.getFullYear(),
@@ -172,17 +146,7 @@ export function isOlderThanTwoYears(date: CalendarDate): boolean {
 
 export type DateValidationErrorType = "Start" | "End" | null
 
-/**
- * Validates a single date against min/max, mirroring the original
- * `validateDates`'s per-date branching (`"Start"` if below min, `"End"` if
- * above max). Range mode (Branch 2) calls this once per endpoint.
- *
- * Note: the original `normalizeToStartOfDay` workaround (BaseWeb quick
- * select emitting noon instead of midnight, causing spurious boundary
- * errors — streamlit/streamlit#12293) is intentionally not ported.
- * `CalendarDate` has no time-of-day component at all, so that ambiguity is
- * structurally impossible to reproduce here.
- */
+/** Returns "Start" if below min, "End" if above max, null if valid. */
 export function validateDate(
   date: CalendarDate | null,
   minDate: CalendarDate,
@@ -198,13 +162,7 @@ function pad(value: number, length: number): string {
   return String(Math.abs(value)).padStart(length, "0")
 }
 
-/**
- * Formats a `CalendarDate` according to `format` (e.g. "DD.MM.YYYY"), used
- * for min/max date strings in error messages. Replaces the old
- * moment-to-date-fns token conversion + `date-fns`'s `format()` call — this
- * reuses the same order/separator parsing as the typed field, so no
- * date-fns dependency is needed here.
- */
+/** Formats a `CalendarDate` according to `format` (e.g. "DD.MM.YYYY"). */
 export function formatCalendarDate(
   date: CalendarDate,
   format: string
@@ -219,12 +177,7 @@ export function formatCalendarDate(
     .join(separator)
 }
 
-/**
- * Builds the exact user-facing error message wording from the original
- * `DateInput.tsx`'s `createErrorMessage`, preserved verbatim (see the
- * migration plan's parity checklist — these strings are user-facing and may
- * be documented/screenshotted elsewhere).
- */
+/** Builds the user-facing error message for out-of-range dates. */
 export function createDateErrorMessage(
   errorType: DateValidationErrorType,
   isRange: boolean,
@@ -245,17 +198,9 @@ export function createDateErrorMessage(
 }
 
 /**
- * Parses a full pasted date string (e.g. "15/01/2024") according to
- * `format`'s segment order, returning the parsed `CalendarDate` or `null` if
- * it can't be parsed as three separator-delimited numeric groups.
- *
- * Needed because `DateField`'s built-in paste handling parses clipboard text
- * using the locale-derived segment order from its `I18nProvider` — but the
- * typed field is pinned to a fixed `en-US` `I18nProvider` while its
- * *rendered* segments are independently reordered to match `format` (Phase 0
- * decision above). RAC's native paste logic has no awareness of that
- * reordering, so this must be parsed explicitly in an `onPaste` handler
- * rather than relying on `DateField`'s default paste behavior.
+ * Parses a pasted date string (e.g. "15/01/2024") using `format`'s segment
+ * order. Needed because the field's I18nProvider is pinned to en-US while
+ * rendered segments are reordered to match `format`.
  */
 export function parsePastedDate(
   text: string,

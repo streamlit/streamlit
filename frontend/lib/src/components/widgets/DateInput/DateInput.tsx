@@ -102,10 +102,8 @@ function DateInput({
   const isInSidebar = useContext(IsSidebarContext)
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // Lifted calendar-visible-month state — kept here (rather than inside
-  // SingleDateInput/RangeDateInput) so a future single/range toggle could
-  // preserve calendar continuity across the swap. See the migration plan's
-  // future-extensibility note.
+  // Lifted here so a future single/range toggle can preserve calendar
+  // continuity across the swap.
   const [focusedValue, setFocusedValue] = useState<CalendarDate | null>(null)
 
   const resetError = useCallback(() => {

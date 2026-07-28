@@ -39,14 +39,8 @@ const ISO_DAY_TO_RAC: Record<number, RACFirstDayOfWeek> = {
   7: "sun",
 }
 
-/**
- * Returns the first day of the week for `locale`, in the shape React Aria's
- * `Calendar`/`RangeCalendar` `firstDayOfWeek` prop expects. Falls back to
- * `"sun"` (matching `en-US`) if the locale is invalid or the browser doesn't
- * support `Intl.Locale.getWeekInfo()` (e.g. Firefox) — the same fallback
- * `useIntlLocale.tsx` uses for BaseWeb's `DateTimeInput`, via the shared
- * `getWeekInfoForLocale` helper.
- */
+/** Returns the locale's first day of week for RAC's `firstDayOfWeek` prop.
+ * Falls back to "sun" if the browser doesn't support getWeekInfo (Firefox). */
 export function useFirstDayOfWeek(locale: string): RACFirstDayOfWeek {
   return useMemo(() => {
     const weekInfo = getWeekInfoForLocale(locale)
