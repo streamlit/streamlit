@@ -28,27 +28,61 @@ if "change" not in st.session_state:
     st.session_state["change"] = False
 
 
+# The tab mutations happen inside the on_click callbacks (not from the button
+# return values) because every button disables itself via its own callback
+# (e.g. disabled=st.session_state.add_tab). With server-side enforcement of the
+# `disabled` parameter, a self-disabling button's trigger value is discarded on
+# the run it becomes disabled, so its return value can no longer drive the
+# mutation. The callback runs before re-registration (while the button was still
+# enabled last run), so it fires exactly once per click and is the reliable place
+# to apply the change.
+def _append_tab(label: str) -> None:
+    if label not in st.session_state.tabs:
+        st.session_state.tabs.append(label)
+
+
+def _remove_tab(label: str) -> None:
+    if label in st.session_state.tabs:
+        st.session_state.tabs.pop(st.session_state.tabs.index(label))
+
+
+def _rename_tab(old_label: str, new_label: str) -> None:
+    if old_label in st.session_state.tabs:
+        st.session_state.tabs[st.session_state.tabs.index(old_label)] = new_label
+
+
 def on_click_1():
     st.session_state.add_tab = True
+    _append_tab("Tab 3")
 
 
 def on_click_2():
     st.session_state.remove_1 = True
+    _remove_tab("Tab 1")
 
 
 def on_click_3():
     st.session_state.remove_2 = True
+    _remove_tab("Tab 2")
 
 
 def on_click_4():
     st.session_state.change = True
-    on_click_1()
-    on_click_2()
-    on_click_3()
+    st.session_state.add_tab = True
+    st.session_state.remove_1 = True
+    st.session_state.remove_2 = True
+    _rename_tab("Tab 1", "Tab A")
+    _rename_tab("Tab 3", "Tab C")
 
 
 def on_click_5():
-    on_click_4()
+    st.session_state.change = True
+    st.session_state.add_tab = True
+    st.session_state.remove_1 = True
+    st.session_state.remove_2 = True
+    _rename_tab("Tab 1", "Tab A")
+    _rename_tab("Tab 2", "Tab B")
+    _rename_tab("Tab 3", "Tab C")
 
 
 def reset():
@@ -57,34 +91,34 @@ def reset():
 
 col1, col2, col3, col4, col5 = st.columns([0.8, 1, 1, 1.2, 1], gap="small")
 with col1:
-    add_tab = st.button(
+    st.button(
         "Add Tab 3",
         on_click=on_click_1,
         disabled=st.session_state.add_tab,
         width="stretch",
     )
 with col2:
-    remove_1 = st.button(
+    st.button(
         "Remove Tab 1",
         on_click=on_click_2,
         disabled=st.session_state.remove_1,
         width="stretch",
     )
 with col3:
-    remove_2 = st.button(
+    st.button(
         "Remove Tab 2",
         on_click=on_click_3,
         disabled=st.session_state.remove_2,
         width="stretch",
     )
 with col4:
-    change_some = st.button(
+    st.button(
         "Change Tab 1 & 3",
         on_click=on_click_4,
         disabled=st.session_state.change,
         width="stretch",
     )
-    change = st.button(
+    st.button(
         "Change All Tabs",
         on_click=on_click_5,
         disabled=st.session_state.change,
@@ -94,31 +128,6 @@ with col5:
     st.button("**Reset Tabs**", on_click=reset)
 
 st.subheader("Tabs Example", divider="green")
-
-if add_tab:
-    st.session_state.tabs.append("Tab 3")
-
-if remove_1:
-    index = st.session_state.tabs.index("Tab 1")
-    st.session_state.tabs.pop(index)
-
-if remove_2:
-    index = st.session_state.tabs.index("Tab 2")
-    st.session_state.tabs.pop(index)
-
-if change:
-    if "Tab 1" in st.session_state.tabs:
-        st.session_state.tabs[st.session_state.tabs.index("Tab 1")] = "Tab A"
-    if "Tab 2" in st.session_state.tabs:
-        st.session_state.tabs[st.session_state.tabs.index("Tab 2")] = "Tab B"
-    if "Tab 3" in st.session_state.tabs:
-        st.session_state.tabs[st.session_state.tabs.index("Tab 3")] = "Tab C"
-
-if change_some:
-    if "Tab 1" in st.session_state.tabs:
-        st.session_state.tabs[st.session_state.tabs.index("Tab 1")] = "Tab A"
-    if "Tab 3" in st.session_state.tabs:
-        st.session_state.tabs[st.session_state.tabs.index("Tab 3")] = "Tab C"
 
 
 tabs = st.tabs(st.session_state.tabs)
