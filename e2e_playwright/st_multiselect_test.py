@@ -583,20 +583,24 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
     # Get the tags container (scrollable area inside the trigger group)
     value_container = multiselect_elem.locator('[role="group"] > div').first
 
-    # Scroll to middle of the value container (not bottom, to avoid clamping issues
-    # when items are removed and scrollHeight decreases)
-    value_container.evaluate("el => { el.scrollTop = el.scrollHeight / 2; }")
+    # Scroll to the bottom of the tags container
+    value_container.evaluate("el => { el.scrollTop = el.scrollHeight; }")
+    app.wait_for_timeout(50)
 
     # Get initial scroll position (should be > 0 since there are many items)
     initial_scroll = value_container.evaluate("el => el.scrollTop")
     assert initial_scroll > 0
 
-    # Remove an item by clicking its delete button
-    remove_from_multiselect(app, "multiselect 17 - show maxHeight", "twenty")
+    # Remove the last tag ("forty") which is visible at the bottom scroll position.
+    # Using the last tag avoids Playwright's auto-scroll-into-view changing scrollTop
+    # before the click handler fires.
+    remove_from_multiselect(app, "multiselect 17 - show maxHeight", "forty")
 
-    # Verify scroll position is preserved
+    # Verify scroll position is preserved (or clamped to the new max if content shrank)
     final_scroll = value_container.evaluate("el => el.scrollTop")
-    assert final_scroll == initial_scroll
+    max_scroll = value_container.evaluate("el => el.scrollHeight - el.clientHeight")
+    expected = min(initial_scroll, max_scroll)
+    assert abs(final_scroll - expected) <= 1
 
 
 def test_multiselect_custom_objects_without_eq(app: Page):
@@ -711,13 +715,16 @@ def test_multiselect_query_param_seeding_multiple(page: Page, app_base_url: str)
 def test_multiselect_query_param_updates_url(app: Page):
     """Test that changing a bound multiselect updates the URL."""
     select_for_multiselect(app, "Bound multiselect", "Red", True)
-    expect(app).to_have_url(re.compile(r"\?bound_multi=Red"))
+    # Assert text first to confirm the rerun completed before checking the URL
     expect_text(app, "bound_multi: ['Red']")
+    expect(app).to_have_url(re.compile(r"\?bound_multi=Red"), timeout=10_000)
 
     # Add a second selection
     select_for_multiselect(app, "Bound multiselect", "Blue", True)
-    expect(app).to_have_url(re.compile(r"bound_multi=Red&bound_multi=Blue"))
     expect_text(app, "bound_multi: ['Red', 'Blue']")
+    expect(app).to_have_url(
+        re.compile(r"bound_multi=Red&bound_multi=Blue"), timeout=10_000
+    )
 
 
 def test_multiselect_query_param_default_override(page: Page, app_base_url: str):

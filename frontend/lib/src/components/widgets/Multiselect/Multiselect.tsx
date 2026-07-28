@@ -207,6 +207,7 @@ const Multiselect: FC<Props> = props => {
   const tagsContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const scrollTopRef = useRef(0)
+  const scrollLockRef = useRef(false)
   const focusedTagIndexRef = useRef(0)
 
   const queryParamBinding = element.queryParamKey
@@ -325,15 +326,22 @@ const Multiselect: FC<Props> = props => {
     return "No results"
   }, [element.maxSelections, value.length])
 
-  // Preserve scroll position when tags are added/removed
+  // Preserve scroll position when tags are removed via UI interaction.
   useLayoutEffect(() => {
-    if (tagsContainerRef.current) {
-      tagsContainerRef.current.scrollTop = scrollTopRef.current
-    }
+    if (!scrollLockRef.current) return
+    const savedScroll = scrollTopRef.current
+    scrollLockRef.current = false
+    const container = tagsContainerRef.current
+    if (!container) return
+    requestAnimationFrame(() => {
+      container.scrollTop = savedScroll
+      scrollTopRef.current = savedScroll
+    })
   }, [value])
 
   const handleTagsScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: layout already computed during scroll event
+    if (scrollLockRef.current) return
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access
     scrollTopRef.current = e.currentTarget.scrollTop
   }, [])
 
@@ -441,6 +449,11 @@ const Multiselect: FC<Props> = props => {
 
   const handleTagGroupRemove = useCallback(
     (keys: Set<Key>): void => {
+      scrollLockRef.current = true
+      if (tagsContainerRef.current) {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        scrollTopRef.current = tagsContainerRef.current.scrollTop
+      }
       const keysToRemove = new Set([...keys].map(String))
       const newValue = valueRef.current.filter(v => !keysToRemove.has(v))
       valueRef.current = newValue
@@ -492,10 +505,10 @@ const Multiselect: FC<Props> = props => {
             focusedTagIndexRef.current =
               nextFocus === tags[idx + 1] ? idx : idx - 1
             nextFocus.tabIndex = 0
-            nextFocus.focus()
+            nextFocus.focus({ preventScroll: true })
           } else {
             focusedTagIndexRef.current = 0
-            inputRef.current?.focus()
+            inputRef.current?.focus({ preventScroll: true })
           }
         }
       } else if (e.key === "Home") {
@@ -743,6 +756,7 @@ const Multiselect: FC<Props> = props => {
                           onClick={e => {
                             e.stopPropagation()
                             handleTagGroupRemove(new Set([v]))
+                            inputRef.current?.focus({ preventScroll: true })
                           }}
                         >
                           <TagRemoveIcon />
