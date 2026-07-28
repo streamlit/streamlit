@@ -243,14 +243,23 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         const clampedWidth = Math.max(Math.floor(availableWidth), 0)
         elements.floating.style.maxHeight = `${clampedHeight}px`
         elements.floating.style.maxWidth = `${clampedWidth}px`
-        // StyledPopoverBody has an intrinsic `min-width`
-        // (`theme.sizes.minPopupWidth`, 20rem/320px). On viewports narrower
-        // than that, the min-width overrides `max-width` and the popover
-        // still overflows. Cap `min-width` at the clamped width in that case
-        // so the viewport clamp actually wins.
-        const minPopupWidthPx = convertRemToPx(theme.sizes.minPopupWidth)
-        elements.floating.style.minWidth =
-          clampedWidth < minPopupWidthPx ? `${clampedWidth}px` : ""
+        // StyledPopoverBody has an intrinsic `min-width` — either
+        // `theme.sizes.minPopupWidth` (20rem/320px) or, for stretch popovers,
+        // `max($calculatedWidth, 10rem)` where `$calculatedWidth` is the
+        // trigger width. When that intrinsic value exceeds our `max-width`
+        // clamp, CSS resolves the conflict in favor of `min-width` and the
+        // popover overflows again. Reset our own inline override so we can
+        // read the CSS-resolved value, then cap it at the clamp only when it
+        // would exceed it (covers both baseline and stretch cases without
+        // artificially widening narrow content).
+        elements.floating.style.minWidth = ""
+        const intrinsicMinWidth =
+          parseFloat(
+            window.getComputedStyle(elements.floating).minWidth
+          ) || 0
+        if (intrinsicMinWidth > clampedWidth) {
+          elements.floating.style.minWidth = `${clampedWidth}px`
+        }
       },
     })
     if (!isInSidebar) {
@@ -266,7 +275,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       shiftOptions: { padding: shiftPadding, boundary },
       extraMiddleware: [sizeMiddleware],
     }
-  }, [open, theme.spacing.twoXS, theme.sizes.minPopupWidth, isInSidebar])
+  }, [open, theme.spacing.twoXS, isInSidebar])
 
   // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
   // fully replaced with FloatingPortal here because Popover has no collection

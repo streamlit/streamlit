@@ -186,64 +186,74 @@ def test_popover_stays_within_narrow_viewport(app: Page):
     Before the fix, the popover body's baseline `max-width` (~704px) exceeded
     a narrow embed viewport's width. `shift` would push the popover against
     an edge, but the far side stayed off-screen and was clipped by the host
-    iframe. The `size` middleware now clamps `max-width` to the available
+    iframe. The `size` middleware now clamps `max-width` (and `min-width`,
+    when the intrinsic CSS min-width would exceed the clamp) to the available
     space at the chosen placement so the popover always fits.
+
+    Two scenarios are exercised in one app load to keep browser runs cheap
+    (per `e2e_playwright/AGENTS.md`):
+
+    - **640px viewport** — inside the #9340 bug window: wider than the
+      styled-component's `@media (max-width: 576px)` CSS clamp but narrower
+      than the popover's baseline ~704px max-width. Pre-fix, `size` middleware
+      wasn't wired here and the popover overflowed horizontally.
+    - **300px viewport** — narrower than the popover's 320px baseline
+      `min-width` (`theme.sizes.minPopupWidth`). Without the matching
+      `min-width` cap in the `size` middleware, CSS resolves the `min-width`
+      vs `max-width` conflict in favor of `min-width` and the popover
+      overflows again.
     """
-    # Simulate a narrow oEmbed iframe (e.g. a Medium post is ~680px wide).
-    # 640px is chosen to sit inside the bug window: above the styled-component's
-    # `@media (max-width: 576px)` CSS clamp (which independently limits width on
-    # very small viewports) but below the popover's baseline ~704px max-width.
-    # Pre-fix, `size` middleware wasn't wired here and the popover overflowed.
+    # 1px epsilon guards against subpixel layout differences across browsers.
+    epsilon = 1
+
+    def assert_within_viewport(popover_body, viewport, *, check_vertical: bool):
+        body_box = popover_body.bounding_box()
+        assert body_box is not None, "popover body must have a bounding box"
+        assert body_box["x"] >= -epsilon, (
+            f"popover body extends off left edge: {body_box}"
+        )
+        assert body_box["x"] + body_box["width"] <= viewport["width"] + epsilon, (
+            f"popover body extends past right edge: {body_box}, viewport={viewport}"
+        )
+        if check_vertical:
+            assert body_box["y"] >= -epsilon, (
+                f"popover body extends off top edge: {body_box}"
+            )
+            assert (
+                body_box["y"] + body_box["height"] <= viewport["height"] + epsilon
+            ), (
+                f"popover body extends past bottom edge: {body_box}, "
+                f"viewport={viewport}"
+            )
+
+    # Case 1: viewport inside the #9340 bug window (577-704px). Chosen to
+    # exceed the 576px CSS media-query clamp so the JS `size` middleware is
+    # actually the thing keeping the popover within the viewport. Also asserts
+    # vertical bounds since a narrow viewport at 800px height is tall enough
+    # to catch a top/bottom overflow regression.
     app.set_viewport_size({"width": 640, "height": 800})
-
     popover_body = open_popover(app, "popover 3 (with widgets)")
     expect_markdown(popover_body, "Hello World 👋")
-
     viewport = app.viewport_size
     assert viewport is not None, "viewport_size must be set for this test"
+    assert_within_viewport(popover_body, viewport, check_vertical=True)
 
-    body_box = popover_body.bounding_box()
-    assert body_box is not None, "popover body must have a bounding box"
+    # Close the popover by clicking outside so we can re-open it fresh at the
+    # next viewport size (avoids relying on Floating UI's autoUpdate reflow).
+    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    expect(popover_body).not_to_be_visible()
 
-    # Before #9340 was fixed the popover body extended past the viewport's
-    # right edge (its max-width was 704px). A 1px epsilon guards against
-    # subpixel layout differences across browsers. Also assert vertical
-    # bounds to guard against vertical overflow regressions.
-    epsilon = 1
-    assert body_box["x"] >= -epsilon, f"popover body extends off left edge: {body_box}"
-    assert body_box["x"] + body_box["width"] <= viewport["width"] + epsilon, (
-        f"popover body extends past right edge: {body_box}, viewport={viewport}"
-    )
-    assert body_box["y"] >= -epsilon, f"popover body extends off top edge: {body_box}"
-    assert body_box["y"] + body_box["height"] <= viewport["height"] + epsilon, (
-        f"popover body extends past bottom edge: {body_box}, viewport={viewport}"
-    )
-
-
-def test_popover_fits_viewport_narrower_than_min_width(app: Page):
-    """The popover's baseline `min-width` (`theme.sizes.minPopupWidth`, 20rem
-    / 320px) is wider than a very narrow embed viewport. Without a matching
-    `min-width` clamp the styled-component's min-width overrides the viewport
-    `max-width` clamp and the body still overflows. Regression guard for the
-    P1 finding on https://github.com/streamlit/streamlit/pull/16173.
-    """
-    # 300px is narrower than the popover's 320px baseline min-width.
+    # Case 2: viewport narrower than the popover's 320px baseline min-width.
+    # Without the intrinsic-min-width cap in the `size` middleware the popover
+    # would still overflow at this width. Horizontal bounds only — the trigger
+    # placement at 300px wide can force `flip` to pick a vertically-tight
+    # side, and vertical bounds are already covered by case 1.
     app.set_viewport_size({"width": 300, "height": 800})
-
     popover_body = open_popover(app, "popover 3 (with widgets)")
     expect_markdown(popover_body, "Hello World 👋")
-
     viewport = app.viewport_size
     assert viewport is not None, "viewport_size must be set for this test"
-
-    body_box = popover_body.bounding_box()
-    assert body_box is not None, "popover body must have a bounding box"
-
-    epsilon = 1
-    assert body_box["x"] >= -epsilon, f"popover body extends off left edge: {body_box}"
-    assert body_box["x"] + body_box["width"] <= viewport["width"] + epsilon, (
-        f"popover body extends past right edge: {body_box}, viewport={viewport}"
-    )
+    assert_within_viewport(popover_body, viewport, check_vertical=False)
 
 
 def test_popover_container_rendering(
