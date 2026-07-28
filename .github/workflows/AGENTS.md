@@ -124,7 +124,7 @@ steps:
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `pr-preview.yml` | Push/PR to `develop` | Builds wheel, uploads to S3, creates preview deployment |
+| `pr-preview.yml` | Push/PR to `develop` | Builds wheel, uploads to S3, and comments the download links on the PR |
 | `autofix.yml` | `autofix` label on PR | Runs formatters, linters, and other cleanups, then creates fix PR |
 | `snapshot-autofix.yml` | `update-snapshots` label | Downloads failed snapshots and creates update PR |
 | `fork-pr-welcome.yml` | PR opened from fork | Posts welcome comment with contribution guidelines |
