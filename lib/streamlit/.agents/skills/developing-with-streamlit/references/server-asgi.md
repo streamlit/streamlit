@@ -215,9 +215,12 @@ app = st.App("streamlit_app.py", lifespan=lifespan)
 
 Put cached functions in a shared module when both the Streamlit script and the ASGI wrapper need to call them. For per-user state inside the Streamlit script, use `st.session_state`.
 
-Import cached functions inside the lifespan hook rather than at launcher module scope.
-`st.App` discovery imports the launcher before the Streamlit runtime exists, while the user
-lifespan runs after the runtime and its cache storage manager have started.
+Import and call cached functions inside the lifespan hook rather than at launcher module
+scope. `st.App` imports the launcher before the Streamlit runtime exists, so a module-scope
+`@st.cache_data` or `@st.cache_resource` there is validated against a temporary in-memory
+storage manager and logs a `No runtime found` warning at decoration. The user lifespan runs
+after the runtime and its cache storage manager have started, so importing and warming inside
+it avoids that warning and binds each cache to the real storage manager.
 
 If ASGI routes or middleware need process-level state that is not a Streamlit resource, the lifespan context manager may yield a dictionary. Those values are stored on `app.state` (`app.state["ready"]` in the example above).
 
@@ -229,7 +232,8 @@ call observes an expired entry, and that call receives the stale value.
 
 For advanced cases that must keep known global cache keys updated without ever serving stale
 values, use a lifespan task to clear and immediately warm each key before its `ttl` expires.
-Run synchronous cached functions in a worker thread so they don't block the ASGI event loop.
+Run synchronous cached functions in a worker thread (via `anyio`, already a Streamlit
+dependency) so they don't block the ASGI event loop.
 
 ```python
 # resources.py
@@ -284,14 +288,20 @@ app = st.App("streamlit_app.py", lifespan=lifespan)
 ```
 
 This pattern works for global `st.cache_data` and `st.cache_resource` entries whose argument
-combinations are known to the scheduler. Keep the refresh interval comfortably shorter than
-the `ttl` so normal requests rarely need a foreground recomputation.
+combinations are known to the scheduler. Size the interval so each refresh finishes
+comfortably before the `ttl` elapses, counting the warm duration itself: if a refresh is
+skipped, runs late, or a slow warm overruns the remaining `ttl`, the entry expires and the
+next request falls back to a blocking foreground recompute. That recompute still returns fresh
+data, so the values stay never-stale even though that single request is no longer
+never-blocking.
 
 Clearing and warming is not an atomic replacement. Concurrent callers never receive the old,
-stale value, but they can wait for the in-progress computation. If uninterrupted reads and
-atomic replacement are required, refresh a shared external store instead. Lifespan tasks also
-run once per ASGI process, so a multi-worker deployment runs and warms each process
-independently.
+stale value, but they can wait for the in-progress computation. Because the refresh clears
+before it recomputes, a warm that raises leaves the entry empty until the next successful
+refresh or a request-side recompute—so treat a failed refresh as a cold-cache window, not a
+keep-last-good-value fallback. If uninterrupted reads and atomic replacement are required,
+refresh a shared external store instead. Lifespan tasks also run once per ASGI process, so a
+multi-worker deployment runs and warms each process independently.
 
 ## Mount another ASGI app inside Streamlit
 
