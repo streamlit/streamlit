@@ -1843,7 +1843,7 @@ class TimeInput(Widget):
         ws = WidgetState()
         ws.id = self.id
 
-        serde = TimeInputSerde(None)
+        serde = TimeInputSerde(None, step=self.step)
         serialized_value = serde.serialize(self.value)
         if serialized_value is not None:
             ws.string_value = serialized_value

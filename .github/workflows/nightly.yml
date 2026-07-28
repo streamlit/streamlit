@@ -143,10 +143,6 @@ jobs:
       run:
         shell: bash
 
-    outputs:
-      enable-setup: ${{ steps.exports.outputs.enable-setup }}
-      s3-url: ${{ steps.exports.outputs.s3-url }}
-
     environment: nightly
 
     steps:
@@ -184,7 +180,6 @@ jobs:
           name: whl_file
           path: lib/dist/*.whl
       - name: Upload wheel to S3
-        id: exports
         env:
           AWS_DEFAULT_REGION: us-west-2
           AWS_ACCESS_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
@@ -200,11 +195,6 @@ jobs:
           S3_URL="https://core-previews.s3-us-west-2.amazonaws.com/nightly-preview/${WHEELFILE}"
 
           echo -e "Wheel file download link: ${S3_URL}"
-
-          cd ../..
-          # env variables don't carry over between gh action jobs
-          echo "enable-setup=${{ env.AWS_ACCESS_KEY_ID != '' }}" >> $GITHUB_OUTPUT
-          echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
       - name: Upload to PyPI
         uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # v1.14.1
         with:
@@ -215,40 +205,3 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           RUN_ID: ${{ github.run_id }}
         run: python scripts/slack_notifications.py nightly build
-
-  setup-nightly-preview:
-    runs-on: ubuntu-latest
-
-    needs: [create-nightly-tag, create-nightly-build]
-    if: needs.create-nightly-build.outputs.enable-setup == 'true'
-
-    defaults:
-      run:
-        shell: bash
-
-    steps:
-      - name: Checkout Core Previews Repo
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: streamlit/core-previews
-          # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo.
-          # Accessing streamlit/core-previews repo requires a separate auth token.
-          token: ${{ secrets.CORE_PREVIEWS_REPO_TOKEN }}
-          # Save the access token to the local git config, so
-          # later git commands can work.
-          persist-credentials: true
-      - name: Setup preview repo
-        env:
-          NIGHTLY_TAG: ${{ needs.create-nightly-tag.outputs.tag }}
-          S3_URL: ${{ needs.create-nightly-build.outputs.s3-url }}
-        run: |
-          git config --global user.email "core+streamlitbot-github@streamlit.io"
-          git config --global user.name "Streamlit Bot"
-          git branch -D nightly-preview &>/dev/null || true
-          git checkout -b nightly-preview
-
-          echo "$S3_URL" >> requirements.txt
-
-          git add .
-          git commit -m "Nightly Preview: ${NIGHTLY_TAG}"
-          git push -f origin nightly-preview

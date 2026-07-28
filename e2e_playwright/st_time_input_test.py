@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-NUM_TIME_INPUTS = 17
+NUM_TIME_INPUTS = 21
 
 
 def test_time_input_widget_rendering(
@@ -94,6 +94,18 @@ def test_time_input_widget_rendering(
     assert_snapshot(
         get_time_input(themed_app, "Time input 12 (width='stretch')"),
         name="st_time_input-width_stretch",
+    )
+    assert_snapshot(
+        get_time_input(themed_app, "Time input (step=30, seconds)"),
+        name="st_time_input-seconds_step30",
+    )
+    assert_snapshot(
+        get_time_input(themed_app, "Time input (12-hour)"),
+        name="st_time_input-format_12h",
+    )
+    assert_snapshot(
+        get_time_input(themed_app, "Time input (12h + seconds)"),
+        name="st_time_input-12h_seconds",
     )
 
 
@@ -492,7 +504,10 @@ def test_paste_error_state_snapshot(app: Page, assert_snapshot: ImageCompareFunc
 
 def test_paste_in_form_context(app: Page):
     """Test that paste works inside a form and value is submitted correctly."""
-    time_input = get_time_input(app, "Form time input")
+    form = app.get_by_test_id("stForm").filter(
+        has=app.get_by_text("Form time input", exact=True)
+    )
+    time_input = form.get_by_test_id("stTimeInput")
     time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
     hour_segment = time_display.locator("[role='spinbutton']").first
     hour_segment.click()
@@ -504,7 +519,7 @@ def test_paste_in_form_context(app: Page):
     expect(app.get_by_text("Form time:")).not_to_be_visible()
 
     # Submit the form
-    app.get_by_role("button", name="Submit").click()
+    form.get_by_role("button", name="Submit").click()
     wait_for_app_run(app)
 
     expect_markdown(app, "Form time: 14:30:00")
@@ -515,7 +530,83 @@ def test_paste_in_form_context(app: Page):
     expect(time_input.get_by_test_id("stTimeInputError")).to_be_visible()
 
     # Submit form — should still submit the last committed value (14:30)
-    app.get_by_role("button", name="Submit").click()
+    form.get_by_role("button", name="Submit").click()
     wait_for_app_run(app)
 
     expect_markdown(app, "Form time: 14:30:00")
+
+
+# --- Seconds granularity and hour cycle tests ---
+
+
+def test_seconds_arrow_key_snaps_to_step(app: Page):
+    """ArrowUp/Down on the seconds segment snaps to step boundaries (step=30)."""
+    time_input = get_time_input(app, "Time input (step=30, seconds)")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    spinbuttons = time_display.get_by_role("spinbutton")
+    second_segment = spinbuttons.nth(2)
+
+    # Initial value is 08:45:30. ArrowUp on seconds → next step boundary.
+    # totalSecs = 8*3600 + 45*60 + 30 = 31530. floor(31530/30)*30 + 30 = 31560 → 08:46:00
+    second_segment.click()
+    second_segment.press("ArrowUp")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Value seconds:", "08:46:00")
+
+    # ArrowDown → ceil(31560/30)*30 - 30 = 31560 - 30 = 31530 → 08:45:30
+    second_segment.press("ArrowDown")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Value seconds:", "08:45:30")
+
+
+# --- Form support: InputInstructions + Enter-to-submit ---
+
+
+def test_input_instructions_outside_form(app: Page):
+    """InputInstructions shows 'Press Enter to apply' when dirty and hides after blur."""
+    time_input = get_time_input(app, "Time input 1 (8:45)")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    minute_segment = time_display.get_by_role("spinbutton").nth(1)
+
+    # Focus alone does not show an instruction (not dirty, not in form).
+    minute_segment.click()
+    expect(time_input.get_by_test_id("InputInstructions")).to_have_text("")
+
+    # Type a digit to make the widget dirty — hint appears.
+    minute_segment.press("3")
+    expect(time_input.get_by_test_id("InputInstructions")).to_have_text(
+        "Press Enter to apply"
+    )
+
+    # Blur commits and clears dirty — hint disappears.
+    minute_segment.blur()
+    wait_for_app_run(app)
+    expect(time_input.get_by_test_id("InputInstructions")).not_to_be_visible()
+
+
+def test_form_enter_to_submit(app: Page):
+    """Enter-to-submit form shows hint on focus and submits on Enter with dirty edit."""
+    time_input = get_time_input(app, "Form time input (enter to submit)")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    hour_segment = time_display.get_by_role("spinbutton").first
+
+    # Focusing in a form with enter_to_submit=True shows the submit hint.
+    hour_segment.click()
+    expect(time_input.get_by_test_id("InputInstructions")).to_have_text(
+        "Press Enter to submit form"
+    )
+
+    # Type digits to make the widget dirty (exercises the commit-then-submit path
+    # rather than ArrowUp which commits immediately).
+    hour_segment.press("1")
+    hour_segment.press("0")
+
+    # Press Enter to commit the pending edit and submit the form.
+    hour_segment.press("Enter")
+    wait_for_app_run(app)
+
+    # The submitted value should be reflected in the app output.
+    expect_markdown(app, "Form enter time: 10:00:00")
+
+    # Must NOT happen: the non-enter form must not have been submitted.
+    expect(app.get_by_text("Form time:", exact=True)).not_to_be_visible()
