@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     assert_type(write({"key": "value"}), None)
     assert_type(write([1, 2, 3]), None)
 
-    # No arguments is allowed
+    # No arguments are allowed
     assert_type(write(), None)
 
     # unsafe_allow_html parameter (keyword-only)
@@ -62,7 +62,7 @@ if TYPE_CHECKING:
     async def async_text_generator() -> AsyncGenerator[str, None]:
         yield "Hello"
 
-    # A generator function (Callable) - returns list[Any] | str
+    # A generator function passed uncalled (matches Callable[..., Any])
     assert_type(write_stream(text_generator), list[Any] | str)
 
     # An already-created generator
@@ -71,8 +71,11 @@ if TYPE_CHECKING:
     # An iterable
     assert_type(write_stream(["a", "b", "c"]), list[Any] | str)
 
-    # An async generator
+    # An async generator instance
     assert_type(write_stream(async_text_generator()), list[Any] | str)
+
+    # An async generator function passed uncalled (matches Callable[..., Any])
+    assert_type(write_stream(async_text_generator), list[Any] | str)
 
     # cursor parameter (keyword-only)
     assert_type(write_stream(text_generator, cursor="▌"), list[Any] | str)
@@ -90,3 +93,6 @@ if TYPE_CHECKING:
 
     # cursor is keyword-only, cannot be passed positionally
     write_stream(text_generator, "▌")  # type: ignore[call-arg]
+
+    # stream must be a Callable, Generator, Iterable, or AsyncGenerator
+    write_stream(123)  # type: ignore[arg-type]
