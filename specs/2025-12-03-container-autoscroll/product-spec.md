@@ -104,13 +104,15 @@ st.container(
 
 ```python
 # Valid:
-st.container(height=300, autoscroll=True)   # Auto-scroll always enabled
+st.container(height=300, autoscroll=True)  # Auto-scroll always enabled
 st.container(height=300, autoscroll=False)  # Auto-scroll always disabled
-st.container(height=300)                    # Auto-scroll if contains chat messages (default)
-st.container(height=300, autoscroll=None)   # Auto-scroll if contains chat messages (explicit default)
+st.container(height=300)  # Auto-scroll if contains chat messages (default)
+st.container(
+    height=300, autoscroll=None
+)  # Auto-scroll if contains chat messages (explicit default)
 
 # Valid but no effect (no scrolling possible):
-st.container(autoscroll=True)               # No fixed height, autoscroll has no effect
+st.container(autoscroll=True)  # No fixed height, autoscroll has no effect
 st.container(height="content", autoscroll=True)  # No scrolling
 ```
 
