@@ -656,7 +656,7 @@ describe("Multiselect widget", () => {
     expect(options[2]).toHaveTextContent("grape")
   })
 
-  it("keeps all options visible and the input readonly when filterMode is none", async () => {
+  it("keeps all options visible and disables typing (inputmode=none) when filterMode is none", async () => {
     const user = userEvent.setup()
     const props = getProps({
       default: [],

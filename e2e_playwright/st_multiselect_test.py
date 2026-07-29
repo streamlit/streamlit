@@ -56,7 +56,7 @@ def select_for_multiselect(
     wait_for_app_run(page)
 
 
-def del_from_multiselect(page: Page, label: str, option_text: str) -> None:
+def remove_from_multiselect(page: Page, label: str, option_text: str) -> None:
     """Remove a tag from the multiselect. Dropdown must be closed before calling."""
     ms = get_multiselect(page, label)
     ms.get_by_role("button", name=f"Remove {option_text}", exact=True).click()
@@ -275,7 +275,7 @@ def test_multiselect_deselect_option(app: Page):
     """Should deselect an option when deselecting it."""
     select_for_multiselect(app, "multiselect 2", "Female", True)
     select_for_multiselect(app, "multiselect 2", "Male", True)
-    del_from_multiselect(app, "multiselect 2", "Female")
+    remove_from_multiselect(app, "multiselect 2", "Female")
     expect_text(app, "value 2: ['male']")
 
 
@@ -452,7 +452,7 @@ def test_multiselect_accept_new_options(app: Page):
     # Two Escapes: first clears filter text, second closes the dropdown.
     input_elem.press("Escape")
     input_elem.press("Escape")
-    del_from_multiselect(app, "multiselect 14 - accept new options", "mango")
+    remove_from_multiselect(app, "multiselect 14 - accept new options", "mango")
 
     # Verify we can add another option after removing one
     input_elem.click()
@@ -542,7 +542,7 @@ def test_multiselect_empty_options_with_accept_new_options(app: Page):
     expect(tags).to_have_count(2)
 
     # Remove one option
-    del_from_multiselect(
+    remove_from_multiselect(
         app, "multiselect 16 - empty options with accept_new_options", "strawberry"
     )
 
@@ -592,7 +592,7 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
     assert initial_scroll > 0
 
     # Remove an item by clicking its delete button
-    del_from_multiselect(app, "multiselect 17 - show maxHeight", "twenty")
+    remove_from_multiselect(app, "multiselect 17 - show maxHeight", "twenty")
 
     # Verify scroll position is preserved
     final_scroll = value_container.evaluate("el => el.scrollTop")

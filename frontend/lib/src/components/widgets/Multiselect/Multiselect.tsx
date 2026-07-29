@@ -135,20 +135,17 @@ const updateWidgetMgrState = (
  */
 const DropdownController = memo<{
   openRef: React.MutableRefObject<(() => void) | null>
-  closeRef: React.MutableRefObject<(() => void) | null>
   focusedKeyRef: React.MutableRefObject<Key | null>
-}>(({ openRef, closeRef, focusedKeyRef }) => {
+}>(({ openRef, focusedKeyRef }) => {
   const state = useContext(ComboBoxStateContext)
   useEffect(() => {
     if (state) {
       openRef.current = () => state.open("first", "manual")
-      closeRef.current = () => state.close()
     }
     return () => {
       openRef.current = null
-      closeRef.current = null
     }
-  }, [state, openRef, closeRef])
+  }, [state, openRef])
   // Read synchronously — an effect would leave a stale-read window for keydown handlers
   focusedKeyRef.current = state?.selectionManager.focusedKey ?? null
   return null
@@ -257,7 +254,6 @@ const Multiselect: FC<Props> = props => {
 
   const isOpenRef = useRef(false)
   const openDropdownRef = useRef<(() => void) | null>(null)
-  const closeDropdownRef = useRef<(() => void) | null>(null)
   const focusedKeyRef = useRef<Key | null>(null)
 
   // In the sidebar, flip/shift are bounded by the viewport so the dropdown can
@@ -447,6 +443,7 @@ const Multiselect: FC<Props> = props => {
   const handleRemoveTag = useCallback(
     (tagValue: string): void => {
       const newValue = valueRef.current.filter(v => v !== tagValue)
+      valueRef.current = newValue
       setValueWithSource({ value: newValue, fromUi: true })
     },
     [setValueWithSource]
@@ -560,7 +557,8 @@ const Multiselect: FC<Props> = props => {
         value.length > 0
       ) {
         e.preventDefault()
-        const newValue = value.slice(0, -1)
+        const newValue = valueRef.current.slice(0, -1)
+        valueRef.current = newValue
         setValueWithSource({ value: newValue, fromUi: true })
       }
     },
@@ -633,7 +631,6 @@ const Multiselect: FC<Props> = props => {
         >
           <DropdownController
             openRef={openDropdownRef}
-            closeRef={closeDropdownRef}
             focusedKeyRef={focusedKeyRef}
           />
           <StyledTrigger
