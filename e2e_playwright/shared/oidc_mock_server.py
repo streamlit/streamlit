@@ -161,13 +161,17 @@ def oidc_app(
 
     if path == "/logout":
         # Handle OIDC end_session_endpoint
-        # Redirect to post_logout_redirect_uri if provided
+        # Support both standard (post_logout_redirect_uri) and non-standard
+        # (redirect_uri) parameter names for provider compatibility (e.g. Cognito).
         qs = parse_qs(environ.get("QUERY_STRING", ""))
-        post_logout_redirect_uri = qs.get("post_logout_redirect_uri", [""])[0]
+        redirect_target = (
+            qs.get("post_logout_redirect_uri", [""])[0]
+            or qs.get("redirect_uri", [""])[0]
+        )
 
-        if post_logout_redirect_uri:
+        if redirect_target:
             status = "302 Found"
-            headers = [("Location", post_logout_redirect_uri)]
+            headers = [("Location", redirect_target)]
             start_response(status, headers)
             return []
         # Return a simple success page if no redirect URI
