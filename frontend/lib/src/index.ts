@@ -62,7 +62,12 @@ export { default as TextElement } from "./components/elements/TextElement/TextEl
 export { toastQueue } from "./components/elements/Toast/toastQueue"
 export type { StreamlitToastContent } from "./components/elements/Toast/toastQueue"
 export { StreamlitToastItem } from "./components/elements/Toast/StreamlitToastItem"
-export { StyledToastRegion } from "./components/elements/Toast/styled-components"
+export {
+  getToastCardStyle,
+  StyledMessageWrapper,
+  StyledToastRegion,
+  StyledToastWrapper,
+} from "./components/elements/Toast/styled-components"
 export {
   getOverlayZIndex,
   getPopoverContainerStyle,
@@ -70,6 +75,7 @@ export {
 export {
   default as BaseButton,
   BaseButtonKind,
+  BaseButtonSize,
 } from "./components/shared/BaseButton/BaseButton"
 export { default as BaseColorPicker } from "./components/shared/BaseColorPicker/BaseColorPicker"
 export { default as UISelectbox } from "./components/shared/Dropdown/Selectbox"
@@ -100,7 +106,11 @@ export { useWindowDimensionsContext } from "./components/shared/WindowDimensions
 export { ComponentRegistry } from "./components/widgets/CustomComponent/ComponentRegistry"
 export { Quiver } from "./dataframes/Quiver"
 export { FileUploadClient } from "./FileUploadClient"
-export { BackendOperationClient } from "./BackendOperationClient"
+export {
+  BackendOperationClient,
+  CONNECTION_CLOSED_MESSAGE,
+  REQUEST_TIMED_OUT_MESSAGE,
+} from "./BackendOperationClient"
 export type { BackendOperationClientProps } from "./BackendOperationClient"
 export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
 export { useCrossOriginAttribute } from "./hooks/useCrossOriginAttribute"
@@ -108,6 +118,7 @@ export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
 export { useFloatingOverlay } from "./hooks/useFloatingOverlay"
 export { useHoverSubmenu } from "./hooks/useHoverSubmenu"
+export { useOverlayDismissal } from "./hooks/useOverlayDismissal"
 export {
   ensureHotkeysFilterConfigured,
   isKeyboardEventFromEditableTarget,

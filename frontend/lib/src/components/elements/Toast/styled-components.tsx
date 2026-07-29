@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import type { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 import { Button } from "react-aria-components"
 import {
@@ -22,6 +23,35 @@ import {
 } from "react-aria-components/Toast"
 
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
+
+/**
+ * The shared visual "card" for the toast surface: width, padding, elevation
+ * (brightness filter + popover shadow), radius, and colors. Extracted so the
+ * react-aria ``StyledToast`` (which backs ``st.toast``) and the standalone,
+ * framework-level "install skills" nudge card can share one source of truth
+ * for the look without coupling at the queue/data layer. Excludes the
+ * ``[data-focus-visible]`` ring, which is specific to the react-aria toast.
+ */
+export const getToastCardStyle = (theme: EmotionTheme): CSSObject => ({
+  display: "flex",
+  flexDirection: "row",
+  gap: theme.spacing.md,
+  width: theme.sizes.toastWidth,
+  marginTop: theme.spacing.sm,
+  borderRadius: theme.radii.default,
+  paddingTop: theme.spacing.lg,
+  paddingBottom: theme.spacing.lg,
+  paddingLeft: theme.spacing.twoXL,
+  paddingRight: theme.spacing.twoXL,
+  backgroundColor: theme.colors.bgColor,
+  filter: hasLightBackgroundColor(theme)
+    ? "brightness(0.98)"
+    : "brightness(1.2)",
+  color: theme.colors.bodyText,
+  boxShadow: theme.shadows.popover,
+  outline: "none",
+})
 
 export const StyledToastRegion = styled(ToastRegion)(({ theme }) => ({
   position: "fixed",
@@ -49,23 +79,7 @@ export const StyledToastRegion = styled(ToastRegion)(({ theme }) => ({
 })) as typeof ToastRegion
 
 export const StyledToast = styled(Toast)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  gap: theme.spacing.md,
-  width: theme.sizes.toastWidth,
-  marginTop: theme.spacing.sm,
-  borderRadius: theme.radii.default,
-  paddingTop: theme.spacing.lg,
-  paddingBottom: theme.spacing.lg,
-  paddingLeft: theme.spacing.twoXL,
-  paddingRight: theme.spacing.twoXL,
-  backgroundColor: theme.colors.bgColor,
-  filter: hasLightBackgroundColor(theme)
-    ? "brightness(0.98)"
-    : "brightness(1.2)",
-  color: theme.colors.bodyText,
-  boxShadow: theme.shadows.popover,
-  outline: "none",
+  ...getToastCardStyle(theme),
   "&[data-focus-visible]": {
     boxShadow: theme.shadows.focusRing,
   },

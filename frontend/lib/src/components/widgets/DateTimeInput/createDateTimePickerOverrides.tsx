@@ -27,10 +27,11 @@ import { createHighlightListItem } from "~lib/components/shared/Highlight/create
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
-import { StyledTimeDropdownListItem } from "~lib/components/widgets/TimeInput/styled-components"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
+
+import { StyledTimeDropdownListItem } from "./styled-components"
 
 const TimeDropdownListItem = createHighlightListItem(
   StyledTimeDropdownListItem

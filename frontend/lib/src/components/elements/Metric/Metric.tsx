@@ -28,6 +28,7 @@ import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
 import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
@@ -44,11 +45,48 @@ import {
   StyledMetricContainer,
   StyledMetricContent,
   StyledMetricDeltaText,
+  StyledMetricIcon,
+  StyledMetricLabelRow,
   StyledMetricLabelText,
   StyledMetricValueText,
 } from "./styled-components"
 
 const LARGE_DATASET_POINT_THRESHOLD = 1000
+
+/**
+ * Returns the baseline value (`y2`) to anchor an area chart's shaded region.
+ *
+ * The baseline is `0` only when the data strictly crosses zero (i.e. it has
+ * both a value below and a value above zero, so the fill diverges around the
+ * zero line), otherwise the data minimum (so the fill is anchored to the
+ * bottom of the visible range). A series that merely touches zero (e.g.
+ * `[-2, -1, 0]`) does not cross it and still anchors to the data minimum. The
+ * returned value is always within `[dataMin, dataMax]`, which keeps it from
+ * expanding the `zero: false` y-scale.
+ *
+ * Uses a single pass instead of `Math.min(...chartData)` to avoid a potential
+ * argument-spread `RangeError` on very large datasets.
+ */
+function getAreaChartBaseline(chartData: number[]): number {
+  if (chartData.length === 0) {
+    // Defensive fallback: an empty dataset has no meaningful baseline, so
+    // return `0` to keep the `y2` datum a valid finite number.
+    return 0
+  }
+
+  let dataMin = chartData[0]
+  let dataMax = chartData[0]
+  for (const value of chartData) {
+    if (value < dataMin) {
+      dataMin = value
+    }
+    if (value > dataMax) {
+      dataMax = value
+    }
+  }
+
+  return dataMin < 0 && dataMax > 0 ? 0 : dataMin
+}
 
 /**
  * Safely format a numeric string, returning the original value if formatting fails.
@@ -88,6 +126,7 @@ export function getMetricChartSpec(
   // charts need at least two points:
   const data =
     chartData.length === 1 ? [chartData[0], chartData[0]] : chartData
+  const isAreaChart = chartType === MetricProto.ChartType.AREA
 
   const spec: TopLevelSpec = {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
@@ -144,6 +183,11 @@ export function getMetricChartSpec(
               nice: false,
             },
           },
+          ...(isAreaChart && {
+            y2: {
+              datum: getAreaChartBaseline(data),
+            },
+          }),
         },
       },
       {
@@ -274,6 +318,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     chartType,
     format,
     deltaDescription,
+    icon,
   } = element
 
   // Apply number formatting if a format is specified and the value is numeric
@@ -349,12 +394,23 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           data-testid="stMetricLabel"
           visibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
         >
-          <StreamlitMarkdown
-            source={label}
-            allowHTML={false}
-            isLabel
-            truncate
-          />
+          <StyledMetricLabelRow>
+            {icon && (
+              <StyledMetricIcon>
+                <DynamicIcon
+                  iconValue={icon}
+                  size="lg"
+                  testid="stMetricIcon"
+                />
+              </StyledMetricIcon>
+            )}
+            <StreamlitMarkdown
+              source={label}
+              allowHTML={false}
+              isLabel
+              truncate
+            />
+          </StyledMetricLabelRow>
           {help && (
             <WidgetLabelHelpIconInline
               content={help}

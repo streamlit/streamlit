@@ -36,7 +36,11 @@
  * - https://vite.dev/guide/migration.html
  * - https://vite.dev/config/dep-optimization-options
  */
+// The explicit `.js` extension is required to target the specific build entry
+// for the Vite 8 interop shim described above, so the extension rule is disabled here.
+// eslint-disable-next-line import-x/extensions
 import * as ReactUid from "react-uid/dist/es2015/index.js"
 
+// eslint-disable-next-line import-x/extensions
 export * from "react-uid/dist/es2015/index.js"
 export default ReactUid

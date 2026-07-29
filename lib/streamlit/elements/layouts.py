@@ -27,7 +27,7 @@ from streamlit.elements.lib.layout_utils import (
     Width,
     WidthWithoutContent,
     get_align,
-    get_gap_size,
+    get_gap_config,
     get_height_config,
     get_justify,
     get_width_config,
@@ -45,7 +45,6 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.proto.GapSize_pb2 import GapConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import register_widget
@@ -215,7 +214,7 @@ class LayoutsMixin:
               When ``horizontal`` is ``True``, ``"distribute"`` aligns the
               elements the same as ``"top"``.
 
-        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", or None
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
             The minimum gap size between the elements inside the container.
             This can be one of the following:
 
@@ -226,6 +225,8 @@ class LayoutsMixin:
             - ``"large"``: 4rem gap between the elements.
             - ``"xlarge"``: 6rem gap between the elements.
             - ``"xxlarge"``: 8rem gap between the elements.
+            - A non-negative integer specifying the gap in pixels. For
+              example, ``gap=20`` sets a 20-pixel gap.
             - ``None``: No gap between the elements.
 
             The rem unit is relative to the ``theme.baseFontSize``
@@ -343,8 +344,8 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.flex_container.border = border or False
-        block_proto.flex_container.gap_config.gap_size = get_gap_size(
-            gap, "st.container"
+        block_proto.flex_container.gap_config.CopyFrom(
+            get_gap_config(gap, "st.container")
         )
 
         validate_horizontal_alignment(horizontal_alignment)
@@ -431,7 +432,7 @@ class LayoutsMixin:
               Or ``[1, 2, 3]`` creates three columns where the second one is two times
               the width of the first one, and the third one is three times that width.
 
-        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", or None
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
             The size of the gap between the columns. This can be one of the
             following:
 
@@ -442,6 +443,8 @@ class LayoutsMixin:
             - ``"large"``: 4rem gap between the columns.
             - ``"xlarge"``: 6rem gap between the columns.
             - ``"xxlarge"``: 8rem gap between the columns.
+            - A non-negative integer specifying the gap in pixels. For
+              example, ``gap=20`` sets a 20-pixel gap.
             - ``None``: No gap between the columns.
 
             The rem unit is relative to the ``theme.baseFontSize``
@@ -595,9 +598,7 @@ class LayoutsMixin:
                 element_type="st.columns",
             )
 
-        gap_size = get_gap_size(gap, "st.columns")
-        gap_config = GapConfig()
-        gap_config.gap_size = gap_size
+        gap_config = get_gap_config(gap, "st.columns")
 
         def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()
@@ -632,6 +633,7 @@ class LayoutsMixin:
         tabs: Sequence[str],
         *,
         width: WidthWithoutContent = "stretch",
+        height: Height = "content",
         default: str | None = None,
         key: Key | None = None,
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
@@ -685,6 +687,27 @@ class LayoutsMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the container matches the width
               of the parent container.
+
+        height : "content", "stretch", or int
+            The height of the tab container. This can be one of the following:
+
+            - ``"content"`` (default): The height of the container matches the
+              height of its content.
+            - ``"stretch"``: The height of the container matches the height
+              of the parent container, and content that overflows scrolls
+              inside the active tab panel. If the container is not in a
+              fixed-height parent, the height of the container matches the
+              height of its content.
+            - An integer specifying the height in pixels: The container has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled inside the active tab panel.
+
+            .. note::
+                Use scrolling tab panels sparingly. If you use scrolling tab
+                panels, avoid heights that exceed 500 pixels. Otherwise, the
+                scroll surface of the tab panel might cover the majority of
+                the screen on mobile devices, which makes it hard to scroll the
+                rest of the app.
 
         default : str or None
             The default tab to select. If this is ``None`` (default), the first
@@ -916,6 +939,7 @@ class LayoutsMixin:
                 dg=self.dg,
                 tabs=tuple(tabs),
                 width=width,
+                height=height,
                 default=default,
             )
             block_id = element_id
@@ -954,6 +978,13 @@ class LayoutsMixin:
         block_proto.tab_container.SetInParent()
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
+
+        validate_height(height, allow_content=True)
+        block_proto.height_config.CopyFrom(get_height_config(height))
+        if isinstance(height, int):
+            # Ensure the fixed-height tab container renders even when the
+            # active tab is empty, so the reserved space is preserved.
+            block_proto.allow_empty = True
 
         # Compute the current tab index from the label
         try:

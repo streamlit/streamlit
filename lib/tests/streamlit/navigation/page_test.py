@@ -82,6 +82,76 @@ class StPagesTest(DeltaGeneratorTestCase):
             != st.Page(lambda: True, url_path="path_2")._script_hash
         )
 
+    @parameterized.expand(
+        [
+            ("backslash_unc", "\\\\server\\share\\page.py"),
+            ("forward_slash_unc", "//server/share/page.py"),
+            ("forward_then_backslash_unc", "/\\server\\share\\page.py"),
+            ("backslash_then_forward_unc", "\\/server/share/page.py"),
+            ("extended_unc", "\\\\?\\UNC\\server\\share\\page.py"),
+            ("device_namespace", "\\\\.\\device\\page.py"),
+            ("path_object", Path("\\\\server\\share\\page.py")),
+        ]
+    )
+    @patch("streamlit.env_util.IS_WINDOWS", True)
+    def test_rejects_windows_network_paths_before_resolving(
+        self, _name: str, page: str | Path
+    ) -> None:
+        """Windows network paths are rejected before any filesystem access.
+
+        This includes mixed-separator spellings (``/\\``, ``\\/``) that Windows
+        normalizes to a UNC root when resolving.
+        """
+        with (
+            patch("pathlib.Path.resolve") as resolve,
+            pytest.raises(StreamlitAPIException, match="Network paths"),
+        ):
+            st.Page(page)
+
+        resolve.assert_not_called()
+
+    @parameterized.expand(
+        [
+            ("string", "page\x00.py"),
+            ("path_object", Path("page\x00.py")),
+        ]
+    )
+    def test_rejects_null_byte_paths_on_all_platforms(
+        self, _name: str, page: str | Path
+    ) -> None:
+        """Null-byte paths are rejected on every platform before filesystem access.
+
+        The null-byte check runs unconditionally before the Windows-gated UNC
+        check, so this test intentionally uses the real ``IS_WINDOWS`` value.
+        """
+        with (
+            patch("pathlib.Path.resolve") as resolve,
+            pytest.raises(StreamlitAPIException, match="null bytes"),
+        ):
+            st.Page(page)
+
+        resolve.assert_not_called()
+
+    @patch("streamlit.env_util.IS_WINDOWS", False)
+    def test_allows_network_style_paths_on_non_windows(self) -> None:
+        """Network-style paths are only blocked on Windows, where SMB auto-connects."""
+        # On POSIX these are ordinary paths with no SMB auto-connect, so st.Page
+        # must not reject them. The meaningful assertion is that no exception is
+        # raised and the path is accepted as a regular filesystem page.
+        page = st.Page("//server/share/page.py")
+        assert isinstance(page._page, Path)
+
+    @parameterized.expand(
+        [
+            ("string", str(Path.cwd() / "page.py")),
+            ("path_object", Path.cwd() / "page.py"),
+        ]
+    )
+    def test_allows_absolute_local_paths(self, _name: str, page: str | Path) -> None:
+        """Absolute local paths are part of the public st.Page contract."""
+        streamlit_page = st.Page(page)
+        assert streamlit_page._page == Path(page).resolve()
+
     def test_url_path_is_inferred_from_filename(self):
         """Tests that url path is inferred from filename if not provided"""
         page = st.Page("page_8.py")

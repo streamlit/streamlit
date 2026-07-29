@@ -57,6 +57,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -190,6 +191,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> None: ...  # Returns None if options is empty and accept_new_options is False
 
     @overload
@@ -212,6 +214,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T: ...
 
     @overload
@@ -234,6 +237,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | str: ...
 
     @overload
@@ -256,6 +260,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | None: ...
 
     @overload
@@ -278,6 +283,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | str | None: ...
 
     @overload
@@ -300,6 +306,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | str | None: ...
 
     @gather_metrics("selectbox")
@@ -322,6 +329,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | str | None:
         r"""Display a select widget.
 
@@ -481,6 +489,21 @@ class SelectboxMixin:
             from the URL. If ``index`` is ``None``, an empty query
             parameter (e.g., ``?my_key=``) clears the widget.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         any
@@ -567,6 +590,7 @@ class SelectboxMixin:
             filter_mode=filter_mode,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -589,6 +613,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> T | str | None:
         key = to_key(key)
@@ -693,6 +718,7 @@ class SelectboxMixin:
             ctx=ctx,
             value_type="string_value",
             bind=bind,
+            persist_state=persist_state,
             # Clearable when index=None: the widget can be in an empty state,
             # so ?key= (empty URL param) should clear the widget to None.
             clearable=(index is None),

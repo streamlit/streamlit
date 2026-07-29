@@ -79,4 +79,4 @@ if TYPE_CHECKING:
     pyplot(fig, clear_figure="yes")  # type: ignore[arg-type]
 
     # Passing width as positional argument (should be keyword-only)
-    pyplot(fig, None, "stretch")  # type: ignore[misc]
+    pyplot(fig, None, "stretch")  # type: ignore[call-arg]

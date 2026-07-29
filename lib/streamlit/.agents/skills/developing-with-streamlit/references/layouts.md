@@ -169,6 +169,7 @@ def confirm_delete(item_name):
         delete_item(item_name)
         st.rerun()
 
+
 if st.button("Delete item"):
     confirm_delete("My Document")
 ```
@@ -196,10 +197,10 @@ with st.container(gap="small"):
 Add vertical space with `st.space`:
 
 ```python
-st.space("small")   # Small gap
+st.space("small")  # Small gap
 st.space("medium")  # Medium gap
-st.space("large")   # Large gap
-st.space(50)        # Custom pixels
+st.space("large")  # Large gap
+st.space(50)  # Custom pixels
 ```
 
 ## Width and height

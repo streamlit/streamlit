@@ -193,6 +193,6 @@ if TYPE_CHECKING:
     subheader("Subheader", text_alignment="end")  # type: ignore[arg-type]
 
     # Passing keyword-only parameters as positional (help is keyword-only)
-    title("Title", "anchor", "help text")  # type: ignore[misc]
-    header("Header", "anchor", "help text")  # type: ignore[misc]
-    subheader("Subheader", "anchor", "help text")  # type: ignore[misc]
+    title("Title", "anchor", "help text")  # type: ignore[call-arg]
+    header("Header", "anchor", "help text")  # type: ignore[call-arg]
+    subheader("Subheader", "anchor", "help text")  # type: ignore[call-arg]

@@ -28,12 +28,19 @@ name = "streamlit-dev"
 version = "0.0.0"
 description = "Development environment for Streamlit"
 requires-python = ">=3.10"
-# Empty dependencies - the actual package is installed via [tool.uv.sources]
-dependencies = []
+# The published package metadata remains in lib/pyproject.toml. This requirement
+# makes its runtime dependencies part of the development lock graph, while the
+# source mapping below keeps the package editable.
+dependencies = ["streamlit"]
 
 [tool.uv]
-# Minimum uv version required for this project
-required-version = ">=0.9.17"
+# The development toolchain is the default local environment.
+default-groups = ["dev"]
+# Keep this floor low enough for Dependabot's bundled uv.
+# Raise it when Dependabot ships a newer uv and we want a tighter floor.
+required-version = ">=0.11.8"
+# Resolve the development lock only for the currently supported Python range.
+environments = ["python_version < '3.15'"]
 # Exclude packages published in the last 24 hours to lower risk from supply chain attacks
 exclude-newer = "24 hours"
 # Explicit pandas version constraints by Python version:
@@ -52,18 +59,25 @@ streamlit = { path = "lib", editable = true }
 # =============================================================================
 
 [dependency-groups]
+# Dependencies used by lightweight CI and release automation scripts.
+# Keep this group small so those workflows do not need the complete dev environment.
+automation = [
+  "packaging>=20,<26",
+  "requests>=2.27,<3",
+  "semver>=3,<4",
+]
+
 # Development dependencies - includes test group
 dev = [
   { include-group = "test" },
-  "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.51",
+  "ty==0.0.56",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.15.18",
+  "ruff==0.16.0",
   # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
-  "mypy==2.1.0",
+  "mypy==2.2.0",
   # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
   # Streamlit still type-checks as Python 3.10.
   "numpy<2.5",
@@ -82,7 +96,6 @@ dev = [
   "types-requests",
   "types-setuptools",
   "types-toml",
-  "types-cachetools",
   "types-Authlib",
   # pandas-stubs have caused a couple of CI breaks, so we pin to a specific version.
   # We need to pin 2.3.3.260113 since higher versions require a min Python 3.11 support.
@@ -91,7 +104,6 @@ dev = [
 
 # Test dependencies
 test = [
-  "streamlit",
   # Testing infrastructure dependencies:
   # pytest >= 9.1.0 is causing issues and is not yet supported.
   "pytest>=9.0.3,<9.1.0",
@@ -120,10 +132,10 @@ test = [
   # httpx2 is used by starlette's TestClient (>=1.2); httpx is still required
   # by authlib's httpx_client integration used in the auth route tests.
   "httpx>=0.24.1",
-  "httpx2>=2.0.0",
+  "httpx2>=2.7.0",
   # Playwright and E2E test dependencies:
   # We pin playwright to a minor version to avoid new browser versions breaking our CI.
-  "playwright==1.60.*",
+  "playwright==1.61.*",
   "pytest-playwright>=0.3.3",
   "pixelmatch>=0.3.0",
   "pytest-xdist>=3.6.1",
@@ -143,7 +155,6 @@ test = [
 # Integration test dependencies
 integration = [
   { include-group = "test" },
-  "streamlit",
   # Snowflake dependencies:
   "snowflake-snowpark-python[modin]>=1.17.0",
   "snowflake-connector-python>=3.3.0",
@@ -264,7 +275,6 @@ ignore = [
   "RUF052",  # Checks for dummy variables that are used.
   "RUF067",  # Checks for non empty __init__ modules.
   "RUF075",  # Checks for context managers that don't catch exceptions (new preview rule in ruff 0.15.14).
-  "RUF076",  # Checks for autouse=True in pytest.fixture decorators (new rule in ruff 0.15.17; autouse is intentional in our fixtures).
   "SIM105",  # Enforces use of contextlib.suppress.
   "SIM108",  # Enforces ternary operators instead of if-else.
   "SIM115",  # Enforces context manager for opening files.
@@ -273,6 +283,12 @@ ignore = [
   "TD002",   # Checks for missing author in TODO comment.
   "TD003",   # Checks for missing issue link in TODO comment.
   "TRY300",  # Checks for return statements in try blocks.
+  # New preview rules in ruff 0.15.22 that would migrate our existing
+  # `# noqa` comments and rule codes to the unstable `ruff:ignore` syntax and
+  # human-readable names. We keep the established conventions for now.
+  "RUF105",  # Checks for legacy `# noqa` comments (migrates them to `# ruff:ignore`).
+  "RUF106",  # Checks for rule codes in suppression comments (migrates to human-readable names).
+  "RUF201",  # Checks for rule codes in config selectors (migrates to human-readable names).
 ]
 extend-safe-fixes = ["TC002", "TC003"]
 

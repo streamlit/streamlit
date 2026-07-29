@@ -176,12 +176,18 @@ interface UseWidgetStateReturn {
   editingState: MutableRefObject<EditingState>
   // The current number of rows (including additions/deletions)
   numRows: number
+  // Counter that increments once pending edits have been restored from the
+  // widget manager on initial mount. Consumers can watch this to reconcile the
+  // restored edits (e.g. clear edits that already match the current source).
+  editStateHydrationCount: number
   // Callback to reset the editing state
   resetEditingState: () => void
   // Callback to update numRows from editing state
   updateNumRows: () => void
   // Debounced callback to sync editing state with widget manager
   syncEditState: () => void
+  // Immediately syncs a pending edit and cancels its debounce timeout
+  flushEditState: () => void
   // Creates a sync selection state callback for the given columns and getOriginalIndex
   // This needs to be called after useColumnSort since it needs the sorted columns and getOriginalIndex
   createSyncSelectionState: (
@@ -240,6 +246,11 @@ function useWidgetState({
   )
   const [numRows, setNumRows] = useState(editingStateRef.current.getNumRows())
 
+  // Bumped after the initial hydration of edits from the widget manager so
+  // edit reconciliation can run against the restored edits (which may already
+  // match the current source data).
+  const [editStateHydrationCount, setEditStateHydrationCount] = useState(0)
+
   // Reset editing state when originalNumRows changes.
   // Using useExecuteWhenChanged instead of useEffect to follow React best practices
   // for adjusting state when props change (avoids extra render cycle).
@@ -297,6 +308,9 @@ function useWidgetState({
 
       editingStateRef.current.fromJson(initialWidgetValue, originalColumns)
       setNumRows(editingStateRef.current.getNumRows())
+      // Signal that edits were restored so reconciliation can clear any
+      // restored edits that already match the current source data.
+      setEditStateHydrationCount(count => count + 1)
     },
     // We only want to run this effect once during the initial component load
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -340,10 +354,8 @@ function useWidgetState({
   }, [originalColumns, element.id, element.formId, widgetMgr, fragmentId])
 
   // Debounced version of syncEditState to prevent rapid updates
-  const { debouncedCallback: syncEditState } = useDebouncedCallback(
-    innerSyncEditState,
-    DEBOUNCE_TIME_MS
-  )
+  const { debouncedCallback: syncEditState, flush: flushEditState } =
+    useDebouncedCallback(innerSyncEditState, DEBOUNCE_TIME_MS)
 
   /**
    * Creates a function to sync selection state with the widget manager.
@@ -377,6 +389,12 @@ function useWidgetState({
         selectionState.selection.rows = newSelection.rows
           .toArray()
           .map(row => getOriginalIndex(row))
+          // Report row indices in a stable ascending order so the serialized
+          // selection is independent of the current sort/display order. This
+          // keeps the widget value unchanged when only the display order
+          // changes (e.g. after sorting), avoiding spurious reruns / on_select
+          // callbacks.
+          .sort((a, b) => a - b)
         selectionState.selection.columns = newSelection.columns
           .toArray()
           .map(columnIdx => getColumnName(columns[columnIdx]))
@@ -642,9 +660,11 @@ function useWidgetState({
   return {
     editingState: editingStateRef,
     numRows,
+    editStateHydrationCount,
     resetEditingState,
     updateNumRows,
     syncEditState,
+    flushEditState,
     createSyncSelectionState,
     onFormCleared,
     loadInitialSelectionState,

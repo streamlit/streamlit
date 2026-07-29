@@ -26,6 +26,7 @@ from e2e_playwright.conftest import (
     wait_for_app_loaded,
     wait_for_app_run,
 )
+from e2e_playwright.shared.app_utils import reset_hovering
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -268,6 +269,17 @@ def test_deploy_button_desktop_manually_collapsed(
 
     # Verify sidebar is collapsed
     verify_sidebar_state(app, False)
+
+    # Wait for the expand-sidebar button to appear in the header. It is only
+    # rendered once the sidebar has collapsed, so waiting for it ensures the
+    # header has reached its final collapsed layout before we snapshot it.
+    verify_expand_button_visible(app)
+
+    # The collapse button and the expand-sidebar button occupy the same
+    # top-left position, so after collapsing the mouse is left hovering the
+    # freshly rendered expand button, giving it a hover background that flakes
+    # the header snapshot. Move the mouse away to capture the default state.
+    reset_hovering(app)
 
     # Verify header adjusts correctly
     header = app.get_by_test_id("stHeader")

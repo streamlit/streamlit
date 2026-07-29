@@ -42,6 +42,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -129,6 +130,7 @@ class TextWidgetsMixin:
         validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str:
         pass
 
@@ -153,6 +155,7 @@ class TextWidgetsMixin:
         validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str | None:
         pass
 
@@ -177,6 +180,7 @@ class TextWidgetsMixin:
         validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str | None:
         r"""Display a single-line text input widget.
 
@@ -348,6 +352,24 @@ class TextWidgetsMixin:
             This can't be used with ``type="password"``. An empty
             query parameter (e.g., ``?my_key=``) clears the widget.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope. For example,
+            ``st.text_input("Name", key="name", persist_state="session")`` keeps
+            the entered text when the widget is hidden and shown again, or when
+            the user navigates to another page and back.
+
         Returns
         -------
         str or None
@@ -385,6 +407,7 @@ class TextWidgetsMixin:
             validate=validate,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -408,6 +431,7 @@ class TextWidgetsMixin:
         validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
@@ -528,6 +552,7 @@ class TextWidgetsMixin:
             ctx=ctx,
             value_type="string_value",
             bind=bind,
+            persist_state=persist_state,
             # Text input is clearable (empty string is a valid value)
             clearable=True,
         )
@@ -565,6 +590,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str:
         pass
 
@@ -586,6 +612,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str | None:
         pass
 
@@ -607,6 +634,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str | None:
         r"""Display a multi-line text input widget.
 
@@ -741,6 +769,21 @@ class TextWidgetsMixin:
             An empty query parameter (e.g., ``?my_key=``) clears the
             widget.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         str or None
@@ -783,6 +826,7 @@ class TextWidgetsMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -803,6 +847,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
@@ -872,6 +917,7 @@ class TextWidgetsMixin:
             ctx=ctx,
             value_type="string_value",
             bind=bind,
+            persist_state=persist_state,
             # Text area is clearable (empty string is a valid value)
             clearable=True,
         )

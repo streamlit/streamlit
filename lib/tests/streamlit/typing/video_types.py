@@ -117,4 +117,4 @@ if TYPE_CHECKING:
     video("video.mp4", width="content")  # type: ignore[arg-type]
 
     # Passing subtitles as positional argument (should be keyword-only)
-    video("video.mp4", "video/mp4", 0, "subtitles.vtt")  # type: ignore[misc]
+    video("video.mp4", "video/mp4", 0, "subtitles.vtt")  # type: ignore[call-arg]

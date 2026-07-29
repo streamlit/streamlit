@@ -71,4 +71,4 @@ if TYPE_CHECKING:
     text("Text", text_alignment="start")  # type: ignore[arg-type]
 
     # Passing help as positional argument (should be keyword-only)
-    text("Text", "help text")  # type: ignore[misc]
+    text("Text", "help text")  # type: ignore[call-arg]

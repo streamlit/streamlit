@@ -60,6 +60,60 @@ describe("BackendOperationClient", () => {
     expect(client.pendingCount).toBe(0)
   })
 
+  it("sends dataframe chunk requests with the chunk payload", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestDataframeChunk({
+      sourceId: "source-1",
+      offset: 500,
+      limit: 500,
+    })
+
+    expect(sendRequest).toHaveBeenCalledTimes(1)
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+    expect(request.requestId).toBeTruthy()
+    expect(request.sessionId).toBe("session-id")
+    expect(request.dataframeChunk?.sourceId).toBe("source-1")
+    expect(Number(request.dataframeChunk?.offset)).toBe(500)
+    expect(request.dataframeChunk?.limit).toBe(500)
+    expect(client.pendingCount).toBe(1)
+
+    const arrowData = { data: new Uint8Array([1, 2, 3]) }
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        dataframeChunk: {
+          sourceId: "source-1",
+          offset: 500,
+          arrowData,
+        },
+      })
+    )
+
+    const resolved = await promise
+    expect(resolved.sourceId).toBe("source-1")
+    expect(Number(resolved.offset)).toBe(500)
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("allows two minutes for dataframe chunk requests", async () => {
+    vi.useFakeTimers()
+    const client = createClient()
+
+    const promise = client.requestDataframeChunk({
+      sourceId: "source-1",
+      offset: 500,
+      limit: 500,
+    })
+    vi.advanceTimersByTime(119_999)
+    expect(client.pendingCount).toBe(1)
+
+    vi.advanceTimersByTime(1)
+    await expect(promise).rejects.toThrow("Request timed out")
+    expect(client.pendingCount).toBe(0)
+  })
+
   it("rejects the pending promise when the response contains an error", async () => {
     const sendRequest = vi.fn()
     const client = createClient(sendRequest)
@@ -157,6 +211,64 @@ describe("BackendOperationClient", () => {
     await expect(promise).rejects.toThrow(
       "Response contained no recognized payload"
     )
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("sends install skills requests and resolves with the payload", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+    expect(request.installSkills).toBeTruthy()
+    expect(request.deferredFile).toBeFalsy()
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        installSkills: { detail: "" },
+      })
+    )
+
+    await expect(promise).resolves.toEqual({ detail: "" })
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("rejects install skills requests when the server reports an error", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        errorMsg: "No skills found",
+      })
+    )
+
+    await expect(promise).rejects.toThrow("No skills found")
+  })
+
+  it("sends dismiss skills nudge requests and resolves on the ack", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestDismissSkillsNudge()
+
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+    expect(request.dismissSkillsNudge).toBeTruthy()
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        dismissSkillsNudge: {},
+      })
+    )
+
+    await expect(promise).resolves.toBeTruthy()
     expect(client.pendingCount).toBe(0)
   })
 })

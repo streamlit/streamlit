@@ -295,7 +295,7 @@ class MediaMixin:
             When provided, subtitles are displayed by default. For multiple
             tracks, the first one is displayed by default. If you don't want any
             subtitles displayed by default, use an empty string for the value
-            in a dictrionary's first pair: ``{"None": "", "English": "path/to/english.vtt"}``
+            in a dictionary's first pair: ``{"None": "", "English": "path/to/english.vtt"}``
 
             Not supported for YouTube videos.
         end_time : int, float, timedelta, str, or None
