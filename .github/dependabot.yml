@@ -203,6 +203,12 @@ updates:
           - "parameterized"
           - "requests-mock"
           - "testfixtures"
+      python-ruff:
+        # Ruff bumps often add lint rules or change formatting and are coupled to the
+        # ruff-pre-commit hook version (sync-ruff-version hook), so isolate them in
+        # their own PR instead of the python-minor-patch batch.
+        patterns:
+          - "ruff"
       python-minor-patch:
         patterns:
           - "*"
