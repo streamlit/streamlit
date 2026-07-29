@@ -52,7 +52,10 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ScriptRunContext,
+    ThreadState,
+)
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -872,7 +875,13 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
-        ctx.fragment_ids_this_run = ["my_fragment_id"]
+        # Populated below with the fragment's actual id once available. The
+        # snapshot-restore branch runs only when the currently executing
+        # fragment is a top-level fragment being rerun (its id appears in
+        # ``fragment_ids_this_run``); nested fragments called via ``wrap`` from
+        # an already-rerunning parent skip the restore to avoid detaching
+        # their writes from the enclosing scope's cursor state. See #12514.
+        ctx.fragment_ids_this_run = []
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
@@ -905,7 +914,13 @@ class FragmentTest(unittest.TestCase):
 
             call_count += 1
 
+        # Initial registration: acts like a full app run (no restore).
         my_fragment()
+
+        # Register the fragment id so that subsequent standalone invocations
+        # of ``saved_fragment`` are treated as top-level fragment reruns.
+        fragment_id = next(iter(ctx.fragment_storage._fragments.keys()))
+        ctx.fragment_ids_this_run = [fragment_id]
 
         # Reach inside our MemoryFragmentStorage internals to pull out our saved
         # fragment.
@@ -1095,7 +1110,16 @@ class FragmentTest(unittest.TestCase):
         """Test that the internal function can be called with an
         additional hash info parameter."""
         ctx = MagicMock()
+        # Emulate a full app run so wrapped_fragment doesn't try to restore
+        # dg_stack/cursor snapshots between calls (see #12514 fix).
+        ctx.fragment_ids_this_run = []
         patched_get_script_run_ctx.return_value = ctx
+
+        # Pin the top DG's delta path to a deterministic value so that
+        # ``fragment_id`` is a function only of the function identity and
+        # ``additional_hash_info`` argument — not of MagicMock repr ids that
+        # can shift between calls when garbage collection reuses addresses.
+        context_dg_stack.get()[-1]._cursor.delta_path = [0, 0]
 
         def my_function():
             return ThreadState.get().fragment_id
@@ -2199,3 +2223,153 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
                 _check_not_parallel_worker("@st.dialog")
 
         assert ThreadState.get().is_parallel_worker is True
+
+
+class NestedFragmentContainerRerunTest(DeltaGeneratorTestCase):
+    """Regression tests for #12514: fragments inside a container disappearing
+    on rerender when the parent fragment is rerun.
+    """
+
+    @staticmethod
+    def _lookup_parent_fragment_id(
+        ctx: ScriptRunContext, child_fragment_ids: list[str]
+    ) -> str:
+        """Return the id of the only registered fragment that has no parent.
+
+        The nested ``b`` fragments are registered with ``a`` as their parent, so
+        ``a`` is the sole entry in the storage's parent map pointing at ``None``.
+        """
+        parent_ids = [
+            fid
+            for fid, parent_id in ctx.fragment_storage._parent_by_id.items()
+            if parent_id is None
+        ]
+        assert len(parent_ids) == 1, (
+            f"Expected exactly one top-level fragment, got {parent_ids!r}."
+        )
+        assert parent_ids[0] not in child_fragment_ids, (
+            "The top-level fragment id must be distinct from its children's ids."
+        )
+        return parent_ids[0]
+
+    def test_sibling_nested_fragments_get_distinct_ids_on_parent_rerun(
+        self,
+    ) -> None:
+        """Sibling nested fragments written to the same container via
+        separate ``with container:`` blocks must get distinct fragment ids
+        on a parent fragment rerun.
+
+        Before the fix, the inner fragment's ``wrapped_fragment`` unconditionally
+        replaced ``context_dg_stack`` with deep copies whenever
+        ``ctx.fragment_ids_this_run`` was truthy. During a parent's rerun the
+        inner fragment is called via ``wrap`` from the parent's execution, so
+        the deep-copy substitution detached the inner's writes from the
+        enclosing container's cursor. The container's cursor never advanced
+        between sibling ``with container: b(i)`` calls, so both siblings
+        computed identical fragment ids and overwrote each other's deltas.
+        """
+        recorded_fragment_ids: list[str] = []
+
+        @fragment
+        def b(i: int) -> None:
+            recorded_fragment_ids.append(ThreadState.get().fragment_id or "")
+
+        @fragment
+        def a() -> None:
+            container = st.container()
+            with container:
+                b(1)
+            with container:
+                b(2)
+
+        # Initial full app run — registers a, b(1), b(2) with distinct ids.
+        a()
+
+        # Sanity check: on the initial run, b(1) and b(2) get distinct ids.
+        assert len(recorded_fragment_ids) == 2
+        assert recorded_fragment_ids[0] != recorded_fragment_ids[1], (
+            "Even during the initial run, sibling nested fragments should have "
+            "distinct fragment ids."
+        )
+
+        initial_run_ids = recorded_fragment_ids.copy()
+        recorded_fragment_ids.clear()
+
+        # Simulate a fragment rerun of ``a``: look up a's registered
+        # wrapped_fragment and invoke it directly, mirroring what
+        # ScriptRunner does when processing a fragment rerun.
+        ctx = self.script_run_ctx
+        a_fragment_id = self._lookup_parent_fragment_id(ctx, initial_run_ids)
+        ctx.fragment_ids_this_run = [a_fragment_id]
+
+        wrapped_a = ctx.fragment_storage.lookup(a_fragment_id)
+        wrapped_a()
+
+        assert len(recorded_fragment_ids) == 2, (
+            "Both nested fragments should re-execute during a rerun of the parent."
+        )
+        assert recorded_fragment_ids[0] != recorded_fragment_ids[1], (
+            "Sibling nested fragments must get distinct fragment ids on a "
+            "parent fragment rerun; got a collision at "
+            f"{recorded_fragment_ids[0]!r}."
+        )
+        # The recomputed ids should match the ids assigned during the
+        # initial run — deterministic identity across reruns is what makes
+        # fragment storage/lookup work.
+        assert recorded_fragment_ids == initial_run_ids
+
+    def test_sibling_nested_fragments_keep_distinct_ids_when_parent_and_children_queued(
+        self,
+    ) -> None:
+        """A coalesced queue holding both the parent and its nested children must
+        still produce distinct sibling ids.
+
+        ``order_fragment_ids`` runs queued ancestors before queued descendants,
+        so the parent executes first and invokes its children inline via
+        ``wrap`` while their ids are *still* in ``fragment_ids_this_run``. Queue
+        membership alone therefore can't distinguish a ScriptRunner-driven
+        top-level replay from an inline nested call; without the additional
+        ``ThreadState.get().fragment_id is None`` guard the children would
+        restore their declaration-time snapshots mid-parent-run and collide
+        exactly as in #12514.
+        """
+        recorded_fragment_ids: list[str] = []
+
+        @fragment
+        def b(i: int) -> None:
+            recorded_fragment_ids.append(ThreadState.get().fragment_id or "")
+
+        @fragment
+        def a() -> None:
+            container = st.container()
+            with container:
+                b(1)
+            with container:
+                b(2)
+
+        # Initial full app run — registers a, b(1), b(2) with distinct ids.
+        a()
+        assert len(recorded_fragment_ids) == 2
+        initial_run_ids = recorded_fragment_ids.copy()
+        recorded_fragment_ids.clear()
+
+        ctx = self.script_run_ctx
+        a_fragment_id = self._lookup_parent_fragment_id(ctx, initial_run_ids)
+
+        # Queue the parent *and* both children, ancestors first — the ordering
+        # ScriptRunner applies via ``order_fragment_ids``.
+        ctx.fragment_ids_this_run = [a_fragment_id, *initial_run_ids]
+
+        # ScriptRunner invokes the parent first; the children are reached inline
+        # from the parent's body rather than by a second direct invocation.
+        ctx.fragment_storage.lookup(a_fragment_id)()
+
+        assert len(recorded_fragment_ids) == 2, (
+            "Both nested fragments should re-execute during the parent's rerun."
+        )
+        assert recorded_fragment_ids[0] != recorded_fragment_ids[1], (
+            "Sibling nested fragments must keep distinct ids when the parent and "
+            "children are queued together; got a collision at "
+            f"{recorded_fragment_ids[0]!r}."
+        )
+        assert recorded_fragment_ids == initial_run_ids
