@@ -435,6 +435,30 @@ def test_real_repository_info_and_ahead_commits(tmp_path: Path) -> None:
 
 
 @_REQUIRES_GIT
+def test_real_repository_ahead_commits_with_diverging_branch_names(
+    tmp_path: Path,
+) -> None:
+    """Count ahead commits when the local branch name differs from upstream.
+
+    Interpolating ``origin/<local-branch>`` would miss commits that
+    ``@{upstream}..HEAD`` correctly reports against ``origin/main``.
+    """
+    repo_path = _init_repo(tmp_path / "repo")
+    _git(repo_path, "remote", "add", "origin", "https://github.com/owner/repo.git")
+    _git(repo_path, "update-ref", "refs/remotes/origin/main", "HEAD")
+    _git(repo_path, "checkout", "-b", "feature")
+    _git(repo_path, "branch", "--set-upstream-to=origin/main", "feature")
+
+    (repo_path / "tracked.txt").write_text("ahead\n", encoding="utf-8")
+    _git(repo_path, "add", "tracked.txt")
+    _git(repo_path, "commit", "-m", "ahead on feature")
+
+    repo = GitRepo(str(repo_path / "tracked.txt"))
+    assert repo.tracking_branch == "origin/main"
+    assert len(repo.ahead_commits or []) == 1
+
+
+@_REQUIRES_GIT
 def test_real_repository_reports_untracked_and_unstaged_only(tmp_path: Path) -> None:
     """Report untracked files and unstaged changes, excluding staged-only paths."""
     repo_path = _init_repo(tmp_path / "repo")

@@ -142,7 +142,9 @@ def _decode_line(output: bytes) -> str:
     the platform record terminator so a trailing carriage return in the path
     itself is preserved.
     """
-    if os.name == "nt" and output.endswith(b"\r\n"):
+    if os.name == "nt" and output.endswith(
+        b"\r\n"
+    ):  # pragma: no cover - platform-specific
         output = output[:-2]
     elif output.endswith(b"\n"):
         output = output[:-1]
@@ -296,6 +298,15 @@ class GitRepo:
 
     @property
     def ahead_commits(self) -> list[str] | None:
+        """Commit hashes that are ahead of the configured upstream.
+
+        Returns
+        -------
+        list[str] | None
+            ``None`` when the repository is invalid or has no usable upstream.
+            An empty list when the rev-list query fails or HEAD is not ahead.
+            Otherwise, the commit hashes from ``@{upstream}..HEAD``.
+        """
         try:
             if not self.is_valid() or self.get_tracking_branch_remote() is None:
                 return None
