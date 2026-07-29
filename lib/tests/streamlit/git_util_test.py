@@ -100,6 +100,8 @@ def _init_repo(path: Path, *, initial_commit: bool = True) -> Path:
     _git(path, "init")
     _git(path, "config", "user.email", "git-util@example.com")
     _git(path, "config", "user.name", "Git Util Tests")
+    _git(path, "config", "commit.gpgsign", "false")
+    _git(path, "config", "tag.gpgsign", "false")
     _git(path, "symbolic-ref", "HEAD", "refs/heads/main")
 
     if initial_commit:
@@ -356,7 +358,13 @@ def test_repr_returns_string() -> None:
 def test_run_git_uses_safe_noninteractive_subprocess_boundary() -> None:
     """Run Git without a shell, input, prompts, pagers, or optional locks."""
     completed = MagicMock(returncode=0, stdout=b"output\n")
-    with patch("streamlit.git_util.subprocess.run", return_value=completed) as mock_run:
+    override_env = {
+        var: f"/override/{var.lower()}" for var in git_util._GIT_REPO_OVERRIDE_ENV_VARS
+    }
+    with (
+        patch.dict(os.environ, override_env, clear=False),
+        patch("streamlit.git_util.subprocess.run", return_value=completed) as mock_run,
+    ):
         assert git_util._run_git(("status", "--short"), cwd="/repo root") == b"output\n"
 
     (command,), kwargs = mock_run.call_args
@@ -371,6 +379,8 @@ def test_run_git_uses_safe_noninteractive_subprocess_boundary() -> None:
     assert kwargs["env"]["GIT_PAGER"] == ""
     assert kwargs["env"]["PAGER"] == ""
     assert kwargs["env"]["GIT_OPTIONAL_LOCKS"] == "0"
+    for var in git_util._GIT_REPO_OVERRIDE_ENV_VARS:
+        assert var not in kwargs["env"]
     assert "text" not in kwargs
 
 

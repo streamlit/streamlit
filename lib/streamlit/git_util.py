@@ -45,6 +45,16 @@ _MIN_GIT_VERSION: Final = (2, 7, 0)
 # A finite timeout ensures unusual local Git configuration cannot hold up an app.
 _GIT_TIMEOUT: Final = 5
 
+# Ambient vars that can redirect Git away from the caller's ``cwd`` path.
+_GIT_REPO_OVERRIDE_ENV_VARS: Final = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_COMMON_DIR",
+)
+
 
 def _extract_github_repo_from_url(url: str) -> str | None:
     """Extract the ``owner/repo`` from a GitHub remote URL.
@@ -77,13 +87,21 @@ def _run_git(args: Sequence[str], *, cwd: str) -> bytes | None:
     interfere with starting or running a Streamlit app.
     """
     try:
+        # Inherit the process environment, but drop repo-selection overrides so
+        # inspection stays anchored to ``cwd`` rather than ambient ``GIT_*`` state.
         env = {
-            **os.environ,
-            "GIT_OPTIONAL_LOCKS": "0",
-            "GIT_PAGER": "",
-            "GIT_TERMINAL_PROMPT": "0",
-            "PAGER": "",
+            key: value
+            for key, value in os.environ.items()
+            if key not in _GIT_REPO_OVERRIDE_ENV_VARS
         }
+        env.update(
+            {
+                "GIT_OPTIONAL_LOCKS": "0",
+                "GIT_PAGER": "",
+                "GIT_TERMINAL_PROMPT": "0",
+                "PAGER": "",
+            }
+        )
         # `git` is intentionally resolved from PATH (S607). Arguments are
         # passed directly without shell interpolation (S603).
         result = subprocess.run(  # noqa: S603
@@ -157,8 +175,12 @@ class GitRepo:
 
         try:
             # Git commands need a directory; callers usually pass the main script path.
+            # Always store an absolute path so later queries stay valid if cwd changes.
+            absolute_path = os.path.abspath(path)
             self._start_dir = (
-                path if os.path.isdir(path) else os.path.dirname(os.path.abspath(path))
+                absolute_path
+                if os.path.isdir(absolute_path)
+                else os.path.dirname(absolute_path)
             )
 
             version_output = _run_git(("--version",), cwd=self._start_dir)
@@ -180,13 +202,11 @@ class GitRepo:
             if self.is_valid():
                 self.module = os.path.relpath(os.path.abspath(path), git_root)
         except Exception:
-            # Unexpected failure while resolving the start directory or module
-            # path. Missing repos usually exit earlier when
-            # ``rev-parse --show-toplevel`` returns ``None``. Other causes
-            # include a missing git binary, a corrupted .git directory, or an
-            # invalid path.
+            # Contain unexpected errors resolving Git metadata; common non-repo
+            # / git-missing cases return early above when ``_run_git`` yields
+            # ``None``.
             _LOGGER.debug(
-                "Did not find a git repo at %s.",
+                "Unexpected error while resolving Git metadata at %s.",
                 path,
                 exc_info=True,
             )
@@ -347,9 +367,13 @@ class GitRepo:
                     break
 
             if repo is None:
+                # Redact URL userinfo so tokens in remotes are not written to logs.
+                redacted_urls = [
+                    re.sub(r"(://[^/]*@)", "://***@", url) for url in remote_urls
+                ]
                 _LOGGER.debug(
                     "Unable to determine repo name from configured remote URLs. URLs: %s",
-                    remote_urls,
+                    redacted_urls,
                 )
                 return None
 
