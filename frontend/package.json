@@ -61,7 +61,7 @@
     "@types/eslint-plugin-jsx-a11y": "~6.10.1",
     "@types/node": ">=24 <25",
     "@vitest/coverage-v8": "^4.1.10",
-    "@vitest/eslint-plugin": "^1.6.23",
+    "@vitest/eslint-plugin": "^1.6.24",
     "concurrently": "^10.0.3",
     "eslint": "^10.7.0",
     "eslint-import-resolver-typescript": "^4.4.5",
