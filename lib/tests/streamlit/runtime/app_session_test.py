@@ -2861,3 +2861,99 @@ def test_populate_config_msg_disable_data_export(disable_data_export: bool) -> N
         app_session._populate_config_msg(msg)
 
     assert msg.disable_data_export is disable_data_export
+
+
+# ---- Tests for handle_backmsg dispatch and small handlers ----
+
+
+@pytest.mark.parametrize(
+    ("field", "handler_name"),
+    [
+        ("load_git_info", "_handle_git_information_request"),
+        ("set_run_on_save", "_handle_set_run_on_save_request"),
+        ("stop_script", "_handle_stop_script_request"),
+    ],
+)
+def test_handle_backmsg_dispatches_bool_requests(field: str, handler_name: str) -> None:
+    """Test that handle_backmsg routes each boolean BackMsg to its handler."""
+    session = _create_test_session()
+    msg = BackMsg()
+    setattr(msg, field, True)
+
+    with patch.object(session, handler_name) as handler:
+        session.handle_backmsg(msg)
+
+    handler.assert_called_once()
+
+
+def test_handle_backmsg_dispatches_file_urls_request() -> None:
+    """Test that handle_backmsg routes a file_urls_request to its handler."""
+    session = _create_test_session()
+    msg = BackMsg()
+    msg.file_urls_request.request_id = "some_request_id"
+
+    with patch.object(session, "_handle_file_urls_request") as handler:
+        session.handle_backmsg(msg)
+
+    handler.assert_called_once()
+
+
+def test_handle_backmsg_unknown_type_logs_warning() -> None:
+    """Test that an unrecognized BackMsg type logs a warning instead of raising."""
+    session = _create_test_session()
+
+    with patch.object(app_session, "_LOGGER") as patched_logger:
+        # An empty BackMsg has no oneof "type" set, so no handler matches.
+        session.handle_backmsg(BackMsg())
+
+    patched_logger.warning.assert_called_once()
+
+
+def test_handle_stop_script_request_forwards_to_scriptrunner() -> None:
+    """Test that _handle_stop_script_request delegates to request_script_stop."""
+    session = _create_test_session()
+
+    with patch.object(session, "request_script_stop") as request_stop:
+        session._handle_stop_script_request()
+
+    request_stop.assert_called_once()
+
+
+def test_request_rerun_after_shutdown_is_discarded() -> None:
+    """Test that a rerun request is ignored once shutdown has been requested."""
+    session = _create_test_session()
+    session._state = AppSessionState.SHUTDOWN_REQUESTED
+
+    with patch.object(session, "_create_scriptrunner") as create_scriptrunner:
+        session.request_rerun(None)
+
+    create_scriptrunner.assert_not_called()
+
+
+def test_clear_user_info_empties_user_info() -> None:
+    """Test that clear_user_info removes all stored user info."""
+    session = _create_test_session()
+    assert session._user_info != {}
+
+    session.clear_user_info()
+
+    assert session._user_info == {}
+
+
+def test_on_secrets_file_changed_triggers_source_change() -> None:
+    """Test that a secrets file change is handled like a source file change."""
+    session = _create_test_session()
+
+    with patch.object(session, "_on_source_file_changed") as on_source_changed:
+        session._on_secrets_file_changed(None)
+
+    on_source_changed.assert_called_once_with()
+
+
+def test_create_file_change_message_marks_script_changed() -> None:
+    """Test that _create_file_change_message flags a script change on disk."""
+    session = _create_test_session()
+
+    msg = session._create_file_change_message()
+
+    assert msg.session_event.script_changed_on_disk is True
