@@ -343,6 +343,11 @@ export class WidgetStateManager {
     form.enterToSubmit = enterToSubmit
   }
 
+  /**
+   * Registers a sync form-submit gate for `widgetId`. On submit, every
+   * registered validator runs (no short-circuit); if any returns `false`,
+   * the form submit is aborted after every validator has run.
+   */
   public addFormSubmitValidator(
     formId: string,
     widgetId: string,
@@ -363,12 +368,15 @@ export class WidgetStateManager {
   /**
    * Commit pending changes for widgets that belong to the given form,
    * and send a rerunBackMsg to the server.
+   *
+   * @returns `true` if the form was submitted, or `false` if a registered
+   * form-submit validator blocked the submit.
    */
   public submitForm(
     formId: string,
     fragmentId: string | undefined,
     actualSubmitButton?: WidgetInfo
-  ): void {
+  ): boolean {
     if (!isValidFormId(formId)) {
       // This should never get thrown - only FormSubmitButton calls this
       // function.
@@ -384,7 +392,7 @@ export class WidgetStateManager {
       validator => validator()
     )
     if (validationResults.some(passed => !passed)) {
-      return
+      return false
     }
 
     const submitButtons = this.formsData.submitButtons.get(formId)
@@ -426,6 +434,8 @@ export class WidgetStateManager {
     if (form.clearOnSubmit) {
       form.formCleared.emit()
     }
+
+    return true
   }
 
   public setChatInputValue(

@@ -308,14 +308,21 @@ class TextWidgetsMixin:
             fails. Providing a custom message is recommended, since generic
             validation messages are less helpful to users.
 
-            For example, pass ``r"[^@\s]+@[^@\s]+\.[^@\s]+"`` to require an
+            For example, pass ``r"^[^@\s]+@[^@\s]+\.[^@\s]+$"`` to require an
             email-like value, or
-            ``(r"\d{3}-\d{3}-\d{4}", "Use the format 555-123-4567.")`` to
-            require a phone number and show a custom error message.
+            ``(r"^\d{3}-\d{3}-\d{4}$", "Use the format 555-123-4567.")`` to
+            require a phone number and show a custom error message. Patterns are
+            not implicitly anchored; use ``^`` / ``$`` when the whole value must
+            match (same semantics as ``st.column_config.TextColumn``).
 
-            Validation runs only when the user tries to submit a value (on
-            blur, when pressing Enter, or on form submission). Invalid values
-            are not submitted, and empty inputs bypass validation.
+            Validation runs when the user tries to submit a value: on blur or
+            Enter outside a form, and on form submission inside a form. Invalid
+            values are not submitted, and empty inputs bypass validation.
+
+            Inside a form with ``bind="query-params"``, keystrokes still stage
+            the value into widget state (and therefore the URL) before
+            submit-time validation runs. Form submission itself still blocks
+            invalid values from reaching the server.
 
             .. note::
                This validation runs in the user's browser and can be bypassed.

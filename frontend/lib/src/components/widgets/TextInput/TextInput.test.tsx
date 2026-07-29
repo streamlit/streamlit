@@ -791,6 +791,27 @@ describe("TextInput widget", () => {
     expect(tooltip).toHaveTextContent("Invalid validate regex: [.")
   })
 
+  it("allows clearing the input when the validate regex is invalid", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "abc", validateRegex: "[" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    // Config error is still shown, but empty commits must not be blocked.
+    expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
+
+    const textInput = screen.getByRole("textbox")
+    await user.clear(textInput)
+    await user.click(document.body)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "",
+      { fromUi: true },
+      undefined
+    )
+  })
+
   it("does not validate on blur inside a form", async () => {
     const user = userEvent.setup()
     const props = getProps({ formId: "form", validateRegex: "^[a-z]+$" })

@@ -95,8 +95,9 @@ st.text_input(
 1. Regex is compiled on the frontend with fixed `us` flags to match existing
    `st.column_config.TextColumn` behavior. The `u` flag enables Unicode mode, and
    the `s` flag lets `.` match newlines. We intentionally don't use `m`, `g`, or
-   `y`: validation patterns should match against the whole value, and stateful
-   regex flags can produce inconsistent results across repeated validations.
+   `y`: stateful regex flags can produce inconsistent results across repeated
+   validations. Matching uses non-anchored `.test()`, so full-string matches
+   require explicit `^` / `$` in the pattern (same as `TextColumn`).
 2. Validation does not run on initial render. It runs when the user attempts to
    commit a value (blur/Enter) or submit a form; error state is cleared when user
    types in the input field.

@@ -679,7 +679,7 @@ describe("Widget State Manager", () => {
       const validator = vi.fn(() => false)
       widgetMgr.addFormSubmitValidator(formId, "widget1", validator)
 
-      widgetMgr.submitForm(formId, undefined)
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(false)
 
       expect(validator).toHaveBeenCalledTimes(1)
       expect(sendBackMsg).not.toHaveBeenCalled()
@@ -698,7 +698,7 @@ describe("Widget State Manager", () => {
       widgetMgr.addFormSubmitValidator(formId, "widget1", failingValidator)
       widgetMgr.addFormSubmitValidator(formId, "widget2", secondValidator)
 
-      widgetMgr.submitForm(formId, undefined)
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(false)
 
       // Both validators must run (no short-circuit) so every invalid field can
       // surface its error state.
@@ -725,7 +725,7 @@ describe("Widget State Manager", () => {
       const validator = vi.fn(() => true)
       widgetMgr.addFormSubmitValidator(formId, "widget1", validator)
 
-      widgetMgr.submitForm(formId, undefined)
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(true)
 
       expect(validator).toHaveBeenCalledTimes(1)
       expect(sendBackMsg).toHaveBeenCalledWith(

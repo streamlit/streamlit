@@ -209,6 +209,14 @@ function TextInput({
   // Runs validation for the current value, updates the displayed user error,
   // and returns whether the value may be committed.
   const validateBeforeCommit = useCallback((): boolean => {
+    // Empty values always bypass validation — including when the regex config
+    // itself is broken — so users can still clear the field or submit an empty
+    // form input. The config error remains visible via `displayedError`.
+    if (uiValue === null || uiValue === "") {
+      setHasUserError(false)
+      return true
+    }
+
     if (configError) {
       return false
     }
@@ -311,8 +319,13 @@ function TextInput({
           // No explicit commit is needed here: `useOnInputChange` already
           // pushes the latest value to the form's widget state on every
           // keystroke, and the registered form submit validator commits the
-          // final value when validation is configured.
-          widgetMgr.submitForm(formId, fragmentId)
+          // final value when validation is configured. Clear dirty only when
+          // submit succeeds so `useUpdateUiValue` can sync post-submit
+          // script-driven value changes (e.g. session_state updates in a
+          // callback). On validation failure, dirty stays true.
+          if (widgetMgr.submitForm(formId, fragmentId)) {
+            setDirty(false)
+          }
           return
         }
 
