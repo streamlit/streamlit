@@ -221,12 +221,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   //   Without this override, shift squishes a sidebar popover against the
   //   sidebar's edge.
   const shiftPadding = 8
-  // Match StyledPopoverBody's stretch-mode `min-width: max($calculatedWidth,
-  // 10rem)` from styled-components.ts. Kept in sync manually because the
-  // middleware needs to know the intrinsic min-width without reading it back
-  // from the DOM (which would force a style recomputation on every position
-  // update).
-  const stretchMinWidthPx = convertRemToPx("10rem")
   const overlayOptions = useMemo(() => {
     const base = {
       open,
@@ -237,12 +231,18 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       return base
     }
     const boundary = document.documentElement
+    // Match StyledPopoverBody's stretch-mode `min-width: max($calculatedWidth,
+    // 10rem)` from styled-components.ts. Kept in sync manually because the
+    // middleware needs to know the intrinsic min-width without reading it
+    // back from the DOM (which would force a style recomputation on every
+    // position update).
+    const stretchMinWidthPx = convertRemToPx("10rem")
     const minPopupWidthPx = convertRemToPx(theme.sizes.minPopupWidth)
     // StyledPopoverBody's design cap on width: `calc(contentMaxWidth - 2 *
-    // spacing.lg)` (~704px). Preserved as a floor for the inline `max-width`
-    // so wide viewports still respect the design cap rather than being
-    // clamped to the full available viewport width. `contentMaxWidth` is a
-    // px token (e.g. "736px") while `spacing.lg` is a rem token.
+    // spacing.lg)` (~704px). Preserved as a ceiling for the inline `max-width`
+    // so wide viewports still respect the design cap rather than growing to
+    // the full available viewport width. `contentMaxWidth` is a px token
+    // (e.g. "736px") while `spacing.lg` is a rem token.
     const baselineMaxWidthPx =
       parseFloat(theme.sizes.contentMaxWidth) -
       2 * convertRemToPx(theme.spacing.lg)
@@ -266,15 +266,18 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         // popover to grow past them.
         const clampedHeight = Math.max(Math.floor(availableHeight), 0)
         const clampedWidth = Math.max(Math.floor(availableWidth), 0)
+        const appliedMaxWidth = Math.min(clampedWidth, baselineMaxWidthPx)
         elements.floating.style.maxHeight = `min(${clampedHeight}px, 70vh)`
-        elements.floating.style.maxWidth = `${Math.min(clampedWidth, baselineMaxWidthPx)}px`
-        // When the intrinsic `min-width` from StyledPopoverBody exceeds our
-        // `max-width` clamp, CSS resolves the conflict in favor of `min-width`
-        // and the popover overflows again. Cap `min-width` at the clamp only
-        // in that case — leaving it unset otherwise preserves the natural
-        // content-driven sizing for popovers that comfortably fit.
+        elements.floating.style.maxWidth = `${appliedMaxWidth}px`
+        // When the intrinsic `min-width` from StyledPopoverBody exceeds the
+        // applied `max-width` (which now folds in both the viewport clamp
+        // and the ~704px design cap), CSS resolves the conflict in favor of
+        // `min-width` and the popover overflows the cap. Compare against
+        // `appliedMaxWidth`, not raw `clampedWidth`, so a stretch popover
+        // whose `calculatedWidth` sits between the design cap and the
+        // viewport clamp still gets its min-width capped.
         elements.floating.style.minWidth =
-          intrinsicMinWidth > clampedWidth ? `${clampedWidth}px` : ""
+          intrinsicMinWidth > appliedMaxWidth ? `${appliedMaxWidth}px` : ""
       },
     })
     if (!isInSidebar) {
@@ -299,7 +302,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     isInSidebar,
     stretchWidth,
     calculatedWidth,
-    stretchMinWidthPx,
   ])
 
   // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is

@@ -190,7 +190,7 @@ def test_popover_stays_within_narrow_viewport(app: Page):
     when the intrinsic CSS min-width would exceed the clamp) to the available
     space at the chosen placement so the popover always fits.
 
-    Two scenarios are exercised in one app load to keep browser runs cheap
+    Three scenarios are exercised in one app load to keep browser runs cheap
     (per `e2e_playwright/AGENTS.md`):
 
     - **640px viewport** — inside the #9340 bug window: wider than the
@@ -202,6 +202,10 @@ def test_popover_stays_within_narrow_viewport(app: Page):
       `min-width` cap in the `size` middleware, CSS resolves the `min-width`
       vs `max-width` conflict in favor of `min-width` and the popover
       overflows again.
+    - **Stretch popover at 640px** — a `width="stretch"` popover uses
+      `min-width: max($calculatedWidth, 10rem)`, exercising the middleware's
+      stretch-aware intrinsic-min-width path (compares against the applied
+      max-width, which folds in the ~704px design cap).
     """
     # 1px epsilon guards against subpixel layout differences across browsers.
     epsilon = 1
@@ -265,9 +269,12 @@ def test_popover_stays_within_narrow_viewport(app: Page):
     # viewport. Its `min-width` is `max($calculatedWidth, 10rem)`, so the
     # size middleware's stretch-aware intrinsic-min-width computation is what
     # keeps this popover from overflowing when the trigger's calculated width
-    # would otherwise push past the viewport clamp.
+    # would otherwise push past the viewport clamp. `expect_markdown` waits
+    # for the popover body to render its content so the bounding box has
+    # stabilized past any ResizeObserver-driven `$calculatedWidth` update.
     app.set_viewport_size({"width": 640, "height": 800})
     popover_body = open_popover(app, "popover 11 (width=stretch)")
+    expect_markdown(popover_body, "Stretch width")
     viewport = app.viewport_size
     assert viewport is not None, "viewport_size must be set for this test"
     assert_within_viewport(popover_body, viewport, check_vertical=False)
