@@ -294,6 +294,9 @@ frontend-fast:
 frontend-dev:
 	cd frontend/ ; yarn start
 
+# The backend startup loop detects the last numeric port from either the INFO
+# "server started on" or DEBUG "Starting uvicorn runner on" log line.
+# Keep comments outside the backslash-continued recipe so Bash parses one command.
 .PHONY: debug
 # Start Streamlit and Vite dev server for debugging. Use via `make debug my-script.py`.
 debug:
@@ -386,8 +389,6 @@ debug:
 			echo "Error: Streamlit backend exited before startup completed. Check $$DEBUG_DIR/backend.log"; \
 			exit 1; \
 		fi; \
-		# Detect the backend port from the INFO "server started on" or DEBUG "Starting \
-		# uvicorn runner on" log lines, keeping the last numeric match (dev mode retries ports). \
 		DETECTED_BACKEND_PORT=$$(awk '/[Ss]erver started on|Starting uvicorn runner on/ { n=split($$NF, a, ":"); port=a[n] } END { if (port ~ /^[0-9]+$$/) print port }' "$$DEBUG_DIR/backend.log"); \
 		if [[ -n "$$DETECTED_BACKEND_PORT" ]]; then \
 			BACKEND_PORT=$$DETECTED_BACKEND_PORT; \
