@@ -45,7 +45,7 @@ _MIN_GIT_VERSION: Final = (2, 7, 0)
 # A finite timeout ensures unusual local Git configuration cannot hold up an app.
 _GIT_TIMEOUT: Final = 5
 
-# Ambient vars that can redirect Git away from the caller's ``cwd`` path.
+# Ambient vars that can redirect or truncate Git discovery away from ``cwd``.
 _GIT_REPO_OVERRIDE_ENV_VARS: Final = (
     "GIT_DIR",
     "GIT_WORK_TREE",
@@ -53,6 +53,7 @@ _GIT_REPO_OVERRIDE_ENV_VARS: Final = (
     "GIT_OBJECT_DIRECTORY",
     "GIT_ALTERNATE_OBJECT_DIRECTORIES",
     "GIT_COMMON_DIR",
+    "GIT_CEILING_DIRECTORIES",
 )
 
 
@@ -83,8 +84,9 @@ def _extract_github_repo_from_url(url: str) -> str | None:
 def _run_git(args: Sequence[str], *, cwd: str) -> bytes | None:
     """Run a local Git command, returning stdout bytes on success.
 
-    All failures are contained here so Git metadata collection can never
-    interfere with starting or running a Streamlit app.
+    Anchors inspection to ``cwd`` by dropping ambient repo-selection ``GIT_*``
+    overrides, and runs non-interactively (no prompts/pagers, finite timeout).
+    All failures are contained so metadata collection cannot block the app.
     """
     try:
         # Inherit the process environment, but drop repo-selection overrides so
@@ -168,6 +170,8 @@ def _decode_nul_paths(output: bytes) -> list[str]:
 
 
 class GitRepo:
+    """Read-only Git metadata for a path, safe when git is missing or invalid."""
+
     def __init__(self, path: str) -> None:
         self.git_version: tuple[int, int, int] | None = None
         self.module: str = ""

@@ -250,6 +250,23 @@ def test_get_repo_info_rejects_non_github_remote() -> None:
         assert repo.get_repo_info() is None
 
 
+def test_get_repo_info_redacts_userinfo_in_debug_logs() -> None:
+    """Keep remote tokens out of debug logs when GitHub detection fails."""
+    remote_url = b"https://x-access-token:SECRET@example.com/o/r.git\n"
+    with (
+        _mock_git_repo(remote_urls=(remote_url,)) as repo,
+        patch("streamlit.git_util._LOGGER") as mock_logger,
+    ):
+        assert repo.get_repo_info() is None
+
+    mock_logger.debug.assert_called()
+    logged = " ".join(
+        str(arg) for call in mock_logger.debug.call_args_list for arg in call.args
+    )
+    assert "://***@" in logged
+    assert "SECRET" not in logged
+
+
 def test_get_repo_info_rejects_missing_remote_urls() -> None:
     """Return no remote when upstream is set but remote URLs cannot be resolved."""
     with _mock_git_repo(remote_urls=()) as repo:
