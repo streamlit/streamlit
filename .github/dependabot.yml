@@ -161,6 +161,25 @@ updates:
       - "autofix"
       - "never-stale"
 
+    # Skip versions we intentionally cap out via upper bounds (`<`) in pyproject.toml,
+    # so Dependabot doesn't open PRs that only fight that cap. The manifest constraint
+    # stays the real gate; it also blocks `uv lock`. A `!=` exclusion of a single old
+    # release (e.g. pytest-rerunfailures, pytest-github-actions-annotate-failures)
+    # needs no entry here: Dependabot targets the latest allowed version, so it never
+    # proposes the excluded one.
+    ignore:
+      - dependency-name: "numpy"
+        # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
+        # Streamlit still type-checks as Python 3.10.
+        versions: [">=2.5.0"]
+      - dependency-name: "pytest"
+        # pytest >= 9.1.0 is causing issues and is not yet supported.
+        versions: [">=9.1.0"]
+      - dependency-name: "pandas-stubs"
+        # pandas-stubs 3.x diverges from 2.x (type: ignore mismatches across the
+        # type-check matrix) and requires Python >= 3.11, but we still support 3.10.
+        versions: [">=3.0.0"]
+
     # Batch non-breaking direct updates while keeping major updates separate.
     # More specific category groups are matched first; the catch-all
     # python-minor-patch group absorbs any remaining minor/patch updates.
