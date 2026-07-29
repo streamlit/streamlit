@@ -258,6 +258,20 @@ def test_popover_stays_within_narrow_viewport(app: Page):
     assert viewport is not None, "viewport_size must be set for this test"
     assert_within_viewport(popover_body, viewport, check_vertical=False)
 
+    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    expect(popover_body).not_to_be_visible()
+
+    # Case 3: stretch popover (popover 11, `width="stretch"`) in a narrow
+    # viewport. Its `min-width` is `max($calculatedWidth, 10rem)`, so the
+    # size middleware's stretch-aware intrinsic-min-width computation is what
+    # keeps this popover from overflowing when the trigger's calculated width
+    # would otherwise push past the viewport clamp.
+    app.set_viewport_size({"width": 640, "height": 800})
+    popover_body = open_popover(app, "popover 11 (width=stretch)")
+    viewport = app.viewport_size
+    assert viewport is not None, "viewport_size must be set for this test"
+    assert_within_viewport(popover_body, viewport, check_vertical=False)
+
 
 def test_popover_container_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction

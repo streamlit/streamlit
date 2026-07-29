@@ -195,31 +195,31 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // keyboard activation, which can dispatch a `click` with no prior pointerdown.
   const interactionInsideRef = useRef(false)
 
-  // Adjust Floating UI middleware so the popover stays within the viewport
-  // even when the app is embedded inside a narrow iframe (e.g. Medium
-  // oEmbed, #9340) or rendered inside the sidebar's `overflow: auto` column.
-  // Two things are needed:
+  // Keep the popover inside the viewport for both narrow embeds (#9340) and
+  // sidebar `overflow: auto` clipping (#9387). Two middleware adjustments,
+  // split by scope:
   //
-  // 1. Override the shift/flip boundary to `document.documentElement` so the
-  //    popover (portalled to document.body with `position: fixed`) is bounded
-  //    by the viewport rather than the sidebar or any `.stApp` clipping
-  //    ancestor. `document.documentElement` (the <html> element) is used
-  //    rather than `document.body` because Streamlit's `.stApp` uses
-  //    `position: absolute; inset: 0`, which leaves document.body sized 0x0
-  //    — a body boundary would always report overflow. Without this override,
-  //    shift squishes a sidebar popover against the sidebar's edge.
+  // - **Always** (applies to every popover): a `size` middleware that clamps
+  //   `max-height` AND `max-width` to Floating UI's measured available space
+  //   at the chosen placement, and caps `min-width` when the intrinsic value
+  //   would exceed the clamp. Without the height clamp, a popover taller
+  //   than the space on either side of the trigger extends off-screen (bug
+  //   in #9387). Without the width clamp, the popover's baseline
+  //   `maxWidth: contentMaxWidth` (~704px) can exceed a narrow oEmbed
+  //   iframe's width, so `shift` shoves it against an edge and the far side
+  //   is clipped (bug in #9340). `size` sits after `flip` so it constrains
+  //   dimensions relative to whichever side `flip` landed on; the internal
+  //   `overflow: auto` on StyledPopoverBody handles scrolling when clamped.
   //
-  // 2. Add a `size` middleware that clamps the popover's max height AND max
-  //    width to the available space at the chosen placement. Without the
-  //    height clamp, when the popover is taller than the space both above
-  //    and below the trigger, `flip` picks the less-overflowing side and the
-  //    popover extends off-screen (bug in #9387). Without the width clamp,
-  //    the popover's baseline `maxWidth: contentMaxWidth` (~704px) can
-  //    exceed a narrow oEmbed iframe's width, so `shift` shoves it against
-  //    an edge and the far side is clipped by the iframe (bug in #9340).
-  //    `size` sits after `flip` so it constrains dimensions relative to
-  //    whichever side `flip` landed on; the internal `overflow: auto` on
-  //    StyledPopoverBody handles scrolling when clamped.
+  // - **Sidebar only**: override the shift/flip `boundary` to
+  //   `document.documentElement` so the popover (portalled to document.body
+  //   with `position: fixed`) is bounded by the viewport rather than the
+  //   sidebar or any `.stApp` clipping ancestor. `document.documentElement`
+  //   (the <html> element) is used rather than `document.body` because
+  //   Streamlit's `.stApp` uses `position: absolute; inset: 0`, which leaves
+  //   document.body sized 0x0 — a body boundary would always report overflow.
+  //   Without this override, shift squishes a sidebar popover against the
+  //   sidebar's edge.
   const shiftPadding = 8
   // Match StyledPopoverBody's stretch-mode `min-width: max($calculatedWidth,
   // 10rem)` from styled-components.ts. Kept in sync manually because the
@@ -238,6 +238,14 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
     const boundary = document.documentElement
     const minPopupWidthPx = convertRemToPx(theme.sizes.minPopupWidth)
+    // StyledPopoverBody's design cap on width: `calc(contentMaxWidth - 2 *
+    // spacing.lg)` (~704px). Preserved as a floor for the inline `max-width`
+    // so wide viewports still respect the design cap rather than being
+    // clamped to the full available viewport width. `contentMaxWidth` is a
+    // px token (e.g. "736px") while `spacing.lg` is a rem token.
+    const baselineMaxWidthPx =
+      parseFloat(theme.sizes.contentMaxWidth) -
+      2 * convertRemToPx(theme.spacing.lg)
     // Intrinsic min-width from StyledPopoverBody: non-stretch uses
     // `theme.sizes.minPopupWidth`; stretch uses `max($calculatedWidth,
     // 10rem)`.
@@ -251,11 +259,15 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         // Clamp strictly to Floating UI's measured space so the popover never
         // extends past the viewport, even in very small viewports where both
         // sides of the trigger have limited room. The internal `overflow:
-        // auto` on StyledPopoverBody handles the scroll.
+        // auto` on StyledPopoverBody handles the scroll. `Math.min` against
+        // the styled-component's design caps (`baselineMaxWidthPx` and the
+        // CSS `70vh` cap on max-height) preserves those caps on large
+        // viewports so the inline clamp doesn't accidentally allow the
+        // popover to grow past them.
         const clampedHeight = Math.max(Math.floor(availableHeight), 0)
         const clampedWidth = Math.max(Math.floor(availableWidth), 0)
-        elements.floating.style.maxHeight = `${clampedHeight}px`
-        elements.floating.style.maxWidth = `${clampedWidth}px`
+        elements.floating.style.maxHeight = `min(${clampedHeight}px, 70vh)`
+        elements.floating.style.maxWidth = `${Math.min(clampedWidth, baselineMaxWidthPx)}px`
         // When the intrinsic `min-width` from StyledPopoverBody exceeds our
         // `max-width` clamp, CSS resolves the conflict in favor of `min-width`
         // and the popover overflows again. Cap `min-width` at the clamp only
@@ -281,7 +293,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   }, [
     open,
     theme.spacing.twoXS,
+    theme.spacing.lg,
     theme.sizes.minPopupWidth,
+    theme.sizes.contentMaxWidth,
     isInSidebar,
     stretchWidth,
     calculatedWidth,
