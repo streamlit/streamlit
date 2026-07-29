@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from starlette.requests import Request
     from starlette.responses import Response
     from starlette.routing import BaseRoute
+    from starlette.types import Message
 
     from streamlit.components.types.base_component_registry import BaseComponentRegistry
     from streamlit.components.v2.component_manager import BidiComponentManager
@@ -103,6 +104,15 @@ _SAME_SITE_HEADER_VALUES: Final = {
 
 # App static files
 _ROUTE_APP_STATIC: Final = "app/static/{path:path}"
+
+# Framing margin for the streaming upload-size cap in `_upload_put`: the raw
+# request body is rejected once it exceeds `server.maxUploadSize` plus this
+# margin, and the exact per-file limit is still re-checked after parsing. The
+# margin exists because a multipart body is slightly larger than the file it
+# carries (boundary lines, part headers, filename), so without it a legitimate
+# file of exactly `maxUploadSize` could be rejected while streaming. 1 MB
+# comfortably covers that framing overhead.
+_MAX_UPLOAD_MULTIPART_OVERHEAD_BYTES: Final = 1024 * 1024  # 1 MB
 
 
 def _stats_to_text(stats_by_family: Mapping[str, Sequence[Stat]]) -> str:
@@ -646,6 +656,7 @@ def create_upload_routes(
     """
     from starlette.datastructures import UploadFile
     from starlette.exceptions import HTTPException
+    from starlette.requests import Request as StarletteRequest
     from starlette.responses import Response
     from starlette.routing import Route
 
@@ -706,7 +717,8 @@ def create_upload_routes(
             config.get_option("server.maxUploadSize") * 1024 * 1024
         )
 
-        # 1. Fast fail via header (if present) - check before reading the body
+        # 1. Fast fail via the Content-Length header (if present), before reading
+        # any of the body. This rejects well-behaved oversized uploads early.
         content_length = request.headers.get("content-length")
         if content_length:
             try:
@@ -717,7 +729,43 @@ def create_upload_routes(
                     status_code=400, detail="Invalid Content-Length header"
                 )
 
-        form = await request.form()
+        # 2. Enforce the limit while streaming the body. Content-Length can be
+        # absent or falsified (e.g. Transfer-Encoding: chunked), so we cap the
+        # raw request body as it arrives and abort as soon as it exceeds the
+        # limit. Without this, an oversized upload would be fully buffered in
+        # memory (upload.read()) or spooled to disk (request.form()) before the
+        # size check below could reject it, allowing a single request to exhaust
+        # the server's memory/disk.
+        max_body_bytes = max_size_bytes + _MAX_UPLOAD_MULTIPART_OVERHEAD_BYTES
+        bytes_received = 0
+
+        async def limited_receive() -> Message:
+            nonlocal bytes_received
+            message = await request.receive()
+            if message["type"] == "http.request":
+                bytes_received += len(message.get("body", b""))
+                if bytes_received > max_body_bytes:
+                    # Log the streaming-cap rejection so operators can tell a
+                    # misconfigured server.maxUploadSize (legitimate uploads being
+                    # rejected) apart from an actual abuse attempt.
+                    _LOGGER.warning(
+                        "Upload rejected: request body exceeded the size limit "
+                        "while streaming (%d bytes received, cap %d bytes). If "
+                        "legitimate uploads are affected, increase "
+                        "server.maxUploadSize.",
+                        bytes_received,
+                        max_body_bytes,
+                    )
+                    # Raising here aborts the multipart parse mid-stream. Starlette
+                    # only closes its spooled temp files on MultiPartException /
+                    # OSError, so this HTTPException leaves cleanup to GC once the
+                    # frames unwind - the same as an upstream ClientDisconnect.
+                    # Resource use stays bounded to one in-flight request.
+                    raise HTTPException(status_code=413, detail="File too large")
+            return message
+
+        limited_request = StarletteRequest(request.scope, limited_receive)
+        form = await limited_request.form()
         uploads = [value for value in form.values() if isinstance(value, UploadFile)]
 
         if len(uploads) != 1:
@@ -727,9 +775,8 @@ def create_upload_routes(
 
         upload = uploads[0]
 
-        # 2. Check actual file size (Content-Length may be absent or inaccurate)
-        # TODO(lukasmasuch): Improve by using a streaming approach that rejects uploads as soon as
-        # they exceed max_size_bytes, rather than waiting for the full upload to complete.
+        # 3. Enforce the exact per-file size limit. The streaming cap above
+        # allows a small framing margin, so re-check the parsed file size here.
         try:
             data = await upload.read()
         finally:

@@ -158,6 +158,31 @@ function getAltText(source: string): string {
  */
 const THEME_CONFIG_KEY = Symbol.for("streamlit.mermaid.themeConfigKey")
 
+/**
+ * Config keys locked against `%%{init}%%` directive overrides.
+ *
+ * Includes Mermaid's documented defaults plus Streamlit hardening keys Mermaid
+ * does not lock. Without the extras, diagram source can re-enable `htmlLabels`
+ * or inject page-wide CSS via `themeCSS`. Mermaid walks nested objects, so
+ * keys like `flowchart.htmlLabels` are covered. Prefer this static list over
+ * deprecated/internal `mermaid.mermaidAPI`.
+ */
+const SECURE_CONFIG_KEYS = [
+  // Mermaid defaults: https://mermaid.js.org/config/schema-docs/config-properties-secure.html
+  "secure",
+  "securityLevel",
+  "startOnLoad",
+  "maxTextSize",
+  "suppressErrorRendering",
+  "maxEdges",
+  // Streamlit hardening beyond Mermaid's defaults
+  "htmlLabels",
+  "themeCSS",
+  "fontFamily",
+  "altFontFamily",
+  "dompurifyConfig",
+]
+
 interface MermaidChartProps {
   /**
    * The mermaid diagram source code
@@ -468,6 +493,7 @@ const MermaidChart = memo(function MermaidChart({
           mermaid.initialize({
             startOnLoad: false,
             securityLevel: "strict",
+            secure: SECURE_CONFIG_KEYS,
             suppressErrorRendering: true,
             ...themeConfig,
           })

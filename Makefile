@@ -16,13 +16,15 @@
 # /bin/sh is POSIX compliant, ie it's not bash.  So let's be explicit:
 SHELL=/bin/bash
 
-INSTALL_DEV_REQS ?= true
-INSTALL_TEST_REQS ?= true
+PYTHON_DEPENDENCY_GROUP ?= dev
+PYTHON_SYNC_LOCK_FLAG ?= --locked
 INSTALL_PLAYWRIGHT ?= true
 INSTALL_PLAYWRIGHT_DEPS ?= auto
 # Flags:
-#  - INSTALL_DEV_REQS: install dev requirements (default: true)
-#  - INSTALL_TEST_REQS: install test requirements (default: true)
+#  - PYTHON_DEPENDENCY_GROUP: final Python environment to install. Supported
+#    values are runtime, test, dev, and integration (default: dev).
+#  - PYTHON_SYNC_LOCK_FLAG: lock enforcement passed to uv sync (default: --locked).
+#    Automation that repairs the lock may explicitly set this to an empty value.
 #  - INSTALL_PLAYWRIGHT: install Playwright browsers during python-init (default: true)
 #    CI uses a dedicated action to install browsers and typically sets this to false.
 #    Local dev can opt out when not needed: `INSTALL_PLAYWRIGHT=false make init`
@@ -145,35 +147,36 @@ protobuf-format:
 .PHONY: python-init
 # Install Python dependencies and Streamlit in editable mode.
 python-init:
+	@case "${PYTHON_DEPENDENCY_GROUP}" in \
+		runtime|test|dev|integration) ;; \
+		*) \
+			echo "Unsupported PYTHON_DEPENDENCY_GROUP='${PYTHON_DEPENDENCY_GROUP}'. Expected one of: runtime, test, dev, integration."; \
+			exit 1; \
+		;; \
+	esac
 	@# Check if uv is installed
 	@if ! command -v uv > /dev/null 2>&1; then \
 		echo "Installing uv..."; \
 		pip install uv; \
 	fi
-	@# Determine which dependency group to sync
-	@if [ "${INSTALL_DEV_REQS}" = "true" ] && [ "${INSTALL_TEST_REQS}" = "true" ]; then \
-		echo "Installing dev dependencies (includes test)..."; \
-		uv sync --group dev; \
-	elif [ "${INSTALL_DEV_REQS}" = "true" ]; then \
-		echo "Installing dev dependencies..."; \
-		uv sync --group dev; \
-	elif [ "${INSTALL_TEST_REQS}" = "true" ]; then \
-		echo "Installing test dependencies..."; \
-		uv sync --group test; \
+	@# Sync exactly one final dependency selection. uv otherwise includes dev by default.
+	@if [ "${PYTHON_DEPENDENCY_GROUP}" = "runtime" ]; then \
+		echo "Installing runtime dependencies..."; \
+		uv sync ${PYTHON_SYNC_LOCK_FLAG} --no-default-groups; \
 	else \
-		echo "Installing base dependencies..."; \
-		uv sync; \
+		echo "Installing ${PYTHON_DEPENDENCY_GROUP} dependencies..."; \
+		uv sync ${PYTHON_SYNC_LOCK_FLAG} --no-default-groups --group "${PYTHON_DEPENDENCY_GROUP}"; \
 	fi
 	@# Install playwright if requested
-	@if [ "${INSTALL_TEST_REQS}" = "true" ] && [ "${INSTALL_PLAYWRIGHT}" = "true" ]; then \
+	@if [ "${PYTHON_DEPENDENCY_GROUP}" != "runtime" ] && [ "${INSTALL_PLAYWRIGHT}" = "true" ]; then \
 		if [ "${INSTALL_PLAYWRIGHT_DEPS}" = "false" ]; then \
-			uv run python -m playwright install; \
+			uv run --no-sync python -m playwright install; \
 		elif [ "${INSTALL_PLAYWRIGHT_DEPS}" = "true" ] || [ -f /etc/debian_version ] || [ "$$(uname)" = "Darwin" ]; then \
-			uv run python -m playwright install --with-deps; \
+			uv run --no-sync python -m playwright install --with-deps; \
 		else \
 			echo "Skipping 'playwright install --with-deps': not officially supported on this OS."; \
 			echo "Browsers will be downloaded. Install browser system libraries through your distro's package manager (see CONTRIBUTING.md)."; \
-			uv run python -m playwright install; \
+			uv run --no-sync python -m playwright install; \
 		fi; \
 	fi
 
@@ -212,10 +215,11 @@ python-performance-tests:
 		lib/tests/
 
 .PHONY: python-integration-tests
-# Run Python integration tests. Requires `uv sync --group integration` to be run first.
+# Run Python integration tests. Requires `PYTHON_DEPENDENCY_GROUP=integration make python-init` first.
 python-integration-tests:
 	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
-	MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v -l \
+	@# --no-sync keeps the integration group installed by `PYTHON_DEPENDENCY_GROUP=integration make python-init`; a bare `uv run` re-syncs to the default `dev` group and drops integration-only deps.
+	MPLBACKEND=Agg uv run --no-sync pytest -c lib/pyproject.toml -v -l \
 		--require-integration \
 		lib/tests/
 
@@ -382,8 +386,11 @@ debug:
 			echo "Error: Streamlit backend exited before startup completed. Check $$DEBUG_DIR/backend.log"; \
 			exit 1; \
 		fi; \
-		if [[ -z "$$BACKEND_PORT" ]]; then \
-			BACKEND_PORT=$$(awk '/[Ss]erver started on/ { n=split($$NF, a, ":"); print a[n]; exit }' "$$DEBUG_DIR/backend.log"); \
+		# Detect the backend port from the INFO "server started on" or DEBUG "Starting \
+		# uvicorn runner on" log lines, keeping the last numeric match (dev mode retries ports). \
+		DETECTED_BACKEND_PORT=$$(awk '/[Ss]erver started on|Starting uvicorn runner on/ { n=split($$NF, a, ":"); port=a[n] } END { if (port ~ /^[0-9]+$$/) print port }' "$$DEBUG_DIR/backend.log"); \
+		if [[ -n "$$DETECTED_BACKEND_PORT" ]]; then \
+			BACKEND_PORT=$$DETECTED_BACKEND_PORT; \
 		fi; \
 		if [[ -n "$$BACKEND_PORT" ]] && curl -fsS "http://localhost:$$BACKEND_PORT/_stcore/health" > /dev/null 2>&1; then \
 			BACKEND_READY=true; \
@@ -545,10 +552,8 @@ update-headers:
 .PHONY: update-min-deps
 # Update minimum dependency constraints file.
 update-min-deps:
-	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init >/dev/null
-	# Install streamlit in editable mode (needed by get_min_versions.py)
-	uv pip install --editable ./lib --no-deps
-	uv run python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
+	INSTALL_PLAYWRIGHT=false PYTHON_DEPENDENCY_GROUP=dev $(MAKE) python-init >/dev/null
+	uv run --no-sync python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
 
 .PHONY: debug-e2e-test
 # Run a playwright e2e test in debug mode. Use it via `make debug-e2e-test st_command_test.py`.

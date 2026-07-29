@@ -311,7 +311,13 @@ export function useVegaEmbed(
     }
 
     try {
-      return await vegaViewRef.current.toImageURL("png")
+      // Vega's default PNG export is at 1x, which produces a blurry image on
+      // HiDPI/retina displays where the on-screen canvas is rendered at
+      // `window.devicePixelRatio`. We upscale the PNG to at least 2x so the
+      // exported file matches (or exceeds) the perceived on-screen fidelity.
+      // See https://github.com/streamlit/streamlit/issues/8177.
+      const scaleFactor = Math.max(2, window.devicePixelRatio || 1)
+      return await vegaViewRef.current.toImageURL("png", scaleFactor)
     } catch (error) {
       LOG.warn("Failed to export Vega view as PNG:", error)
       return null

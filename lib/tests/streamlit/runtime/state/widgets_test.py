@@ -459,6 +459,12 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         sig = inspect.signature(widget_func)
         expected_sig = self.signature_to_expected_kwargs(sig)
 
+        # time_input intentionally excludes format from ID computation because
+        # it's a display-only setting (React Aria handles format changes without
+        # needing a widget reset, unlike BaseWeb-based date_input).
+        if widget_func == st.time_input:
+            del expected_sig["format"]
+
         patched_compute_and_register_element_id.assert_called_with(ANY, **expected_sig)
 
         # Double check that we get a DuplicateWidgetID error since the `disabled`

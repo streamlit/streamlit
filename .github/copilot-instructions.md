@@ -37,6 +37,9 @@
 - Prefer `make` targets for all dev tasks (tests, lint, format, builds).
 - Always use `uv run` to run any Python command (e.g. `uv run streamlit`, `uv run pytest`, `uv run ruff`, `uv run mypy`, etc.).
 - Always use `uv run` for git commands that trigger hooks (e.g. `uv run git commit`, `uv run git push`). Pre-commit hooks require the uv environment to run linters and formatters.
+- The committed root `uv.lock` is the source of truth for normal development and CI. Do not hand-edit it.
+- For Python dependency changes, edit the relevant `pyproject.toml`, run `uv lock`, and commit both files. Also run `uv lock` after changing the package name or version. Use `uv lock --upgrade-package <package>` for a targeted upgrade, `uv lock --upgrade` for a full compatible upgrade, and `uv lock --check` to verify consistency.
+- If `uv.lock` conflicts during a merge, restore it with `git checkout origin/develop -- uv.lock`, then run `uv lock`; never hand-merge it.
 - For Python unit tests: `uv run pytest` commands are allowed and encouraged for running specific tests during development.
 - For E2E tests: `uv run pytest` commands targeting `e2e_playwright/` files are blocked by policy.
   Use `make run-e2e-test <filename>` instead.
@@ -52,6 +55,7 @@ Selection of `make` commands for development (run in the repo root):
 
 **Backend Development (Python):**
 
+- `python-init`: Install the locked Python environment selected by `PYTHON_DEPENDENCY_GROUP` (`dev` by default).
 - `python-lint`: Lint and check formatting of Python files (ruff). [~1s]
 - `python-tests`: Run all Python unit tests (pytest). [~3min]
 - `python-types`: Run the Python type checker (mypy & ty). [~30s]

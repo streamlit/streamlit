@@ -39,6 +39,7 @@ The app features a bunch of examples of what you can do with Streamlit. Jump to 
 Create a new file named `streamlit_app.py` in your project directory with the following code:
 ```python
 import streamlit as st
+
 x = st.slider("Select a value")
 st.write(x, "squared is", x * x)
 ```
@@ -133,7 +134,16 @@ Deploy, manage and share your apps for free using our [Community Cloud](https://
 
 🎉 Thanks for your interest in helping improve Streamlit! 🎉
 
-Before contributing, please read our guidelines here: https://github.com/streamlit/streamlit/blob/develop/CONTRIBUTING.md
+We have paused accepting pull requests from outside the Streamlit maintainer team. You can still
+make a valuable contribution by [reporting bugs](https://github.com/streamlit/streamlit/issues/new?template=bug_report.yml),
+[requesting features](https://github.com/streamlit/streamlit/issues/new?template=feature_request.yml),
+[improving or upvoting existing issues](https://github.com/streamlit/streamlit/issues?q=is%3Aissue%20state%3Aopen%20sort%3Areactions-%2B1-desc),
+[commenting on open specs](https://github.com/streamlit/streamlit/issues?q=state%3Aopen%20label%3Achange%3Aspec), creating
+[custom components](https://docs.streamlit.io/develop/concepts/custom-components/components-v2),
+and contributing to [streamlit-extras](https://github.com/arnaudmiribel/streamlit-extras).
+
+Read our [contribution guide](https://github.com/streamlit/streamlit/blob/develop/CONTRIBUTING.md)
+for details.
 
 ## License
 

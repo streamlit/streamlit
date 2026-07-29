@@ -18,16 +18,20 @@ import {
   memo,
   ReactElement,
   useCallback,
+  useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
 
-import { FloatingPortal } from "@floating-ui/react"
+import { FloatingPortal, type Middleware, size } from "@floating-ui/react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
@@ -73,6 +77,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   fragmentId,
 }): ReactElement => {
   const theme = useEmotionTheme()
+  const isInSidebar = useContext(IsSidebarContext)
 
   // id is only set when the backend registers the popover as a
   // stateful widget (on_change="rerun").
@@ -190,14 +195,62 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // keyboard activation, which can dispatch a `click` with no prior pointerdown.
   const interactionInsideRef = useRef(false)
 
+  // When inside the sidebar, adjust Floating UI middleware so the popover can
+  // escape the sidebar's `overflow: auto` clipping rect and stay within the
+  // viewport. Two things are needed:
+  //
+  // 1. Override the shift/flip boundary to `document.documentElement` so the
+  //    popover (portalled to document.body with `position: fixed`) is bounded
+  //    by the viewport rather than the sidebar. `document.documentElement`
+  //    (the <html> element) is used rather than `document.body` because
+  //    Streamlit's `.stApp` uses `position: absolute; inset: 0`, which leaves
+  //    document.body sized 0x0 — a body boundary would always report overflow
+  //    and re-introduce the same flip. Without this override, shift squishes
+  //    the popover (whose min-width exceeds the sidebar column) against the
+  //    sidebar's edge.
+  //
+  // 2. Add a `size` middleware that clamps the popover's maxHeight to the
+  //    available space at the chosen placement. Without this, when the popover
+  //    is taller than the space both above and below the trigger, `flip` picks
+  //    the less-overflowing side and the popover extends off-screen (bug in
+  //    #9387: popover clipped above the viewport top). `size` sits after
+  //    `flip` so it constrains the height to whichever side `flip` landed on,
+  //    causing the internal `overflow: auto` on StyledPopoverBody to kick in.
+  const shiftPadding = 8
+  const overlayOptions = useMemo(() => {
+    const base = {
+      open,
+      placement: "bottom-start" as const,
+      offsetPx: convertRemToPx(theme.spacing.twoXS),
+    }
+    if (!isInSidebar || typeof document === "undefined") {
+      return base
+    }
+    const boundary = document.documentElement
+    const sizeMiddleware: Middleware = size({
+      padding: shiftPadding,
+      boundary,
+      apply({ availableHeight, elements }) {
+        // Clamp strictly to Floating UI's measured space so the popover never
+        // extends past the viewport, even in very short viewports where both
+        // sides of the trigger have limited room. The internal `overflow:
+        // auto` on StyledPopoverBody handles the scroll.
+        const clampedHeight = Math.max(Math.floor(availableHeight), 0)
+        elements.floating.style.maxHeight = `${clampedHeight}px`
+      },
+    })
+    return {
+      ...base,
+      flipOptions: { boundary },
+      shiftOptions: { padding: shiftPadding, boundary },
+      extraMiddleware: [sizeMiddleware],
+    }
+  }, [open, theme.spacing.twoXS, isInSidebar])
+
   // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
   // fully replaced with FloatingPortal here because Popover has no collection
   // system dependency — it renders arbitrary children, not ComboBox items.
-  const { refs, floatingStyles } = useFloatingOverlay({
-    open,
-    placement: "bottom-start",
-    offsetPx: convertRemToPx(theme.spacing.twoXS),
-  })
+  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
   // Custom dismissal via document-level DOM listeners.
   //
@@ -350,7 +403,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         </BaseButtonTooltip>
       </div>
       {open && (
-        <FloatingPortal>
+        <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <StyledPopoverBody
             ref={setFloatingRef}
             data-testid="stPopoverBody"

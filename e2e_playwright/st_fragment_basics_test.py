@@ -25,6 +25,7 @@ from e2e_playwright.shared.app_utils import (
     get_button,
     get_element_by_key,
     select_selectbox_option,
+    type_time,
 )
 
 
@@ -244,9 +245,10 @@ def test_text_input_in_fragment(app: Page):
 def test_time_input_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    time_input_field = app.get_by_test_id("stTimeInput").locator("input")
-    time_input_field.type("00:15")
-    time_input_field.press("Enter")
+    time_display = app.get_by_test_id("stTimeInput").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    type_time(time_display, "00", "15")
     wait_for_app_run(app)
 
     expect_only_fragment_uuid_changed(

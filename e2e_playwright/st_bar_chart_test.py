@@ -18,7 +18,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
-TOTAL_BAR_CHARTS = 28
+TOTAL_BAR_CHARTS = 30
 
 
 def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -81,6 +81,16 @@ def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         bar_chart_elements.nth(27),
         name="st_bar_chart-sort_by_x_column_multiple_y",
+    )
+    # Regression tests for https://github.com/streamlit/streamlit/issues/7714:
+    # column names with characters Vega-Lite treats as special ('.', '[', ']')
+    # used to render as a blank chart. We only assert the chart renders — the
+    # get_vega_graphics_document count above already covers the crucial part
+    # (the chart is not empty), and we add snapshots so any future regression
+    # is caught visually.
+    assert_snapshot(bar_chart_elements.nth(28), name="st_bar_chart-dotted_column_name")
+    assert_snapshot(
+        bar_chart_elements.nth(29), name="st_bar_chart-bracketed_column_name"
     )
 
 

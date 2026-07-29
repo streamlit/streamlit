@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 28
+NUM_SELECTBOXES = 30
 
 
 def get_selectbox_input(
@@ -151,6 +151,7 @@ def test_selectbox_has_correct_initial_values(app: Page):
     expect_markdown(app, "value 21: None")
     expect_markdown(app, "value 22: None")
     expect_markdown(app, "value 23: None")
+    expect_markdown(app, "value 26: None")
 
 
 def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFunction):
@@ -241,6 +242,35 @@ def test_type_to_search_replaces_committed_value(app: Page):
 
     selectbox_input.press("Enter")
     expect_markdown(app, "value 1: female")
+
+
+def test_escape_clears_typed_query_and_restores_committed_value(app: Page):
+    """Regression test for https://github.com/streamlit/streamlit/issues/16004.
+
+    While the user is actively filtering, pressing Escape must discard the
+    typed query and restore the committed label (matching pre-1.59 BaseWeb
+    behavior). The committed value must not change.
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 1 (default)")
+    expect(selectbox_input).to_have_value("male")
+
+    selectbox_input.click()
+    selectbox_input.press_sequentially("fem")
+    # The query has replaced the committed label in the input.
+    expect(selectbox_input).to_have_value("fem")
+
+    # Verify the dropdown is filtering on the query before Escape.
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(selection_dropdown).to_be_visible()
+
+    selectbox_input.press("Escape")
+
+    # The typed query is cleared and the committed label is restored.
+    expect(selectbox_input).to_have_value("male")
+    # The dropdown is closed after Escape.
+    expect(selection_dropdown).not_to_be_visible()
+    # The committed selection did not change — no rerun with a new value.
+    expect_markdown(app, "value 1: male")
 
 
 def test_empty_selectbox_behaves_correctly(
@@ -660,6 +690,43 @@ def test_selectbox_virtualizes_large_option_list(
     expect_markdown(app, "value 25: Option 987")
 
 
+def test_selectbox_fuzzy_filter_mode_keeps_non_contiguous_matches(app: Page):
+    """Regression test for https://github.com/streamlit/streamlit/issues/16003.
+
+    Fuzzy (default) filtering must keep non-contiguous matches. The react-aria
+    ComboBox used to apply its own "contains" filter on top of Streamlit's fuzzy
+    result, dropping matches whose query is not a contiguous substring.
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 26 (fuzzy filter mode)")
+    selectbox_input.click()
+    selectbox_input.fill("ape")
+
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    options = selection_dropdown.get_by_role("option")
+    # "Grape" (contains "ape") and "Apple" (fuzzy A-p-...-e) both match; the
+    # contiguous match ranks first in the fuzzy-sorted result.
+    expect(options).to_have_count(2)
+    expect(options.nth(0)).to_have_text("Grape")
+    expect(options.nth(1)).to_have_text("Apple")
+    # Non-matching options must NOT be shown, and there must be no empty state.
+    expect(
+        selection_dropdown.get_by_role("option", name="Banana", exact=True)
+    ).to_have_count(0)
+    expect(
+        selection_dropdown.get_by_role("option", name="No results", exact=True)
+    ).to_have_count(0)
+
+    # A query that is not a contiguous substring of any option must still
+    # fuzzy-match: "aple" -> "Apple" only (A-p-l-e), without falling back to the
+    # "No results" empty state.
+    selectbox_input.fill("aple")
+    expect(options).to_have_count(1)
+    expect(options.nth(0)).to_have_text("Apple")
+
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 26: Apple")
+
+
 # --- Query param binding tests ---
 
 
@@ -745,3 +812,45 @@ def test_selectbox_query_param_non_clearable_empty_value(page: Page, app_port: i
     # Non-clearable selectbox should reject empty value, show default "cat"
     expect_prefixed_markdown(page, "bound select value:", "cat")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_select="))
+
+
+def test_selectbox_in_sidebar_flips_up_within_viewport(app: Page):
+    """A selectbox near the bottom of the sidebar must flip its dropdown up and
+    stay within the viewport instead of opening downward and overflowing past
+    the bottom.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/16181,
+    where flip was disabled inside the sidebar so the dropdown always opened
+    downward and got clipped.
+    """
+    app.set_viewport_size({"width": 1280, "height": 720})
+
+    selectbox = get_element_by_key(app, "sidebar_bottom_select")
+    selectbox.scroll_into_view_if_needed()
+
+    trigger_box = selectbox.bounding_box()
+    assert trigger_box is not None, "selectbox trigger must have a bounding box"
+
+    selectbox.locator("input").click()
+
+    dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(dropdown).to_be_visible()
+    expect(dropdown.get_by_role("option")).to_have_count(7)
+
+    dropdown_box = dropdown.bounding_box()
+    assert dropdown_box is not None, "dropdown must have a bounding box"
+
+    viewport = app.viewport_size
+    assert viewport is not None
+
+    # Primary regression check: the dropdown must not overflow past the bottom
+    # of the viewport. A 1px epsilon guards against subpixel layout differences.
+    epsilon = 1
+    assert dropdown_box["y"] + dropdown_box["height"] <= viewport["height"] + epsilon, (
+        f"dropdown overflows the viewport bottom: {dropdown_box}, viewport={viewport}"
+    )
+
+    # The dropdown must open above the trigger (flip up), not below it.
+    assert dropdown_box["y"] < trigger_box["y"], (
+        f"dropdown did not flip up: dropdown={dropdown_box}, trigger={trigger_box}"
+    )

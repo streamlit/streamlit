@@ -192,8 +192,10 @@ for item in my_data[start:end]:
 ```python
 import streamlit as st
 
+
 def on_page_change():
     st.toast(f"Navigated to page {st.session_state.current_page}")
+
 
 page = st.pagination(
     num_pages=20,

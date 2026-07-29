@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ErrorCode as FileErrorCode, type FileRejection } from "react-dropzone"
+import { ErrorCode as FileErrorCode } from "react-dropzone"
 
 import {
   ChatInput as ChatInputProto,
@@ -25,7 +25,7 @@ import {
 import type { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import type { FileUploadClient } from "~lib/FileUploadClient"
 import { createTestFile } from "~lib/test_util"
-import { getRejectedFileInfo } from "~lib/util/FileHelper"
+import { type FileRejection, getRejectedFileInfo } from "~lib/util/FileHelper"
 
 import { createDropHandler } from "./createDropHandler"
 import { validateFileType } from "./fileUploadUtils"

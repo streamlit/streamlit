@@ -163,7 +163,9 @@ result = my_text_input(
     key=KEY,
     data={"value": value},
     on_value_change=lambda: None,  # optional; include to always get `result.value`
-    on_submitted_change=lambda: None,  # optional; include to always get `result.submitted`
+    on_submitted_change=lambda: (
+        None
+    ),  # optional; include to always get `result.submitted`
 )
 
 st.write("value (state):", result.value)

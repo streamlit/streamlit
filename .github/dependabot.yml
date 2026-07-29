@@ -60,6 +60,13 @@ updates:
       - dependency-name: "color2k"
         # Our Yarn patch only applies to color2k 2.0.3.
         versions: [">=2.0.4"]
+      - dependency-name: "katex"
+        # KaTeX 0.18 prefixed its internal CSS class names, which no longer
+        # match the markup produced by rehype-katex (it bundles katex 0.16.x).
+        # We only use the direct katex dependency for its stylesheet, so it must
+        # stay compatible with rehype-katex. Keep it below 0.18 until
+        # rehype-katex ships a katex 0.18-compatible release.
+        versions: [">=0.18.0"]
 
     groups:
       deck-gl:
@@ -125,8 +132,9 @@ updates:
           - "minor"
           - "patch"
 
-  # Keep python dependencies up to date (via uv)
-  # Root pyproject.toml contains dev/test dependency groups
+  # Keep direct development/test/integration dependencies up to date. These
+  # PRs own the corresponding uv.lock update; the weekly full relock owns bulk
+  # transitive and editable-package runtime freshness.
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
@@ -153,6 +161,9 @@ updates:
       - "autofix"
       - "never-stale"
 
+    # Batch non-breaking direct updates while keeping major updates separate.
+    # More specific category groups are matched first; the catch-all
+    # python-minor-patch group absorbs any remaining minor/patch updates.
     groups:
       python-typing:
         patterns:
@@ -173,6 +184,12 @@ updates:
           - "parameterized"
           - "requests-mock"
           - "testfixtures"
+      python-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # Keep streamlit package runtime dependencies up to date
   # lib/pyproject.toml contains the published package's dependencies
@@ -186,6 +203,8 @@ updates:
     # by GitHub's dependabot.yml schema (only lockfile-only, auto, increase, and
     # increase-if-necessary are), so `auto` is used to opt into widening.
     # Tracking issue: https://github.com/dependabot/dependabot-core/issues/15290
+    # Changes here can temporarily stale the root lock; the autofix uv-lock hook
+    # repairs it.
     versioning-strategy: auto
 
     cooldown:

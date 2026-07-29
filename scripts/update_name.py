@@ -64,18 +64,18 @@ def update_root_pyproject_toml(project_name: str) -> None:
             f'In file "{file_path}", did not find regex "{uv_sources_pattern}"'
         )
 
-    # Update dependency references in dependency-groups from "streamlit" to new name
-    # These appear as standalone "streamlit", entries in the arrays
-    dep_groups_pattern = r'^  "streamlit",$'
-    content, dep_groups_count = re.subn(
-        dep_groups_pattern,
-        rf'  "{project_name}",',
+    # Update the root project dependency that anchors the editable package in
+    # the lock graph.
+    project_dependency_pattern = r'^dependencies = \["streamlit"\]$'
+    content, project_dependency_count = re.subn(
+        project_dependency_pattern,
+        rf'dependencies = ["{project_name}"]',
         content,
         flags=re.MULTILINE,
     )
-    if dep_groups_count == 0:
+    if project_dependency_count == 0:
         raise Exception(
-            f'In file "{file_path}", did not find regex "{dep_groups_pattern}"'
+            f'In file "{file_path}", did not find regex "{project_dependency_pattern}"'
         )
 
     with open(file_path, "w", encoding="utf-8") as f:

@@ -170,9 +170,13 @@ st.title("Sales Dashboard")
 
 # Filters don't trigger reruns
 col1, col2, col3 = st.columns(3)
-region = col1.selectbox("Region", ["All", "North", "South", "East", "West"], on_change="ignore")
+region = col1.selectbox(
+    "Region", ["All", "North", "South", "East", "West"], on_change="ignore"
+)
 year = col2.selectbox("Year", [2024, 2023, 2022], on_change="ignore")
-category = col3.multiselect("Category", ["Electronics", "Clothing", "Food"], on_change="ignore")
+category = col3.multiselect(
+    "Category", ["Electronics", "Clothing", "Food"], on_change="ignore"
+)
 
 # Apply filters button
 if st.button("Apply Filters"):

@@ -2570,6 +2570,169 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitColumnNotFoundError):
             st.bar_chart(df, x="A", y="B", sort="-nonexistent_column")
 
+    def test_bar_chart_single_column_with_dot_in_name_renders(self):
+        """Regression test for #7714: a single column whose name contains '.'
+        should render normally.
+
+        Vega-Lite treats '.' inside a field string as nested-object access, so
+        the raw column name must not be used as the field. Streamlit should
+        instead rename the column to a safe internal alias.
+        """
+        df = pd.DataFrame({"col.name": [1, 2, 3, 4]})
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        y_field = chart_spec["encoding"]["y"]["field"]
+        # Field must not contain '.', '[', ']', or '\' - otherwise Vega-Lite
+        # would interpret it as nested-object / property access.
+        assert not any(ch in y_field for ch in (".", "[", "]", "\\"))
+        # And it must not be the raw user-supplied name (which would be broken).
+        assert y_field != "col.name"
+        # The data column names in the proto payload must match the aliased
+        # field the spec references.
+        data_frame = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert y_field in data_frame.columns
+
+    def test_bar_chart_single_column_with_brackets_renders(self):
+        """Regression test for #7714 companion report: column names containing
+        square brackets (e.g. 'CO2 Storage [t]') must also render.
+        """
+        df = pd.DataFrame({"CO2 Storage [t]": [1, 2, 3, 4]})
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        y_field = chart_spec["encoding"]["y"]["field"]
+        assert not any(ch in y_field for ch in (".", "[", "]", "\\"))
+
+    def test_bar_chart_dotted_column_tooltip_shows_original_name(self):
+        """The tooltip title for a renamed column should be the original,
+        user-facing column name so the user still sees their column label.
+        """
+        df = pd.DataFrame({"a.b": [1, 2, 3, 4]})
+
+        st.bar_chart(df, y="a.b")
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        y_tooltip = next(
+            t
+            for t in chart_spec["encoding"]["tooltip"]
+            if t["field"] == chart_spec["encoding"]["y"]["field"]
+        )
+        assert y_tooltip["title"] == "a.b"
+        # And the axis title (only shown because y was explicitly passed) should
+        # also be the original name.
+        assert chart_spec["encoding"]["y"]["title"] == "a.b"
+
+    def test_bar_chart_multi_dotted_columns_legend_shows_originals(self):
+        """When multiple y columns contain '.', the melted-color column data
+        values must be rewritten back to the original names so the legend and
+        the tooltip both display 'a.b' / 'c.d' rather than internal aliases.
+        """
+        df = pd.DataFrame({"a.b": [1, 2, 3], "c.d": [4, 5, 6]})
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # The melted color column data values must be the original names, not
+        # the internal aliases. That way both the legend and the melted-color
+        # tooltip pick them up naturally.
+        data_frame = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        color_field = chart_spec["encoding"]["color"]["field"]
+        color_values = set(data_frame[color_field].unique())
+        assert color_values == {"a.b", "c.d"}
+        # And the color legend must not carry a stale labelExpr — a leftover
+        # alias-to-original remap would be a signal that data and encoding
+        # went out of sync.
+        legend = chart_spec["encoding"]["color"]["legend"]
+        assert "labelExpr" not in legend
+
+    def test_bar_chart_multi_dotted_columns_tooltip_shows_originals(self):
+        """The melted-color tooltip must display the original column names,
+        not the internal aliases.
+        """
+        df = pd.DataFrame({"a.b": [1, 2, 3], "c.d": [4, 5, 6]})
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # The melted-color tooltip references the color field directly, so what
+        # the user sees on hover is the raw data value. Assert those values
+        # cannot leak internal aliases.
+        data_frame = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        color_field = chart_spec["encoding"]["color"]["field"]
+        for value in data_frame[color_field].unique():
+            assert "streamlit-generated" not in str(value)
+
+    def test_bar_chart_plain_column_names_are_not_aliased(self):
+        """Anti-regression: columns without special characters must keep their
+        original names (no aliasing applied).
+        """
+        df = pd.DataFrame({"plain": [1, 2, 3, 4]})
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        assert chart_spec["encoding"]["y"]["field"] == "plain"
+
+    def test_bar_chart_sort_by_dotted_column_uses_alias(self):
+        """When sorting by a column whose name contains '.', the sort field
+        must reference the aliased column so Vega-Lite finds the actual field.
+        """
+        df = pd.DataFrame(
+            {
+                "cat": ["foo", "bar", "baz"],
+                "num.value": [3, 1, 2],
+            }
+        )
+
+        st.bar_chart(df, x="cat", y="num.value", sort="-num.value")
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        sort = chart_spec["encoding"]["x"]["sort"]
+        assert not any(ch in sort["field"] for ch in (".", "[", "]", "\\"))
+        assert sort["order"] == "descending"
+
+    def test_bar_chart_columns_with_colliding_stringified_names_get_distinct_aliases(
+        self,
+    ):
+        """Two columns whose stringified names collide (e.g. literal duplicate
+        ``"a.b"`` labels, which is a legal pandas construct) must each receive
+        their own alias so both columns survive as distinct series through
+        aliasing and melting.
+        """
+        df = pd.DataFrame([[1, 10], [2, 20], [3, 30]])
+        df.columns = pd.Index(["a.b", "a.b"])
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+        data_frame = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+
+        # Both columns must survive the melt: the first contributes 1, 2, 3
+        # and the second contributes 10, 20, 30. Duplicate y-list remap
+        # collapsing to a single alias would produce only one of these sets
+        # (or duplicate one), leaving a value column that doesn't cover
+        # both ranges.
+        y_field = chart_spec["encoding"]["y"]["field"]
+        assert sorted(data_frame[y_field].tolist()) == [1, 2, 3, 10, 20, 30]
+
 
 class ChartWidthHeightTest(DeltaGeneratorTestCase):
     """Test width and height parameter functionality for modernized chart commands."""

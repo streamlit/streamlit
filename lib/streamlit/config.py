@@ -807,6 +807,23 @@ _create_option(
     type_=int,
 )
 
+_create_option(
+    "runner.cacheBackgroundRefreshMaxWorkers",
+    description="""
+        Maximum number of concurrent background refreshes for cached functions
+        that use refresh_mode="background" (@st.cache_data / @st.cache_resource).
+        Sizes a single, process-wide thread pool shared by all such functions;
+        when it is saturated, extra refreshes are skipped (the stale value is
+        still served) rather than queued.
+
+        Set to 0 to disable background refresh entirely: stale entries are then
+        recomputed by a blocking foreground call at hard expiry (2 x ttl).
+    """,
+    visibility="hidden",
+    default_val=4,
+    type_=int,
+)
+
 # Config Section: Server #
 
 _create_section("server", "Settings for the Streamlit server")
@@ -1027,6 +1044,26 @@ _create_option(
 )
 
 _create_option(
+    "server.allowedHosts",
+    description="""
+        Allow-list of hostnames for incoming WebSocket connections.
+
+        Use this option to protect against DNS rebinding attacks when the
+        hostnames used to access the app are known. Ports in the Host header are
+        ignored. Wildcard subdomains are supported with a leading `*.`. Use `*`
+        to accept any valid Host header.
+
+        If this list is empty (the default), Streamlit accepts any Host header
+        to preserve compatibility with dynamically configured reverse proxies
+        and custom domains.
+
+        Example: ['localhost', 'app.example.com', '*.example.com']
+    """,
+    default_val=[],
+    multiple=True,
+)
+
+_create_option(
     "server.enableXsrfProtection",
     description="""
         Enables support for Cross-Site Request Forgery (XSRF) protection, for
@@ -1102,19 +1139,6 @@ _create_option(
     visibility="hidden",
     default_val=25,
     type_=int,
-)
-
-_create_option(
-    "server.enableArrowTruncation",
-    description="""
-        Enable automatically truncating all data structures that get serialized
-        into Arrow (e.g. DataFrames) to ensure that the size is under
-        `server.maxMessageSize`.
-    """,
-    visibility="hidden",
-    default_val=False,
-    scriptable=True,
-    type_=bool,
 )
 
 _create_option(
