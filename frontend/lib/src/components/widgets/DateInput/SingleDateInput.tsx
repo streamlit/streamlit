@@ -40,6 +40,7 @@ import {
 } from "react-aria-components"
 import { useDatePickerState } from "react-stately"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
@@ -87,7 +88,7 @@ function getFocusableCalendarElements(container: HTMLElement): HTMLElement[] {
   ).filter(el => el.tabIndex >= 0 && !(el as HTMLButtonElement).disabled)
 }
 
-export interface SingleDateInputProps {
+interface SingleDateInputProps {
   value: CalendarDate | null
   onChange: (value: CalendarDate | null) => void
   minDate: CalendarDate
@@ -106,8 +107,10 @@ export interface SingleDateInputProps {
   focusedValue: CalendarDate | null
   onFocusChange: (value: CalendarDate) => void
   /** Called when popover closes (outside click, Escape, or date selection).
-   * Parent uses this to revert to default if the field was left empty. */
-  onClose: () => void
+   * Parent uses this to revert to default if the field was left empty or
+   * partially cleared. The boolean argument indicates whether any segment
+   * was in placeholder state at the time of close. */
+  onClose: (hasPlaceholderSegments: boolean) => void
 }
 
 /** Renders segments reordered to match `format` instead of the locale-derived
@@ -175,7 +178,11 @@ function SingleDateInput({
   const wasOpenRef = useRef(state.isOpen)
   useEffect(() => {
     if (wasOpenRef.current && !state.isOpen) {
-      onClose()
+      // Detect whether any date segment is in placeholder state (partially
+      // cleared). The parent uses this to decide whether to revert the value.
+      const hasPlaceholders =
+        triggerRef.current?.querySelector('[data-placeholder="true"]') !== null
+      onClose(hasPlaceholders)
     }
     wasOpenRef.current = state.isOpen
   }, [state.isOpen, onClose])
@@ -386,7 +393,7 @@ function SingleDateInput({
         )}
       </StyledDateInputWrapper>
       {state.isOpen && (
-        <FloatingPortal>
+        <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <StyledCalendarPopover
             ref={setFloatingRef}
             style={floatingStyles}

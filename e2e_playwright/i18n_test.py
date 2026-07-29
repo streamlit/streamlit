@@ -52,9 +52,11 @@ def test_range_date_calendar_picker_rendering(
     date_input = app.get_by_test_id("stDateInput").first
     expect(date_input).to_be_visible()
     date_input.scroll_into_view_if_needed()
-    date_input.click()
+    date_input.get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
+    ).first.click()
 
-    calendar_popover = app.locator('[data-baseweb="calendar"]').first
+    calendar_popover = app.get_by_test_id("stDateInputCalendar")
 
     expect(calendar_popover).to_be_visible()
     # Add a small timeout to minimize some flakiness:

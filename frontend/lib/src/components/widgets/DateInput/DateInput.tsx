@@ -318,15 +318,28 @@ function DateInput({
   )
 
   // Shared by both modes: revert to the default value if the popover closes
-  // while the field is empty. `element.default` is already the ISO wire
-  // format, so no conversion is needed here at all (unlike the old
-  // `stringsToDates(element.default)` version).
-  const handleClose = useCallback((): void => {
-    if (!isEmpty && !error) return
-    resetError()
-    setValueWithSource({ value: element.default, fromUi: true })
-    setIsEmpty(element.default.length === 0)
-  }, [isEmpty, error, element.default, setValueWithSource, resetError])
+  // while the field is empty or partially cleared. `element.default` is
+  // already the ISO wire format, so no conversion is needed here at all
+  // (unlike the old `stringsToDates(element.default)` version).
+  //
+  // `hasPlaceholderSegments` is true when any date segment was in placeholder
+  // state at close time (partial clear). React Aria fires onChange for
+  // intermediate backspace states (e.g. 1970 -> 197 -> 19 -> 1), corrupting
+  // the canonical value. Reverting to default on close ensures abandoned
+  // partial edits don't persist.
+  const handleClose = useCallback(
+    (hasPlaceholderSegments?: boolean): void => {
+      if (!isEmpty && !hasPlaceholderSegments) {
+        // User made a complete valid edit or just opened/closed without
+        // changing anything — keep the current value.
+        return
+      }
+      resetError()
+      setValueWithSource({ value: element.default, fromUi: true })
+      setIsEmpty(element.default.length === 0)
+    },
+    [isEmpty, element.default, setValueWithSource, resetError]
+  )
 
   const singleValue = useMemo(
     () => isoToCalendarDate(value[0] ?? "") ?? null,

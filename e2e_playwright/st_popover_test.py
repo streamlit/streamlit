@@ -536,12 +536,14 @@ def test_date_input_selection_does_not_dismiss_popover(app: Page):
     expect(date_input).to_be_visible()
 
     # Open the calendar.
-    date_input.locator("input").first.click()
-    calendar = app.locator('[data-baseweb="calendar"]')
+    date_input.get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
+    ).first.click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
     expect(calendar).to_be_visible()
 
     # Select a different day.
-    calendar.get_by_text("15", exact=True).first.click()
+    calendar.get_by_role("button", name=re.compile(r"15,")).first.click()
     wait_for_app_run(app)
 
     # The popover must still be open after the day selection.

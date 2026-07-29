@@ -72,8 +72,10 @@ def test_sidebar_date_input_popover(
     date_inputs = themed_app.get_by_test_id("stSidebar").get_by_test_id("stDateInput")
     expect(date_inputs).to_have_count(2)
     expect(date_inputs.first).to_be_visible()
-    date_inputs.first.click()
-    calendar_popover = themed_app.locator("[data-baseweb='calendar']")
+    date_inputs.first.get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
+    ).first.click()
+    calendar_popover = themed_app.get_by_test_id("stDateInputCalendar")
     expect(calendar_popover).to_be_visible()
     assert_snapshot(calendar_popover, name="st_sidebar-date_popover")
 

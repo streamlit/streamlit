@@ -35,7 +35,7 @@ type IntlLocaleWithWeekInfo = Intl.Locale & {
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Locale/getWeekInfo
  */
-export function getIntlWeekInfo(intlLocale: Intl.Locale): IntlWeekInfo | null {
+function getIntlWeekInfo(intlLocale: Intl.Locale): IntlWeekInfo | null {
   const locale = intlLocale as IntlLocaleWithWeekInfo
   return locale?.getWeekInfo?.() ?? locale?.weekInfo ?? null
 }

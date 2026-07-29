@@ -1014,18 +1014,19 @@ describe("DateInput keyboard navigation and focus management", () => {
     )
 
     // After close, segments should revert to the default value (1970/01/20).
-    // The closeEpoch mechanism in DateInput.tsx produces a fresh CalendarDate
-    // reference, forcing useDateFieldState to rebuild segments.
-    const region2 = screen.getByTestId("stDateInput")
-    const refreshedSegments = getSingleDateSegments(region2)
+    // SingleDateInput reports placeholder segments to handleClose, which
+    // reverts the value to element.default. The controlled value change causes
+    // the DateField to rebuild its segments.
     await waitFor(
       () => {
+        const region2 = screen.getByTestId("stDateInput")
+        const refreshedSegments = getSingleDateSegments(region2)
         expect(refreshedSegments.year).toHaveTextContent("1970")
+        expect(refreshedSegments.month).toHaveTextContent("01")
+        expect(refreshedSegments.day).toHaveTextContent("20")
       },
       { timeout: 2000 }
     )
-    expect(refreshedSegments.month).toHaveTextContent("01")
-    expect(refreshedSegments.day).toHaveTextContent("20")
   })
 })
 

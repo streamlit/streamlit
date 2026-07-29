@@ -135,10 +135,12 @@ def test_date_input_in_fragment(app: Page):
 
     date_input = app.get_by_test_id("stDateInput")
     date_input.evaluate("el => el.scrollIntoView({ block: 'center' })")
-    date_input.click()
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
+    date_input.get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
     ).first.click()
+    app.get_by_test_id("stDateInputCalendar").get_by_label(
+        "Friday, January 2, 1970"
+    ).click()
     wait_for_app_run(app)
 
     expect_only_fragment_uuid_changed(

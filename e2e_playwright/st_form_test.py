@@ -47,10 +47,12 @@ def change_widget_values(app: Page):
     click_checkbox(app, "Checkbox")
 
     # Change the date input value.
-    form_1.get_by_test_id("stDateInput").locator("input").click()
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 17th 2019."]'
+    form_1.get_by_test_id("stDateInput").get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
     ).first.click()
+    app.get_by_test_id("stDateInputCalendar").get_by_label(
+        "Wednesday, July 17, 2019"
+    ).click()
 
     # Change the multiselect value.
     form_1.get_by_test_id("stMultiSelect").locator("input").click()

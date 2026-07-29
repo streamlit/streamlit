@@ -31,7 +31,6 @@ import {
   ListBox,
   ListBoxItem,
   Popover,
-  RangeCalendar,
   Select,
 } from "react-aria-components"
 
@@ -194,10 +193,6 @@ const TypedCalendar = Calendar as ComponentType<
 >
 
 export const StyledCalendarRoot = styled(TypedCalendar)(({ theme }) => ({
-  fontSize: theme.fontSizes.sm,
-}))
-
-export const StyledRangeCalendarRoot = styled(RangeCalendar)(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
 }))
 

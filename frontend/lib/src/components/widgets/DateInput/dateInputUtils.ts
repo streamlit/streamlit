@@ -30,7 +30,7 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
  * display order only — it's not a moment/date-fns runtime dependency.
  */
 
-export type FormatToken = "Y" | "M" | "D"
+type FormatToken = "Y" | "M" | "D"
 
 const TOKEN_TO_SEGMENT_TYPE: Record<FormatToken, "year" | "month" | "day"> = {
   Y: "year",
