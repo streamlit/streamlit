@@ -15,7 +15,7 @@
 
 import re
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Locator, Page, ViewportSize, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -208,7 +208,7 @@ def test_popover_stays_within_narrow_viewport(app: Page):
 
     def assert_within_viewport(
         popover_body: Locator,
-        viewport: dict,
+        viewport: ViewportSize,
         *,
         check_vertical: bool,
     ) -> None:
