@@ -481,6 +481,10 @@ class ButtonMixin:
             The MIME type of the data. If this is ``None`` (default), Streamlit
             sets the MIME type depending on the value of ``data`` as follows:
 
+            - If ``data`` is a file object with a string ``name`` attribute
+              (e.g. a file opened with ``open()``), Streamlit first tries to
+              guess the MIME type from the file name (``file_name`` if
+              specified, otherwise ``data.name``).
             - If ``data`` is a string or textual file (i.e. ``str`` or
               ``io.TextIOWrapper`` object), Streamlit uses the "text/plain"
               MIME type.
@@ -1736,15 +1740,14 @@ def _maybe_infer_file_info(
     file_name: str | None,
     mimetype: str | None,
 ) -> tuple[str | None, str | None]:
-    """Infer a missing ``file_name``/``mime`` from ``data.name`` when the data
-    is a file object opened from disk (e.g. ``io.FileIO``).
+    """Infer a missing ``file_name``/``mime`` from ``data.name`` when it is a
+    non-empty string, as on a file object opened from disk (e.g. ``io.FileIO``).
 
     Explicit user-provided values always take precedence; when nothing can be
     inferred, the values are returned unchanged.
     """
-    # Reading `name` can itself raise: e.g. TextIOWrapper delegates the
-    # property to its underlying buffer, and a detached or closed stream
-    # raises ValueError/UnsupportedOperation, which getattr does not swallow.
+    # `data.name` may be a property that raises (e.g. on a detached
+    # TextIOWrapper), so getattr's default alone isn't enough.
     try:
         name = getattr(data, "name", None)
     except (AttributeError, ValueError, OSError):

@@ -219,6 +219,21 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         assert stored.filename == "custom.bin"
         assert stored.mimetype == "application/x-foo"
 
+    def test_explicit_file_name_drives_mime_inference(self) -> None:
+        """When file_name is user-provided but mime is not, the mime is
+        guessed from the explicit file_name, not from data.name."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = os.path.join(tmp_dir, "data.bin")
+            with open(path, "wb") as f:
+                f.write(b"{}")
+            with open(path, "rb") as data:
+                st.download_button("Download", data=data, file_name="report.json")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename == "report.json"
+        assert stored.mimetype == "application/json"
+
     def test_nameless_buffer_keeps_existing_behavior(self) -> None:
         """In-memory buffers without a usable name are unaffected."""
         st.download_button("Download", data=io.BytesIO(b"payload"))
