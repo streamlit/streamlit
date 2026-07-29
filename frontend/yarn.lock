@@ -3321,6 +3321,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@streamlit/app@workspace:app"
   dependencies:
+    "@babel/runtime": "npm:^7.28.4"
     "@emotion-icons/emotion-icon": "npm:^4.1.0"
     "@emotion-icons/material-outlined": "npm:^3.14.0"
     "@emotion-icons/material-rounded": "npm:^3.14.0"
