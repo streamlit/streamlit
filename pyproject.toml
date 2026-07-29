@@ -62,7 +62,7 @@ streamlit = { path = "lib", editable = true }
 # Dependencies used by lightweight CI and release automation scripts.
 # Keep this group small so those workflows do not need the complete dev environment.
 automation = [
-  "packaging>=20,<26",
+  "packaging>=26.2,<27",
   "requests>=2.27,<3",
   "semver>=3,<4",
 ]
