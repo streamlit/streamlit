@@ -221,6 +221,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   //    whichever side `flip` landed on; the internal `overflow: auto` on
   //    StyledPopoverBody handles scrolling when clamped.
   const shiftPadding = 8
+  // Match StyledPopoverBody's stretch-mode `min-width: max($calculatedWidth,
+  // 10rem)` from styled-components.ts. Kept in sync manually because the
+  // middleware needs to know the intrinsic min-width without reading it back
+  // from the DOM (which would force a style recomputation on every position
+  // update).
+  const stretchMinWidthPx = convertRemToPx("10rem")
   const overlayOptions = useMemo(() => {
     const base = {
       open,
@@ -231,6 +237,13 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       return base
     }
     const boundary = document.documentElement
+    const minPopupWidthPx = convertRemToPx(theme.sizes.minPopupWidth)
+    // Intrinsic min-width from StyledPopoverBody: non-stretch uses
+    // `theme.sizes.minPopupWidth`; stretch uses `max($calculatedWidth,
+    // 10rem)`.
+    const intrinsicMinWidth = stretchWidth
+      ? Math.max(calculatedWidth, stretchMinWidthPx)
+      : minPopupWidthPx
     const sizeMiddleware: Middleware = size({
       padding: shiftPadding,
       boundary,
@@ -243,22 +256,13 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         const clampedWidth = Math.max(Math.floor(availableWidth), 0)
         elements.floating.style.maxHeight = `${clampedHeight}px`
         elements.floating.style.maxWidth = `${clampedWidth}px`
-        // StyledPopoverBody has an intrinsic `min-width` — either
-        // `theme.sizes.minPopupWidth` (20rem/320px) or, for stretch popovers,
-        // `max($calculatedWidth, 10rem)` where `$calculatedWidth` is the
-        // trigger width. When that intrinsic value exceeds our `max-width`
-        // clamp, CSS resolves the conflict in favor of `min-width` and the
-        // popover overflows again. Reset our own inline override so we can
-        // read the CSS-resolved value, then cap it at the clamp only when it
-        // would exceed it (covers both baseline and stretch cases without
-        // artificially widening narrow content).
-        elements.floating.style.minWidth = ""
-        const intrinsicMinWidth =
-          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Inside Floating UI's `size.apply`; layout has already been read to compute `availableWidth`, and the popover is only mounted when open, so the extra style read is bounded and only fires on open/scroll/resize (via `autoUpdate`), not per animation frame. The value gained — correctly capping the intrinsic min-width including the stretch case `max($calculatedWidth, 10rem)` without threading `$stretchWidth`/`$calculatedWidth` down here — outweighs the cost.
-          parseFloat(window.getComputedStyle(elements.floating).minWidth) || 0
-        if (intrinsicMinWidth > clampedWidth) {
-          elements.floating.style.minWidth = `${clampedWidth}px`
-        }
+        // When the intrinsic `min-width` from StyledPopoverBody exceeds our
+        // `max-width` clamp, CSS resolves the conflict in favor of `min-width`
+        // and the popover overflows again. Cap `min-width` at the clamp only
+        // in that case — leaving it unset otherwise preserves the natural
+        // content-driven sizing for popovers that comfortably fit.
+        elements.floating.style.minWidth =
+          intrinsicMinWidth > clampedWidth ? `${clampedWidth}px` : ""
       },
     })
     if (!isInSidebar) {
@@ -274,7 +278,15 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       shiftOptions: { padding: shiftPadding, boundary },
       extraMiddleware: [sizeMiddleware],
     }
-  }, [open, theme.spacing.twoXS, isInSidebar])
+  }, [
+    open,
+    theme.spacing.twoXS,
+    theme.sizes.minPopupWidth,
+    isInSidebar,
+    stretchWidth,
+    calculatedWidth,
+    stretchMinWidthPx,
+  ])
 
   // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
   // fully replaced with FloatingPortal here because Popover has no collection

@@ -15,7 +15,7 @@
 
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -206,7 +206,12 @@ def test_popover_stays_within_narrow_viewport(app: Page):
     # 1px epsilon guards against subpixel layout differences across browsers.
     epsilon = 1
 
-    def assert_within_viewport(popover_body, viewport, *, check_vertical: bool):
+    def assert_within_viewport(
+        popover_body: Locator,
+        viewport: dict,
+        *,
+        check_vertical: bool,
+    ) -> None:
         body_box = popover_body.bounding_box()
         assert body_box is not None, "popover body must have a bounding box"
         assert body_box["x"] >= -epsilon, (
