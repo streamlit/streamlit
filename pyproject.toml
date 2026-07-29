@@ -62,9 +62,13 @@ streamlit = { path = "lib", editable = true }
 # use bare package names by default and let the lock own the versions. We only add
 # a version constraint when it is functionally required:
 #   - Exact pins (==) for tools we deliberately hold back and let Dependabot bump on
-#     its own PRs (ty, mypy, ruff, playwright, pandas-stubs).
-#   - Upper caps / exclusions (<, !=) for versions known to break us; these are
-#     mirrored by `ignore` entries in .github/dependabot.yml.
+#     its own PRs (ty, mypy, ruff, playwright).
+#   - Upper caps (<) for versions known to break us (numpy, pytest, pandas-stubs);
+#     these are mirrored by `ignore` entries in .github/dependabot.yml.
+#   - `!=` exclusions of a single known-broken release (pytest-rerunfailures,
+#     pytest-github-actions-annotate-failures); these need no dependabot.yml entry,
+#     since Dependabot targets the latest allowed version and never proposes the
+#     excluded release.
 # Avoid lower-bound floors here: they don't affect what gets installed (the lock
 # does), and Dependabot ratchets them up on every update, creating pointless
 # manifest churn. NOTE: This does NOT apply to lib/pyproject.toml, whose ranges are
@@ -131,8 +135,10 @@ test = [
   "tomli; python_version < '3.11'",
   # Install the same optional dependency sets users get from these extras, so tests
   # exercise the real extra dependency graphs instead of a hand-maintained copy:
-  #   auth -> Authlib, httpx | charts -> matplotlib, graphviz, plotly, orjson
-  #   pdf -> streamlit-pdf   | performance -> orjson, uvloop
+  #   - auth -> Authlib, httpx
+  #   - charts -> matplotlib, graphviz, plotly, orjson
+  #   - pdf -> streamlit-pdf
+  #   - performance -> orjson, uvloop
   "streamlit[auth,charts,pdf,performance]",
   # Test-only packages not provided by any extra:
   "seaborn",
