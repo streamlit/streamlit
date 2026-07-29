@@ -180,10 +180,11 @@ class GitRepo:
             if self.is_valid():
                 self.module = os.path.relpath(os.path.abspath(path), git_root)
         except Exception:
-            # Expected when the path is not a git repo. Other causes include:
-            # - git binary not installed
-            # - missing or corrupted .git directory
-            # - invalid path
+            # Unexpected failure while resolving the start directory or module
+            # path. Missing repos usually exit earlier when
+            # ``rev-parse --show-toplevel`` returns ``None``. Other causes
+            # include a missing git binary, a corrupted .git directory, or an
+            # invalid path.
             _LOGGER.debug(
                 "Did not find a git repo at %s.",
                 path,
@@ -267,8 +268,7 @@ class GitRepo:
             if git_root is None:
                 return None
 
-            # Exclude staged-only changes to preserve the previous
-            # GitPython ``index.diff(None)`` behavior.
+            # Only report unstaged working-tree changes, not staged-only edits.
             output = _run_git(("diff", "--name-only", "-z"), cwd=git_root)
             return None if output is None else _decode_nul_paths(output)
         except Exception:
@@ -280,7 +280,9 @@ class GitRepo:
             if not self.is_valid() or self.get_tracking_branch_remote() is None:
                 return None
 
-            # Use ``@{upstream}`` so branch names with slashes are not interpolated.
+            # Compare HEAD to the configured upstream tip so ahead commits stay
+            # correct when the local branch name differs from the upstream
+            # branch name. Also avoids interpolating slash-containing names.
             output = _run_git(
                 ("rev-list", "@{upstream}..HEAD", "--"), cwd=self._start_dir
             )
