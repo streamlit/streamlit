@@ -46,7 +46,9 @@ as the release candidate.
 
 1. Confirm the selected nightly workflow completed successfully, including
    Python, JavaScript, and Playwright tests.
-2. Record its full tag, for example `1.60.1.dev20260725`.
+2. Record its full tag. Nightly versions are derived from the latest PyPI
+   micro + 1, so a cutoff for a `1.60.0` release typically looks like
+   `1.59.1.dev20260725`, not `1.60.1.dev20260725`.
 
 ### 2. Create the release branch
 
@@ -114,10 +116,13 @@ release branch. Until publishing completes:
 ### 5. Deploy static assets for SiS
 
 Run the Static Assets Workflow for SiS after creating the release tag and
-before building the release. This ensures that Streamlit in Snowflake on SPCS
-loads static assets from the CDN instead of serving them locally.
+before building the release. This ensures that Streamlit in Snowflake on
+Snowpark Container Services (SPCS) loads static assets from the CDN instead of
+serving them locally.
 
-Follow the [Static Assets Workflow for SiS instructions](https://docs.google.com/document/d/1iyvW4mWsUvt3G9W9CbuhvrOkNAoKsRi7yfBoZzQI6dw/edit?tab=t.0#heading=h.hgtyabu854x3):
+Follow the Snowflake-internal
+[Static Assets Workflow for SiS instructions](https://docs.google.com/document/d/1iyvW4mWsUvt3G9W9CbuhvrOkNAoKsRi7yfBoZzQI6dw/edit?tab=t.0#heading=h.hgtyabu854x3)
+(skip if you do not have access; the high-level steps are below):
 
 1. Run the workflow in preprod.
 2. Verify that the static assets load and render correctly.
@@ -171,7 +176,7 @@ should verify:
    This can take a couple of hours after the PyPI release.
 8. Confirm the feedstock PR checks pass, fix any failures if needed, and merge
    the PR.
-9. Request publication to the default Conda channel in the
+9. Request publication to the default Conda channel in the Snowflake-internal
    [#anaconda-snowflake-technical](https://snowflake.enterprise.slack.com/archives/C02D68R4D0D)
    Slack channel. You may need to request access to the channel first. Use this
    message template:
@@ -264,7 +269,17 @@ Components v1 is considered legacy, and no new releases are planned.
   product regression, a bad test, or a confirmed flake. Fix real defects on
   `develop` and cherry-pick only the approved fix. If a tag already exists but
   the release has not been published, move the tag to the updated release
-  branch head.
+  branch head. Do not re-run [Release Tag and PR Creation](https://github.com/streamlit/streamlit/actions/workflows/release-tag-and-pr-creation.yml);
+  that workflow refuses to recreate an existing tag. Delete and recreate the
+  tag manually on the updated release-branch head instead:
+
+  ```bash
+  git fetch origin "release/<version>"
+  git tag -d "<version>"
+  git push origin ":refs/tags/<version>"
+  git tag -a "<version>" -m "Release <version>" "origin/release/<version>"
+  git push origin "<version>"
+  ```
 - **Failure during or after publication:** Check PyPI and GitHub Releases before
   retrying. Package uploads and releases are externally visible and cannot be
   treated like an unstarted job.
