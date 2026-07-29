@@ -132,7 +132,7 @@ test = [
   # httpx2 is used by starlette's TestClient (>=1.2); httpx is still required
   # by authlib's httpx_client integration used in the auth route tests.
   "httpx>=0.24.1",
-  "httpx2>=2.7.0",
+  "httpx2>=2.9.1",
   # Playwright and E2E test dependencies:
   # We pin playwright to a minor version to avoid new browser versions breaking our CI.
   "playwright==1.61.*",
@@ -157,7 +157,7 @@ integration = [
   { include-group = "test" },
   # Snowflake dependencies:
   "snowflake-snowpark-python[modin]>=1.17.0",
-  "snowflake-connector-python>=3.3.0",
+  "snowflake-connector-python>=4.7.1",
   # Additional dataframe formats for testing:
   "polars",
   "xarray",
