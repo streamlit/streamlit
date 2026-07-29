@@ -86,8 +86,9 @@ After all cherry-picks:
 
 - test each release-specific fix on the release branch;
 - rerun focused unit or end-to-end tests as appropriate;
-- inspect the complete diff from the selected nightly's source commit
-  (`<nightly-tag>^`) to the release branch.
+- inspect the complete diff from the selected nightly's parent commit
+  (`<nightly-tag>^`, i.e. the commit before the nightly version bump) to the
+  release branch.
 
 ### 4. Create the tag and merge-back PR
 
