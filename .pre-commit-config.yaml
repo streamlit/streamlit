@@ -30,6 +30,11 @@ repos:
       # Run the formatter.
       - id: ruff-format
         types_or: [python, pyi]
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.11.33
+    hooks:
+      - id: uv-lock
+        files: ^(pyproject\.toml|lib/pyproject\.toml|uv\.lock)$
   - repo: local
     hooks:
       - id: oxlint-frontend
@@ -37,6 +42,9 @@ repos:
         entry: ./scripts/run_in_subdirectory.py frontend yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings
         files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
+        # Uses `language: system` (not `node`) because the tool is invoked via
+        # the frontend's yarn install, matching the buf hooks below. pre-commit
+        # 4.6.1+ rejects `language: node` hooks without package.json/deps.
         language: system
         pass_filenames: true
       # Single oxfmt hook for all frontend source files.
@@ -215,6 +223,7 @@ repos:
           |^proto/streamlit/proto/openmetrics_data_model.proto$
           |\.snap$
       - id: check-added-large-files
+        exclude: ^uv\.lock$
       - id: check-json
         # Note that this should be the same as the check-json5 hook's files
         # property

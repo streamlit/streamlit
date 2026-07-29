@@ -132,10 +132,11 @@ jobs:
           # which might cause some unexpected issues with dependencies.
           use_cached_venv: false
       - name: Install integration dependencies
-        run: uv sync --python python --group integration
+        run: uv sync --python python --locked --no-default-groups --group integration
       - name: Run Python integration tests
         run: make python-integration-tests
         env:
+          UV_NO_SYNC: 1
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
       - name: Upload coverage data
@@ -188,13 +189,58 @@ jobs:
             echo "min constraints file is up to date."
           fi
       - name: Install min dependencies (force reinstall)
-        run: uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
+        run: uv pip install --no-config -r scripts/assets/min-constraints-gen.txt --force-reinstall
       - name: Make local modules visible
         run: uv pip install --editable ./lib --no-deps
+      - name: Verify minimum dependency versions
+        env:
+          UV_NO_SYNC: 1
+        run: |
+          uv run python - <<'PY'
+          from importlib.metadata import version
+          from pathlib import Path
+
+          from packaging.requirements import Requirement
+          from packaging.version import Version
+
+          constraints = Path("scripts/assets/min-constraints-gen.txt")
+          for line in constraints.read_text().splitlines():
+              line = line.strip()
+              if not line or line.startswith("#"):
+                  continue
+
+              requirement = Requirement(line)
+              if requirement.marker and not requirement.marker.evaluate():
+                  continue
+
+              actual_version = Version(version(requirement.name))
+              assert actual_version in requirement.specifier, (
+                  f"{requirement.name}: expected {requirement.specifier}, "
+                  f"found {actual_version}"
+              )
+              print(f"{requirement.name}=={actual_version}")
+          PY
+      - name: Import standard-generated Python protobufs
+        env:
+          UV_NO_SYNC: 1
+        run: |
+          uv run python - <<'PY'
+          import importlib
+          from pathlib import Path
+
+          modules = sorted(Path("lib/streamlit/proto").glob("*_pb2.py"))
+          for module in modules:
+              importlib.import_module(f"streamlit.proto.{module.stem}")
+          print(f"Imported {len(modules)} generated protobuf modules")
+          PY
       - name: Run Python Tests
         run: make python-tests
+        env:
+          UV_NO_SYNC: 1
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
+        env:
+          UV_NO_SYNC: 1
       - name: Upload coverage data
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

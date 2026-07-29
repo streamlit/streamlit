@@ -33,20 +33,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Set Python version vars
-        uses: ./.github/actions/build_info
-
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-
-      - name: Install Python deps for notifications
-        run: |
-          uv pip install --system requests
+      # Sync before switching to the release branch, which may have older
+      # dependency metadata.
+      - name: Setup Python automation environment
+        uses: ./.github/actions/setup_automation
 
       - name: Configure Git
         env:
@@ -204,4 +194,4 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           PR_URL: ${{ steps.create_pr.outputs.pr_url }}
         run: |
-          python scripts/slack_notifications.py release_automation tag_pr_created
+          uv run --no-sync python scripts/slack_notifications.py release_automation tag_pr_created

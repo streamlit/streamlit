@@ -62,7 +62,8 @@ Reusable composite actions in `.github/actions/` encapsulate common setup steps.
 | Action | Description |
 |--------|-------------|
 | `build_info` | Sets Python version env vars (`PYTHON_MIN_VERSION`, `PYTHON_MAX_VERSION`, `PYTHON_VERSIONS`). Call early in workflows. |
-| `make_init` | Full dev environment setup: uv, Python, Node/Yarn, protoc, virtualenv, protobufs. Does NOT install Playwright. |
+| `make_init` | Locked dev environment setup: latest compatible uv, Python, Node/Yarn, protoc, lock-keyed virtualenv, protobufs. Does NOT install Playwright. Lock enforcement defaults on; only lock-repair workflows may disable it. |
+| `setup_automation` | Locked Python 3.12 environment containing only the dependencies used by lightweight CI and release utility scripts. |
 | `playwright_install` | Installs Playwright browsers with caching (by OS/arch/version). Call after `make_init` for E2E tests. |
 | `apt_mirror_fix` | Fixes slow Azure apt mirrors on Ubuntu runners. Called automatically by `playwright_install`. |
 | `preview_branch` | Sets `PREVIEW_BRANCH` and `BRANCH` env vars for PR preview deployments. Uses action inputs to mitigate script injection. |
@@ -78,6 +79,12 @@ steps:
       python_version: ${{ env.PYTHON_MAX_VERSION }}
   - uses: ./.github/actions/playwright_install  # Only for E2E tests
 ```
+
+For jobs that only run Python utility scripts, use `setup_automation` instead of
+`make_init`, then invoke scripts with `uv run --no-sync python`. The action exact-syncs
+the small, locked `automation` dependency group, and `--no-sync` prevents later branch or
+tag checkouts from changing that environment. Do not install these dependencies into the
+runner's system Python.
 
 ## Workflow Reference
 
@@ -154,6 +161,7 @@ steps:
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `update-browserslist-db.yml` | Weekly (Tuesdays) | Updates browserslist database, creates PR if changed |
+| `update-python-lock.yml` | Weekly (Mondays), manual dry run | Upgrades the complete compatible Python lock with the latest compatible uv and creates a PR if changed |
 | `update-emojis-material-icons.yml` | Weekly (Tuesdays) | Updates emoji and Material icons assets |
 | `community-voting.yml` | Issue labeled | Adds voting comment and reaction to bug/enhancement issues |
 
