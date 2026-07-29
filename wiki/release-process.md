@@ -166,11 +166,12 @@ should verify:
    streamlit version
    ```
 
-3. Confirm the command prints the expected version and smoke-test startup.
+3. Confirm the command prints the expected version and smoke-test that the app
+   starts successfully.
 4. Confirm the GitHub release exists and skim its generated notes.
 5. Merge the release PR back into `develop`.
-6. Complete the documentation release, public release notes, relevant issue or
-   forum follow-ups.
+6. Complete the documentation release, public release notes, and any relevant
+   issue or forum follow-ups.
 7. Wait for the automated release PR to appear in the
    [conda-forge Streamlit feedstock](https://github.com/conda-forge/streamlit-feedstock/pulls).
    This can take a couple of hours after the PyPI release.
