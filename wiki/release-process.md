@@ -47,7 +47,7 @@ as the release candidate.
 1. Confirm the selected nightly workflow completed successfully, including
    Python, JavaScript, and Playwright tests.
 2. Record its full tag. Nightly versions are derived from the latest PyPI
-   micro + 1, so a cutoff for a `1.60.0` release typically looks like
+   patch version + 1, so a cutoff for a `1.60.0` release typically looks like
    `1.59.1.dev20260725`, not `1.60.1.dev20260725`.
 
 ### 2. Create the release branch
@@ -101,9 +101,10 @@ The workflow:
 3. opens `[chore] Release v<version>` from the release branch to `develop`;
 4. adds the `change:chore` and `impact:users` labels.
 
-Before publication, the tag may be moved if the release branch changes. After
-publication, treat the tag as immutable and use a new version for additional
-fixes.
+Before publication, the tag may be moved if the release branch changes (see
+[Handling failures](#handling-failures) for the delete-and-recreate commands).
+After publication, treat the tag as immutable and use a new version for
+additional fixes.
 
 Do not merge the generated PR yet. [Build Release](https://github.com/streamlit/streamlit/actions/workflows/release.yml)
 uses an open `release/*` PR to verify that the selected tag corresponds to a
@@ -113,7 +114,7 @@ release branch. Until publishing completes:
 - ensure it is the only open `release/*` PR;
 - verify its head is `release/<version>` and its base is `develop`.
 
-### 5. Deploy static assets for SiS
+### 5. Deploy static assets for SiS (Streamlit in Snowflake)
 
 Run the Static Assets Workflow for SiS after creating the release tag and
 before building the release. This ensures that Streamlit in Snowflake on
