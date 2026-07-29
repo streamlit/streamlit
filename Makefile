@@ -382,8 +382,11 @@ debug:
 			echo "Error: Streamlit backend exited before startup completed. Check $$DEBUG_DIR/backend.log"; \
 			exit 1; \
 		fi; \
-		if [[ -z "$$BACKEND_PORT" ]]; then \
-			BACKEND_PORT=$$(awk '/[Ss]erver started on/ { n=split($$NF, a, ":"); print a[n]; exit }' "$$DEBUG_DIR/backend.log"); \
+		# Detect the backend port from the INFO "server started on" or DEBUG "Starting \
+		# uvicorn runner on" log lines, keeping the last numeric match (dev mode retries ports). \
+		DETECTED_BACKEND_PORT=$$(awk '/[Ss]erver started on|Starting uvicorn runner on/ { n=split($$NF, a, ":"); port=a[n] } END { if (port ~ /^[0-9]+$$/) print port }' "$$DEBUG_DIR/backend.log"); \
+		if [[ -n "$$DETECTED_BACKEND_PORT" ]]; then \
+			BACKEND_PORT=$$DETECTED_BACKEND_PORT; \
 		fi; \
 		if [[ -n "$$BACKEND_PORT" ]] && curl -fsS "http://localhost:$$BACKEND_PORT/_stcore/health" > /dev/null 2>&1; then \
 			BACKEND_READY=true; \
