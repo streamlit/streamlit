@@ -46,9 +46,9 @@ as the release candidate.
 
 1. Confirm the selected nightly workflow completed successfully, including
    Python, JavaScript, and Playwright tests.
-2. Record its full tag. Nightly versions are derived from the latest PyPI
-   patch version + 1, so a cutoff for a `1.60.0` release typically looks like
-   `1.59.1.dev20260725`, not `1.60.1.dev20260725`.
+2. Record its full tag. A cutoff for a `1.60.0` release typically has a nightly
+   tag like `1.59.1.dev20260725` (not `1.60.1.dev20260725`), because nightly
+   versions are derived from the latest PyPI patch version + 1.
 
 ### 2. Create the release branch
 
@@ -236,7 +236,7 @@ API and decide whether a separate npm package release is required.
 Use the same steps as a regular release:
 
 1. [Create the tag and merge-back PR](#4-create-the-tag-and-merge-back-pr).
-2. [Deploy static assets for SiS](#5-deploy-static-assets-for-sis).
+2. [Deploy static assets for SiS](#5-deploy-static-assets-for-sis-streamlit-in-snowflake).
 3. [Build and publish](#6-build-and-publish) from the patch tag.
 4. [Verify and close out](#7-verify-and-close-out).
 
@@ -279,7 +279,7 @@ Components v1 is considered legacy, and no new releases are planned.
   git fetch origin "release/<version>"
   git tag -d "<version>"
   git push origin ":refs/tags/<version>"
-  git tag -a "<version>" -m "Release <version>" "origin/release/<version>"
+  git tag -a "<version>" -m "Streamlit <version>" "origin/release/<version>"
   git push origin "<version>"
   ```
 - **Failure during or after publication:** Check PyPI and GitHub Releases before
