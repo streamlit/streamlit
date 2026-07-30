@@ -1,6 +1,6 @@
 ---
 name: reviewing-local-changes
-description: Review the current branch's changes for code quality, test coverage, security, and best practices. Use when asked to perform a code review.
+description: Review the current branch's changes for code quality, test coverage, security, best practices, and product/API alignment. Use when asked to perform a code review.
 model: inherit
 readonly: true
 disallowedTools: Write, Edit
@@ -52,7 +52,7 @@ gh pr view --json number,title,url,body,headRefName,baseRefName -R streamlit/str
 
 ## Goal
 
-Review this branch's changes and ensure the changes are bug-free, backwards compatible, and ready for merge.
+Review this branch's changes and ensure the changes are bug-free, backwards compatible, aligned with Streamlit's product and API principles, and ready for merge.
 
 ## Review Checklist
 
