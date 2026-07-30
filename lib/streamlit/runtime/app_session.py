@@ -79,6 +79,13 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
+# Skills-nudge suppression reasons worth reporting to telemetry: the ones that
+# tell us something actionable about adoption. The rest are deliberately dropped
+# to ``""`` — ``headless`` alone fires for every deployed app and would swamp the
+# metric, and "no agent harness" / "already installed" / "user dismissed" are
+# either already measurable from the page profile or simply not interesting.
+_REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset({"conflict", "error"})
+
 
 class AppSessionState(Enum):
     APP_NOT_RUNNING = "APP_NOT_RUNNING"
@@ -882,30 +889,31 @@ class AppSession:
         # Recommend installing the bundled agent skills when running locally
         # with an AI agent present, no skills installed yet, and the browser on a
         # direct-loopback connection, so the frontend can surface a one-click
-        # "install skills" nudge. ``suppressed_locality`` records (for telemetry)
-        # when the nudge was otherwise eligible but the loopback gate blocked it.
-        recommend, suppressed_locality = self._compute_skills_nudge_state()
+        # "install skills" nudge. ``suppressed_reason`` records (for telemetry)
+        # why an otherwise-eligible nudge was withheld.
+        recommend, suppressed_reason = self._compute_skills_nudge_state()
         imsg.recommend_skills_install = recommend
-        imsg.skills_nudge_suppressed_locality = suppressed_locality
+        imsg.skills_nudge_suppressed_reason = suppressed_reason
 
         return msg
 
     def _compute_skills_nudge_state(self) -> tuple[bool, str]:
         """Compute the in-app skills-nudge state for the NewSession message.
 
-        Returns ``(recommend, suppressed_locality)``:
+        Returns ``(recommend, suppressed_reason)``:
 
         - ``recommend`` is ``True`` only when the nudge is eligible
-          (``should_show_skills_nudge``) AND the browser is connected directly
-          over loopback. The loopback requirement is an intentionally
-          conservative eligibility rule: Docker/VM/reverse-proxy/SSH-tunnel
+          (``skills.nudge_suppression_reason`` returns ``""``) AND the browser is
+          connected directly over loopback. The loopback requirement is an
+          intentionally conservative eligibility rule: Docker/VM/reverse-proxy/SSH-tunnel
           setups are legitimate local dev but also where the app may be
           shared/deployed, so we don't surface an in-app CTA there.
-        - ``suppressed_locality`` is the connection class (``"private"``,
-          ``"other"``, or ``"unknown"`` when the peer IP can't be determined)
-          when the nudge WOULD be eligible but the loopback gate blocked it,
-          else ``""`` — recorded purely so adoption telemetry can measure how
-          much of the agent-harness audience the gate excludes.
+        - ``suppressed_reason`` is why an otherwise-eligible nudge was withheld,
+          else ``""`` — recorded purely so adoption telemetry can measure
+          suppression instead of it being silent. Only the informative reasons are
+          reported (see ``_REPORTED_NUDGE_SUPPRESSION_REASONS``); the high-volume
+          uninteresting ones, above all ``headless`` (every deployed app), would
+          swamp the metric.
 
         Recomputed on each NewSession rather than memoized: the heavy filesystem
         detection is cached in ``skills`` (and invalidated when skills are
@@ -927,14 +935,17 @@ class AppSession:
             from streamlit.web import skills
 
             app_dir = os.path.dirname(self._script_data.main_script_path)
-            if not skills.should_show_skills_nudge(app_dir):
-                return False, ""
+            reason = skills.nudge_suppression_reason(app_dir)
+            if reason:
+                return False, (
+                    reason if reason in _REPORTED_NUDGE_SUPPRESSION_REASONS else ""
+                )
             locality = connection_locality(self.id)
             if locality == "loopback":
                 return True, ""
             # Eligible, but the browser is not on a direct-loopback connection:
-            # suppress the nudge and record the topology for adoption telemetry.
-            return False, locality
+            # withhold the nudge and record the topology for adoption telemetry.
+            return False, f"non_loopback_{locality}"
         except Exception as ex:  # pragma: no cover - defensive
             _LOGGER.debug("Failed to compute skills nudge state", exc_info=ex)
             return False, ""

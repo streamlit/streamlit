@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import click
@@ -1522,6 +1523,28 @@ def _evaluate_nudge(
     would_be_refused: bool = False,
 ) -> bool:
     """Run ``should_show_skills_nudge`` with the given conditions patched in."""
+    return not _evaluate_nudge_reason(
+        tmp_path,
+        headless=headless,
+        hide_welcome=hide_welcome,
+        agents=agents,
+        installed_skills=installed_skills,
+        marker_exists=marker_exists,
+        would_be_refused=would_be_refused,
+    )
+
+
+def _evaluate_nudge_reason(
+    tmp_path: Path,
+    *,
+    headless: bool = False,
+    hide_welcome: bool = False,
+    agents: tuple[str, ...] = ("claude",),
+    installed_skills: tuple[str, ...] = (),
+    marker_exists: bool = False,
+    would_be_refused: bool = False,
+) -> str:
+    """Run ``nudge_suppression_reason`` with the given conditions patched in."""
     marker = tmp_path / ".skills_nudge_dismissed"
     if marker_exists:
         marker.touch()
@@ -1547,7 +1570,39 @@ def _evaluate_nudge(
             return_value=would_be_refused,
         ),
     ):
-        return skills.should_show_skills_nudge()
+        return skills.nudge_suppression_reason()
+
+
+@pytest.mark.parametrize(
+    ("conditions", "expected_reason"),
+    [
+        ({}, ""),
+        ({"headless": True}, "headless"),
+        ({"hide_welcome": True}, "welcome_hidden"),
+        ({"marker_exists": True}, "dismissed"),
+        ({"agents": ()}, "no_agent"),
+        ({"installed_skills": ("home:claude:developing-with-streamlit",)}, "installed"),
+        ({"would_be_refused": True}, "conflict"),
+    ],
+)
+def test_nudge_suppression_reason_maps_each_gate_to_its_code(
+    tmp_path: Path, conditions: dict[str, Any], expected_reason: str
+) -> None:
+    """Each gate reports its own bounded reason code. These strings become
+    telemetry labels (``skillsNudgeSuppressed:<reason>``), so pin them: a rename
+    silently orphans the dashboard queries that split on them."""
+    assert _evaluate_nudge_reason(tmp_path, **conditions) == expected_reason
+
+
+def test_nudge_suppression_reason_gates_in_priority_order(tmp_path: Path) -> None:
+    """With several gates tripped at once the earliest wins, so a session reports
+    one reason rather than an arbitrary pick. Headless outranks a conflict: a
+    deployed app was never a nudge candidate, and reporting the conflict there
+    would pollute the metric this reason exists to make measurable."""
+    assert (
+        _evaluate_nudge_reason(tmp_path, headless=True, would_be_refused=True)
+        == "headless"
+    )
 
 
 def test_should_show_skills_nudge_when_all_conditions_met(tmp_path: Path) -> None:

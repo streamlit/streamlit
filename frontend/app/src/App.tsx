@@ -1567,17 +1567,17 @@ export class App extends PureComponent<Props, State> {
       this.setState({ showSkillsNudge: true })
       this.trackSkillsNudge("skillsNudgeShown")
     } else if (
-      initialize.skillsNudgeSuppressedLocality &&
+      initialize.skillsNudgeSuppressedReason &&
       !this.skillsNudgeShown
     ) {
-      // The nudge was eligible server-side but the server suppressed it because
-      // the browser isn't on a direct-loopback connection (Docker/VM/tunnel).
-      // Record the connection class — once per page load, reusing the same
-      // guard so a reconnect can't double-count — so we can measure how much of
-      // the agent-harness audience the conservative loopback gate excludes.
+      // The nudge was eligible server-side but the server withheld it — because
+      // the browser isn't on a direct-loopback connection (Docker/VM/tunnel), or
+      // because a one-click install would only conflict. Record the reason as a
+      // label suffix — once per page load, reusing the same guard so a reconnect
+      // can't double-count — so suppression is measurable instead of silent.
       this.skillsNudgeShown = true
       this.trackSkillsNudge(
-        `skillsNudgeSuppressedNonLocal:${initialize.skillsNudgeSuppressedLocality}`
+        `skillsNudgeSuppressed:${initialize.skillsNudgeSuppressedReason}`
       )
     }
   }

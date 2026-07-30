@@ -23,7 +23,7 @@ import tempfile
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Final
+from typing import Final, Literal
 
 import click
 
@@ -1167,15 +1167,44 @@ def _project_install_would_be_refused(app_dir: str | None) -> bool:
         return False
 
 
+# The full vocabulary of reasons the nudge can be withheld. A closed set so the
+# reason stays safe to emit as a telemetry label; typing it as a Literal makes
+# mypy reject a typo or an ad-hoc reason at the return site instead of silently
+# minting a new label the analysis queries won't know about. ``conflict``
+# deliberately reuses the install-failure reason name for the same cause, so
+# "we withheld the nudge" and "we nudged and the install conflicted anyway" are
+# comparable in a single query.
+NudgeSuppressionReason = Literal[
+    "",  # Not withheld - show the nudge.
+    "conflict",  # A one-click install would refuse at every install target.
+    "dismissed",  # The user asked never to see it again.
+    "error",  # The eligibility check itself failed; withheld defensively.
+    "headless",  # Headless mode: deployments, CI, SiS.
+    "installed",  # The bundled skills are already present.
+    "no_agent",  # No AI agent harness on this machine.
+    "welcome_hidden",  # The user suppressed startup messaging entirely.
+]
+
+
 def should_show_skills_nudge(app_dir: str | None = None) -> bool:
     """Return whether the in-app "install skills" nudge should be shown.
+
+    Thin wrapper over :func:`nudge_suppression_reason` for callers that only
+    need the yes/no answer; see it for the gating rules and error behavior.
+    """
+    return not nudge_suppression_reason(app_dir)
+
+
+def nudge_suppression_reason(app_dir: str | None = None) -> NudgeSuppressionReason:
+    """Return why the in-app "install skills" nudge is being withheld, or ``""``
+    when it should be shown.
 
     The nudge is recommended only for interactive local development where an
     AI agent harness is present but the bundled Streamlit skills are not yet
     installed, and the user has not permanently dismissed it. This mirrors the
-    gating of the CLI recommendation printed on app startup. It is also
-    suppressed when a one-click install would conflict at every install target,
-    so the user is never nudged toward an install that can only fail.
+    gating of the CLI recommendation printed on app startup. It is also withheld
+    when a one-click install would conflict at every install target, so the user
+    is never nudged toward an install that can only fail.
 
     Parameters
     ----------
@@ -1186,31 +1215,34 @@ def should_show_skills_nudge(app_dir: str | None = None) -> bool:
         detection result. Falls back to the current working directory when
         ``None``.
 
-    Best-effort: returns ``False`` on any error so a detection failure never
-    blocks app startup or surfaces a spurious nudge.
+    Best-effort: returns ``"error"`` on any failure so a detection failure never
+    blocks app startup or surfaces a spurious nudge. Note this is a *reason*, not
+    a falsy value — the nudge stays hidden, as before.
     """
     from streamlit import config
 
     try:
         if config.get_option("server.headless"):
             # Don't nudge in headless mode (e.g. deployments, CI, SiS).
-            return False
+            return "headless"
         if config.get_option("logger.hideWelcomeMessage"):
-            return False
+            return "welcome_hidden"
         if _nudge_dismissed_marker_path().exists():
-            return False
+            return "dismissed"
         # Gate on the same detection the page-profile telemetry uses (both now
         # defined here): an agent must be present, and our skills must not be
         # installed yet.
         if not detect_installed_agents():
-            return False
+            return "no_agent"
         # An agent is present; recommend installing only if our skills aren't.
         if detect_installed_skills(app_dir):
-            return False
-        # No SKILL.md marker found. Suppress only a deterministic conflict at
+            return "installed"
+        # No SKILL.md marker found. Withhold only on a deterministic conflict at
         # every target; the other always-fail causes (missing bundled package, a
         # copy that errors on permissions/path-length) stay fail-open, since those
         # can resolve without the user removing anything.
-        return not _project_install_would_be_refused(app_dir)
+        if _project_install_would_be_refused(app_dir):
+            return "conflict"
+        return ""
     except Exception:  # pragma: no cover - defensive
-        return False
+        return "error"
