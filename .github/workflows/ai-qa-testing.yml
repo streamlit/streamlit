@@ -190,10 +190,10 @@ jobs:
         run: |
           gh pr edit "$PR_NUMBER_ENV" --remove-label "ai-qa-test" --repo "$REPOSITORY" || true
 
-      # actions/upload-artifact strips the shared parent dir ($QA_DIR) when
-      # uploading multiple files, so qa-report.md and verdict.txt download to
-      # qa-artifacts/ directly (not qa-artifacts/$QA_DIR/). Later steps rely on
-      # these flat paths.
+      # The upload step uploads the $QA_DIR/ directory, so its contents
+      # (qa-report.md and verdict.txt) are stored at the artifact root and
+      # download to qa-artifacts/ directly (not qa-artifacts/$QA_DIR/). Later
+      # steps rely on these flat paths.
       - name: Download QA artifacts
         id: download
         if: needs.ai-qa-testing.result == 'success'
