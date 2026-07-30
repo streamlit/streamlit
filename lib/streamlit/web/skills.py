@@ -511,14 +511,21 @@ def _install_skill_copy(
                 with contextlib.suppress(OSError):
                     backup_path.rename(target_path)
                 raise
-            _remove_skill_target(backup_path)
+            # The swap has landed, so the install succeeded - dropping the backup
+            # is bookkeeping. Suppress its errors: letting one reach the handler
+            # below would report write_failed for a skill that is correctly in
+            # place, a false failure in both the nudge and the telemetry this
+            # reason feeds. A leftover backup is cleared by the next install.
+            with contextlib.suppress(OSError):
+                _remove_skill_target(backup_path)
         else:
             shutil.copytree(source_path, target_path)
         result.installed.append(str(rel_target_path))
     except OSError as e:
-        # Clean up temp path only if the old target is still in place. If it's
-        # gone, the swap got past the removal and temp is our only copy - keep it
-        # so the user isn't left with nothing.
+        # Drop the temp copy only if something is still at the target. If the
+        # target is empty, the swap died mid-flight and both the restore failed -
+        # so temp (new content) and the .old backup (previous install) are all the
+        # user has left. Keep them rather than leaving the path with nothing.
         temp_path = target_path.with_name(f".{skill_name}.tmp")
         if temp_path.exists() and (target_path.exists() or target_path.is_symlink()):
             shutil.rmtree(temp_path, ignore_errors=True)

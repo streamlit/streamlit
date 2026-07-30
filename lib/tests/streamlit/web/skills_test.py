@@ -1428,6 +1428,44 @@ class TestInstallSkillCopyEdgeCases:
         assert result.errored
         assert not result.installed
 
+    def test_reports_success_when_only_backup_cleanup_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A failed backup cleanup after a landed swap is still a success.
+
+        Dropping the moved-aside ``.old`` backup is bookkeeping that happens after
+        the new skill is already at the target. If its error reached the write
+        handler, a correct install would be reported as ``write_failed`` — a false
+        failure in the nudge and a false reason in the telemetry.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "SKILL.md").write_text("# Old version\n", encoding="utf-8")
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            # The only rmtree in this path is the post-swap backup cleanup.
+            patch.object(
+                skills.shutil, "rmtree", side_effect=OSError("Directory not empty")
+            ),
+        ):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        # The new skill landed, so this is a success...
+        assert result.installed
+        assert (target / "SKILL.md").read_text() == "# Test Skill\n"
+        # ...and must not be booked as a write failure.
+        assert not result.errored
+
     def test_reports_mkdir_failure_as_error(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
