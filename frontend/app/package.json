@@ -23,7 +23,7 @@
     "typesync:ci": "typesync --dry=fail"
   },
   "dependencies": {
-    "@babel/runtime": "^7.28.4",
+    "@babel/runtime": "^8.0.0",
     "@emotion-icons/emotion-icon": "^4.1.0",
     "@emotion-icons/material-outlined": "^3.14.0",
     "@emotion-icons/material-rounded": "^3.14.0",
