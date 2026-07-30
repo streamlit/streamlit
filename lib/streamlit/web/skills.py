@@ -279,8 +279,15 @@ def _skill_copy_matches(source_path: Path, target_path: Path) -> bool:
     return True
 
 
+@lru_cache(maxsize=8)
 def _symlinks_supported(project_root: Path, source_path: Path) -> bool:
     """Return whether project install can create directory symlinks."""
+    # Cached because the probe WRITES (a temp dir plus a symlink) into
+    # project_root, and the nudge show-gate calls this on every script rerun -
+    # uncached, a passive eligibility check would churn the user's project
+    # directory continuously. Symlink support is a property of the OS and
+    # filesystem rather than of a moment in time (enabling Windows Developer
+    # Mode needs a restart anyway), so a process-lifetime answer is accurate.
     try:
         with tempfile.TemporaryDirectory(
             prefix=".streamlit-skills-", dir=project_root
@@ -305,15 +312,28 @@ def _get_display_path(
 
 def _symlink_target_would_conflict(target_path: Path) -> bool:
     """Return whether a real (non-symlink) file or directory occupies the target,
-    blocking a project/symlink install.
-
-    Single source of truth for the project installer's per-target conflict,
-    shared between :func:`_install_skill_symlink` (which skips such a target) and
-    the nudge show-gate (:func:`_project_install_would_be_refused`), so the two
-    can never drift. A matching or name-owned symlink is replaced rather than
-    blocked, and a broken symlink has ``exists() == False``, so neither counts.
+    blocking a project (symlink) install.
     """
+    # Shared by _install_skill_symlink (which skips such a target) and the nudge
+    # show-gate (_project_install_would_be_refused) so the two cannot drift.
+    # Symlinks are excluded because the installer replaces any symlink named
+    # after a bundled skill; a broken one has exists() == False regardless.
     return target_path.exists() and not target_path.is_symlink()
+
+
+def _copy_target_would_conflict(target_path: Path) -> bool:
+    """Return whether a real (non-symlink) file occupies the target, blocking a
+    global (copy) install.
+    """
+    # The copy counterpart to _symlink_target_would_conflict, and deliberately
+    # narrower: the copy install replaces a real directory (staging to a temp dir
+    # first) and unlinks a name-owned symlink, so only a real file blocks it.
+    # Shared by _install_skill_copy and the nudge show-gate, same as above.
+    return (
+        target_path.exists()
+        and not target_path.is_symlink()
+        and not target_path.is_dir()
+    )
 
 
 def _install_skill_symlink(
@@ -403,23 +423,24 @@ def _install_skill_copy(
 
     old_target_to_remove: Path | None = None
 
-    if target_path.exists() or target_path.is_symlink():
-        # Target exists - check if we can replace it
-        if target_path.is_symlink():
-            if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
-                target_path.unlink()
-            else:
-                result.skipped.append(f"{rel_target_path} (existing symlink)")
-                return
-        elif target_path.is_dir():
-            if _skill_copy_matches(source_path, target_path):
-                result.up_to_date.append(str(rel_target_path))
-                return
-            # Defer removal until after successful copy to ensure atomicity
-            old_target_to_remove = target_path
+    # A real (non-symlink) file is a hard conflict - skip it.
+    if _copy_target_would_conflict(target_path):
+        result.skipped.append(f"{rel_target_path} (existing file)")
+        return
+
+    if target_path.is_symlink():
+        # A symlink (valid or broken) at the target - replace it if it's ours.
+        if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
+            target_path.unlink()
         else:
-            result.skipped.append(f"{rel_target_path} (existing file)")
+            result.skipped.append(f"{rel_target_path} (existing symlink)")
             return
+    elif target_path.is_dir():
+        if _skill_copy_matches(source_path, target_path):
+            result.up_to_date.append(str(rel_target_path))
+            return
+        # Defer removal until after successful copy to ensure atomicity
+        old_target_to_remove = target_path
 
     # Copy skill directory - use temp location first to ensure atomicity
     try:
@@ -1070,35 +1091,36 @@ def clear_installed_skills_cache() -> None:
     _detect_installed_skills_cached.cache_clear()
 
 
+@lru_cache(maxsize=4)
+def _log_nudge_suppressed_by_conflict(blocked_paths: tuple[str, ...]) -> None:
+    """Warn that the 'install skills' nudge is being withheld, once per blocker set."""
+    # Cached purely to deduplicate: the show-gate re-evaluates on every script
+    # rerun, so an unguarded warning would repeat for as long as the blockers do.
+    # Suppression is otherwise entirely silent, which leaves a developer no way to
+    # find out why the nudge never appears. Absolute paths are fine here - unlike
+    # the installer's ClickExceptions, this reaches only the server log.
+    _LOGGER.warning(
+        "Not recommending the 'install skills' nudge: %s already exist(s) and "
+        "would block a one-click install. Remove to enable it.",
+        ", ".join(blocked_paths),
+    )
+
+
 def _project_install_would_be_refused(app_dir: str | None) -> bool:
-    """Return whether the one-click install the nudge triggers would refuse.
+    """Return whether the one-click install the nudge triggers would refuse
+    outright, hitting a conflict at every target it could write to.
 
-    The nudge triggers ``install_skills(global_mode=False, ...)``, which installs
-    project symlinks or — when symlinks are unsupported (e.g. Windows without
-    Developer Mode) — falls back to a global copy. This mirrors BOTH refusal
-    paths so the show-gate stops recommending an install that can only conflict:
-    without it, a stray non-managed ``developing-with-streamlit`` path with no
-    ``SKILL.md`` is invisible to the marker-based detection yet a hard conflict
-    for the installer, so the nudge shows, the install refuses, and the loop
-    repeats every session.
-
-    It reuses the installer's own resolvers and per-mode conflict rules so the
-    two cannot drift:
-
-    - Symlink mode: refuses only when every project ``(skill, target)`` pair is
-      blocked by a real, non-symlink file/dir (:func:`_symlink_target_would_conflict`).
-    - Copy mode (symlinks unsupported): the global fallback copies the single
-      global skill and refuses only when every global target is a real
-      (non-symlink) FILE — a real dir is replaced, a name-owned symlink is
-      unlinked+replaced, and a missing path is copied, so none of those refuse.
-
-    The cheap stat-only checks run first; the ``_symlinks_supported`` probe
-    (which writes a temp symlink into ``project_root``) is only reached when one
-    target set is already fully blocked, keeping the common no-conflict path
-    write-free. Intentionally uncached so removing the blocker re-shows the nudge
-    next session, and fails open (returns ``False``) on any error so a probe
-    failure never suppresses the nudge spuriously.
+    Fails open (returns ``False``) on any error, so a probe failure never hides
+    the nudge. Deliberately uncached, so removing a blocker re-shows it.
     """
+    # Without this the show-gate and the installer disagree: a stray non-managed
+    # ``developing-with-streamlit`` path with no SKILL.md is invisible to the
+    # marker-based detection yet a hard conflict for the installer, so the nudge
+    # shows, the install refuses, and the loop repeats every session. The nudge
+    # triggers install_skills(global_mode=False), which installs project symlinks
+    # or - when symlinks are unsupported (e.g. Windows without Developer Mode) -
+    # falls back to a global copy, so both modes are mirrored below using the
+    # installer's own resolvers and conflict rules to keep the two from drifting.
     try:
         source_skills_dir = _get_source_skills_dir()
         skill_names = _discover_skills(source_skills_dir)
@@ -1106,33 +1128,41 @@ def _project_install_would_be_refused(app_dir: str | None) -> bool:
             return False
         project_root = _find_project_root(Path(app_dir) if app_dir else None)
 
-        # Symlink-mode refusal: every project (skill, target) pair blocked by a
-        # real, non-managed file/dir.
-        project_targets = _get_project_target_dirs(project_root)
-        project_all_blocked = bool(project_targets) and all(
-            _symlink_target_would_conflict(target_dir / skill_name)
-            for target_dir in project_targets
+        # Symlink mode installs every (skill, target) pair, so it only refuses
+        # when a real file/dir blocks all of them.
+        project_pairs = [
+            target_dir / skill_name
+            for target_dir in _get_project_target_dirs(project_root)
             for skill_name in skill_names
+        ]
+        project_all_blocked = bool(project_pairs) and all(
+            _symlink_target_would_conflict(path) for path in project_pairs
         )
-        # Copy-mode refusal (the symlinks-unsupported global fallback): every
-        # global target is a real, non-symlink FILE. A real dir is replaced, so
-        # do NOT reuse _symlink_target_would_conflict here.
-        global_targets = _get_global_target_dirs()
-        global_all_blocked = bool(global_targets) and all(
-            (target_dir / _GLOBAL_SKILL_NAME).is_file()
-            and not (target_dir / _GLOBAL_SKILL_NAME).is_symlink()
-            for target_dir in global_targets
+
+        # The copy fallback installs only the single global skill, and replaces a
+        # real dir rather than conflicting - hence the narrower rule.
+        global_pairs = [
+            target_dir / _GLOBAL_SKILL_NAME for target_dir in _get_global_target_dirs()
+        ]
+        global_all_blocked = bool(global_pairs) and all(
+            _copy_target_would_conflict(path) for path in global_pairs
         )
+
         if not project_all_blocked and not global_all_blocked:
-            # Common case: neither mode is fully blocked, so the install can make
-            # progress. Return without the symlink-support write-probe.
+            # Neither mode is fully blocked, so the install can make progress.
             return False
 
-        # One mode is fully blocked; only the mode the installer actually uses
-        # decides. This is the sole branch that probes symlink support.
+        # One mode is fully blocked, so only the mode the installer would actually
+        # use decides. Sole branch needing the (cached) symlink-support probe.
         if _symlinks_supported(project_root, source_skills_dir / skill_names[0]):
-            return project_all_blocked
-        return global_all_blocked
+            refused, pairs = project_all_blocked, project_pairs
+        else:
+            refused, pairs = global_all_blocked, global_pairs
+
+        if refused:
+            # "Refused" means every pair conflicted, so the pairs ARE the blockers.
+            _log_nudge_suppressed_by_conflict(tuple(str(path) for path in pairs))
+        return refused
     except (OSError, RuntimeError):
         return False
 
@@ -1144,12 +1174,8 @@ def should_show_skills_nudge(app_dir: str | None = None) -> bool:
     AI agent harness is present but the bundled Streamlit skills are not yet
     installed, and the user has not permanently dismissed it. This mirrors the
     gating of the CLI recommendation printed on app startup. It is also
-    suppressed when a one-click install would deterministically *conflict* at
-    every install target (a non-managed file or directory already occupies each
-    one), so the user is never nudged toward an install that can only conflict.
-    (Other always-fail causes — a missing bundled package, or a copy that errors
-    on permissions/path-length — stay fail-open: the nudge keeps showing, since
-    those can resolve without the user removing anything.)
+    suppressed when a one-click install would conflict at every install target,
+    so the user is never nudged toward an install that can only fail.
 
     Parameters
     ----------
@@ -1181,10 +1207,10 @@ def should_show_skills_nudge(app_dir: str | None = None) -> bool:
         # An agent is present; recommend installing only if our skills aren't.
         if detect_installed_skills(app_dir):
             return False
-        # No SKILL.md marker found. Also suppress when a one-click project
-        # install would deterministically refuse at every target (a stray
-        # non-managed file/dir occupies the installer's target), so the developer
-        # isn't nudged toward an action that can only fail with a conflict.
+        # No SKILL.md marker found. Suppress only a deterministic conflict at
+        # every target; the other always-fail causes (missing bundled package, a
+        # copy that errors on permissions/path-length) stay fail-open, since those
+        # can resolve without the user removing anything.
         return not _project_install_would_be_refused(app_dir)
     except Exception:  # pragma: no cover - defensive
         return False

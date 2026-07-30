@@ -19,6 +19,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -1902,6 +1903,81 @@ class TestSymlinkTargetWouldConflict:
         assert skills._symlink_target_would_conflict(target) is False
 
 
+class TestCopyTargetWouldConflict:
+    """_copy_target_would_conflict is the shared per-target conflict rule for the
+    global (copy) install, and is narrower than its symlink counterpart: only a
+    real file blocks, because the copy replaces a real directory."""
+
+    def test_real_file_conflicts(self, tmp_path: Path) -> None:
+        """A regular file at the target blocks a copy install."""
+        target = tmp_path / "developing-with-streamlit"
+        target.write_text("not a skill", encoding="utf-8")
+        assert skills._copy_target_would_conflict(target) is True
+
+    def test_real_directory_does_not_conflict(self, tmp_path: Path) -> None:
+        """The copy stages to a temp dir and swaps, so a real directory is
+        replaced rather than blocked - the one case where the copy rule must
+        diverge from the symlink rule."""
+        target = tmp_path / "developing-with-streamlit"
+        target.mkdir()
+        assert skills._copy_target_would_conflict(target) is False
+        # Guard the divergence itself: symlink mode DOES treat this as a conflict.
+        assert skills._symlink_target_would_conflict(target) is True
+
+    def test_symlink_does_not_conflict(self, tmp_path: Path) -> None:
+        """A name-owned symlink is unlinked and replaced, not blocked."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        real = tmp_path / "real"
+        real.write_text("x", encoding="utf-8")
+        link = tmp_path / "developing-with-streamlit"
+        link.symlink_to(real)
+        assert skills._copy_target_would_conflict(link) is False
+
+    def test_missing_path_does_not_conflict(self, tmp_path: Path) -> None:
+        """An absent target is free for the copy to create."""
+        assert (
+            skills._copy_target_would_conflict(tmp_path / "developing-with-streamlit")
+            is False
+        )
+
+    def test_matches_install_skill_copy_skip_decision(self, tmp_path: Path) -> None:
+        """Ties the rule to the installer it gates: a file the rule calls a
+        conflict is exactly what _install_skill_copy skips, and a directory it
+        clears is one _install_skill_copy actually replaces."""
+        source_dir = tmp_path / "src"
+        (source_dir / "developing-with-streamlit").mkdir(parents=True)
+        (source_dir / "developing-with-streamlit" / "SKILL.md").write_text(
+            "# Skill\n", encoding="utf-8"
+        )
+
+        blocked_dir = tmp_path / "blocked"
+        blocked_dir.mkdir()
+        (blocked_dir / "developing-with-streamlit").write_text("x", encoding="utf-8")
+        blocked_result = skills._InstallResult()
+        skills._install_skill_copy(
+            "developing-with-streamlit",
+            source_dir,
+            blocked_dir,
+            blocked_result,
+            {"developing-with-streamlit"},
+        )
+        assert any("existing file" in s for s in blocked_result.skipped)
+        assert not blocked_result.installed
+
+        free_dir = tmp_path / "free"
+        (free_dir / "developing-with-streamlit").mkdir(parents=True)
+        free_result = skills._InstallResult()
+        skills._install_skill_copy(
+            "developing-with-streamlit",
+            source_dir,
+            free_dir,
+            free_result,
+            {"developing-with-streamlit"},
+        )
+        assert free_result.installed
+        assert not free_result.skipped
+
+
 class TestProjectInstallWouldBeRefused:
     """_project_install_would_be_refused mirrors the installer: it returns True
     only when EVERY (skill, target) pair is blocked by a real file/dir AND
@@ -2224,6 +2300,109 @@ class TestNudgeSuppressedWhenInstallWouldConflict:
             with pytest.raises(click.ClickException) as exc:
                 skills.install_skills(global_mode=False, yes=True, app_dir=str(app_dir))
             assert "already exist" in str(exc.value)
+
+
+class TestNudgeGateSideEffects:
+    """The show-gate is re-evaluated on every script rerun, so its cost and its
+    side effects on the user's project matter as much as its answer."""
+
+    @staticmethod
+    def _blocked_project(tmp_path: Path) -> tuple[Path, Path]:
+        """Build the suppression scenario: a stray dir at every project target."""
+        source_dir = tmp_path / "pkg" / ".agents" / "skills"
+        (source_dir / "developing-with-streamlit").mkdir(parents=True)
+        (source_dir / "developing-with-streamlit" / "SKILL.md").write_text(
+            "# Skill\n", encoding="utf-8"
+        )
+        project = tmp_path / "project"
+        for target in (project / ".agents" / "skills", project / ".claude" / "skills"):
+            target.mkdir(parents=True)
+            (target / "developing-with-streamlit").mkdir()
+        return source_dir, project
+
+    def test_symlink_probe_runs_once_across_reruns(self, tmp_path: Path) -> None:
+        """_symlinks_supported writes a temp dir and symlink INTO project_root, so
+        it must be cached: uncached, every rerun of a suppressed app would churn
+        the user's project directory for a read-only eligibility check."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        source_dir, project = self._blocked_project(tmp_path.resolve())
+
+        with (
+            patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
+            patch.object(skills, "_find_project_root", return_value=project),
+            patch.object(
+                skills,
+                "_get_project_target_dirs",
+                return_value=[
+                    project / ".agents" / "skills",
+                    project / ".claude" / "skills",
+                ],
+            ),
+            patch.object(skills, "_get_global_target_dirs", return_value=[]),
+            # Count the probe's actual write rather than trusting cache bookkeeping,
+            # so a cache keyed on something volatile would still fail this.
+            patch.object(
+                skills.tempfile,
+                "TemporaryDirectory",
+                side_effect=tempfile.TemporaryDirectory,
+            ) as mock_temp_dir,
+        ):
+            skills._symlinks_supported.cache_clear()
+            for _ in range(3):
+                assert skills._project_install_would_be_refused(None) is True
+
+        assert mock_temp_dir.call_count == 1
+        assert list(project.glob(".streamlit-skills-*")) == []
+
+    def test_suppression_is_logged_once_naming_the_blockers(
+        self, tmp_path: Path
+    ) -> None:
+        """Suppression is otherwise silent, leaving a developer no way to learn why
+        the nudge never appears - so warn, naming the paths to remove, and only
+        once per blocker set rather than on every rerun."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        source_dir, project = self._blocked_project(tmp_path.resolve())
+        target_dirs = [project / ".agents" / "skills", project / ".claude" / "skills"]
+
+        with (
+            patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
+            patch.object(skills, "_find_project_root", return_value=project),
+            patch.object(skills, "_get_project_target_dirs", return_value=target_dirs),
+            patch.object(skills, "_get_global_target_dirs", return_value=[]),
+            patch.object(skills._LOGGER, "warning") as mock_warning,
+        ):
+            skills._log_nudge_suppressed_by_conflict.cache_clear()
+            for _ in range(3):
+                assert skills._project_install_would_be_refused(None) is True
+
+        assert mock_warning.call_count == 1
+        logged = mock_warning.call_args.args[-1]
+        for target_dir in target_dirs:
+            assert str(target_dir / "developing-with-streamlit") in logged
+
+    def test_no_warning_when_the_install_can_proceed(self, tmp_path: Path) -> None:
+        """The warning is tied to suppression: a free target means no suppression
+        and so no console noise for the overwhelmingly common case."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        source_dir, project = self._blocked_project(tmp_path.resolve())
+        free_target = project / ".codex" / "skills"
+        free_target.mkdir(parents=True)
+
+        with (
+            patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
+            patch.object(skills, "_find_project_root", return_value=project),
+            patch.object(
+                skills,
+                "_get_project_target_dirs",
+                return_value=[project / ".agents" / "skills", free_target],
+            ),
+            patch.object(skills, "_get_global_target_dirs", return_value=[]),
+            patch.object(skills._LOGGER, "warning") as mock_warning,
+        ):
+            skills._log_nudge_suppressed_by_conflict.cache_clear()
+            assert skills._project_install_would_be_refused(None) is False
+
+        mock_warning.assert_not_called()
 
 
 class TestGenerateGitignoreSnippetEdgeCases:
