@@ -1392,6 +1392,42 @@ class TestInstallSkillCopyEdgeCases:
         assert any("copy failed" in s for s in result.errored)
         assert not result.skipped
 
+    def test_restores_old_install_when_final_swap_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A failed swap restores the old install instead of stranding the copy.
+
+        The copy succeeds, so the old target is moved aside — but if renaming the
+        new copy into place then fails (a held handle, antivirus), deleting the old
+        one outright would leave the fresh copy under a hidden dot-name with
+        nothing at the path agents actually read.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "SKILL.md").write_text("# Old version\n", encoding="utf-8")
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            patch.object(
+                skills.Path, "rename", side_effect=OSError("Access is denied")
+            ),
+        ):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert target.is_dir()
+        assert (target / "SKILL.md").read_text() == "# Old version\n"
+        assert result.errored
+        assert not result.installed
+
     def test_reports_mkdir_failure_as_error(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
@@ -1509,6 +1545,59 @@ class TestInstallSkillSymlinkEdgeCases:
 
         assert not success
         assert not result.errored
+        assert not result.installed
+
+    def test_restores_replaced_symlink_when_relink_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A failed re-link puts back the project symlink it removed.
+
+        ``symlink_to`` cannot overwrite, so replacing an owned link means unlinking
+        first. If the new link then fails to appear, the caller falls back to a
+        *global* install, which lands elsewhere and would leave the project skill
+        deleted.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        existing_skill = tmp_path / "existing-skill"
+        existing_skill.mkdir()
+        (existing_skill / "SKILL.md").write_text(
+            "# Working install\n", encoding="utf-8"
+        )
+        target_dir = tmp_path / "project" / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.symlink_to(existing_skill, target_is_directory=True)
+
+        result = skills._InstallResult()
+        real_symlink_to = skills.Path.symlink_to
+        attempts = {"n": 0}
+
+        def _fail_first_symlink(
+            self: Path, target: object, target_is_directory: bool = False
+        ) -> None:
+            """Fail the install link only; let the restore link through."""
+            attempts["n"] += 1
+            if attempts["n"] == 1:
+                raise OSError("A required privilege is not held by the client")
+            real_symlink_to(self, target, target_is_directory=target_is_directory)  # type: ignore[arg-type]
+
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            patch.object(skills.Path, "symlink_to", _fail_first_symlink),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        # False so the caller still falls back to a global copy...
+        assert not success
+        # ...but the working project install must survive, still pointing where it did.
+        assert target.is_symlink()
+        assert (target / "SKILL.md").read_text() == "# Working install\n"
         assert not result.installed
 
 

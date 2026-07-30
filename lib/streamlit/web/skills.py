@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import sys
@@ -364,6 +365,11 @@ def _install_skill_symlink(
     # an existing target) runs under one guard: any OSError here means we can't
     # lay the symlink, so return False and let the caller fall back to a global
     # copy - never let it escape and get misbooked as a hard write_failed.
+    #
+    # ``symlink_to`` won't overwrite, so replacing an owned link means unlinking
+    # first. Remember where it pointed so a failed re-link can put it back: the
+    # caller's fallback installs GLOBALLY, which wouldn't restore a project link.
+    replaced_link_target: str | None = None
     try:
         # Ensure parent directory exists
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -382,6 +388,8 @@ def _install_skill_symlink(
 
                 # Check if it's a Streamlit-owned symlink we can replace
                 if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
+                    with contextlib.suppress(OSError):
+                        replaced_link_target = os.readlink(target_path)
                     target_path.unlink()
                 else:
                     result.skipped.append(f"{rel_target_path} (existing symlink)")
@@ -418,7 +426,26 @@ def _install_skill_symlink(
     except (OSError, NotImplementedError):
         # Symlink not supported (e.g., Windows without Developer Mode, or some
         # environments where symlinks are not implemented)
+        if replaced_link_target is not None:
+            # Put back the working link we removed. Without this, a reinstall that
+            # can't re-link destroys a usable project install and the caller's
+            # global fallback lands somewhere else entirely.
+            with contextlib.suppress(OSError):
+                target_path.symlink_to(replaced_link_target, target_is_directory=True)
         return False
+
+
+def _remove_skill_target(path: Path) -> None:
+    """Delete an installed skill target, whichever form it took.
+
+    A target can be a real directory (global copy) or a symlink (project
+    install), and ``shutil.rmtree`` refuses symlinks. Absent paths are a no-op so
+    callers can use this to clear a possibly-stale leftover.
+    """
+    if path.is_symlink():
+        path.unlink()
+    elif path.is_dir():
+        shutil.rmtree(path)
 
 
 def _install_skill_copy(
@@ -466,16 +493,25 @@ def _install_skill_copy(
         # user with nothing.
         if old_target_to_remove is not None:
             temp_path = target_path.with_name(f".{skill_name}.tmp")
+            backup_path = target_path.with_name(f".{skill_name}.old")
             if temp_path.exists():
                 shutil.rmtree(temp_path)
             shutil.copytree(source_path, temp_path)
-            # Now safe to remove old and rename new. rmtree refuses symlinks, so
-            # an owned symlink target has to be unlinked instead.
-            if old_target_to_remove.is_symlink():
-                old_target_to_remove.unlink()
-            else:
-                shutil.rmtree(old_target_to_remove)
-            temp_path.rename(target_path)
+            # Move the old target aside rather than deleting it: if the swap then
+            # fails we can put it back, instead of stranding the new copy under a
+            # hidden name with nothing at the path the agent looks in.
+            _remove_skill_target(backup_path)
+            old_target_to_remove.rename(backup_path)
+            try:
+                temp_path.rename(target_path)
+            except OSError:
+                # Restore, then let the handler below record the write failure. If
+                # the restore itself fails, leave the backup on disk - both copies
+                # survive, which beats losing the only one.
+                with contextlib.suppress(OSError):
+                    backup_path.rename(target_path)
+                raise
+            _remove_skill_target(backup_path)
         else:
             shutil.copytree(source_path, target_path)
         result.installed.append(str(rel_target_path))
@@ -614,6 +650,23 @@ def _confirm_global_installation(target_dirs: list[Path]) -> bool:
     return click.confirm("Proceed with installation?", default=True)
 
 
+def _concise_install_paths(entries: list[str]) -> list[str]:
+    """Collapse ``_InstallResult`` entries to short paths safe to show a user.
+
+    Entries look like ``"<path> (why)"``. Both failure messages built from them
+    are shown verbatim in the in-app nudge, so this keeps only the
+    ``<harness>/skills/<skill>`` tail and drops the parenthetical: neither an
+    absolute server path nor a raw ``OSError`` string may reach the browser.
+    Shared by the two error builders so that invariant lives in one place.
+    """
+    paths = []
+    for entry in entries:
+        raw = entry.split(" (", 1)[0]
+        parts = Path(raw).parts
+        paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
+    return paths
+
+
 def _conflict_error(skipped: list[str]) -> _InstallError:
     """Build a specific "couldn't install" error that names the conflicting
     paths, rather than a vague "remove conflicting files".
@@ -626,11 +679,7 @@ def _conflict_error(skipped: list[str]) -> _InstallError:
     stand on its own (the CLI's detailed ``_print_result`` output never reaches
     the browser).
     """
-    paths = []
-    for entry in skipped:
-        raw = entry.split(" (", 1)[0]
-        parts = Path(raw).parts
-        paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
+    paths = _concise_install_paths(skipped)
     joined = ", ".join(paths)
     plural = len(paths) != 1
     return _InstallError(
@@ -646,17 +695,9 @@ def _write_error(errored: list[str]) -> _InstallError:
     Distinct from :func:`_conflict_error`: ``errored`` entries are ``OSError``
     failures (permissions, disk space, locked files), not pre-existing files.
     Keeping them apart stops the nudge's failure telemetry from misreporting a
-    write failure as a ``conflict``. Like the conflict message this is shown
-    verbatim in the nudge, so it collapses paths to the
-    ``<harness>/skills/<skill>`` tail and never echoes the raw ``OSError`` text
-    (which can embed an absolute server path).
+    write failure as a ``conflict``.
     """
-    paths = []
-    for entry in errored:
-        raw = entry.split(" (", 1)[0]
-        parts = Path(raw).parts
-        paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
-    joined = ", ".join(paths)
+    joined = ", ".join(_concise_install_paths(errored))
     return _InstallError(
         f"Could not write {joined}. Check folder permissions and free disk "
         "space, then try again.",
