@@ -11,7 +11,7 @@ Prepares the current branch for merge by running quality checks, simplifying cod
 
 ## Workflow
 
-Follow these steps in order. **Run all subagents in foreground** (not background) unless otherwise specified—wait for each to complete before proceeding.
+Follow these steps in order. **Run all subagents in foreground** (not background) unless otherwise specified—wait for each to complete before proceeding. **Subagent model**: use the same model as this session on every launch (`model: inherit` / omit any model override); do not switch to a different or faster model.
 
 > **Note:** For small changes (documentation tweaks, test-only tweaks, one-liners, or other mini-changes), you can skip steps 1, 2, 3, 6, 7, and 8.
 
