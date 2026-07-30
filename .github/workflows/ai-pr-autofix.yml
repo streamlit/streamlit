@@ -203,3 +203,18 @@ jobs:
           "
 
           cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text
+
+      - name: Post failure notice
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          gh pr comment "$PR_NUMBER_ENV" --body "⚠️ **AI PR Autofix Failed**
+
+          The AI PR autofix job failed to complete. Please check the [workflow run](${SERVER_URL}/$REPOSITORY/actions/runs/${RUN_ID}) for details.
+
+          You can retry by adding the \`ai-pr-autofix\` label again or manually triggering the workflow." --repo "$REPOSITORY"
