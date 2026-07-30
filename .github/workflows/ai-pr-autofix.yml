@@ -22,7 +22,7 @@ env:
 
 jobs:
   check-secrets:
-    if: github.repository == 'streamlit/streamlit' && (github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-autofix')
+    if: github.repository == 'streamlit/streamlit' && (github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-pr-autofix')
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -48,7 +48,25 @@ jobs:
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          gh pr edit "$PR_NUMBER_ENV" --remove-label "ai-autofix" --repo "$REPOSITORY" || true
+          # Best-effort cleanup: may fail for restricted tokens (e.g. fork PRs).
+          gh pr edit "$PR_NUMBER_ENV" --remove-label "ai-pr-autofix" --repo "$REPOSITORY" || true
+
+      - name: Post missing key notice
+        if: steps.check-key.outputs.has_key == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh pr comment "$PR_NUMBER_ENV" --body "ℹ️ **AI PR Autofix Not Available via Label**
+
+          The \`ai-pr-autofix\` label cannot trigger AI PR autofix for this PR because the required API key is not available. This typically happens for PRs from forked repositories.
+
+          **To request AI PR autofix, a maintainer can:**
+          1. Go to the [AI PR Autofix workflow](https://github.com/streamlit/streamlit/actions/workflows/ai-pr-autofix.yml)
+          2. Click **Run workflow**
+          3. Enter the PR number: \`$PR_NUMBER_ENV\`
+          4. Click **Run workflow**" --repo "$REPOSITORY"
 
   ai-pr-autofix:
     needs: check-secrets
