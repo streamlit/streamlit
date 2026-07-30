@@ -13,6 +13,11 @@
   interaction, default, error message, or other externally observable behavior.
   - Read `specs/AGENTS.md` and evaluate the change against its "Principles of Streamlit API
     Design."
+  - Search `specs/` for a relevant product spec. Product decisions explicitly described in a
+    product spec that is already merged into the PR's base branch are considered approved and
+    aligned; do not relitigate them. Instead, verify that the implementation follows the spec
+    and separately assess any user-facing behavior that the merged spec does not cover. A new
+    or modified spec in the current PR is not already approved by this rule.
   - Inspect analogous Streamlit APIs, configs, and behaviors. Check that the proposed surface
     uses established names, defaults, interaction patterns, return types, and error behavior.
   - Confirm that the change solves a clear user problem, keeps the common case simple, exposes
@@ -63,9 +68,12 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 
 ## Product Alignment
 
-[State whether the PR has user-facing product impact. If yes, assess the user value and
-complexity tradeoff, consistency with analogous Streamlit surfaces, and alignment with the
-principles in `specs/AGENTS.md`. If no, state why this section is not applicable.]
+[State whether the PR has user-facing product impact. If yes, identify any relevant product
+spec already merged into the base branch, treat its documented product decisions as approved,
+and assess whether the implementation follows it. For user-facing aspects not covered by an
+approved spec, assess the user value and complexity tradeoff, consistency with analogous
+Streamlit surfaces, and alignment with the principles in `specs/AGENTS.md`. If no, state why
+this section is not applicable.]
 
 ## Code Quality
 
