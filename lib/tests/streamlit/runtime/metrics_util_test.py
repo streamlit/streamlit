@@ -242,7 +242,8 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
     @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_page_constructor_telemetry(self) -> None:
-        """Page preserves the factory's command name and argument metadata."""
+        """Page records the same command name and argument metadata as the
+        previous function-based st.Page."""
         st.Page(
             "foo.py",
             title="Title",
@@ -259,6 +260,10 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         assert command.name == "Page"
         assert len(command.args) == 6
         assert str(command.args[0]).strip() == 'k: "page"\nt: "str"\nm: "len:6"'
+        # ``_positional_arg_offset=1`` must place the first real argument at
+        # position 0 (like a plain function), not 1 (shifted by ``self``).
+        # ``str()`` above omits the proto default ``p: 0``, so assert it directly.
+        assert command.args[0].p == 0
         assert str(command.args[1]).strip() == 'k: "title"\nt: "str"\nm: "len:5"'
         assert str(command.args[2]).strip() == 'k: "icon"\nt: "str"\nm: "len:1"'
         assert str(command.args[3]).strip() == 'k: "url_path"\nt: "str"\nm: "len:3"'
