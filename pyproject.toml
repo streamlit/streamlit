@@ -31,7 +31,7 @@ requires-python = ">=3.10"
 # The published package metadata remains in lib/pyproject.toml. This requirement
 # makes its runtime dependencies part of the development lock graph, while the
 # source mapping below keeps the package editable.
-dependencies = ["streamlit"]
+dependencies = ["streamlit-nightly"]
 
 [tool.uv]
 # The development toolchain is the default local environment.
@@ -52,7 +52,7 @@ override-dependencies = [
 ]
 
 [tool.uv.sources]
-streamlit = { path = "lib", editable = true }
+streamlit-nightly = { path = "lib", editable = true }
 
 # =============================================================================
 # Dependency Groups (PEP 735)
