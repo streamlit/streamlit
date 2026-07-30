@@ -1,0 +1,11 @@
+INITIAL markdown tree values: ['1', '2']
+INITIAL markdown deltas: ['[0, 0, 1, 0, 0]=1', '[0, 0, 1, 1, 0]=2']
+parent fragment `a` id: 74d482f26b9fa85a87c618384e93a10d
+registered fragment ids: ['74d482f26b9fa85a87c618384e93a10d', '5accb41ec46bf1d4511c045f8d4eb75e', 'c98e0be1291c681a029d6333903dddd1']
+AFTER-rerun markdown tree values: ['1', '2']
+AFTER-rerun markdown deltas: ['[0, 0, 1, 0, 0]=1', '[0, 0, 1, 1, 0]=2']
+---
+initial had both 1 and 2: True
+after has both 1 and 2 (in tree): True
+sibling markdowns share a delta path (collision): False
+BUG_PRESENT: False

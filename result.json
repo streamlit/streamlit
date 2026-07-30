@@ -1,0 +1,10 @@
+{
+  "issue": 12514,
+  "fix_pr": 16171,
+  "pre_fix_commit": "82765622d32f1198218d8556c0c68e695a8c4c8e",
+  "fix_commit": "e6a40f8bd8069228db5480197807be883805866d",
+  "verdict": "confirmed",
+  "bug_present_before_fix": true,
+  "confidence": "high",
+  "summary": "On the pre-fix commit 82765622, a fragment-scoped rerun of the parent fragment makes sibling nested fragment b(1)'s markdown '1' disappear: b(2) overwrites the same delta path [0,0,1,0,0] because the shared container's cursor never advances between the two `with container: b(i)` calls. The same driver on the fix commit e6a40f8 keeps both '1' and '2' at distinct delta paths. Reproduced at the backend ForwardMsg delta level via Streamlit's real ScriptRunner (a full browser repro was infeasible because network egress to package registries is blocked), which is faithful since the fix is entirely backend Python in fragment.py."
+}
