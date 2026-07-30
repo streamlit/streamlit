@@ -185,7 +185,7 @@ jobs:
     if: always() && needs.ai-issue-triage.result != 'skipped'
     runs-on: ubuntu-latest
     permissions:
-      # Test whether the repository-scoped token can also update the wiki.
+      # Wiki pushes via GITHUB_TOKEN require contents: write (no wiki-specific scope exists).
       contents: write
       issues: write
 
@@ -218,7 +218,8 @@ jobs:
 
           # Configure Git to authenticate with this job's repository-scoped token.
           gh auth setup-git
-          git clone --branch master --depth 1 "https://github.com/${{ github.repository }}.wiki.git" agent-wiki
+          # Depth > 1 so concurrent wiki pushes have enough history for rebase.
+          git clone --branch master --depth 5 "https://github.com/${{ github.repository }}.wiki.git" agent-wiki
           git -C agent-wiki config user.name "github-actions[bot]"
           git -C agent-wiki config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -236,7 +237,13 @@ jobs:
           # Concurrent issue triage runs write different wiki folders but share
           # master, so rebase and retry if another run wins the push race.
           for attempt in 1 2 3; do
-            git -C agent-wiki pull --rebase origin master
+            if ! git -C agent-wiki pull --rebase origin master; then
+              echo "Warning: rebase failed on attempt $attempt"
+              if [ "$attempt" -lt 3 ]; then
+                sleep "$((attempt * 2))"
+              fi
+              continue
+            fi
             if git -C agent-wiki push origin HEAD:master; then
               exit 0
             fi
