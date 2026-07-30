@@ -136,13 +136,16 @@ const updateWidgetMgrState = (
  * open/close methods and focusedKey via refs. Same pattern as the Selectbox widget.
  */
 const DropdownController = memo<{
-  openRef: React.MutableRefObject<(() => void) | null>
+  openRef: React.MutableRefObject<
+    ((focusStrategy?: "first" | "last" | null) => void) | null
+  >
   focusedKeyRef: React.MutableRefObject<Key | null>
 }>(({ openRef, focusedKeyRef }) => {
   const state = useContext(ComboBoxStateContext)
   useEffect(() => {
     if (state) {
-      openRef.current = () => state.open("first", "manual")
+      openRef.current = (focusStrategy = null) =>
+        state.open(focusStrategy, "manual")
     }
     return () => {
       openRef.current = null
@@ -246,7 +249,9 @@ const Multiselect: FC<Props> = props => {
   useExecuteWhenChanged(() => setInputValue(""), [value])
 
   const isOpenRef = useRef(false)
-  const openDropdownRef = useRef<(() => void) | null>(null)
+  const openDropdownRef = useRef<
+    ((focusStrategy?: "first" | "last" | null) => void) | null
+  >(null)
   const focusedKeyRef = useRef<Key | null>(null)
 
   // In the sidebar, flip/shift are bounded by the viewport so the dropdown can
@@ -576,7 +581,7 @@ const Multiselect: FC<Props> = props => {
         (e.key === "ArrowDown" || e.key === "ArrowUp") &&
         !isOpenRef.current
       ) {
-        openDropdownRef.current?.()
+        openDropdownRef.current?.("first")
       }
 
       if (e.key === "Escape") {
