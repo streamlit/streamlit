@@ -167,9 +167,8 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: qa-testing-output
-          path: |
-            ${{ env.QA_DIR }}/qa-report.md
-            ${{ env.QA_DIR }}/verdict.txt
+          path: ${{ env.QA_DIR }}/
+          if-no-files-found: error
           retention-days: 7
 
   post-results:
@@ -191,6 +190,10 @@ jobs:
         run: |
           gh pr edit "$PR_NUMBER_ENV" --remove-label "ai-qa-test" --repo "$REPOSITORY" || true
 
+      # actions/upload-artifact strips the shared parent dir ($QA_DIR) when
+      # uploading multiple files, so qa-report.md and verdict.txt download to
+      # qa-artifacts/ directly (not qa-artifacts/$QA_DIR/). Later steps rely on
+      # these flat paths.
       - name: Download QA artifacts
         id: download
         if: needs.ai-qa-testing.result == 'success'
