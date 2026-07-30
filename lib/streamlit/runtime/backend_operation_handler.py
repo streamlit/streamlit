@@ -42,6 +42,13 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
+# Prefix marking an ``error_reason`` as a refusal: the operation was declined by a
+# safety gate before it ran, rather than attempted and failed. The client strips the
+# prefix and counts refusals under their own telemetry event, so they never inflate
+# the genuine failure rate. Mirrored by REFUSED_REASON_PREFIX in the frontend's
+# components/SkillsNudgeToast/skillsNudge.ts.
+_REFUSED_REASON_PREFIX: Final[str] = "refused:"
+
 
 def connection_locality(session_id: str) -> str:
     """Classify the WebSocket peer of ``session_id`` for the skills nudge.
@@ -241,7 +248,12 @@ class InstallSkillsHandler(BackendOperationHandler):
             return BackendOperationResponse(
                 request_id=request.request_id,
                 error_msg="Skills install is not available in this environment.",
-                error_reason=gate_reason,
+                # The ``refused:`` prefix tells the client this install was declined
+                # before it ran, so it counts separately from installs that ran and
+                # failed. Namespacing it server-side keeps that distinction in one
+                # place: a gate added here is classified correctly without the
+                # frontend having to mirror the list of gate names.
+                error_reason=f"{_REFUSED_REASON_PREFIX}{gate_reason}",
             )
 
         try:
@@ -264,14 +276,15 @@ class InstallSkillsHandler(BackendOperationHandler):
                 else "Failed to install skills."
             )
             # ``skills._InstallError`` carries a bounded, machine-readable ``reason``
-            # (e.g. "conflict", "write_failed", "source_missing") that the client
-            # forwards to telemetry as a label suffix. Read it ONLY from that known
-            # type - never getattr-duck-type, or an unrelated exception that happens
-            # to expose a str ``.reason`` (e.g. UnicodeDecodeError.reason) would emit
-            # an unbounded label and break the fixed vocabulary. A bare ``OSError``
-            # that escaped the installer (e.g. a permission error before the copy's
-            # own try/except) is a filesystem write failure; anything else "unknown".
-            if isinstance(ex, skills._InstallError) and isinstance(ex.reason, str):
+            # that the client forwards to telemetry as a label suffix. Read it ONLY
+            # from that known type - never getattr-duck-type, or an unrelated
+            # exception that happens to expose a str ``.reason`` (e.g.
+            # UnicodeDecodeError.reason) would emit an unbounded label and break the
+            # fixed vocabulary. A bare ``OSError`` that escaped the installer (e.g. a
+            # permission error before the copy's own try/except) is a filesystem write
+            # failure; anything else "unknown".
+            reason: str
+            if isinstance(ex, skills._InstallError):
                 reason = ex.reason
             elif isinstance(ex, OSError):
                 reason = "write_failed"

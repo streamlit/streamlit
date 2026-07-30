@@ -23,7 +23,7 @@ import tempfile
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Final
+from typing import Final, Literal
 
 import click
 
@@ -35,20 +35,33 @@ _LOGGER: Final = get_logger(__name__)
 # Skill name installed in global mode
 _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
 
+# The full vocabulary of install-failure causes. A closed set so the reason stays
+# safe to emit as a telemetry label; typing it as a Literal makes mypy reject a
+# typo or an ad-hoc reason at the raise site instead of silently minting a new
+# label the analysis queries won't know about.
+_InstallFailureReason = Literal[
+    "conflict",  # A pre-existing file or foreign symlink we won't overwrite.
+    "incomplete",  # Project symlinks failed and the global fallback was cancelled.
+    "no_skills",  # The bundled skills dir exists but contains nothing installable.
+    "non_interactive",  # No TTY to prompt on and --yes wasn't passed.
+    "source_missing",  # The bundled skills are absent from the installation.
+    "symlinks_unsupported",  # Project install needs symlinks; this OS won't make them.
+    "write_failed",  # An OSError while writing: permissions, disk space, locks.
+]
+
 
 class _InstallError(click.ClickException):
     """A skills-install failure carrying a stable machine-readable ``reason`` code.
 
     Behaves like a normal ``click.ClickException`` — its ``format_message`` still
     supplies the user-facing text shown in the CLI and the in-app nudge — but also
-    carries a bounded ``reason`` (e.g. ``"conflict"``, ``"write_failed"``,
-    ``"source_missing"``) that the backend-operation handler forwards to the
-    client so the nudge's install-failure telemetry can be split by cause. The
-    reason is a fixed vocabulary set at each raise site, never user input, so it is
-    safe to emit as a telemetry label suffix.
+    carries a bounded ``reason`` (see :data:`_InstallFailureReason`) that the
+    backend-operation handler forwards to the client so the nudge's install-failure
+    telemetry can be split by cause. The reason is a fixed vocabulary set at each
+    raise site, never user input, so it is safe to emit as a telemetry label suffix.
     """
 
-    def __init__(self, message: str, *, reason: str) -> None:
+    def __init__(self, message: str, *, reason: _InstallFailureReason) -> None:
         super().__init__(message)
         self.reason = reason
 
@@ -79,10 +92,11 @@ class _InstallResult:
     up_to_date: list[str] = field(default_factory=list)
     # Pre-existing files/symlinks we won't overwrite - a genuine "conflict".
     skipped: list[str] = field(default_factory=list)
-    # Filesystem failures during copy (OSError: permissions, disk space, locked
-    # files). Tracked separately from ``skipped`` so a write failure is never
-    # misreported as a "conflict" - both in the CLI summary and, crucially, in
-    # the nudge's install-failure telemetry reason.
+    # Filesystem failures during the global copy (OSError: permissions, disk space,
+    # locked files). Tracked separately from ``skipped`` so a write failure is never
+    # misreported as a "conflict" - both in the CLI summary and, crucially, in the
+    # nudge's install-failure telemetry reason. Only the copy path fills this;
+    # symlink failures reroute to a global install instead of being recorded here.
     errored: list[str] = field(default_factory=list)
     # True when project (symlink) install fell back to a global copy because
     # symlinks aren't supported (e.g. Windows without Developer Mode). Surfaced
@@ -420,7 +434,7 @@ def _install_skill_copy(
     rel_target_path = _get_display_path(target_path, Path.home(), use_tilde=True)
 
     # All filesystem work runs under one try so a failure at ANY step - creating
-    # the target dir, removing an old streamlit-owned symlink, or the copy itself
+    # the target dir, removing an old streamlit-owned target, or the copy itself
     # - is recorded as a write failure (reason="write_failed") instead of
     # escaping as an uncaught OSError the caller can only classify as "unknown".
     try:
@@ -432,40 +446,45 @@ def _install_skill_copy(
         if target_path.exists() or target_path.is_symlink():
             # Target exists - check if we can replace it
             if target_path.is_symlink():
-                if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
-                    target_path.unlink()
-                else:
+                if not _is_streamlit_owned_symlink(target_path, bundled_skill_names):
                     result.skipped.append(f"{rel_target_path} (existing symlink)")
                     return
+                # Defer removal until after the copy succeeds, same as a directory.
+                old_target_to_remove = target_path
             elif target_path.is_dir():
                 if _skill_copy_matches(source_path, target_path):
                     result.up_to_date.append(str(rel_target_path))
                     return
-                # Defer removal until after successful copy to ensure atomicity
                 old_target_to_remove = target_path
             else:
                 result.skipped.append(f"{rel_target_path} (existing file)")
                 return
 
-        # Copy skill directory - use temp location first to ensure atomicity
+        # Replacing an existing install copies to a temp dir and swaps, so a
+        # failed copy leaves the working installation in place. Removing the old
+        # target up front would delete a usable skill and then fail, leaving the
+        # user with nothing.
         if old_target_to_remove is not None:
-            # Copy to temp location, then swap
             temp_path = target_path.with_name(f".{skill_name}.tmp")
             if temp_path.exists():
                 shutil.rmtree(temp_path)
             shutil.copytree(source_path, temp_path)
-            # Now safe to remove old and rename new
-            shutil.rmtree(old_target_to_remove)
+            # Now safe to remove old and rename new. rmtree refuses symlinks, so
+            # an owned symlink target has to be unlinked instead.
+            if old_target_to_remove.is_symlink():
+                old_target_to_remove.unlink()
+            else:
+                shutil.rmtree(old_target_to_remove)
             temp_path.rename(target_path)
         else:
             shutil.copytree(source_path, target_path)
         result.installed.append(str(rel_target_path))
     except OSError as e:
-        # Clean up temp path only if target still exists (meaning old wasn't removed).
-        # If target is gone, the old directory was deleted and temp is our only copy -
-        # keep it so the user isn't left with nothing.
+        # Clean up temp path only if the old target is still in place. If it's
+        # gone, the swap got past the removal and temp is our only copy - keep it
+        # so the user isn't left with nothing.
         temp_path = target_path.with_name(f".{skill_name}.tmp")
-        if temp_path.exists() and target_path.exists():
+        if temp_path.exists() and (target_path.exists() or target_path.is_symlink()):
             shutil.rmtree(temp_path, ignore_errors=True)
         # A write failure, not a conflict - record it in ``errored`` so it is
         # classified as such (reason="write_failed"), not "conflict".
@@ -757,12 +776,6 @@ def _install_project_skills(
 
     # Report results
     _print_result(result)
-
-    # A write failure on ANY target is a hard failure, even if another target
-    # succeeded - otherwise a partial install (e.g. ~/.agents ok but ~/.claude
-    # denied) reports success and drops skillsNudgeInstallFailed:write_failed.
-    if result.errored:
-        raise _write_error(result.errored)
 
     if result.installed or result.up_to_date:
         click.echo()

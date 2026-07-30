@@ -229,7 +229,7 @@ def test_install_skills_handler_installs_in_project_mode() -> None:
 def test_install_skills_handler_forwards_global_fallback_flag() -> None:
     """A fallback install (symlinks unsupported -> global copy) forwards
     used_global_fallback so the frontend can emit the countable
-    skillsNudgeInstallSucceeded:global_fallback label (decision A).
+    skillsNudgeInstallSucceeded:global_fallback label.
     """
     install_result = skills._InstallResult(
         installed=["~/.agents/skills/foo"], used_global_fallback=True
@@ -334,14 +334,14 @@ def test_install_skills_handler_does_not_leak_os_error_path() -> None:
 def test_install_skills_handler_ignores_foreign_reason_attribute() -> None:
     """A non-_InstallError exception exposing a str ``.reason`` must NOT be emitted.
 
-    Regression (adversarial-sweep): the handler used to ``getattr(ex, 'reason')``,
-    so any exception with a free-form str ``.reason`` (e.g. UnicodeDecodeError)
-    would leak an unbounded, attacker-influenced telemetry label and break the
-    fixed vocabulary. The reason is now trusted ONLY from skills._InstallError;
-    a non-OSError foreign exception is classified ``unknown``.
+    The handler used to read the reason with ``getattr(ex, 'reason')``, so any
+    exception carrying a free-form str ``.reason`` (``UnicodeDecodeError`` and
+    several stdlib errors do) would emit an unbounded telemetry label and break the
+    fixed vocabulary. The reason is now trusted ONLY from skills._InstallError; a
+    non-OSError foreign exception is classified ``unknown``.
     """
     foreign = ValueError("boom")
-    foreign.reason = "attacker-controlled-label"  # type: ignore[attr-defined]
+    foreign.reason = "some-unbounded-string"  # type: ignore[attr-defined]
     with (
         patch("streamlit.config.get_option", return_value=False),
         patch.object(skills, "detect_installed_agents", return_value=["claude"]),
@@ -354,7 +354,6 @@ def test_install_skills_handler_ignores_foreign_reason_attribute() -> None:
         )
 
     assert response.error_reason == "unknown"
-    assert "attacker-controlled-label" not in response.error_reason
 
 
 def test_install_skills_handler_refuses_without_agent_harness() -> None:
@@ -375,7 +374,7 @@ def test_install_skills_handler_refuses_without_agent_harness() -> None:
 
     mock_install.assert_not_called()
     assert response.error_msg == "Skills install is not available in this environment."
-    assert response.error_reason == "no_agent"
+    assert response.error_reason == "refused:no_agent"
     assert not response.HasField("install_skills")
 
 
@@ -400,7 +399,7 @@ def test_install_skills_handler_refuses_non_loopback_connection() -> None:
 
     mock_install.assert_not_called()
     assert response.error_msg == "Skills install is not available in this environment."
-    assert response.error_reason == "non_loopback"
+    assert response.error_reason == "refused:non_loopback"
     assert not response.HasField("install_skills")
 
 
@@ -462,7 +461,7 @@ def test_install_skills_handler_refuses_in_headless_mode() -> None:
 
     mock_install.assert_not_called()
     assert response.error_msg == "Skills install is not available in this environment."
-    assert response.error_reason == "headless"
+    assert response.error_reason == "refused:headless"
     assert not response.HasField("install_skills")
 
 

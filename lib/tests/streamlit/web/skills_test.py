@@ -1298,6 +1298,46 @@ class TestInstallSkillCopyEdgeCases:
         assert target.is_dir()
         assert (target / "SKILL.md").is_file()
 
+    def test_preserves_existing_symlink_on_copy_failure(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A failed replacement leaves an existing owned symlink usable.
+
+        Replacing a Streamlit-owned symlink used to unlink it before copying, so a
+        copy that failed (permissions, full disk, antivirus lock) deleted a working
+        skill and left nothing in its place. The replacement now copies to a temp
+        dir and swaps, so the old install survives a failure.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        # A working install: an owned symlink pointing at a real skill directory.
+        existing_skill = tmp_path / "existing-skill"
+        existing_skill.mkdir()
+        (existing_skill / "SKILL.md").write_text(
+            "# Working install\n", encoding="utf-8"
+        )
+        target = target_dir / "developing-with-streamlit"
+        target.symlink_to(existing_skill, target_is_directory=True)
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            patch.object(skills.shutil, "copytree", side_effect=OSError("Disk full")),
+        ):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert target.is_symlink()
+        assert (target / "SKILL.md").read_text() == "# Working install\n"
+        assert any("copy failed" in entry for entry in result.errored)
+        assert not result.installed
+
     def test_reports_copy_failure(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
@@ -1318,8 +1358,8 @@ class TestInstallSkillCopyEdgeCases:
             )
 
         assert any("copy failed" in s for s in result.errored)
-        # Regression (Greptile P1): a write failure must land in ``errored``,
-        # never ``skipped`` - otherwise the caller labels it reason="conflict".
+        # A write failure must land in ``errored``, never ``skipped`` - otherwise
+        # the caller labels it reason="conflict".
         assert not result.skipped
 
     def test_preserves_existing_directory_on_copy_failure(
@@ -1445,10 +1485,10 @@ class TestInstallSkillSymlinkEdgeCases:
     ) -> None:
         """A filesystem error in the symlink PRE-work returns False (-> fallback).
 
-        Regression (adversarial-sweep #2): mkdir / existence-check / unlink ran
-        outside the guard, so an OSError there escaped and was booked as a hard
-        write_failed AND bypassed the symlink->global fallback. It must instead
-        return False so the caller falls back to a global copy.
+        The mkdir / existence-check / unlink steps used to run outside the guard, so
+        an OSError there escaped as a hard write_failed and bypassed the
+        symlink->global fallback. Whatever stops us laying the symlink, the caller
+        should get the chance to fall back to a global copy.
         """
         target_dir = tmp_path / "project" / ".agents" / "skills"
         result = skills._InstallResult()
@@ -1540,10 +1580,10 @@ class TestGlobalInstallationConflicts:
     ) -> None:
         """A filesystem copy failure raises reason='write_failed', not 'conflict'.
 
-        Regression for the Greptile P1: an ``OSError`` during the global copy
-        (permissions, disk space, locked dir) used to land in ``skipped`` and be
-        labeled ``conflict``, so the nudge's failure telemetry misclassified
-        write failures - the dominant residual Windows cause - as conflicts.
+        An ``OSError`` during the global copy (permissions, disk space, locked dir)
+        used to land in ``skipped`` and be labeled ``conflict``, so the nudge's
+        failure telemetry misclassified write failures - the dominant residual
+        Windows cause - as conflicts.
         """
         home = tmp_path / "home"
         home.mkdir(parents=True)
@@ -1569,12 +1609,12 @@ class TestGlobalInstallationConflicts:
     ) -> None:
         """One target succeeds, another OSErrors -> hard write_failed, not success.
 
-        Regression (critical, adversarial-sweep #1): _get_global_target_dirs
-        returns TWO targets when ~/.claude exists. If ~/.agents copies OK
-        (result.installed non-empty) but ~/.claude raises OSError (result.errored),
-        the success branch used to win over the errored branch, so the install
-        returned success and emitted NO skillsNudgeInstallFailed:write_failed on
-        the exact Windows cohort under study. Any errored target must fail loud.
+        ``_get_global_target_dirs`` returns TWO targets when ``~/.claude`` exists. If
+        ``~/.agents`` copies OK (result.installed non-empty) but ``~/.claude`` raises
+        OSError (result.errored), the success branch used to win over the errored
+        branch - so a half-installed system reported success and emitted no
+        write_failed telemetry for exactly the locked-down cohort under study. Any
+        errored target must fail loud.
         """
         home = tmp_path / "home"
         # ~/.claude present -> _get_global_target_dirs yields both targets.
@@ -2202,9 +2242,10 @@ class TestInstallProjectSkillsFallbackSignal:
     ) -> None:
         """A successful symlink->global fallback flags used_global_fallback.
 
-        (decision A) so the Windows-no-Dev-Mode cohort - symlinks unsupported,
-        silently rerouted to a global copy - is countable in telemetry as
-        skillsNudgeInstallSucceeded:global_fallback rather than invisible.
+        A project install that can't lay symlinks is silently rerouted to a global
+        copy, which looks identical to a project install in the success telemetry.
+        The flag makes that cohort (Windows without Developer Mode, mainly) countable
+        as skillsNudgeInstallSucceeded:global_fallback rather than invisible.
         """
         project_dir = tmp_path / "project"
         project_dir.mkdir()

@@ -29,10 +29,10 @@ import {
   isSkillsNudgeDismissed,
   isSkillsNudgeDroppedConnection,
   isSkillsNudgeSnoozed,
+  REFUSED_REASON_PREFIX,
   setSkillsNudgeDismissed,
   setSkillsNudgeSnoozed,
   SKILLS_NUDGE_DROPPED_MESSAGE,
-  SKILLS_NUDGE_REFUSAL_REASONS,
 } from "@streamlit/app/src/components/SkillsNudgeToast/skillsNudge"
 import SkillsNudgeToast from "@streamlit/app/src/components/SkillsNudgeToast/SkillsNudgeToast"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget/StatusWidget"
@@ -1629,17 +1629,21 @@ export class App extends PureComponent<Props, State> {
         }
         // Append the server's machine-readable reason as a label suffix —
         // mirroring `skillsNudgeSuppressedNonLocal:<locality>` — so outcomes split
-        // by cause (e.g. "conflict", "write_failed", "source_missing"). Safety-gate
-        // refusals (headless / no_agent / non_loopback) are installs we refused to
-        // attempt, not failures, so they go under a distinct
-        // `skillsNudgeInstallRefused:<reason>` and never inflate the failure rate.
-        // Reasons are a fixed server-side vocabulary (never user input).
+        // by cause (e.g. "conflict", "write_failed", "source_missing"). A reason the
+        // server marked with REFUSED_REASON_PREFIX is an install a safety gate
+        // declined to attempt, not one that ran and failed, so it goes under a
+        // distinct `skillsNudgeInstallRefused:<reason>` and never inflates the
+        // failure rate. Reasons are a fixed server-side vocabulary (never user input).
         const reason = (error as { reason?: string } | null)?.reason
-        const eventName =
-          reason && SKILLS_NUDGE_REFUSAL_REASONS.has(reason)
-            ? "skillsNudgeInstallRefused"
-            : "skillsNudgeInstallFailed"
-        this.trackSkillsNudge(reason ? `${eventName}:${reason}` : eventName)
+        const isRefusal = reason?.startsWith(REFUSED_REASON_PREFIX) ?? false
+        const eventName = isRefusal
+          ? "skillsNudgeInstallRefused"
+          : "skillsNudgeInstallFailed"
+        // Strip the marker so the label reads `...Refused:non_loopback`.
+        const suffix = isRefusal
+          ? reason?.slice(REFUSED_REASON_PREFIX.length)
+          : reason
+        this.trackSkillsNudge(suffix ? `${eventName}:${suffix}` : eventName)
         // Re-throw so the toast renders its error state.
         throw error
       })

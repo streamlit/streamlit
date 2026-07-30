@@ -7361,15 +7361,15 @@ describe("Skills install nudge", () => {
 
   it("tracks a safety-gate refusal as Refused, not Failed", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    // Gate reasons (headless / no_agent / non_loopback) are installs refused
-    // before being attempted; they must not inflate the install-failure rate.
+    // The server prefixes gate reasons with `refused:` — the install was declined
+    // before it was attempted, so it must not inflate the install-failure rate.
     vi.spyOn(
       BackendOperationClient.prototype,
       "requestInstallSkills"
     ).mockRejectedValue(
       Object.assign(
         new Error("Skills install is not available in this environment."),
-        { reason: "non_loopback" }
+        { reason: "refused:non_loopback" }
       )
     )
     renderApp(getProps())
@@ -7379,12 +7379,13 @@ describe("Skills install nudge", () => {
     await user.click(screen.getByRole("button", { name: "Install" }))
     await flushInstall()
 
+    // The prefix is stripped, so the gate name stays readable in the label.
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallRefused:non_loopback",
     })
     // A refusal is not a failure and must stay off the failure funnel.
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
-      label: "skillsNudgeInstallFailed:non_loopback",
+      label: "skillsNudgeInstallFailed:refused:non_loopback",
     })
   })
 
