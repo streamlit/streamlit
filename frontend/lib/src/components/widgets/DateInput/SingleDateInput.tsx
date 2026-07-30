@@ -45,7 +45,10 @@ import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import {
+  SHIFT_VIEWPORT_PADDING,
+  useFloatingOverlay,
+} from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
@@ -187,12 +190,29 @@ function SingleDateInput({
     wasOpenRef.current = state.isOpen
   }, [state.isOpen, onClose])
 
-  const { refs, floatingStyles } = useFloatingOverlay({
-    open: state.isOpen,
-    placement: "bottom-start",
-    offsetPx: convertRemToPx(theme.spacing.twoXS),
-    flipOptions: isInSidebar ? false : undefined,
-  })
+  // In the sidebar, flip/shift are bounded to the viewport
+  // (document.documentElement) rather than the sidebar's overflow:auto
+  // clipping rect. Otherwise the calendar cannot flip up when the trigger
+  // sits near the bottom and overflows the viewport instead (issue #16181).
+  // Matches the pattern established in Selectbox (PR #16199).
+  const overlayOptions = useMemo(() => {
+    const base = {
+      open: state.isOpen,
+      placement: "bottom-start" as const,
+      offsetPx: convertRemToPx(theme.spacing.twoXS),
+    }
+    if (!isInSidebar || typeof document === "undefined") {
+      return base
+    }
+    const boundary = document.documentElement
+    return {
+      ...base,
+      flipOptions: { boundary },
+      shiftOptions: { boundary, padding: SHIFT_VIEWPORT_PADDING },
+    }
+  }, [state.isOpen, theme.spacing.twoXS, isInSidebar])
+
+  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
   // Restores focus to the last date segment when the popover closes.
   // isRestoringFocusRef prevents handleFocus from reopening the popover

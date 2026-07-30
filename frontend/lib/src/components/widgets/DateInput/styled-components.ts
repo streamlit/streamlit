@@ -176,16 +176,24 @@ export const StyledVisuallyHidden = styled.span(visuallyHiddenStyle)
 // Calendar popover
 // ---------------------------------------------------------------------------
 
-export const StyledCalendarPopover = styled.div(({ theme }) => ({
-  ...getPopoverContainerStyle(theme),
-  // bgColor needed here since no single opaque child covers the full panel.
-  backgroundColor: theme.colors.bgColor,
-  zIndex: getOverlayZIndex(theme),
-  padding: theme.spacing.sm,
-  ...(hasLightBackgroundColor(theme) && {
-    borderWidth: theme.spacing.none,
-  }),
-}))
+export const StyledCalendarPopover = styled.div(({ theme }) => {
+  // In the sidebar, bgColor and secondaryBg are swapped (bgColor = sidebar
+  // background, secondaryBg = main panel white). Overlays should always use the
+  // "main panel" white regardless of which container triggered them.
+  const overlayBg = theme.inSidebar
+    ? theme.colors.secondaryBg
+    : theme.colors.bgColor
+
+  return {
+    ...getPopoverContainerStyle(theme),
+    backgroundColor: overlayBg,
+    zIndex: getOverlayZIndex(theme),
+    padding: theme.spacing.sm,
+    ...(hasLightBackgroundColor(theme) && {
+      borderWidth: theme.spacing.none,
+    }),
+  }
+})
 
 // Pin generic to single-date mode so styled() doesn't widen onChange to accept arrays.
 const TypedCalendar = Calendar as ComponentType<
@@ -211,7 +219,11 @@ export const StyledCalendarHeader = styled.header(({ theme }) => ({
   paddingBottom: theme.spacing.threeXS,
   paddingLeft: theme.spacing.sm,
   paddingRight: theme.spacing.sm,
-  backgroundColor: theme.colors.secondaryBg,
+  // In the sidebar, bgColor and secondaryBg are swapped. Use bgColor in
+  // sidebar (gray) to maintain contrast against the white overlay body.
+  backgroundColor: theme.inSidebar
+    ? theme.colors.bgColor
+    : theme.colors.secondaryBg,
   borderTopLeftRadius: theme.radii.default,
   borderTopRightRadius: theme.radii.default,
 }))
@@ -288,7 +300,10 @@ export const StyledCalendarHeaderSelectChevron = styled.div({
 export const StyledCalendarHeaderSelectPopover = styled(Popover)(
   ({ theme }) => ({
     ...getPopoverContainerStyle(theme),
-    backgroundColor: theme.colors.bgColor,
+    // Same sidebar swap as StyledCalendarPopover — use "main panel" white.
+    backgroundColor: theme.inSidebar
+      ? theme.colors.secondaryBg
+      : theme.colors.bgColor,
     zIndex: getOverlayZIndex(theme),
   })
 )
@@ -353,17 +368,21 @@ export const StyledCalendarGrid = styled(CalendarGrid)(({ theme }) => ({
 export const StyledCalendarHeaderCell = styled(CalendarHeaderCell)(({
   theme,
 }) => {
-  const { secondaryBg } = theme.colors
+  // In the sidebar, bgColor and secondaryBg are swapped. Use bgColor in
+  // sidebar (gray) to maintain contrast against the white overlay body.
+  const bandBg = theme.inSidebar
+    ? theme.colors.bgColor
+    : theme.colors.secondaryBg
   const gapWidth = theme.spacing.threeXS
-  const fillGapLeft = `calc(${gapWidth} * -1) 0 0 0 ${secondaryBg}`
-  const bleedToPopoverEdge = `calc((${theme.spacing.sm} + ${gapWidth}) * -1) 0 0 0 ${secondaryBg}`
-  const bleedToPopoverEdgeReversed = `calc(${theme.spacing.sm} + ${gapWidth}) 0 0 0 ${secondaryBg}`
+  const fillGapLeft = `calc(${gapWidth} * -1) 0 0 0 ${bandBg}`
+  const bleedToPopoverEdge = `calc((${theme.spacing.sm} + ${gapWidth}) * -1) 0 0 0 ${bandBg}`
+  const bleedToPopoverEdgeReversed = `calc(${theme.spacing.sm} + ${gapWidth}) 0 0 0 ${bandBg}`
 
   return {
     fontSize: theme.fontSizes.sm,
     fontWeight: theme.fontWeights.normal,
     color: theme.colors.fadedText60,
-    backgroundColor: secondaryBg,
+    backgroundColor: bandBg,
     paddingTop: theme.spacing.twoXS,
     paddingBottom: theme.spacing.twoXS,
     boxShadow: fillGapLeft,
