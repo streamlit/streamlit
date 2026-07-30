@@ -3361,7 +3361,6 @@ __metadata:
     "@types/ua-parser-js": "npm:^0.7.39"
     "@types/uuid": "npm:^11.0.0"
     "@vitejs/plugin-react-swc": "npm:^4.3.2"
-    axios-mock-adapter: "npm:^2.1.0"
     baseui: "npm:12.2.0"
     buffer: "npm:^6.0.3"
     chrome-launcher: "npm:^1.2.1"
