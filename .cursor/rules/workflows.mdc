@@ -149,6 +149,7 @@ runner's system Python.
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
+| `ai-pr-autofix.yml` | `ai-autofix` label or manual | AI-powered CI and review feedback fixes using Cursor CLI |
 | `ai-pr-review.yml` | `ai-review`/`ai-final-review` label or manual | AI-powered code review using Cursor CLI |
 | `ai-qa-testing.yml` | `ai-qa-test` label or manual | AI-powered QA testing on PR branches |
 | `ai-issue-triage.yml` | `ai-review` label on issue or manual | AI-powered issue triage (duplicates, labels) |

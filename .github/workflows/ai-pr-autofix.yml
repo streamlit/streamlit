@@ -1,0 +1,187 @@
+# AI PR Autofix workflow uses Cursor CLI to fix CI failures and review feedback
+name: AI PR Autofix
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to autofix"
+        required: true
+        type: number
+      model:
+        description: "Model to use for autofix"
+        required: false
+        type: string
+        default: "claude-opus-4-8-thinking-xhigh"
+
+env:
+  PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
+  MODEL: ${{ github.event.inputs.model || 'claude-opus-4-8-thinking-xhigh' }}
+
+jobs:
+  check-secrets:
+    if: github.repository == 'streamlit/streamlit' && (github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-autofix')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    outputs:
+      has_key: ${{ steps.check-key.outputs.has_key }}
+    steps:
+      - name: Check for API key
+        id: check-key
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CURSOR_API_KEY is not available. This typically happens for PRs from forks."
+          else
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Remove AI autofix request label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh pr edit "$PR_NUMBER_ENV" --remove-label "ai-autofix" --repo "$REPOSITORY" || true
+
+  ai-pr-autofix:
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has_key == 'true'
+    runs-on: ubuntu-latest-8-cores
+    timeout-minutes: 240
+    permissions:
+      actions: read
+      checks: read
+      contents: write
+      pull-requests: write
+      statuses: read
+
+    concurrency:
+      group: ${{ github.workflow }}-pr-${{ github.event.inputs.pr_number || github.event.pull_request.number }}
+      cancel-in-progress: true
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Get PR details
+        id: pr-info
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          PR_DATA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV")
+          HEAD_REPO=$(echo "$PR_DATA" | jq -r '.head.repo.full_name')
+          STATE=$(echo "$PR_DATA" | jq -r '.state')
+
+          if [ "$STATE" != "open" ]; then
+            echo "::error::PR #$PR_NUMBER_ENV is not open."
+            exit 1
+          fi
+
+          if [ "$HEAD_REPO" != "$REPOSITORY" ]; then
+            echo "::error::AI autofix only supports PRs whose head branch is in $REPOSITORY."
+            exit 1
+          fi
+
+          echo "head_sha=$(echo "$PR_DATA" | jq -r '.head.sha')" >> "$GITHUB_OUTPUT"
+          echo "head_ref=$(echo "$PR_DATA" | jq -r '.head.ref')" >> "$GITHUB_OUTPUT"
+          echo "base_ref=$(echo "$PR_DATA" | jq -r '.base.ref')" >> "$GITHUB_OUTPUT"
+          echo "html_url=$(echo "$PR_DATA" | jq -r '.html_url')" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Streamlit code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Checkout the branch, rather than its SHA, so fixing-pr can push updates.
+          ref: ${{ steps.pr-info.outputs.head_ref }}
+          persist-credentials: true
+          submodules: "recursive"
+          fetch-depth: 0
+
+      - name: Verify checked out revision
+        env:
+          EXPECTED_HEAD_SHA: ${{ steps.pr-info.outputs.head_sha }}
+        run: |
+          if [ "$(git rev-parse HEAD)" != "$EXPECTED_HEAD_SHA" ]; then
+            echo "::error::The PR branch advanced while the workflow was starting. Retry AI autofix on the latest revision."
+            exit 1
+          fi
+
+      - name: Configure Git
+        run: |
+          git config user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
+
+      - name: AI PR Autofix
+        env:
+          BASE_REF: ${{ steps.pr-info.outputs.base_ref }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ steps.pr-info.outputs.head_ref }}
+          PR_HTML_URL: ${{ steps.pr-info.outputs.html_url }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          PROMPT="You are operating in a GitHub Actions runner to fix a pull request.
+
+          ## Context
+
+          - Repository: $REPOSITORY
+          - Main branch: develop
+          - PR Number: $PR_NUMBER_ENV
+          - PR URL: $PR_HTML_URL
+          - Base Ref: $BASE_REF
+          - Head Ref: $HEAD_REF
+
+          The PR head branch is checked out with full git history.
+          The development environment and Git identity are configured.
+          The GitHub CLI and Git both have write access to this pull request.
+
+          ## Task
+
+          Run the \`/fixing-pr\` command to autonomously fix CI failures and address review
+          feedback on this PR.
+
+          ## CRITICAL: GitHub Actions instructions
+
+          You MUST forward all instructions in this section to the \`fixing-pr\` subagent as
+          additional context. These instructions are mandatory and override any conflicting
+          default behavior in the command, subagent, or its skills.
+
+          - After every successful \`git push\`, add the \`trigger-ci\` label:
+            \`gh pr edit \"$PR_NUMBER_ENV\" --add-label trigger-ci --repo \"$REPOSITORY\"\`
+          - The trigger-ci automation removes the label and appends an empty commit, which
+            triggers normal pull request CI.
+          - After adding the trigger-ci label, wait for that empty commit to advance the PR
+            branch before checking the new CI runs.
+          - When waiting for CI, ignore the current workflow run ID:
+            \`$CURRENT_RUN_ID\`
+          - After trigger-ci advances the branch, synchronize the local checkout using:
+            \`git pull --ff-only origin \"$HEAD_REF\"\`
+            before starting another fix iteration.
+          - Never force-push or push to a branch other than \`$HEAD_REF\`.
+          "
+
+          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text
