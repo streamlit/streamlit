@@ -431,6 +431,13 @@ const Multiselect: FC<Props> = props => {
   )
 
   const handleInputChange = useCallback((text: string): void => {
+    // RAC can echo the previous filter text via onInputChange when the menu
+    // closes. Unlike the single-select Selectbox (which displays a committed
+    // label when closed), the multiselect input should be empty when closed.
+    // Ignore echoes entirely so they don't overwrite the clear from
+    // handleOpenChange or trigger a reopen.
+    if (text === inputValueRef.current) return
+
     setInputValue(text)
     if (text !== "" && !isOpenRef.current) {
       openDropdownRef.current?.()
