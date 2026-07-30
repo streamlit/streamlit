@@ -185,7 +185,8 @@ jobs:
     if: always() && needs.ai-issue-triage.result != 'skipped'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      # Test whether the repository-scoped token can also update the wiki.
+      contents: write
       issues: write
 
     steps:
@@ -202,6 +203,57 @@ jobs:
         continue-on-error: true
         with:
           name: triage-output
+
+      - name: Publish triage notes to agent-wiki
+        id: publish-wiki-notes
+        if: steps.download.outcome == 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f comment.txt ]; then
+            echo "Warning: comment.txt not found, skipping agent-wiki publish"
+            exit 0
+          fi
+
+          # Configure Git to authenticate with this job's repository-scoped token.
+          gh auth setup-git
+          git clone --branch master --depth 1 "https://github.com/${{ github.repository }}.wiki.git" agent-wiki
+          git -C agent-wiki config user.name "github-actions[bot]"
+          git -C agent-wiki config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          mkdir -p "agent-wiki/issues/$ISSUE_NUMBER"
+          cp comment.txt "agent-wiki/issues/$ISSUE_NUMBER/notes.md"
+          git -C agent-wiki add "issues/$ISSUE_NUMBER/notes.md"
+
+          if git -C agent-wiki diff --cached --quiet; then
+            echo "Agent-wiki notes are already up to date"
+            exit 0
+          fi
+
+          git -C agent-wiki commit -m "Add triage notes for issue #$ISSUE_NUMBER"
+
+          # Concurrent issue triage runs write different wiki folders but share
+          # master, so rebase and retry if another run wins the push race.
+          for attempt in 1 2 3; do
+            git -C agent-wiki pull --rebase origin master
+            if git -C agent-wiki push origin HEAD:master; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep "$((attempt * 2))"
+            fi
+          done
+
+          echo "Error: Failed to push triage notes to agent-wiki"
+          exit 1
+
+      - name: Report agent-wiki publish failure
+        if: steps.publish-wiki-notes.outcome == 'failure'
+        env:
+          WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          echo "::warning::Could not push notes to agent-wiki with GITHUB_TOKEN. See $WORKFLOW_RUN_URL for details."
 
       - name: Apply labels
         if: steps.download.outcome == 'success'
