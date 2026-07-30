@@ -1260,10 +1260,11 @@ class SessionState:
 
         # Capture the stored wire value *before* swapping in this run's
         # serializer, so it reflects the value as it was actually stored (using
-        # the serializer it was stored with). For string widgets we expose this
-        # so callers can reconcile a stored value against freshly computed state
-        # without re-deriving it from the deserialized value.
+        # the serializer it was stored with). For string and string-array widgets
+        # we expose this so callers can reconcile a stored value against freshly
+        # computed state without re-deriving it from the deserialized value.
         incoming_serialized_value: str | None = None
+        incoming_serialized_values: list[str] | None = None
         if metadata.value_type == "string_value":
             stored_proto = self._new_widget_state.get_serialized(widget_id)
             if (
@@ -1271,6 +1272,13 @@ class SessionState:
                 and stored_proto.WhichOneof("value") == "string_value"
             ):
                 incoming_serialized_value = stored_proto.string_value
+        elif metadata.value_type == "string_array_value":
+            stored_proto = self._new_widget_state.get_serialized(widget_id)
+            if (
+                stored_proto is not None
+                and stored_proto.WhichOneof("value") == "string_array_value"
+            ):
+                incoming_serialized_values = list(stored_proto.string_array_value.data)
 
         self._set_widget_metadata(metadata)
         if user_key is not None:
@@ -1419,6 +1427,7 @@ class SessionState:
             widget_value,
             widget_value_changed,
             incoming_serialized_value=incoming_serialized_value,
+            incoming_serialized_values=incoming_serialized_values,
         )
 
     def _handle_query_param_binding(
