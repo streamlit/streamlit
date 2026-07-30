@@ -52,6 +52,7 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import {
   SHIFT_VIEWPORT_PADDING,
   useFloatingOverlay,
@@ -251,6 +252,9 @@ const Multiselect: FC<Props> = props => {
   filterActiveRef.current = filterActive
   const inputValueRef = useRef("")
   inputValueRef.current = inputValue
+
+  // Clear stale filter when value changes externally (rerun, session state, etc.)
+  useExecuteWhenChanged(() => setInputValue(""), [value])
 
   const isOpenRef = useRef(false)
   const openDropdownRef = useRef<(() => void) | null>(null)
