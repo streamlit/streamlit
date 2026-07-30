@@ -496,7 +496,7 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
         directory = os.path.basename(main_script_directory)
 
         message = (
-            "Could not find page: `{page}`. You must provide a `StreamlitPage` "
+            "Could not find page: `{page}`. You must provide a `Page` "
             "object or file path relative to the entrypoint file. Only pages "
             "previously defined by `st.Page` and passed to `st.navigation` are "
             "allowed."

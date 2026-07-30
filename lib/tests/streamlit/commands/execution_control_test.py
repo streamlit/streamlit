@@ -24,7 +24,7 @@ from streamlit.commands.execution_control import (
     switch_page,
 )
 from streamlit.errors import NoSessionContext, StreamlitAPIException
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import Page
 from streamlit.runtime.scriptrunner import RerunData
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -139,8 +139,8 @@ def test_st_switch_page_context_info(patched_get_script_run_ctx):
 
     patched_get_script_run_ctx.return_value = ctx
 
-    # Mock the StreamlitPage object and its _script_hash attribute
-    mock_page = MagicMock(spec=StreamlitPage)
+    # Mock the Page object and its _script_hash attribute
+    mock_page = MagicMock(spec=Page)
     mock_page._script_hash = "target_page_hash"
     mock_page.is_external = False
 
@@ -181,7 +181,7 @@ def test_st_switch_page_applies_query_params(patched_get_script_run_ctx):
 
     mock_query_params.from_dict.side_effect = _from_dict_side_effect
 
-    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
     mocked_page.is_external = False
 
@@ -226,7 +226,7 @@ def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx
 
     mock_query_params.from_dict.side_effect = _from_dict_side_effect
 
-    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
     mocked_page.is_external = False
 
@@ -262,7 +262,7 @@ def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx)
 
     patched_get_script_run_ctx.return_value = ctx
 
-    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
     mocked_page.is_external = False
 
@@ -281,7 +281,7 @@ def test_st_switch_page_raises_for_external_page(patched_get_script_run_ctx):
     ctx.script_requests = MagicMock()
     patched_get_script_run_ctx.return_value = ctx
 
-    mock_page = MagicMock(spec=StreamlitPage)
+    mock_page = MagicMock(spec=Page)
     mock_page.is_external = True
 
     with pytest.raises(
@@ -412,8 +412,8 @@ def test_st_switch_page_string_path_unknown_page_raises(
 
 
 @patch("pathlib.Path.is_file", MagicMock(return_value=True))
-class SwitchPageStreamlitPageValidationTest(DeltaGeneratorTestCase):
-    """Test that ``st.switch_page`` validates a passed ``StreamlitPage`` against
+class SwitchPagePageValidationTest(DeltaGeneratorTestCase):
+    """Test that ``st.switch_page`` validates a passed ``Page`` against
     pages registered with ``st.navigation`` and raises when the source does not
     match the registered page sharing the same URL pathname.
 
@@ -421,7 +421,7 @@ class SwitchPageStreamlitPageValidationTest(DeltaGeneratorTestCase):
     """
 
     def test_streamlit_page_with_mismatched_file_path_raises(self) -> None:
-        """Switching to a ``StreamlitPage`` whose file path does not match the
+        """Switching to a ``Page`` whose file path does not match the
         page registered under the same ``url_path`` raises."""
         import streamlit as st
 
@@ -442,7 +442,7 @@ class SwitchPageStreamlitPageValidationTest(DeltaGeneratorTestCase):
             st.switch_page(st.Page("foo.py"))
 
     def test_streamlit_page_callable_with_file_registered_raises(self) -> None:
-        """Switching to a callable-based ``StreamlitPage`` raises when the
+        """Switching to a callable-based ``Page`` raises when the
         registered page sharing its ``url_path`` is file-based."""
         import streamlit as st
 
@@ -455,7 +455,7 @@ class SwitchPageStreamlitPageValidationTest(DeltaGeneratorTestCase):
             st.switch_page(st.Page(some_callable, url_path="foo"))
 
     def test_streamlit_page_matching_source_does_not_raise(self) -> None:
-        """A ``StreamlitPage`` whose source matches the registered page is
+        """A ``Page`` whose source matches the registered page is
         accepted by validation (no ``StreamlitAPIException`` raised)."""
         import streamlit as st
 

@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Literal, NoReturn
 import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import StreamlitPage, _validate_registered_page
+from streamlit.navigation.page import Page, _validate_registered_page
 from streamlit.runtime.fragment import _check_not_parallel_worker
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
@@ -193,7 +193,7 @@ def rerun(  # type: ignore[misc]
 
 @gather_metrics("switch_page")
 def switch_page(  # type: ignore[misc]
-    page: str | Path | StreamlitPage,
+    page: str | Path | Page,
     *,
     query_params: QueryParamsInput | None = None,
 ) -> NoReturn:  # ty: ignore[invalid-return-type]
@@ -207,7 +207,7 @@ def switch_page(  # type: ignore[misc]
 
     Parameters
     ----------
-    page : str, Path, or StreamlitPage
+    page : str, Path, or Page
         The page to switch to. This can be one of the following values:
 
         - Path to a Python file: The path can be a string or ``pathlib.Path``
@@ -218,13 +218,13 @@ def switch_page(  # type: ignore[misc]
           ``st.navigation``, the Python file must be your entrypoint file or
           a file in the ``pages/`` directory.
 
-        - ``StreamlitPage``: The source of the ``StreamlitPage`` and its
+        - ``Page``: The source of the ``Page`` and its
           ``url_path`` must match a page defined in ``st.navigation``. The
-          ``StreamlitPage`` must be internal and can't be defined by a URL.
-          Use ``st.Page`` to create a ``StreamlitPage`` object.
+          ``Page`` must be internal and can't be defined by a URL.
+          Use ``st.Page`` to create a ``Page`` object.
 
         To switch to a page defined by a ``callable``, you must use a
-        ``StreamlitPage`` object.
+        ``Page`` object.
 
     query_params : dict, list of tuples, or None
         Query parameters to apply when navigating to the target page.
@@ -296,7 +296,7 @@ def switch_page(  # type: ignore[misc]
         raise NoSessionContext()
 
     page_script_hash = ""
-    if isinstance(page, StreamlitPage):
+    if isinstance(page, Page):
         if page.is_external:
             raise StreamlitAPIException(
                 "Cannot use st.switch_page with external URL pages. "
