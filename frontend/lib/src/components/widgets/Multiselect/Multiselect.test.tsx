@@ -308,36 +308,10 @@ describe("Multiselect widget", () => {
     })
   })
 
-  it("does not clear the selection on Escape when a default exists", async () => {
-    const user = userEvent.setup()
-    const props = getProps()
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
-    render(<Multiselect {...props} />)
-
-    // The default selection ("a") is rendered.
-    expect(screen.getByRole("button", { name: "Remove a" })).toBeVisible()
-
-    // Focus the input and close the dropdown that opens on click
-    await user.click(screen.getByRole("combobox"))
-    await user.keyboard("{Escape}")
-
-    // Now dropdown is closed — Escape must not clear the value because the
-    // widget has a default (not clearable), matching st.selectbox.
-    await user.keyboard("{Escape}")
-
-    expect(screen.getByRole("button", { name: "Remove a" })).toBeVisible()
-    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
-      props.element,
-      [],
-      { fromUi: true },
-      undefined
-    )
-  })
-
-  it("clears the selection on Escape when there is no default", async () => {
+  it("does not clear the selection on Escape regardless of default", async () => {
     const user = userEvent.setup()
     const props = getProps({ default: [] })
-    // Seed a user selection so there is a value to clear (dropdown closed).
+    // Seed a user selection so there is a value to verify preservation.
     props.widgetMgr.setStringArrayValue(
       props.element,
       ["b"],
@@ -353,14 +327,14 @@ describe("Multiselect widget", () => {
     await user.click(screen.getByRole("combobox"))
     await user.keyboard("{Escape}")
 
-    // Now dropdown is closed — Escape clears the value because the widget is
-    // clearable (no default), matching st.selectbox.
+    // Dropdown is closed — additional Escape presses must never clear
+    // committed selections (WAI-ARIA APG: Escape dismisses popup, never
+    // clears committed values). See #16109.
+    await user.keyboard("{Escape}")
     await user.keyboard("{Escape}")
 
-    expect(
-      screen.queryByRole("button", { name: /^Remove / })
-    ).not.toBeInTheDocument()
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+    expect(screen.getByRole("button", { name: "Remove b" })).toBeVisible()
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
       props.element,
       [],
       { fromUi: true },

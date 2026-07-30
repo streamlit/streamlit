@@ -297,7 +297,6 @@ const Multiselect: FC<Props> = props => {
   )
 
   const disabled = props.disabled || placeholderDisable
-  const isClearable = element.default.length === 0
 
   // Max height: cut through 5th tag row
   const maxHeight = useMemo(() => {
@@ -589,12 +588,6 @@ const Multiselect: FC<Props> = props => {
           setInputValue("")
           return
         }
-        if (!isOpenRef.current && isClearable && value.length > 0) {
-          e.preventDefault()
-          e.stopPropagation()
-          setValueWithSource({ value: [], fromUi: true })
-          return
-        }
       }
 
       // Creatable Enter: commit typed text as a new option.
@@ -652,7 +645,6 @@ const Multiselect: FC<Props> = props => {
       element.acceptNewOptions,
       element.maxSelections,
       element.options,
-      isClearable,
       isFilterNone,
       setValueWithSource,
       value,
