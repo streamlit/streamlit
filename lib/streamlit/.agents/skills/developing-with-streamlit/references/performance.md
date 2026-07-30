@@ -75,6 +75,13 @@ combined with `persist`. The function can't use session-specific features (e.g.
 `st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works
 with both `st.cache_data` and `st.cache_resource`.
 
+Background refresh is access-driven: it starts only after a call observes an expired entry,
+so the caller may briefly receive stale data. For advanced cases that need the server to
+initiate background refreshes for specific global cache keys even without user traffic, use
+an `st.App` lifespan task to periodically call the cached function with those arguments. See
+[Scheduled background refresh for specific
+keys](server-asgi.md#scheduled-background-refresh-for-specific-keys).
+
 ### Prevent unbounded cache growth
 
 **Important:** Caches without `ttl` or `max_entries` can grow indefinitely and cause memory issues. For any cached function that stores changing objects (user-specific data, parameterized queries), set limits:
