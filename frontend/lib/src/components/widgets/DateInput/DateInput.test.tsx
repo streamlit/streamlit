@@ -693,15 +693,9 @@ describe("DateInput widget", () => {
       const { year } = getSingleDateSegments(region)
       await user.click(year)
 
-      // The calendar's own month/year <select>s are comboboxes too (native
-      // <select> elements), so assert on their *names* rather than on
-      // "no comboboxes at all" — quick select would show as a combobox
-      // with a different accessible name (e.g. a date-range preset list).
-      // The calendar's own month/year pickers are buttons that open a
-      // listbox (`aria-haspopup="listbox"`), so assert on their *names*
-      // rather than on "no buttons at all" — quick select would show as a
-      // combobox with a different accessible name (e.g. a date-range
-      // preset list), which stays absent here.
+      // The calendar's month/year pickers are buttons that open a
+      // listbox (`aria-haspopup="listbox"`). Quick select (absent here)
+      // would be the only combobox role.
       const pickerNames = screen
         .queryAllByRole("button", { expanded: false })
         .filter(el => el.getAttribute("aria-haspopup") === "listbox")
@@ -1027,6 +1021,111 @@ describe("DateInput keyboard navigation and focus management", () => {
       },
       { timeout: 2000 }
     )
+  })
+
+  it("arrow keys navigate between days in the calendar grid", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const { gridCell } = await openCalendarAndGetGrid(user)
+
+    // Focus the selected cell (Jan 20, 1970)
+    act(() => gridCell.focus())
+    expect(gridCell).toHaveFocus()
+
+    // Arrow right → Jan 21
+    await user.keyboard("{ArrowRight}")
+    const jan21 = screen.getByRole("button", { name: /January 21, 1970/ })
+    expect(jan21).toHaveFocus()
+
+    // Arrow down → Jan 28 (one week forward)
+    await user.keyboard("{ArrowDown}")
+    const jan28 = screen.getByRole("button", { name: /January 28, 1970/ })
+    expect(jan28).toHaveFocus()
+
+    // Arrow left → Jan 27
+    await user.keyboard("{ArrowLeft}")
+    const jan27 = screen.getByRole("button", { name: /January 27, 1970/ })
+    expect(jan27).toHaveFocus()
+  })
+})
+
+describe("DateInput paste handling", () => {
+  it("pasting a full date string updates the value", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+
+    await user.click(year)
+    await user.paste("2024/03/15")
+
+    await waitFor(() => {
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "1" }),
+        ["2024-03-15"],
+        expect.objectContaining({ fromUi: true }),
+        undefined
+      )
+    })
+  })
+
+  it("paste is ignored when widget is disabled", async () => {
+    const user = userEvent.setup()
+    const props = getProps({}, { disabled: true })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+
+    // Disabled segments cannot be clicked/focused, so we paste on the
+    // wrapper directly. The handler should bail on `if (disabled) return`.
+    const field = within(region).getByTestId("stDateInputField")
+    act(() => {
+      field.focus()
+    })
+
+    // Record call count before paste
+    const callsBefore = (
+      props.widgetMgr.setStringArrayValue as ReturnType<typeof vi.fn>
+    ).mock.calls.length
+    await user.paste("2024/03/15")
+
+    // No new calls after paste
+    const callsAfter = (
+      props.widgetMgr.setStringArrayValue as ReturnType<typeof vi.fn>
+    ).mock.calls.length
+    expect(callsAfter).toBe(callsBefore)
+  })
+
+  it("pasting an invalid date is rejected", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+
+    await user.click(year)
+    await user.paste("not-a-date")
+
+    // Value should remain unchanged — no new call after the initial mount
+    await waitFor(() => {
+      const calls = (
+        props.widgetMgr.setStringArrayValue as ReturnType<typeof vi.fn>
+      ).mock.calls
+      // The only call should be the initial mount with the default value
+      const dateValues = calls.map(c => c[1])
+      expect(
+        dateValues.every(
+          v => JSON.stringify(v) === JSON.stringify([originalDateWire])
+        )
+      ).toBe(true)
+    })
   })
 })
 

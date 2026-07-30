@@ -225,7 +225,11 @@ export function parsePastedDate(
   if (month < 1 || month > 12 || day < 1 || day > 31) return null
 
   try {
-    return new CalendarDate(year, month, day)
+    const result = new CalendarDate(year, month, day)
+    // CalendarDate auto-clamps invalid days (e.g. April 31 → April 30).
+    // Reject if the constructed date differs from what was pasted.
+    if (result.day !== day) return null
+    return result
   } catch {
     return null
   }

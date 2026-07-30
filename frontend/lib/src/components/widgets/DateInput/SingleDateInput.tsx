@@ -170,6 +170,13 @@ function SingleDateInput({
   // of closing — see `focusLastFieldSegment` below.
   const isRestoringFocusRef = useRef(false)
 
+  // Stable ref for onClose so the close-detection effect doesn't re-run
+  // every time the parent's handleClose callback identity changes.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
+
   // Fully controlled: value/onChange from parent, only isOpen is local.
   const state = useDatePickerState({
     value,
@@ -177,18 +184,17 @@ function SingleDateInput({
     minValue: minDate,
     maxValue: maxDate,
   })
+  const { isOpen, setOpen, setValue: setStateValue } = state
 
-  const wasOpenRef = useRef(state.isOpen)
+  const wasOpenRef = useRef(isOpen)
   useEffect(() => {
-    if (wasOpenRef.current && !state.isOpen) {
-      // Detect whether any date segment is in placeholder state (partially
-      // cleared). The parent uses this to decide whether to revert the value.
+    if (wasOpenRef.current && !isOpen) {
       const hasPlaceholders =
         triggerRef.current?.querySelector('[data-placeholder="true"]') !== null
-      onClose(hasPlaceholders)
+      onCloseRef.current(hasPlaceholders)
     }
-    wasOpenRef.current = state.isOpen
-  }, [state.isOpen, onClose])
+    wasOpenRef.current = isOpen
+  }, [isOpen])
 
   // In the sidebar, flip/shift are bounded to the viewport
   // (document.documentElement) rather than the sidebar's overflow:auto
@@ -197,7 +203,7 @@ function SingleDateInput({
   // Matches the pattern established in Selectbox (PR #16199).
   const overlayOptions = useMemo(() => {
     const base = {
-      open: state.isOpen,
+      open: isOpen,
       placement: "bottom-start" as const,
       offsetPx: convertRemToPx(theme.spacing.twoXS),
     }
@@ -210,13 +216,14 @@ function SingleDateInput({
       flipOptions: { boundary },
       shiftOptions: { boundary, padding: SHIFT_VIEWPORT_PADDING },
     }
-  }, [state.isOpen, theme.spacing.twoXS, isInSidebar])
+  }, [isOpen, theme.spacing.twoXS, isInSidebar])
 
   const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
   // Restores focus to the last date segment when the popover closes.
   // isRestoringFocusRef prevents handleFocus from reopening the popover
-  // in response to this programmatic focus.
+  // in response to this programmatic focus. Reset via rAF to guarantee
+  // the synthetic focus event has been processed before re-enabling.
   const focusLastFieldSegment = useCallback((): void => {
     const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
       '[role="spinbutton"]'
@@ -228,12 +235,14 @@ function SingleDateInput({
     } else {
       triggerRef.current?.focus()
     }
-    isRestoringFocusRef.current = false
+    requestAnimationFrame(() => {
+      isRestoringFocusRef.current = false
+    })
   }, [])
 
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
-    isOpen: state.isOpen,
-    onClose: () => state.setOpen(false),
+    isOpen,
+    onClose: () => setOpen(false),
     floatingSetFn: refs.setFloating,
     referenceSetFn: refs.setReference,
     restoreFocusFn: focusLastFieldSegment,
@@ -253,23 +262,23 @@ function SingleDateInput({
   // Selecting a date closes the popover and restores focus to the field.
   const handleCalendarChange = useCallback(
     (date: CalendarDate): void => {
-      state.setValue(date)
-      state.setOpen(false)
+      setStateValue(date)
+      setOpen(false)
       focusLastFieldSegment()
     },
-    [state, focusLastFieldSegment]
+    [setStateValue, setOpen, focusLastFieldSegment]
   )
 
   // Wired to onClickCapture: clicking an already-focused segment doesn't
   // re-fire onFocus. Capture phase needed because RAC stops propagation.
   const handleFocus = useCallback((): void => {
     if (isRestoringFocusRef.current) return
-    if (!disabled) state.setOpen(true)
-  }, [disabled, state])
+    if (!disabled) setOpen(true)
+  }, [disabled, setOpen])
 
   const handleClear = useCallback((): void => {
-    state.setValue(null)
-  }, [state])
+    setStateValue(null)
+  }, [setStateValue])
 
   // Custom paste: DateField's built-in paste uses the locale-derived segment
   // order (en-US), which is out of sync with our reordered segments.
@@ -281,7 +290,7 @@ function SingleDateInput({
       const fullDate = parsePastedDate(text, format)
       if (fullDate) {
         e.preventDefault()
-        state.setValue(fullDate)
+        setStateValue(fullDate)
         return
       }
 
@@ -296,9 +305,9 @@ function SingleDateInput({
       if (!isValidSegmentValue(partial.segmentType, partial.value)) return
 
       const base = value ?? minDate
-      state.setValue(base.set({ [partial.segmentType]: partial.value }))
+      setStateValue(base.set({ [partial.segmentType]: partial.value }))
     },
-    [disabled, format, state, value, minDate]
+    [disabled, format, setStateValue, value, minDate]
   )
 
   // Tab from the last segment moves focus into the calendar popover.
@@ -306,7 +315,7 @@ function SingleDateInput({
   // Tab would skip over it entirely.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
-      if (e.key !== "Tab" || e.shiftKey || !state.isOpen) return
+      if (e.key !== "Tab" || e.shiftKey || !isOpen) return
       const wrapper = triggerRef.current
       const calendar = refs.floating.current
       if (!wrapper || !calendar) return
@@ -324,7 +333,7 @@ function SingleDateInput({
       e.preventDefault()
       focusedCell.focus()
     },
-    [state.isOpen, refs.floating]
+    [isOpen, refs.floating]
   )
 
   // Tab trap: forward-Tab on last element closes popover, Shift+Tab on
@@ -342,14 +351,14 @@ function SingleDateInput({
 
       if (!e.shiftKey && e.target === last) {
         e.preventDefault()
-        state.setOpen(false)
+        setOpen(false)
         focusLastFieldSegment()
       } else if (e.shiftKey && e.target === first) {
         e.preventDefault()
         last.focus()
       }
     },
-    [refs.floating, state, focusLastFieldSegment]
+    [refs.floating, setOpen, focusLastFieldSegment]
   )
 
   return (
@@ -370,8 +379,8 @@ function SingleDateInput({
               aria-label={label}
               aria-describedby={error ? errorId : undefined}
               isInvalid={!!error}
-              value={state.value}
-              onChange={state.setValue}
+              value={value}
+              onChange={setStateValue}
               minValue={minDate}
               maxValue={maxDate}
               shouldForceLeadingZeros
@@ -408,11 +417,11 @@ function SingleDateInput({
         )}
         {error && (
           <StyledVisuallyHidden id={errorId} role="alert">
-            {`Error: ${error}`}
+            {error.replace(/\*\*/g, "")}
           </StyledVisuallyHidden>
         )}
       </StyledDateInputWrapper>
-      {state.isOpen && (
+      {isOpen && (
         <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <StyledCalendarPopover
             ref={setFloatingRef}

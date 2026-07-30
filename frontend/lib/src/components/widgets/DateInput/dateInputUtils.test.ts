@@ -277,10 +277,15 @@ describe("parsePastedDate", () => {
     expect(parsePastedDate("2024/01/32", "YYYY/MM/DD")).toBeNull()
   })
 
-  it("clamps an out-of-range day-of-month (April has 30 days)", () => {
-    // `CalendarDate`'s constructor clamps rather than throwing/returning
-    // null for a day that doesn't exist in the given month.
-    expect(parsePastedDate("2024/04/31", "YYYY/MM/DD")).toEqual(
+  it("rejects an invalid day-of-month (April has 30 days)", () => {
+    // CalendarDate's constructor would clamp April 31 → 30, but we
+    // verify the constructed day matches the input to reject ambiguous
+    // pastes rather than silently clamping.
+    expect(parsePastedDate("2024/04/31", "YYYY/MM/DD")).toBeNull()
+  })
+
+  it("accepts valid day-of-month at month boundary (April 30)", () => {
+    expect(parsePastedDate("2024/04/30", "YYYY/MM/DD")).toEqual(
       new CalendarDate(2024, 4, 30)
     )
   })

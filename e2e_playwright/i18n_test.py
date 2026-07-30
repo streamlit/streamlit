@@ -45,10 +45,10 @@ def browser_context_args(
     }
 
 
-def test_range_date_calendar_picker_rendering(
+def test_single_date_calendar_picker_rendering(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the range calendar picker renders correctly via screenshots matching."""
+    """Test that the single-date calendar picker renders correctly via screenshots matching."""
     date_input = app.get_by_test_id("stDateInput").first
     expect(date_input).to_be_visible()
     date_input.scroll_into_view_if_needed()
@@ -65,5 +65,5 @@ def test_range_date_calendar_picker_rendering(
 
     assert_snapshot(
         calendar_popover,
-        name="st_date_input-range_two_dates_calendar",
+        name="st_date_input-single_date_calendar",
     )

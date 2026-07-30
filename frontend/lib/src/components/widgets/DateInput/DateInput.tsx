@@ -196,7 +196,7 @@ function DateInput({
   // Thereby, we need to replace all letters with 9s which refers to any number.
   // Pure string manipulation — no date library needed, kept for the
   // still-BaseWeb-backed range path only.
-  // (Using useMemo to avoid recomputing every time for now reason)
+  // (Using useMemo to avoid recomputing every time for no reason)
   const dateMask = useMemo(
     () => element.format.replaceAll(/[a-zA-Z]/g, "9"),
     [element.format]
@@ -206,7 +206,7 @@ function DateInput({
   // slightly different from the momentJS notation. Therefore, we need to
   // convert the provided format into the date-fns notation, for the range
   // path's Datepicker formatString prop only:
-  // (Using useMemo to avoid recomputing every time for now reason)
+  // (Using useMemo to avoid recomputing every time for no reason)
   const dateFormat = useMemo(
     () => element.format.replaceAll("Y", "y").replaceAll("D", "d"),
     [element.format]
@@ -329,7 +329,7 @@ function DateInput({
   // partial edits don't persist.
   const handleClose = useCallback(
     (hasPlaceholderSegments?: boolean): void => {
-      if (!isEmpty && !hasPlaceholderSegments) {
+      if (!isEmpty && !hasPlaceholderSegments && !error) {
         // User made a complete valid edit or just opened/closed without
         // changing anything — keep the current value.
         return
@@ -338,7 +338,7 @@ function DateInput({
       setValueWithSource({ value: element.default, fromUi: true })
       setIsEmpty(element.default.length === 0)
     },
-    [isEmpty, element.default, setValueWithSource, resetError]
+    [isEmpty, element.default, setValueWithSource, resetError, error]
   )
 
   const singleValue = useMemo(

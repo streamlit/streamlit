@@ -166,6 +166,17 @@ def test_handle_value_changes(app: Page):
     expect_markdown(app, "Value 1: 1970-01-02")
 
 
+def test_handle_value_changes_non_default_format(app: Page):
+    """Test typing in a date input with MM-DD-YYYY format."""
+    date_field = get_date_input(app, "Single date with format").get_by_test_id(
+        "stDateInputField"
+    )
+    # MM-DD-YYYY format: segments are month, day, year (left-to-right)
+    type_date(date_field, "03", "15", "2024")
+    reset_focus(app)
+    expect_markdown(app, "Value 9: 2024-03-15")
+
+
 def test_empty_date_input_behaves_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
