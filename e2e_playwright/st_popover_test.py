@@ -480,12 +480,12 @@ def test_popover_menu_style_icons_hide_chevron(
 
 
 def test_multiselect_dropdown_renders_above_popover_body(app: Page):
-    """A BaseWeb dropdown (multiselect) opened inside a popover must render above
+    """A multiselect dropdown opened inside a popover must render above
     the popover body, not behind it.
 
     Regression test for https://github.com/streamlit/streamlit/issues/15959: the
-    floating-ui popover body and the BaseWeb overlay layer host both resolved to
-    the `popup` z-index, so the popover body (mounted later) painted over the
+    floating-ui popover body and the dropdown overlay both resolved to the
+    `popup` z-index, so the popover body (mounted later) painted over the
     dropdown and hid the options.
     """
     popover_container = open_popover(app, "popover 20 (multiselect stacking)")
@@ -519,7 +519,7 @@ def test_multiselect_dropdown_renders_above_popover_body(app: Page):
     # Selecting the option must work (would fail the click hit-test if occluded).
     first_option.click()
     wait_for_app_run(app)
-    expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(1)
+    expect(multiselect.locator("[data-tag]")).to_have_count(1)
 
 
 def test_date_input_selection_does_not_dismiss_popover(app: Page):

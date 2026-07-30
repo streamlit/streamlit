@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -90,11 +90,11 @@ describe("Multiselect widget", () => {
     })
     render(<Multiselect {...props} />)
 
-    const selections = screen.getAllByRole("button")
-    // one of the buttons is the dropdown button
-    expect(selections.length).toBe(3)
-    expect(selections[0]).toHaveTextContent("b")
-    expect(selections[1]).toHaveTextContent("c")
+    const removeButtons = screen.getAllByRole("button", { name: /^Remove / })
+    expect(removeButtons).toHaveLength(2)
+    // Tags are rendered with their value text
+    expect(screen.getByText("b")).toBeVisible()
+    expect(screen.getByText("c")).toBeVisible()
   })
 
   it("can pass fragmentId to setStringArrayValue", () => {
@@ -155,8 +155,7 @@ describe("Multiselect widget", () => {
       const props = getProps({ default: [] })
       render(<Multiselect {...props} />)
 
-      const placeholder = screen.getByText("Please select")
-      expect(placeholder).toBeInTheDocument()
+      expect(screen.getByPlaceholderText("Please select")).toBeVisible()
     })
 
     it("renders with custom placeholder", () => {
@@ -167,20 +166,21 @@ describe("Multiselect widget", () => {
       })
       render(<Multiselect {...props} />)
 
-      expect(screen.getByText("Custom placeholder text")).toBeInTheDocument()
+      expect(
+        screen.getByPlaceholderText("Custom placeholder text")
+      ).toBeVisible()
     })
 
     it("integrates with placeholder utility for default behavior", () => {
       const props = getProps({
         default: [],
         options: ["a", "b", "c"],
-        placeholder: "", // Empty string to trigger default placeholder
+        placeholder: "",
         acceptNewOptions: false,
       })
       render(<Multiselect {...props} />)
 
-      // Verifies that the integration with getSelectPlaceholder utility works
-      expect(screen.getByText("Choose options")).toBeInTheDocument()
+      expect(screen.getByPlaceholderText("Choose options")).toBeVisible()
     })
 
     it("handles single space placeholder as a valid placeholder", () => {
@@ -191,14 +191,17 @@ describe("Multiselect widget", () => {
       })
       render(<Multiselect {...props} />)
 
-      // Should not show any default placeholder text since single space is provided
-      expect(screen.queryByText("Choose options")).not.toBeInTheDocument()
       expect(
-        screen.queryByText("Choose or add options")
+        screen.queryByPlaceholderText("Choose options")
       ).not.toBeInTheDocument()
-      expect(screen.queryByText("Add options")).not.toBeInTheDocument()
       expect(
-        screen.queryByText("No options to select")
+        screen.queryByPlaceholderText("Choose or add options")
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByPlaceholderText("Add options")
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByPlaceholderText("No options to select")
       ).not.toBeInTheDocument()
     })
   })
@@ -208,8 +211,7 @@ describe("Multiselect widget", () => {
     const props = getProps({ default: [] })
     render(<Multiselect {...props} />)
 
-    const expandListButton = screen.getAllByTitle("open")[0]
-    await user.click(expandListButton)
+    await user.click(screen.getByRole("button", { name: "Open" }))
 
     const options = screen.getAllByRole("option")
     // First option is "Select all", followed by the actual options
@@ -251,16 +253,15 @@ describe("Multiselect widget", () => {
     render(<Multiselect {...props} />)
 
     // Add new selection (b) in addition to existing selection (a)
-    // by typing in the preferred option
     const multiSelect = screen.getByRole("combobox")
     await user.type(multiSelect, "b")
     // Select the matching option from the list
     const match = screen.getByRole("option")
     await user.click(match)
 
-    const selections = screen.getAllByRole("button")
-    expect(selections[0]).toHaveTextContent("a")
-    expect(selections[1]).toHaveTextContent("b")
+    // Verify both values are now shown as tags
+    expect(screen.getByText("a")).toBeVisible()
+    expect(screen.getByText("b")).toBeVisible()
   })
 
   it("can remove options", async () => {
@@ -268,19 +269,17 @@ describe("Multiselect widget", () => {
     const props = getProps()
     render(<Multiselect {...props} />)
 
-    // Clear current selection
-    const deleteOptionButton = screen.getAllByTitle("Delete")[0]
-    await user.click(deleteOptionButton)
+    // Clear current selection via the tag's remove button
+    const removeButton = screen.getByRole("button", { name: "Remove a" })
+    await user.click(removeButton)
 
     // Should now see all options available again
-    const expandListButton = screen.getAllByTitle("open")[0]
-    await user.click(expandListButton)
+    await user.click(screen.getByRole("button", { name: "Open" }))
 
     const options = screen.getAllByRole("option")
     // First option is "Select all", followed by the actual options
     expect(options.length).toBe(props.element.options.length + 1)
     expect(options[0]).toHaveTextContent("Select all")
-    // Skip the first option (Select all) when checking data options
     const dataOptions = options.slice(1)
     dataOptions.forEach((option, idx) => {
       expect(option).toHaveTextContent(props.element.options[idx])
@@ -297,40 +296,36 @@ describe("Multiselect widget", () => {
     await user.click(clearAllButton)
 
     // Should now see all options available again
-    const expandListButton = screen.getAllByTitle("open")[0]
-    await user.click(expandListButton)
+    await user.click(screen.getByRole("button", { name: "Open" }))
 
     const options = screen.getAllByRole("option")
     // First option is "Select all", followed by the actual options
     expect(options.length).toBe(props.element.options.length + 1)
     expect(options[0]).toHaveTextContent("Select all")
-    // Skip the first option (Select all) when checking data options
     const dataOptions = options.slice(1)
     dataOptions.forEach((option, idx) => {
       expect(option).toHaveTextContent(props.element.options[idx])
     })
   })
 
-  it("does not clear the selection on Escape when a default exists", () => {
+  it("does not clear the selection on Escape when a default exists", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
     render(<Multiselect {...props} />)
 
-    const multiSelect = screen.getByRole("combobox")
     // The default selection ("a") is rendered.
-    expect(screen.getAllByTitle("Delete").length).toBeGreaterThan(0)
+    expect(screen.getByRole("button", { name: "Remove a" })).toBeVisible()
 
-    // With the dropdown closed, Escape must not clear the value because the
+    // Focus the input and close the dropdown that opens on click
+    await user.click(screen.getByRole("combobox"))
+    await user.keyboard("{Escape}")
+
+    // Now dropdown is closed — Escape must not clear the value because the
     // widget has a default (not clearable), matching st.selectbox.
-    act(() => {
-      multiSelect.focus()
-    })
-    // baseweb's Select reads event.keyCode, which userEvent no longer sets, so
-    // dispatch the key event directly.
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.keyDown(multiSelect, { key: "Escape", keyCode: 27, which: 27 })
+    await user.keyboard("{Escape}")
 
-    expect(screen.getAllByTitle("Delete").length).toBeGreaterThan(0)
+    expect(screen.getByRole("button", { name: "Remove a" })).toBeVisible()
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
       props.element,
       [],
@@ -339,7 +334,8 @@ describe("Multiselect widget", () => {
     )
   })
 
-  it("clears the selection on Escape when there is no default", () => {
+  it("clears the selection on Escape when there is no default", async () => {
+    const user = userEvent.setup()
     const props = getProps({ default: [] })
     // Seed a user selection so there is a value to clear (dropdown closed).
     props.widgetMgr.setStringArrayValue(
@@ -351,20 +347,19 @@ describe("Multiselect widget", () => {
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
     render(<Multiselect {...props} />)
 
-    const multiSelect = screen.getByRole("combobox")
-    expect(screen.getAllByTitle("Delete").length).toBeGreaterThan(0)
+    expect(screen.getByRole("button", { name: "Remove b" })).toBeVisible()
 
-    // With the dropdown closed, Escape clears the value because the widget is
+    // Focus the input and close the dropdown that opens on click
+    await user.click(screen.getByRole("combobox"))
+    await user.keyboard("{Escape}")
+
+    // Now dropdown is closed — Escape clears the value because the widget is
     // clearable (no default), matching st.selectbox.
-    act(() => {
-      multiSelect.focus()
-    })
-    // baseweb's Select reads event.keyCode, which userEvent no longer sets, so
-    // dispatch the key event directly.
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.keyDown(multiSelect, { key: "Escape", keyCode: 27, which: 27 })
+    await user.keyboard("{Escape}")
 
-    expect(screen.queryAllByTitle("Delete")).toHaveLength(0)
+    expect(
+      screen.queryByRole("button", { name: /^Remove / })
+    ).not.toBeInTheDocument()
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
       [],
@@ -384,7 +379,6 @@ describe("Multiselect widget", () => {
     render(<Multiselect {...props} />)
 
     // Change the widget value - add selection (b)
-    // to existing selection (a) by typing in
     const multiSelect = screen.getByRole("combobox")
     await user.type(multiSelect, "b")
     // Select the matching option from the list
@@ -411,14 +405,16 @@ describe("Multiselect widget", () => {
       props.widgetMgr.submitForm("form", undefined)
     })
 
-    // Our widget should be reset, and the widgetMgr should be updated
-    const expandListButton = screen.getAllByTitle("open")[0]
-    await user.click(expandListButton)
+    // Our widget should be reset, and the widgetMgr should be updated.
+    // The dropdown may still be open from the previous selection, so open it
+    // if needed (multi-select keeps it open on selection).
+    if (screen.queryAllByRole("option").length === 0) {
+      await user.click(screen.getByRole("button", { name: "Open" }))
+    }
     // Options list should have "Select all" + b & c available - default a selected
     const updatedOptions = screen.getAllByRole("option")
     expect(updatedOptions.length).toBe(3)
     expect(updatedOptions[0]).toHaveTextContent("Select all")
-    // Skip the first option (Select all) when checking data options
     const dataOptions = updatedOptions.slice(1)
     expect(dataOptions[0]).toHaveTextContent("b")
     expect(dataOptions[1]).toHaveTextContent("c")
@@ -487,18 +483,15 @@ describe("Multiselect widget", () => {
       render(<Multiselect {...props} />)
 
       // Select another option, b, from the dropdown list
-      const expandListButton = screen.getAllByTitle("open")[0]
-      // Open the list
-      await user.click(expandListButton)
+      await user.click(screen.getByRole("button", { name: "Open" }))
       // Options list should have "Select all" + b & c available - default a selected
       const options = screen.getAllByRole("option")
       expect(options.length).toBe(3)
       expect(options[0]).toHaveTextContent("Select all")
-      // Skip the first option (Select all) when checking data options
       const dataOptions = options.slice(1)
       expect(dataOptions[0]).toHaveTextContent("b")
       expect(dataOptions[1]).toHaveTextContent("c")
-      // Select b from the list (click directly on b, not "Select all")
+      // Select b from the list
       await user.click(screen.getByText("b"))
 
       expect(
@@ -545,16 +538,14 @@ describe("Multiselect widget", () => {
       render(<Multiselect {...props} />)
 
       // Clear a selection
-      const deleteOptionButton = screen.getAllByTitle("Delete")[0]
-      await user.click(deleteOptionButton)
+      const removeButton = screen.getByRole("button", { name: "Remove a" })
+      await user.click(removeButton)
 
       // Options list should have "Select all" + a & c available - b selected
-      const expandListButton = screen.getAllByTitle("open")[0]
-      await user.click(expandListButton)
+      await user.click(screen.getByRole("button", { name: "Open" }))
       const updatedOptions = screen.getAllByRole("option")
       expect(updatedOptions.length).toBe(3)
       expect(updatedOptions[0]).toHaveTextContent("Select all")
-      // Skip the first option (Select all) when checking data options
       const dataOptions = updatedOptions.slice(1)
       expect(dataOptions[0]).toHaveTextContent("a")
       expect(dataOptions[1]).toHaveTextContent("c")
@@ -575,6 +566,56 @@ describe("Multiselect widget", () => {
     expect(screen.getByText("Add: AA")).toBeInTheDocument()
   })
 
+  it("does not allow re-adding an already-selected custom value", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      options: ["apple", "banana"],
+      acceptNewOptions: true,
+    })
+    render(<Multiselect {...props} />)
+    const input = screen.getByRole("combobox")
+
+    // Add a custom value "mango"
+    await user.type(input, "mango")
+    expect(screen.getByText("Add: mango")).toBeInTheDocument()
+    await user.keyboard("{Enter}")
+
+    // Verify "mango" was added as a tag
+    expect(screen.getByText("mango")).toBeVisible()
+
+    // Type "mango" again — "Add: mango" should NOT appear
+    await user.type(input, "mango")
+    expect(screen.queryByText("Add: mango")).not.toBeInTheDocument()
+  })
+
+  it("activates bulk action via Enter when acceptNewOptions is true", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "banana", "cherry"],
+      acceptNewOptions: true,
+    })
+    render(<Multiselect {...props} />)
+    const input = screen.getByRole("combobox")
+
+    // Open dropdown and type a filter that matches multiple options
+    await user.type(input, "a")
+
+    // "Select X matches" bulk action should be visible
+    const bulkAction = screen.getByText(/Select \d+ matches/)
+    expect(bulkAction).toBeVisible()
+
+    // Press ArrowDown to focus the bulk action, then Enter to activate it
+    await user.keyboard("{ArrowDown}{Enter}")
+
+    // All matching options should now be selected as tags
+    expect(screen.getByText("apple")).toBeVisible()
+    expect(screen.getByText("banana")).toBeVisible()
+
+    // The input should NOT have created "a" as a custom value
+    expect(screen.queryByText("a", { exact: true })).not.toBeInTheDocument()
+  })
+
   it("predictably produces case sensitive matches", async () => {
     const user = userEvent.setup()
     const props = getProps({
@@ -590,7 +631,6 @@ describe("Multiselect widget", () => {
     // First option is "Select X matches", followed by the matched options
     expect(options).toHaveLength(4)
     expect(options[0]).toHaveTextContent("Select 3 matches")
-    // Skip the first option when checking data options
     const dataOptions = options.slice(1)
     expect(dataOptions[0]).toHaveTextContent("aa")
     expect(dataOptions[1]).toHaveTextContent("Aa")
@@ -616,7 +656,7 @@ describe("Multiselect widget", () => {
     expect(options[2]).toHaveTextContent("grape")
   })
 
-  it("keeps all options visible and the input readonly when filterMode is none", async () => {
+  it("keeps all options visible and disables typing (inputmode=none) when filterMode is none", async () => {
     const user = userEvent.setup()
     const props = getProps({
       default: [],
@@ -626,13 +666,34 @@ describe("Multiselect widget", () => {
     render(<Multiselect {...props} />)
     const input = screen.getByRole("combobox")
 
-    expect(input).toHaveAttribute("readonly")
+    expect(input).toHaveAttribute("inputmode", "none")
+    expect(input).not.toHaveAttribute("readonly")
 
     await user.click(input)
     expect(screen.queryAllByRole("option")).toHaveLength(4)
 
     await user.type(input, "no")
     expect(screen.queryAllByRole("option")).toHaveLength(4)
+  })
+
+  it("allows Backspace to remove last tag when filterMode is none", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [0, 1],
+      options: ["yes", "no", "maybe"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
+    })
+    render(<Multiselect {...props} />)
+    const input = screen.getByRole("combobox")
+
+    expect(screen.getByRole("button", { name: "Remove no" })).toBeVisible()
+
+    await user.click(input)
+    await user.keyboard("{Backspace}")
+
+    expect(
+      screen.queryByRole("button", { name: "Remove no" })
+    ).not.toBeInTheDocument()
   })
 
   describe("scroll position preservation", () => {
@@ -646,26 +707,29 @@ describe("Multiselect widget", () => {
       render(<Multiselect {...props} />)
 
       const multiselect = screen.getByTestId("stMultiSelect")
-      const valueContainer = multiselect.querySelector(
-        '[data-baseweb="select"] > div > div:first-child'
-      )
+      // The tags container is the scrollable div inside the trigger
+      const tagsContainer = multiselect.querySelector(
+        "[data-testid='stMultiSelect'] div div"
+      )?.firstElementChild?.firstElementChild
 
-      expect(valueContainer).not.toBeNull()
-      if (valueContainer === null) {
+      expect(tagsContainer).not.toBeNull()
+      if (!tagsContainer) {
         return
       }
 
-      Object.defineProperty(valueContainer, "scrollTop", {
+      Object.defineProperty(tagsContainer, "scrollTop", {
         writable: true,
         configurable: true,
         value: 100,
       })
-      valueContainer.dispatchEvent(new Event("scroll", { bubbles: true }))
+      tagsContainer.dispatchEvent(new Event("scroll", { bubbles: true }))
 
-      const deleteButtons = screen.getAllByTitle("Delete")
-      await user.click(deleteButtons[5])
+      const removeButtons = screen.getAllByRole("button", {
+        name: /^Remove /,
+      })
+      await user.click(removeButtons[5])
 
-      expect(valueContainer.scrollTop).toBe(100)
+      expect(tagsContainer.scrollTop).toBe(100)
     })
   })
 
@@ -717,8 +781,7 @@ describe("Multiselect widget", () => {
       render(<Multiselect {...props} />)
 
       // Open dropdown
-      const expandListButton = screen.getAllByTitle("open")[0]
-      await user.click(expandListButton)
+      await user.click(screen.getByRole("button", { name: "Open" }))
 
       // Click "Select all"
       const selectAll = screen.getByText("Select all")
@@ -741,8 +804,7 @@ describe("Multiselect widget", () => {
       render(<Multiselect {...props} />)
 
       // Open dropdown
-      const expandListButton = screen.getAllByTitle("open")[0]
-      await user.click(expandListButton)
+      await user.click(screen.getByRole("button", { name: "Open" }))
 
       // Click "Select all"
       const selectAll = screen.getByText("Select all")
@@ -820,8 +882,7 @@ describe("Multiselect widget", () => {
       render(<Multiselect {...props} />)
 
       // Open dropdown
-      const expandListButton = screen.getAllByTitle("open")[0]
-      await user.click(expandListButton)
+      await user.click(screen.getByRole("button", { name: "Open" }))
 
       // Click "Select all"
       const selectAll = screen.getByText("Select all")
@@ -847,8 +908,7 @@ describe("Multiselect widget", () => {
       render(<Multiselect {...props} />)
 
       // Open dropdown
-      const expandListButton = screen.getAllByTitle("open")[0]
-      await user.click(expandListButton)
+      await user.click(screen.getByRole("button", { name: "Open" }))
 
       // Click "Select all"
       const selectAll = screen.getByText("Select all")
@@ -916,8 +976,7 @@ describe("Multiselect widget", () => {
       render(<Multiselect {...props} />)
 
       // Open dropdown
-      const expandListButton = screen.getAllByTitle("open")[0]
-      await user.click(expandListButton)
+      await user.click(screen.getByRole("button", { name: "Open" }))
 
       // Should only see the single option, no "Select all"
       const options = screen.getAllByRole("option")
@@ -956,8 +1015,7 @@ describe("Multiselect widget", () => {
       render(<Multiselect {...props} />)
 
       // Open dropdown without search
-      const expandListButton = screen.getAllByTitle("open")[0]
-      await user.click(expandListButton)
+      await user.click(screen.getByRole("button", { name: "Open" }))
 
       // Should show "Select all", not "Select X matches"
       expect(screen.getByText("Select all")).toBeInTheDocument()
@@ -997,13 +1055,18 @@ describe("Multiselect widget", () => {
     })
 
     it("does not show Select all when there are >= 1000 options", async () => {
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
+        320
+      )
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(
+        300
+      )
       const user = userEvent.setup()
       const options = Array.from({ length: 1000 }, (_, i) => `option_${i}`)
       const props = getProps({ default: [], options })
       render(<Multiselect {...props} />)
 
-      const expandListButton = screen.getAllByTitle("open")[0]
-      await user.click(expandListButton)
+      await user.click(screen.getByRole("button", { name: "Open" }))
 
       expect(screen.queryByText("Select all")).not.toBeInTheDocument()
       // Options should still be visible
@@ -1011,6 +1074,12 @@ describe("Multiselect widget", () => {
     })
 
     it("does not show Select X matches when there are >= 1000 options", async () => {
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
+        320
+      )
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(
+        300
+      )
       const user = userEvent.setup()
       const options = Array.from({ length: 1000 }, (_, i) => `option_${i}`)
       const props = getProps({ default: [], options })
@@ -1018,23 +1087,28 @@ describe("Multiselect widget", () => {
 
       const multiSelect = screen.getByRole("combobox")
       await user.click(multiSelect)
-      // Search for options matching "option_1" (this will match option_1, option_10-19, option_100-199, etc.)
+      // Search for options matching "option_1"
       await user.type(multiSelect, "option_1")
 
       // "Select X matches" should NOT be shown for >= 1000 total options
       expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
-      // But matching options should still be visible (use queryAllBy since multiple match)
+      // But matching options should still be visible
       expect(screen.queryAllByText(/option_1/).length).toBeGreaterThan(0)
     })
 
     it("shows Select all when there are less than 1000 options", async () => {
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
+        320
+      )
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(
+        300
+      )
       const user = userEvent.setup()
       const options = Array.from({ length: 999 }, (_, i) => `option_${i}`)
       const props = getProps({ default: [], options })
       render(<Multiselect {...props} />)
 
-      const expandListButton = screen.getAllByTitle("open")[0]
-      await user.click(expandListButton)
+      await user.click(screen.getByRole("button", { name: "Open" }))
 
       expect(screen.getByText("Select all")).toBeVisible()
     })
@@ -1042,6 +1116,14 @@ describe("Multiselect widget", () => {
 })
 
 describe("Multiselect query param binding", () => {
+  beforeEach(() => {
+    vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it("registers query param binding on mount when queryParamKey is set", () => {
     const props = getProps({ queryParamKey: "my_multi" })
     vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
