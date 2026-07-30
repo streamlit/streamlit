@@ -488,4 +488,5 @@ exclude = [
 [tool.ty.rules]
 unresolved-import = "ignore"
 possibly-unresolved-reference = "error"
+unused-ignore-comment = "ignore"
 unused-type-ignore-comment = "ignore"
