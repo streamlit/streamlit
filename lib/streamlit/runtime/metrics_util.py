@@ -518,10 +518,12 @@ def gather_metrics(
         The function to track for telemetry. If ``None`` (default), returns a
         decorator that can be applied to a function.
     _positional_arg_offset : int
-        The number of leading positional arguments to exclude from the recorded
-        argument positions. Set this to ``1`` when decorating a method (such as
-        a class ``__init__``) so that its first real argument is recorded at
-        position ``0``, matching an equivalent plain-function command.
+        How many leading positional arguments to skip when assigning recorded
+        position indexes. The arguments are still tracked; only their stored
+        position (``p``) is shifted. Set this to ``1`` when decorating a method
+        (such as a class ``__init__``) so that its first real argument is
+        recorded at position ``0``, matching an equivalent plain-function
+        command.
 
     Examples
     --------
