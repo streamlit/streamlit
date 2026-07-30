@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import io
+import mimetypes
 import os
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -108,7 +109,7 @@ def _normalize_icon_position(
             f'The argument passed was "{icon_position}".'
         )
 
-    return cast("IconPosition", icon_position)  # type: ignore[redundant-cast]
+    return icon_position
 
 
 def _icon_position_to_proto(
@@ -480,6 +481,10 @@ class ButtonMixin:
             The MIME type of the data. If this is ``None`` (default), Streamlit
             sets the MIME type depending on the value of ``data`` as follows:
 
+            - If ``data`` is a file object with a string ``name`` attribute
+              (e.g. a file opened with ``open()``), Streamlit first tries to
+              guess the MIME type from the file name (``file_name`` if
+              specified, otherwise ``data.name``).
             - If ``data`` is a string or textual file (i.e. ``str`` or
               ``io.TextIOWrapper`` object), Streamlit uses the "text/plain"
               MIME type.
@@ -1730,6 +1735,33 @@ class ButtonMixin:
         return cast("DeltaGenerator", self)
 
 
+def _maybe_infer_file_info(
+    data: DownloadButtonDataType,
+    file_name: str | None,
+    mimetype: str | None,
+) -> tuple[str | None, str | None]:
+    """Infer a missing ``file_name``/``mime`` from ``data.name`` when it is a
+    non-empty string, as on a file object opened from disk (e.g. ``io.FileIO``).
+
+    Explicit user-provided values always take precedence; when nothing can be
+    inferred, the values are returned unchanged.
+    """
+    # `data.name` may be a property that raises (e.g. on a detached
+    # TextIOWrapper), so getattr's default alone isn't enough.
+    try:
+        name = getattr(data, "name", None)
+    except (AttributeError, ValueError, OSError):
+        return file_name, mimetype
+    # FileIO.name is an int when the object was created from a file descriptor.
+    if not isinstance(name, str) or not name:
+        return file_name, mimetype
+    if file_name is None:
+        file_name = os.path.basename(name)
+    if mimetype is None:
+        mimetype = mimetypes.guess_type(file_name)[0]
+    return file_name, mimetype
+
+
 def marshall_file(
     coordinates: str,
     data: DownloadButtonDataType,
@@ -1754,6 +1786,10 @@ def marshall_file(
         proto_download_button.deferred_file_id = file_id
         proto_download_button.url = ""  # No URL yet, will be generated on click
         return
+
+    # A file object opened from disk carries a usable path in `name`: use it
+    # to fill in a missing file_name/mime. See issue #14159.
+    file_name, mimetype = _maybe_infer_file_info(data, file_name, mimetype)
 
     # Existing logic for non-callable data
     data_as_bytes, inferred_mime_type = convert_data_to_bytes_and_infer_mime(
