@@ -1606,13 +1606,15 @@ export class App extends PureComponent<Props, State> {
         // which would conflate "installed" with a permanent opt-out. The card
         // shows its own success confirmation and auto-dismisses.
         //
-        // Tag installs that took the symlink -> global-copy fallback (symlinks
-        // unsupported, e.g. Windows without Developer Mode) so that cohort is
-        // countable — a fallback install is otherwise indistinguishable from a
-        // project install in the success telemetry.
+        // Tag installs the server rerouted from project mode to a global copy,
+        // with which of the two causes — symlinks unavailable machine-wide vs. an
+        // individual link that would not lay. Those point at different fixes, and
+        // a fallback install is otherwise indistinguishable from a project install
+        // in the success telemetry.
+        const fallbackReason = result.fallbackReason
         this.trackSkillsNudge(
-          result.usedGlobalFallback
-            ? "skillsNudgeInstallSucceeded:global_fallback"
+          fallbackReason
+            ? `skillsNudgeInstallSucceeded:${fallbackReason}`
             : "skillsNudgeInstallSucceeded"
         )
         return result.detail ?? undefined

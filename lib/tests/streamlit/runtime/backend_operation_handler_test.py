@@ -223,16 +223,16 @@ def test_install_skills_handler_installs_in_project_mode() -> None:
     )
     assert response.error_msg == ""
     # A normal project (symlink) install did not take the global fallback.
-    assert response.install_skills.used_global_fallback is False
+    assert response.install_skills.fallback_reason == ""
 
 
 def test_install_skills_handler_forwards_global_fallback_flag() -> None:
-    """A fallback install (symlinks unsupported -> global copy) forwards
-    used_global_fallback so the frontend can emit the countable
-    skillsNudgeInstallSucceeded:global_fallback label.
+    """A fallback install forwards WHICH fallback route it took, so the frontend can
+    emit skillsNudgeInstallSucceeded:<fallback_reason> and the two causes stay
+    separable in the funnel.
     """
     install_result = skills._InstallResult(
-        installed=["~/.agents/skills/foo"], used_global_fallback=True
+        installed=["~/.agents/skills/foo"], fallback_reason="symlink_failed"
     )
     with (
         patch("streamlit.config.get_option", return_value=False),
@@ -247,7 +247,7 @@ def test_install_skills_handler_forwards_global_fallback_flag() -> None:
         )
 
     assert response.HasField("install_skills")
-    assert response.install_skills.used_global_fallback is True
+    assert response.install_skills.fallback_reason == "symlink_failed"
 
 
 def test_install_skills_handler_reports_failure() -> None:

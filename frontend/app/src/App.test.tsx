@@ -7332,16 +7332,17 @@ describe("Skills install nudge", () => {
     })
   })
 
-  it("tags a global-fallback install with :global_fallback on success", async () => {
+  it("tags a rerouted install with the server's fallback reason", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    // Symlinks-unsupported installs (e.g. Windows without Developer Mode) are
-    // rerouted server-side to a global copy; the flag lets us count that cohort.
+    // Installs the server reroutes from project mode to a global copy carry WHY.
+    // Symlinks being unavailable machine-wide (Windows without Developer Mode) is a
+    // different problem from a single link failing, so the label keeps them apart.
     vi.spyOn(
       BackendOperationClient.prototype,
       "requestInstallSkills"
     ).mockResolvedValue({
       detail: "Installed to ~/.agents/skills",
-      usedGlobalFallback: true,
+      fallbackReason: "symlinks_unsupported",
     })
     renderApp(getProps())
     const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
@@ -7351,11 +7352,34 @@ describe("Skills install nudge", () => {
     await flushInstall()
 
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
-      label: "skillsNudgeInstallSucceeded:global_fallback",
+      label: "skillsNudgeInstallSucceeded:symlinks_unsupported",
     })
     // The plain success label must not also fire (it would double-count).
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallSucceeded",
+    })
+  })
+
+  it("emits the bare success label when no reroute happened", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // A normal project install carries no fallback reason, so no suffix — and an
+    // older backend that omits the field must degrade to this same label.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockResolvedValue({ detail: "Installed to .agents/skills" })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded:",
     })
   })
 

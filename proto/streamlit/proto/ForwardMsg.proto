@@ -154,13 +154,22 @@ message InstallSkillsResponsePayload {
   // Optional human-readable detail about the install outcome.
   string detail = 1;
 
-  // True when a project install was rerouted to a global copy because symlinks
-  // could not be laid (e.g. Windows without Developer Mode) - set whether that
-  // was found by the up-front pre-check or by an individual symlink failing.
-  // Lets the nudge telemetry count that cohort
-  // (skillsNudgeInstallSucceeded:global_fallback), since a fallback install is
+  // Why a project install was rerouted to a global copy, empty when it wasn't:
+  //   "symlinks_unsupported" - the up-front pre-check found symlinks unavailable
+  //                            (e.g. Windows without Developer Mode)
+  //   "symlink_failed"       - the pre-check passed but an individual link would
+  //                            not lay, which is closer to a bug or a
+  //                            directory-specific permission problem
+  // Split rather than a single flag because those two point at different fixes.
+  // Lets the nudge telemetry count each cohort
+  // (skillsNudgeInstallSucceeded:<fallback_reason>), since a fallback install is
   // otherwise indistinguishable from a project install.
-  bool used_global_fallback = 2;
+  string fallback_reason = 3;
+
+  // 2 was a bool used_global_fallback, superseded by the fallback_reason string
+  // above. Never released, but a PR preview wheel carried it, so the number is
+  // retired rather than retyped.
+  reserved 2;
 }
 
 // Acknowledgement payload for dismissing the skills nudge. Carries no data;

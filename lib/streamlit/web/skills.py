@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import contextlib
+import errno
 import os
 import shutil
 import sys
@@ -39,12 +40,27 @@ _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
 # Prefix for the scratch directories a replacement install stages into. Only
 # ``mkdtemp`` produces these names, which is what makes the cleanup sweep in
 # _sweep_staging_dirs safe to run against a directory holding user files.
-_STAGING_PREFIX: Final[str] = ".streamlit-skills-staging-"
+#
+# Kept deliberately short, as are the child names below: staging adds a path
+# segment, and Windows still caps paths at 260 characters without long-path
+# support - which is itself one of the failure causes this telemetry is meant to
+# identify. Lengthening the path while hunting a path-length bug would be its own
+# footgun.
+_STAGING_PREFIX: Final[str] = ".st-skills-"
+# Children of the staging dir: the incoming copy and the displaced old install.
+# Single letters for the same path-budget reason; neither name is ever user-visible.
+_STAGING_NEW: Final[str] = "n"
+_STAGING_OLD: Final[str] = "o"
 
 # The full vocabulary of install-failure causes. A closed set so the reason stays
 # safe to emit as a telemetry label; typing it as a Literal makes mypy reject a
 # typo or an ad-hoc reason at the raise site instead of silently minting a new
 # label the analysis queries won't know about.
+#
+# The ``write_*`` values subdivide what would otherwise be a single opaque
+# "a write failed". That distinction is the point: a lock clears on retry, a path
+# that is too long can be shortened, and neither is fixed by the permissions advice
+# a generic write failure would earn. See :func:`_classify_write_error`.
 _InstallFailureReason = Literal[
     "conflict",  # A pre-existing file or foreign symlink we won't overwrite.
     "incomplete",  # Project symlinks failed and the global fallback was cancelled.
@@ -52,8 +68,66 @@ _InstallFailureReason = Literal[
     "non_interactive",  # No TTY to prompt on and --yes wasn't passed.
     "source_missing",  # The bundled skills are absent from the installation.
     "symlinks_unsupported",  # Project install needs symlinks; this OS won't make them.
-    "write_failed",  # An OSError while writing: permissions, disk space, locks.
+    "write_denied",  # Permissions, or a read-only filesystem.
+    "write_locked",  # Another process holds the path (antivirus, sync clients).
+    "write_name_too_long",  # The path exceeded the OS limit (Windows MAX_PATH).
+    "write_no_space",  # Out of disk, or over a quota.
+    "write_failed",  # A write failed for a reason none of the above cover.
 ]
+
+# Why a project install was rerouted to a global copy. Split because the two mean
+# different things: ``symlinks_unsupported`` is a categorical property of the machine
+# (Windows without Developer Mode) that a user can fix, while ``symlink_failed`` means
+# the pre-check passed and an individual link still would not lay - closer to a bug or
+# a directory-specific permission problem, and worth chasing separately.
+_FallbackReason = Literal["symlinks_unsupported", "symlink_failed"]
+
+# OSError.errno -> reason. Built by name so a platform missing one of these (they
+# are not all defined everywhere) simply omits it rather than failing at import.
+_ERRNO_GROUPS: Final[tuple[tuple[tuple[str, ...], _InstallFailureReason], ...]] = (
+    (("EACCES", "EPERM", "EROFS"), "write_denied"),
+    (("ENOSPC", "EDQUOT", "EFBIG"), "write_no_space"),
+    (("EBUSY", "EAGAIN", "ETXTBSY"), "write_locked"),
+    (("ENAMETOOLONG",), "write_name_too_long"),
+)
+_WRITE_REASON_BY_ERRNO: Final[dict[int, _InstallFailureReason]] = {
+    code: reason
+    for names, reason in _ERRNO_GROUPS
+    for name in names
+    if (code := getattr(errno, name, None)) is not None
+}
+
+# Windows native codes, consulted BEFORE errno because CPython's mapping is lossy in
+# exactly the way that would mislead us: a sharing violation (antivirus or OneDrive
+# holding the file) arrives as EACCES, which reads as a permissions problem and sends
+# us after folder ACLs when the actual fix is to retry.
+_WRITE_REASON_BY_WINERROR: Final[dict[int, _InstallFailureReason]] = {
+    5: "write_denied",  # ERROR_ACCESS_DENIED
+    19: "write_denied",  # ERROR_WRITE_PROTECT
+    32: "write_locked",  # ERROR_SHARING_VIOLATION
+    33: "write_locked",  # ERROR_LOCK_VIOLATION
+    39: "write_no_space",  # ERROR_HANDLE_DISK_FULL
+    112: "write_no_space",  # ERROR_DISK_FULL
+    206: "write_name_too_long",  # ERROR_FILENAME_EXCED_RANGE
+}
+
+
+def _classify_write_error(error: OSError) -> _InstallFailureReason:
+    """Map a filesystem ``OSError`` to a bounded, actionable failure reason.
+
+    Only the error *class* is used - never the message, which can embed an absolute
+    server path - so the result stays safe to emit as a telemetry label.
+
+    Returns the generic ``"write_failed"`` when the code is unrecognised, so an
+    unclassified failure is visible as such in the data rather than being guessed
+    into the wrong bucket.
+    """
+    winerror = getattr(error, "winerror", None)
+    if isinstance(winerror, int) and winerror in _WRITE_REASON_BY_WINERROR:
+        return _WRITE_REASON_BY_WINERROR[winerror]
+    if error.errno is not None and error.errno in _WRITE_REASON_BY_ERRNO:
+        return _WRITE_REASON_BY_ERRNO[error.errno]
+    return "write_failed"
 
 
 class _InstallError(click.ClickException):
@@ -106,11 +180,14 @@ class _InstallResult:
     # nudge's install-failure telemetry reason. Only the copy path fills this;
     # symlink failures reroute to a global install instead of being recorded here.
     errored: list[str] = field(default_factory=list)
-    # True when a project install was rerouted to a global copy - either because
-    # the up-front symlink pre-check failed, or because laying an individual
-    # symlink failed. Surfaced to telemetry so that cohort is countable - see
+    # Classified cause for each ``errored`` entry, in the same order. Kept apart from
+    # the display strings above because those carry raw OSError text (fine for the
+    # CLI, never for the browser) while these are the bounded telemetry reasons.
+    write_reasons: list[_InstallFailureReason] = field(default_factory=list)
+    # Set when a project install was rerouted to a global copy, to which of the two
+    # causes. Surfaced to telemetry so that cohort is countable and separable - see
     # InstallSkillsResponsePayload.
-    used_global_fallback: bool = False
+    fallback_reason: _FallbackReason | None = None
 
 
 def _get_source_skills_dir() -> Path:
@@ -437,7 +514,7 @@ def _install_skill_symlink(
         # ``rel_source`` is relative to target_dir, so while the link sits one level
         # down in staging it dangles. Nothing reads it there, and the rename below
         # moves the link verbatim, after which it resolves.
-        link_path = staging / skill_name
+        link_path = staging / _STAGING_NEW
 
     try:
         link_path.symlink_to(rel_source, target_is_directory=True)
@@ -567,8 +644,8 @@ def _install_skill_copy(
         # a fresh mkdtemp rather than a fixed sibling name.
         if old_target_to_remove is not None:
             staging = _open_staging_dir(target_dir)
-            new_path = staging / skill_name
-            backup_path = staging / f"{skill_name}.old"
+            new_path = staging / _STAGING_NEW
+            backup_path = staging / _STAGING_OLD
             shutil.copytree(source_path, new_path)
             # Move the old target aside rather than deleting it: if the swap then
             # fails we can put it back, instead of stranding the new copy in
@@ -603,6 +680,7 @@ def _install_skill_copy(
         # A write failure, not a conflict - record it in ``errored`` so it is
         # classified as such (reason="write_failed"), not "conflict".
         result.errored.append(f"{rel_target_path} (copy failed: {e})")
+        result.write_reasons.append(_classify_write_error(e))
     finally:
         # Discard staging unless the target ended up empty, which happens only when
         # the swap AND the restore both failed - there it holds the user's only
@@ -776,19 +854,27 @@ def _conflict_error(skipped: list[str]) -> _InstallError:
     )
 
 
-def _write_error(errored: list[str]) -> _InstallError:
+def _write_error(result: _InstallResult) -> _InstallError:
     """Build a "couldn't write" error for filesystem failures during copy.
 
     Distinct from :func:`_conflict_error`: ``errored`` entries are ``OSError``
-    failures (permissions, disk space, locked files), not pre-existing files.
-    Keeping them apart stops the nudge's failure telemetry from misreporting a
-    write failure as a ``conflict``.
+    failures, not pre-existing files. Keeping them apart stops the nudge's failure
+    telemetry from misreporting a write failure as a ``conflict``.
+
+    The reason is the specific cause when every failed target agreed on one, and the
+    generic ``write_failed`` when they disagreed - claiming "permission denied" for a
+    set of failures that were half permissions and half disk-full would point whoever
+    reads the telemetry at the wrong fix.
     """
-    joined = ", ".join(_concise_install_paths(errored))
+    joined = ", ".join(_concise_install_paths(result.errored))
+    distinct = set(result.write_reasons)
+    reason: _InstallFailureReason = (
+        next(iter(distinct)) if len(distinct) == 1 else "write_failed"
+    )
     return _InstallError(
         f"Could not write {joined}. Check folder permissions and free disk "
         "space, then try again.",
-        reason="write_failed",
+        reason=reason,
     )
 
 
@@ -840,7 +926,7 @@ def _install_project_skills(
             )
             click.echo()
             global_result = _install_global_skills(yes=yes)
-            global_result.used_global_fallback = True
+            global_result.fallback_reason = "symlinks_unsupported"
             return global_result
 
         raise _InstallError(
@@ -883,7 +969,9 @@ def _install_project_skills(
         click.echo()
         try:
             global_result = _install_global_skills(yes=yes)
-            global_result.used_global_fallback = True
+            # The pre-check said symlinks work here, yet laying one still failed -
+            # distinct from the categorical case above, and worth chasing separately.
+            global_result.fallback_reason = "symlink_failed"
             return global_result
         except click.ClickException:
             # Global install failed - partial project symlinks remain as fallback
@@ -997,7 +1085,7 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
     # succeeded - otherwise a partial install (e.g. ~/.agents ok but ~/.claude
     # denied) reports success and drops skillsNudgeInstallFailed:write_failed.
     if result.errored:
-        raise _write_error(result.errored)
+        raise _write_error(result)
 
     if result.installed or result.up_to_date:
         click.echo()

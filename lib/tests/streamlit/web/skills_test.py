@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import errno
 import os
 import subprocess
 import sys
@@ -1492,12 +1493,12 @@ class TestInstallSkillCopyEdgeCases:
         # Both copies survive inside the retained staging dir - nothing is destroyed.
         staged = list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
         assert len(staged) == 1
-        assert (
-            staged[0] / "developing-with-streamlit.old" / "SKILL.md"
-        ).read_text() == "# Old version\n"
-        assert (
-            staged[0] / "developing-with-streamlit" / "SKILL.md"
-        ).read_text() == "# Test Skill\n"
+        assert (staged[0] / skills._STAGING_OLD / "SKILL.md").read_text() == (
+            "# Old version\n"
+        )
+        assert (staged[0] / skills._STAGING_NEW / "SKILL.md").read_text() == (
+            "# Test Skill\n"
+        )
 
     def test_reports_success_when_only_backup_cleanup_fails(
         self, tmp_path: Path, mock_source_skills_dir: Path
@@ -1837,8 +1838,7 @@ class TestInstallSkillSymlinkEdgeCases:
         # The staged link is the only remaining copy, so its staging dir must survive.
         staged = list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
         assert len(staged) == 1
-        link = staged[0] / "developing-with-streamlit"
-        assert link.is_symlink()
+        assert (staged[0] / skills._STAGING_NEW).is_symlink()
 
 
 class TestPromptInstallModeRetry:
@@ -1932,6 +1932,65 @@ class TestGlobalInstallationConflicts:
         assert exc.value.reason == "write_failed"
         # Must NOT be misclassified as a conflict.
         assert "already exist" not in exc.value.format_message()
+
+    def test_reports_the_specific_write_cause_not_a_generic_failure(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """A permission error surfaces as write_denied, end to end.
+
+        The point of the whole exercise: "a write failed" does not say what to do,
+        while "permission denied" and "path too long" imply different fixes. The
+        errno has to survive from the copy site out to the raised reason.
+        """
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            patch.object(
+                skills.shutil,
+                "copytree",
+                side_effect=OSError(errno.EACCES, "Permission denied"),
+            ),
+            pytest.raises(skills._InstallError) as exc,
+        ):
+            skills._install_global_skills(yes=True)
+
+        assert exc.value.reason == "write_denied"
+
+    def test_generalises_when_targets_fail_for_different_reasons(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """Disagreeing targets report the generic write_failed, not a guess.
+
+        Claiming "permission denied" when one target was denied and the other was out
+        of disk would send whoever reads the telemetry after half the problem.
+        """
+        home = tmp_path / "home"
+        # ~/.claude present -> _get_global_target_dirs yields two targets.
+        (home / ".claude").mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            patch.object(
+                skills.shutil,
+                "copytree",
+                side_effect=[
+                    OSError(errno.EACCES, "Permission denied"),
+                    OSError(errno.ENOSPC, "No space left"),
+                ],
+            ),
+            pytest.raises(skills._InstallError) as exc,
+        ):
+            skills._install_global_skills(yes=True)
+
+        assert exc.value.reason == "write_failed"
 
     def test_partial_write_failure_reports_write_failed_not_success(
         self, tmp_path: Path, mock_meta_skill_dir: Path
@@ -2556,25 +2615,27 @@ class TestInstallProjectSkillsFallbackErrors:
 
 
 class TestInstallProjectSkillsFallbackSignal:
-    """used_global_fallback marks installs that took the symlink->global path."""
+    """fallback_reason names WHY an install took the symlink->global path."""
 
     @pytest.mark.parametrize(
-        "symlinks_supported",
-        [False, True],
-        ids=["fallback_via_precheck", "fallback_via_symlink_failure"],
+        ("symlinks_supported", "expected_reason"),
+        [(False, "symlinks_unsupported"), (True, "symlink_failed")],
+        ids=["precheck_says_unsupported", "individual_link_failed"],
     )
-    def test_fallback_sets_used_global_fallback(
+    def test_fallback_records_its_cause(
         self,
         tmp_path: Path,
         mock_source_skills_dir: Path,
         symlinks_supported: bool,
+        expected_reason: str,
     ) -> None:
-        """A successful symlink->global fallback flags used_global_fallback.
+        """The two fallback routes are recorded distinctly, not as one flag.
 
         A project install that can't lay symlinks is silently rerouted to a global
-        copy, which looks identical to a project install in the success telemetry.
-        The flag makes that cohort (Windows without Developer Mode, mainly) countable
-        as skillsNudgeInstallSucceeded:global_fallback rather than invisible.
+        copy, so it looks identical to a project install in the success telemetry.
+        Naming the cause separates the machine-wide case a user can fix (Developer
+        Mode off) from a link that would not lay despite the pre-check passing —
+        different problems, different fixes.
         """
         project_dir = tmp_path / "project"
         project_dir.mkdir()
@@ -2585,8 +2646,8 @@ class TestInstallProjectSkillsFallbackSignal:
             patch.object(
                 skills, "_symlinks_supported", return_value=symlinks_supported
             ),
-            # Force the per-skill symlink to fail (only reached when symlinks are
-            # "supported" but a link can't be laid); harmless on the pre-check path.
+            # Force the per-skill symlink to fail (only reached when the pre-check
+            # said symlinks work); harmless on the pre-check path.
             patch.object(skills, "_install_skill_symlink", return_value=False),
             patch.object(
                 skills,
@@ -2600,12 +2661,12 @@ class TestInstallProjectSkillsFallbackSignal:
         ):
             result = skills._install_project_skills(yes=True)
 
-        assert result.used_global_fallback is True
+        assert result.fallback_reason == expected_reason
 
-    def test_project_symlink_install_has_no_fallback_flag(
+    def test_project_symlink_install_has_no_fallback_reason(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """A normal project (symlink) install does NOT set used_global_fallback."""
+        """A normal project (symlink) install records no fallback reason."""
         project_dir = tmp_path / "project"
         project_dir.mkdir()
         with (
@@ -2619,7 +2680,54 @@ class TestInstallProjectSkillsFallbackSignal:
         ):
             result = skills._install_project_skills(yes=True)
 
-        assert result.used_global_fallback is False
+        assert result.fallback_reason is None
+
+
+class TestClassifyWriteError:
+    """_classify_write_error maps OSError codes to actionable reasons."""
+
+    @pytest.mark.parametrize(
+        ("errno_name", "expected"),
+        [
+            ("EACCES", "write_denied"),
+            ("EPERM", "write_denied"),
+            ("EROFS", "write_denied"),
+            ("ENOSPC", "write_no_space"),
+            ("EBUSY", "write_locked"),
+            ("ENAMETOOLONG", "write_name_too_long"),
+        ],
+    )
+    def test_maps_posix_errnos(self, errno_name: str, expected: str) -> None:
+        """Each POSIX code that implies a distinct fix gets its own reason."""
+        code = getattr(errno, errno_name)
+        assert skills._classify_write_error(OSError(code, "boom")) == expected
+
+    def test_unrecognised_errno_stays_generic(self) -> None:
+        """An unmapped code reports write_failed rather than being mis-bucketed.
+
+        Guessing would be worse than admitting ignorance: a wrong specific reason
+        sends whoever reads the telemetry after the wrong fix.
+        """
+        assert skills._classify_write_error(OSError(errno.EIO, "io")) == "write_failed"
+        assert skills._classify_write_error(OSError()) == "write_failed"
+
+    def test_winerror_takes_precedence_over_errno(self) -> None:
+        """A Windows sharing violation is a lock, not a permissions problem.
+
+        CPython maps ERROR_SHARING_VIOLATION (32) to EACCES, so trusting errno on
+        Windows would report write_denied and point at folder ACLs — when the real
+        cause is antivirus or a sync client holding the file, and the real fix is to
+        retry. winerror is therefore consulted first.
+        """
+        locked = OSError(errno.EACCES, "in use")
+        locked.winerror = 32  # type: ignore[attr-defined]
+        assert skills._classify_write_error(locked) == "write_locked"
+
+    def test_unrecognised_winerror_falls_back_to_errno(self) -> None:
+        """An unmapped Windows code still uses whatever errno CPython supplied."""
+        denied = OSError(errno.EACCES, "denied")
+        denied.winerror = 1_000_000  # type: ignore[attr-defined]
+        assert skills._classify_write_error(denied) == "write_denied"
 
 
 class TestInstallSkillCopyStaging:

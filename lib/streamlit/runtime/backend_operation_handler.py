@@ -281,13 +281,15 @@ class InstallSkillsHandler(BackendOperationHandler):
             # exception that happens to expose a str ``.reason`` (e.g.
             # UnicodeDecodeError.reason) would emit an unbounded label and break the
             # fixed vocabulary. A bare ``OSError`` that escaped the installer (e.g. a
-            # permission error before the copy's own try/except) is a filesystem write
-            # failure; anything else "unknown".
+            # permission error before the copy's own try/except) gets the same errno
+            # classification the installer would have applied, so it lands in a
+            # specific write_* bucket rather than being flattened; anything else
+            # "unknown".
             reason: str
             if isinstance(ex, skills._InstallError):
                 reason = ex.reason
             elif isinstance(ex, OSError):
-                reason = "write_failed"
+                reason = skills._classify_write_error(ex)
             else:
                 reason = "unknown"
             return BackendOperationResponse(
@@ -304,7 +306,7 @@ class InstallSkillsHandler(BackendOperationHandler):
             request_id=request.request_id,
             install_skills=InstallSkillsResponsePayload(
                 detail=skills.summarize_install(result),
-                used_global_fallback=result.used_global_fallback,
+                fallback_reason=result.fallback_reason or "",
             ),
         )
 
