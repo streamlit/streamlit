@@ -306,8 +306,8 @@ if TYPE_CHECKING:
     assert_type(page_link("https://example.com", label="External"), DeltaGenerator)
 
     # Page link with Page object
-    streamlit_page = Page("page1.py")
-    assert_type(page_link(streamlit_page), DeltaGenerator)
+    page = Page("page1.py")
+    assert_type(page_link(page), DeltaGenerator)
 
     # Page link with label
     assert_type(page_link("pages/page1.py", label="Page 1"), DeltaGenerator)
