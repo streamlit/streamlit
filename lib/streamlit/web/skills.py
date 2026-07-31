@@ -521,11 +521,24 @@ def _install_skill_copy(
             try:
                 temp_path.rename(target_path)
             except OSError:
-                # Restore, then let the handler below record the write failure. If
-                # the restore itself fails, leave the backup on disk - both copies
-                # survive, which beats losing the only one.
-                with contextlib.suppress(OSError):
+                # Put the old install back, then let the handler below record the
+                # write failure. There is no atomic replace for a non-empty
+                # directory on either POSIX or Windows, so this move-aside dance is
+                # the best available and a restore that ALSO fails can't be
+                # recovered in code. Log where both copies ended up - the
+                # user-facing message deliberately carries no server paths, so this
+                # is the only way the state is diagnosable.
+                try:
                     backup_path.rename(target_path)
+                except OSError:
+                    _LOGGER.warning(
+                        "Skills install left %s empty: the previous install is at "
+                        "%s and the new copy at %s. Move either one back to "
+                        "recover.",
+                        target_path,
+                        backup_path,
+                        temp_path,
+                    )
                 raise
             # The swap has landed, so the install succeeded - dropping the backup
             # is bookkeeping. Suppress its errors: letting one reach the handler

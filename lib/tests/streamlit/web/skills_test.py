@@ -1428,6 +1428,55 @@ class TestInstallSkillCopyEdgeCases:
         assert result.errored
         assert not result.installed
 
+    def test_keeps_both_copies_when_swap_and_restore_both_fail(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """If the swap and the restore both fail, neither copy is discarded.
+
+        Moving the old install aside succeeds, then both renaming the new copy in
+        and putting the old one back fail. No atomic replace exists for a non-empty
+        directory on POSIX or Windows, so this state cannot be avoided in code — but
+        it must at least be non-destructive, leaving both copies recoverable on disk
+        and reporting the install as failed rather than succeeded.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "SKILL.md").write_text("# Old version\n", encoding="utf-8")
+
+        result = skills._InstallResult()
+        real_rename = skills.Path.rename
+        calls = {"n": 0}
+
+        def _only_first_rename_works(self: Path, target_name: object) -> object:
+            """Let the move-aside through; fail the swap and the restore after it."""
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return real_rename(self, target_name)  # type: ignore[arg-type]
+            raise OSError("Access is denied")
+
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            patch.object(skills.Path, "rename", _only_first_rename_works),
+        ):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        # Reported as a failure, never a success.
+        assert result.errored
+        assert not result.installed
+        # Both copies survive under their hidden names - nothing is destroyed.
+        old_copy = target_dir / ".developing-with-streamlit.old"
+        new_copy = target_dir / ".developing-with-streamlit.tmp"
+        assert (old_copy / "SKILL.md").read_text() == "# Old version\n"
+        assert (new_copy / "SKILL.md").read_text() == "# Test Skill\n"
+
     def test_reports_success_when_only_backup_cleanup_fails(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
