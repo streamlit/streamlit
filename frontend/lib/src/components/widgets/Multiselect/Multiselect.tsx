@@ -83,6 +83,7 @@ import {
   StyledOpenButton,
   StyledPopover,
   StyledTag,
+  StyledTagGroup,
   StyledTagRemoveButton,
   StyledTagsContainer,
   StyledTagText,
@@ -495,6 +496,9 @@ const Multiselect: FC<Props> = props => {
           next.focus()
           focusedTagIndexRef.current = idx + 1
         } else {
+          tag.tabIndex = -1
+          const first = tags[0]
+          if (first) first.tabIndex = 0
           focusedTagIndexRef.current = 0
           inputRef.current?.focus()
         }
@@ -705,10 +709,11 @@ const Multiselect: FC<Props> = props => {
     element.options.length <= 10 &&
     !(element.acceptNewOptions ?? false)
 
-  // Clamp focused tag index to valid range after tags are removed
-  if (focusedTagIndexRef.current >= value.length) {
-    focusedTagIndexRef.current = Math.max(0, value.length - 1)
-  }
+  // Derive clamped tag index for render — don't mutate ref during render
+  const clampedTagIndex = Math.min(
+    focusedTagIndexRef.current,
+    Math.max(0, value.length - 1)
+  )
 
   return (
     <div className="stMultiSelect" data-testid="stMultiSelect">
@@ -753,19 +758,11 @@ const Multiselect: FC<Props> = props => {
               data-testid="stMultiSelectTagsContainer"
             >
               {value.length > 0 && (
-                <span
-                  role="group"
-                  aria-label="Selected values"
-                  style={{ display: "contents" }}
-                >
+                <StyledTagGroup role="group" aria-label="Selected values">
                   {value.map((v, idx) => (
                     <StyledTag
                       key={v}
-                      tabIndex={
-                        !disabled && idx === focusedTagIndexRef.current
-                          ? 0
-                          : -1
-                      }
+                      tabIndex={!disabled && idx === clampedTagIndex ? 0 : -1}
                       aria-label={v}
                       $disabled={disabled}
                       data-tag=""
@@ -791,7 +788,7 @@ const Multiselect: FC<Props> = props => {
                       )}
                     </StyledTag>
                   ))}
-                </span>
+                </StyledTagGroup>
               )}
               <StyledFilterInput
                 ref={inputRef}

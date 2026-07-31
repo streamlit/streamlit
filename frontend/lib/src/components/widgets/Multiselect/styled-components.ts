@@ -83,6 +83,11 @@ export const StyledTagsContainer = styled.div(({ theme }) => ({
   cursor: "text",
 }))
 
+/** Wrapper for the tag group that participates in flex layout without adding a box. */
+export const StyledTagGroup = styled.span({
+  display: "contents",
+})
+
 /** Individual removable tag pill displaying a selected value. */
 export const StyledTag = styled.span<{ $disabled?: boolean }>(
   ({ theme, $disabled }) => ({

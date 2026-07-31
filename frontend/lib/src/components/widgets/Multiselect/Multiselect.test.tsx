@@ -1280,12 +1280,16 @@ describe("Multiselect tag accessibility", () => {
       undefined
     )
 
-    // Simulate rerender with updated value
-    const updatedProps = getProps({
-      default: [0, 2],
-      options: ["a", "b", "c"],
-    })
-    rerender(<Multiselect {...updatedProps} />)
+    // Simulate rerender with updated value (same widgetMgr instance)
+    rerender(
+      <Multiselect
+        {...props}
+        element={MultiSelectProto.create({
+          ...props.element,
+          default: [0, 2],
+        })}
+      />
+    )
 
     tags = getTags()
     expect(tags).toHaveLength(2)
@@ -1318,11 +1322,15 @@ describe("Multiselect tag accessibility", () => {
       undefined
     )
 
-    const updatedProps = getProps({
-      default: [0, 1],
-      options: ["a", "b", "c"],
-    })
-    rerender(<Multiselect {...updatedProps} />)
+    rerender(
+      <Multiselect
+        {...props}
+        element={MultiSelectProto.create({
+          ...props.element,
+          default: [0, 1],
+        })}
+      />
+    )
 
     tags = getTags()
     expect(tags).toHaveLength(2)

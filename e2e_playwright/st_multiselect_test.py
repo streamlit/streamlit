@@ -597,11 +597,21 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
     # before the click handler fires.
     remove_from_multiselect(app, "multiselect 17 - show maxHeight", "forty")
 
-    # Verify scroll position is preserved (or clamped to the new max if content shrank)
-    final_scroll = value_container.evaluate("el => el.scrollTop")
-    max_scroll = value_container.evaluate("el => el.scrollHeight - el.clientHeight")
-    expected = min(initial_scroll, max_scroll)
-    assert abs(final_scroll - expected) <= 1
+    # Verify scroll position is preserved (or clamped to the new max if content shrank).
+    # The scroll restore happens in a rAF callback, so use wait_until.
+    wait_until(
+        app,
+        lambda: (
+            abs(
+                value_container.evaluate("el => el.scrollTop")
+                - min(
+                    initial_scroll,
+                    value_container.evaluate("el => el.scrollHeight - el.clientHeight"),
+                )
+            )
+            <= 1
+        ),
+    )
 
 
 def test_multiselect_custom_objects_without_eq(app: Page):
