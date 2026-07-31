@@ -188,7 +188,7 @@ export const StyledCalendarPopover = styled.div(({ theme }) => {
     ...getPopoverContainerStyle(theme),
     backgroundColor: overlayBg,
     zIndex: getOverlayZIndex(theme),
-    padding: theme.spacing.sm,
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
     ...(hasLightBackgroundColor(theme) && {
       borderWidth: theme.spacing.none,
     }),
@@ -204,28 +204,17 @@ export const StyledCalendarRoot = styled(TypedCalendar)(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
 }))
 
-/**
- * Negative margins bleed to popover edges. Don't use %-based width here —
- * the popover is shrink-to-fit (no definite width), so % resolves against
- * the viewport and blows up the layout.
- */
 export const StyledCalendarHeader = styled.header(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: theme.spacing.twoXS,
-  margin: `calc(${theme.spacing.sm} * -1) calc(${theme.spacing.sm} * -1) 0`,
-  paddingTop: theme.spacing.xs,
-  paddingBottom: theme.spacing.threeXS,
-  paddingLeft: theme.spacing.sm,
-  paddingRight: theme.spacing.sm,
-  // In the sidebar, bgColor and secondaryBg are swapped. Use bgColor in
-  // sidebar (gray) to maintain contrast against the white overlay body.
-  backgroundColor: theme.inSidebar
-    ? theme.colors.bgColor
-    : theme.colors.secondaryBg,
-  borderTopLeftRadius: theme.radii.default,
-  borderTopRightRadius: theme.radii.default,
+  gap: theme.spacing.sm,
+}))
+
+export const StyledCalendarHeaderPickerGroup = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.threeXS,
 }))
 
 export const StyledCalendarHeaderButton = styled(Button)(({ theme }) => ({
@@ -275,6 +264,7 @@ export const StyledCalendarHeaderSelectTrigger = styled(Button)(
     backgroundColor: "transparent",
     color: theme.colors.bodyText,
     fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.semiBold,
     cursor: "pointer",
     padding: `${theme.spacing.twoXS} ${theme.spacing.twoXS}`,
     maxWidth: "100%",
@@ -291,9 +281,10 @@ export const StyledCalendarHeaderSelectTrigger = styled(Button)(
   })
 )
 
-export const StyledCalendarHeaderSelectChevron = styled.div({
+export const StyledCalendarHeaderSelectChevron = styled.div(({ theme }) => ({
   display: "flex",
-})
+  color: theme.colors.fadedText60,
+}))
 
 /** Uses RAC's own positioning (not Floating UI) to avoid nesting two
  * positioning engines inside the outer calendar popover. */
@@ -341,59 +332,21 @@ export const StyledCalendarHeaderSelectListBoxItem = styled(ListBoxItem)(
 
 export const StyledCalendarHeadingFallback = styled.div(visuallyHiddenStyle)
 
-/**
- * border-spacing creates gaps between cells (popover bg shows through).
- * Negative marginTop compensates for the gap border-spacing inserts above
- * the first row, keeping the weekday header flush with StyledCalendarHeader.
- * The table stays inset (no negative horizontal margins) — only the weekday
- * cells' box-shadows bleed their background to the popover edges.
- * Don't use table-layout:fixed — the popover has no definite width, so it
- * expands to the viewport.
- */
 export const StyledCalendarGrid = styled(CalendarGrid)(({ theme }) => ({
   width: "100%",
-  borderCollapse: "separate",
-  borderSpacing: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
-  marginTop: `calc(${theme.spacing.sm} * -1)`,
+  borderCollapse: "collapse",
   fontSize: theme.fontSizes.sm,
 }))
 
-/**
- * Weekday header cells. Each <th> paints its own secondaryBg (CSS table
- * layout ignores margin/padding on <thead>/<tr>). Box-shadows extend the
- * shaded band to fill border-spacing gaps and bleed to the popover edges
- * without affecting layout — the table itself stays inset so the day grid
- * below isn't dragged edge-to-edge.
- */
-export const StyledCalendarHeaderCell = styled(CalendarHeaderCell)(({
-  theme,
-}) => {
-  // In the sidebar, bgColor and secondaryBg are swapped. Use bgColor in
-  // sidebar (gray) to maintain contrast against the white overlay body.
-  const bandBg = theme.inSidebar
-    ? theme.colors.bgColor
-    : theme.colors.secondaryBg
-  const gapWidth = theme.spacing.threeXS
-  const fillGapLeft = `calc(${gapWidth} * -1) 0 0 0 ${bandBg}`
-  const bleedToPopoverEdge = `calc((${theme.spacing.sm} + ${gapWidth}) * -1) 0 0 0 ${bandBg}`
-  const bleedToPopoverEdgeReversed = `calc(${theme.spacing.sm} + ${gapWidth}) 0 0 0 ${bandBg}`
-
-  return {
+export const StyledCalendarHeaderCell = styled(CalendarHeaderCell)(
+  ({ theme }) => ({
     fontSize: theme.fontSizes.sm,
-    fontWeight: theme.fontWeights.normal,
-    color: theme.colors.fadedText60,
-    backgroundColor: bandBg,
-    paddingTop: theme.spacing.twoXS,
-    paddingBottom: theme.spacing.twoXS,
-    boxShadow: fillGapLeft,
-    "&:first-of-type": {
-      boxShadow: bleedToPopoverEdge,
-    },
-    "&:last-of-type": {
-      boxShadow: `${fillGapLeft}, ${bleedToPopoverEdgeReversed}`,
-    },
-  }
-})
+    fontWeight: theme.fontWeights.semiBold,
+    color: theme.colors.bodyText,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.xs,
+  })
+)
 
 /**
  * In single mode, `data-selected` draws the solid primary circle.
@@ -412,7 +365,7 @@ export const StyledCalendarCell = styled(CalendarCell, {
     ? "&[data-selection-start], &[data-selection-end]"
     : "&[data-selected]"
 
-  const cellSize = `calc(${theme.sizes.smallElementHeight} + ${theme.spacing.twoXS})`
+  const cellSize = theme.sizes.smallElementHeight
 
   return {
     boxSizing: "border-box",
@@ -421,15 +374,15 @@ export const StyledCalendarCell = styled(CalendarCell, {
     justifyContent: "center",
     width: cellSize,
     height: cellSize,
-    marginTop: theme.spacing.none,
-    marginBottom: theme.spacing.none,
+    marginTop: theme.spacing.twoXS,
+    marginBottom: theme.spacing.twoXS,
     marginLeft: "auto",
     marginRight: "auto",
     textAlign: "center",
     cursor: "pointer",
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.base,
-    borderRadius: theme.radii.full,
+    borderRadius: theme.radii.default,
     outline: "none",
 
     ...($isRangeMode && {

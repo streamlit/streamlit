@@ -17,7 +17,7 @@
 import { ReactElement, useState } from "react"
 
 import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
-import { ChevronLeft, ChevronRight } from "@emotion-icons/material-rounded"
+import { ArrowBack, ArrowForward } from "@emotion-icons/material-rounded"
 import {
   CalendarMonthPicker,
   CalendarYearPicker,
@@ -32,6 +32,7 @@ import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import {
   StyledCalendarHeader,
   StyledCalendarHeaderButton,
+  StyledCalendarHeaderPickerGroup,
   StyledCalendarHeaderSelect,
   StyledCalendarHeaderSelectChevron,
   StyledCalendarHeaderSelectListBox,
@@ -122,36 +123,38 @@ export function CalendarPopoverHeader(): ReactElement {
   return (
     <StyledCalendarHeader>
       <StyledCalendarHeaderButton slot="previous" aria-label="Previous month">
-        <Icon content={ChevronLeft} size="base" />
+        <Icon content={ArrowBack} size="base" />
       </StyledCalendarHeaderButton>
-      <CalendarMonthPicker format="long">
-        {({ "aria-label": ariaLabel, value, onChange, items }) => (
-          <HeaderPickerSelect
-            ariaLabel={ariaLabel}
-            value={value}
-            onChange={onChange}
-            items={items}
-          />
-        )}
-      </CalendarMonthPicker>
-      <CalendarYearPicker>
-        {({ "aria-label": ariaLabel, value, onChange, items }) => (
-          <HeaderPickerSelect
-            ariaLabel={ariaLabel}
-            value={value}
-            onChange={onChange}
-            items={items}
-          />
-        )}
-      </CalendarYearPicker>
-      {/* Visually-hidden Heading kept for the accessible name RAC otherwise
-          derives from it (screen readers still announce month/year via the
-          selects above); avoids two duplicate announcements. */}
-      <StyledCalendarHeadingFallback>
-        <Heading />
-      </StyledCalendarHeadingFallback>
+      <StyledCalendarHeaderPickerGroup>
+        <CalendarMonthPicker format="long">
+          {({ "aria-label": ariaLabel, value, onChange, items }) => (
+            <HeaderPickerSelect
+              ariaLabel={ariaLabel}
+              value={value}
+              onChange={onChange}
+              items={items}
+            />
+          )}
+        </CalendarMonthPicker>
+        <CalendarYearPicker>
+          {({ "aria-label": ariaLabel, value, onChange, items }) => (
+            <HeaderPickerSelect
+              ariaLabel={ariaLabel}
+              value={value}
+              onChange={onChange}
+              items={items}
+            />
+          )}
+        </CalendarYearPicker>
+        {/* Visually-hidden Heading kept for the accessible name RAC otherwise
+            derives from it (screen readers still announce month/year via the
+            selects above); avoids two duplicate announcements. */}
+        <StyledCalendarHeadingFallback>
+          <Heading />
+        </StyledCalendarHeadingFallback>
+      </StyledCalendarHeaderPickerGroup>
       <StyledCalendarHeaderButton slot="next" aria-label="Next month">
-        <Icon content={ChevronRight} size="base" />
+        <Icon content={ArrowForward} size="base" />
       </StyledCalendarHeaderButton>
     </StyledCalendarHeader>
   )

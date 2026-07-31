@@ -443,7 +443,7 @@ function SingleDateInput({
                 onFocusChange={onFocusChange}
               >
                 <CalendarPopoverHeader />
-                <StyledCalendarGrid weekdayStyle="short">
+                <StyledCalendarGrid weekdayStyle="narrow">
                   <CalendarGridHeader>
                     {day => (
                       <StyledCalendarHeaderCell>

@@ -561,7 +561,7 @@ describe("DateInput widget", () => {
 
         await openCalendar(user)
 
-        expect(await getCalendarHeader()).toHaveTextContent("MoDiMiDoFrSaSo")
+        expect(await getCalendarHeader()).toHaveTextContent("MDMDFSS")
       })
     })
 
@@ -577,9 +577,7 @@ describe("DateInput widget", () => {
 
         await openCalendar(user)
 
-        expect(await getCalendarHeader()).toHaveTextContent(
-          "السبتالأحدالاثنينالثلاثاءالأربعاءالخميسالجمعة"
-        )
+        expect(await getCalendarHeader()).toHaveTextContent("سحنثرخج")
       })
     })
 
@@ -595,9 +593,7 @@ describe("DateInput widget", () => {
 
         await openCalendar(user)
 
-        expect(await getCalendarHeader()).toHaveTextContent(
-          "SunMonTueWedThuFriSat"
-        )
+        expect(await getCalendarHeader()).toHaveTextContent("SMTWTFS")
       })
     })
 
@@ -613,9 +609,7 @@ describe("DateInput widget", () => {
 
         await openCalendar(user)
 
-        expect(await getCalendarHeader()).toHaveTextContent(
-          "SunMonTueWedThuFriSat"
-        )
+        expect(await getCalendarHeader()).toHaveTextContent("SMTWTFS")
       })
     })
   })
