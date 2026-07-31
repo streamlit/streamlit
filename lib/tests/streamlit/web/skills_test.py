@@ -20,6 +20,7 @@ import errno
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -2893,10 +2894,10 @@ class TestClassifyWriteError:
 class TestInstallSkillCopyStaging:
     """Staging behavior for _install_skill_copy replacements."""
 
-    def test_sweeps_leftover_staging_dir(
+    def test_sweeps_staging_dir_orphaned_by_an_interrupted_install(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """A staging dir orphaned by an interrupted install is reclaimed."""
+        """An old staging dir left by a crashed run is reclaimed."""
         target_dir = tmp_path / "target" / "skills"
         target_dir.mkdir(parents=True)
         # Existing target with different content forces the staged-swap path.
@@ -2907,6 +2908,9 @@ class TestInstallSkillCopyStaging:
         orphan = target_dir / f"{skills._STAGING_PREFIX}abc123"
         orphan.mkdir()
         (orphan / "leftover.txt").write_text("leftover", encoding="utf-8")
+        # Backdate it well past the orphan threshold.
+        old = time.time() - skills._STAGING_ORPHAN_AGE_S - 60
+        os.utime(orphan, (old, old))
 
         result = skills._InstallResult()
         with patch("pathlib.Path.home", return_value=tmp_path):
@@ -2924,6 +2928,47 @@ class TestInstallSkillCopyStaging:
         # The orphan is gone, and this run's own staging dir left nothing behind.
         assert not orphan.exists()
         assert not list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
+
+    def test_leaves_a_concurrent_installs_staging_dir_alone(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A freshly-created staging dir belongs to a live install — do not touch it.
+
+        Sweeping on name alone would delete a concurrent invocation's staging dir. That
+        dir may already hold the old installation it moved aside, so the sweep would
+        destroy both that and its replacement and leave the canonical path empty —
+        orphan cleanup turned into data loss. Age separates live from abandoned without
+        needing a lock.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "stale-file.txt").write_text("old", encoding="utf-8")
+
+        # Stand in for another process mid-swap: its staging dir already holds the
+        # only copy of the installation it displaced.
+        live = target_dir / f"{skills._STAGING_PREFIX}live99"
+        (live / skills._STAGING_OLD).mkdir(parents=True)
+        (live / skills._STAGING_OLD / "SKILL.md").write_text(
+            "# Their only copy\n", encoding="utf-8"
+        )
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert len(result.installed) == 1
+        # The other invocation's displaced installation must survive untouched.
+        assert (live / skills._STAGING_OLD / "SKILL.md").read_text() == (
+            "# Their only copy\n"
+        )
 
     def test_never_deletes_a_directory_it_did_not_create(
         self, tmp_path: Path, mock_source_skills_dir: Path

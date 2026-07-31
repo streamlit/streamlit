@@ -22,6 +22,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -51,6 +52,11 @@ _STAGING_PREFIX: Final[str] = ".st-skills-"
 # Single letters for the same path-budget reason; neither name is ever user-visible.
 _STAGING_NEW: Final[str] = "n"
 _STAGING_OLD: Final[str] = "o"
+# How long a staging dir must sit untouched before the sweep will reclaim it. A live
+# install writes into staging within seconds, so anything older was orphaned by a crash
+# or a kill - and anything younger may belong to a concurrent install whose staging dir
+# holds the only copy of the installation it has already moved aside.
+_STAGING_ORPHAN_AGE_S: Final[float] = 3600.0
 
 # The full vocabulary of install-failure causes. A closed set so the reason stays
 # safe to emit as a telemetry label; typing it as a Literal makes mypy reject a
@@ -619,13 +625,26 @@ def _open_staging_dir(target_dir: Path) -> Path:
 def _sweep_staging_dirs(target_dir: Path) -> None:
     """Reclaim staging directories orphaned by an interrupted install.
 
-    Matches only :data:`_STAGING_PREFIX`, which ``mkdtemp`` alone produces, so this
-    can never remove a user's own files. Best-effort: a failure to tidy up must not
-    fail an install.
+    Two guards, both load-bearing:
+
+    - Only :data:`_STAGING_PREFIX` names are candidates, and only ``mkdtemp``
+      produces those, so a user's own files are never at risk.
+    - Only directories untouched for :data:`_STAGING_ORPHAN_AGE_S` are removed.
+      Sweeping on name alone would delete a *concurrent* install's staging
+      directory - which may already hold the old installation it moved aside, so
+      the sweep would take out both that and its replacement and leave the
+      canonical path empty. Orphan cleanup turning into data loss is worse than
+      the orphans it set out to prevent. A live install writes into staging within
+      seconds, so age separates the two cleanly without needing a lock.
+
+    Best-effort throughout: failing to tidy up must never fail an install.
     """
+    cutoff = time.time() - _STAGING_ORPHAN_AGE_S
     with contextlib.suppress(OSError):
         for stale in target_dir.glob(f"{_STAGING_PREFIX}*"):
-            shutil.rmtree(stale, ignore_errors=True)
+            with contextlib.suppress(OSError):
+                if stale.stat().st_mtime < cutoff:
+                    shutil.rmtree(stale, ignore_errors=True)
 
 
 def _install_skill_copy(
