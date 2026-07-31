@@ -36,15 +36,9 @@ _LOGGER: Final = get_logger(__name__)
 # Skill name installed in global mode
 _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
 
-# The full vocabulary of install-failure causes. A closed set so the reason stays
-# safe to emit as a telemetry label; typing it as a Literal makes mypy reject a
-# typo or an ad-hoc reason at the raise site instead of silently minting a new
-# label the analysis queries won't know about.
-#
-# The ``write_*`` values subdivide what would otherwise be a single opaque
-# "a write failed". That distinction is the point: a lock clears on retry, a path
-# that is too long can be shortened, and neither is fixed by the permissions advice
-# a generic write failure would earn. See :func:`classify_write_error`.
+# The full vocabulary of install-failure causes. Closed so the reason is safe to emit
+# as a telemetry label, and a Literal so mypy rejects a typo'd or ad-hoc reason at the
+# raise site rather than silently minting a label no query knows about.
 _InstallFailureReason = Literal[
     "conflict",  # A pre-existing file or foreign symlink we won't overwrite.
     "incomplete",  # Project symlinks failed and the global fallback was cancelled.
@@ -60,12 +54,10 @@ _InstallFailureReason = Literal[
     "write_failed",  # A write failed for a reason none of the above cover.
 ]
 
-# Why a project install was rerouted to a global copy. Split as finely as the OS lets
-# us, because most Windows users take this path and then SUCCEED - so this, not the
-# failure vocabulary, is where their diagnostic signal lives. The distinctions map to
-# different responses: Developer Mode off is a documentable user action, a denial on
-# the project directory is an environment problem, a filesystem with no symlink support
-# at all is neither, and a link failing after the pre-check passed is closer to a bug.
+# Why a project install was rerouted to a global copy. Split finely because most
+# Windows users take this path and then SUCCEED, so this - not the failure vocabulary
+# above - is where their diagnostic signal lives, and only the first is a cause a user
+# can fix themselves.
 _FallbackReason = Literal[
     "symlinks_no_privilege",  # Windows Developer Mode off (ERROR_PRIVILEGE_NOT_HELD).
     "symlinks_denied",  # Permissions on the project dir refused the probe.
@@ -77,11 +69,9 @@ _FallbackReason = Literal[
 # are not all defined everywhere) simply omits it rather than failing at import.
 _ERRNO_GROUPS: Final[tuple[tuple[tuple[str, ...], _InstallFailureReason], ...]] = (
     (("EACCES", "EPERM", "EROFS"), "write_denied"),
-    # EFBIG is deliberately absent: a file-size limit is not out of space, so it stays
-    # the honest write_failed rather than pointing whoever reads it at a full disk.
+    # EFBIG is deliberately absent: a file-size limit is not out of space.
     (("ENOSPC", "EDQUOT"), "write_no_space"),
-    # EAGAIN sits here on retry semantics rather than locking specifically - like a
-    # held file, the call may well succeed if simply repeated.
+    # EAGAIN belongs here on retry semantics rather than locking specifically.
     (("EBUSY", "EAGAIN", "ETXTBSY"), "write_locked"),
     (("ENAMETOOLONG",), "write_name_too_long"),
 )
@@ -92,10 +82,10 @@ _WRITE_REASON_BY_ERRNO: Final[dict[int, _InstallFailureReason]] = {
     if (code := getattr(errno, name, None)) is not None
 }
 
-# Windows native codes, consulted BEFORE errno because CPython's mapping is lossy in
-# exactly the way that would mislead us: a sharing violation (antivirus or OneDrive
-# holding the file) arrives as EACCES, which reads as a permissions problem and sends
-# us after folder ACLs when the actual fix is to retry.
+# Consulted BEFORE errno: CPython's mapping is lossy in the one direction that would
+# mislead us. A sharing violation (antivirus or a sync client holding the file) arrives
+# as EACCES, so trusting errno on Windows sends us after folder ACLs when the fix is to
+# retry.
 _WRITE_REASON_BY_WINERROR: Final[dict[int, _InstallFailureReason]] = {
     5: "write_denied",  # ERROR_ACCESS_DENIED
     19: "write_denied",  # ERROR_WRITE_PROTECT
@@ -110,12 +100,10 @@ _WRITE_REASON_BY_WINERROR: Final[dict[int, _InstallFailureReason]] = {
 def classify_write_error(error: OSError) -> _InstallFailureReason:
     """Map a filesystem ``OSError`` to a bounded, actionable failure reason.
 
-    Only the error *class* is used - never the message, which can embed an absolute
-    server path - so the result stays safe to emit as a telemetry label.
-
-    Returns the generic ``"write_failed"`` when the code is unrecognised, so an
-    unclassified failure is visible as such in the data rather than being guessed
-    into the wrong bucket.
+    Only the error *class* is used, never the message, which can embed an absolute
+    server path - so the result stays safe to emit as a telemetry label. An
+    unrecognised code stays the generic ``"write_failed"`` rather than being guessed
+    into a specific bucket that would point at the wrong fix.
     """
     winerror = getattr(error, "winerror", None)
     if isinstance(winerror, int) and winerror in _WRITE_REASON_BY_WINERROR:
@@ -128,14 +116,10 @@ def classify_write_error(error: OSError) -> _InstallFailureReason:
 class InstallError(click.ClickException):
     """A skills-install failure carrying a stable machine-readable ``reason`` code.
 
-    The ``reason`` (see :data:`_InstallFailureReason`) is what the backend-operation
-    handler forwards to the client so the nudge's install-failure telemetry can be
-    split by cause. It is a fixed vocabulary set at each raise site, never user
-    input, so it is safe to emit as a telemetry label suffix.
-
-    Otherwise this behaves like a normal ``click.ClickException`` — its
-    ``format_message`` still supplies the user-facing text shown in the CLI and the
-    in-app nudge — so raising it changes nothing a user sees.
+    The backend-operation handler forwards the ``reason`` to the client, which emits
+    it as a telemetry label suffix - hence the fixed :data:`_InstallFailureReason`
+    vocabulary, never user input. Behaves like a plain ``click.ClickException``
+    otherwise, so raising it changes nothing a user sees.
     """
 
     def __init__(self, message: str, *, reason: _InstallFailureReason) -> None:
@@ -169,21 +153,17 @@ class _InstallResult:
     up_to_date: list[str] = field(default_factory=list)
     # Pre-existing files/symlinks we won't overwrite - a genuine "conflict".
     skipped: list[str] = field(default_factory=list)
-    # Filesystem failures during the global copy (OSError: permissions, disk space,
-    # locked files). Tracked separately from ``skipped`` so a write failure is never
-    # misreported as a "conflict" - both in the CLI summary and, crucially, in the
-    # nudge's install-failure telemetry reason. Only the copy path fills this;
-    # symlink failures reroute to a global install instead of being recorded here.
+    # Filesystem failures during the global copy. Kept apart from ``skipped`` so a
+    # write failure is never misreported as a "conflict", in the CLI summary and in
+    # the nudge's telemetry reason. Only the copy path fills this.
     errored: list[str] = field(default_factory=list)
-    # The distinct classified causes behind ``errored``. A set, not a per-entry list:
-    # the only consumer asks whether the failed targets agreed on one cause, never
-    # which target had which. Kept apart from the display strings above because those
-    # carry raw OSError text (fine for the CLI, never for the browser) while these are
-    # the bounded telemetry reasons.
+    # The distinct causes behind ``errored``. A set, not a per-entry list: the only
+    # consumer asks whether the failed targets agreed on one cause, never which
+    # target had which. Separate from the display strings above, which carry raw
+    # OSError text that must not reach the browser.
     write_reasons: set[_InstallFailureReason] = field(default_factory=set)
-    # Set when a project install was rerouted to a global copy, naming why (see
-    # :data:`_FallbackReason`). Surfaced to telemetry so that cohort is countable and
-    # separable - see InstallSkillsResponsePayload.
+    # Set when a project install was rerouted to a global copy, naming why. Surfaced
+    # to telemetry so that cohort is countable - see InstallSkillsResponsePayload.
     fallback_reason: _FallbackReason | None = None
 
 
@@ -407,12 +387,9 @@ def _symlink_blocker(project_root: Path, source_path: Path) -> _FallbackReason |
     """Return why project install can't use symlinks here, or ``None`` if it can.
 
     Probes by actually creating one in a temp dir, then classifies the failure rather
-    than collapsing it to "unsupported". This is the highest-value split in the whole
-    vocabulary: most Windows users land here and then *succeed* via the global
-    fallback, so this is what their success label carries, and the causes want
-    completely different responses. ``symlinks_no_privilege`` (Developer Mode off) is
-    a documentable user action, while a denial on the project directory or a
-    filesystem that has no symlinks at all are not.
+    than collapsing it to "unsupported" - most Windows users land here and then
+    *succeed* via the global fallback, so this is what their success label carries,
+    and only ``symlinks_no_privilege`` (Developer Mode off) is a cause a user can fix.
     """
     try:
         with tempfile.TemporaryDirectory(
@@ -470,10 +447,9 @@ def _install_skill_symlink(
     target_path = target_dir / skill_name
     rel_target_path = _get_display_path(target_path, Path.cwd())
 
-    # Pre-symlink filesystem work (creating the parent dir, inspecting or removing
-    # an existing target) runs under one guard: any OSError here means we can't
-    # lay the symlink, so return False and let the caller fall back to a global
-    # copy - never let it escape and get misbooked as a hard write_failed.
+    # Pre-symlink filesystem work runs under one guard: any OSError here means we
+    # can't lay the symlink, so return False and let the caller fall back to a global
+    # copy rather than letting it escape and be misbooked as a hard write failure.
     try:
         # Ensure parent directory exists
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -543,10 +519,9 @@ def _install_skill_copy(
     target_path = target_dir / skill_name
     rel_target_path = _get_display_path(target_path, Path.home(), use_tilde=True)
 
-    # All filesystem work runs under one try so a failure at ANY step - creating
-    # the target dir, removing an old streamlit-owned target, or the copy itself
-    # - is recorded as a write failure (classified by errno) instead of escaping
-    # as an uncaught OSError the caller can only classify as "unknown".
+    # All filesystem work runs under one try so a failure at ANY step is recorded as
+    # a write failure classified by errno, instead of escaping as an uncaught OSError
+    # the caller can only classify as "unknown".
     try:
         # Ensure parent directory exists
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -570,10 +545,8 @@ def _install_skill_copy(
                 result.skipped.append(f"{rel_target_path} (existing file)")
                 return
 
-        # Replacing an existing install copies to a temp dir and swaps, so a
-        # failed copy leaves the working installation in place. Removing the old
-        # target up front would delete a usable skill and then fail, leaving the
-        # user with nothing.
+        # Copy to a temp location and swap, so a failed copy leaves the working
+        # installation in place.
         if old_target_to_remove is not None:
             temp_path = target_path.with_name(f".{skill_name}.tmp")
             if temp_path.exists():
@@ -725,11 +698,10 @@ def _confirm_global_installation(target_dirs: list[Path]) -> bool:
 def _concise_install_paths(entries: list[str]) -> list[str]:
     """Collapse ``_InstallResult`` entries to short paths safe to show a user.
 
-    Entries look like ``"<path> (why)"``. Both failure messages built from them
-    are shown verbatim in the in-app nudge, so this keeps only the
-    ``<harness>/skills/<skill>`` tail and drops the parenthetical: neither an
-    absolute server path nor a raw ``OSError`` string may reach the browser.
-    Shared by the two error builders so that invariant lives in one place.
+    Entries look like ``"<path> (why)"``. Both failure messages built from them are
+    shown verbatim in the in-app nudge, so keep only the ``<harness>/skills/<skill>``
+    tail and drop the parenthetical: neither an absolute server path nor a raw
+    ``OSError`` string may reach the browser.
     """
     paths = []
     for entry in entries:
@@ -764,14 +736,10 @@ def _conflict_error(skipped: list[str]) -> InstallError:
 def _write_error(result: _InstallResult) -> InstallError:
     """Build a "couldn't write" error for filesystem failures during copy.
 
-    Distinct from :func:`_conflict_error`: ``errored`` entries are ``OSError``
-    failures, not pre-existing files. Keeping them apart stops the nudge's failure
-    telemetry from misreporting a write failure as a ``conflict``.
-
-    The reason is the specific cause when every failed target agreed on one, and the
+    Distinct from :func:`_conflict_error`, which reports pre-existing files. The
+    reason is the specific cause when every failed target agreed on one, and the
     generic ``write_failed`` when they disagreed - claiming "permission denied" for a
-    set of failures that were half permissions and half disk-full would point whoever
-    reads the telemetry at the wrong fix.
+    set that was half permissions and half disk-full would point at the wrong fix.
     """
     joined = ", ".join(_concise_install_paths(result.errored))
     reasons = result.write_reasons

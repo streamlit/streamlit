@@ -275,16 +275,12 @@ class InstallSkillsHandler(BackendOperationHandler):
                 if isinstance(ex, click.ClickException)
                 else "Failed to install skills."
             )
-            # ``skills.InstallError`` carries a bounded, machine-readable ``reason``
-            # that the client forwards to telemetry as a label suffix. Read it ONLY
-            # from that known type - never getattr-duck-type, or an unrelated
-            # exception that happens to expose a str ``.reason`` (e.g.
+            # Read the reason ONLY from the known type - never getattr-duck-type, or
+            # an unrelated exception that happens to expose a str ``.reason`` (e.g.
             # UnicodeDecodeError.reason) would emit an unbounded label and break the
-            # fixed vocabulary. A bare ``OSError`` that escaped the installer (e.g. a
-            # permission error before the copy's own try/except) gets the same errno
-            # classification the installer would have applied, so it lands in a
-            # specific write_* bucket rather than being flattened; anything else
-            # "unknown".
+            # fixed vocabulary. A bare ``OSError`` that escaped the installer gets the
+            # same errno classification, so it lands in a specific write_* bucket
+            # rather than being flattened to "unknown".
             reason: str
             if isinstance(ex, skills.InstallError):
                 reason = ex.reason
