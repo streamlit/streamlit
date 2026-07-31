@@ -1835,7 +1835,7 @@ class TestInstallSkillSymlinkEdgeCases:
         take it either.
         """
         _skip_if_symlinks_not_supported(tmp_path)
-        target_dir, target = self._existing_project_link(tmp_path)
+        target_dir, _target = self._existing_project_link(tmp_path)
 
         real_symlink_to = skills.Path.symlink_to
         calls = {"n": 0}
