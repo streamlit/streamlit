@@ -188,8 +188,8 @@ class VegaLiteState(AttributeDictionary):
     """
 
     # Keep selection typed as AttributeDictionary; without this property,
-    # attribute access re-wraps the nested dict as a plain AttributeDictionary
-    # without preserving nested typing expectations.
+    # __getattr__ re-wraps the value in a plain AttributeDictionary, losing
+    # the eagerly constructed instance.
     @property
     def selection(self) -> AttributeDictionary:
         return self["selection"]

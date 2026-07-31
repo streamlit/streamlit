@@ -279,7 +279,11 @@ class DataframeState(ReadOnlyAttributeDictionary):
         if key == "selection":
             item = dict.__getitem__(self, key)
             if not isinstance(item, DataframeSelectionState):
-                return DataframeSelectionState(item)
+                item = DataframeSelectionState(item)
+                # Cache via dict.__setitem__ — ReadOnlyAttributeDictionary
+                # blocks normal mutation, but storing the wrapped instance
+                # keeps identity stable across accesses.
+                dict.__setitem__(self, key, item)
             return item
         return super().__getitem__(key)
 
@@ -309,6 +313,7 @@ class DataframeSelectionSerde:
             # When a selection_default is provided, use it as the initial
             # deserialized value so the first-render Python return matches
             # the default selection the frontend will display.
+            # Shallow copy to avoid mutating the caller's default.
             selection_state = {"selection": dict(self.selection_default["selection"])}
         else:
             selection_state = empty_selection_state
@@ -1296,7 +1301,15 @@ class ArrowMixin:
                     layout_config=layout_config,
                     has_one_shot_effect=True,
                 )
-                return DataframeState(validated_state)
+                # Eagerly wrap like deserialize so nested selection identity
+                # stays stable on this one-shot programmatic path.
+                return DataframeState(
+                    {
+                        "selection": DataframeSelectionState(
+                            validated_state["selection"]
+                        ),
+                    }
+                )
 
             self.dg._enqueue("dataframe", proto, layout_config=layout_config)
             return DataframeState(widget_state.value)

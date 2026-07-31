@@ -1421,17 +1421,24 @@ def test_programmatic_selection_returns_attribute_dictionary() -> None:
         )
         # Attribute access would raise AttributeError if result is a plain dict.
         st.text(f"rows: {result.selection.rows}")
+        # Nested selection must stay identity-stable after programmatic set.
+        st.session_state["_selection_stable"] = (
+            result["selection"] is result.selection
+            and result["selection"] is result["selection"]
+        )
 
     at = AppTest.from_function(script).run()
     assert at.text[0].value == "rows: []"
 
     at = at.run()
     assert at.text[0].value == "rows: [1]"
+    assert at.session_state["_selection_stable"] is True
 
     # Third run without modifying session state: selection should persist
     # as AttributeDictionary (verifies the fix applies across subsequent reruns).
     at = at.run()
     assert at.text[0].value == "rows: [1]"
+    assert at.session_state["_selection_stable"] is True
 
 
 def test_selection_state_is_read_only() -> None:

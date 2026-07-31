@@ -235,7 +235,12 @@ class PlotlyState(AttributeDictionary):
     # attribute access re-wraps the nested dict as a plain AttributeDictionary.
     @property
     def selection(self) -> PlotlySelectionState:
-        return self["selection"]
+        try:
+            return self["selection"]
+        except KeyError as err:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute 'selection'"
+            ) from err
 
     @selection.setter
     def selection(self, value: PlotlySelectionState) -> None:
