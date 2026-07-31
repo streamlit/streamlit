@@ -7094,11 +7094,16 @@ describe("Skills install nudge", () => {
   })
 
   it.each([
-    ["non_loopback_private", "a containerized/remote browser"],
-    ["conflict", "an install that would only conflict"],
+    // Non-loopback keeps the label it has emitted since 1.59, so the existing
+    // adoption funnel keeps resolving across the upgrade.
+    ["non_loopback_private", "skillsNudgeSuppressedNonLocal:private"],
+    ["non_loopback_unknown", "skillsNudgeSuppressedNonLocal:unknown"],
+    // New reasons get the generic label.
+    ["conflict", "skillsNudgeSuppressed:conflict"],
+    ["check_failed", "skillsNudgeSuppressed:check_failed"],
   ])(
     "tracks a suppressed nudge (%s) without showing it",
-    (reason, _description) => {
+    (reason, expectedLabel) => {
       renderApp(getProps())
       const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
 
@@ -7118,7 +7123,7 @@ describe("Skills install nudge", () => {
       // silent. `conflict` matches the install-failure reason of the same cause,
       // so the two are comparable in one query.
       expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
-        label: `skillsNudgeSuppressed:${reason}`,
+        label: expectedLabel,
       })
       // And no (false) impression is logged.
       expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {

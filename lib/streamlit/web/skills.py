@@ -1178,7 +1178,9 @@ NudgeSuppressionReason = Literal[
     "",  # Not withheld - show the nudge.
     "conflict",  # A one-click install would refuse at every install target.
     "dismissed",  # The user asked never to see it again.
-    "error",  # The eligibility check itself failed; withheld defensively.
+    # Names the stage that failed, not just "error": the sibling telemetry labels
+    # are install failures, so a bare "error" would read as one.
+    "check_failed",  # The eligibility check itself threw; withheld defensively.
     "headless",  # Headless mode: deployments, CI, SiS.
     "installed",  # The bundled skills are already present.
     "no_agent",  # No AI agent harness on this machine.
@@ -1215,9 +1217,9 @@ def nudge_suppression_reason(app_dir: str | None = None) -> NudgeSuppressionReas
         detection result. Falls back to the current working directory when
         ``None``.
 
-    Best-effort: returns ``"error"`` on any failure so a detection failure never
-    blocks app startup or surfaces a spurious nudge. Note this is a *reason*, not
-    a falsy value — the nudge stays hidden, as before.
+    Best-effort: returns ``"check_failed"`` on any failure so a detection failure
+    never blocks app startup or surfaces a spurious nudge. Note this is a *reason*,
+    not a falsy value — the nudge stays hidden, as before.
     """
     from streamlit import config
 
@@ -1245,4 +1247,4 @@ def nudge_suppression_reason(app_dir: str | None = None) -> NudgeSuppressionReas
             return "conflict"
         return ""
     except Exception:  # pragma: no cover - defensive
-        return "error"
+        return "check_failed"

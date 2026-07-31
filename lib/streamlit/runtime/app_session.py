@@ -84,7 +84,7 @@ _LOGGER: Final = get_logger(__name__)
 # to ``""`` — ``headless`` alone fires for every deployed app and would swamp the
 # metric, and "no agent harness" / "already installed" / "user dismissed" are
 # either already measurable from the page profile or simply not interesting.
-_REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset({"conflict", "error"})
+_REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset({"conflict", "check_failed"})
 
 
 class AppSessionState(Enum):

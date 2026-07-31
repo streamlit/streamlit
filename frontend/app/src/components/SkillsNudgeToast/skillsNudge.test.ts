@@ -28,6 +28,7 @@ import {
   SKILLS_NUDGE_DISMISSED_KEY,
   SKILLS_NUDGE_SNOOZE_MS,
   SKILLS_NUDGE_SNOOZED_AT_KEY,
+  skillsNudgeSuppressedLabel,
 } from "./skillsNudge"
 
 describe("skillsNudge preferences", () => {
@@ -130,6 +131,44 @@ describe("skillsNudge preferences", () => {
       // so it must not be reclassified as a dropped connection.
       expect(isSkillsNudgeDroppedConnection(CONNECTION_CLOSED_MESSAGE)).toBe(
         false
+      )
+    })
+  })
+
+  describe("skillsNudgeSuppressedLabel", () => {
+    it.each([
+      ["non_loopback_private", "skillsNudgeSuppressedNonLocal:private"],
+      ["non_loopback_other", "skillsNudgeSuppressedNonLocal:other"],
+      ["non_loopback_unknown", "skillsNudgeSuppressedNonLocal:unknown"],
+    ])("keeps the pre-existing label for %s", (reason, expected) => {
+      // This label is load-bearing for the adoption funnel ("eligible" is
+      // shown ∪ suppressedNonLocal) and has been emitted since 1.59. Renaming
+      // it would silently break that: the event log keeps old rows forever and
+      // clients upgrade over months, so both forms would coexist for a long
+      // time. Pinned exactly, byte for byte.
+      expect(skillsNudgeSuppressedLabel(reason)).toBe(expected)
+    })
+
+    it.each([
+      ["conflict", "skillsNudgeSuppressed:conflict"],
+      ["check_failed", "skillsNudgeSuppressed:check_failed"],
+    ])("uses the generic label for %s", (reason, expected) => {
+      expect(skillsNudgeSuppressedLabel(reason)).toBe(expected)
+    })
+
+    it("routes an unrecognized reason to the generic label", () => {
+      // A reason added server-side needs no change here, and must never be
+      // misfiled under the non-loopback label, which would pool a broken-state
+      // suppression into the loopback gate's reach drop-off.
+      expect(skillsNudgeSuppressedLabel("some_new_reason")).toBe(
+        "skillsNudgeSuppressed:some_new_reason"
+      )
+    })
+
+    it("does not treat a merely similar reason as non-loopback", () => {
+      // Guards the prefix check against matching on a substring.
+      expect(skillsNudgeSuppressedLabel("not_non_loopback")).toBe(
+        "skillsNudgeSuppressed:not_non_loopback"
       )
     })
   })

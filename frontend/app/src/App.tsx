@@ -32,6 +32,7 @@ import {
   setSkillsNudgeDismissed,
   setSkillsNudgeSnoozed,
   SKILLS_NUDGE_DROPPED_MESSAGE,
+  skillsNudgeSuppressedLabel,
 } from "@streamlit/app/src/components/SkillsNudgeToast/skillsNudge"
 import SkillsNudgeToast from "@streamlit/app/src/components/SkillsNudgeToast/SkillsNudgeToast"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget/StatusWidget"
@@ -1572,12 +1573,12 @@ export class App extends PureComponent<Props, State> {
     ) {
       // The nudge was eligible server-side but the server withheld it — because
       // the browser isn't on a direct-loopback connection (Docker/VM/tunnel), or
-      // because a one-click install would only conflict. Record the reason as a
-      // label suffix — once per page load, reusing the same guard so a reconnect
-      // can't double-count — so suppression is measurable instead of silent.
+      // because a one-click install would only conflict. Record the reason —
+      // once per page load, reusing the same guard so a reconnect can't
+      // double-count — so suppression is measurable instead of silent.
       this.skillsNudgeShown = true
       this.trackSkillsNudge(
-        `skillsNudgeSuppressed:${initialize.skillsNudgeSuppressedReason}`
+        skillsNudgeSuppressedLabel(initialize.skillsNudgeSuppressedReason)
       )
     }
   }
