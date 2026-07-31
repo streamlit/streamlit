@@ -162,4 +162,3 @@ runner's system Python.
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `copilot-setup-steps.yml` | Manual, on workflow changes | Setup steps for GitHub Copilot Workspace |
-| `static-deploy.yml` | Manual | Deploys static frontend build to S3 |
