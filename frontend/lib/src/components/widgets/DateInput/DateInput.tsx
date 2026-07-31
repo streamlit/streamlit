@@ -68,7 +68,6 @@ import {
   validateDate,
 } from "./dateInputUtils"
 import SingleDateInput from "./SingleDateInput"
-import { useFirstDayOfWeek } from "./useFirstDayOfWeek"
 import { useIntlLocale } from "./useIntlLocale"
 
 export interface Props {
@@ -161,7 +160,6 @@ function DateInput({
 
   const { locale } = useContext(LibConfigContext)
   const loadedLocale = useIntlLocale(locale)
-  const firstDayOfWeek = useFirstDayOfWeek(locale)
 
   const minDateCalendar = useMemo(() => getMinDate(element), [element])
   const maxDateCalendar = useMemo(() => getMaxCalendarDate(element), [element])
@@ -389,7 +387,6 @@ function DateInput({
           label={element.label}
           error={error}
           locale={locale}
-          firstDayOfWeek={firstDayOfWeek}
           isInSidebar={isInSidebar}
           focusedValue={focusedValue}
           onFocusChange={setFocusedValue}

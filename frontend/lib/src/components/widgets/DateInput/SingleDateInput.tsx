@@ -25,6 +25,7 @@ import {
   useId,
   useMemo,
   useRef,
+  useState,
 } from "react"
 
 import { ErrorOutline } from "@emotion-icons/material-outlined"
@@ -38,7 +39,6 @@ import {
   DateFieldStateContext,
   I18nProvider,
 } from "react-aria-components"
-import { useDatePickerState } from "react-stately"
 
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import Icon from "~lib/components/shared/Icon/Icon"
@@ -75,7 +75,6 @@ import {
   StyledErrorIconContainer,
   StyledVisuallyHidden,
 } from "./styled-components"
-import { RACFirstDayOfWeek } from "./useFirstDayOfWeek"
 import { getSafeLocale } from "./weekInfo"
 
 /**
@@ -105,7 +104,6 @@ interface SingleDateInputProps {
    * calendar popover's month/weekday text — the typed field is always
    * pinned to `en-US` (see `I18nProvider locale="en-US"` below). */
   locale: string
-  firstDayOfWeek: RACFirstDayOfWeek
   isInSidebar: boolean
   focusedValue: CalendarDate | null
   onFocusChange: (value: CalendarDate) => void
@@ -155,7 +153,6 @@ function SingleDateInput({
   label,
   error,
   locale,
-  firstDayOfWeek,
   isInSidebar,
   focusedValue,
   onFocusChange,
@@ -177,14 +174,8 @@ function SingleDateInput({
     onCloseRef.current = onClose
   })
 
-  // Fully controlled: value/onChange from parent, only isOpen is local.
-  const state = useDatePickerState({
-    value,
-    onChange,
-    minValue: minDate,
-    maxValue: maxDate,
-  })
-  const { isOpen, setOpen, setValue: setStateValue } = state
+  // Only isOpen is local state; value/onChange are fully controlled by the parent.
+  const [isOpen, setIsOpen] = useState(false)
 
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
@@ -242,7 +233,7 @@ function SingleDateInput({
 
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen,
-    onClose: () => setOpen(false),
+    onClose: () => setIsOpen(false),
     floatingSetFn: refs.setFloating,
     referenceSetFn: refs.setReference,
     restoreFocusFn: focusLastFieldSegment,
@@ -262,23 +253,23 @@ function SingleDateInput({
   // Selecting a date closes the popover and restores focus to the field.
   const handleCalendarChange = useCallback(
     (date: CalendarDate): void => {
-      setStateValue(date)
-      setOpen(false)
+      onChange(date)
+      setIsOpen(false)
       focusLastFieldSegment()
     },
-    [setStateValue, setOpen, focusLastFieldSegment]
+    [onChange, focusLastFieldSegment]
   )
 
   // Wired to onClickCapture: clicking an already-focused segment doesn't
   // re-fire onFocus. Capture phase needed because RAC stops propagation.
   const handleFocus = useCallback((): void => {
     if (isRestoringFocusRef.current) return
-    if (!disabled) setOpen(true)
-  }, [disabled, setOpen])
+    if (!disabled) setIsOpen(true)
+  }, [disabled])
 
   const handleClear = useCallback((): void => {
-    setStateValue(null)
-  }, [setStateValue])
+    onChange(null)
+  }, [onChange])
 
   // Custom paste: DateField's built-in paste uses the locale-derived segment
   // order (en-US), which is out of sync with our reordered segments.
@@ -290,7 +281,7 @@ function SingleDateInput({
       const fullDate = parsePastedDate(text, format)
       if (fullDate) {
         e.preventDefault()
-        setStateValue(fullDate)
+        onChange(fullDate)
         return
       }
 
@@ -305,9 +296,9 @@ function SingleDateInput({
       if (!isValidSegmentValue(partial.segmentType, partial.value)) return
 
       const base = value ?? minDate
-      setStateValue(base.set({ [partial.segmentType]: partial.value }))
+      onChange(base.set({ [partial.segmentType]: partial.value }))
     },
-    [disabled, format, setStateValue, value, minDate]
+    [disabled, format, onChange, value, minDate]
   )
 
   // Tab from the last segment moves focus into the calendar popover.
@@ -351,14 +342,14 @@ function SingleDateInput({
 
       if (!e.shiftKey && e.target === last) {
         e.preventDefault()
-        setOpen(false)
+        setIsOpen(false)
         focusLastFieldSegment()
       } else if (e.shiftKey && e.target === first) {
         e.preventDefault()
         last.focus()
       }
     },
-    [refs.floating, setOpen, focusLastFieldSegment]
+    [refs.floating, focusLastFieldSegment]
   )
 
   return (
@@ -380,7 +371,7 @@ function SingleDateInput({
               aria-describedby={error ? errorId : undefined}
               isInvalid={!!error}
               value={value}
-              onChange={setStateValue}
+              onChange={onChange}
               minValue={minDate}
               maxValue={maxDate}
               shouldForceLeadingZeros
@@ -438,7 +429,6 @@ function SingleDateInput({
                 onChange={handleCalendarChange}
                 minValue={minDate}
                 maxValue={maxDate}
-                firstDayOfWeek={firstDayOfWeek}
                 focusedValue={focusedValue ?? undefined}
                 onFocusChange={onFocusChange}
               >
