@@ -57,6 +57,11 @@ _STAGING_OLD: Final[str] = "o"
 # or a kill - and anything younger may belong to a concurrent install whose staging dir
 # holds the only copy of the installation it has already moved aside.
 _STAGING_ORPHAN_AGE_S: Final[float] = 3600.0
+# Where a staging dir is moved when it holds the user's only copies (both the swap and
+# the restore failed). Deliberately NOT under _STAGING_PREFIX: the orphan sweep must be
+# unable to match it, or it would eventually delete the data it was retained to save.
+# Nothing reclaims these - that is the point - and the failure is logged with the path.
+_RECOVERY_PREFIX: Final[str] = ".st-recover-"
 
 # The full vocabulary of install-failure causes. A closed set so the reason stays
 # safe to emit as a telemetry label; typing it as a Literal makes mypy reject a
@@ -664,6 +669,7 @@ def _install_skill_copy(
     # - is recorded as a write failure (reason="write_failed") instead of
     # escaping as an uncaught OSError the caller can only classify as "unknown".
     staging: Path | None = None
+    unrecoverable = False
     try:
         # Ensure parent directory exists
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -714,14 +720,7 @@ def _install_skill_copy(
                 try:
                     backup_path.rename(target_path)
                 except OSError:
-                    _LOGGER.warning(
-                        "Skills install left %s empty: the previous install is at "
-                        "%s and the new copy at %s. Move either one back to "
-                        "recover.",
-                        target_path,
-                        backup_path,
-                        new_path,
-                    )
+                    unrecoverable = True
                 raise
         else:
             shutil.copytree(source_path, target_path)
@@ -732,14 +731,38 @@ def _install_skill_copy(
         result.errored.append(f"{rel_target_path} (copy failed: {e})")
         result.write_reasons.append(_classify_write_error(e))
     finally:
-        # Discard staging unless the target ended up empty, which happens only when
-        # the swap AND the restore both failed - there it holds the user's only
-        # copies, so it is left for the next install's sweep to reclaim. Dropping it
-        # is bookkeeping either way and must never turn a landed install into a
-        # reported failure, hence the belt-and-braces suppression.
-        if staging is not None and (target_path.exists() or target_path.is_symlink()):
-            with contextlib.suppress(OSError):
-                shutil.rmtree(staging, ignore_errors=True)
+        # Dropping staging is bookkeeping and must never turn a landed install into a
+        # reported failure, hence the suppression throughout.
+        if staging is not None:
+            if unrecoverable:
+                # Both the swap and the restore failed, so staging holds the only
+                # copies of the old install and its replacement. Move it OUT of the
+                # swept namespace: leaving it under _STAGING_PREFIX would let a later
+                # install's orphan sweep delete the very thing we kept it for. The
+                # contents are usually reproducible from the wheel, but not if the
+                # user had edited their installed skill - so this is not ours to
+                # garbage-collect on a timer.
+                # Best-effort: relocating is itself a rename, and rename may be the
+                # very operation failing here. If it doesn't work the copies stay
+                # under the staging prefix, where only the age gate protects them -
+                # hence the log below naming their location either way.
+                keep = staging.with_name(
+                    _RECOVERY_PREFIX + staging.name[len(_STAGING_PREFIX) :]
+                )
+                with contextlib.suppress(OSError):
+                    staging.rename(keep)
+                    staging = keep
+                _LOGGER.warning(
+                    "Skills install left %s empty. The previous install is at %s and "
+                    "the new copy at %s - move either one back to recover. Nothing "
+                    "will clean this up automatically.",
+                    target_path,
+                    staging / _STAGING_OLD,
+                    staging / _STAGING_NEW,
+                )
+            else:
+                with contextlib.suppress(OSError):
+                    shutil.rmtree(staging, ignore_errors=True)
 
 
 def _print_result(result: _InstallResult) -> None:

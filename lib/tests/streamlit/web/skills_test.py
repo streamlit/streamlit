@@ -1493,13 +1493,20 @@ class TestInstallSkillCopyEdgeCases:
         # Reported as a failure, never a success.
         assert result.errored
         assert not result.installed
-        # Both copies survive inside the retained staging dir - nothing is destroyed.
-        staged = list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
-        assert len(staged) == 1
-        assert (staged[0] / skills._STAGING_OLD / "SKILL.md").read_text() == (
+        # Both copies survive somewhere - nothing is destroyed. They stay under the
+        # staging prefix here rather than moving to the recovery one, because the
+        # relocation is itself a rename and rename is the operation failing in this
+        # scenario. The age gate is then the only thing protecting them, which is why
+        # the warning log names the paths. See
+        # test_never_sweeps_a_retained_recovery_directory for the normal case.
+        kept = list(target_dir.glob(f"{skills._STAGING_PREFIX}*")) + list(
+            target_dir.glob(f"{skills._RECOVERY_PREFIX}*")
+        )
+        assert len(kept) == 1
+        assert (kept[0] / skills._STAGING_OLD / "SKILL.md").read_text() == (
             "# Old version\n"
         )
-        assert (staged[0] / skills._STAGING_NEW / "SKILL.md").read_text() == (
+        assert (kept[0] / skills._STAGING_NEW / "SKILL.md").read_text() == (
             "# Test Skill\n"
         )
 
@@ -2928,6 +2935,53 @@ class TestInstallSkillCopyStaging:
         # The orphan is gone, and this run's own staging dir left nothing behind.
         assert not orphan.exists()
         assert not list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
+
+    def test_never_sweeps_a_retained_recovery_directory(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Copies kept for manual recovery are never garbage-collected on a timer.
+
+        When the swap and the restore both fail, staging holds the only copies of the
+        old install and its replacement. Leaving them under the staging prefix would
+        let a later install's orphan sweep delete exactly what was retained to save —
+        and the age gate is no defence, since a recovery directory becomes old by
+        definition while it waits for the user. Moving it out of the swept namespace
+        is what makes it safe.
+
+        The contents are usually reproducible from the wheel, but not if the user had
+        edited their installed skill, so this is not ours to reclaim.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+
+        # A recovery dir left by an earlier unrecoverable swap, long past the age gate.
+        recovery = target_dir / f"{skills._RECOVERY_PREFIX}old99"
+        (recovery / skills._STAGING_OLD).mkdir(parents=True)
+        (recovery / skills._STAGING_OLD / "SKILL.md").write_text(
+            "# Their edited skill\n", encoding="utf-8"
+        )
+        ancient = time.time() - skills._STAGING_ORPHAN_AGE_S * 24
+        os.utime(recovery, (ancient, ancient))
+
+        # A later replacement install, which is what runs the sweep.
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "stale-file.txt").write_text("old", encoding="utf-8")
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert len(result.installed) == 1
+        assert (recovery / skills._STAGING_OLD / "SKILL.md").read_text() == (
+            "# Their edited skill\n"
+        )
 
     def test_leaves_a_concurrent_installs_staging_dir_alone(
         self, tmp_path: Path, mock_source_skills_dir: Path
