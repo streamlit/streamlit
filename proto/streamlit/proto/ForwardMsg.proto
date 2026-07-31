@@ -148,16 +148,18 @@ message DeferredFileResponsePayload {
 }
 
 // Response payload for one-click skills install. A successful, empty detail
-// indicates a clean install; failures are reported via the response's
-// error_msg field instead.
+// indicates a clean install; failures are not reported here at all, but via the
+// parent response's error_msg (human-readable) and error_reason (machine-readable).
 message InstallSkillsResponsePayload {
   // Optional human-readable detail about the install outcome.
   string detail = 1;
 
-  // True when the install took the symlink -> global-copy fallback (symlinks
-  // unsupported, e.g. Windows without Developer Mode). Lets the nudge telemetry
-  // count that cohort (skillsNudgeInstallSucceeded:global_fallback) since a
-  // fallback install is otherwise indistinguishable from a project install.
+  // True when a project install was rerouted to a global copy because symlinks
+  // could not be laid (e.g. Windows without Developer Mode) - set whether that
+  // was found by the up-front pre-check or by an individual symlink failing.
+  // Lets the nudge telemetry count that cohort
+  // (skillsNudgeInstallSucceeded:global_fallback), since a fallback install is
+  // otherwise indistinguishable from a project install.
   bool used_global_fallback = 2;
 }
 

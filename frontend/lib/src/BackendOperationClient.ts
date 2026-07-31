@@ -211,8 +211,10 @@ export class BackendOperationClient {
   /**
    * Request a one-click install of the bundled Streamlit agent skills.
    *
-   * @returns A promise that resolves with an optional outcome detail, or
-   * rejects with the server-provided error message on failure.
+   * @returns A promise that resolves with an optional outcome detail and a
+   * `usedGlobalFallback` flag (true when a project install was rerouted to a
+   * global copy), or rejects with a {@link BackendOperationError} whose `reason`
+   * classifies the failure for telemetry.
    */
   public requestInstallSkills(): Promise<{
     detail?: string | null

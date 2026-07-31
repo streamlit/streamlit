@@ -54,12 +54,14 @@ _InstallFailureReason = Literal[
 class _InstallError(click.ClickException):
     """A skills-install failure carrying a stable machine-readable ``reason`` code.
 
-    Behaves like a normal ``click.ClickException`` — its ``format_message`` still
-    supplies the user-facing text shown in the CLI and the in-app nudge — but also
-    carries a bounded ``reason`` (see :data:`_InstallFailureReason`) that the
-    backend-operation handler forwards to the client so the nudge's install-failure
-    telemetry can be split by cause. The reason is a fixed vocabulary set at each
-    raise site, never user input, so it is safe to emit as a telemetry label suffix.
+    The ``reason`` (see :data:`_InstallFailureReason`) is what the backend-operation
+    handler forwards to the client so the nudge's install-failure telemetry can be
+    split by cause. It is a fixed vocabulary set at each raise site, never user
+    input, so it is safe to emit as a telemetry label suffix.
+
+    Otherwise this behaves like a normal ``click.ClickException`` — its
+    ``format_message`` still supplies the user-facing text shown in the CLI and the
+    in-app nudge — so raising it changes nothing a user sees.
     """
 
     def __init__(self, message: str, *, reason: _InstallFailureReason) -> None:
@@ -99,9 +101,10 @@ class _InstallResult:
     # nudge's install-failure telemetry reason. Only the copy path fills this;
     # symlink failures reroute to a global install instead of being recorded here.
     errored: list[str] = field(default_factory=list)
-    # True when project (symlink) install fell back to a global copy because
-    # symlinks aren't supported (e.g. Windows without Developer Mode). Surfaced
-    # to telemetry so that cohort is countable - see InstallSkillsResponsePayload.
+    # True when a project install was rerouted to a global copy - either because
+    # the up-front symlink pre-check failed, or because laying an individual
+    # symlink failed. Surfaced to telemetry so that cohort is countable - see
+    # InstallSkillsResponsePayload.
     used_global_fallback: bool = False
 
 
