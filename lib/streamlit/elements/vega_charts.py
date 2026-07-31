@@ -192,7 +192,12 @@ class VegaLiteState(AttributeDictionary):
     # the eagerly constructed instance.
     @property
     def selection(self) -> AttributeDictionary:
-        return self["selection"]
+        try:
+            return self["selection"]
+        except KeyError as err:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute 'selection'"
+            ) from err
 
     @selection.setter
     def selection(self, value: AttributeDictionary) -> None:

@@ -255,7 +255,10 @@ class PlotlyState(AttributeDictionary):
     def __getitem__(self, key: Any) -> Any:
         item = super().__getitem__(key)
         if key == "selection" and not isinstance(item, PlotlySelectionState):
-            return PlotlySelectionState(item)
+            item = PlotlySelectionState(item)
+            # Cache so repeated bracket/attribute access stays identity-stable.
+            dict.__setitem__(self, key, item)
+            return item
         return item
 
 

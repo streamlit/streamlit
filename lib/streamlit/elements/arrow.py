@@ -292,7 +292,7 @@ class DataframeState(ReadOnlyAttributeDictionary):
 class DataframeSelectionSerde:
     """DataframeSelectionSerde is used to serialize and deserialize the dataframe selection state."""
 
-    selection_default: DataframeStateInput | None = None
+    selection_default: DataframeStateInput | DataframeState | None = None
     is_required_row_mode: bool = False
     num_rows: int = 0
 
@@ -624,7 +624,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["ignore"] = "ignore",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-        selection_default: DataframeStateInput | None = None,
+        selection_default: DataframeStateInput | DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
@@ -644,7 +644,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-        selection_default: DataframeStateInput | None = None,
+        selection_default: DataframeStateInput | DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
@@ -664,7 +664,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-        selection_default: DataframeStateInput | None = None,
+        selection_default: DataframeStateInput | DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,

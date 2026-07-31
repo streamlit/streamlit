@@ -258,6 +258,12 @@ if TYPE_CHECKING:
         ),
         DataframeState,
     )
+    # Round-trip: returned DataframeState must be valid for selection_default.
+    returned_state = dataframe(df, on_select="rerun")
+    assert_type(
+        dataframe(df, on_select="rerun", selection_default=returned_state),
+        DataframeState,
+    )
 
     # =====================================================================
     # Test row_height parameter (int or None)
