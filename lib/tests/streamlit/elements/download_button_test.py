@@ -255,6 +255,17 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         assert stored.filename is None
         assert stored.mimetype == "text/plain"
 
+    def test_stringio_marshals_to_text_plain(self) -> None:
+        """io.StringIO is marshalled through the full button -> media-manager
+        path and stored as text/plain, mirroring the io.BytesIO case."""
+        st.download_button("Download", data=io.StringIO("hello"))
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.content == b"hello"
+        assert stored.filename is None
+        assert stored.mimetype == "text/plain"
+
     def test_stream_raising_on_name_access_keeps_existing_behavior(self) -> None:
         """A stream whose `name` property raises (e.g. a detached or closed
         TextIOWrapper raises ValueError) must not crash inference."""
