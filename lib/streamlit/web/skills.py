@@ -16,11 +16,13 @@
 
 from __future__ import annotations
 
+import contextlib
 import errno
 import os
 import shutil
 import sys
 import tempfile
+import time
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -35,6 +37,36 @@ _LOGGER: Final = get_logger(__name__)
 
 # Skill name installed in global mode
 _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
+
+# Prefix for the scratch directories a replacement install stages into. Only
+# ``mkdtemp`` produces these names, which is what makes the cleanup sweep in
+# _sweep_staging_dirs safe to run against a directory holding user files.
+#
+# Kept deliberately short, as are the child names below: staging adds a path
+# segment, and Windows still caps paths at 260 characters without long-path
+# support - which is itself one of the failure causes this telemetry is meant to
+# identify. Lengthening the path while hunting a path-length bug would be its own
+# footgun.
+_STAGING_PREFIX: Final[str] = ".st-skills-"
+# Children of the staging dir: the incoming copy and the displaced old install.
+# Single letters for the same path-budget reason; neither name is ever user-visible.
+_STAGING_NEW: Final[str] = "n"
+_STAGING_OLD: Final[str] = "o"
+# How long a staging dir must sit untouched before the sweep will reclaim it. A live
+# install writes into staging within seconds, so anything older was orphaned by a crash
+# or a kill - and anything younger may belong to a concurrent install whose staging dir
+# holds the only copy of the installation it has already moved aside.
+_STAGING_ORPHAN_AGE_S: Final[float] = 3600.0
+# Where a staging dir is moved when it holds the user's only copies (both the swap and
+# the restore failed). Deliberately NOT under _STAGING_PREFIX: the orphan sweep must be
+# unable to match it, or it would eventually delete the data it was retained to save.
+# Nothing reclaims these - that is the point - and the failure is logged with the path.
+_RECOVERY_PREFIX: Final[str] = ".st-recover-"
+# Sentinel written into every staging dir. The sweep requires it before deleting, so a
+# hidden user directory that merely shares the prefix is never touched: mkdtemp
+# guarantees uniqueness for the *creating* side, but the sweep matches on name and age,
+# which is a convention rather than proof of ownership.
+_STAGING_MARKER: Final[str] = ".streamlit-owned"
 
 # The full vocabulary of install-failure causes. Closed so the reason is safe to emit
 # as a telemetry label, and a Literal so mypy rejects a typo'd or ad-hoc reason at the
@@ -450,6 +482,7 @@ def _install_skill_symlink(
     # Pre-symlink filesystem work runs under one guard: any OSError here means we
     # can't lay the symlink, so return False and let the caller fall back to a global
     # copy rather than letting it escape and be misbooked as a hard write failure.
+    replace_owned_link = False
     try:
         # Ensure parent directory exists
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -466,9 +499,10 @@ def _install_skill_symlink(
                     # Broken symlink or resolution error - check ownership below
                     pass
 
-                # Check if it's a Streamlit-owned symlink we can replace
+                # Check if it's a Streamlit-owned symlink we can replace. Don't
+                # remove it yet - see the staged replacement below.
                 if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
-                    target_path.unlink()
+                    replace_owned_link = True
                 else:
                     result.skipped.append(f"{rel_target_path} (existing symlink)")
                     return True
@@ -496,15 +530,135 @@ def _install_skill_symlink(
         # absolute (resolved) source path, which still resolves correctly.
         rel_source = os.path.realpath(source_path)
 
-    # Create symlink
+    # Replacing an existing link is staged: ``symlink_to`` won't overwrite, so the
+    # old one has to go first, and "remove then re-create" loses a working install
+    # whenever the re-create fails. Since a failing re-create means this system
+    # can't make symlinks at all, an attempt to restore would fail for the same
+    # reason. So prove we can make the link - inside a private staging dir - BEFORE
+    # removing anything. If that fails, the existing install is still untouched.
+    staging: Path | None = None
+    link_path = target_path
+    if replace_owned_link:
+        try:
+            staging = _open_staging_dir(target_dir)
+        except OSError:
+            return False
+        # ``rel_source`` is relative to target_dir, so while the link sits one level
+        # down in staging it dangles. Nothing reads it there, and the rename below
+        # moves the link verbatim, after which it resolves.
+        link_path = staging / _STAGING_NEW
+
     try:
-        target_path.symlink_to(rel_source, target_is_directory=True)
-        result.installed.append(str(rel_target_path))
-        return True
+        link_path.symlink_to(rel_source, target_is_directory=True)
     except (OSError, NotImplementedError):
         # Symlink not supported (e.g., Windows without Developer Mode, or some
-        # environments where symlinks are not implemented)
+        # environments where symlinks are not implemented). Nothing was removed.
+        if staging is not None:
+            shutil.rmtree(staging, ignore_errors=True)
         return False
+
+    if staging is not None:
+        # Move the old link aside rather than unlinking it, mirroring the copy path:
+        # if the swap then fails, the canonical path can be restored from staging
+        # instead of being left empty.
+        displaced = staging / _STAGING_OLD
+        try:
+            target_path.rename(displaced)
+            link_path.rename(target_path)
+        except OSError:
+            if target_path.exists() or target_path.is_symlink():
+                # The move-aside failed, so the old install is intact and the staged
+                # link is redundant. Drop it and let the caller fall back.
+                shutil.rmtree(staging, ignore_errors=True)
+                return False
+            # The old link is out of the way but the staged one wouldn't move, leaving
+            # the canonical path empty. Creating a link here demonstrably works - we
+            # just made one - so lay it directly.
+            try:
+                target_path.symlink_to(rel_source, target_is_directory=True)
+            except OSError:
+                # Last resort: put the displaced link back, so the canonical path is
+                # populated even though this install failed.
+                with contextlib.suppress(OSError):
+                    displaced.rename(target_path)
+                if not (target_path.exists() or target_path.is_symlink()):
+                    # The restore didn't land either, so staging holds the only copy
+                    # of the old link. Deleting it here would destroy the very thing
+                    # the move-aside preserved. Keep it, and drop the ownership marker
+                    # so the sweep can't take it later either.
+                    with contextlib.suppress(OSError):
+                        (staging / _STAGING_MARKER).unlink()
+                    return False
+                shutil.rmtree(staging, ignore_errors=True)
+                return False
+        shutil.rmtree(staging, ignore_errors=True)
+
+    result.installed.append(str(rel_target_path))
+    return True
+
+
+def _open_staging_dir(target_dir: Path) -> Path:
+    """Create a private scratch directory inside ``target_dir`` for a replacement.
+
+    Replacing an installed skill can't be done in one step: ``symlink_to`` won't
+    overwrite, and no OS offers an atomic replace for a non-empty directory
+    (``rename`` onto one gives ``ENOTEMPTY``, or ``PermissionError`` on Windows).
+    So a replacement has to build the new copy somewhere else first and then swap
+    it in, which raises the question of *where* "somewhere else" is.
+
+    Three options, and why this is the one:
+
+    - **A fixed sibling name** (``.<skill>.tmp``) is predictable, so clearing it
+      before use can recursively delete a directory the installer never created,
+      and two concurrent installs silently clobber each other's scratch space.
+    - **A unique name with no cleanup** can't collide, but every interrupted
+      install leaves a permanent orphan directory in a folder users browse and
+      gitignore.
+    - **A unique name plus a prefix-scoped sweep** — this. ``mkdtemp`` guarantees
+      the directory is ours and fresh, so nothing is ever deleted that we didn't
+      create; :func:`_sweep_staging_dirs` reclaims orphans on the next install by
+      matching only our own prefix, so they don't accumulate either.
+
+    The one accepted consequence: a staging directory deliberately left behind by
+    an unrecoverable swap (see :func:`_install_skill_copy`) is reclaimed by the
+    next install's sweep. That is bounded — anything in it is a copy of a bundled
+    skill, reproducible from the wheel — and by the time the sweep runs, the
+    install that follows it repopulates the canonical path anyway.
+    """
+    target_dir.mkdir(parents=True, exist_ok=True)
+    _sweep_staging_dirs(target_dir)
+    staging = Path(tempfile.mkdtemp(dir=target_dir, prefix=_STAGING_PREFIX))
+    (staging / _STAGING_MARKER).touch()
+    return staging
+
+
+def _sweep_staging_dirs(target_dir: Path) -> None:
+    """Reclaim staging directories orphaned by an interrupted install.
+
+    Two guards, both load-bearing:
+
+    - A candidate must both match :data:`_STAGING_PREFIX` and contain the
+      :data:`_STAGING_MARKER` sentinel. The prefix alone is a convention; the marker
+      is proof we created it, so a hidden user directory that happens to share the
+      prefix is never removed.
+    - Only directories untouched for :data:`_STAGING_ORPHAN_AGE_S` are removed.
+      Sweeping on name alone would delete a *concurrent* install's staging
+      directory - which may already hold the old installation it moved aside, so
+      the sweep would take out both that and its replacement and leave the
+      canonical path empty. Orphan cleanup turning into data loss is worse than
+      the orphans it set out to prevent. A live install writes into staging within
+      seconds, so age separates the two cleanly without needing a lock.
+
+    Best-effort throughout: failing to tidy up must never fail an install.
+    """
+    cutoff = time.time() - _STAGING_ORPHAN_AGE_S
+    with contextlib.suppress(OSError):
+        for stale in target_dir.glob(f"{_STAGING_PREFIX}*"):
+            with contextlib.suppress(OSError):
+                if (
+                    stale / _STAGING_MARKER
+                ).is_file() and stale.stat().st_mtime < cutoff:
+                    shutil.rmtree(stale, ignore_errors=True)
 
 
 def _install_skill_copy(
@@ -522,6 +676,8 @@ def _install_skill_copy(
     # All filesystem work runs under one try so a failure at ANY step is recorded as
     # a write failure classified by errno, instead of escaping as an uncaught OSError
     # the caller can only classify as "unknown".
+    staging: Path | None = None
+    unrecoverable = False
     try:
         # Ensure parent directory exists
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -531,11 +687,14 @@ def _install_skill_copy(
         if target_path.exists() or target_path.is_symlink():
             # Target exists - check if we can replace it
             if target_path.is_symlink():
-                if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
-                    target_path.unlink()
-                else:
+                if not _is_streamlit_owned_symlink(target_path, bundled_skill_names):
                     result.skipped.append(f"{rel_target_path} (existing symlink)")
                     return
+                # Defer removal until after the copy succeeds, same as a directory.
+                # Unlinking here instead would send this case down the plain-copytree
+                # branch below, so a failed copy would delete a working skill and
+                # leave nothing - the exact loss the staged swap exists to prevent.
+                old_target_to_remove = target_path
             elif target_path.is_dir():
                 if _skill_copy_matches(source_path, target_path):
                     result.up_to_date.append(str(rel_target_path))
@@ -545,31 +704,84 @@ def _install_skill_copy(
                 result.skipped.append(f"{rel_target_path} (existing file)")
                 return
 
-        # Copy to a temp location and swap, so a failed copy leaves the working
-        # installation in place.
+        # A replacement builds the new copy in a private staging dir and swaps it
+        # in, so a failed copy leaves the working installation in place. See
+        # _open_staging_dir for why staging is a fresh mkdtemp.
         if old_target_to_remove is not None:
-            temp_path = target_path.with_name(f".{skill_name}.tmp")
-            if temp_path.exists():
-                shutil.rmtree(temp_path)
-            shutil.copytree(source_path, temp_path)
-            # Now safe to remove old and rename new
-            shutil.rmtree(old_target_to_remove)
-            temp_path.rename(target_path)
+            staging = _open_staging_dir(target_dir)
+            new_path = staging / _STAGING_NEW
+            backup_path = staging / _STAGING_OLD
+            shutil.copytree(source_path, new_path)
+            # Move the old target aside rather than deleting it: if the swap then
+            # fails we can put it back, instead of stranding the new copy in
+            # staging with nothing at the path the agent looks in.
+            old_target_to_remove.rename(backup_path)
+            try:
+                new_path.rename(target_path)
+            except OSError:
+                # Put the old install back, then let the handler below record the
+                # write failure. There is no atomic replace for a non-empty
+                # directory on either POSIX or Windows, so this move-aside dance is
+                # the best available and a restore that ALSO fails can't be
+                # recovered in code. Log where both copies ended up - the
+                # user-facing message deliberately carries no server paths, so this
+                # is the only way the state is diagnosable.
+                try:
+                    backup_path.rename(target_path)
+                except OSError:
+                    unrecoverable = True
+                raise
         else:
             shutil.copytree(source_path, target_path)
         result.installed.append(str(rel_target_path))
     except OSError as e:
-        # Clean up temp path only if target still exists (meaning old wasn't removed).
-        # If target is gone, the old directory was deleted and temp is our only copy -
-        # keep it so the user isn't left with nothing.
-        temp_path = target_path.with_name(f".{skill_name}.tmp")
-        if temp_path.exists() and target_path.exists():
-            shutil.rmtree(temp_path, ignore_errors=True)
         # A write failure, not a conflict - record it in ``errored`` so it is
         # classified as such, not "conflict", and note the errno-derived cause so the
         # telemetry reason names which write failed.
         result.errored.append(f"{rel_target_path} (copy failed: {e})")
         result.write_reasons.add(classify_write_error(e))
+    finally:
+        # Dropping staging is bookkeeping and must never turn a landed install into a
+        # reported failure, hence the suppression throughout.
+        if staging is not None:
+            if unrecoverable:
+                # Both the swap and the restore failed, so staging holds the only
+                # copies of the old install and its replacement. Move it OUT of the
+                # swept namespace: leaving it under _STAGING_PREFIX would let a later
+                # install's orphan sweep delete the very thing we kept it for. The
+                # contents are usually reproducible from the wheel, but not if the
+                # user had edited their installed skill - so this is not ours to
+                # garbage-collect on a timer.
+                # Best-effort: relocating is itself a rename, and rename may be the
+                # very operation failing here. If it doesn't work the copies stay
+                # under the staging prefix, where only the age gate protects them -
+                # hence the log below naming their location either way.
+                keep = staging.with_name(
+                    _RECOVERY_PREFIX + staging.name[len(_STAGING_PREFIX) :]
+                )
+                with contextlib.suppress(OSError):
+                    staging.rename(keep)
+                    staging = keep
+                if staging.name.startswith(_STAGING_PREFIX):
+                    # The relocation didn't take - rename may be the very operation
+                    # failing here. Drop the ownership marker instead: the sweep
+                    # requires it, so removing it makes this directory permanently
+                    # invisible to cleanup. Unlinking one small file is far likelier
+                    # to succeed than renaming a directory, so between the two the
+                    # retained copies are protected whichever operation is broken.
+                    with contextlib.suppress(OSError):
+                        (staging / _STAGING_MARKER).unlink()
+                _LOGGER.warning(
+                    "Skills install left %s empty. The previous install is at %s and "
+                    "the new copy at %s - move either one back to recover. Nothing "
+                    "will clean this up automatically.",
+                    target_path,
+                    staging / _STAGING_OLD,
+                    staging / _STAGING_NEW,
+                )
+            else:
+                with contextlib.suppress(OSError):
+                    shutil.rmtree(staging, ignore_errors=True)
 
 
 def _print_result(result: _InstallResult) -> None:

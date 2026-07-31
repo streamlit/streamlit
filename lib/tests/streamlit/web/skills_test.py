@@ -20,6 +20,7 @@ import errno
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import get_args
 from unittest.mock import patch
@@ -1302,6 +1303,50 @@ class TestInstallSkillCopyEdgeCases:
         assert target.is_dir()
         assert (target / "SKILL.md").is_file()
 
+    def test_preserves_existing_symlink_on_copy_failure(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A failed replacement leaves an existing owned symlink usable.
+
+        Replacing a Streamlit-owned symlink used to unlink it before copying, so a
+        copy that failed (permissions, full disk, antivirus lock) deleted a working
+        skill and left nothing in its place. The symlink case now takes the same
+        staged swap directories do, so the old install survives a failure.
+
+        This is the only test that pins the symlink target onto the staging path at
+        all: unlinking early would silently route it down the plain-copytree branch,
+        where every guarantee in this module is absent and nothing else notices.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        # A working install: an owned symlink pointing at a real skill directory.
+        existing_skill = tmp_path / "existing-skill"
+        existing_skill.mkdir()
+        (existing_skill / "SKILL.md").write_text(
+            "# Working install\n", encoding="utf-8"
+        )
+        target = target_dir / "developing-with-streamlit"
+        target.symlink_to(existing_skill, target_is_directory=True)
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            patch.object(skills.shutil, "copytree", side_effect=OSError("Disk full")),
+        ):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert target.is_symlink()
+        assert (target / "SKILL.md").read_text() == "# Working install\n"
+        assert any("copy failed" in entry for entry in result.errored)
+        assert not result.installed
+
     def test_reports_copy_failure(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
@@ -1356,6 +1401,163 @@ class TestInstallSkillCopyEdgeCases:
         assert any("copy failed" in s for s in result.errored)
         assert not result.skipped
 
+    def test_restores_old_install_when_final_swap_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A failed swap restores the old install instead of stranding the copy.
+
+        The copy succeeds, so the old target is moved aside — but if renaming the
+        new copy into place then fails (a held handle, antivirus), deleting the old
+        one outright would leave the fresh copy under a hidden dot-name with
+        nothing at the path agents actually read.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "SKILL.md").write_text("# Old version\n", encoding="utf-8")
+
+        result = skills._InstallResult()
+        real_rename = skills.Path.rename
+        calls = {"n": 0}
+
+        def _fail_only_the_swap(self: Path, target_name: object) -> object:
+            """Let the move-aside through and fail the swap; the restore then works.
+
+            Blanket-patching ``rename`` would fail the move-aside instead, so the
+            restore branch would never run and a broken restore would still pass.
+            """
+            calls["n"] += 1
+            if calls["n"] == 2:
+                raise OSError("Access is denied")
+            return real_rename(self, target_name)  # type: ignore[arg-type]
+
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            patch.object(skills.Path, "rename", _fail_only_the_swap),
+        ):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        # rename #1 moved the old install aside, #2 (the swap) failed, #3 restored it.
+        assert calls["n"] == 3
+        # The old install is back at the canonical path with its original content.
+        assert target.is_dir()
+        assert not target.is_symlink()
+        assert (target / "SKILL.md").read_text() == "# Old version\n"
+        # Reported as a failure, and the backup name is not left behind.
+        assert result.errored
+        assert not result.installed
+        assert not list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
+
+    def test_keeps_both_copies_when_swap_and_restore_both_fail(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """If the swap and the restore both fail, neither copy is discarded.
+
+        Moving the old install aside succeeds, then both renaming the new copy in
+        and putting the old one back fail. No atomic replace exists for a non-empty
+        directory on POSIX or Windows, so this state cannot be avoided in code — but
+        it must at least be non-destructive, leaving both copies recoverable on disk
+        and reporting the install as failed rather than succeeded.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "SKILL.md").write_text("# Old version\n", encoding="utf-8")
+
+        result = skills._InstallResult()
+        real_rename = skills.Path.rename
+        calls = {"n": 0}
+
+        def _only_first_rename_works(self: Path, target_name: object) -> object:
+            """Let the move-aside through; fail the swap and the restore after it."""
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return real_rename(self, target_name)  # type: ignore[arg-type]
+            raise OSError("Access is denied")
+
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            patch.object(skills.Path, "rename", _only_first_rename_works),
+        ):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        # Reported as a failure, never a success.
+        assert result.errored
+        assert not result.installed
+        # Both copies survive somewhere - nothing is destroyed. They stay under the
+        # staging prefix here rather than moving to the recovery one, because the
+        # relocation is itself a rename and rename is the operation failing in this
+        # scenario. The age gate is then the only thing protecting them, which is why
+        # the warning log names the paths. See
+        # test_never_sweeps_a_retained_recovery_directory for the normal case.
+        kept = list(target_dir.glob(f"{skills._STAGING_PREFIX}*")) + list(
+            target_dir.glob(f"{skills._RECOVERY_PREFIX}*")
+        )
+        assert len(kept) == 1
+        # Relocation is itself a rename, and rename is what is failing here — so the
+        # copies stay under the staging prefix. The ownership marker is dropped instead,
+        # which makes them permanently invisible to the sweep: two independent
+        # protections, so whichever filesystem operation is broken, one still holds.
+        assert not (kept[0] / skills._STAGING_MARKER).exists()
+        assert (kept[0] / skills._STAGING_OLD / "SKILL.md").read_text() == (
+            "# Old version\n"
+        )
+        assert (kept[0] / skills._STAGING_NEW / "SKILL.md").read_text() == (
+            "# Test Skill\n"
+        )
+
+    def test_reports_success_when_only_backup_cleanup_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A failed backup cleanup after a landed swap is still a success.
+
+        Discarding the staging dir is bookkeeping that happens after the new skill
+        is already at the target. If its error reached the write handler, a correct
+        install would be reported as ``write_failed`` — a false failure in the nudge
+        and a false reason in the telemetry.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "SKILL.md").write_text("# Old version\n", encoding="utf-8")
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            # Every rmtree here is cleanup; none of it may affect the outcome.
+            patch.object(
+                skills.shutil, "rmtree", side_effect=OSError("Directory not empty")
+            ),
+        ):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        # The new skill landed, so this is a success...
+        assert result.installed
+        assert (target / "SKILL.md").read_text() == "# Test Skill\n"
+        # ...and must not be booked as a write failure.
+        assert not result.errored
+
     def test_reports_mkdir_failure_as_error(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
@@ -1389,6 +1591,22 @@ class TestInstallSkillCopyEdgeCases:
 
 
 class TestInstallSkillSymlinkEdgeCases:
+    @staticmethod
+    def _existing_project_link(tmp_path: Path) -> tuple[Path, Path]:
+        """Create a working Streamlit-owned project symlink.
+
+        Returns ``(target_dir, target)`` — the directory the install writes into and
+        the link itself.
+        """
+        existing = tmp_path / "existing-skill"
+        existing.mkdir()
+        (existing / "SKILL.md").write_text("# Working install\n", encoding="utf-8")
+        target_dir = tmp_path / "project" / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.symlink_to(existing, target_is_directory=True)
+        return target_dir, target
+
     """Additional edge case tests for _install_skill_symlink."""
 
     def test_replaces_existing_symlink_with_skill_name(
@@ -1474,6 +1692,240 @@ class TestInstallSkillSymlinkEdgeCases:
         assert not success
         assert not result.errored
         assert not result.installed
+
+    def test_keeps_replaced_symlink_when_link_creation_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """An unmakeable symlink leaves the existing project install alone.
+
+        ``symlink_to`` cannot overwrite, so replacing an owned link means removing
+        it first — and "remove then re-create" loses a working install whenever the
+        re-create fails. A restore attempt is no defence: the re-create only fails
+        because this system won't make symlinks, so the restore fails identically.
+        Hence the new link is staged under a temp name first, and nothing is removed
+        until that has worked. Here every ``symlink_to`` fails, so the original must
+        be exactly as it was.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        existing_skill = tmp_path / "existing-skill"
+        existing_skill.mkdir()
+        (existing_skill / "SKILL.md").write_text(
+            "# Working install\n", encoding="utf-8"
+        )
+        target_dir = tmp_path / "project" / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.symlink_to(existing_skill, target_is_directory=True)
+
+        result = skills._InstallResult()
+
+        def _always_fail(*args: object, **kwargs: object) -> None:
+            raise OSError("A required privilege is not held by the client")
+
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            patch.object(skills.Path, "symlink_to", _always_fail),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        # False so the caller still falls back to a global copy...
+        assert not success
+        # ...but the working project install must survive, still pointing where it did.
+        assert target.is_symlink()
+        assert (target / "SKILL.md").read_text() == "# Working install\n"
+        assert not result.installed
+
+    def _fail_from_nth_rename(self, n: int) -> object:
+        """Rename mock that fails the nth call and every one after it."""
+        real = skills.Path.rename
+        calls = {"n": 0}
+
+        def _rename(self: Path, target: object) -> object:
+            calls["n"] += 1
+            if calls["n"] >= n:
+                raise OSError("Access is denied")
+            return real(self, target)  # type: ignore[arg-type]
+
+        return _rename
+
+    def _fail_nth_rename(self, n: int) -> object:
+        """Rename mock that fails only the nth call, letting the others through."""
+        real = skills.Path.rename
+        calls = {"n": 0}
+
+        def _rename(self: Path, target: object) -> object:
+            calls["n"] += 1
+            if calls["n"] == n:
+                raise OSError("Access is denied")
+            return real(self, target)  # type: ignore[arg-type]
+
+        return _rename
+
+    def test_keeps_old_link_when_move_aside_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """If the old link can't be moved aside, it is left exactly as it was.
+
+        This is the branch staging exists for: the replacement is fully prepared, and
+        the first thing that touches the existing install fails, so nothing is lost.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir, target = self._existing_project_link(tmp_path)
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            patch.object(skills.Path, "rename", self._fail_nth_rename(1)),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert not success
+        assert not result.installed
+        assert target.is_symlink()
+        assert (target / "SKILL.md").read_text() == "# Working install\n"
+        assert not list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
+
+    def test_lays_link_directly_when_swap_rename_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A failed swap recovers by creating the link at the canonical path.
+
+        The old link is already moved aside and the staged one will not rename into
+        place — but creating a symlink here is proven to work, since the staged one
+        just succeeded, so it is laid directly rather than stranding the install.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir, target = self._existing_project_link(tmp_path)
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            patch.object(skills.Path, "rename", self._fail_nth_rename(2)),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert success
+        assert result.installed
+        assert target.is_symlink()
+        assert (target / "SKILL.md").read_text() == "# Test Skill\n"
+        assert not list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
+
+    def test_keeps_displaced_link_when_even_the_restore_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """When the restore fails too, the displaced link is not deleted with staging.
+
+        Move-aside succeeded, so staging holds the only copy of the old link. The swap,
+        the direct re-lay and the restore all fail — and the cleanup that follows must
+        not take staging with it, or the move-aside would have destroyed exactly what it
+        was there to preserve. The ownership marker is dropped so no later sweep can
+        take it either.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir, _target = self._existing_project_link(tmp_path)
+
+        real_symlink_to = skills.Path.symlink_to
+        calls = {"n": 0}
+
+        def _only_staged_link_works(
+            self: Path, link_target: object, target_is_directory: bool = False
+        ) -> None:
+            calls["n"] += 1
+            if calls["n"] == 1:
+                real_symlink_to(
+                    self, link_target, target_is_directory=target_is_directory
+                )  # type: ignore[arg-type]
+                return
+            raise OSError("A required privilege is not held by the client")
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            # Move-aside is rename #1 and must work; every later rename fails, so both
+            # the swap and the restore are blocked.
+            patch.object(skills.Path, "rename", self._fail_from_nth_rename(2)),
+            patch.object(skills.Path, "symlink_to", _only_staged_link_works),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert not success
+        assert not result.installed
+        # The old link survives inside staging, and staging is now un-sweepable.
+        staged = list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
+        assert len(staged) == 1
+        assert (staged[0] / skills._STAGING_OLD).is_symlink()
+        assert not (staged[0] / skills._STAGING_MARKER).exists()
+
+    def test_restores_displaced_link_when_recovery_also_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """When nothing else works, the original link goes back at the canonical path.
+
+        The swap failed and the direct re-lay failed too. Moving the old link aside
+        rather than unlinking it means there is still something to put back, so the
+        path an agent reads ends up populated even though the install failed.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir, target = self._existing_project_link(tmp_path)
+
+        real_symlink_to = skills.Path.symlink_to
+        calls = {"n": 0}
+
+        def _only_staged_link_works(
+            self: Path, link_target: object, target_is_directory: bool = False
+        ) -> None:
+            calls["n"] += 1
+            if calls["n"] == 1:
+                real_symlink_to(
+                    self, link_target, target_is_directory=target_is_directory
+                )  # type: ignore[arg-type]
+                return
+            raise OSError("A required privilege is not held by the client")
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            patch.object(skills.Path, "rename", self._fail_nth_rename(2)),
+            patch.object(skills.Path, "symlink_to", _only_staged_link_works),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert not success
+        assert not result.installed
+        # The original link is back where agents look for it.
+        assert target.is_symlink()
+        assert (target / "SKILL.md").read_text() == "# Working install\n"
+        assert not list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
 
 
 class TestPromptInstallModeRetry:
@@ -2554,6 +3006,215 @@ class TestClassifyWriteError:
         denied = OSError(errno.EACCES, "denied")
         denied.winerror = 1_000_000  # type: ignore[attr-defined]
         assert skills.classify_write_error(denied) == "write_denied"
+
+
+class TestInstallSkillCopyStaging:
+    """Staging behavior for _install_skill_copy replacements."""
+
+    def test_sweeps_staging_dir_orphaned_by_an_interrupted_install(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """An old staging dir left by a crashed run is reclaimed."""
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        # Existing target with different content forces the staged-swap path.
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "stale-file.txt").write_text("old", encoding="utf-8")
+
+        orphan = target_dir / f"{skills._STAGING_PREFIX}abc123"
+        orphan.mkdir()
+        (orphan / "leftover.txt").write_text("leftover", encoding="utf-8")
+        # The sweep requires our ownership marker, so a real orphan carries one.
+        (orphan / skills._STAGING_MARKER).touch()
+        # Backdate it well past the orphan threshold.
+        old = time.time() - skills._STAGING_ORPHAN_AGE_S - 60
+        os.utime(orphan, (old, old))
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert len(result.installed) == 1
+        assert (target / "SKILL.md").is_file()
+        assert not (target / "stale-file.txt").exists()
+        # The orphan is gone, and this run's own staging dir left nothing behind.
+        assert not orphan.exists()
+        assert not list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
+
+    def test_requires_an_ownership_marker_before_sweeping(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A prefix-shaped directory we did not create is never swept.
+
+        ``mkdtemp`` guarantees uniqueness for the side that *creates* the directory, but
+        the sweep matches on name and age — a convention, not proof of ownership. A user
+        directory that happens to share the prefix and is older than the threshold would
+        otherwise be deleted, so the sweep requires a sentinel we wrote ourselves.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+
+        # Prefix-shaped, well past the age gate, but NOT ours - no marker inside.
+        impostor = target_dir / f"{skills._STAGING_PREFIX}notours"
+        impostor.mkdir()
+        (impostor / "precious.txt").write_text("do not delete", encoding="utf-8")
+        ancient = time.time() - skills._STAGING_ORPHAN_AGE_S * 24
+        os.utime(impostor, (ancient, ancient))
+
+        # A replacement install, which is what runs the sweep.
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "stale-file.txt").write_text("old", encoding="utf-8")
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert len(result.installed) == 1
+        assert (impostor / "precious.txt").read_text() == "do not delete"
+
+    def test_never_sweeps_a_retained_recovery_directory(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Copies kept for manual recovery are never garbage-collected on a timer.
+
+        When the swap and the restore both fail, staging holds the only copies of the
+        old install and its replacement. Leaving them under the staging prefix would
+        let a later install's orphan sweep delete exactly what was retained to save —
+        and the age gate is no defence, since a recovery directory becomes old by
+        definition while it waits for the user. Moving it out of the swept namespace
+        is what makes it safe.
+
+        The contents are usually reproducible from the wheel, but not if the user had
+        edited their installed skill, so this is not ours to reclaim.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+
+        # A recovery dir left by an earlier unrecoverable swap, long past the age gate.
+        recovery = target_dir / f"{skills._RECOVERY_PREFIX}old99"
+        (recovery / skills._STAGING_OLD).mkdir(parents=True)
+        (recovery / skills._STAGING_OLD / "SKILL.md").write_text(
+            "# Their edited skill\n", encoding="utf-8"
+        )
+        ancient = time.time() - skills._STAGING_ORPHAN_AGE_S * 24
+        os.utime(recovery, (ancient, ancient))
+
+        # A later replacement install, which is what runs the sweep.
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "stale-file.txt").write_text("old", encoding="utf-8")
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert len(result.installed) == 1
+        assert (recovery / skills._STAGING_OLD / "SKILL.md").read_text() == (
+            "# Their edited skill\n"
+        )
+
+    def test_leaves_a_concurrent_installs_staging_dir_alone(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A freshly-created staging dir belongs to a live install — do not touch it.
+
+        Sweeping on name alone would delete a concurrent invocation's staging dir. That
+        dir may already hold the old installation it moved aside, so the sweep would
+        destroy both that and its replacement and leave the canonical path empty —
+        orphan cleanup turned into data loss. Age separates live from abandoned without
+        needing a lock.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "stale-file.txt").write_text("old", encoding="utf-8")
+
+        # Stand in for another process mid-swap: its staging dir already holds the
+        # only copy of the installation it displaced.
+        live = target_dir / f"{skills._STAGING_PREFIX}live99"
+        (live / skills._STAGING_OLD).mkdir(parents=True)
+        (live / skills._STAGING_OLD / "SKILL.md").write_text(
+            "# Their only copy\n", encoding="utf-8"
+        )
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert len(result.installed) == 1
+        # The other invocation's displaced installation must survive untouched.
+        assert (live / skills._STAGING_OLD / "SKILL.md").read_text() == (
+            "# Their only copy\n"
+        )
+
+    def test_never_deletes_a_directory_it_did_not_create(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Unrelated hidden directories in the target survive an install.
+
+        Staging used to use predictable sibling names (``.<skill>.tmp`` /
+        ``.<skill>.old``) and cleared them before use, so a directory the installer
+        never created could be recursively deleted. Staging is now a fresh
+        ``mkdtemp``, and the sweep matches only its own prefix, so nothing outside
+        that prefix is ever touched.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "stale-file.txt").write_text("old", encoding="utf-8")
+
+        # The exact names the old implementation would have wiped, plus a plain one.
+        bystanders = [
+            target_dir / ".developing-with-streamlit.tmp",
+            target_dir / ".developing-with-streamlit.old",
+            target_dir / ".developing-with-streamlit.newlink",
+            target_dir / ".my-notes",
+        ]
+        for d in bystanders:
+            d.mkdir()
+            (d / "precious.txt").write_text("do not delete", encoding="utf-8")
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert len(result.installed) == 1
+        for d in bystanders:
+            assert (d / "precious.txt").read_text() == "do not delete"
 
 
 class TestGetMetaSkillDir:
