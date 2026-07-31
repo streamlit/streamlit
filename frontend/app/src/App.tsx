@@ -29,6 +29,7 @@ import {
   isSkillsNudgeDismissed,
   isSkillsNudgeDroppedConnection,
   isSkillsNudgeSnoozed,
+  REFUSED_REASON_PREFIX,
   setSkillsNudgeDismissed,
   setSkillsNudgeSnoozed,
   SKILLS_NUDGE_DROPPED_MESSAGE,
@@ -1604,20 +1605,47 @@ export class App extends PureComponent<Props, State> {
         // — no need to also write the permanent "don't show again" flag here,
         // which would conflate "installed" with a permanent opt-out. The card
         // shows its own success confirmation and auto-dismisses.
-        this.trackSkillsNudge("skillsNudgeInstallSucceeded")
+        //
+        // Tag installs the server rerouted from project mode to a global copy with
+        // the reason it gave (a bounded set — see fallback_reason in the proto). The
+        // distinctions matter because they point at different fixes, and a fallback
+        // install is otherwise indistinguishable from a project install in the
+        // success telemetry.
+        const fallbackReason = result.fallbackReason
+        this.trackSkillsNudge(
+          fallbackReason
+            ? `skillsNudgeInstallSucceeded:${fallbackReason}`
+            : "skillsNudgeInstallSucceeded"
+        )
         return result.detail ?? undefined
       })
       .catch((error: unknown) => {
-        // A dropped or timed-out connection during a long install (e.g. the
-        // GitHub global fallback) rejects the request even though the server
-        // install may have completed. Count it separately — not as a failure,
-        // which would over-count the funnel — and surface a reassuring,
-        // retry-friendly message; re-install is idempotent.
+        // A dropped or timed-out connection during a long install rejects the
+        // request even though the server install may have completed. Count it
+        // separately — not as a failure, which would over-count the funnel —
+        // and surface a reassuring, retry-friendly message; re-install is
+        // idempotent.
         if (isSkillsNudgeDroppedConnection(error)) {
           this.trackSkillsNudge("skillsNudgeInstallDropped")
           throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
         }
-        this.trackSkillsNudge("skillsNudgeInstallFailed")
+        // Append the server's machine-readable reason as a label suffix —
+        // mirroring `skillsNudgeSuppressedNonLocal:<locality>` — so outcomes split
+        // by cause (e.g. "conflict", "write_failed", "source_missing"). A reason the
+        // server marked with REFUSED_REASON_PREFIX is an install a safety gate
+        // declined to attempt, not one that ran and failed, so it goes under a
+        // distinct `skillsNudgeInstallRefused:<reason>` and never inflates the
+        // failure rate. Reasons are a fixed server-side vocabulary (never user input).
+        const reason = (error as { reason?: string } | null)?.reason
+        const isRefusal = reason?.startsWith(REFUSED_REASON_PREFIX) ?? false
+        const eventName = isRefusal
+          ? "skillsNudgeInstallRefused"
+          : "skillsNudgeInstallFailed"
+        // Strip the marker so the label reads `...Refused:non_loopback`.
+        const suffix = isRefusal
+          ? reason?.slice(REFUSED_REASON_PREFIX.length)
+          : reason
+        this.trackSkillsNudge(suffix ? `${eventName}:${suffix}` : eventName)
         // Re-throw so the toast renders its error state.
         throw error
       })

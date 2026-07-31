@@ -122,3 +122,14 @@ export function isSkillsNudgeDroppedConnection(error: unknown): boolean {
     message === REQUEST_TIMED_OUT_MESSAGE
   )
 }
+
+/**
+ * Prefix the server puts on an `error_reason` when a safety gate *refused* the
+ * install before attempting it (headless server, no agent harness, non-loopback
+ * connection) rather than an install that ran and failed. Refusals are tracked
+ * under their own event (`skillsNudgeInstallRefused:<reason>`) so they don't
+ * inflate the genuine install-failure rate. The server owns which reasons are
+ * refusals — we only strip the prefix — so a gate added there needs no change
+ * here. Mirrors `_REFUSED_REASON_PREFIX` in `backend_operation_handler.py`.
+ */
+export const REFUSED_REASON_PREFIX = "refused:"
