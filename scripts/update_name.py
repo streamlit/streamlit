@@ -89,12 +89,11 @@ def update_root_pyproject_toml(project_name: str) -> None:
 
 def _update_pyproject_self_references(project_name: str) -> None:
     """Rename `streamlit[extras]` self-references to the new project name."""
+    # Matches lines like `  "streamlit[extras]",`, with an optional trailing comma.
     dependency_pattern = r'(?P<pre_match>^\s*")streamlit(?P<post_match>\[[^"]+\]",?$)'
-    # Any quoted dependency entry that still opens with `streamlit[` after the
-    # rename is a self-reference we failed to rewrite (e.g. one carrying a
-    # version constraint that `dependency_pattern` does not match). Because the
-    # count check below only guarantees at least one replacement, this guards
-    # against silently leaving a stale reference to the old package name.
+    # Fail if any self-reference was left unrenamed. The count check only
+    # requires one replacement, so a version-constrained form like
+    # `streamlit[snowflake]>=1.0.0` would otherwise slip through.
     leftover_pattern = r'^\s*"streamlit\['
 
     for filename in _PYPROJECT_FILES_WITH_SELF_REFERENCES:
