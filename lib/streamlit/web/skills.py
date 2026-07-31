@@ -930,12 +930,9 @@ _MAX_REPO_ROOT_WALK_DEPTH: Final = 20
 def _find_git_root(start: str) -> str | None:
     """Return the nearest ancestor of ``start`` containing a ``.git`` entry, or ``None``.
 
-    Uses a bounded stdlib ancestor walk rather than ``git.Repo(...)`` from
-    GitPython. GitPython's cold import adds ~170ms on first call, which shows
-    up on every hosted-app startup via the ``create_page_profile_message``
-    code path — for a signal that almost always resolves to ``None`` in those
-    environments. The stdlib walk is ~1ms cold and returns the same path we
-    need.
+    Uses a bounded stdlib ancestor walk instead of Git or a Git library. Hosted-app
+    startup hits this via ``create_page_profile_message``, and the walk stays ~1ms
+    cold for a signal that is usually ``None`` there.
     """
     current = os.path.abspath(start)
     for _ in range(_MAX_REPO_ROOT_WALK_DEPTH):

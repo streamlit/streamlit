@@ -550,7 +550,7 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                     _LOGGER.exception("Error deserializing back message")
                     if session_id is not None:
                         runtime.handle_backmsg_deserialization_exception(
-                            session_id, exc
+                            session_id, exc, client=client
                         )
                     continue
 
@@ -582,7 +582,7 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                     )
                     continue
 
-                runtime.handle_backmsg(session_id, back_msg)
+                runtime.handle_backmsg(session_id, back_msg, client=client)
 
         except WebSocketDisconnect:
             # The websocket was closed by the client,
@@ -591,7 +591,7 @@ def create_websocket_handler(runtime: Runtime) -> Any:
         finally:
             try:
                 if session_id is not None:
-                    runtime.disconnect_session(session_id)
+                    runtime.disconnect_session(session_id, client=client)
             finally:
                 # Ensure client cleanup happens even if disconnect_session raises.
                 await client.aclose()

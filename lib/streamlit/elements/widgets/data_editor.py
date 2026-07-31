@@ -1330,6 +1330,9 @@ class DataEditorMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            # `disabled` may be a list of column names for partial disabling;
+            # only enforce server-side when the entire editor is disabled.
+            disabled=disabled is True,
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)

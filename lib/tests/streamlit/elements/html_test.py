@@ -13,13 +13,26 @@
 # limitations under the License.
 
 import pathlib
+from unittest.mock import patch
 
 import pytest
 
 import streamlit as st
+from streamlit.elements.html import _is_file
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+
+
+def test_is_file_with_long_string() -> None:
+    """Test that _is_file short-circuits for very long strings (likely HTML)."""
+    long_html = "x" * 5000
+    assert _is_file(long_html) is False
+
+
+def test_is_file_with_html_tag_substring() -> None:
+    """Test that _is_file short-circuits for strings containing '<'."""
+    assert _is_file("not<a>file") is False
 
 
 class StHtmlAPITest(DeltaGeneratorTestCase):
@@ -136,11 +149,31 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
         )
 
     def test_st_html_with_file(self):
-        """Test st.html with file."""
-        st.html(str(pathlib.Path(__file__).parent / "test_html.js"))
+        """Test st.html with a file."""
+        st.html(pathlib.Path(__file__).parent / "test_html.js")
 
         el = self.get_delta_from_queue().new_element
         assert el.html.body.strip() == "<button>Corgi</button>"
+
+    def test_st_html_with_string_file_path(self):
+        """Test st.html warns and doesn't read a string file path."""
+        file_path = str(pathlib.Path(__file__).parent / "test_html.js")
+
+        with (
+            patch(
+                "streamlit.elements.html.show_deprecation_warning"
+            ) as mock_show_warning,
+            patch("streamlit.elements.html.open") as mock_open,
+        ):
+            st.html(file_path)
+
+        mock_show_warning.assert_called_once_with(
+            "Passing a local file path as a string to `st.html` is no longer "
+            "supported. To load a local file, pass a `pathlib.Path` object instead."
+        )
+        mock_open.assert_not_called()
+        el = self.get_delta_from_queue().new_element
+        assert el.html.body == file_path
 
     def test_st_html_with_path(self):
         """Test st.html with path."""
@@ -269,7 +302,12 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
 
     def test_st_html_with_nonhtml_filelike_str(self):
         """Test st.html with a string that's neither HTML-like nor a real file."""
-        st.html("foo/fake.html")
+        with patch(
+            "streamlit.elements.html.show_deprecation_warning"
+        ) as mock_show_warning:
+            st.html("foo/fake.html")
 
+        # A string that doesn't resolve to a file must not trigger the warning.
+        mock_show_warning.assert_not_called()
         el = self.get_delta_from_queue().new_element
         assert el.html.body == "foo/fake.html"

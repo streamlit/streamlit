@@ -145,6 +145,8 @@ register_widget(
 - `on_script_will_rerun()`: Process widget states from browser, run callbacks
 - `on_script_finished()`: Clean up stale widgets not seen this run
 
+**Disabled widget enforcement**: `WidgetMetadata` carries a `disabled` flag (set via `register_widget(..., disabled=...)`). Because a disabled widget cannot be interacted with in the browser, this is enforced server-side to guard against a stale UI or a forged `BackMsg`: `SessionState.register_widget()` discards any incoming frontend value for a disabled widget (falling back to its previous value, or its default on first registration), and `_call_callbacks()` suppresses its `on_change`/`on_click` callback. Programmatic `st.session_state` assignments are still honored.
+
 ## Caching (`lib/streamlit/runtime/caching/`)
 
 **@st.cache_data** (`cache_data_api.py`):
@@ -276,6 +278,22 @@ sequenceDiagram
     Note over Storage: After 2 min without reconnect
     Storage-->>SM: Session entry expires (next connect creates a new AppSession)
 ```
+
+**Reconnecting to a still-active session**:
+
+An unclean WebSocket close can leave a session still marked active when a new
+connection arrives reusing the same `existing_session_id` (before the previous
+connection's cleanup runs). In this case `WebsocketSessionManager.connect_session()`
+disconnects the stale active session first (moving it to storage) and then
+reconnects the new client to it, preserving state instead of creating a brand-new
+session and discarding the previous state.
+
+To keep the old and new connections from interfering during this handoff,
+`Runtime.disconnect_session()`, `Runtime.handle_backmsg()`, and
+`Runtime.handle_backmsg_deserialization_exception()` accept an optional `client`.
+When provided, the call is a no-op if the session's current client is no longer
+that client, so the old connection's late cleanup or in-flight BackMsgs cannot
+disrupt the newly reconnected client.
 
 **Key components**:
 - `WebsocketSessionManager` (`lib/streamlit/runtime/websocket_session_manager.py`): Manages session lifecycle
