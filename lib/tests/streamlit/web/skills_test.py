@@ -1444,7 +1444,7 @@ class TestInstallSkillCopyEdgeCases:
         # Reported as a failure, and the backup name is not left behind.
         assert result.errored
         assert not result.installed
-        assert not (target_dir / ".developing-with-streamlit.old").exists()
+        assert not list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
 
     def test_keeps_both_copies_when_swap_and_restore_both_fail(
         self, tmp_path: Path, mock_source_skills_dir: Path
@@ -1489,21 +1489,25 @@ class TestInstallSkillCopyEdgeCases:
         # Reported as a failure, never a success.
         assert result.errored
         assert not result.installed
-        # Both copies survive under their hidden names - nothing is destroyed.
-        old_copy = target_dir / ".developing-with-streamlit.old"
-        new_copy = target_dir / ".developing-with-streamlit.tmp"
-        assert (old_copy / "SKILL.md").read_text() == "# Old version\n"
-        assert (new_copy / "SKILL.md").read_text() == "# Test Skill\n"
+        # Both copies survive inside the retained staging dir - nothing is destroyed.
+        staged = list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
+        assert len(staged) == 1
+        assert (
+            staged[0] / "developing-with-streamlit.old" / "SKILL.md"
+        ).read_text() == "# Old version\n"
+        assert (
+            staged[0] / "developing-with-streamlit" / "SKILL.md"
+        ).read_text() == "# Test Skill\n"
 
     def test_reports_success_when_only_backup_cleanup_fails(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
         """A failed backup cleanup after a landed swap is still a success.
 
-        Dropping the moved-aside ``.old`` backup is bookkeeping that happens after
-        the new skill is already at the target. If its error reached the write
-        handler, a correct install would be reported as ``write_failed`` — a false
-        failure in the nudge and a false reason in the telemetry.
+        Discarding the staging dir is bookkeeping that happens after the new skill
+        is already at the target. If its error reached the write handler, a correct
+        install would be reported as ``write_failed`` — a false failure in the nudge
+        and a false reason in the telemetry.
         """
         target_dir = tmp_path / "target" / "skills"
         target_dir.mkdir(parents=True)
@@ -1514,7 +1518,7 @@ class TestInstallSkillCopyEdgeCases:
         result = skills._InstallResult()
         with (
             patch("pathlib.Path.home", return_value=tmp_path),
-            # The only rmtree in this path is the post-swap backup cleanup.
+            # Every rmtree here is cleanup; none of it may affect the outcome.
             patch.object(
                 skills.shutil, "rmtree", side_effect=OSError("Directory not empty")
             ),
@@ -1738,7 +1742,7 @@ class TestInstallSkillSymlinkEdgeCases:
         assert target.is_symlink()
         assert (target / "SKILL.md").read_text() == "# Test Skill\n"
         # ...and the staging name is cleaned up rather than left as clutter.
-        assert not (target_dir / ".developing-with-streamlit.newlink").exists()
+        assert not list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
 
     def test_keeps_old_link_when_unlink_fails_after_staging(
         self, tmp_path: Path, mock_source_skills_dir: Path
@@ -1830,10 +1834,11 @@ class TestInstallSkillSymlinkEdgeCases:
 
         assert not success
         assert not result.installed
-        # The staged link is the only remaining copy, so it must survive.
-        staged = target_dir / ".developing-with-streamlit.newlink"
-        assert staged.is_symlink()
-        assert (staged / "SKILL.md").read_text() == "# Test Skill\n"
+        # The staged link is the only remaining copy, so its staging dir must survive.
+        staged = list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
+        assert len(staged) == 1
+        link = staged[0] / "developing-with-streamlit"
+        assert link.is_symlink()
 
 
 class TestPromptInstallModeRetry:
@@ -2617,25 +2622,23 @@ class TestInstallProjectSkillsFallbackSignal:
         assert result.used_global_fallback is False
 
 
-class TestInstallSkillCopyTempCleanup:
-    """Tests for temp file cleanup paths in _install_skill_copy."""
+class TestInstallSkillCopyStaging:
+    """Staging behavior for _install_skill_copy replacements."""
 
-    def test_removes_leftover_temp_before_copying(
+    def test_sweeps_leftover_staging_dir(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """Removes leftover temp directory from a previous failed copy."""
+        """A staging dir orphaned by an interrupted install is reclaimed."""
         target_dir = tmp_path / "target" / "skills"
         target_dir.mkdir(parents=True)
-        # Existing target directory with different content forces use of the
-        # temp-swap path.
+        # Existing target with different content forces the staged-swap path.
         target = target_dir / "developing-with-streamlit"
         target.mkdir()
         (target / "stale-file.txt").write_text("old", encoding="utf-8")
 
-        # Leftover temp directory from a previous failed run.
-        leftover_temp = target_dir / ".developing-with-streamlit.tmp"
-        leftover_temp.mkdir()
-        (leftover_temp / "leftover.txt").write_text("leftover", encoding="utf-8")
+        orphan = target_dir / f"{skills._STAGING_PREFIX}abc123"
+        orphan.mkdir()
+        (orphan / "leftover.txt").write_text("leftover", encoding="utf-8")
 
         result = skills._InstallResult()
         with patch("pathlib.Path.home", return_value=tmp_path):
@@ -2648,11 +2651,53 @@ class TestInstallSkillCopyTempCleanup:
             )
 
         assert len(result.installed) == 1
-        # New target must replace the old one and contain only the source content.
         assert (target / "SKILL.md").is_file()
         assert not (target / "stale-file.txt").exists()
-        # Temp directory must be cleaned up after the swap.
-        assert not leftover_temp.exists()
+        # The orphan is gone, and this run's own staging dir left nothing behind.
+        assert not orphan.exists()
+        assert not list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
+
+    def test_never_deletes_a_directory_it_did_not_create(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Unrelated hidden directories in the target survive an install.
+
+        Staging used to use predictable sibling names (``.<skill>.tmp`` /
+        ``.<skill>.old``) and cleared them before use, so a directory the installer
+        never created could be recursively deleted. Staging is now a fresh
+        ``mkdtemp``, and the sweep matches only its own prefix, so nothing outside
+        that prefix is ever touched.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "stale-file.txt").write_text("old", encoding="utf-8")
+
+        # The exact names the old implementation would have wiped, plus a plain one.
+        bystanders = [
+            target_dir / ".developing-with-streamlit.tmp",
+            target_dir / ".developing-with-streamlit.old",
+            target_dir / ".developing-with-streamlit.newlink",
+            target_dir / ".my-notes",
+        ]
+        for d in bystanders:
+            d.mkdir()
+            (d / "precious.txt").write_text("do not delete", encoding="utf-8")
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert len(result.installed) == 1
+        for d in bystanders:
+            assert (d / "precious.txt").read_text() == "do not delete"
 
 
 class TestGetMetaSkillDir:
