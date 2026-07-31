@@ -569,6 +569,12 @@ def _install_skill_symlink(
             if target_path.exists() or target_path.is_symlink():
                 # The move-aside failed, so the old install is intact and the staged
                 # link is redundant. Drop it and let the caller fall back.
+                #
+                # Removing this branch happens to reach the same state today - the
+                # direct-lay attempt below would hit FileExistsError and unwind here
+                # anyway - so no test can isolate it. Keep it regardless: it means an
+                # intact install is never a target we attempt to overwrite, rather
+                # than relying on symlink_to refusing to.
                 shutil.rmtree(staging, ignore_errors=True)
                 return False
             # The old link is out of the way but the staged one wouldn't move, leaving

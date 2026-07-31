@@ -3151,9 +3151,12 @@ class TestInstallSkillCopyStaging:
         (target / "stale-file.txt").write_text("old", encoding="utf-8")
 
         # Stand in for another process mid-swap: its staging dir already holds the
-        # only copy of the installation it displaced.
+        # only copy of the installation it displaced. It carries the ownership marker,
+        # exactly as _open_staging_dir would have written it, so the marker check
+        # cannot be what spares it - only the age gate can.
         live = target_dir / f"{skills._STAGING_PREFIX}live99"
         (live / skills._STAGING_OLD).mkdir(parents=True)
+        (live / skills._STAGING_MARKER).touch()
         (live / skills._STAGING_OLD / "SKILL.md").write_text(
             "# Their only copy\n", encoding="utf-8"
         )
