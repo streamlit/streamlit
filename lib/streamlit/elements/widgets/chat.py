@@ -23,6 +23,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
+    TypeAlias,
     cast,
     overload,
 )
@@ -89,9 +90,11 @@ _ACCEPTED_AUDIO_MIME_TYPES: frozenset[str] = frozenset(
     }
 )
 
+_ChatInputValueItem: TypeAlias = str | list[UploadedFile] | UploadedFile | None
+
 
 @dataclass
-class ChatInputValue(MutableMapping[str, Any]):
+class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     """Represents the value returned by `st.chat_input` after user interaction.
 
     This dataclass contains the user's input text, any files uploaded, and optionally
@@ -146,7 +149,19 @@ class ChatInputValue(MutableMapping[str, Any]):
             return False
         return key in self._get_included_keys()
 
-    def __getitem__(self, item: str) -> str | list[UploadedFile] | UploadedFile | None:
+    @overload
+    def __getitem__(self, item: Literal["text"]) -> str: ...
+
+    @overload
+    def __getitem__(self, item: Literal["files"]) -> list[UploadedFile]: ...
+
+    @overload
+    def __getitem__(self, item: Literal["audio"]) -> UploadedFile | None: ...
+
+    @overload
+    def __getitem__(self, item: str) -> _ChatInputValueItem: ...
+
+    def __getitem__(self, item: str) -> _ChatInputValueItem:
         if item not in self._get_included_keys():
             raise KeyError(f"Invalid key: {item}")
         try:
@@ -181,10 +196,8 @@ class ChatInputValue(MutableMapping[str, Any]):
         except AttributeError:  # pragma: no cover - defensive
             raise KeyError(f"Invalid key: {key}") from None
 
-    def to_dict(self) -> dict[str, str | list[UploadedFile] | UploadedFile | None]:
-        result: dict[str, str | list[UploadedFile] | UploadedFile | None] = {
-            "text": self.text
-        }
+    def to_dict(self) -> dict[str, _ChatInputValueItem]:
+        result: dict[str, _ChatInputValueItem] = {"text": self.text}
         if self._include_files:
             result["files"] = self.files
         if self._include_audio:

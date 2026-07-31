@@ -102,14 +102,29 @@ _ROW_SELECTION_MODES: Final[set[SelectionMode]] = {
 }
 
 
-class DataframeSelectionState(TypedDict, total=False):
+class DataframeSelectionStateInput(TypedDict, total=False):
+    """The accepted dictionary schema for a dataframe selection."""
+
+    rows: list[int]
+    columns: list[str]
+    cells: list[tuple[int, str]]
+
+
+class DataframeStateInput(TypedDict):
+    """The accepted dictionary schema for a dataframe event state."""
+
+    selection: DataframeSelectionStateInput
+
+
+class DataframeSelectionState(ReadOnlyAttributeDictionary):
     """
     The schema for the dataframe selection state.
 
     The selection state is stored in a dictionary-like object that supports both
     key and attribute notation. Selection states can be programmatically set
-    through Session State by assigning a ``DataframeSelectionState`` dictionary
-    to the ``"selection"`` key of a ``DataframeState`` dictionary.
+    through Session State by assigning a dictionary matching
+    ``DataframeSelectionStateInput`` to the ``"selection"`` key of a
+    ``DataframeStateInput`` dictionary.
 
     Programmatic selection is supported for all selection modes
     except ``"multi-cell"``. If ``"single-cell"`` isn't included in the
@@ -211,8 +226,23 @@ class DataframeSelectionState(TypedDict, total=False):
     columns: list[str]
     cells: list[tuple[int, str]]
 
+    @overload
+    def __getitem__(self, key: Literal["rows"]) -> list[int]: ...
 
-class DataframeState(TypedDict, total=False):
+    @overload
+    def __getitem__(self, key: Literal["columns"]) -> list[str]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["cells"]) -> list[tuple[int, str]]: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
+
+
+class DataframeState(ReadOnlyAttributeDictionary):
     """
     The schema for the dataframe event state.
 
@@ -229,24 +259,43 @@ class DataframeState(TypedDict, total=False):
     selection : dict
         The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
-        The attributes are described by the ``DataframeSelectionState``
-        dictionary schema.
+        The attributes are described by ``DataframeSelectionState``.
 
     """
 
     selection: DataframeSelectionState
+
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to return DataframeSelectionState. Use
+    # dict.__getitem__ for the selection key so the read-only base class does
+    # not re-wrap the already-typed nested instance.
+    @overload
+    def __getitem__(self, key: Literal["selection"]) -> DataframeSelectionState: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, DataframeSelectionState):
+                return DataframeSelectionState(item)
+            return item
+        return super().__getitem__(key)
 
 
 @dataclass
 class DataframeSelectionSerde:
     """DataframeSelectionSerde is used to serialize and deserialize the dataframe selection state."""
 
-    selection_default: DataframeState | None = None
+    selection_default: DataframeStateInput | None = None
     is_required_row_mode: bool = False
     num_rows: int = 0
 
     def deserialize(self, ui_value: str | None) -> DataframeState:
-        empty_selection_state: DataframeState = {
+        # Keep the empty selection as a plain dict until the end so required-row
+        # and missing-key mutations below can still run before we wrap.
+        empty_selection_state: dict[str, Any] = {
             "selection": {
                 "rows": [],
                 "columns": [],
@@ -255,12 +304,12 @@ class DataframeSelectionSerde:
         }
 
         if ui_value is not None:
-            selection_state: DataframeState = json.loads(ui_value)
+            selection_state: Any = json.loads(ui_value)
         elif self.selection_default is not None:
             # When a selection_default is provided, use it as the initial
             # deserialized value so the first-render Python return matches
             # the default selection the frontend will display.
-            selection_state = self.selection_default
+            selection_state = {"selection": dict(self.selection_default["selection"])}
         else:
             selection_state = empty_selection_state
 
@@ -280,8 +329,10 @@ class DataframeSelectionSerde:
             # This is necessary since there isn't a concept of tuples in JSON
             # The format that the data is transferred to the backend.
             selection_state["selection"]["cells"] = [
-                tuple(cell)  # type: ignore
-                for cell in selection_state["selection"]["cells"]
+                tuple(cell)
+                for cell in cast(
+                    "list[list[Any]]", selection_state["selection"]["cells"]
+                )
             ]
 
         # In single-row-required mode, auto-select the first row if no rows
@@ -293,9 +344,14 @@ class DataframeSelectionSerde:
         ):
             selection_state["selection"]["rows"] = [0]
 
-        return cast("DataframeState", ReadOnlyAttributeDictionary(selection_state))
+        # Eagerly wrap selection so bracket access returns a stable typed
+        # instance instead of creating a shallow copy on every access.
+        selection_state["selection"] = DataframeSelectionState(
+            selection_state["selection"]
+        )
+        return DataframeState(selection_state)
 
-    def serialize(self, state: DataframeState) -> str:
+    def serialize(self, state: DataframeState | DataframeStateInput) -> str:
         return json.dumps(state)
 
 
@@ -383,7 +439,7 @@ def _validate_selection_state(
     num_rows: int,
     column_names: list[str],
     selection_mode_set: set[SelectionMode],
-) -> DataframeState:
+) -> DataframeStateInput:
     """Validate a programmatically set selection state.
 
     Parameters
@@ -416,7 +472,7 @@ def _validate_selection_state(
 
     selection = value["selection"]
 
-    validated_selection: DataframeSelectionState = {
+    validated_selection: DataframeSelectionStateInput = {
         "rows": [],
         "columns": [],
         "cells": [],
@@ -563,7 +619,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["ignore"] = "ignore",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-        selection_default: DataframeState | None = None,
+        selection_default: DataframeStateInput | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
@@ -583,7 +639,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-        selection_default: DataframeState | None = None,
+        selection_default: DataframeStateInput | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
@@ -603,7 +659,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-        selection_default: DataframeState | None = None,
+        selection_default: DataframeStateInput | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
@@ -867,7 +923,7 @@ class ArrowMixin:
             internal placeholder for the dataframe element. Otherwise, this
             command returns a dictionary-like object that supports both key and
             attribute notation. The attributes are described by the
-            ``DataframeState`` dictionary schema.
+            ``DataframeState`` class.
 
         Examples
         --------
@@ -1178,7 +1234,7 @@ class ArrowMixin:
             normalized_selection_mode = tuple(sorted(selection_mode_set))
 
             selection_default_json: str | None = None
-            validated_default: DataframeState | None = None
+            validated_default: DataframeStateInput | None = None
             if selection_default is not None:
                 validated_default = _validate_selection_state(
                     selection_default,
@@ -1240,16 +1296,10 @@ class ArrowMixin:
                     layout_config=layout_config,
                     has_one_shot_effect=True,
                 )
-                # Return validated state wrapped in ReadOnlyAttributeDictionary for attribute-style access.
-                return cast(
-                    "DataframeState", ReadOnlyAttributeDictionary(validated_state)
-                )
+                return DataframeState(validated_state)
 
             self.dg._enqueue("dataframe", proto, layout_config=layout_config)
-            # Wrap in ReadOnlyAttributeDictionary for attribute-style access
-            return cast(
-                "DataframeState", ReadOnlyAttributeDictionary(widget_state.value)
-            )
+            return DataframeState(widget_state.value)
         return self.dg._enqueue("dataframe", proto, layout_config=layout_config)
 
     @property
