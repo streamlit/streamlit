@@ -98,7 +98,8 @@ st.iframe(
 
 ### Input Modes
 
-The `src` parameter accepts four types of input, auto-detected in this order:
+The `src` parameter accepts four types of input (see "Input type detection" below
+for the exact precedence):
 
 **1. Absolute URL** — Embed external content:
 
@@ -123,15 +124,14 @@ from pathlib import Path
 
 # HTML files are read and embedded directly
 st.iframe(Path("reports/dashboard.html"), height=500)
-st.iframe("reports/dashboard.html", height=500)  # Also works with string paths
 
 # Non-HTML files (PDF, images, SVG, etc.) are served via media storage
 st.iframe(Path("documents/manual.pdf"), height=600)
-st.iframe("charts/visualization.svg", height=400)
+st.iframe(Path("charts/visualization.svg"), height=400)
 ```
 
-When a path is detected (either a `Path` object or a string that resolves to an existing
-file), Streamlit handles it based on file type:
+Local files must be passed as `Path` objects. Streamlit handles them based on file
+type:
 
 - **HTML files** (`.html`, `.htm`, `.xhtml`): Read content and embed using `srcdoc`
 - **Other files** (PDF, images, SVG, text, etc.): Upload to media file storage and
@@ -150,13 +150,15 @@ st.iframe("<h1>Hello World</h1><p>This is embedded HTML.</p>", height=100)
 Streamlit determines the input type in this order:
 
 1. If `src` is a `Path` object → local file path
-2. If `src` starts with `http://`, `https://`, `data:`, or `/` → URL
-3. If `src` is a string that exists as a local file → local file path
-4. Otherwise → HTML string (embedded via `srcdoc`)
+2. If `src` starts with `http://`, `https://`, or `data:` → absolute URL
+3. If `src` is a deprecated string file path → show a migration warning and
+   treat it as an HTML string
+4. If `src` starts with `/` → relative URL
+5. Otherwise → HTML string (embedded via `srcdoc`)
 
-This order ensures URL patterns are detected before filesystem checks, preventing relative URLs
-like `/app/static/report.html` from being misinterpreted as file paths. Plain strings that don't
-match URLs or existing files (e.g., `"foo"`) are treated as HTML and embedded via `srcdoc`.
+Plain strings are never read from the local filesystem. During the migration
+period, strings that resolve to existing files are detected only to show a
+warning directing the developer to wrap the path in `Path`.
 
 **Local file handling:**
 

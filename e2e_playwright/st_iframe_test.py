@@ -18,12 +18,12 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.app_utils import check_top_level_class, expect_warning
 
 # Total number of st.iframe elements in the test app
 # 1: HTML string, 2: Fixed dims, 3: Data URL, 4: Stretch width, 5: Content width,
-# 6: Tab index, 7: Auto-sizing height, 8: Auto-sizing both
-ST_IFRAME_COUNT = 8
+# 6: Tab index, 7: Auto-sizing height, 8: Auto-sizing both, 9: String file path
+ST_IFRAME_COUNT = 9
 
 
 def test_iframe_elements_render(app: Page):
@@ -103,6 +103,19 @@ def test_iframe_no_tab_index_by_default(app: Page):
     # First iframe doesn't have tab_index set - check attribute doesn't exist
     # Using regex that matches any value to verify attribute is absent
     expect(first_iframe).not_to_have_attribute("tabindex", re.compile(r".*"))
+
+
+def test_iframe_from_string_file_path(app: Page):
+    """Test that string file paths show a warning and aren't read."""
+    expect_warning(
+        app,
+        "Passing a local file path as a string to st.iframe is no longer supported.",
+    )
+
+    string_path_iframe = app.get_by_test_id("stIFrame").nth(8)
+    iframe_body = string_path_iframe.content_frame.locator("body")
+    expect(iframe_body).to_contain_text("test_div.html")
+    expect(iframe_body).not_to_contain_text("This is a div with some inline styles.")
 
 
 def test_check_top_level_class(app: Page):
