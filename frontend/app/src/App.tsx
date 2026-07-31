@@ -331,6 +331,15 @@ export class App extends PureComponent<Props, State> {
   // only by a full page reload (a new App instance).
   private skillsNudgeShown: boolean = false
 
+  // Whether a suppression reason has been reported this page load. Tracked
+  // separately from `skillsNudgeShown` so recording a suppression does NOT
+  // prevent the nudge from appearing later in the same page load: eligibility is
+  // recomputed on every rerun, and `check_failed` in particular is transient (a
+  // thrown eligibility check), so a single bad rerun must not withhold the nudge
+  // until the user reloads. Deduping the two events independently still keeps a
+  // reconnect from inflating either count.
+  private skillsNudgeSuppressionReported: boolean = false
+
   public constructor(props: Props) {
     super(props)
 
@@ -1569,14 +1578,17 @@ export class App extends PureComponent<Props, State> {
       this.trackSkillsNudge("skillsNudgeShown")
     } else if (
       initialize.skillsNudgeSuppressedReason &&
+      !this.skillsNudgeSuppressionReported &&
       !this.skillsNudgeShown
     ) {
       // The nudge was eligible server-side but the server withheld it — because
-      // the browser isn't on a direct-loopback connection (Docker/VM/tunnel), or
-      // because a one-click install would only conflict. Record the reason —
-      // once per page load, reusing the same guard so a reconnect can't
-      // double-count — so suppression is measurable instead of silent.
-      this.skillsNudgeShown = true
+      // the browser isn't on a direct-loopback connection (Docker/VM/tunnel),
+      // because a one-click install would only conflict, or because the
+      // eligibility check itself failed. Record the reason once per page load so
+      // suppression is measurable instead of silent, and so a reconnect can't
+      // double-count it. Also skipped once the nudge HAS been shown, since the
+      // funnel treats shown and suppressed as mutually exclusive per session.
+      this.skillsNudgeSuppressionReported = true
       this.trackSkillsNudge(
         skillsNudgeSuppressedLabel(initialize.skillsNudgeSuppressedReason)
       )

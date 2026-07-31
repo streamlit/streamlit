@@ -315,7 +315,7 @@ def _symlink_target_would_conflict(target_path: Path) -> bool:
     blocking a project (symlink) install.
     """
     # Shared by _install_skill_symlink (which skips such a target) and the nudge
-    # show-gate (_project_install_would_be_refused) so the two cannot drift.
+    # show-gate (_one_click_install_would_be_refused) so the two cannot drift.
     # Symlinks are excluded because the installer replaces any symlink named
     # after a bundled skill; a broken one has exists() == False regardless.
     return target_path.exists() and not target_path.is_symlink()
@@ -1106,7 +1106,7 @@ def _log_nudge_suppressed_by_conflict(blocked_paths: tuple[str, ...]) -> None:
     )
 
 
-def _project_install_would_be_refused(app_dir: str | None) -> bool:
+def _one_click_install_would_be_refused(app_dir: str | None) -> bool:
     """Return whether the one-click install the nudge triggers would refuse
     outright, hitting a conflict at every target it could write to.
 
@@ -1174,7 +1174,7 @@ def _project_install_would_be_refused(app_dir: str | None) -> bool:
 # deliberately reuses the install-failure reason name for the same cause, so
 # "we withheld the nudge" and "we nudged and the install conflicted anyway" are
 # comparable in a single query.
-NudgeSuppressionReason = Literal[
+_NudgeSuppressionReason = Literal[
     "",  # Not withheld - show the nudge.
     "conflict",  # A one-click install would refuse at every install target.
     "dismissed",  # The user asked never to see it again.
@@ -1197,7 +1197,7 @@ def should_show_skills_nudge(app_dir: str | None = None) -> bool:
     return not nudge_suppression_reason(app_dir)
 
 
-def nudge_suppression_reason(app_dir: str | None = None) -> NudgeSuppressionReason:
+def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionReason:
     """Return why the in-app "install skills" nudge is being withheld, or ``""``
     when it should be shown.
 
@@ -1243,7 +1243,7 @@ def nudge_suppression_reason(app_dir: str | None = None) -> NudgeSuppressionReas
         # every target; the other always-fail causes (missing bundled package, a
         # copy that errors on permissions/path-length) stay fail-open, since those
         # can resolve without the user removing anything.
-        if _project_install_would_be_refused(app_dir):
+        if _one_click_install_would_be_refused(app_dir):
             return "conflict"
         return ""
     except Exception:  # pragma: no cover - defensive

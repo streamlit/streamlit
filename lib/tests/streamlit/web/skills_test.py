@@ -1566,7 +1566,7 @@ def _evaluate_nudge_reason(
         # hits the real filesystem (a dev machine's ~/.claude makes .claude/skills
         # a real target) and may run the symlink probe.
         patch(
-            "streamlit.web.skills._project_install_would_be_refused",
+            "streamlit.web.skills._one_click_install_would_be_refused",
             return_value=would_be_refused,
         ),
     ):
@@ -2033,10 +2033,11 @@ class TestCopyTargetWouldConflict:
         assert not free_result.skipped
 
 
-class TestProjectInstallWouldBeRefused:
-    """_project_install_would_be_refused mirrors the installer: it returns True
-    only when EVERY (skill, target) pair is blocked by a real file/dir AND
-    symlinks are supported (the only mode that hard-refuses). It reuses the
+class TestOneClickInstallWouldBeRefused:
+    """_one_click_install_would_be_refused mirrors the installer mode-aware: it
+    returns True only when the mode the installer would actually use is fully
+    blocked — every project symlink target by a real file/dir, or, when symlinks
+    are unsupported, every global copy target by a real file. It reuses the
     installer's own resolvers so the show-gate cannot drift from the install."""
 
     @staticmethod
@@ -2061,7 +2062,7 @@ class TestProjectInstallWouldBeRefused:
                 skills, "_symlinks_supported", return_value=symlinks_supported
             ),
         ):
-            return skills._project_install_would_be_refused(None)
+            return skills._one_click_install_would_be_refused(None)
 
     def test_file_at_sole_target_is_refused(
         self, tmp_path: Path, mock_source_skills_dir: Path
@@ -2211,7 +2212,7 @@ class TestProjectInstallWouldBeRefused:
         with patch.object(
             skills, "_get_source_skills_dir", side_effect=OSError("boom")
         ):
-            assert skills._project_install_would_be_refused(None) is False
+            assert skills._one_click_install_would_be_refused(None) is False
 
 
 class TestNudgeSuppressedWhenInstallWouldConflict:
@@ -2404,7 +2405,7 @@ class TestNudgeGateSideEffects:
         ):
             skills._symlinks_supported.cache_clear()
             for _ in range(3):
-                assert skills._project_install_would_be_refused(None) is True
+                assert skills._one_click_install_would_be_refused(None) is True
 
         assert mock_temp_dir.call_count == 1
         assert list(project.glob(".streamlit-skills-*")) == []
@@ -2428,7 +2429,7 @@ class TestNudgeGateSideEffects:
         ):
             skills._log_nudge_suppressed_by_conflict.cache_clear()
             for _ in range(3):
-                assert skills._project_install_would_be_refused(None) is True
+                assert skills._one_click_install_would_be_refused(None) is True
 
         assert mock_warning.call_count == 1
         logged = mock_warning.call_args.args[-1]
@@ -2455,7 +2456,7 @@ class TestNudgeGateSideEffects:
             patch.object(skills._LOGGER, "warning") as mock_warning,
         ):
             skills._log_nudge_suppressed_by_conflict.cache_clear()
-            assert skills._project_install_would_be_refused(None) is False
+            assert skills._one_click_install_would_be_refused(None) is False
 
         mock_warning.assert_not_called()
 
