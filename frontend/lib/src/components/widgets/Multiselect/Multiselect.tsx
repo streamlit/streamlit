@@ -533,9 +533,26 @@ const Multiselect: FC<Props> = props => {
           last.focus()
           focusedTagIndexRef.current = tags.length - 1
         }
+      } else if (e.key === " ") {
+        e.preventDefault()
       }
     },
     [handleTagGroupRemove, value]
+  )
+
+  const handleTagPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLSpanElement>): void => {
+      const clicked = e.currentTarget
+      const container = clicked.parentElement
+      if (!container) return
+      const tags = container.querySelectorAll<HTMLElement>("[data-tag]")
+      tags.forEach(t => {
+        t.tabIndex = t === clicked ? 0 : -1
+      })
+      const idx = Number(clicked.dataset.tagIndex)
+      focusedTagIndexRef.current = idx
+    },
+    []
   )
 
   const handleClearAll = useCallback((): void => {
@@ -640,6 +657,11 @@ const Multiselect: FC<Props> = props => {
         value.length > 0
       ) {
         e.preventDefault()
+        scrollLockRef.current = true
+        if (tagsContainerRef.current) {
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+          scrollTopRef.current = tagsContainerRef.current.scrollTop
+        }
         const newValue = valueRef.current.slice(0, -1)
         valueRef.current = newValue
         setValueWithSource({ value: newValue, fromUi: true })
@@ -728,6 +750,7 @@ const Multiselect: FC<Props> = props => {
             <StyledTagsContainer
               ref={tagsContainerRef}
               onScroll={handleTagsScroll}
+              data-testid="stMultiSelectTagsContainer"
             >
               {value.length > 0 && (
                 <span
@@ -748,6 +771,9 @@ const Multiselect: FC<Props> = props => {
                       data-tag=""
                       data-tag-index={idx}
                       onKeyDown={disabled ? undefined : handleTagKeyDown}
+                      onPointerDown={
+                        disabled ? undefined : handleTagPointerDown
+                      }
                     >
                       <StyledTagText title={v}>{v}</StyledTagText>
                       {!disabled && (

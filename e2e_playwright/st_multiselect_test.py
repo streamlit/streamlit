@@ -23,6 +23,7 @@ from e2e_playwright.conftest import (
     build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -581,11 +582,11 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
     multiselect_elem = get_multiselect(app, "multiselect 17 - show maxHeight")
 
     # Get the tags container (scrollable area inside the trigger group)
-    value_container = multiselect_elem.locator('[role="group"] > div').first
+    value_container = multiselect_elem.get_by_test_id("stMultiSelectTagsContainer")
 
-    # Scroll to the bottom of the tags container
+    # Scroll to the bottom of the tags container and wait for scroll to settle
     value_container.evaluate("el => { el.scrollTop = el.scrollHeight; }")
-    app.wait_for_timeout(50)
+    wait_until(app, lambda: value_container.evaluate("el => el.scrollTop") > 0)
 
     # Get initial scroll position (should be > 0 since there are many items)
     initial_scroll = value_container.evaluate("el => el.scrollTop")
