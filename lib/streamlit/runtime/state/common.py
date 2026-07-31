@@ -194,6 +194,13 @@ class WidgetMetadata(Generic[T]):
     # zero-width range).
     allow_url_duplicates: bool = False
 
+    # Whether the widget is disabled. A disabled widget cannot be interacted with
+    # in the browser, so it must never accept a value coming from the frontend.
+    # This is enforced server-side (see SessionState.register_widget): any incoming
+    # value for a disabled widget is discarded and its on-change callback is
+    # suppressed, guarding against forged BackMsg/WidgetState values.
+    disabled: bool = False
+
     def __repr__(self) -> str:
         return util.repr_(self)
 

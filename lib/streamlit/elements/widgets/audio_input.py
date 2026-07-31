@@ -330,6 +330,7 @@ class AudioInputMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="file_uploader_state_value",
+            disabled=disabled,
         )
 
         self.dg._enqueue("audio_input", audio_input_proto, layout_config=layout_config)

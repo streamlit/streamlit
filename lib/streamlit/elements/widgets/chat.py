@@ -1062,6 +1062,7 @@ class ChatMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="chat_input_value",
+            disabled=disabled,
         )
 
         layout_config = create_layout_config(

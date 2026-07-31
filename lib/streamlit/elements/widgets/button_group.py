@@ -1308,6 +1308,7 @@ class ButtonGroupMixin:
             serializer=serializer,
             ctx=ctx,
             value_type="string_array_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             clearable=True,

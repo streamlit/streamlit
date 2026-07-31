@@ -394,6 +394,7 @@ class MenuButtonMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_trigger_value",
+            disabled=disabled,
         )
 
         if ctx:
