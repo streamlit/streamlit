@@ -24,8 +24,7 @@ module:
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 
-def parse_upload(file: UploadedFile) -> dict[str, str]:
-    ...
+def parse_upload(file: UploadedFile) -> dict[str, str]: ...
 ```
 
 The same problem applies to other Streamlit-defined return values. For example,
