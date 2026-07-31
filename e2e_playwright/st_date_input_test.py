@@ -172,9 +172,10 @@ def test_handle_value_changes_non_default_format(app: Page):
         "stDateInputField"
     )
     # MM-DD-YYYY format: segments are month, day, year (left-to-right)
-    type_date(date_field, "03", "15", "2024")
+    # Use a date within the widget's allowed range (1960/01/01 - 1980/01/01)
+    type_date(date_field, "03", "15", "1975")
     reset_focus(app)
-    expect_markdown(app, "Value 9: 2024-03-15")
+    expect_markdown(app, "Value 9: 1975-03-15")
 
 
 def test_empty_date_input_behaves_correctly(

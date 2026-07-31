@@ -329,16 +329,18 @@ function DateInput({
   // partial edits don't persist.
   const handleClose = useCallback(
     (hasPlaceholderSegments?: boolean): void => {
-      if (!isEmpty && !hasPlaceholderSegments && !error) {
-        // User made a complete valid edit or just opened/closed without
-        // changing anything — keep the current value.
+      if (!isEmpty && !hasPlaceholderSegments) {
+        // User made a complete edit (valid value committed, or invalid value
+        // with error shown) or just opened/closed without changing anything.
+        // Keep current state including any error indicator so the user sees
+        // why their out-of-range input was not accepted.
         return
       }
       resetError()
       setValueWithSource({ value: element.default, fromUi: true })
       setIsEmpty(element.default.length === 0)
     },
-    [isEmpty, element.default, setValueWithSource, resetError, error]
+    [isEmpty, element.default, setValueWithSource, resetError]
   )
 
   const singleValue = useMemo(
