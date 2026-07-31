@@ -1736,6 +1736,19 @@ class TestInstallSkillSymlinkEdgeCases:
         assert (target / "SKILL.md").read_text() == "# Working install\n"
         assert not result.installed
 
+    def _fail_from_nth_rename(self, n: int) -> object:
+        """Rename mock that fails the nth call and every one after it."""
+        real = skills.Path.rename
+        calls = {"n": 0}
+
+        def _rename(self: Path, target: object) -> object:
+            calls["n"] += 1
+            if calls["n"] >= n:
+                raise OSError("Access is denied")
+            return real(self, target)  # type: ignore[arg-type]
+
+        return _rename
+
     def _fail_nth_rename(self, n: int) -> object:
         """Rename mock that fails only the nth call, letting the others through."""
         real = skills.Path.rename
@@ -1809,6 +1822,58 @@ class TestInstallSkillSymlinkEdgeCases:
         assert target.is_symlink()
         assert (target / "SKILL.md").read_text() == "# Test Skill\n"
         assert not list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
+
+    def test_keeps_displaced_link_when_even_the_restore_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """When the restore fails too, the displaced link is not deleted with staging.
+
+        Move-aside succeeded, so staging holds the only copy of the old link. The swap,
+        the direct re-lay and the restore all fail — and the cleanup that follows must
+        not take staging with it, or the move-aside would have destroyed exactly what it
+        was there to preserve. The ownership marker is dropped so no later sweep can
+        take it either.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir, target = self._existing_project_link(tmp_path)
+
+        real_symlink_to = skills.Path.symlink_to
+        calls = {"n": 0}
+
+        def _only_staged_link_works(
+            self: Path, link_target: object, target_is_directory: bool = False
+        ) -> None:
+            calls["n"] += 1
+            if calls["n"] == 1:
+                real_symlink_to(
+                    self, link_target, target_is_directory=target_is_directory
+                )  # type: ignore[arg-type]
+                return
+            raise OSError("A required privilege is not held by the client")
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            # Move-aside is rename #1 and must work; every later rename fails, so both
+            # the swap and the restore are blocked.
+            patch.object(skills.Path, "rename", self._fail_from_nth_rename(2)),
+            patch.object(skills.Path, "symlink_to", _only_staged_link_works),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert not success
+        assert not result.installed
+        # The old link survives inside staging, and staging is now un-sweepable.
+        staged = list(target_dir.glob(f"{skills._STAGING_PREFIX}*"))
+        assert len(staged) == 1
+        assert (staged[0] / skills._STAGING_OLD).is_symlink()
+        assert not (staged[0] / skills._STAGING_MARKER).exists()
 
     def test_restores_displaced_link_when_recovery_also_fails(
         self, tmp_path: Path, mock_source_skills_dir: Path

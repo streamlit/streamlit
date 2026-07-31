@@ -596,6 +596,14 @@ def _install_skill_symlink(
                 # populated even though this install failed.
                 with contextlib.suppress(OSError):
                     displaced.rename(target_path)
+                if not (target_path.exists() or target_path.is_symlink()):
+                    # The restore didn't land either, so staging holds the only copy
+                    # of the old link. Deleting it here would destroy the very thing
+                    # the move-aside preserved. Keep it, and drop the ownership marker
+                    # so the sweep can't take it later either.
+                    with contextlib.suppress(OSError):
+                        (staging / _STAGING_MARKER).unlink()
+                    return False
                 shutil.rmtree(staging, ignore_errors=True)
                 return False
         shutil.rmtree(staging, ignore_errors=True)
