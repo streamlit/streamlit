@@ -88,7 +88,11 @@ def update_root_pyproject_toml(project_name: str) -> None:
 
 
 def _update_pyproject_self_references(project_name: str) -> None:
-    """Rename `streamlit[extras]` self-references to the new project name."""
+    """Rename `streamlit[extras]` self-references to the new project name.
+
+    Aborts if any self-reference is left unrenamed so the nightly build
+    cannot silently depend on the stable `streamlit` package.
+    """
     # Matches lines like `  "streamlit[extras]",`, with an optional trailing comma.
     dependency_pattern = r'(?P<pre_match>^\s*")streamlit(?P<post_match>\[[^"]+\]",?$)'
     # Fail if any self-reference was left unrenamed. The count check only
@@ -113,6 +117,9 @@ def _update_pyproject_self_references(project_name: str) -> None:
                 f'In file "{file_path}", did not find regex "{dependency_pattern}"'
             )
 
+        # Skip the guard for identity renames, since an unchanged
+        # `streamlit[...]` reference would still match `leftover_pattern`
+        # and falsely abort.
         if project_name != "streamlit" and re.search(
             leftover_pattern, content, flags=re.MULTILINE
         ):
