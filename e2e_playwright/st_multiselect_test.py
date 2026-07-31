@@ -23,6 +23,7 @@ from e2e_playwright.conftest import (
     build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -581,22 +582,36 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
     multiselect_elem = get_multiselect(app, "multiselect 17 - show maxHeight")
 
     # Get the tags container (scrollable area inside the trigger group)
-    value_container = multiselect_elem.locator('[role="group"] > div').first
+    value_container = multiselect_elem.get_by_test_id("stMultiSelectTagsContainer")
 
-    # Scroll to middle of the value container (not bottom, to avoid clamping issues
-    # when items are removed and scrollHeight decreases)
-    value_container.evaluate("el => { el.scrollTop = el.scrollHeight / 2; }")
+    # Scroll to the bottom of the tags container and wait for scroll to settle
+    value_container.evaluate("el => { el.scrollTop = el.scrollHeight; }")
+    wait_until(app, lambda: value_container.evaluate("el => el.scrollTop") > 0)
 
     # Get initial scroll position (should be > 0 since there are many items)
     initial_scroll = value_container.evaluate("el => el.scrollTop")
     assert initial_scroll > 0
 
-    # Remove an item by clicking its delete button
-    remove_from_multiselect(app, "multiselect 17 - show maxHeight", "twenty")
+    # Remove the last tag ("forty") which is visible at the bottom scroll position.
+    # Using the last tag avoids Playwright's auto-scroll-into-view changing scrollTop
+    # before the click handler fires.
+    remove_from_multiselect(app, "multiselect 17 - show maxHeight", "forty")
 
-    # Verify scroll position is preserved
-    final_scroll = value_container.evaluate("el => el.scrollTop")
-    assert final_scroll == initial_scroll
+    # Verify scroll position is preserved (or clamped to the new max if content shrank).
+    # The scroll restore happens in a rAF callback, so use wait_until.
+    wait_until(
+        app,
+        lambda: (
+            abs(
+                value_container.evaluate("el => el.scrollTop")
+                - min(
+                    initial_scroll,
+                    value_container.evaluate("el => el.scrollHeight - el.clientHeight"),
+                )
+            )
+            <= 1
+        ),
+    )
 
 
 def test_multiselect_custom_objects_without_eq(app: Page):
@@ -711,13 +726,16 @@ def test_multiselect_query_param_seeding_multiple(page: Page, app_base_url: str)
 def test_multiselect_query_param_updates_url(app: Page):
     """Test that changing a bound multiselect updates the URL."""
     select_for_multiselect(app, "Bound multiselect", "Red", True)
-    expect(app).to_have_url(re.compile(r"\?bound_multi=Red"))
+    # Assert text first to confirm the rerun completed before checking the URL
     expect_text(app, "bound_multi: ['Red']")
+    expect(app).to_have_url(re.compile(r"\?bound_multi=Red"), timeout=10_000)
 
     # Add a second selection
     select_for_multiselect(app, "Bound multiselect", "Blue", True)
-    expect(app).to_have_url(re.compile(r"bound_multi=Red&bound_multi=Blue"))
     expect_text(app, "bound_multi: ['Red', 'Blue']")
+    expect(app).to_have_url(
+        re.compile(r"bound_multi=Red&bound_multi=Blue"), timeout=10_000
+    )
 
 
 def test_multiselect_query_param_default_override(page: Page, app_base_url: str):

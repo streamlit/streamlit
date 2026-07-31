@@ -64,6 +64,7 @@ import {
   SELECT_MATCHES_ID,
   useMultiselectFiltering,
 } from "~lib/hooks/useMultiselectFiltering"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isMobile } from "~lib/util/isMobile"
 import {
@@ -82,6 +83,7 @@ import {
   StyledOpenButton,
   StyledPopover,
   StyledTag,
+  StyledTagGroup,
   StyledTagRemoveButton,
   StyledTagsContainer,
   StyledTagText,
@@ -135,13 +137,16 @@ const updateWidgetMgrState = (
  * open/close methods and focusedKey via refs. Same pattern as the Selectbox widget.
  */
 const DropdownController = memo<{
-  openRef: React.MutableRefObject<(() => void) | null>
+  openRef: React.MutableRefObject<
+    ((focusStrategy?: "first" | "last" | null) => void) | null
+  >
   focusedKeyRef: React.MutableRefObject<Key | null>
 }>(({ openRef, focusedKeyRef }) => {
   const state = useContext(ComboBoxStateContext)
   useEffect(() => {
     if (state) {
-      openRef.current = () => state.open("first", "manual")
+      openRef.current = (focusStrategy = null) =>
+        state.open(focusStrategy, "manual")
     }
     return () => {
       openRef.current = null
@@ -153,37 +158,22 @@ const DropdownController = memo<{
 })
 DropdownController.displayName = "DropdownController"
 
-// TODO(mgbarnes): Replace manual tags with RAC TagGroup for arrow-key
-// navigation and Delete-to-remove on any focused tag.
-const TagRemoveButton = memo<{
-  value: string
-  onRemove: (value: string) => void
-}>(({ value, onRemove }) => (
-  <StyledTagRemoveButton
-    aria-label={`Remove ${value}`}
-    tabIndex={-1}
-    onClick={e => {
-      e.stopPropagation()
-      onRemove(value)
-    }}
+const TagRemoveIcon: FC = () => (
+  <svg
+    aria-hidden="true"
+    height="0.5em"
+    width="0.5em"
+    viewBox="0 0 10 10"
+    xmlns="http://www.w3.org/2000/svg"
   >
-    <svg
-      aria-hidden="true"
-      height="0.5em"
-      width="0.5em"
-      viewBox="0 0 10 10"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M9 1L5 5M1 9L5 5M5 5L1 1M5 5L9 9"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="2"
-      />
-    </svg>
-  </StyledTagRemoveButton>
-))
-TagRemoveButton.displayName = "TagRemoveButton"
+    <path
+      d="M9 1L5 5M1 9L5 5M5 5L1 1M5 5L9 9"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="2"
+    />
+  </svg>
+)
 
 /** Render a single option. Cast required: styled(ListBox) erases the generic item type. */
 const renderOption = (item: unknown): ReactElement => {
@@ -217,9 +207,12 @@ const Multiselect: FC<Props> = props => {
 
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const scrollbarGutterSize = useScrollbarGutterSize()
   const tagsContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const scrollTopRef = useRef(0)
+  const scrollLockRef = useRef(false)
+  const focusedTagIndexRef = useRef(0)
 
   const queryParamBinding = element.queryParamKey
     ? {
@@ -257,7 +250,9 @@ const Multiselect: FC<Props> = props => {
   useExecuteWhenChanged(() => setInputValue(""), [value])
 
   const isOpenRef = useRef(false)
-  const openDropdownRef = useRef<(() => void) | null>(null)
+  const openDropdownRef = useRef<
+    ((focusStrategy?: "first" | "last" | null) => void) | null
+  >(null)
   const focusedKeyRef = useRef<Key | null>(null)
 
   // In the sidebar, flip/shift are bounded by the viewport so the dropdown can
@@ -308,7 +303,6 @@ const Multiselect: FC<Props> = props => {
   )
 
   const disabled = props.disabled || placeholderDisable
-  const isClearable = element.default.length === 0
 
   // Max height: cut through 5th tag row
   const maxHeight = useMemo(() => {
@@ -337,15 +331,22 @@ const Multiselect: FC<Props> = props => {
     return "No results"
   }, [element.maxSelections, value.length])
 
-  // Preserve scroll position when tags are added/removed
+  // Preserve scroll position when tags are removed via UI interaction.
   useLayoutEffect(() => {
-    if (tagsContainerRef.current) {
-      tagsContainerRef.current.scrollTop = scrollTopRef.current
-    }
+    if (!scrollLockRef.current) return
+    const savedScroll = scrollTopRef.current
+    scrollLockRef.current = false
+    const container = tagsContainerRef.current
+    if (!container) return
+    requestAnimationFrame(() => {
+      container.scrollTop = savedScroll
+      scrollTopRef.current = savedScroll
+    })
   }, [value])
 
   const handleTagsScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: layout already computed during scroll event
+    if (scrollLockRef.current) return
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access
     scrollTopRef.current = e.currentTarget.scrollTop
   }, [])
 
@@ -451,13 +452,111 @@ const Multiselect: FC<Props> = props => {
     }
   }, [])
 
-  const handleRemoveTag = useCallback(
-    (tagValue: string): void => {
-      const newValue = valueRef.current.filter(v => v !== tagValue)
+  const handleTagGroupRemove = useCallback(
+    (keys: Set<Key>): void => {
+      scrollLockRef.current = true
+      if (tagsContainerRef.current) {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        scrollTopRef.current = tagsContainerRef.current.scrollTop
+      }
+      const keysToRemove = new Set([...keys].map(String))
+      const newValue = valueRef.current.filter(v => !keysToRemove.has(v))
       valueRef.current = newValue
       setValueWithSource({ value: newValue, fromUi: true })
     },
     [setValueWithSource]
+  )
+
+  const handleTagKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLSpanElement>): void => {
+      const tag = e.currentTarget
+      const container = tag.parentElement
+      if (!container) return
+
+      const tags = Array.from(
+        container.querySelectorAll<HTMLElement>("[data-tag]")
+      )
+      const idx = tags.indexOf(tag)
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault()
+        const prev = tags[idx - 1]
+        if (prev) {
+          tag.tabIndex = -1
+          prev.tabIndex = 0
+          prev.focus()
+          focusedTagIndexRef.current = idx - 1
+        }
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault()
+        const next = tags[idx + 1]
+        if (next) {
+          tag.tabIndex = -1
+          next.tabIndex = 0
+          next.focus()
+          focusedTagIndexRef.current = idx + 1
+        } else {
+          tag.tabIndex = -1
+          const first = tags[0]
+          if (first) first.tabIndex = 0
+          focusedTagIndexRef.current = 0
+          inputRef.current?.focus()
+        }
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault()
+        const tagValue = value[idx]
+        if (tagValue !== undefined) {
+          const nextFocus = tags[idx + 1] ?? tags[idx - 1]
+          handleTagGroupRemove(new Set([tagValue]))
+          if (nextFocus && nextFocus !== tag) {
+            // After removal, right neighbor slides to idx; left stays at idx-1
+            focusedTagIndexRef.current =
+              nextFocus === tags[idx + 1] ? idx : idx - 1
+            nextFocus.tabIndex = 0
+            nextFocus.focus({ preventScroll: true })
+          } else {
+            focusedTagIndexRef.current = 0
+            inputRef.current?.focus({ preventScroll: true })
+          }
+        }
+      } else if (e.key === "Home") {
+        e.preventDefault()
+        const first = tags[0]
+        if (first && first !== tag) {
+          tag.tabIndex = -1
+          first.tabIndex = 0
+          first.focus()
+          focusedTagIndexRef.current = 0
+        }
+      } else if (e.key === "End") {
+        e.preventDefault()
+        const last = tags[tags.length - 1]
+        if (last && last !== tag) {
+          tag.tabIndex = -1
+          last.tabIndex = 0
+          last.focus()
+          focusedTagIndexRef.current = tags.length - 1
+        }
+      } else if (e.key === " ") {
+        e.preventDefault()
+      }
+    },
+    [handleTagGroupRemove, value]
+  )
+
+  const handleTagPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLSpanElement>): void => {
+      const clicked = e.currentTarget
+      const container = clicked.parentElement
+      if (!container) return
+      const tags = container.querySelectorAll<HTMLElement>("[data-tag]")
+      tags.forEach(t => {
+        t.tabIndex = t === clicked ? 0 : -1
+      })
+      const idx = Number(clicked.dataset.tagIndex)
+      focusedTagIndexRef.current = idx
+    },
+    []
   )
 
   const handleClearAll = useCallback((): void => {
@@ -515,12 +614,6 @@ const Multiselect: FC<Props> = props => {
           setInputValue("")
           return
         }
-        if (!isOpenRef.current && isClearable && value.length > 0) {
-          e.preventDefault()
-          e.stopPropagation()
-          setValueWithSource({ value: [], fromUi: true })
-          return
-        }
       }
 
       // Creatable Enter: commit typed text as a new option.
@@ -568,6 +661,11 @@ const Multiselect: FC<Props> = props => {
         value.length > 0
       ) {
         e.preventDefault()
+        scrollLockRef.current = true
+        if (tagsContainerRef.current) {
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+          scrollTopRef.current = tagsContainerRef.current.scrollTop
+        }
         const newValue = valueRef.current.slice(0, -1)
         valueRef.current = newValue
         setValueWithSource({ value: newValue, fromUi: true })
@@ -578,7 +676,6 @@ const Multiselect: FC<Props> = props => {
       element.acceptNewOptions,
       element.maxSelections,
       element.options,
-      isClearable,
       isFilterNone,
       setValueWithSource,
       value,
@@ -611,6 +708,12 @@ const Multiselect: FC<Props> = props => {
     isMobile() &&
     element.options.length <= 10 &&
     !(element.acceptNewOptions ?? false)
+
+  // Derive clamped tag index for render — don't mutate ref during render
+  const clampedTagIndex = Math.min(
+    focusedTagIndexRef.current,
+    Math.max(0, value.length - 1)
+  )
 
   return (
     <div className="stMultiSelect" data-testid="stMultiSelect">
@@ -652,15 +755,41 @@ const Multiselect: FC<Props> = props => {
             <StyledTagsContainer
               ref={tagsContainerRef}
               onScroll={handleTagsScroll}
+              data-testid="stMultiSelectTagsContainer"
             >
-              {value.map(v => (
-                <StyledTag key={v} $disabled={disabled} data-tag="">
-                  <StyledTagText title={v}>{v}</StyledTagText>
-                  {!disabled && (
-                    <TagRemoveButton value={v} onRemove={handleRemoveTag} />
-                  )}
-                </StyledTag>
-              ))}
+              {value.length > 0 && (
+                <StyledTagGroup role="group" aria-label="Selected values">
+                  {value.map((v, idx) => (
+                    <StyledTag
+                      key={v}
+                      tabIndex={!disabled && idx === clampedTagIndex ? 0 : -1}
+                      aria-label={v}
+                      $disabled={disabled}
+                      data-tag=""
+                      data-tag-index={idx}
+                      onKeyDown={disabled ? undefined : handleTagKeyDown}
+                      onPointerDown={
+                        disabled ? undefined : handleTagPointerDown
+                      }
+                    >
+                      <StyledTagText title={v}>{v}</StyledTagText>
+                      {!disabled && (
+                        <StyledTagRemoveButton
+                          aria-label={`Remove ${v}`}
+                          tabIndex={-1}
+                          onClick={e => {
+                            e.stopPropagation()
+                            handleTagGroupRemove(new Set([v]))
+                            inputRef.current?.focus({ preventScroll: true })
+                          }}
+                        >
+                          <TagRemoveIcon />
+                        </StyledTagRemoveButton>
+                      )}
+                    </StyledTag>
+                  ))}
+                </StyledTagGroup>
+              )}
               <StyledFilterInput
                 ref={inputRef}
                 placeholder={value.length === 0 ? placeholder : ""}
@@ -703,7 +832,12 @@ const Multiselect: FC<Props> = props => {
             isNonModal
             $isInSidebar={isInSidebar}
             offset={0}
-            style={floatingStyles}
+            style={
+              {
+                ...floatingStyles,
+                "--scrollbar-gutter-size": `${scrollbarGutterSize}px`,
+              } as React.CSSProperties
+            }
           >
             <Virtualizer
               layout={ListLayout}

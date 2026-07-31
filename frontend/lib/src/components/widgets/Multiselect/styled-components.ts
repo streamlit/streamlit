@@ -83,6 +83,11 @@ export const StyledTagsContainer = styled.div(({ theme }) => ({
   cursor: "text",
 }))
 
+/** Wrapper for the tag group that participates in flex layout without adding a box. */
+export const StyledTagGroup = styled.span({
+  display: "contents",
+})
+
 /** Individual removable tag pill displaying a selected value. */
 export const StyledTag = styled.span<{ $disabled?: boolean }>(
   ({ theme, $disabled }) => ({
@@ -106,6 +111,10 @@ export const StyledTag = styled.span<{ $disabled?: boolean }>(
     cursor: "default",
     overflow: "hidden",
     whiteSpace: "nowrap",
+    outline: "none",
+    "&:focus-visible": {
+      boxShadow: theme.shadows.focusRing,
+    },
   })
 )
 
@@ -118,21 +127,18 @@ export const StyledTagText = styled.span({
 })
 
 /** Accessible remove button inside each tag. */
-export const StyledTagRemoveButton = styled.button<{ $disabled?: boolean }>(
-  ({ theme, $disabled }) => ({
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    border: "none",
-    background: "transparent",
-    padding: theme.spacing.none,
-    paddingLeft: theme.spacing.sm,
-    cursor: $disabled ? "not-allowed" : "pointer",
-    color: "inherit",
-    pointerEvents: $disabled ? "none" : "auto",
-    flexShrink: 0,
-  })
-)
+export const StyledTagRemoveButton = styled.button(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  border: "none",
+  background: "transparent",
+  padding: theme.spacing.none,
+  paddingLeft: theme.spacing.sm,
+  cursor: "pointer",
+  color: "inherit",
+  flexShrink: 0,
+}))
 
 /**
  * Filter input inline with tags. Fills remaining space on the current flex line.
