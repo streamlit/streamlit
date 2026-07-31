@@ -66,7 +66,8 @@ _InstallFailureReason = Literal[
     "incomplete",  # Project symlinks failed and the global fallback was cancelled.
     "no_skills",  # The bundled skills dir exists but contains nothing installable.
     "non_interactive",  # No TTY to prompt on and --yes wasn't passed.
-    "source_missing",  # The bundled skills are absent from the installation.
+    "source_missing",  # The bundled skills dir is absent from the installation.
+    "source_incomplete",  # The dir is present but a required file is missing.
     "symlinks_unsupported",  # Project install needs symlinks; this OS won't make them.
     "write_denied",  # Permissions, or a read-only filesystem.
     "write_locked",  # Another process holds the path (antivirus, sync clients).
@@ -75,12 +76,18 @@ _InstallFailureReason = Literal[
     "write_failed",  # A write failed for a reason none of the above cover.
 ]
 
-# Why a project install was rerouted to a global copy. Split because the two mean
-# different things: ``symlinks_unsupported`` is a categorical property of the machine
-# (Windows without Developer Mode) that a user can fix, while ``symlink_failed`` means
-# the pre-check passed and an individual link still would not lay - closer to a bug or
-# a directory-specific permission problem, and worth chasing separately.
-_FallbackReason = Literal["symlinks_unsupported", "symlink_failed"]
+# Why a project install was rerouted to a global copy. Split as finely as the OS lets
+# us, because most Windows users take this path and then SUCCEED - so this, not the
+# failure vocabulary, is where their diagnostic signal lives. The distinctions map to
+# different responses: Developer Mode off is a documentable user action, a denial on
+# the project directory is an environment problem, a filesystem with no symlink support
+# at all is neither, and a link failing after the pre-check passed is closer to a bug.
+_FallbackReason = Literal[
+    "symlinks_no_privilege",  # Windows Developer Mode off (ERROR_PRIVILEGE_NOT_HELD).
+    "symlinks_denied",  # Permissions on the project dir refused the probe.
+    "symlinks_unsupported",  # The filesystem/OS has no directory symlinks.
+    "symlink_failed",  # Pre-check passed, then an individual link would not lay.
+]
 
 # OSError.errno -> reason. Built by name so a platform missing one of these (they
 # are not all defined everywhere) simply omits it rather than failing at import.
@@ -406,17 +413,41 @@ def _skill_copy_matches(source_path: Path, target_path: Path) -> bool:
     return True
 
 
-def _symlinks_supported(project_root: Path, source_path: Path) -> bool:
-    """Return whether project install can create directory symlinks."""
+def _symlink_blocker(project_root: Path, source_path: Path) -> _FallbackReason | None:
+    """Return why project install can't use symlinks here, or ``None`` if it can.
+
+    Probes by actually creating one in a temp dir, then classifies the failure rather
+    than collapsing it to "unsupported". This is the highest-value split in the whole
+    vocabulary: most Windows users land here and then *succeed* via the global
+    fallback, so this is what their success label carries, and the causes want
+    completely different responses. ``symlinks_no_privilege`` (Developer Mode off) is
+    a documentable user action, while a denial on the project directory or a
+    filesystem that has no symlinks at all are not.
+    """
     try:
         with tempfile.TemporaryDirectory(
             prefix=".streamlit-skills-", dir=project_root
         ) as temp_dir:
             link_path = Path(temp_dir) / "skill-link"
             link_path.symlink_to(source_path, target_is_directory=True)
-            return link_path.is_symlink()
-    except (OSError, NotImplementedError):
-        return False
+            if link_path.is_symlink():
+                return None
+            # Created without error yet isn't a symlink: treat as unsupported rather
+            # than claiming success we can't verify.
+            return "symlinks_unsupported"
+    except NotImplementedError:
+        return "symlinks_unsupported"
+    except OSError as e:
+        # ERROR_PRIVILEGE_NOT_HELD: the account lacks SeCreateSymbolicLinkPrivilege,
+        # which in practice means Windows Developer Mode is off. Distinguishing this
+        # is the point of the exercise - it is the one cause a user can simply fix.
+        if getattr(e, "winerror", None) == 1314:
+            return "symlinks_no_privilege"
+        if e.errno in _WRITE_REASON_BY_ERRNO and (
+            _WRITE_REASON_BY_ERRNO[e.errno] == "write_denied"
+        ):
+            return "symlinks_denied"
+        return "symlinks_unsupported"
 
 
 def _get_display_path(
@@ -909,7 +940,8 @@ def _install_project_skills(
     project_root = _find_project_root(Path(app_dir) if app_dir else None)
     target_dirs = _get_project_target_dirs(project_root)
 
-    if not _symlinks_supported(project_root, source_skills_dir / skills[0]):
+    symlink_blocker = _symlink_blocker(project_root, source_skills_dir / skills[0])
+    if symlink_blocker is not None:
         if fallback_to_global:
             click.secho(
                 "\n⚠ Symlinks not supported on this system.",
@@ -926,7 +958,7 @@ def _install_project_skills(
             )
             click.echo()
             global_result = _install_global_skills(yes=yes)
-            global_result.fallback_reason = "symlinks_unsupported"
+            global_result.fallback_reason = symlink_blocker
             return global_result
 
         raise _InstallError(
@@ -1062,7 +1094,10 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
         raise _InstallError(
             f"The bundled '{_GLOBAL_SKILL_NAME}' meta-skill was not found in your "
             "Streamlit installation. Reinstall Streamlit and try again.",
-            reason="source_missing",
+            # Distinct from source_missing: the directory is there but a required
+            # file is not, which points at a too-narrow package-data glob rather
+            # than skills being absent from the wheel entirely.
+            reason="source_incomplete",
         )
 
     # Install to each target directory

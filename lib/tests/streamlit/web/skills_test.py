@@ -1028,7 +1028,9 @@ class TestInstallSkillsCli:
             patch.object(
                 skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
-            patch.object(skills, "_symlinks_supported", return_value=False),
+            patch.object(
+                skills, "_symlink_blocker", return_value="symlinks_unsupported"
+            ),
             patch.object(skills, "_install_global_skills") as install_global_skills,
             patch("pathlib.Path.cwd", return_value=project_dir),
             patch("pathlib.Path.home", return_value=tmp_path / "home"),
@@ -2537,10 +2539,10 @@ class TestInstallProjectSkillsNoFallback:
     """Tests for _install_project_skills with fallback_to_global=False."""
 
     @pytest.mark.parametrize(
-        ("symlinks_supported", "install_skill_symlink_return"),
+        ("precheck_blocker", "install_skill_symlink_return"),
         [
-            (False, True),
-            (True, False),
+            ("symlinks_unsupported", True),
+            (None, False),
         ],
         ids=["symlinks_unsupported_globally", "individual_symlink_failed"],
     )
@@ -2548,7 +2550,7 @@ class TestInstallProjectSkillsNoFallback:
         self,
         tmp_path: Path,
         mock_source_skills_dir: Path,
-        symlinks_supported: bool,
+        precheck_blocker: str | None,
         install_skill_symlink_return: bool,
     ) -> None:
         """Raises ClickException when symlinks are unavailable and fallback disabled."""
@@ -2559,9 +2561,7 @@ class TestInstallProjectSkillsNoFallback:
             patch.object(
                 skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
-            patch.object(
-                skills, "_symlinks_supported", return_value=symlinks_supported
-            ),
+            patch.object(skills, "_symlink_blocker", return_value=precheck_blocker),
             patch.object(
                 skills,
                 "_install_skill_symlink",
@@ -2600,7 +2600,7 @@ class TestInstallProjectSkillsFallbackErrors:
             patch.object(
                 skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
-            patch.object(skills, "_symlinks_supported", return_value=True),
+            patch.object(skills, "_symlink_blocker", return_value=None),
             patch.object(skills, "_install_skill_symlink", return_value=False),
             patch.object(
                 skills,
@@ -2618,24 +2618,29 @@ class TestInstallProjectSkillsFallbackSignal:
     """fallback_reason names WHY an install took the symlink->global path."""
 
     @pytest.mark.parametrize(
-        ("symlinks_supported", "expected_reason"),
-        [(False, "symlinks_unsupported"), (True, "symlink_failed")],
-        ids=["precheck_says_unsupported", "individual_link_failed"],
+        ("precheck_blocker", "expected_reason"),
+        [
+            ("symlinks_no_privilege", "symlinks_no_privilege"),
+            ("symlinks_denied", "symlinks_denied"),
+            ("symlinks_unsupported", "symlinks_unsupported"),
+            (None, "symlink_failed"),
+        ],
+        ids=["dev_mode_off", "project_dir_denied", "no_symlink_support", "link_failed"],
     )
     def test_fallback_records_its_cause(
         self,
         tmp_path: Path,
         mock_source_skills_dir: Path,
-        symlinks_supported: bool,
+        precheck_blocker: str | None,
         expected_reason: str,
     ) -> None:
-        """The two fallback routes are recorded distinctly, not as one flag.
+        """Each fallback route is recorded distinctly, not collapsed into one flag.
 
         A project install that can't lay symlinks is silently rerouted to a global
         copy, so it looks identical to a project install in the success telemetry.
-        Naming the cause separates the machine-wide case a user can fix (Developer
-        Mode off) from a link that would not lay despite the pre-check passing —
-        different problems, different fixes.
+        Most Windows users land here and then succeed, which makes this the label
+        carrying their diagnostic signal — and Developer Mode being off is a
+        documentable user action, while the others are not.
         """
         project_dir = tmp_path / "project"
         project_dir.mkdir()
@@ -2643,9 +2648,7 @@ class TestInstallProjectSkillsFallbackSignal:
             patch.object(
                 skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
-            patch.object(
-                skills, "_symlinks_supported", return_value=symlinks_supported
-            ),
+            patch.object(skills, "_symlink_blocker", return_value=precheck_blocker),
             # Force the per-skill symlink to fail (only reached when the pre-check
             # said symlinks work); harmless on the pre-check path.
             patch.object(skills, "_install_skill_symlink", return_value=False),
@@ -2673,7 +2676,7 @@ class TestInstallProjectSkillsFallbackSignal:
             patch.object(
                 skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
-            patch.object(skills, "_symlinks_supported", return_value=True),
+            patch.object(skills, "_symlink_blocker", return_value=None),
             patch.object(skills, "_install_skill_symlink", return_value=True),
             patch("pathlib.Path.cwd", return_value=project_dir),
             patch("pathlib.Path.home", return_value=tmp_path / "home"),
@@ -2681,6 +2684,68 @@ class TestInstallProjectSkillsFallbackSignal:
             result = skills._install_project_skills(yes=True)
 
         assert result.fallback_reason is None
+
+
+class TestSymlinkBlocker:
+    """_symlink_blocker names WHY symlinks are unavailable, not just that they are."""
+
+    def test_returns_none_when_symlinks_work(self, tmp_path: Path) -> None:
+        """A successful probe reports no blocker."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        source = tmp_path / "source"
+        source.mkdir()
+        assert skills._symlink_blocker(tmp_path, source) is None
+
+    def test_identifies_windows_developer_mode_off(self, tmp_path: Path) -> None:
+        """ERROR_PRIVILEGE_NOT_HELD is reported as symlinks_no_privilege.
+
+        This is the single most useful value in the vocabulary: it means the account
+        lacks SeCreateSymbolicLinkPrivilege, i.e. Developer Mode is off — the one
+        cause of a global-fallback install that a user can simply fix. Collapsing it
+        into "unsupported" would hide a documentable action behind a dead end.
+        """
+        source = tmp_path / "source"
+        source.mkdir()
+        denied = OSError(errno.EPERM, "A required privilege is not held")
+        denied.winerror = 1314  # type: ignore[attr-defined]
+
+        with patch.object(skills.Path, "symlink_to", side_effect=denied):
+            assert skills._symlink_blocker(tmp_path, source) == "symlinks_no_privilege"
+
+    def test_distinguishes_a_denied_project_directory(self, tmp_path: Path) -> None:
+        """A plain permission denial is an environment problem, not a missing feature."""
+        source = tmp_path / "source"
+        source.mkdir()
+        with patch.object(
+            skills.Path, "symlink_to", side_effect=OSError(errno.EACCES, "denied")
+        ):
+            assert skills._symlink_blocker(tmp_path, source) == "symlinks_denied"
+
+    def test_reports_unsupported_for_a_filesystem_without_symlinks(
+        self, tmp_path: Path
+    ) -> None:
+        """NotImplementedError means the platform has no directory symlinks at all."""
+        source = tmp_path / "source"
+        source.mkdir()
+        with patch.object(skills.Path, "symlink_to", side_effect=NotImplementedError):
+            assert skills._symlink_blocker(tmp_path, source) == "symlinks_unsupported"
+
+    def test_reports_unsupported_when_the_link_silently_is_not_one(
+        self, tmp_path: Path
+    ) -> None:
+        """A probe that "succeeds" without producing a symlink is not support.
+
+        Some filesystems accept the call and create something else. Claiming support
+        we could not verify would route the install down the symlink path and fail
+        later, with a worse reason attached.
+        """
+        source = tmp_path / "source"
+        source.mkdir()
+        with (
+            patch.object(skills.Path, "symlink_to"),
+            patch.object(skills.Path, "is_symlink", return_value=False),
+        ):
+            assert skills._symlink_blocker(tmp_path, source) == "symlinks_unsupported"
 
 
 class TestClassifyWriteError:
