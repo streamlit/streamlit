@@ -19,7 +19,10 @@ import {
   BackendOperationResponse,
 } from "@streamlit/protobuf"
 
-import { BackendOperationClient } from "./BackendOperationClient"
+import {
+  BackendOperationClient,
+  getBackendOperationReason,
+} from "./BackendOperationClient"
 
 function createClient(
   sendRequest = vi.fn(),
@@ -290,8 +293,53 @@ describe("BackendOperationClient", () => {
     )
 
     await expect(promise).rejects.toSatisfy(
-      (error: unknown) => (error as { reason?: string }).reason === undefined
+      (error: unknown) => getBackendOperationReason(error) === undefined
     )
+  })
+
+  it("preserves the server's fallback_reason on a successful install", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        installSkills: {
+          detail: "Installed to ~/.agents/skills",
+          fallbackReason: "symlinks_no_privilege",
+        },
+      })
+    )
+
+    // A project install rerouted to a global copy still SUCCEEDS, so this cohort's
+    // only diagnostic signal is the fallback reason riding the success payload
+    // through to skillsNudgeInstallSucceeded:<fallback_reason>.
+    await expect(promise).resolves.toEqual({
+      detail: "Installed to ~/.agents/skills",
+      fallbackReason: "symlinks_no_privilege",
+    })
+  })
+
+  it("leaves fallbackReason empty for a normal project install", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        installSkills: { detail: "Installed", fallbackReason: "" },
+      })
+    )
+
+    const payload = await promise
+    // Must stay falsy, or App would tag an ordinary symlink install as a fallback.
+    expect(payload.fallbackReason).toBeFalsy()
   })
 
   it("sends dismiss skills nudge requests and resolves on the ack", async () => {

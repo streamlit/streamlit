@@ -62,9 +62,10 @@ export const REQUEST_TIMED_OUT_MESSAGE = "Request timed out"
  * Error a backend operation rejects with when the server returns a failure.
  * Carries the server's machine-readable `reason` (e.g. the skills-install
  * failure cause) alongside the human-readable message, so callers can route it
- * to telemetry without parsing the message text. Not exported: it is thrown
- * from within this module and consumers read the `reason` property structurally
- * (`(error as { reason?: string }).reason`) rather than via `instanceof`.
+ * to telemetry without parsing the message text. Read it via
+ * {@link getBackendOperationReason} rather than exporting the class, which keeps
+ * the throw site inside this module and gives callers a typed accessor instead of
+ * a hand-written structural cast.
  */
 class BackendOperationError extends Error {
   public readonly reason?: string
@@ -74,6 +75,27 @@ class BackendOperationError extends Error {
     this.name = "BackendOperationError"
     this.reason = reason || undefined
   }
+}
+
+/**
+ * Return the server's machine-readable failure reason from a rejected backend
+ * operation, or `undefined` for any other error.
+ *
+ * The reason is a bounded server-side vocabulary (never user input), so callers
+ * may safely use it as a telemetry label suffix.
+ *
+ * Reads the property structurally rather than via `instanceof
+ * BackendOperationError`, deliberately. The class is thrown inside
+ * `@streamlit/lib` and read in `@streamlit/app`, and an `instanceof` across that
+ * boundary is only sound while both sides resolve to one class identity — which
+ * bundling and test mocks do not guarantee. What this accessor buys is the thing
+ * that matters: callers no longer hand-write `(error as { reason?: string })`, and
+ * renaming the property is a one-line change here instead of a silent `undefined`
+ * at every call site.
+ */
+export function getBackendOperationReason(error: unknown): string | undefined {
+  const reason = (error as { reason?: unknown } | null | undefined)?.reason
+  return typeof reason === "string" && reason ? reason : undefined
 }
 
 /** Information about a pending request. */

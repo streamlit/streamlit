@@ -427,8 +427,11 @@ def _symlink_blocker(project_root: Path, source_path: Path) -> _FallbackReason |
         # is the point of the exercise - it is the one cause a user can simply fix.
         if getattr(e, "winerror", None) == 1314:
             return "symlinks_no_privilege"
-        if e.errno in _WRITE_REASON_BY_ERRNO and (
-            _WRITE_REASON_BY_ERRNO[e.errno] == "write_denied"
+        # ``errno`` is Optional on OSError, and dict.get is typed to reject None, so
+        # the guard is for the type checker rather than for runtime behaviour.
+        if (
+            e.errno is not None
+            and _WRITE_REASON_BY_ERRNO.get(e.errno) == "write_denied"
         ):
             return "symlinks_denied"
         return "symlinks_unsupported"

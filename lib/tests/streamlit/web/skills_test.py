@@ -2178,14 +2178,19 @@ class TestInstallProjectSkillsNoFallback:
         ],
         ids=["symlinks_unsupported_globally", "individual_symlink_failed"],
     )
-    def test_raises_clickexception_without_fallback(
+    def test_raises_symlinks_unsupported_without_fallback(
         self,
         tmp_path: Path,
         mock_source_skills_dir: Path,
         precheck_blocker: str | None,
         install_skill_symlink_return: bool,
     ) -> None:
-        """Raises ClickException when symlinks are unavailable and fallback disabled."""
+        """Raises the symlinks_unsupported reason when fallback is disabled.
+
+        Both no-fallback raise sites carry ``reason="symlinks_unsupported"``. Pin the
+        reason, not just the parent ``ClickException``, so the telemetry vocabulary
+        stays covered here the way it is everywhere else in this file.
+        """
         project_dir = tmp_path / "project"
         project_dir.mkdir()
 
@@ -2202,8 +2207,12 @@ class TestInstallProjectSkillsNoFallback:
             patch("pathlib.Path.cwd", return_value=project_dir),
             patch("pathlib.Path.home", return_value=tmp_path / "home"),
         ):
-            with pytest.raises(click.ClickException, match="Symlinks not supported"):
+            with pytest.raises(
+                skills._InstallError, match="Symlinks not supported"
+            ) as exc:
                 skills._install_project_skills(yes=True, fallback_to_global=False)
+
+        assert exc.value.reason == "symlinks_unsupported"
 
 
 class TestInstallProjectSkillsFallbackErrors:

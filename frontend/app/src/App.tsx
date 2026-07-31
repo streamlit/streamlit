@@ -86,6 +86,7 @@ import {
   FileUploadClient,
   FormsData,
   generateUID,
+  getBackendOperationReason,
   getElementId,
   getEmbeddingIdClassName,
   getIFrameEnclosingApp,
@@ -1636,7 +1637,7 @@ export class App extends PureComponent<Props, State> {
         // declined to attempt, not one that ran and failed, so it goes under a
         // distinct `skillsNudgeInstallRefused:<reason>` and never inflates the
         // failure rate. Reasons are a fixed server-side vocabulary (never user input).
-        const reason = (error as { reason?: string } | null)?.reason
+        const reason = getBackendOperationReason(error)
         const isRefusal = reason?.startsWith(REFUSED_REASON_PREFIX) ?? false
         const eventName = isRefusal
           ? "skillsNudgeInstallRefused"
