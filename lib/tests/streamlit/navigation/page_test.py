@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -22,8 +23,44 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.navigation.page import Page, StreamlitPage, _create_page
 from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
+
+def test_page_is_a_class_with_compatibility_alias() -> None:
+    """st.Page is the concrete Page class, with StreamlitPage as an alias."""
+    assert inspect.isclass(st.Page)
+    assert st.Page is Page
+    assert StreamlitPage is Page
+
+    page = st.Page(lambda: None, title="Example")
+    assert type(page) is Page
+    assert isinstance(page, st.Page)
+    assert isinstance(page, StreamlitPage)
+
+
+def test_page_constructor_signature() -> None:
+    """The Page class preserves the public factory's constructor parameters."""
+    parameters = inspect.signature(st.Page).parameters
+
+    assert list(parameters) == [
+        "page",
+        "title",
+        "icon",
+        "url_path",
+        "default",
+        "visibility",
+    ]
+    assert parameters["page"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+    assert parameters["page"].default is inspect.Parameter.empty
+    for name in ("title", "icon", "url_path", "default", "visibility"):
+        assert parameters[name].kind is inspect.Parameter.KEYWORD_ONLY
+    assert parameters["title"].default is None
+    assert parameters["icon"].default is None
+    assert parameters["url_path"].default is None
+    assert parameters["default"].default is False
+    assert parameters["visibility"].default == "visible"
 
 
 @patch("pathlib.Path.is_file", MagicMock(return_value=True))
@@ -81,6 +118,25 @@ class StPagesTest(DeltaGeneratorTestCase):
             st.Page(lambda: True, url_path="path_1")._script_hash
             != st.Page(lambda: True, url_path="path_2")._script_hash
         )
+
+    def test_create_page_builds_default_page(self) -> None:
+        """``_create_page`` builds a fully-initialized default page."""
+        page = _create_page("home.py", default=True)
+
+        assert type(page) is Page
+        assert page._default is True
+        # Default pages always report an empty ``url_path`` (the root URL).
+        assert page.url_path == ""
+        assert page.is_external is False
+        # Only the page returned by ``st.navigation`` may be run.
+        assert page._can_be_called is False
+
+    def test_create_page_infers_url_path_for_non_default_page(self) -> None:
+        """``_create_page`` infers the ``url_path`` from the filename."""
+        page = _create_page("settings.py")
+
+        assert page._default is False
+        assert page.url_path == "settings"
 
     @parameterized.expand(
         [

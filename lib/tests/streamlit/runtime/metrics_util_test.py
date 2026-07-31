@@ -33,6 +33,8 @@ import streamlit.components.v1 as components
 from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SQLConnection
+from streamlit.errors import StreamlitValueError
+from streamlit.navigation.page import _create_page
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
@@ -236,6 +238,73 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         assert (
             str(command_metadata.args[2]).strip()
             == 'k: "disabled"\nt: "bool"\nm: "val:True"'
+        )
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_page_constructor_telemetry(self) -> None:
+        """Page records the same command name and argument metadata as the
+        previous function-based st.Page."""
+        st.Page(
+            "foo.py",
+            title="Title",
+            icon="🔥",
+            url_path="foo",
+            default=False,
+            visibility="hidden",
+        )
+
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        assert len(ctx.shared.tracked_commands) == 1
+        command = ctx.shared.tracked_commands[0]
+        assert command.name == "Page"
+        assert len(command.args) == 6
+        assert str(command.args[0]).strip() == 'k: "page"\nt: "str"\nm: "len:6"'
+        # ``_positional_arg_offset=1`` must place the first real argument at
+        # position 0 (like a plain function), not 1 (shifted by ``self``).
+        # ``str()`` above omits the proto default ``p: 0``, so assert it directly.
+        assert command.args[0].p == 0
+        assert str(command.args[1]).strip() == 'k: "title"\nt: "str"\nm: "len:5"'
+        assert str(command.args[2]).strip() == 'k: "icon"\nt: "str"\nm: "len:1"'
+        assert str(command.args[3]).strip() == 'k: "url_path"\nt: "str"\nm: "len:3"'
+        assert str(command.args[4]).strip() == 'k: "default"\nt: "bool"\nm: "val:False"'
+        assert str(command.args[5]).strip() == 'k: "visibility"\nt: "str"\nm: "len:6"'
+
+    def test_page_constructor_exception_is_tracked(self) -> None:
+        """Page constructor failures retain the existing telemetry event."""
+        with pytest.raises(StreamlitValueError):
+            st.Page("foo.py", visibility="invalid")
+
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        assert len(ctx.shared.tracked_commands) == 1
+        assert ctx.shared.tracked_commands[0].name == "Page"
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_internal_page_creation_is_not_tracked(self) -> None:
+        """Legacy pages-directory bootstrapping does not emit Page commands."""
+        _create_page("foo.py")
+
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        assert ctx.shared.tracked_commands == ()
+
+    def test_decorated_method_positional_metadata_is_unchanged(self) -> None:
+        """The Page-specific position offset does not affect other methods."""
+
+        class Example:
+            @metrics_util.gather_metrics("tracked_method")
+            def tracked_method(self, value: str) -> None:
+                pass
+
+        Example().tracked_method("value")
+
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        assert len(ctx.shared.tracked_commands) == 1
+        assert (
+            str(ctx.shared.tracked_commands[0].args[0]).strip()
+            == 'k: "value"\nt: "str"\nm: "len:5"\np: 1'
         )
 
     def test_get_command_telemetry_custom_component_v2(self):

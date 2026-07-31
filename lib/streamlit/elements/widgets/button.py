@@ -49,7 +49,7 @@ from streamlit.errors import (
     StreamlitPageNotFoundError,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import StreamlitPage, _validate_registered_page
+from streamlit.navigation.page import Page, _validate_registered_page
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
@@ -1095,7 +1095,7 @@ class ButtonMixin:
     @gather_metrics("page_link")
     def page_link(
         self,
-        page: str | Path | StreamlitPage,
+        page: str | Path | Page,
         *,
         label: str | None = None,
         icon: str | None = None,
@@ -1118,7 +1118,7 @@ class ButtonMixin:
 
         Parameters
         ----------
-        page : str, Path, or StreamlitPage
+        page : str, Path, or Page
             The page to switch to on user click. This can be one of the
             following values:
 
@@ -1131,9 +1131,9 @@ class ButtonMixin:
               ``st.navigation``, the Python file must be your entrypoint file
               or a file in the ``pages/`` directory.
 
-            - ``StreamlitPage``: The source of the ``StreamlitPage`` and its
+            - ``Page``: The source of the ``Page`` and its
               ``url_path`` must match a page defined in ``st.navigation``.
-              Use ``st.Page`` to create a ``StreamlitPage`` object.
+              Use ``st.Page`` to create a ``Page`` object.
 
             - URL: The URL must contain an HTTP or HTTPS scheme, like
               ``"https://docs.streamlit.io"``. When a user clicks a
@@ -1142,7 +1142,7 @@ class ButtonMixin:
               ``label`` parameter is required.
 
             To link to a page defined by a ``callable``, you must use a
-            ``StreamlitPage`` object.
+            ``Page`` object.
 
         label : str
             The label for the page link. Labels are required for external pages.
@@ -1165,7 +1165,7 @@ class ButtonMixin:
         icon : str or None
             An optional emoji or icon to display next to the link label. If
             ``icon`` is ``None`` (default), the icon is inferred from the
-            ``StreamlitPage`` object or no icon is displayed. If ``icon`` is a
+            ``Page`` object or no icon is displayed. If ``icon`` is a
             string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
@@ -1520,7 +1520,7 @@ class ButtonMixin:
 
     def _page_link(
         self,
-        page: str | Path | StreamlitPage,
+        page: str | Path | Page,
         *,  # keyword-only arguments:
         label: str | None = None,
         icon: str | None = None,
@@ -1556,12 +1556,12 @@ class ButtonMixin:
         if help is not None:
             page_link_proto.help = dedent(help)
 
-        if isinstance(page, StreamlitPage):
+        if isinstance(page, Page):
             if label is None:
                 page_link_proto.label = page.title
             if icon is None:
                 page_link_proto.icon = page.icon
-                # Here the StreamlitPage's icon is already validated
+                # Here the Page's icon is already validated
                 # (using validate_icon_or_emoji) during its initialization
 
             if page.is_external:

@@ -993,7 +993,7 @@ During a sequential fragment rerun, `st.switch_page` is a valid and common patte
 (`lib/streamlit/commands/execution_control.py`):
 
 ```python
-def switch_page(page: str | Path | StreamlitPage, ...) -> NoReturn:
+def switch_page(page: str | Path | Page, ...) -> NoReturn:
     ctx = get_script_run_ctx()
     if ctx:
         _check_not_parallel_worker("st.switch_page")

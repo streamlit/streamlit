@@ -200,8 +200,8 @@ class PageLinkTest(DeltaGeneratorTestCase):
 
     @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_st_page_with_none_icon(self):
-        """Test that st.page_link handles None icon from StreamlitPage correctly"""
-        # None icon defaults to empty string in StreamlitPage
+        """Test that st.page_link handles None icon from Page correctly."""
+        # None icon defaults to empty string in Page
         page = st.Page("foo.py", title="Bar Test", icon=None)
         st.page_link(page=page)
 
@@ -215,7 +215,7 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.help == ""
 
     def test_external_streamlit_page(self):
-        """Test that st.page_link works with an external StreamlitPage object."""
+        """Test that st.page_link works with an external Page object."""
         page = st.Page("https://docs.streamlit.io", title="Docs", icon="📖")
         st.page_link(page=page)
 
@@ -227,7 +227,7 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert not c.disabled
 
     def test_external_streamlit_page_with_label_override(self):
-        """Test that st.page_link label overrides external StreamlitPage title."""
+        """Test that st.page_link label overrides an external Page title."""
         page = st.Page("https://docs.streamlit.io", title="Docs")
         st.page_link(page=page, label="Custom Label")
 
