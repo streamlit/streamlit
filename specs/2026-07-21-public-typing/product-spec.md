@@ -29,9 +29,8 @@ def parse_upload(file: UploadedFile) -> dict[str, str]:
 ```
 
 The same problem applies to other Streamlit-defined return values. For example,
-users must import `DataframeState` from `streamlit.elements.arrow`,
-`ChatInputValue` from `streamlit.elements.widgets.chat`, and `StreamlitPage` from
-`streamlit.navigation.page`.
+users must import `DataframeState` from `streamlit.elements.arrow` and
+`ChatInputValue` from `streamlit.elements.widgets.chat`.
 
 These imports have three problems:
 
@@ -131,13 +130,12 @@ public contract.
 
 ### Initial exports
 
-The initial `streamlit.typing.__all__` contains these 11 names:
+The initial `streamlit.typing.__all__` contains these 10 names:
 
 | Export | Public API relationship | Why users need to name it |
 |---|---|---|
 | `UploadedFile` | `st.file_uploader`, `st.camera_input`, `st.audio_input`, and file/audio fields in `st.chat_input` | It is a Streamlit-specific `BytesIO` subclass with documented file metadata and is the motivating request in `#7801`. |
 | `ChatInputValue` | `st.chat_input` when file or audio input is enabled | It has a documented dict-like and attribute-based schema that is lost with `Mapping[str, Any]`. |
-| `StreamlitPage` | `st.Page` and `st.navigation` | Modular multipage apps commonly build and return page collections, but `st.Page` is a factory function and cannot itself be used as the return type. |
 | `DataframeState` | `st.dataframe` with selection events | It is the documented event envelope returned to app code. |
 | `DataframeSelectionState` | `DataframeState["selection"]` and `selection_default` | It describes the selectable row, column, and cell payload and is also used for programmatic selection. |
 | `PlotlyState` | `st.plotly_chart` with selection events | It is the documented event envelope returned to app code. |
@@ -199,7 +197,8 @@ that Streamlit cannot provide.
 |---|---|---|
 | `UploadedFile`, `ChatInputValue` | Include | Concrete, Streamlit-owned values returned directly to users. |
 | `DataframeState`, `DataframeSelectionState`, `PlotlyState`, `PlotlySelectionState`, `VegaLiteState`, `PydeckState`, `PydeckSelectionState` | Include | Documented event return types and nested payloads. Keep their current names. |
-| `StreamlitPage`, `ButtonClickState` | Include | Additional user-facing values found by auditing public return and session-state contracts. |
+| `ButtonClickState` | Include | An additional user-facing value found by auditing public session-state contracts. |
+| `Page` | Exclude | `st.Page` is a public class and can be used directly as a type annotation. |
 | `Data` | Defer | A very broad, generically named union of third-party inputs. It changes as dataframe support expands and is not a Streamlit-owned value. A future public alias should have a semantic name such as `DataframeData` and dedicated demand. |
 | `Width`, `WidthWithoutContent`, `Height`, `HeightWithoutContent` | Defer | Useful mainly to wrapper authors, and the negative `WithoutContent` names expose implementation constraints. Revisit with semantic names if input aliases are added. |
 | `Key` | Exclude | It is exactly `str | int`; the alias adds little information or safety. |
@@ -251,20 +250,6 @@ event = st.dataframe(
 st.write(selected_rows(event))
 ```
 
-#### Build typed page collections
-
-```python
-import streamlit as st
-from streamlit.typing import StreamlitPage
-
-
-def app_pages() -> list[StreamlitPage]:
-    return [st.Page("home.py"), st.Page("reports.py")]
-
-
-st.navigation(app_pages()).run()
-```
-
 ### Implementation and compatibility
 
 - Add `lib/streamlit/typing.py` with explicit re-exports and `__all__`.
@@ -305,8 +290,8 @@ Add coverage for:
 - Add a `streamlit.typing` API-reference page that lists only `__all__` exports and
   groups them into values, event states, and nested state payloads.
 - Update the relevant command return-value documentation to link to the public type,
-  especially `st.file_uploader`, `st.chat_input`, `st.navigation`, dataframe/chart
-  selection APIs, and `st.column_config.ButtonColumn`.
+  especially `st.file_uploader`, `st.chat_input`, dataframe/chart selection APIs, and
+  `st.column_config.ButtonColumn`.
 - State that concrete classes are normally obtained from Streamlit commands rather
   than constructed directly.
 - State that event-state `TypedDict` types support statically checked item notation.
@@ -319,10 +304,10 @@ Add coverage for:
 
 - Users can replace an internal `UploadedFile` import with
   `from streamlit.typing import UploadedFile` without changing behavior.
-- All 11 initial exports are available through both `streamlit.typing` and
+- All 10 initial exports are available through both `streamlit.typing` and
   `st.typing` and are listed in `__all__`.
 - Public exports are the same runtime objects as their current definitions.
-- Type-checking examples for uploaded files, chat values, pages, and all event-state
+- Type-checking examples for uploaded files, chat values, and all event-state
   schemas pass with the repository's supported type checkers.
 - Loading `streamlit.typing` does not import additional third-party packages beyond a
   normal `import streamlit`.
