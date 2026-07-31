@@ -768,6 +768,15 @@ def _install_skill_copy(
                 with contextlib.suppress(OSError):
                     staging.rename(keep)
                     staging = keep
+                if staging.name.startswith(_STAGING_PREFIX):
+                    # The relocation didn't take - rename may be the very operation
+                    # failing here. Drop the ownership marker instead: the sweep
+                    # requires it, so removing it makes this directory permanently
+                    # invisible to cleanup. Unlinking one small file is far likelier
+                    # to succeed than renaming a directory, so between the two the
+                    # retained copies are protected whichever operation is broken.
+                    with contextlib.suppress(OSError):
+                        (staging / _STAGING_MARKER).unlink()
                 _LOGGER.warning(
                     "Skills install left %s empty. The previous install is at %s and "
                     "the new copy at %s - move either one back to recover. Nothing "

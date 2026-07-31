@@ -1503,6 +1503,11 @@ class TestInstallSkillCopyEdgeCases:
             target_dir.glob(f"{skills._RECOVERY_PREFIX}*")
         )
         assert len(kept) == 1
+        # Relocation is itself a rename, and rename is what is failing here — so the
+        # copies stay under the staging prefix. The ownership marker is dropped instead,
+        # which makes them permanently invisible to the sweep: two independent
+        # protections, so whichever filesystem operation is broken, one still holds.
+        assert not (kept[0] / skills._STAGING_MARKER).exists()
         assert (kept[0] / skills._STAGING_OLD / "SKILL.md").read_text() == (
             "# Old version\n"
         )
