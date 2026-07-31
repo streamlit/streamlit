@@ -361,15 +361,11 @@ def _install_skill_symlink(
     target_path = target_dir / skill_name
     rel_target_path = _get_display_path(target_path, Path.cwd())
 
-    # Pre-symlink filesystem work (creating the parent dir, inspecting or removing
-    # an existing target) runs under one guard: any OSError here means we can't
-    # lay the symlink, so return False and let the caller fall back to a global
-    # copy - never let it escape and get misbooked as a hard write_failed.
-    #
-    # ``symlink_to`` won't overwrite, so replacing an owned link means unlinking
-    # first. Remember where it pointed so a failed re-link can put it back: the
-    # caller's fallback installs GLOBALLY, which wouldn't restore a project link.
-    replaced_link_target: str | None = None
+    # Pre-symlink filesystem work (creating the parent dir, inspecting an existing
+    # target) runs under one guard: any OSError here means we can't lay the
+    # symlink, so return False and let the caller fall back to a global copy -
+    # never let it escape and get misbooked as a hard write_failed.
+    replace_owned_link = False
     try:
         # Ensure parent directory exists
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -386,11 +382,10 @@ def _install_skill_symlink(
                     # Broken symlink or resolution error - check ownership below
                     pass
 
-                # Check if it's a Streamlit-owned symlink we can replace
+                # Check if it's a Streamlit-owned symlink we can replace. Don't
+                # remove it yet - see the staged replacement below.
                 if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
-                    with contextlib.suppress(OSError):
-                        replaced_link_target = os.readlink(target_path)
-                    target_path.unlink()
+                    replace_owned_link = True
                 else:
                     result.skipped.append(f"{rel_target_path} (existing symlink)")
                     return True
@@ -418,21 +413,42 @@ def _install_skill_symlink(
         # absolute (resolved) source path, which still resolves correctly.
         rel_source = os.path.realpath(source_path)
 
-    # Create symlink
+    # Replacing an existing link is staged: ``symlink_to`` won't overwrite, so the
+    # old one has to go first, and "remove then re-create" loses a working install
+    # whenever the re-create fails. Since a failing re-create means this system
+    # can't make symlinks at all, an attempt to restore would fail for the same
+    # reason. So prove we can make the link - under a temp name - BEFORE removing
+    # anything. If that fails, the existing install is still untouched.
+    link_path = target_path
+    if replace_owned_link:
+        link_path = target_path.with_name(f".{skill_name}.newlink")
+        with contextlib.suppress(OSError):
+            _remove_skill_target(link_path)
+
     try:
-        target_path.symlink_to(rel_source, target_is_directory=True)
-        result.installed.append(str(rel_target_path))
-        return True
+        link_path.symlink_to(rel_source, target_is_directory=True)
     except (OSError, NotImplementedError):
         # Symlink not supported (e.g., Windows without Developer Mode, or some
-        # environments where symlinks are not implemented)
-        if replaced_link_target is not None:
-            # Put back the working link we removed. Without this, a reinstall that
-            # can't re-link destroys a usable project install and the caller's
-            # global fallback lands somewhere else entirely.
-            with contextlib.suppress(OSError):
-                target_path.symlink_to(replaced_link_target, target_is_directory=True)
+        # environments where symlinks are not implemented). Nothing was removed.
         return False
+
+    if replace_owned_link:
+        try:
+            target_path.unlink()
+            # Renaming into a name we just freed, in the same directory.
+            link_path.rename(target_path)
+        except OSError:
+            # If something is still at the target the unlink failed and the old
+            # install is intact, so drop the staged link. If the target is empty
+            # the rename failed and the staged link is the only copy left - keep
+            # it rather than deleting the last one. Either way, fall back.
+            if target_path.exists() or target_path.is_symlink():
+                with contextlib.suppress(OSError):
+                    _remove_skill_target(link_path)
+            return False
+
+    result.installed.append(str(rel_target_path))
+    return True
 
 
 def _remove_skill_target(path: Path) -> None:

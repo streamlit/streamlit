@@ -1585,15 +1585,18 @@ class TestInstallSkillSymlinkEdgeCases:
         assert not result.errored
         assert not result.installed
 
-    def test_restores_replaced_symlink_when_relink_fails(
+    def test_keeps_replaced_symlink_when_link_creation_fails(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """A failed re-link puts back the project symlink it removed.
+        """An unmakeable symlink leaves the existing project install alone.
 
-        ``symlink_to`` cannot overwrite, so replacing an owned link means unlinking
-        first. If the new link then fails to appear, the caller falls back to a
-        *global* install, which lands elsewhere and would leave the project skill
-        deleted.
+        ``symlink_to`` cannot overwrite, so replacing an owned link means removing
+        it first — and "remove then re-create" loses a working install whenever the
+        re-create fails. A restore attempt is no defence: the re-create only fails
+        because this system won't make symlinks, so the restore fails identically.
+        Hence the new link is staged under a temp name first, and nothing is removed
+        until that has worked. Here every ``symlink_to`` fails, so the original must
+        be exactly as it was.
         """
         _skip_if_symlinks_not_supported(tmp_path)
         existing_skill = tmp_path / "existing-skill"
@@ -1607,21 +1610,13 @@ class TestInstallSkillSymlinkEdgeCases:
         target.symlink_to(existing_skill, target_is_directory=True)
 
         result = skills._InstallResult()
-        real_symlink_to = skills.Path.symlink_to
-        attempts = {"n": 0}
 
-        def _fail_first_symlink(
-            self: Path, target: object, target_is_directory: bool = False
-        ) -> None:
-            """Fail the install link only; let the restore link through."""
-            attempts["n"] += 1
-            if attempts["n"] == 1:
-                raise OSError("A required privilege is not held by the client")
-            real_symlink_to(self, target, target_is_directory=target_is_directory)  # type: ignore[arg-type]
+        def _always_fail(*args: object, **kwargs: object) -> None:
+            raise OSError("A required privilege is not held by the client")
 
         with (
             patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
-            patch.object(skills.Path, "symlink_to", _fail_first_symlink),
+            patch.object(skills.Path, "symlink_to", _always_fail),
         ):
             success = skills._install_skill_symlink(
                 "developing-with-streamlit",
@@ -1637,6 +1632,44 @@ class TestInstallSkillSymlinkEdgeCases:
         assert target.is_symlink()
         assert (target / "SKILL.md").read_text() == "# Working install\n"
         assert not result.installed
+
+    def test_keeps_staged_link_when_swap_rename_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A failed swap keeps the staged link rather than losing both copies.
+
+        The staged link is created and the old one removed, but if moving the new
+        link into place then fails, deleting it would leave the path with nothing at
+        all. It is kept so the content still exists on disk.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        existing_skill = tmp_path / "existing-skill"
+        existing_skill.mkdir()
+        (existing_skill / "SKILL.md").write_text("# Old link\n", encoding="utf-8")
+        target_dir = tmp_path / "project" / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.symlink_to(existing_skill, target_is_directory=True)
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            patch.object(skills.Path, "rename", side_effect=OSError("Access denied")),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert not success
+        assert not result.installed
+        # The staged link is the only remaining copy, so it must not be deleted.
+        staged = target_dir / ".developing-with-streamlit.newlink"
+        assert staged.is_symlink()
+        assert (staged / "SKILL.md").read_text() == "# Test Skill\n"
 
 
 class TestPromptInstallModeRetry:
