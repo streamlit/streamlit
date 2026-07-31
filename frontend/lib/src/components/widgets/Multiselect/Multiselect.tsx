@@ -602,7 +602,7 @@ const Multiselect: FC<Props> = props => {
         (e.key === "ArrowDown" || e.key === "ArrowUp") &&
         !isOpenRef.current
       ) {
-        openDropdownRef.current?.("first")
+        openDropdownRef.current?.()
       }
 
       if (e.key === "Escape") {
