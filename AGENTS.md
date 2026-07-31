@@ -88,6 +88,7 @@ Selection of `make` commands for development (run in the repo root):
 ### Development Tips
 
 - **Follow existing patterns**: Check neighboring files for conventions.
+- **Subagent model**: When launching subagents, use the same model as the parent session (`model: inherit` / omit any model override). Do not switch to a different or faster model unless the user explicitly requests it. Prefer the named custom agents in `.claude/agents/` when available.
 - You can use the `work-tmp` directory to store temporary files, specs, and scripts.
 - Use `agent-wiki/` (gitignored, cloned on first use) to share intermediate files (specs, plans, learnings) relevant for the current PR. This is a local checkout of [streamlit.wiki](https://github.com/streamlit/streamlit.wiki.git). Files are stored in `pull-requests/<pr-number>/` and accessible at `https://issues.streamlit.app/agent_wiki_explorer?file=<relative-path>`. See `sharing-pr-agent-artifacts` skill.
 - If you fail to run a `make` command, remember to run it from the root / top-level directory.
