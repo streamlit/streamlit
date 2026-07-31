@@ -29,10 +29,11 @@ import {
   isSkillsNudgeDismissed,
   isSkillsNudgeDroppedConnection,
   isSkillsNudgeSnoozed,
-  REFUSED_REASON_PREFIX,
   setSkillsNudgeDismissed,
   setSkillsNudgeSnoozed,
   SKILLS_NUDGE_DROPPED_MESSAGE,
+  skillsNudgeInstallFailureLabel,
+  skillsNudgeInstallSuccessLabel,
 } from "@streamlit/app/src/components/SkillsNudgeToast/skillsNudge"
 import SkillsNudgeToast from "@streamlit/app/src/components/SkillsNudgeToast/SkillsNudgeToast"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget/StatusWidget"
@@ -86,7 +87,6 @@ import {
   FileUploadClient,
   FormsData,
   generateUID,
-  getBackendOperationReason,
   getElementId,
   getEmbeddingIdClassName,
   getIFrameEnclosingApp,
@@ -1606,17 +1606,8 @@ export class App extends PureComponent<Props, State> {
         // — no need to also write the permanent "don't show again" flag here,
         // which would conflate "installed" with a permanent opt-out. The card
         // shows its own success confirmation and auto-dismisses.
-        //
-        // Tag installs the server rerouted from project mode to a global copy with
-        // the reason it gave (a bounded set — see fallback_reason in the proto). The
-        // distinctions matter because they point at different fixes, and a fallback
-        // install is otherwise indistinguishable from a project install in the
-        // success telemetry.
-        const fallbackReason = result.fallbackReason
         this.trackSkillsNudge(
-          fallbackReason
-            ? `skillsNudgeInstallSucceeded:${fallbackReason}`
-            : "skillsNudgeInstallSucceeded"
+          skillsNudgeInstallSuccessLabel(result.fallbackReason)
         )
         return result.detail ?? undefined
       })
@@ -1630,23 +1621,10 @@ export class App extends PureComponent<Props, State> {
           this.trackSkillsNudge("skillsNudgeInstallDropped")
           throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
         }
-        // Append the server's machine-readable reason as a label suffix —
-        // mirroring `skillsNudgeSuppressedNonLocal:<locality>` — so outcomes split
-        // by cause (e.g. "conflict", "write_failed", "source_missing"). A reason the
-        // server marked with REFUSED_REASON_PREFIX is an install a safety gate
-        // declined to attempt, not one that ran and failed, so it goes under a
-        // distinct `skillsNudgeInstallRefused:<reason>` and never inflates the
-        // failure rate. Reasons are a fixed server-side vocabulary (never user input).
-        const reason = getBackendOperationReason(error)
-        const isRefusal = reason?.startsWith(REFUSED_REASON_PREFIX) ?? false
-        const eventName = isRefusal
-          ? "skillsNudgeInstallRefused"
-          : "skillsNudgeInstallFailed"
-        // Strip the marker so the label reads `...Refused:non_loopback`.
-        const suffix = isRefusal
-          ? reason?.slice(REFUSED_REASON_PREFIX.length)
-          : reason
-        this.trackSkillsNudge(suffix ? `${eventName}:${suffix}` : eventName)
+        // Append the server's machine-readable reason as a label suffix, and
+        // count a safety-gate refusal under its own event rather than as a
+        // failure. See skillsNudgeInstallFailureLabel.
+        this.trackSkillsNudge(skillsNudgeInstallFailureLabel(error))
         // Re-throw so the toast renders its error state.
         throw error
       })

@@ -275,7 +275,7 @@ class InstallSkillsHandler(BackendOperationHandler):
                 if isinstance(ex, click.ClickException)
                 else "Failed to install skills."
             )
-            # ``skills._InstallError`` carries a bounded, machine-readable ``reason``
+            # ``skills.InstallError`` carries a bounded, machine-readable ``reason``
             # that the client forwards to telemetry as a label suffix. Read it ONLY
             # from that known type - never getattr-duck-type, or an unrelated
             # exception that happens to expose a str ``.reason`` (e.g.
@@ -286,10 +286,10 @@ class InstallSkillsHandler(BackendOperationHandler):
             # specific write_* bucket rather than being flattened; anything else
             # "unknown".
             reason: str
-            if isinstance(ex, skills._InstallError):
+            if isinstance(ex, skills.InstallError):
                 reason = ex.reason
             elif isinstance(ex, OSError):
-                reason = skills._classify_write_error(ex)
+                reason = skills.classify_write_error(ex)
             else:
                 reason = "unknown"
             return BackendOperationResponse(

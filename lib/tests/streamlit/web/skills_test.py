@@ -21,6 +21,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import get_args
 from unittest.mock import patch
 
 import click
@@ -1559,7 +1560,7 @@ class TestGlobalInstallationConflicts:
             patch.object(
                 skills.shutil, "copytree", side_effect=OSError("Permission denied")
             ),
-            pytest.raises(skills._InstallError) as exc,
+            pytest.raises(skills.InstallError) as exc,
         ):
             skills._install_global_skills(yes=True)
 
@@ -1589,7 +1590,7 @@ class TestGlobalInstallationConflicts:
                 "copytree",
                 side_effect=OSError(errno.EACCES, "Permission denied"),
             ),
-            pytest.raises(skills._InstallError) as exc,
+            pytest.raises(skills.InstallError) as exc,
         ):
             skills._install_global_skills(yes=True)
 
@@ -1620,7 +1621,7 @@ class TestGlobalInstallationConflicts:
                     OSError(errno.ENOSPC, "No space left"),
                 ],
             ),
-            pytest.raises(skills._InstallError) as exc,
+            pytest.raises(skills.InstallError) as exc,
         ):
             skills._install_global_skills(yes=True)
 
@@ -1653,7 +1654,7 @@ class TestGlobalInstallationConflicts:
                 "copytree",
                 side_effect=[None, OSError("Permission denied")],
             ),
-            pytest.raises(skills._InstallError) as exc,
+            pytest.raises(skills.InstallError) as exc,
         ):
             skills._install_global_skills(yes=True)
 
@@ -1928,12 +1929,12 @@ class TestConflictError:
         assert "Remove it and try again." in message
 
     def test_conflict_error_carries_conflict_reason(self) -> None:
-        """The conflict error is an ``_InstallError`` tagged ``reason="conflict"`` so
+        """The conflict error is an ``InstallError`` tagged ``reason="conflict"`` so
         the handler forwards it to install-failure telemetry."""
         err = skills._conflict_error(
             [".agents/skills/developing-with-streamlit (existing file or directory)"]
         )
-        assert isinstance(err, skills._InstallError)
+        assert isinstance(err, skills.InstallError)
         assert err.reason == "conflict"
 
 
@@ -2208,7 +2209,7 @@ class TestInstallProjectSkillsNoFallback:
             patch("pathlib.Path.home", return_value=tmp_path / "home"),
         ):
             with pytest.raises(
-                skills._InstallError, match="Symlinks not supported"
+                skills.InstallError, match="Symlinks not supported"
             ) as exc:
                 skills._install_project_skills(yes=True, fallback_to_global=False)
 
@@ -2327,6 +2328,30 @@ class TestInstallProjectSkillsFallbackSignal:
         assert result.fallback_reason is None
 
 
+@pytest.mark.parametrize(
+    "reason",
+    sorted(
+        {*get_args(skills._InstallFailureReason), *get_args(skills._FallbackReason)}
+    ),
+)
+def test_every_reason_in_the_vocabulary_is_named_by_a_test(reason: str) -> None:
+    """Fail when a reason is added to either vocabulary and no test names it.
+
+    mypy constrains raise sites to the vocabulary but says nothing about the reverse
+    direction: a value can be added, shipped, and never exercised, so nobody notices
+    it is unreachable or mis-tagged until an analysis query returns an empty bucket.
+
+    This is a tripwire on that gap, not proof the covering assertion is a good one -
+    it only checks the literal appears somewhere in this file. The classes below are
+    where it should appear.
+    """
+    source = Path(__file__).read_text(encoding="utf-8")
+    assert f'"{reason}"' in source, (
+        f"{reason!r} is in the reason vocabulary but no test in this file names it. "
+        "Add one asserting the raise site or classification that produces it."
+    )
+
+
 class TestRaiseSiteReasons:
     """Every raise site reports the reason the telemetry vocabulary expects.
 
@@ -2343,7 +2368,7 @@ class TestRaiseSiteReasons:
             patch.object(
                 skills, "_get_source_skills_dir", return_value=tmp_path / "nope"
             ),
-            pytest.raises(skills._InstallError) as exc,
+            pytest.raises(skills.InstallError) as exc,
         ):
             skills._install_project_skills(yes=True)
 
@@ -2365,7 +2390,7 @@ class TestRaiseSiteReasons:
         with (
             patch.object(skills, "_get_meta_skill_dir", return_value=meta_dir),
             patch("pathlib.Path.home", return_value=tmp_path / "home"),
-            pytest.raises(skills._InstallError) as exc,
+            pytest.raises(skills.InstallError) as exc,
         ):
             skills._install_global_skills(yes=True)
 
@@ -2377,7 +2402,7 @@ class TestRaiseSiteReasons:
         empty.mkdir()
         with (
             patch.object(skills, "_get_source_skills_dir", return_value=empty),
-            pytest.raises(skills._InstallError) as exc,
+            pytest.raises(skills.InstallError) as exc,
         ):
             skills._install_project_skills(yes=True)
 
@@ -2392,7 +2417,7 @@ class TestRaiseSiteReasons:
                 skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
             patch("sys.stdin.isatty", return_value=False),
-            pytest.raises(skills._InstallError) as exc,
+            pytest.raises(skills.InstallError) as exc,
         ):
             skills.install_skills()
 
@@ -2415,7 +2440,7 @@ class TestRaiseSiteReasons:
             ),
             patch("pathlib.Path.cwd", return_value=project_dir),
             patch("pathlib.Path.home", return_value=tmp_path / "home"),
-            pytest.raises(skills._InstallError) as exc,
+            pytest.raises(skills.InstallError) as exc,
         ):
             skills._install_project_skills(yes=True)
 
@@ -2485,7 +2510,7 @@ class TestSymlinkBlocker:
 
 
 class TestClassifyWriteError:
-    """_classify_write_error maps OSError codes to actionable reasons."""
+    """classify_write_error maps OSError codes to actionable reasons."""
 
     @pytest.mark.parametrize(
         ("errno_name", "expected"),
@@ -2501,7 +2526,7 @@ class TestClassifyWriteError:
     def test_maps_posix_errnos(self, errno_name: str, expected: str) -> None:
         """Each POSIX code that implies a distinct fix gets its own reason."""
         code = getattr(errno, errno_name)
-        assert skills._classify_write_error(OSError(code, "boom")) == expected
+        assert skills.classify_write_error(OSError(code, "boom")) == expected
 
     def test_unrecognised_errno_stays_generic(self) -> None:
         """An unmapped code reports write_failed rather than being mis-bucketed.
@@ -2509,8 +2534,8 @@ class TestClassifyWriteError:
         Guessing would be worse than admitting ignorance: a wrong specific reason
         sends whoever reads the telemetry after the wrong fix.
         """
-        assert skills._classify_write_error(OSError(errno.EIO, "io")) == "write_failed"
-        assert skills._classify_write_error(OSError()) == "write_failed"
+        assert skills.classify_write_error(OSError(errno.EIO, "io")) == "write_failed"
+        assert skills.classify_write_error(OSError()) == "write_failed"
 
     def test_winerror_takes_precedence_over_errno(self) -> None:
         """A Windows sharing violation is a lock, not a permissions problem.
@@ -2522,13 +2547,13 @@ class TestClassifyWriteError:
         """
         locked = OSError(errno.EACCES, "in use")
         locked.winerror = 32  # type: ignore[attr-defined]
-        assert skills._classify_write_error(locked) == "write_locked"
+        assert skills.classify_write_error(locked) == "write_locked"
 
     def test_unrecognised_winerror_falls_back_to_errno(self) -> None:
         """An unmapped Windows code still uses whatever errno CPython supplied."""
         denied = OSError(errno.EACCES, "denied")
         denied.winerror = 1_000_000  # type: ignore[attr-defined]
-        assert skills._classify_write_error(denied) == "write_denied"
+        assert skills.classify_write_error(denied) == "write_denied"
 
 
 class TestGetMetaSkillDir:

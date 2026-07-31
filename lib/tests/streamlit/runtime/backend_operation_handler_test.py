@@ -272,7 +272,7 @@ def test_install_skills_handler_reports_failure() -> None:
 
 
 def test_install_skills_handler_forwards_failure_reason() -> None:
-    """A ``skills._InstallError`` propagates its machine-readable ``reason`` into
+    """A ``skills.InstallError`` propagates its machine-readable ``reason`` into
     the response's ``error_reason`` so the client can split install-failure
     telemetry by cause (e.g. conflict vs. write_failed vs. source_missing)."""
     with (
@@ -280,7 +280,7 @@ def test_install_skills_handler_forwards_failure_reason() -> None:
         patch.object(skills, "detect_installed_agents", return_value=["claude"]),
         patch(
             "streamlit.web.skills.install_skills",
-            side_effect=skills._InstallError(
+            side_effect=skills.InstallError(
                 "developing-with-streamlit already exists. Remove it and try again.",
                 reason="conflict",
             ),
@@ -332,12 +332,12 @@ def test_install_skills_handler_does_not_leak_os_error_path() -> None:
 
 
 def test_install_skills_handler_ignores_foreign_reason_attribute() -> None:
-    """A non-_InstallError exception exposing a str ``.reason`` must NOT be emitted.
+    """A non-InstallError exception exposing a str ``.reason`` must NOT be emitted.
 
     The handler used to read the reason with ``getattr(ex, 'reason')``, so any
     exception carrying a free-form str ``.reason`` (``UnicodeDecodeError`` and
     several stdlib errors do) would emit an unbounded telemetry label and break the
-    fixed vocabulary. The reason is now trusted ONLY from skills._InstallError; a
+    fixed vocabulary. The reason is now trusted ONLY from skills.InstallError; a
     non-OSError foreign exception is classified ``unknown``.
     """
     foreign = ValueError("boom")

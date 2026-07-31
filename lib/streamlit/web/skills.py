@@ -44,7 +44,7 @@ _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
 # The ``write_*`` values subdivide what would otherwise be a single opaque
 # "a write failed". That distinction is the point: a lock clears on retry, a path
 # that is too long can be shortened, and neither is fixed by the permissions advice
-# a generic write failure would earn. See :func:`_classify_write_error`.
+# a generic write failure would earn. See :func:`classify_write_error`.
 _InstallFailureReason = Literal[
     "conflict",  # A pre-existing file or foreign symlink we won't overwrite.
     "incomplete",  # Project symlinks failed and the global fallback was cancelled.
@@ -77,7 +77,11 @@ _FallbackReason = Literal[
 # are not all defined everywhere) simply omits it rather than failing at import.
 _ERRNO_GROUPS: Final[tuple[tuple[tuple[str, ...], _InstallFailureReason], ...]] = (
     (("EACCES", "EPERM", "EROFS"), "write_denied"),
-    (("ENOSPC", "EDQUOT", "EFBIG"), "write_no_space"),
+    # EFBIG is deliberately absent: a file-size limit is not out of space, so it stays
+    # the honest write_failed rather than pointing whoever reads it at a full disk.
+    (("ENOSPC", "EDQUOT"), "write_no_space"),
+    # EAGAIN sits here on retry semantics rather than locking specifically - like a
+    # held file, the call may well succeed if simply repeated.
     (("EBUSY", "EAGAIN", "ETXTBSY"), "write_locked"),
     (("ENAMETOOLONG",), "write_name_too_long"),
 )
@@ -103,7 +107,7 @@ _WRITE_REASON_BY_WINERROR: Final[dict[int, _InstallFailureReason]] = {
 }
 
 
-def _classify_write_error(error: OSError) -> _InstallFailureReason:
+def classify_write_error(error: OSError) -> _InstallFailureReason:
     """Map a filesystem ``OSError`` to a bounded, actionable failure reason.
 
     Only the error *class* is used - never the message, which can embed an absolute
@@ -121,7 +125,7 @@ def _classify_write_error(error: OSError) -> _InstallFailureReason:
     return "write_failed"
 
 
-class _InstallError(click.ClickException):
+class InstallError(click.ClickException):
     """A skills-install failure carrying a stable machine-readable ``reason`` code.
 
     The ``reason`` (see :data:`_InstallFailureReason`) is what the backend-operation
@@ -171,10 +175,12 @@ class _InstallResult:
     # nudge's install-failure telemetry reason. Only the copy path fills this;
     # symlink failures reroute to a global install instead of being recorded here.
     errored: list[str] = field(default_factory=list)
-    # Classified cause for each ``errored`` entry, in the same order. Kept apart from
-    # the display strings above because those carry raw OSError text (fine for the
-    # CLI, never for the browser) while these are the bounded telemetry reasons.
-    write_reasons: list[_InstallFailureReason] = field(default_factory=list)
+    # The distinct classified causes behind ``errored``. A set, not a per-entry list:
+    # the only consumer asks whether the failed targets agreed on one cause, never
+    # which target had which. Kept apart from the display strings above because those
+    # carry raw OSError text (fine for the CLI, never for the browser) while these are
+    # the bounded telemetry reasons.
+    write_reasons: set[_InstallFailureReason] = field(default_factory=set)
     # Set when a project install was rerouted to a global copy, naming why (see
     # :data:`_FallbackReason`). Surfaced to telemetry so that cohort is countable and
     # separable - see InstallSkillsResponsePayload.
@@ -587,10 +593,10 @@ def _install_skill_copy(
         if temp_path.exists() and target_path.exists():
             shutil.rmtree(temp_path, ignore_errors=True)
         # A write failure, not a conflict - record it in ``errored`` so it is
-        # classified as such, not "conflict", and keep the errno-derived cause
-        # alongside it so the telemetry reason names which write failed.
+        # classified as such, not "conflict", and note the errno-derived cause so the
+        # telemetry reason names which write failed.
         result.errored.append(f"{rel_target_path} (copy failed: {e})")
-        result.write_reasons.append(_classify_write_error(e))
+        result.write_reasons.add(classify_write_error(e))
 
 
 def _print_result(result: _InstallResult) -> None:
@@ -733,7 +739,7 @@ def _concise_install_paths(entries: list[str]) -> list[str]:
     return paths
 
 
-def _conflict_error(skipped: list[str]) -> _InstallError:
+def _conflict_error(skipped: list[str]) -> InstallError:
     """Build a specific "couldn't install" error that names the conflicting
     paths, rather than a vague "remove conflicting files".
 
@@ -748,14 +754,14 @@ def _conflict_error(skipped: list[str]) -> _InstallError:
     paths = _concise_install_paths(skipped)
     joined = ", ".join(paths)
     plural = len(paths) != 1
-    return _InstallError(
+    return InstallError(
         f"{joined} already exist{'' if plural else 's'}. "
         f"Remove {'them' if plural else 'it'} and try again.",
         reason="conflict",
     )
 
 
-def _write_error(result: _InstallResult) -> _InstallError:
+def _write_error(result: _InstallResult) -> InstallError:
     """Build a "couldn't write" error for filesystem failures during copy.
 
     Distinct from :func:`_conflict_error`: ``errored`` entries are ``OSError``
@@ -768,11 +774,11 @@ def _write_error(result: _InstallResult) -> _InstallError:
     reads the telemetry at the wrong fix.
     """
     joined = ", ".join(_concise_install_paths(result.errored))
-    distinct = set(result.write_reasons)
+    reasons = result.write_reasons
     reason: _InstallFailureReason = (
-        next(iter(distinct)) if len(distinct) == 1 else "write_failed"
+        next(iter(reasons)) if len(reasons) == 1 else "write_failed"
     )
-    return _InstallError(
+    return InstallError(
         f"Could not write {joined}. Check folder permissions and free disk "
         "space, then try again.",
         reason=reason,
@@ -792,7 +798,7 @@ def _install_project_skills(
         # Keep the absolute path in the server log only - this message is shown
         # verbatim in the in-app nudge, so it must not leak a server path.
         _LOGGER.warning("Bundled skills directory not found at %s", source_skills_dir)
-        raise _InstallError(
+        raise InstallError(
             "Bundled skills were not found in your Streamlit installation. "
             "Reinstall Streamlit and try again.",
             reason="source_missing",
@@ -800,7 +806,7 @@ def _install_project_skills(
 
     skills = _discover_skills(source_skills_dir)
     if not skills:
-        raise _InstallError(
+        raise InstallError(
             "No installable skills found in Streamlit package.", reason="no_skills"
         )
 
@@ -831,7 +837,7 @@ def _install_project_skills(
             global_result.fallback_reason = symlink_blocker
             return global_result
 
-        raise _InstallError(
+        raise InstallError(
             "Symlinks not supported. Use --global for global installation.",
             reason="symlinks_unsupported",
         )
@@ -880,14 +886,14 @@ def _install_project_skills(
             raise
         except click.exceptions.Abort:
             # User cancelled global install - report that nothing was fully installed
-            raise _InstallError(
+            raise InstallError(
                 "Installation incomplete. Project symlinks failed and global install "
                 "was cancelled.",
                 reason="incomplete",
             )
 
     if symlink_failed:
-        raise _InstallError(
+        raise InstallError(
             "Symlinks not supported. Use --global for global installation.",
             reason="symlinks_unsupported",
         )
@@ -961,7 +967,7 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
             _GLOBAL_SKILL_NAME,
             meta_skill_dir,
         )
-        raise _InstallError(
+        raise InstallError(
             f"The bundled '{_GLOBAL_SKILL_NAME}' meta-skill was not found in your "
             "Streamlit installation. Reinstall Streamlit and try again.",
             # Distinct from source_missing: the directory is there but a required
@@ -1042,7 +1048,7 @@ def install_skills(
     """
     # Check if running interactively
     if not yes and not sys.stdin.isatty():
-        raise _InstallError(
+        raise InstallError(
             "Non-interactive terminal detected. Use --yes to skip prompts.",
             reason="non_interactive",
         )

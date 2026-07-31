@@ -15,17 +15,22 @@
  */
 
 /**
- * Client-side preference helpers for the in-app "install skills" nudge.
+ * Client-side helpers for the in-app "install skills" nudge.
  *
  * The nudge's *visibility* is owned by ``App`` (it depends on the per-session
- * ``recommendSkillsInstall`` flag and React state), but the browser-local
- * preference logic — the ``localStorage`` snooze/dismiss flags and the
- * dropped-connection classification — is pure and lives here so it can be unit
- * tested in isolation and kept out of the already-large ``App`` component.
+ * ``recommendSkillsInstall`` flag and React state), but everything here is pure —
+ * the ``localStorage`` snooze/dismiss flags, the dropped-connection
+ * classification, and the telemetry labels an install outcome maps to — so it can
+ * be unit tested in isolation and kept out of the already-large ``App`` component.
+ *
+ * Keeping the label functions here also keeps the whole emitted vocabulary in one
+ * file, including the ``refused:`` marker the server namespaces gate refusals
+ * with, which no other module needs to know about.
  */
 
 import {
   CONNECTION_CLOSED_MESSAGE,
+  getBackendOperationReason,
   REQUEST_TIMED_OUT_MESSAGE,
 } from "@streamlit/lib"
 import { localStorageAvailable } from "@streamlit/utils"
@@ -124,12 +129,54 @@ export function isSkillsNudgeDroppedConnection(error: unknown): boolean {
 }
 
 /**
+ * Telemetry label for a successful install.
+ *
+ * A `fallbackReason` means the server rerouted a project install to a global copy
+ * and named why (a bounded set — see `fallback_reason` in the proto). It becomes a
+ * label suffix because a fallback install is otherwise indistinguishable from a
+ * project install in the success telemetry, and the causes point at different
+ * fixes — only Developer Mode being off is something a user can simply turn on.
+ */
+export function skillsNudgeInstallSuccessLabel(
+  fallbackReason?: string | null
+): string {
+  return fallbackReason
+    ? `skillsNudgeInstallSucceeded:${fallbackReason}`
+    : "skillsNudgeInstallSucceeded"
+}
+
+/**
  * Prefix the server puts on an `error_reason` when a safety gate *refused* the
  * install before attempting it (headless server, no agent harness, non-loopback
- * connection) rather than an install that ran and failed. Refusals are tracked
- * under their own event (`skillsNudgeInstallRefused:<reason>`) so they don't
- * inflate the genuine install-failure rate. The server owns which reasons are
- * refusals — we only strip the prefix — so a gate added there needs no change
- * here. Mirrors `_REFUSED_REASON_PREFIX` in `backend_operation_handler.py`.
+ * connection) rather than an install that ran and failed. The server owns which
+ * reasons are refusals — we only strip the prefix — so a gate added there needs no
+ * change here. Mirrors `_REFUSED_REASON_PREFIX` in `backend_operation_handler.py`.
  */
-export const REFUSED_REASON_PREFIX = "refused:"
+const REFUSED_REASON_PREFIX = "refused:"
+
+/**
+ * Telemetry label for an install the server rejected.
+ *
+ * Splits two outcomes the funnel must not conflate: an install that *ran and
+ * failed*, and one a safety gate *refused* before touching the filesystem —
+ * refusals get their own event so they never inflate the genuine failure rate.
+ * Either way the server's machine-readable reason becomes a label suffix,
+ * mirroring `skillsNudgeSuppressedNonLocal:<locality>`, so outcomes split by cause
+ * (e.g. `skillsNudgeInstallFailed:write_denied`). Reasons are a fixed server-side
+ * vocabulary, never user input, so they are safe to emit verbatim.
+ *
+ * Callers must check {@link isSkillsNudgeDroppedConnection} first — a dropped
+ * connection is neither outcome and is counted separately.
+ */
+export function skillsNudgeInstallFailureLabel(error: unknown): string {
+  // getBackendOperationReason already narrows to a non-empty string, so an older
+  // backend that omits error_reason lands on the bare label below.
+  const reason = getBackendOperationReason(error) ?? ""
+  const isRefusal = reason.startsWith(REFUSED_REASON_PREFIX)
+  const event = isRefusal
+    ? "skillsNudgeInstallRefused"
+    : "skillsNudgeInstallFailed"
+  // Strip the marker so the label reads `...Refused:non_loopback`.
+  const cause = isRefusal ? reason.slice(REFUSED_REASON_PREFIX.length) : reason
+  return cause ? `${event}:${cause}` : event
+}
