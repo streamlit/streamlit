@@ -565,7 +565,7 @@ def _install_skill_copy(
         result.installed.append(str(rel_target_path))
     except OSError as e:
         # Drop the temp copy only if something is still at the target. If the
-        # target is empty, the swap died mid-flight and both the restore failed -
+        # target is empty, the swap died mid-flight and the restore also failed -
         # so temp (new content) and the .old backup (previous install) are all the
         # user has left. Keep them rather than leaving the path with nothing.
         temp_path = target_path.with_name(f".{skill_name}.tmp")

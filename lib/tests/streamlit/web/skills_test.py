@@ -1409,11 +1409,23 @@ class TestInstallSkillCopyEdgeCases:
         (target / "SKILL.md").write_text("# Old version\n", encoding="utf-8")
 
         result = skills._InstallResult()
+        real_rename = skills.Path.rename
+        calls = {"n": 0}
+
+        def _fail_only_the_swap(self: Path, target_name: object) -> object:
+            """Let the move-aside through and fail the swap; the restore then works.
+
+            Blanket-patching ``rename`` would fail the move-aside instead, so the
+            restore branch would never run and a broken restore would still pass.
+            """
+            calls["n"] += 1
+            if calls["n"] == 2:
+                raise OSError("Access is denied")
+            return real_rename(self, target_name)  # type: ignore[arg-type]
+
         with (
             patch("pathlib.Path.home", return_value=tmp_path),
-            patch.object(
-                skills.Path, "rename", side_effect=OSError("Access is denied")
-            ),
+            patch.object(skills.Path, "rename", _fail_only_the_swap),
         ):
             skills._install_skill_copy(
                 "developing-with-streamlit",
@@ -1423,10 +1435,16 @@ class TestInstallSkillCopyEdgeCases:
                 {"developing-with-streamlit"},
             )
 
+        # rename #1 moved the old install aside, #2 (the swap) failed, #3 restored it.
+        assert calls["n"] == 3
+        # The old install is back at the canonical path with its original content.
         assert target.is_dir()
+        assert not target.is_symlink()
         assert (target / "SKILL.md").read_text() == "# Old version\n"
+        # Reported as a failure, and the backup name is not left behind.
         assert result.errored
         assert not result.installed
+        assert not (target_dir / ".developing-with-streamlit.old").exists()
 
     def test_keeps_both_copies_when_swap_and_restore_both_fail(
         self, tmp_path: Path, mock_source_skills_dir: Path
@@ -1721,6 +1739,47 @@ class TestInstallSkillSymlinkEdgeCases:
         assert (target / "SKILL.md").read_text() == "# Test Skill\n"
         # ...and the staging name is cleaned up rather than left as clutter.
         assert not (target_dir / ".developing-with-streamlit.newlink").exists()
+
+    def test_keeps_old_link_when_unlink_fails_after_staging(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A failed unlink leaves the old link in place, staged copy or not.
+
+        The staged link exists but the old one can't be removed, so the swap never
+        starts. This is the branch where staging pays off: the existing install was
+        never touched, so it is still exactly what it was.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        existing_skill = tmp_path / "existing-skill"
+        existing_skill.mkdir()
+        (existing_skill / "SKILL.md").write_text(
+            "# Working install\n", encoding="utf-8"
+        )
+        target_dir = tmp_path / "project" / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.symlink_to(existing_skill, target_is_directory=True)
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            patch.object(
+                skills.Path, "unlink", side_effect=OSError("Permission denied")
+            ),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert not success
+        assert not result.installed
+        # The old install is untouched, still resolving to its original content.
+        assert target.is_symlink()
+        assert (target / "SKILL.md").read_text() == "# Working install\n"
 
     def test_keeps_staged_link_when_recovery_also_fails(
         self, tmp_path: Path, mock_source_skills_dir: Path
