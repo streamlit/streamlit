@@ -88,4 +88,6 @@ export const sizes = {
   // Default for box-shadow focus ring width
   focusRingWidth: "0.2rem",
   fileChipNameMinWidth: "4.875rem",
+  // Date input calendar sizing so changing months doesnt impact display width
+  dateInputMinWidth: "14rem",
 }
