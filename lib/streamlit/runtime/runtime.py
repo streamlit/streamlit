@@ -489,7 +489,7 @@ class Runtime:
         self._on_session_disconnected()
 
     def disconnect_session(
-        self, session_id: str, client: SessionClient | None = None
+        self, session_id: str, *, client: SessionClient | None = None
     ) -> None:
         """Disconnect a session. It will stop producing ForwardMsgs.
 
@@ -517,7 +517,7 @@ class Runtime:
         self._on_session_disconnected()
 
     def handle_backmsg(
-        self, session_id: str, msg: BackMsg, client: SessionClient | None = None
+        self, session_id: str, msg: BackMsg, *, client: SessionClient | None = None
     ) -> None:
         """Send a BackMsg to an active session.
 
@@ -557,6 +557,7 @@ class Runtime:
         self,
         session_id: str,
         exc: BaseException,
+        *,
         client: SessionClient | None = None,
     ) -> None:
         """Handle an Exception raised during deserialization of a BackMsg.
