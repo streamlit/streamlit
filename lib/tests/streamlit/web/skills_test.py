@@ -2686,6 +2686,101 @@ class TestInstallProjectSkillsFallbackSignal:
         assert result.fallback_reason is None
 
 
+class TestRaiseSiteReasons:
+    """Every raise site reports the reason the telemetry vocabulary expects.
+
+    mypy rejects an *invalid* reason but not a wrong *choice* among valid ones — so
+    tagging the meta-skill check ``source_missing`` instead of ``source_incomplete``
+    would type-check, ship, and quietly point a dashboard at the wrong packaging bug.
+    The existing tests for these paths assert on user-facing messages, which a
+    mis-tagged reason passes. These assert the reason itself.
+    """
+
+    def test_absent_skills_directory_is_source_missing(self, tmp_path: Path) -> None:
+        """Nothing installed in the wheel at all -> missing package data."""
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=tmp_path / "nope"
+            ),
+            pytest.raises(skills._InstallError) as exc,
+        ):
+            skills._install_project_skills(yes=True)
+
+        assert exc.value.reason == "source_missing"
+
+    def test_incomplete_meta_skill_is_source_incomplete(self, tmp_path: Path) -> None:
+        """Directory present but a required file missing -> too-narrow glob.
+
+        Distinct from source_missing on purpose: "the wheel has no skills" and "the
+        wheel has the folder but not scripts/discover.py" are different packaging
+        bugs with different fixes.
+        """
+        meta_dir = tmp_path / "meta"
+        skill_dir = meta_dir / "developing-with-streamlit"
+        skill_dir.mkdir(parents=True)
+        # SKILL.md present, scripts/discover.py absent - the router without its target.
+        (skill_dir / "SKILL.md").write_text("# Meta\n", encoding="utf-8")
+
+        with (
+            patch.object(skills, "_get_meta_skill_dir", return_value=meta_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+            pytest.raises(skills._InstallError) as exc,
+        ):
+            skills._install_global_skills(yes=True)
+
+        assert exc.value.reason == "source_incomplete"
+
+    def test_empty_skills_directory_is_no_skills(self, tmp_path: Path) -> None:
+        """The directory exists but discovery found nothing installable."""
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        with (
+            patch.object(skills, "_get_source_skills_dir", return_value=empty),
+            pytest.raises(skills._InstallError) as exc,
+        ):
+            skills._install_project_skills(yes=True)
+
+        assert exc.value.reason == "no_skills"
+
+    def test_no_tty_without_yes_is_non_interactive(
+        self, mock_source_skills_dir: Path
+    ) -> None:
+        """CLI-only: nothing to prompt on and --yes was not passed."""
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch("sys.stdin.isatty", return_value=False),
+            pytest.raises(skills._InstallError) as exc,
+        ):
+            skills.install_skills()
+
+        assert exc.value.reason == "non_interactive"
+
+    def test_cancelled_global_fallback_is_incomplete(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Project symlinks failed and the user declined the global fallback."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch.object(skills, "_symlink_blocker", return_value=None),
+            patch.object(skills, "_install_skill_symlink", return_value=False),
+            patch.object(
+                skills, "_install_global_skills", side_effect=click.exceptions.Abort()
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+            pytest.raises(skills._InstallError) as exc,
+        ):
+            skills._install_project_skills(yes=True)
+
+        assert exc.value.reason == "incomplete"
+
+
 class TestSymlinkBlocker:
     """_symlink_blocker names WHY symlinks are unavailable, not just that they are."""
 
