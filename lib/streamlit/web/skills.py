@@ -438,14 +438,24 @@ def _install_skill_symlink(
             # Renaming into a name we just freed, in the same directory.
             link_path.rename(target_path)
         except OSError:
-            # If something is still at the target the unlink failed and the old
-            # install is intact, so drop the staged link. If the target is empty
-            # the rename failed and the staged link is the only copy left - keep
-            # it rather than deleting the last one. Either way, fall back.
             if target_path.exists() or target_path.is_symlink():
+                # The unlink failed, so the old install is intact and the staged
+                # link is redundant. Drop it and let the caller fall back.
                 with contextlib.suppress(OSError):
                     _remove_skill_target(link_path)
-            return False
+                return False
+            # The old link is gone but the staged one wouldn't move, leaving the
+            # canonical path empty. Creating a link here demonstrably works - we
+            # just made one - so lay it directly rather than stranding the install
+            # under a dot-name that nothing reads.
+            try:
+                target_path.symlink_to(rel_source, target_is_directory=True)
+            except OSError:
+                # Keep the staged link: it is now the only one, so deleting it
+                # would leave nothing at all.
+                return False
+            with contextlib.suppress(OSError):
+                _remove_skill_target(link_path)
 
     result.installed.append(str(rel_target_path))
     return True

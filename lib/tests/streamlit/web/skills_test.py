@@ -1682,14 +1682,15 @@ class TestInstallSkillSymlinkEdgeCases:
         assert (target / "SKILL.md").read_text() == "# Working install\n"
         assert not result.installed
 
-    def test_keeps_staged_link_when_swap_rename_fails(
+    def test_lays_link_directly_when_swap_rename_fails(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """A failed swap keeps the staged link rather than losing both copies.
+        """A failed swap recovers by creating the link at the canonical path.
 
-        The staged link is created and the old one removed, but if moving the new
-        link into place then fails, deleting it would leave the path with nothing at
-        all. It is kept so the content still exists on disk.
+        The staged link exists and the old one is removed, but the rename into place
+        fails. Creating a symlink here is already proven to work — the staged one
+        just succeeded — so it is laid directly rather than stranding the install
+        under a dot-name that nothing reads.
         """
         _skip_if_symlinks_not_supported(tmp_path)
         existing_skill = tmp_path / "existing-skill"
@@ -1713,9 +1714,64 @@ class TestInstallSkillSymlinkEdgeCases:
                 {"developing-with-streamlit"},
             )
 
+        assert success
+        assert result.installed
+        # The link is where agents look, pointing at the new source...
+        assert target.is_symlink()
+        assert (target / "SKILL.md").read_text() == "# Test Skill\n"
+        # ...and the staging name is cleaned up rather than left as clutter.
+        assert not (target_dir / ".developing-with-streamlit.newlink").exists()
+
+    def test_keeps_staged_link_when_recovery_also_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """When even the direct re-lay fails, the staged link is not deleted.
+
+        Rename fails and so does creating the link at the canonical path, so the
+        staged link is the only one left — deleting it would leave nothing at all.
+        The caller still falls back to a global install.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        existing_skill = tmp_path / "existing-skill"
+        existing_skill.mkdir()
+        (existing_skill / "SKILL.md").write_text("# Old link\n", encoding="utf-8")
+        target_dir = tmp_path / "project" / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.symlink_to(existing_skill, target_is_directory=True)
+
+        result = skills._InstallResult()
+        real_symlink_to = skills.Path.symlink_to
+        calls = {"n": 0}
+
+        def _only_staged_link_works(
+            self: Path, link_target: object, target_is_directory: bool = False
+        ) -> None:
+            """Let the staged link through; fail the direct re-lay after it."""
+            calls["n"] += 1
+            if calls["n"] == 1:
+                real_symlink_to(
+                    self, link_target, target_is_directory=target_is_directory
+                )  # type: ignore[arg-type]
+                return
+            raise OSError("A required privilege is not held by the client")
+
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            patch.object(skills.Path, "rename", side_effect=OSError("Access denied")),
+            patch.object(skills.Path, "symlink_to", _only_staged_link_works),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
         assert not success
         assert not result.installed
-        # The staged link is the only remaining copy, so it must not be deleted.
+        # The staged link is the only remaining copy, so it must survive.
         staged = target_dir / ".developing-with-streamlit.newlink"
         assert staged.is_symlink()
         assert (staged / "SKILL.md").read_text() == "# Test Skill\n"
