@@ -155,13 +155,13 @@ message InstallSkillsResponsePayload {
   string detail = 1;
 
   // Why a project install was rerouted to a global copy, empty when it wasn't:
-  //   "symlinks_unsupported" - the up-front pre-check found symlinks unavailable
-  //                            (e.g. Windows without Developer Mode)
-  //   "symlink_failed"       - the pre-check passed but an individual link would
-  //                            not lay, which is closer to a bug or a
-  //                            directory-specific permission problem
-  // Split rather than a single flag because those two point at different fixes.
-  // Lets the nudge telemetry count each cohort
+  //   "symlinks_no_privilege" - Windows Developer Mode off (ERROR_PRIVILEGE_NOT_HELD)
+  //   "symlinks_denied"       - permissions on the project dir refused the probe
+  //   "symlinks_unsupported"  - the filesystem/OS has no directory symlinks
+  //   "symlink_failed"        - pre-check passed, then an individual link would not lay
+  // Split this finely because most Windows users take this path and then SUCCEED, so
+  // this is where their diagnostic signal lives - and only the first of these is
+  // something a user can simply fix. Lets the nudge telemetry count each cohort
   // (skillsNudgeInstallSucceeded:<fallback_reason>), since a fallback install is
   // otherwise indistinguishable from a project install.
   string fallback_reason = 3;

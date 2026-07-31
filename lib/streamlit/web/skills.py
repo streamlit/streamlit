@@ -62,6 +62,11 @@ _STAGING_ORPHAN_AGE_S: Final[float] = 3600.0
 # unable to match it, or it would eventually delete the data it was retained to save.
 # Nothing reclaims these - that is the point - and the failure is logged with the path.
 _RECOVERY_PREFIX: Final[str] = ".st-recover-"
+# Sentinel written into every staging dir. The sweep requires it before deleting, so a
+# hidden user directory that merely shares the prefix is never touched: mkdtemp
+# guarantees uniqueness for the *creating* side, but the sweep matches on name and age,
+# which is a convention rather than proof of ownership.
+_STAGING_MARKER: Final[str] = ".streamlit-owned"
 
 # The full vocabulary of install-failure causes. A closed set so the reason stays
 # safe to emit as a telemetry label; typing it as a Literal makes mypy reject a
@@ -202,9 +207,9 @@ class _InstallResult:
     # the display strings above because those carry raw OSError text (fine for the
     # CLI, never for the browser) while these are the bounded telemetry reasons.
     write_reasons: list[_InstallFailureReason] = field(default_factory=list)
-    # Set when a project install was rerouted to a global copy, to which of the two
-    # causes. Surfaced to telemetry so that cohort is countable and separable - see
-    # InstallSkillsResponsePayload.
+    # Set when a project install was rerouted to a global copy, naming why (see
+    # :data:`_FallbackReason`). Surfaced to telemetry so that cohort is countable and
+    # separable - see InstallSkillsResponsePayload.
     fallback_reason: _FallbackReason | None = None
 
 
@@ -568,25 +573,30 @@ def _install_skill_symlink(
         return False
 
     if staging is not None:
+        # Move the old link aside rather than unlinking it, mirroring the copy path:
+        # if the swap then fails, the canonical path can be restored from staging
+        # instead of being left empty.
+        displaced = staging / _STAGING_OLD
         try:
-            target_path.unlink()
-            # Renaming into a name we just freed, in the same directory.
+            target_path.rename(displaced)
             link_path.rename(target_path)
         except OSError:
             if target_path.exists() or target_path.is_symlink():
-                # The unlink failed, so the old install is intact and the staged
+                # The move-aside failed, so the old install is intact and the staged
                 # link is redundant. Drop it and let the caller fall back.
                 shutil.rmtree(staging, ignore_errors=True)
                 return False
-            # The old link is gone but the staged one wouldn't move, leaving the
-            # canonical path empty. Creating a link here demonstrably works - we
-            # just made one - so lay it directly rather than stranding the install
-            # inside a staging dir that nothing reads.
+            # The old link is out of the way but the staged one wouldn't move, leaving
+            # the canonical path empty. Creating a link here demonstrably works - we
+            # just made one - so lay it directly.
             try:
                 target_path.symlink_to(rel_source, target_is_directory=True)
             except OSError:
-                # Leave staging in place: it holds the only link, and the sweep on
-                # the next install is what reclaims it.
+                # Last resort: put the displaced link back, so the canonical path is
+                # populated even though this install failed.
+                with contextlib.suppress(OSError):
+                    displaced.rename(target_path)
+                shutil.rmtree(staging, ignore_errors=True)
                 return False
         shutil.rmtree(staging, ignore_errors=True)
 
@@ -624,7 +634,9 @@ def _open_staging_dir(target_dir: Path) -> Path:
     """
     target_dir.mkdir(parents=True, exist_ok=True)
     _sweep_staging_dirs(target_dir)
-    return Path(tempfile.mkdtemp(dir=target_dir, prefix=_STAGING_PREFIX))
+    staging = Path(tempfile.mkdtemp(dir=target_dir, prefix=_STAGING_PREFIX))
+    (staging / _STAGING_MARKER).touch()
+    return staging
 
 
 def _sweep_staging_dirs(target_dir: Path) -> None:
@@ -632,8 +644,10 @@ def _sweep_staging_dirs(target_dir: Path) -> None:
 
     Two guards, both load-bearing:
 
-    - Only :data:`_STAGING_PREFIX` names are candidates, and only ``mkdtemp``
-      produces those, so a user's own files are never at risk.
+    - A candidate must both match :data:`_STAGING_PREFIX` and contain the
+      :data:`_STAGING_MARKER` sentinel. The prefix alone is a convention; the marker
+      is proof we created it, so a hidden user directory that happens to share the
+      prefix is never removed.
     - Only directories untouched for :data:`_STAGING_ORPHAN_AGE_S` are removed.
       Sweeping on name alone would delete a *concurrent* install's staging
       directory - which may already hold the old installation it moved aside, so
@@ -648,7 +662,9 @@ def _sweep_staging_dirs(target_dir: Path) -> None:
     with contextlib.suppress(OSError):
         for stale in target_dir.glob(f"{_STAGING_PREFIX}*"):
             with contextlib.suppress(OSError):
-                if stale.stat().st_mtime < cutoff:
+                if (
+                    stale / _STAGING_MARKER
+                ).is_file() and stale.stat().st_mtime < cutoff:
                     shutil.rmtree(stale, ignore_errors=True)
 
 

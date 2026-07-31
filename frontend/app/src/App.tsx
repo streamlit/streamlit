@@ -1606,11 +1606,11 @@ export class App extends PureComponent<Props, State> {
         // which would conflate "installed" with a permanent opt-out. The card
         // shows its own success confirmation and auto-dismisses.
         //
-        // Tag installs the server rerouted from project mode to a global copy,
-        // with which of the two causes — symlinks unavailable machine-wide vs. an
-        // individual link that would not lay. Those point at different fixes, and
-        // a fallback install is otherwise indistinguishable from a project install
-        // in the success telemetry.
+        // Tag installs the server rerouted from project mode to a global copy with
+        // the reason it gave (a bounded set — see fallback_reason in the proto). The
+        // distinctions matter because they point at different fixes, and a fallback
+        // install is otherwise indistinguishable from a project install in the
+        // success telemetry.
         const fallbackReason = result.fallbackReason
         this.trackSkillsNudge(
           fallbackReason
