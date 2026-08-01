@@ -530,7 +530,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         """Layered from_json charts must keep every named dataset the layers reference.
 
         A layered chart shares one named dataset across its layers, so the same
-        clobbering bug left every layer without data. See #6269.
+        overwrite left every layer without data. See #6269.
         """
         df = pd.DataFrame({"x": [0, 1, 2], "y": [0, 1, 2]})
         base = alt.Chart(df)
@@ -557,8 +557,11 @@ class AltairChartTest(DeltaGeneratorTestCase):
         missing = referenced - set(sent_names)
         assert not missing, f"spec references {missing} but only {sent_names} were sent"
         for name in referenced:
-            assert proto.datasets[sent_names.index(name)].data.data, (
-                f"referenced dataset {name!r} was sent empty"
+            sent = proto.datasets[sent_names.index(name)]
+            pd.testing.assert_frame_equal(
+                convert_arrow_bytes_to_pandas_df(sent.data.data),
+                df,
+                check_dtype=False,
             )
 
     def test_regular_chart_datasets_still_arrow_serialized(self):
