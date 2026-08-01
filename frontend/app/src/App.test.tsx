@@ -7360,6 +7360,42 @@ describe("Skills install nudge", () => {
     })
   })
 
+  it("tracks a safety-gate refusal as Refused, not Failed", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // The server prefixes gate reasons with `refused:` — the install was declined
+    // before it was attempted, so it must not inflate the install-failure rate.
+    // Label construction is unit-tested in skillsNudge.test.ts; this asserts App
+    // routes a refusal to the distinct EVENT, which is the funnel discontinuity
+    // this PR introduces and the one thing a unit test cannot see.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(
+      Object.assign(
+        new Error("Skills install is not available in this environment."),
+        { reason: "refused:non_loopback" }
+      )
+    )
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    // The prefix is stripped, so the gate name stays readable in the label.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallRefused:non_loopback",
+    })
+    // A refusal is not a failure and must stay off the failure funnel.
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed:refused:non_loopback",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+    })
+  })
+
   it("counts a dropped-connection install separately from a failure", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     vi.spyOn(

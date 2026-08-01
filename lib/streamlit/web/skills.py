@@ -736,10 +736,14 @@ def _conflict_error(skipped: list[str]) -> InstallError:
 def _write_error(result: _InstallResult) -> InstallError:
     """Build a "couldn't write" error for filesystem failures during copy.
 
-    Distinct from :func:`_conflict_error`, which reports pre-existing files. The
-    reason is the specific cause when every failed target agreed on one, and the
-    generic ``write_failed`` when they disagreed - claiming "permission denied" for a
-    set that was half permissions and half disk-full would point at the wrong fix.
+    Distinct from :func:`_conflict_error`, which reports pre-existing files.
+
+    The reason follows what the failed targets agreed on:
+
+    - all agreed on one cause -> that cause
+    - they disagreed -> the generic ``write_failed``, because claiming "permission
+      denied" for a set that was half permissions and half disk-full would point
+      whoever reads the telemetry at the wrong fix
     """
     joined = ", ".join(_concise_install_paths(result.errored))
     reasons = result.write_reasons
