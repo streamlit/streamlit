@@ -582,6 +582,13 @@ class AltairChartTest(DeltaGeneratorTestCase):
         assert "name" in spec["data"]
         assert len(proto.datasets) == 1
         assert proto.datasets[0].name == spec["data"]["name"]
+        # Decode it to confirm the payload really is Arrow bytes for this df, so
+        # this cannot pass on a merge that left raw JSON values in place.
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data),
+            df,
+            check_dtype=False,
+        )
 
 
 class AltairChartWidthTest(DeltaGeneratorTestCase):
