@@ -77,19 +77,6 @@ import {
 } from "./styled-components"
 import { getSafeLocale } from "./weekInfo"
 
-/**
- * Focusable descendants of the calendar popover, in DOM order: header
- * buttons (prev/next, month/year pickers) and exactly one grid cell with
- * `tabIndex=0` (React Aria's roving-tabindex pattern).
- */
-function getFocusableCalendarElements(container: HTMLElement): HTMLElement[] {
-  return Array.from(
-    container.querySelectorAll<HTMLElement>(
-      'button, [role="spinbutton"], [role="button"], [tabindex]'
-    )
-  ).filter(el => el.tabIndex >= 0 && !(el as HTMLButtonElement).disabled)
-}
-
 interface SingleDateInputProps {
   value: CalendarDate | null
   onChange: (value: CalendarDate | null) => void
@@ -382,55 +369,38 @@ function SingleDateInput({
     [disabled, format, onChange, displayValue, minDate]
   )
 
-  // Tab from the last segment moves focus into the calendar popover.
-  // Without this, FloatingPortal puts the calendar outside DOM order so
-  // Tab would skip over it entirely.
+  // Tab from edge segments closes the popover and lets focus leave the
+  // widget naturally (Ant Design pattern: calendar is a visual aid for
+  // pointer users; keyboard users type dates directly in the segments).
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
-      if (e.key !== "Tab" || e.shiftKey || !isOpen) return
+      if (e.key !== "Tab" || !isOpen) return
       const wrapper = triggerRef.current
-      const calendar = refs.floating.current
-      if (!wrapper || !calendar) return
-
+      if (!wrapper) return
       const segments = wrapper.querySelectorAll<HTMLElement>(
         '[role="spinbutton"]'
       )
-      const lastSegment = segments[segments.length - 1]
-      if (e.target !== lastSegment) return
-
-      const focusedCell = calendar.querySelector<HTMLElement>(
-        '[role="button"][tabindex="0"]'
-      )
-      if (!focusedCell) return
-      e.preventDefault()
-      focusedCell.focus()
+      const isLeavingField =
+        (!e.shiftKey && e.target === segments[segments.length - 1]) ||
+        (e.shiftKey && e.target === segments[0])
+      if (isLeavingField) {
+        setIsOpen(false)
+      }
     },
-    [isOpen, refs.floating]
+    [isOpen]
   )
 
-  // Tab trap: forward-Tab on last element closes popover, Shift+Tab on
-  // first wraps to the grid cell.
+  // If focus lands in the calendar (mouse click on a header control),
+  // Tab closes the popover and returns focus to the field rather than
+  // letting it escape into the page behind the overlay.
   const handleCalendarKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.key !== "Tab") return
-      const calendar = refs.floating.current
-      if (!calendar) return
-
-      const focusable = getFocusableCalendarElements(calendar)
-      if (focusable.length === 0) return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-
-      if (!e.shiftKey && e.target === last) {
-        e.preventDefault()
-        setIsOpen(false)
-        focusLastFieldSegment()
-      } else if (e.shiftKey && e.target === first) {
-        e.preventDefault()
-        last.focus()
-      }
+      e.preventDefault()
+      setIsOpen(false)
+      focusLastFieldSegment()
     },
-    [refs.floating, focusLastFieldSegment]
+    [focusLastFieldSegment]
   )
 
   return (

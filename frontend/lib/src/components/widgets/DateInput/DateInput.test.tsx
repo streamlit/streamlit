@@ -802,7 +802,7 @@ describe("DateInput keyboard navigation and focus management", () => {
     return { calendar, gridCell, segments }
   }
 
-  it("Tab from last segment focuses the calendar grid cell", async () => {
+  it("Tab from last segment closes calendar (does not enter it)", async () => {
     const user = userEvent.setup()
     render(<DateInput {...getProps()} />)
 
@@ -814,22 +814,22 @@ describe("DateInput keyboard navigation and focus management", () => {
     // Calendar should be open
     await screen.findByTestId("stDateInputCalendar")
 
-    // Tab from day segment should move focus into the calendar grid
+    // Tab from day segment should close the calendar
     await user.tab()
-    const calendar = screen.getByTestId("stDateInputCalendar")
-    const focusedCell = within(calendar).getByRole("button", {
-      name: /January 20, 1970/,
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
     })
-    expect(focusedCell).toHaveFocus()
   })
 
-  it("Tab on grid cell closes calendar and returns focus to field", async () => {
+  it("Tab in calendar closes popover and returns focus to field", async () => {
     const user = userEvent.setup()
     render(<DateInput {...getProps()} />)
 
     const { gridCell, segments } = await openCalendarAndGetGrid(user)
 
-    // Focus the grid cell directly
+    // Focus the grid cell directly (simulates mouse click on a date)
     act(() => gridCell.focus())
     expect(gridCell).toHaveFocus()
 
@@ -841,26 +841,10 @@ describe("DateInput keyboard navigation and focus management", () => {
         screen.queryByTestId("stDateInputCalendar")
       ).not.toBeInTheDocument()
     })
-    // Focus should be on the last segment (day)
     expect(segments.day).toHaveFocus()
   })
 
-  it("Shift+Tab on grid cell moves focus to last header button", async () => {
-    const user = userEvent.setup()
-    render(<DateInput {...getProps()} />)
-
-    const { calendar, gridCell } = await openCalendarAndGetGrid(user)
-
-    act(() => gridCell.focus())
-    expect(gridCell).toHaveFocus()
-
-    // Shift+Tab should move to the last header element (Next month button)
-    await user.tab({ shift: true })
-    const nextMonthBtn = within(calendar).getByLabelText("Next month")
-    expect(nextMonthBtn).toHaveFocus()
-  })
-
-  it("Shift+Tab on first header button wraps to grid cell", async () => {
+  it("Shift+Tab in calendar closes popover and returns focus to field", async () => {
     const user = userEvent.setup()
     // Use a value well past min so Previous month button is enabled
     render(
@@ -870,21 +854,23 @@ describe("DateInput keyboard navigation and focus management", () => {
     )
 
     const region = screen.getByTestId("stDateInput")
-    const { year } = getSingleDateSegments(region)
-    await user.click(year)
+    const segments = getSingleDateSegments(region)
+    await user.click(segments.year)
     const calendar = await screen.findByTestId("stDateInputCalendar")
 
-    // Focus the first header button (Previous month)
+    // Focus a header button (simulates mouse click on prev month)
     const prevMonthBtn = within(calendar).getByLabelText("Previous month")
     act(() => prevMonthBtn.focus())
     expect(prevMonthBtn).toHaveFocus()
 
-    // Shift+Tab should wrap to the grid cell
+    // Shift+Tab should close calendar and return focus to field
     await user.tab({ shift: true })
-    const gridCell = within(calendar).getByRole("button", {
-      name: /June 15, 2020/,
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
     })
-    expect(gridCell).toHaveFocus()
+    expect(segments.day).toHaveFocus()
   })
 
   it("Escape closes calendar and returns focus to field", async () => {
