@@ -493,7 +493,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         # Verify the selection state is returned
         assert hasattr(event, "selection")
 
-    def test_chart_from_json_data_survives_roundtrip(self):
+    def test_chart_from_json_data_survives_roundtrip(self) -> None:
         """A from_json chart's data must be delivered, and delivered correctly.
 
         Charts rebuilt with ``alt.Chart.from_json`` carry their data as inline
@@ -518,7 +518,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
             f"spec references dataset {data_name!r} but only {sent_names} were sent"
         )
 
-        # ...and the delivered data must be the original data, not just non-empty.
+        # The delivered data must match the original frame, not merely be non-empty.
         sent = proto.datasets[sent_names.index(data_name)]
         pd.testing.assert_frame_equal(
             convert_arrow_bytes_to_pandas_df(sent.data.data),
@@ -526,7 +526,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
             check_dtype=False,
         )
 
-    def test_layered_chart_from_json_keeps_its_inline_datasets(self):
+    def test_layered_chart_from_json_keeps_its_inline_datasets(self) -> None:
         """Layered from_json charts must keep every named dataset the layers reference.
 
         A layered chart shares one named dataset across its layers, so the same
@@ -564,7 +564,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
                 check_dtype=False,
             )
 
-    def test_regular_chart_datasets_still_arrow_serialized(self):
+    def test_regular_chart_datasets_still_arrow_serialized(self) -> None:
         """The normal (non-from_json) path must be unchanged by the merge.
 
         A chart built directly from a dataframe should still have its data routed
