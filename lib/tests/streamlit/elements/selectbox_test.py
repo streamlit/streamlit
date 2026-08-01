@@ -699,16 +699,13 @@ def test_selectbox_keeps_enum_selection_with_identity_dependent_format_func():
 
 
 def test_None_session_state_value_retained():
-    """When index=None is declared, a programmatic session_state=None is preserved."""
-
     def script():
         import streamlit as st
 
         if "selectbox" not in st.session_state:
             st.session_state["selectbox"] = None
 
-        # index=None declares that None is a valid state for this widget.
-        st.selectbox("selectbox", ["a", "b", "c"], index=None, key="selectbox")
+        st.selectbox("selectbox", ["a", "b", "c"], key="selectbox")
         st.button("button")
 
     at = AppTest.from_function(script).run()
