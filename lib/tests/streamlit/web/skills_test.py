@@ -2548,7 +2548,9 @@ class TestNudgeSuppressedWhenInstallWouldConflict:
         with (
             patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
             # Force the symlinks-unsupported path (both gate and install).
-            patch.object(skills, "_symlink_blocker", return_value="symlinks_unsupported"),
+            patch.object(
+                skills, "_symlink_blocker", return_value="symlinks_unsupported"
+            ),
             patch("streamlit.config.get_option", return_value=False),
         ):
             self._clear_caches()
