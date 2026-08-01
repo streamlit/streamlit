@@ -376,6 +376,17 @@ def validate_and_sync_value_with_options(
         A tuple of (validated_value, value_was_reset).
     """
     if current_value is None:
+        # A stored None may be stale — left over from a run where options were
+        # empty (forcing None).  When options are now available and the developer
+        # declared a non-None default, reset to that default so the widget
+        # reflects the developer's intent rather than an incidentally-stored None.
+        # When default_index is None the developer explicitly opted into a
+        # nullable widget (index=None), so None is valid and we keep it.
+        if default_index is not None and len(opt) > 0:
+            reset_val = opt[default_index]
+            if key is not None:
+                get_session_state().reset_state_value(str(key), reset_val)
+            return reset_val, True
         return current_value, False
 
     # Use format_func comparison for all values. This correctly handles:
@@ -457,6 +468,14 @@ def resolve_value_against_options(
         A tuple of (validated_value, value_was_reset).
     """
     if current_value is None:
+        # Same logic as validate_and_sync_value_with_options: a stored None may
+        # be stale from a prior run with empty options.  Reset to the declared
+        # default when options are available and a non-None default was declared.
+        if default_index is not None and len(opt) > 0:
+            reset_val = opt[default_index]
+            if key is not None:
+                get_session_state().reset_state_value(str(key), reset_val)
+            return reset_val, True
         return current_value, False
 
     try:

@@ -699,18 +699,91 @@ def test_selectbox_keeps_enum_selection_with_identity_dependent_format_func():
 
 
 def test_None_session_state_value_retained():
+    """When index=None is declared, a programmatic session_state=None is preserved."""
+
     def script():
         import streamlit as st
 
         if "selectbox" not in st.session_state:
             st.session_state["selectbox"] = None
 
-        st.selectbox("selectbox", ["a", "b", "c"], key="selectbox")
+        # index=None declares that None is a valid state for this widget.
+        st.selectbox("selectbox", ["a", "b", "c"], index=None, key="selectbox")
         st.button("button")
 
     at = AppTest.from_function(script).run()
     at = at.button[0].click().run()
     assert at.selectbox[0].value is None
+
+
+def test_selectbox_resets_to_default_when_options_appear():
+    """Regression test for #10093: when options change from empty to non-empty,
+    the widget should reset to the declared default index, not stay at None."""
+
+    def script():
+        import streamlit as st
+
+        if "ready" not in st.session_state:
+            st.session_state["ready"] = False
+
+        if st.session_state["ready"]:
+            options = ["A", "B", "C"]
+        else:
+            options = []
+
+        selected = st.selectbox("Pick", options, index=0, key="picker")
+        st.text(f"value={selected}")
+
+        if st.button("Load options"):
+            st.session_state["ready"] = True
+
+    # First run: options empty, value should be None
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "value=None"
+
+    # Click button to populate options
+    at = at.button[0].click().run()
+    # Extra run needed: AppTest doesn't fully simulate frontend processing
+    # of the set_value=True response. The second run picks up the reset value.
+    at = at.run()
+
+    # With options now available and index=0, value should be "A"
+    assert at.text[0].value == "value=A"
+
+
+def test_selectbox_none_default_preserved_when_index_none():
+    """When index=None is declared and options appear, None is preserved."""
+
+    def script():
+        import streamlit as st
+
+        if "ready" not in st.session_state:
+            st.session_state["ready"] = False
+
+        if st.session_state["ready"]:
+            options = ["A", "B", "C"]
+        else:
+            options = []
+
+        selected = st.selectbox(
+            "Pick",
+            options,
+            index=None,
+            placeholder="Select...",
+            key="picker",
+        )
+        st.text(f"value={selected}")
+
+        if st.button("Load options"):
+            st.session_state["ready"] = True
+
+    # First run: options empty, value is None
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "value=None"
+
+    # Click button to populate options - with index=None, None should be kept
+    at = at.button[0].click().run()
+    assert at.text[0].value == "value=None"
 
 
 class TestSelectboxSerde:

@@ -52,7 +52,6 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
-    get_session_state,
     register_widget,
 )
 from streamlit.type_util import (
@@ -509,10 +508,6 @@ class RadioMixin:
             raise StreamlitAPIException(
                 f"Radio captions must be strings. Passed type: {type(caption).__name__}"
             )
-
-        session_state = get_session_state().filtered_state
-        if key is not None and key in session_state and session_state[key] is None:
-            index = None
 
         radio_proto = RadioProto()
         radio_proto.id = element_id
