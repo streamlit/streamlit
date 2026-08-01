@@ -1130,5 +1130,20 @@ class TestLargeObjectHashingIsExact:
         """Equal large objects must still hash equally (no spurious cache misses)."""
         n = _PANDAS_ROWS_LARGE + 1000
         assert get_hash(pd.Series(range(n))) == get_hash(pd.Series(range(n)))
+        assert get_hash(pd.DataFrame({"a": range(n)})) == get_hash(
+            pd.DataFrame({"a": range(n)})
+        )
         arr = np.arange(_NP_SIZE_LARGE + 1000, dtype=np.float64)
         assert get_hash(arr) == get_hash(arr.copy())
+
+    @pytest.mark.require_integration
+    def test_hash_is_stable_for_equal_large_polars_objects(self) -> None:
+        """Stability must hold for the polars paths too, not just pandas/numpy."""
+        import polars as pl
+
+        n = _PANDAS_ROWS_LARGE + 1000
+        data = list(range(n))
+        assert get_hash(pl.Series("x", data)) == get_hash(pl.Series("x", data.copy()))
+        assert get_hash(pl.DataFrame({"a": data})) == get_hash(
+            pl.DataFrame({"a": data.copy()})
+        )
