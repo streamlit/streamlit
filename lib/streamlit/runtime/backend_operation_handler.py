@@ -42,6 +42,13 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
+# Prefix marking an ``error_reason`` as a refusal: the operation was declined by a
+# safety gate before it ran, rather than attempted and failed. The client strips the
+# prefix and counts refusals under their own telemetry event, so they never inflate
+# the genuine failure rate. Mirrored by REFUSED_REASON_PREFIX in the frontend's
+# components/SkillsNudgeToast/skillsNudge.ts.
+_REFUSED_REASON_PREFIX: Final[str] = "refused:"
+
 
 def connection_locality(session_id: str) -> str:
     """Classify the WebSocket peer of ``session_id`` for the skills nudge.
@@ -224,14 +231,29 @@ class InstallSkillsHandler(BackendOperationHandler):
         # after a dropped connection whose first attempt already completed
         # server-side — surfacing a success as an unrecoverable error and
         # logging it as a failed install. Idempotent retry is the correct path.
-        if (
-            config.get_option("server.headless")
-            or not skills.detect_installed_agents()
-            or connection_locality(session_id) != "loopback"
-        ):
+        #
+        # Check the conditions in order; the first that trips names the telemetry
+        # reason. This short-circuits, so e.g. detect_installed_agents() (which
+        # touches the filesystem) isn't called in headless mode.
+        if config.get_option("server.headless"):
+            gate_reason = "headless"
+        elif not skills.detect_installed_agents():
+            gate_reason = "no_agent"
+        elif connection_locality(session_id) != "loopback":
+            gate_reason = "non_loopback"
+        else:
+            gate_reason = None
+
+        if gate_reason is not None:
             return BackendOperationResponse(
                 request_id=request.request_id,
                 error_msg="Skills install is not available in this environment.",
+                # The ``refused:`` prefix tells the client this install was declined
+                # before it ran, so it counts separately from installs that ran and
+                # failed. Namespacing it server-side keeps that distinction in one
+                # place: a gate added here is classified correctly without the
+                # frontend having to mirror the list of gate names.
+                error_reason=f"{_REFUSED_REASON_PREFIX}{gate_reason}",
             )
 
         try:
@@ -253,9 +275,23 @@ class InstallSkillsHandler(BackendOperationHandler):
                 if isinstance(ex, click.ClickException)
                 else "Failed to install skills."
             )
+            # Read the reason ONLY from the known type - never getattr-duck-type, or
+            # an unrelated exception that happens to expose a str ``.reason`` (e.g.
+            # UnicodeDecodeError.reason) would emit an unbounded label and break the
+            # fixed vocabulary. A bare ``OSError`` that escaped the installer gets the
+            # same errno classification, so it lands in a specific write_* bucket
+            # rather than being flattened to "unknown".
+            reason: str
+            if isinstance(ex, skills.InstallError):
+                reason = ex.reason
+            elif isinstance(ex, OSError):
+                reason = skills.classify_write_error(ex)
+            else:
+                reason = "unknown"
             return BackendOperationResponse(
                 request_id=request.request_id,
                 error_msg=detail or "Failed to install skills.",
+                error_reason=reason,
             )
 
         # Invalidate the cached "skills installed" detection so a later session
@@ -265,7 +301,8 @@ class InstallSkillsHandler(BackendOperationHandler):
         return BackendOperationResponse(
             request_id=request.request_id,
             install_skills=InstallSkillsResponsePayload(
-                detail=skills.summarize_install(result)
+                detail=skills.summarize_install(result),
+                fallback_reason=result.fallback_reason or "",
             ),
         )
 

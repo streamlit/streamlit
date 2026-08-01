@@ -32,6 +32,8 @@ import {
   setSkillsNudgeDismissed,
   setSkillsNudgeSnoozed,
   SKILLS_NUDGE_DROPPED_MESSAGE,
+  skillsNudgeInstallFailureLabel,
+  skillsNudgeInstallSuccessLabel,
 } from "@streamlit/app/src/components/SkillsNudgeToast/skillsNudge"
 import SkillsNudgeToast from "@streamlit/app/src/components/SkillsNudgeToast/SkillsNudgeToast"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget/StatusWidget"
@@ -1604,20 +1606,25 @@ export class App extends PureComponent<Props, State> {
         // — no need to also write the permanent "don't show again" flag here,
         // which would conflate "installed" with a permanent opt-out. The card
         // shows its own success confirmation and auto-dismisses.
-        this.trackSkillsNudge("skillsNudgeInstallSucceeded")
+        this.trackSkillsNudge(
+          skillsNudgeInstallSuccessLabel(result.fallbackReason)
+        )
         return result.detail ?? undefined
       })
       .catch((error: unknown) => {
-        // A dropped or timed-out connection during a long install (e.g. the
-        // GitHub global fallback) rejects the request even though the server
-        // install may have completed. Count it separately — not as a failure,
-        // which would over-count the funnel — and surface a reassuring,
-        // retry-friendly message; re-install is idempotent.
+        // A dropped or timed-out connection during a long install rejects the
+        // request even though the server install may have completed. Count it
+        // separately — not as a failure, which would over-count the funnel —
+        // and surface a reassuring, retry-friendly message; re-install is
+        // idempotent.
         if (isSkillsNudgeDroppedConnection(error)) {
           this.trackSkillsNudge("skillsNudgeInstallDropped")
           throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
         }
-        this.trackSkillsNudge("skillsNudgeInstallFailed")
+        // Append the server's machine-readable reason as a label suffix, and
+        // count a safety-gate refusal under its own event rather than as a
+        // failure. See skillsNudgeInstallFailureLabel.
+        this.trackSkillsNudge(skillsNudgeInstallFailureLabel(error))
         // Re-throw so the toast renders its error state.
         throw error
       })
