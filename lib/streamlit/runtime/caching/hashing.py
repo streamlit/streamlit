@@ -21,7 +21,6 @@ import collections.abc
 import dataclasses
 import datetime
 import functools
-import hashlib
 import inspect
 import io
 import os
@@ -49,24 +48,6 @@ if TYPE_CHECKING:
     from PIL.Image import Image
 
 _LOGGER: Final = logger.get_logger(__name__)
-
-# If a dataframe has more than this many rows, we consider it large and hash a sample.
-_PANDAS_ROWS_LARGE: Final = 50_000
-_PANDAS_SAMPLE_SIZE: Final = 10_000
-
-# Similar to dataframes, we also sample large numpy arrays.
-_NP_SIZE_LARGE: Final = 500_000
-_NP_SAMPLE_SIZE: Final = 100_000
-
-# Number of leading elements used to derive the content-dependent sampling seed.
-_CONTENT_SEED_PREFIX_SIZE: Final = 1000
-
-
-def _content_seed(data: bytes) -> int:
-    """Derive a sampling seed from content so different data samples different positions."""
-    return int.from_bytes(
-        hashlib.md5(data, usedforsecurity=False).digest()[:4], "little"
-    )
 
 
 HashFuncsDict: TypeAlias = dict[str | type[Any], Callable[[Any], Any]]
@@ -438,12 +419,6 @@ class _CacheFuncHasher:
             self.update(h, series_obj.size)
             self.update(h, series_obj.dtype.name)
 
-            if len(series_obj) >= _PANDAS_ROWS_LARGE:
-                seed = _content_seed(
-                    series_obj.head(_CONTENT_SEED_PREFIX_SIZE).to_numpy().tobytes()
-                )
-                series_obj = series_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=seed)
-
             try:
                 self.update(h, hash_pandas_object(series_obj).to_numpy().tobytes())
                 return h.digest()
@@ -463,16 +438,6 @@ class _CacheFuncHasher:
 
             df_obj: pd.DataFrame = cast("pd.DataFrame", obj)
             self.update(h, df_obj.shape)
-
-            if len(df_obj) >= _PANDAS_ROWS_LARGE:
-                try:
-                    prefix_bytes = (
-                        df_obj.head(_CONTENT_SEED_PREFIX_SIZE).to_numpy().tobytes()
-                    )
-                except (TypeError, ValueError):
-                    prefix_bytes = str(df_obj.shape).encode()
-                seed = _content_seed(prefix_bytes)
-                df_obj = df_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=seed)
 
             try:
                 column_hash_bytes = self.to_bytes(hash_pandas_object(df_obj.dtypes))
@@ -499,12 +464,6 @@ class _CacheFuncHasher:
             self.update(h, str(obj.dtype).encode())
             self.update(h, obj.shape)
 
-            if len(obj) >= _PANDAS_ROWS_LARGE:
-                seed = _content_seed(
-                    obj[:_CONTENT_SEED_PREFIX_SIZE].hash(seed=0).to_numpy().tobytes()
-                )
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=seed)
-
             try:
                 self.update(h, obj.hash(seed=0).to_arrow().to_string().encode())
                 return h.digest()
@@ -526,14 +485,6 @@ class _CacheFuncHasher:
             obj = cast("pl.DataFrame", obj)
             self.update(h, obj.shape)
 
-            if len(obj) >= _PANDAS_ROWS_LARGE:
-                seed = _content_seed(
-                    obj[:_CONTENT_SEED_PREFIX_SIZE]
-                    .hash_rows(seed=0)
-                    .to_numpy()
-                    .tobytes()
-                )
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=seed)
             try:
                 for c, t in obj.schema.items():
                     self.update(h, c.encode())
@@ -561,13 +512,6 @@ class _CacheFuncHasher:
             np_obj: npt.NDArray[Any] = cast("npt.NDArray[Any]", obj)
             self.update(h, np_obj.shape)
             self.update(h, str(np_obj.dtype))
-
-            if np_obj.size >= _NP_SIZE_LARGE:
-                import numpy as np
-
-                seed = _content_seed(np_obj.flat[:_CONTENT_SEED_PREFIX_SIZE].tobytes())
-                state = np.random.RandomState(seed)
-                np_obj = state.choice(np_obj.flat, size=_NP_SAMPLE_SIZE)
 
             self.update(h, np_obj.tobytes())
             return h.digest()
