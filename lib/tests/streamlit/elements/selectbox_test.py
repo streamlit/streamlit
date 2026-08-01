@@ -792,6 +792,28 @@ def test_selectbox_none_default_preserved_when_index_none():
     assert at.text[0].value == "value=None"
 
 
+def test_selectbox_explicit_session_state_none_is_honored():
+    """An explicit `st.session_state[key] = None` must clear the widget.
+
+    The stale-None reset for #10093 must not clobber a deliberate in-script clear,
+    otherwise apps can no longer programmatically reset a keyed selectbox.
+    """
+
+    def script():
+        import streamlit as st
+
+        if "init" not in st.session_state:
+            st.session_state["init"] = True
+            st.session_state["picker"] = None
+
+        selected = st.selectbox("Pick", ["A", "B"], index=0, key="picker")
+        st.text(f"value={selected} state={st.session_state['picker']}")
+
+    at = AppTest.from_function(script).run()
+    # Neither the returned value nor session_state may be silently overwritten.
+    assert at.text[0].value == "value=None state=None"
+
+
 class TestSelectboxSerde:
     def test_serialize(self):
         options = ["Option A", "Option B", "Option C"]

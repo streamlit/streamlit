@@ -341,6 +341,25 @@ def create_mappings(
     )
 
 
+def _is_stale_none(
+    key: str | int | None, default_index: int | None, opt: Sequence[T]
+) -> bool:
+    """Whether a stored ``None`` should be treated as stale and reset to the default.
+
+    A ``None`` is stale when it was left over from a run in which ``options`` was
+    empty, so no default could be resolved. It is *not* stale when:
+
+    - the developer declared ``index=None``, opting into a nullable widget;
+    - there are still no options to resolve a default from;
+    - the developer explicitly assigned ``None`` via the Session State API on this
+      run, which is a deliberate request to clear the widget and must be honored.
+    """
+    if default_index is None or len(opt) == 0:
+        return False
+    # An explicit `st.session_state[key] = None` this run is a deliberate clear.
+    return not (key is not None and get_session_state().is_new_state_value(str(key)))
+
+
 def validate_and_sync_value_with_options(
     current_value: T | None,
     opt: Sequence[T],
@@ -388,10 +407,9 @@ def validate_and_sync_value_with_options(
         # empty (forcing None). When options are now available and the developer
         # declared a non-None default, reset to that default so the widget
         # reflects the developer's intent rather than an incidentally-stored None.
-        # When default_index is None the developer explicitly opted into a
-        # nullable widget (index=None), so None is valid and we keep it.
-        if reset_stale_none and default_index is not None and len(opt) > 0:
-            reset_val = opt[default_index]
+        # See _is_stale_none for the cases that are deliberately preserved.
+        if reset_stale_none and _is_stale_none(key, default_index, opt):
+            reset_val = opt[cast("int", default_index)]
             if key is not None:
                 get_session_state().reset_state_value(str(key), reset_val)
             return reset_val, True
@@ -477,10 +495,11 @@ def resolve_value_against_options(
     """
     if current_value is None:
         # Same logic as validate_and_sync_value_with_options: a stored None may
-        # be stale from a prior run with empty options.  Reset to the declared
-        # default when options are available and a non-None default was declared.
-        if default_index is not None and len(opt) > 0:
-            reset_val = opt[default_index]
+        # be stale from a prior run with empty options. See _is_stale_none for
+        # the cases that are deliberately preserved (including an explicit
+        # `st.session_state[key] = None`, which must not be overwritten).
+        if _is_stale_none(key, default_index, opt):
+            reset_val = opt[cast("int", default_index)]
             if key is not None:
                 get_session_state().reset_state_value(str(key), reset_val)
             return reset_val, True
