@@ -23,6 +23,7 @@ import pytest
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.testing.v1 import AppTest
 
 
 def test_dialog_raises_from_parallel_worker() -> None:
@@ -77,3 +78,95 @@ def test_dialog_allowed_when_not_parallel_worker() -> None:
             mock_check.assert_called_once_with("@st.dialog")
     finally:
         ThreadState.initialize(is_parallel_worker=False)
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for https://github.com/streamlit/streamlit/issues/13009
+# Dialog re-executed when st.rerun() is called inside an if-button block.
+# ---------------------------------------------------------------------------
+
+
+def _dialog_rerun_script() -> None:
+    """Script for testing dialog + st.rerun() inside a button conditional."""
+    import streamlit as st
+
+    if "dialog_run_count" not in st.session_state:
+        st.session_state.dialog_run_count = 0
+
+    @st.dialog("Expensive operation")
+    def work_dialog():
+        # Track each time the dialog body executes.
+        st.session_state.dialog_run_count += 1
+        st.write("Work done!")
+        # Bug scenario: st.rerun() behind a button conditional.
+        if st.button("Done", key="done_btn"):
+            st.rerun()
+
+    if st.button("Open", key="open_btn"):
+        work_dialog()
+
+
+def test_dialog_body_does_not_reexecute_after_rerun_from_button_conditional() -> None:
+    """Regression test: dialog body must run exactly once after the user clicks
+    'Done' inside the dialog.  Before the fix, calling st.rerun() behind an
+    st.button conditional caused the outer button's trigger to survive into the
+    following full-app run, re-opening the dialog and repeating the work.
+
+    Covers issue #13009.
+    """
+    at = AppTest.from_function(_dialog_rerun_script).run()
+    assert at.session_state["dialog_run_count"] == 0
+
+    # Open the dialog — body runs once.
+    at = at.button(key="open_btn").click().run()
+    assert at.session_state["dialog_run_count"] == 1
+    assert any(b.key == "done_btn" for b in at.button), "dialog should be visible"
+
+    # Click 'Done' inside the dialog — dialog must close, body must NOT re-run.
+    at = at.button(key="done_btn").click().run()
+    assert at.session_state["dialog_run_count"] == 1, (
+        "Dialog body re-executed after st.rerun() in button conditional (issue #13009)"
+    )
+    assert not any(b.key == "done_btn" for b in at.button), (
+        "Dialog should be closed after st.rerun()"
+    )
+
+
+def test_dialog_without_button_conditional_also_closes() -> None:
+    """Control case: a dialog that calls st.rerun() unconditionally (via session
+    state sentinel) must also close after one interaction.  This ensures the fix
+    does not regress the non-buggy pattern.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        if "dialog_run_count" not in st.session_state:
+            st.session_state.dialog_run_count = 0
+        if "should_close" not in st.session_state:
+            st.session_state.should_close = False
+
+        @st.dialog("Dialog")
+        def dialog() -> None:
+            st.session_state.dialog_run_count += 1
+            st.button("Done", key="done_btn")
+            if st.session_state.should_close:
+                st.session_state.should_close = False
+                st.rerun()
+
+        if st.button("Open", key="open_btn"):
+            dialog()
+
+    at = AppTest.from_function(script).run()
+    assert at.session_state["dialog_run_count"] == 0
+
+    at = at.button(key="open_btn").click().run()
+    assert at.session_state["dialog_run_count"] == 1
+
+    # Trigger close via session state sentinel (workaround pattern).
+    at.session_state["should_close"] = True
+    at = at.button(key="done_btn").click().run()
+    assert at.session_state["dialog_run_count"] == 1, (
+        "Dialog body re-executed using session-state sentinel close pattern"
+    )
+    assert not any(b.key == "done_btn" for b in at.button)
