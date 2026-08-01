@@ -549,7 +549,29 @@ class TestValidateAndSyncValueWithOptions(unittest.TestCase):
                 "banana",
                 False,
             ),
-            ("none_value", None, ["apple", "banana"], 0, None, False),
+            # A stored None is treated as stale when the developer declared a
+            # non-None default and options are available, so it resets to that
+            # default. See https://github.com/streamlit/streamlit/issues/10093.
+            (
+                "none_value_with_declared_default_resets",
+                None,
+                ["apple", "banana"],
+                0,
+                "apple",
+                True,
+            ),
+            # index=None is an explicit opt-in to a nullable widget, so None is
+            # a legitimate value and must be preserved.
+            (
+                "none_value_nullable_default_kept",
+                None,
+                ["apple", "banana"],
+                None,
+                None,
+                False,
+            ),
+            # With no options there is nothing to reset to, so None is kept.
+            ("none_value_empty_options_kept", None, [], 0, None, False),
             (
                 "value_not_in_options_resets_to_default",
                 "mango",
@@ -997,11 +1019,29 @@ class TestValidateMultiselectWithCustomObjects(unittest.TestCase):
 class TestResolveValueAgainstOptions:
     """Tests for the selectbox value resolver (format_func with wire-label fallback)."""
 
-    def test_none_value_returns_unchanged(self) -> None:
-        """A None current value is returned as-is without a reset."""
+    def test_none_value_with_declared_default_resets(self) -> None:
+        """A stored None resets to the declared default once options exist.
+
+        The None is treated as stale — left over from a run where options were
+        empty. See https://github.com/streamlit/streamlit/issues/10093.
+        """
         value, reset = resolve_value_against_options(
             None, ["a", "b"], {"a": 0, "b": 1}, 0, None
         )
+        assert value == "a"
+        assert reset is True
+
+    def test_none_value_nullable_default_is_kept(self) -> None:
+        """index=None opts into a nullable widget, so None must be preserved."""
+        value, reset = resolve_value_against_options(
+            None, ["a", "b"], {"a": 0, "b": 1}, None, None
+        )
+        assert value is None
+        assert reset is False
+
+    def test_none_value_empty_options_is_kept(self) -> None:
+        """With no options there is nothing to reset to, so None is kept."""
+        value, reset = resolve_value_against_options(None, [], {}, 0, None)
         assert value is None
         assert reset is False
 
