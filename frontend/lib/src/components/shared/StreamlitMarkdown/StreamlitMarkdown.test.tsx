@@ -16,7 +16,7 @@
 
 import { ReactElement } from "react"
 
-import { cleanup, screen, within } from "@testing-library/react"
+import { cleanup, screen, waitFor, within } from "@testing-library/react"
 import { transparentize } from "color2k"
 import type { Element } from "hast"
 import ReactMarkdown from "react-markdown"
@@ -618,6 +618,35 @@ describe("StreamlitMarkdown", () => {
     const heading = screen.getByRole("heading", { name: "Hello" })
     expect(heading).toHaveAttribute("id", "my-anchor")
     expect(heading).not.toHaveAttribute("aria-labelledby")
+  })
+
+  it("updates heading anchor when text changes across reruns (no explicit anchor)", async () => {
+    const { rerender } = render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2">
+            First Heading
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading")
+    expect(heading).toHaveAttribute("id", "first-heading")
+
+    rerender(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2">
+            Second Heading
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading")).toHaveAttribute("id", "second-heading")
+    })
   })
 
   it("propagates header attributes to custom header", async () => {

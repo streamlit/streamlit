@@ -26,8 +26,10 @@ import {
   Suspense,
   useCallback,
   useContext,
+  useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -338,9 +340,11 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
   const [elementId, setElementId] = useState(propsAnchor)
+  const nodeRef = useRef<HTMLElement | null>(null)
 
   const ref = useCallback(
     (node: HTMLElement | null) => {
+      nodeRef.current = node
       if (node === null) {
         return
       }
@@ -354,6 +358,22 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     },
     [propsAnchor]
   )
+
+  // Re-derive anchor when heading text changes across reruns. The ref callback
+  // only fires on mount or when propsAnchor changes; when only the text content
+  // changes, React reuses the DOM node and the callback never re-fires.
+  useEffect(() => {
+    const node = nodeRef.current
+    if (!node || propsAnchor) {
+      return
+    }
+    const anchor = createAnchorFromText(node.textContent)
+    setElementId(anchor)
+    const windowHash = window.location.hash.slice(1)
+    if (windowHash && windowHash === anchor) {
+      scrollNodeIntoView(node)
+    }
+  }, [children, propsAnchor])
 
   const isInSidebarOrDialog = isInSidebar || isInDialog
   const actionElements = (
