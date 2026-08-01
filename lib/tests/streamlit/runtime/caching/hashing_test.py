@@ -1083,6 +1083,7 @@ class TestLargeObjectHashingIsExact:
         raise AssertionError("every index was sampled; cannot build the case")
 
     def test_pandas_series_differs_outside_old_sample(self) -> None:
+        """A large pandas Series differing only outside the old sample must hash differently."""
         n = _PANDAS_ROWS_LARGE + 1000
         idx = self._unsampled_index(n, _PANDAS_SAMPLE_SIZE)
         s1 = pd.Series(range(n))
@@ -1091,6 +1092,7 @@ class TestLargeObjectHashingIsExact:
         assert get_hash(s1) != get_hash(s2)
 
     def test_pandas_dataframe_differs_outside_old_sample(self) -> None:
+        """A large pandas DataFrame differing only outside the old sample must hash differently."""
         n = _PANDAS_ROWS_LARGE + 1000
         idx = self._unsampled_index(n, _PANDAS_SAMPLE_SIZE)
         df1 = pd.DataFrame({"a": range(n)})
@@ -1099,6 +1101,7 @@ class TestLargeObjectHashingIsExact:
         assert get_hash(df1) != get_hash(df2)
 
     def test_numpy_differs_outside_old_sample(self) -> None:
+        """A large numpy array differing only outside the old sample must hash differently."""
         n = _NP_SIZE_LARGE + 1000
         idx = self._unsampled_index(n, _NP_SAMPLE_SIZE)
         arr1 = np.arange(n, dtype=np.float64)
@@ -1108,6 +1111,7 @@ class TestLargeObjectHashingIsExact:
 
     @pytest.mark.require_integration
     def test_polars_series_differs_outside_old_sample(self) -> None:
+        """A large polars Series differing only outside the old sample must hash differently."""
         import polars as pl
 
         n = _PANDAS_ROWS_LARGE + 1000
@@ -1119,6 +1123,7 @@ class TestLargeObjectHashingIsExact:
 
     @pytest.mark.require_integration
     def test_polars_dataframe_differs_outside_old_sample(self) -> None:
+        """A large polars DataFrame differing only outside the old sample must hash differently."""
         import polars as pl
 
         n = _PANDAS_ROWS_LARGE + 1000
