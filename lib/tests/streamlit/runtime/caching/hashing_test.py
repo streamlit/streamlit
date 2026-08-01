@@ -1068,8 +1068,13 @@ class TestLargeObjectHashingIsExact:
     objects are now hashed over their full content, so ANY difference changes the
     hash.
 
-    Each test mutates a single element at a position the old `seed=0` sample would
-    not have drawn, which is the exact case that used to collide.
+    Each test mutates a single element at a position outside the indices a fixed
+    `seed=0` sample would have drawn, which is the class of case that used to
+    collide. The helper replays numpy's `RandomState(0).choice`, so for the pandas
+    and polars paths — which used their own `sample(..., seed/random_state=0)`
+    APIs — the position is representative rather than an exact replay. That is
+    sufficient here: the fix hashes full content, so any difference at all must
+    change the hash.
     """
 
     @staticmethod
