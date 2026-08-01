@@ -439,7 +439,7 @@ def _convert_altair_to_vega_lite_spec(
                 chart_dict = altair_chart.to_dict()
 
     # Merge the Arrow-serialized datasets we collected with any datasets the chart
-    # already carries, letting ours win on key collisions.
+    # already carries, letting the Arrow-serialized datasets win on key collisions.
     #
     # Replacing outright would discard data: charts built with alt.Chart.from_json
     # carry their data as inline datasets keyed by name, with the spec referencing
