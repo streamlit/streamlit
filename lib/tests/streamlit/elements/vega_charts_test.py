@@ -493,6 +493,72 @@ class AltairChartTest(DeltaGeneratorTestCase):
         # Verify the selection state is returned
         assert hasattr(event, "selection")
 
+    def test_chart_from_json_keeps_its_inline_datasets(self):
+        """Regression test for #6269.
+
+        A chart rebuilt with ``alt.Chart.from_json`` carries its data as inline
+        datasets referenced by name from the spec. Streamlit used to overwrite the
+        chart's ``datasets`` with only the Arrow-serialized ones it collected
+        itself, which is empty in this case, so the spec referenced a dataset that
+        was never sent and the chart rendered with axes but no data.
+        """
+        df = pd.DataFrame({"x": [0, 1, 2], "y": [0, 1, 2]})
+        chart = alt.Chart(df).mark_line().encode(x=alt.X("x"), y=alt.Y("y"))
+
+        roundtripped = alt.Chart.from_json(chart.to_json())
+        st.altair_chart(roundtripped)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+
+        # The spec references its data by name, so that name must actually
+        # resolve to a dataset that was sent on the proto.
+        data_name = spec["data"]["name"]
+        sent_names = [dataset.name for dataset in proto.datasets]
+        assert data_name in sent_names, (
+            f"spec references dataset {data_name!r} but only {sent_names} were sent"
+        )
+        assert proto.datasets[sent_names.index(data_name)].data.data, (
+            "referenced dataset was sent empty"
+        )
+
+    def test_chart_from_json_data_survives_roundtrip(self):
+        """The values in a from_json chart's dataset must be preserved, not just present."""
+        df = pd.DataFrame({"x": [0, 1, 2], "y": [3, 4, 5]})
+        chart = alt.Chart(df).mark_line().encode(x=alt.X("x"), y=alt.Y("y"))
+
+        st.altair_chart(alt.Chart.from_json(chart.to_json()))
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        sent_names = [dataset.name for dataset in proto.datasets]
+        sent = proto.datasets[sent_names.index(spec["data"]["name"])]
+
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(sent.data.data),
+            df,
+            check_dtype=False,
+        )
+
+    def test_regular_chart_datasets_still_arrow_serialized(self):
+        """The normal (non-from_json) path must be unchanged by the merge.
+
+        A chart built directly from a dataframe should still have its data routed
+        through the Arrow dataset transformer rather than inlined into the spec.
+        """
+        df = pd.DataFrame({"x": [0, 1, 2], "y": [0, 1, 2]})
+        chart = alt.Chart(df).mark_line().encode(x=alt.X("x"), y=alt.Y("y"))
+
+        st.altair_chart(chart)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        # Data is still passed by reference, and the referenced dataset is
+        # delivered as an Arrow dataset on the proto (not inlined in the spec).
+        assert "name" in spec["data"]
+        assert len(proto.datasets) == 1
+        assert proto.datasets[0].name == spec["data"]["name"]
+
 
 class AltairChartWidthTest(DeltaGeneratorTestCase):
     """Test altair_chart width parameter functionality."""

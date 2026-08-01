@@ -438,8 +438,21 @@ def _convert_altair_to_vega_lite_spec(
             with data_transformer:  # ty: ignore[invalid-context-manager]
                 chart_dict = altair_chart.to_dict()
 
-    # Put datasets back into the chart dict:
-    chart_dict["datasets"] = datasets
+    # Put datasets back into the chart dict.
+    #
+    # Charts built with alt.Chart.from_json already carry their data as inline
+    # datasets keyed by name, with the spec referencing them via
+    # {"data": {"name": ...}}. Our transformer never sees a dataframe for those,
+    # so `datasets` is empty -- replacing outright would discard the chart's own
+    # data and render an empty chart. Merge instead, letting the Arrow-serialized
+    # datasets win on key collisions. See
+    # https://github.com/streamlit/streamlit/issues/6269.
+    existing_datasets = chart_dict.get("datasets")
+    chart_dict["datasets"] = (
+        {**existing_datasets, **datasets}
+        if isinstance(existing_datasets, dict)
+        else datasets
+    )
     return chart_dict
 
 
