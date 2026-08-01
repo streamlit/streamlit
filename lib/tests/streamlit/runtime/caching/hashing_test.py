@@ -1079,7 +1079,13 @@ class TestLargeObjectHashingIsExact:
 
     @staticmethod
     def _unsampled_index(n: int, sample_size: int) -> int:
-        """Return an index the old fixed-seed=0 sample would not have picked."""
+        """Return an index outside the set numpy's fixed `seed=0` sample would pick.
+
+        Replays `np.random.RandomState(0).choice`, which is exact for the numpy
+        path. The pandas and polars paths used their own `sample()` APIs, so for
+        those this is a representative unsampled position rather than an exact
+        replay — sufficient, since the fix hashes full content.
+        """
         state = np.random.RandomState(0)
         sampled = set(state.choice(n, size=min(sample_size, n), replace=False))
         for idx in range(n - 1, -1, -1):
