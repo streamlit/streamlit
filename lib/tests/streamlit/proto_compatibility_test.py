@@ -84,7 +84,7 @@ pytestmark = pytest.mark.filterwarnings(
                 ("is_hello", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("recommend_skills_install", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 (
-                    "skills_nudge_suppressed_locality",
+                    "skills_nudge_suppressed_reason",
                     FD.LABEL_OPTIONAL,
                     FD.TYPE_STRING,
                 ),

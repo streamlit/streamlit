@@ -2478,8 +2478,8 @@ def test_create_new_session_message_recommends_skills_install() -> None:
 
     with (
         patch(
-            "streamlit.web.skills.should_show_skills_nudge", return_value=True
-        ) as mock_should_show,
+            "streamlit.web.skills.nudge_suppression_reason", return_value=""
+        ) as mock_reason,
         patch(
             "streamlit.runtime.backend_operation_handler.connection_locality",
             return_value="loopback",
@@ -2489,8 +2489,8 @@ def test_create_new_session_message_recommends_skills_install() -> None:
 
     assert msg.new_session.initialize.recommend_skills_install is True
     # No suppression telemetry when the nudge is actually recommended.
-    assert msg.new_session.initialize.skills_nudge_suppressed_locality == ""
-    mock_should_show.assert_called_once_with("/fake")
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
+    mock_reason.assert_called_once_with("/fake")
 
 
 def test_create_new_session_message_skips_skills_install_when_not_recommended() -> None:
@@ -2498,11 +2498,14 @@ def test_create_new_session_message_skips_skills_install_when_not_recommended() 
     frontend does not show the nudge."""
     session = _create_test_session()
 
-    with patch("streamlit.web.skills.should_show_skills_nudge", return_value=False):
+    with patch(
+        "streamlit.web.skills.nudge_suppression_reason", return_value="installed"
+    ):
         msg = session._create_new_session_message(page_script_hash="")
 
     assert msg.new_session.initialize.recommend_skills_install is False
-    assert msg.new_session.initialize.skills_nudge_suppressed_locality == ""
+    # "installed" is an uninteresting reason, so it is not reported.
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
 
 
 def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
@@ -2512,7 +2515,7 @@ def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
     session = _create_test_session()
 
     with (
-        patch("streamlit.web.skills.should_show_skills_nudge", return_value=True),
+        patch("streamlit.web.skills.nudge_suppression_reason", return_value=""),
         patch(
             "streamlit.runtime.backend_operation_handler.connection_locality",
             return_value="private",
@@ -2521,7 +2524,45 @@ def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
         msg = session._create_new_session_message(page_script_hash="")
 
     assert msg.new_session.initialize.recommend_skills_install is False
-    assert msg.new_session.initialize.skills_nudge_suppressed_locality == "private"
+    assert (
+        msg.new_session.initialize.skills_nudge_suppressed_reason
+        == "non_loopback_private"
+    )
+
+
+@pytest.mark.parametrize("reason", ["conflict", "check_failed"])
+def test_create_new_session_message_reports_informative_suppression(
+    reason: str,
+) -> None:
+    """A withheld nudge that tells us something actionable is reported, so
+    suppression is measurable rather than silent. ``conflict`` shares the
+    install-failure reason name for the same cause, so "we withheld the nudge"
+    and "we nudged and the install conflicted anyway" compare in one query."""
+    session = _create_test_session()
+
+    with patch("streamlit.web.skills.nudge_suppression_reason", return_value=reason):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == reason
+
+
+@pytest.mark.parametrize(
+    "reason", ["headless", "welcome_hidden", "dismissed", "no_agent", "installed"]
+)
+def test_create_new_session_message_drops_high_volume_suppression(
+    reason: str,
+) -> None:
+    """The uninteresting reasons are deliberately NOT reported. ``headless``
+    especially: it fires for every deployed app, so reporting it would swamp the
+    metric with sessions that were never nudge candidates."""
+    session = _create_test_session()
+
+    with patch("streamlit.web.skills.nudge_suppression_reason", return_value=reason):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
 
 
 def test_create_new_session_message_recomputes_skills_recommendation() -> None:
@@ -2537,9 +2578,9 @@ def test_create_new_session_message_recomputes_skills_recommendation() -> None:
 
     with (
         patch(
-            "streamlit.web.skills.should_show_skills_nudge",
-            side_effect=[True, False],
-        ) as mock_should_show,
+            "streamlit.web.skills.nudge_suppression_reason",
+            side_effect=["", "installed"],
+        ) as mock_reason,
         patch(
             "streamlit.runtime.backend_operation_handler.connection_locality",
             return_value="loopback",
@@ -2548,7 +2589,7 @@ def test_create_new_session_message_recomputes_skills_recommendation() -> None:
         first = session._create_new_session_message(page_script_hash="")
         second = session._create_new_session_message(page_script_hash="")
 
-    assert mock_should_show.call_count == 2
+    assert mock_reason.call_count == 2
     assert first.new_session.initialize.recommend_skills_install is True
     # The second NewSession reflects the updated detection (e.g. post-install),
     # not a stale memoized True.
@@ -2563,13 +2604,13 @@ def test_create_new_session_message_skips_skills_install_for_hello_app() -> None
     session = _create_test_session(is_hello=True)
 
     with patch(
-        "streamlit.web.skills.should_show_skills_nudge", return_value=True
-    ) as mock_should_show:
+        "streamlit.web.skills.nudge_suppression_reason", return_value=""
+    ) as mock_reason:
         msg = session._create_new_session_message(page_script_hash="")
 
     assert msg.new_session.initialize.recommend_skills_install is False
     # Short-circuited on is_hello before the (would-recommend) detection ran.
-    mock_should_show.assert_not_called()
+    mock_reason.assert_not_called()
 
 
 # ---- Tests for _handle_git_information_request ----
