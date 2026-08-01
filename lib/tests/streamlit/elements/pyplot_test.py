@@ -195,6 +195,27 @@ class PyplotTest(DeltaGeneratorTestCase):
 
         assert expected_error_message in str(exc_info.value)
 
+    def test_st_pyplot_svg_format(self):
+        """st.pyplot with format="svg" should render as SVG data URI, not crash. #11489"""
+        fig, ax = plt.subplots()
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        # Before the fix this crashes because SVG bytes get fed into the PNG/PIL path
+        st.pyplot(fig, format="svg")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.imgs[0].url.startswith("data:image/svg+xml;base64,")
+
+    def test_st_pyplot_svg_format_uppercase(self):
+        """st.pyplot with format="SVG" (uppercase) should also work. #11489"""
+        fig, ax = plt.subplots()
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        st.pyplot(fig, format="SVG")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.imgs[0].url.startswith("data:image/svg+xml;base64,")
+
     @parameterized.expand(
         [
             (

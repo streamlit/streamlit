@@ -223,9 +223,19 @@ def marshall(
 
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
+
+    # SVG output is text, not raster bytes. Decode to string so image_to_url
+    # routes it through the existing SVG-string path (returns a base64 data URI)
+    # rather than the PNG/PIL path, which cannot parse SVG and crashes.
+    effective_format = kwargs.get("format", "png")
+    if isinstance(effective_format, str) and effective_format.lower() == "svg":
+        svg_image: str | io.BytesIO = image.getvalue().decode("utf-8")
+    else:
+        svg_image = image
+
     marshall_images(
         coordinates=coordinates,
-        image=image,
+        image=svg_image,
         caption=None,
         layout_config=layout_config,
         proto_imgs=image_list_proto,
