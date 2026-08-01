@@ -645,7 +645,10 @@ describe("StreamlitMarkdown", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByRole("heading")).toHaveAttribute("id", "second-heading")
+      expect(screen.getByRole("heading")).toHaveAttribute(
+        "id",
+        "second-heading"
+      )
     })
   })
 
