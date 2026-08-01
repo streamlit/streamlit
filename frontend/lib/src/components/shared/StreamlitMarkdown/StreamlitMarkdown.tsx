@@ -342,13 +342,11 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const [elementId, setElementId] = useState(propsAnchor)
   const nodeRef = useRef<HTMLElement | null>(null)
 
-  const ref = useCallback(
-    (node: HTMLElement | null) => {
-      nodeRef.current = node
-      if (node === null) {
-        return
-      }
-
+  // Derive the anchor from the node and scroll to it if it matches the URL hash.
+  // Shared by the mount-time ref callback and the rerun effect below so the two
+  // paths cannot drift apart.
+  const applyAnchor = useCallback(
+    (node: HTMLElement) => {
       const anchor = propsAnchor || createAnchorFromText(node.textContent)
       setElementId(anchor)
       const windowHash = window.location.hash.slice(1)
@@ -359,21 +357,29 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     [propsAnchor]
   )
 
-  // Re-derive anchor when heading text changes across reruns. The ref callback
-  // only fires on mount or when propsAnchor changes; when only the text content
-  // changes, React reuses the DOM node and the callback never re-fires.
+  const ref = useCallback(
+    (node: HTMLElement | null) => {
+      nodeRef.current = node
+      if (node === null) {
+        return
+      }
+      applyAnchor(node)
+    },
+    [applyAnchor]
+  )
+
+  // Re-derive the anchor when heading text changes across reruns. The ref
+  // callback only fires on mount or when propsAnchor changes; when only the text
+  // content changes, React reuses the DOM node and the callback never re-fires.
+  // Skipped when propsAnchor is set, since an explicit anchor never depends on
+  // the text.
   useEffect(() => {
     const node = nodeRef.current
     if (!node || propsAnchor) {
       return
     }
-    const anchor = createAnchorFromText(node.textContent)
-    setElementId(anchor)
-    const windowHash = window.location.hash.slice(1)
-    if (windowHash && windowHash === anchor) {
-      scrollNodeIntoView(node)
-    }
-  }, [children, propsAnchor])
+    applyAnchor(node)
+  }, [children, propsAnchor, applyAnchor])
 
   const isInSidebarOrDialog = isInSidebar || isInDialog
   const actionElements = (

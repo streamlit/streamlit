@@ -650,6 +650,41 @@ describe("StreamlitMarkdown", () => {
         "second-heading"
       )
     })
+    // The stale anchor must be gone, not merely joined by the new one.
+    expect(screen.getByRole("heading")).not.toHaveAttribute(
+      "id",
+      "first-heading"
+    )
+  })
+
+  it("keeps an explicit anchor when heading text changes across reruns", async () => {
+    const { rerender } = render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor">
+            First Heading
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    expect(screen.getByRole("heading")).toHaveAttribute("id", "my-anchor")
+
+    rerender(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor">
+            Second Heading
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    // A developer-supplied anchor is never re-derived from the text.
+    await waitFor(() => {
+      expect(screen.getByRole("heading")).toHaveTextContent("Second Heading")
+    })
+    expect(screen.getByRole("heading")).toHaveAttribute("id", "my-anchor")
   })
 
   it("propagates header attributes to custom header", async () => {
