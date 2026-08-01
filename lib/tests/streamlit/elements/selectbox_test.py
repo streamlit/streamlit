@@ -743,8 +743,10 @@ def test_selectbox_resets_to_default_when_options_appear():
 
     # Click button to populate options
     at = at.button[0].click().run()
-    # Extra run needed: AppTest doesn't fully simulate frontend processing
-    # of the set_value=True response. The second run picks up the reset value.
+    # A second run is needed because of script ordering, not an AppTest
+    # limitation: `ready` is only set at the end of the click run, after the
+    # selectbox has already rendered. Options first become non-empty on the
+    # run after that.
     at = at.run()
 
     # With options now available and index=0, value should be "A"
@@ -781,8 +783,12 @@ def test_selectbox_none_default_preserved_when_index_none():
     at = AppTest.from_function(script).run()
     assert at.text[0].value == "value=None"
 
-    # Click button to populate options - with index=None, None should be kept
+    # Click button to populate options. A second run is required for options to
+    # actually become non-empty (`ready` is set only at the end of the click
+    # run), otherwise this would assert against still-empty options and pass
+    # vacuously without ever exercising index=None against real options.
     at = at.button[0].click().run()
+    at = at.run()
     assert at.text[0].value == "value=None"
 
 
