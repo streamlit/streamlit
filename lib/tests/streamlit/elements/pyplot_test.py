@@ -201,9 +201,9 @@ class PyplotTest(DeltaGeneratorTestCase):
         fig, ax = plt.subplots()
         ax.plot([1, 2, 3], [1, 2, 3])
 
-        # Before the fix this crashed because SVG bytes get fed into the PNG/PIL path
         st.pyplot(fig, format=fmt)
 
+        # Assert SVG is served as a data URI (not routed through PIL).
         el = self.get_delta_from_queue().new_element
         assert el.imgs.imgs[0].url.startswith("data:image/svg+xml;base64,")
 
