@@ -424,7 +424,7 @@ function SingleDateInput({
                 fixed en-US). safeLocale guards against malformed tags. */}
             <I18nProvider locale={safeLocale}>
               <StyledCalendarRoot
-                aria-label="Calendar."
+                aria-label="Choose date"
                 value={value}
                 onChange={handleCalendarChange}
                 minValue={minDate}

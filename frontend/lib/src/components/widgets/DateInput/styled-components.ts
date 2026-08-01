@@ -408,8 +408,8 @@ export const StyledCalendarCell = styled(CalendarCell, {
     },
 
     "&[data-selected][data-focus-visible]": {
-      outline: `2px solid ${theme.colors.primary}`,
-      outlineOffset: "2px",
+      outline: `${theme.sizes.focusOutlineWidth} solid ${theme.colors.primary}`,
+      outlineOffset: theme.spacing.threeXS,
     },
 
     "&[data-disabled], &[data-unavailable]": {

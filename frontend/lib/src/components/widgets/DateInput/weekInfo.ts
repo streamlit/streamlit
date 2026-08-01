@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-/** Shared `Intl.Locale.getWeekInfo()` helper for locale-aware week start. */
+/** Locale helpers: validate BCP-47 tags for the calendar and read week-start
+ *  info for the date-fns-backed range path. */
 
 export interface IntlWeekInfo {
   firstDay: number
