@@ -493,37 +493,15 @@ class AltairChartTest(DeltaGeneratorTestCase):
         # Verify the selection state is returned
         assert hasattr(event, "selection")
 
-    def test_chart_from_json_keeps_its_inline_datasets(self):
-        """Regression test for #6269.
+    def test_chart_from_json_data_survives_roundtrip(self):
+        """A from_json chart's data must be delivered, and delivered correctly.
 
-        A chart rebuilt with ``alt.Chart.from_json`` carries its data as inline
+        Charts rebuilt with ``alt.Chart.from_json`` carry their data as inline
         datasets referenced by name from the spec. Streamlit used to overwrite the
         chart's ``datasets`` with only the Arrow-serialized ones it collected
         itself, which is empty in this case, so the spec referenced a dataset that
-        was never sent and the chart rendered with axes but no data.
+        was never sent and the chart rendered with axes but no data. See #6269.
         """
-        df = pd.DataFrame({"x": [0, 1, 2], "y": [0, 1, 2]})
-        chart = alt.Chart(df).mark_line().encode(x=alt.X("x"), y=alt.Y("y"))
-
-        roundtripped = alt.Chart.from_json(chart.to_json())
-        st.altair_chart(roundtripped)
-
-        proto = self.get_delta_from_queue().new_element.vega_lite_chart
-        spec = json.loads(proto.spec)
-
-        # The spec references its data by name, so that name must actually
-        # resolve to a dataset that was sent on the proto.
-        data_name = spec["data"]["name"]
-        sent_names = [dataset.name for dataset in proto.datasets]
-        assert data_name in sent_names, (
-            f"spec references dataset {data_name!r} but only {sent_names} were sent"
-        )
-        assert proto.datasets[sent_names.index(data_name)].data.data, (
-            "referenced dataset was sent empty"
-        )
-
-    def test_chart_from_json_data_survives_roundtrip(self):
-        """The values in a from_json chart's dataset must be preserved, not just present."""
         df = pd.DataFrame({"x": [0, 1, 2], "y": [3, 4, 5]})
         chart = alt.Chart(df).mark_line().encode(x=alt.X("x"), y=alt.Y("y"))
 
@@ -531,9 +509,17 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.vega_lite_chart
         spec = json.loads(proto.spec)
-        sent_names = [dataset.name for dataset in proto.datasets]
-        sent = proto.datasets[sent_names.index(spec["data"]["name"])]
 
+        # The spec references its data by name, so that name must resolve to a
+        # dataset that was actually sent on the proto.
+        data_name = spec["data"]["name"]
+        sent_names = [dataset.name for dataset in proto.datasets]
+        assert data_name in sent_names, (
+            f"spec references dataset {data_name!r} but only {sent_names} were sent"
+        )
+
+        # ...and the delivered data must be the original data, not just non-empty.
+        sent = proto.datasets[sent_names.index(data_name)]
         pd.testing.assert_frame_equal(
             convert_arrow_bytes_to_pandas_df(sent.data.data),
             df,
@@ -541,10 +527,10 @@ class AltairChartTest(DeltaGeneratorTestCase):
         )
 
     def test_layered_chart_from_json_keeps_its_inline_datasets(self):
-        """#6269 explicitly covers layered charts too.
+        """Layered from_json charts must keep every named dataset the layers reference.
 
         A layered chart shares one named dataset across its layers, so the same
-        clobbering bug left every layer without data.
+        clobbering bug left every layer without data. See #6269.
         """
         df = pd.DataFrame({"x": [0, 1, 2], "y": [0, 1, 2]})
         base = alt.Chart(df)
