@@ -228,14 +228,15 @@ def marshall(
     # routes it through the existing SVG-string path (returns a base64 data URI)
     # rather than the PNG/PIL path, which cannot parse SVG and crashes.
     effective_format = kwargs.get("format", "png")
-    if isinstance(effective_format, str) and effective_format.lower() == "svg":
-        svg_image: str | io.BytesIO = image.getvalue().decode("utf-8")
-    else:
-        svg_image = image
+    image_for_proto: str | io.BytesIO = (
+        image.getvalue().decode("utf-8")
+        if isinstance(effective_format, str) and effective_format.lower() == "svg"
+        else image
+    )
 
     marshall_images(
         coordinates=coordinates,
-        image=svg_image,
+        image=image_for_proto,
         caption=None,
         layout_config=layout_config,
         proto_imgs=image_list_proto,
