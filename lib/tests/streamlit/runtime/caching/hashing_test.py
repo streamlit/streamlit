@@ -64,6 +64,10 @@ get_main_script_director = MagicMock(return_value=os.getcwd())
 # thresholds were removed. See GitHub issue #14622.
 _PANDAS_ROWS_LARGE = 50_000
 _NP_SIZE_LARGE = 500_000
+# The sample sizes the removed sampling code used, kept so the regression tests
+# can pick indices the old fixed-seed sampler would not have drawn.
+_PANDAS_SAMPLE_SIZE = 10_000
+_NP_SAMPLE_SIZE = 100_000
 
 
 def get_hash(value, hash_funcs=None, cache_type=None):
@@ -1080,7 +1084,7 @@ class TestLargeObjectHashingIsExact:
 
     def test_pandas_series_differs_outside_old_sample(self) -> None:
         n = _PANDAS_ROWS_LARGE + 1000
-        idx = self._unsampled_index(n, 10_000)
+        idx = self._unsampled_index(n, _PANDAS_SAMPLE_SIZE)
         s1 = pd.Series(range(n))
         s2 = s1.copy()
         s2.iloc[idx] = -999
@@ -1088,7 +1092,7 @@ class TestLargeObjectHashingIsExact:
 
     def test_pandas_dataframe_differs_outside_old_sample(self) -> None:
         n = _PANDAS_ROWS_LARGE + 1000
-        idx = self._unsampled_index(n, 10_000)
+        idx = self._unsampled_index(n, _PANDAS_SAMPLE_SIZE)
         df1 = pd.DataFrame({"a": range(n)})
         df2 = df1.copy()
         df2.iloc[idx, 0] = -999
@@ -1096,7 +1100,7 @@ class TestLargeObjectHashingIsExact:
 
     def test_numpy_differs_outside_old_sample(self) -> None:
         n = _NP_SIZE_LARGE + 1000
-        idx = self._unsampled_index(n, 100_000)
+        idx = self._unsampled_index(n, _NP_SAMPLE_SIZE)
         arr1 = np.arange(n, dtype=np.float64)
         arr2 = arr1.copy()
         arr2[idx] = -999.0
@@ -1107,7 +1111,7 @@ class TestLargeObjectHashingIsExact:
         import polars as pl
 
         n = _PANDAS_ROWS_LARGE + 1000
-        idx = self._unsampled_index(n, 10_000)
+        idx = self._unsampled_index(n, _PANDAS_SAMPLE_SIZE)
         data1 = list(range(n))
         data2 = data1.copy()
         data2[idx] = -999
@@ -1118,7 +1122,7 @@ class TestLargeObjectHashingIsExact:
         import polars as pl
 
         n = _PANDAS_ROWS_LARGE + 1000
-        idx = self._unsampled_index(n, 10_000)
+        idx = self._unsampled_index(n, _PANDAS_SAMPLE_SIZE)
         data1 = list(range(n))
         data2 = data1.copy()
         data2[idx] = -999
