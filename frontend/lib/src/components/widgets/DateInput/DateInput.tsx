@@ -104,6 +104,9 @@ function DateInput({
   // Lifted here so a future single/range toggle can preserve calendar
   // continuity across the swap.
   const [focusedValue, setFocusedValue] = useState<CalendarDate | null>(null)
+  // Incremented on form clear to signal SingleDateInput to reset its local
+  // displayValue (which may have diverged from widget state due to buffering).
+  const [formResetKey, setFormResetKey] = useState(0)
 
   const resetError = useCallback(() => {
     setError(null)
@@ -112,6 +115,7 @@ function DateInput({
   const handleFormCleared = useCallback(() => {
     resetError()
     setIsEmpty(false)
+    setFormResetKey(k => k + 1)
   }, [resetError])
 
   /**
@@ -315,16 +319,27 @@ function DateInput({
     ]
   )
 
-  // Shared by both modes: revert to the default value if the popover closes
-  // while the field is empty or partially cleared. `element.default` is
-  // already the ISO wire format, so no conversion is needed here at all
-  // (unlike the old `stringsToDates(element.default)` version).
+  // Real-time validation during segment editing — shows error tooltip
+  // without committing the value to widget state.
+  const handleValidate = useCallback(
+    (date: CalendarDate | null): void => {
+      resetError()
+      if (!date) return
+      const errorType = validateDate(date, minDateCalendar, maxDateCalendar)
+      if (errorType) {
+        setError(buildErrorMessage(errorType))
+      }
+    },
+    [buildErrorMessage, maxDateCalendar, minDateCalendar, resetError, setError]
+  )
+
+  // Revert to the default value if the popover closes while the field is
+  // empty or partially cleared. `element.default` is already the ISO wire
+  // format, so no conversion is needed.
   //
   // `hasPlaceholderSegments` is true when any date segment was in placeholder
-  // state at close time (partial clear). React Aria fires onChange for
-  // intermediate backspace states (e.g. 1970 -> 197 -> 19 -> 1), corrupting
-  // the canonical value. Reverting to default on close ensures abandoned
-  // partial edits don't persist.
+  // state at close time (partial clear via backspace). Reverting to default
+  // on close ensures abandoned partial edits don't persist.
   const handleClose = useCallback(
     (hasPlaceholderSegments?: boolean): void => {
       if (!isEmpty && !hasPlaceholderSegments) {
@@ -346,13 +361,10 @@ function DateInput({
     [value]
   )
 
-  // Keep the calendar's visible month in sync with `value` even when it
-  // changes via direct segment editing rather than through the calendar
-  // itself (prev/next, month/year pickers, or clicking a date all drive
-  // `focusedValue` via `onFocusChange` already). Without this, e.g. typing
-  // "02" into the month segment while the popover is open leaves the
-  // calendar showing whatever month it last displayed instead of jumping
-  // to February.
+  // Sync the calendar's visible month when the committed value changes
+  // externally (session_state update, form clear, calendar click commit).
+  // During segment typing, SingleDateInput drives focusedValue directly
+  // via its onFocusChange prop without waiting for a commit.
   useEffect(() => {
     if (!element.isRange && singleValue) {
       setFocusedValue(singleValue)
@@ -390,7 +402,9 @@ function DateInput({
           isInSidebar={isInSidebar}
           focusedValue={focusedValue}
           onFocusChange={setFocusedValue}
+          onValidate={handleValidate}
           onClose={handleClose}
+          formResetKey={formResetKey}
         />
       </div>
     )
@@ -697,12 +711,13 @@ function updateWidgetMgrState(
   const minDate = getMinDate(element)
   const maxDate = getMaxCalendarDate(element)
 
-  // Check if date(s) outside of allowed min/max. Invalid values are never
-  // written to WidgetStateManager — they still show an error tooltip (via
-  // the local `error` state above) but must not reach the backend.
+  // Guard: invalid values must never reach the backend. This catches
+  // out-of-range dates and unparsable ISO strings (e.g. malformed
+  // query-param seeds). Empty arrays are valid (cleared input).
   const isValid = (vws.value || []).every(iso => {
     const calendarDate = isoToCalendarDate(iso)
-    return !calendarDate || !validateDate(calendarDate, minDate, maxDate)
+    if (!calendarDate) return false
+    return !validateDate(calendarDate, minDate, maxDate)
   })
 
   if (isValid) {

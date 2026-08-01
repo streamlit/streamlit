@@ -107,11 +107,19 @@ interface SingleDateInputProps {
   isInSidebar: boolean
   focusedValue: CalendarDate | null
   onFocusChange: (value: CalendarDate) => void
+  /** Validates a date and updates the parent's error state without
+   * committing the value to widget state. Used for real-time error
+   * feedback during segment editing. */
+  onValidate: (date: CalendarDate | null) => void
   /** Called when popover closes (outside click, Escape, or date selection).
    * Parent uses this to revert to default if the field was left empty or
    * partially cleared. The boolean argument indicates whether any segment
    * was in placeholder state at the time of close. */
   onClose: (hasPlaceholderSegments: boolean) => void
+  /** Incremented when the parent form is cleared. Signals this component to
+   * reset its local displayValue to the parent's value prop (which may not
+   * have changed if segment edits were never committed). */
+  formResetKey: number
 }
 
 /** Renders segments reordered to match `format` instead of the locale-derived
@@ -156,7 +164,9 @@ function SingleDateInput({
   isInSidebar,
   focusedValue,
   onFocusChange,
+  onValidate,
   onClose,
+  formResetKey,
 }: SingleDateInputProps): ReactElement {
   const theme = useEmotionTheme()
   const id = useId()
@@ -167,6 +177,39 @@ function SingleDateInput({
   // of closing — see `focusLastFieldSegment` below.
   const isRestoringFocusRef = useRef(false)
 
+  // --- Two-layer state (matches TimeInput/NumberInput pattern) ---
+  // `displayValue` tracks what the field shows during editing.
+  // Segment typing updates only displayValue; the parent's `onChange` is
+  // called only on explicit actions (calendar click, paste, clear) or when
+  // the popover closes. This prevents intermediate backspace states from
+  // triggering backend reruns and on_change callbacks.
+  const [displayValue, setDisplayValue] = useState<CalendarDate | null>(value)
+
+  // Sync from parent when value changes externally (session_state, form
+  // clear, close-commit, calendar click). Render-time adjustment pattern per
+  // React docs. Always accept the parent's value — during editing the parent
+  // doesn't change (we buffer locally), so this only fires on real external
+  // updates.
+  const [prevValue, setPrevValue] = useState(value)
+  if (prevValue !== value) {
+    setPrevValue(value)
+    setDisplayValue(value)
+  }
+
+  // Form clear: displayValue may have diverged (uncommitted typing) while
+  // the widget state stayed at default. The value prop won't change in that
+  // case, so watch the resetKey separately.
+  const [prevResetKey, setPrevResetKey] = useState(formResetKey)
+  if (prevResetKey !== formResetKey) {
+    setPrevResetKey(formResetKey)
+    setDisplayValue(value)
+  }
+
+  // Ref so the close-detection effect always reads the latest displayValue
+  // without needing it in its dependency array.
+  const displayValueRef = useRef(displayValue)
+  displayValueRef.current = displayValue
+
   // Stable ref for onClose so the close-detection effect doesn't re-run
   // every time the parent's handleClose callback identity changes.
   const onCloseRef = useRef(onClose)
@@ -174,18 +217,38 @@ function SingleDateInput({
     onCloseRef.current = onClose
   })
 
-  // Only isOpen is local state; value/onChange are fully controlled by the parent.
+  const onChangeRef = useRef(onChange)
+  useEffect(() => {
+    onChangeRef.current = onChange
+  })
+
   const [isOpen, setIsOpen] = useState(false)
 
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
     if (wasOpenRef.current && !isOpen) {
+      const pending = displayValueRef.current
       const hasPlaceholders =
         triggerRef.current?.querySelector('[data-placeholder="true"]') !== null
-      onCloseRef.current(hasPlaceholders)
+
+      if (hasPlaceholders) {
+        // User left segments incomplete — revert display to the committed
+        // value directly. We can't go through the parent round-trip because
+        // the widget state might already be at default (segment edits were
+        // buffered), making the parent's revert a no-op.
+        setDisplayValue(value)
+        onCloseRef.current(true)
+      } else if (pending !== value) {
+        // Valid completed date that differs from committed — commit it.
+        onChangeRef.current(pending)
+        onCloseRef.current(false)
+      } else {
+        // No change — opened and closed without editing.
+        onCloseRef.current(false)
+      }
     }
     wasOpenRef.current = isOpen
-  }, [isOpen])
+  }, [isOpen, value])
 
   // In the sidebar, flip/shift are bounded to the viewport
   // (document.documentElement) rather than the sidebar's overflow:auto
@@ -250,9 +313,23 @@ function SingleDateInput({
     [setReferenceRef]
   )
 
-  // Selecting a date closes the popover and restores focus to the field.
+  // Segment typing: buffer locally, sync calendar month, show validation
+  // errors in real-time — but do NOT commit to widget state.
+  const handleFieldChange = useCallback(
+    (date: CalendarDate | null): void => {
+      setDisplayValue(date)
+      onValidate(date)
+      if (date) {
+        onFocusChange(date)
+      }
+    },
+    [onFocusChange, onValidate]
+  )
+
+  // Selecting a date commits immediately and closes the popover.
   const handleCalendarChange = useCallback(
     (date: CalendarDate): void => {
+      setDisplayValue(date)
       onChange(date)
       setIsOpen(false)
       focusLastFieldSegment()
@@ -268,6 +345,7 @@ function SingleDateInput({
   }, [disabled])
 
   const handleClear = useCallback((): void => {
+    setDisplayValue(null)
     onChange(null)
   }, [onChange])
 
@@ -281,6 +359,7 @@ function SingleDateInput({
       const fullDate = parsePastedDate(text, format)
       if (fullDate) {
         e.preventDefault()
+        setDisplayValue(fullDate)
         onChange(fullDate)
         return
       }
@@ -295,10 +374,12 @@ function SingleDateInput({
       e.preventDefault()
       if (!isValidSegmentValue(partial.segmentType, partial.value)) return
 
-      const base = value ?? minDate
-      onChange(base.set({ [partial.segmentType]: partial.value }))
+      const base = displayValue ?? minDate
+      const newDate = base.set({ [partial.segmentType]: partial.value })
+      setDisplayValue(newDate)
+      onChange(newDate)
     },
-    [disabled, format, onChange, value, minDate]
+    [disabled, format, onChange, displayValue, minDate]
   )
 
   // Tab from the last segment moves focus into the calendar popover.
@@ -370,8 +451,8 @@ function SingleDateInput({
               aria-label={label}
               aria-describedby={error ? errorId : undefined}
               isInvalid={!!error}
-              value={value}
-              onChange={onChange}
+              value={displayValue}
+              onChange={handleFieldChange}
               minValue={minDate}
               maxValue={maxDate}
               shouldForceLeadingZeros
@@ -392,7 +473,7 @@ function SingleDateInput({
             </Tooltip>
           </StyledErrorIconContainer>
         )}
-        {clearable && !isNullOrUndefined(value) && (
+        {clearable && !isNullOrUndefined(displayValue) && (
           <StyledClearButton
             type="button"
             onClick={handleClear}
@@ -425,7 +506,7 @@ function SingleDateInput({
             <I18nProvider locale={safeLocale}>
               <StyledCalendarRoot
                 aria-label="Choose date"
-                value={value}
+                value={displayValue}
                 onChange={handleCalendarChange}
                 minValue={minDate}
                 maxValue={maxDate}

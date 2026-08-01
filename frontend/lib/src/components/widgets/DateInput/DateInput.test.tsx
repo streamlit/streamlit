@@ -237,6 +237,10 @@ describe("DateInput widget", () => {
     expect(year).toHaveTextContent("2020")
     expect(month).toHaveTextContent("02")
     expect(day).toHaveTextContent("06")
+
+    // Segment edits are buffered locally and committed on popover close.
+    await user.click(document.body)
+
     await waitFor(() => {
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
@@ -373,9 +377,8 @@ describe("DateInput widget", () => {
     expect(month).toHaveTextContent("mm")
     expect(day).toHaveTextContent("dd")
 
-    // Simulate the close action via an outside click (Escape / calendar
-    // selection also close it — see DateInput.tsx's handleClose).
-    await user.click(document.body)
+    // Close the popover via Escape.
+    await user.keyboard("{Escape}")
 
     await waitFor(() => {
       expect(year).toHaveTextContent(originalDateWire.split("-")[0])
@@ -463,6 +466,9 @@ describe("DateInput widget", () => {
     await typeIntoSegment(user, year, "2020")
     await typeIntoSegment(user, month, "02")
     await typeIntoSegment(user, day, "06")
+
+    // Segment edits are buffered locally and committed on popover close.
+    await user.click(document.body)
 
     await waitFor(() => {
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
@@ -988,8 +994,8 @@ describe("DateInput keyboard navigation and focus management", () => {
     expect(month).toHaveTextContent("mm")
     expect(day).toHaveTextContent("20")
 
-    // Close by clicking outside (same approach as the "resets" test)
-    await user.click(document.body)
+    // Close via Escape.
+    await user.keyboard("{Escape}")
 
     // Calendar should close
     await waitFor(
