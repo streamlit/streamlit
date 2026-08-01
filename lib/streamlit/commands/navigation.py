@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from streamlit import config
 from streamlit.errors import StreamlitAPIException
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import Page
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -36,25 +36,25 @@ if TYPE_CHECKING:
     from streamlit.source_util import PageHash, PageInfo
 
 SectionHeader: TypeAlias = str
-PageType: TypeAlias = str | Path | Callable[[], None] | StreamlitPage
+PageType: TypeAlias = str | Path | Callable[[], None] | Page
 
 
 def convert_to_streamlit_page(
     page_input: PageType,
-) -> StreamlitPage:
-    """Convert various input types to StreamlitPage objects."""
-    if isinstance(page_input, StreamlitPage):
+) -> Page:
+    """Convert various input types to Page objects."""
+    if isinstance(page_input, Page):
         return page_input
 
     if isinstance(page_input, str):
-        return StreamlitPage(page_input)
+        return Page(page_input)
 
     if isinstance(page_input, Path):
-        return StreamlitPage(page_input)
+        return Page(page_input)
 
     if callable(page_input):
-        # Convert function to StreamlitPage
-        return StreamlitPage(page_input)
+        # Convert function to Page
+        return Page(page_input)
 
     raise StreamlitAPIException(
         f"Invalid page type: {type(page_input)}. Must be either a string path, "
@@ -63,8 +63,8 @@ def convert_to_streamlit_page(
 
 
 def pages_from_nav_sections(
-    nav_sections: dict[SectionHeader, list[StreamlitPage]],
-) -> list[StreamlitPage]:
+    nav_sections: dict[SectionHeader, list[Page]],
+) -> list[Page]:
     page_list = []
     for pages in nav_sections.values():
         page_list.extend(pages.copy())
@@ -78,7 +78,7 @@ def send_page_not_found(ctx: ScriptRunContext) -> None:
     ctx.enqueue(msg)
 
 
-def _set_external_url(page_proto: AppPageProto, page: StreamlitPage) -> None:
+def _set_external_url(page_proto: AppPageProto, page: Page) -> None:
     """Set external_url on the AppPage proto when the page targets an external URL."""
     external_url = page.external_url
     if external_url is not None:
@@ -91,7 +91,7 @@ def navigation(
     *,
     position: Literal["sidebar", "hidden", "top"] = "sidebar",
     expanded: bool | int = False,
-) -> StreamlitPage:
+) -> Page:
     """
     Configure the available pages in a multipage app.
 
@@ -103,7 +103,7 @@ def navigation(
     ``streamlit run``) acts like a router or frame of common elements around
     each of your pages. Streamlit executes the entrypoint file with every app
     rerun. To execute the current page, you must call the ``.run()`` method on
-    the ``StreamlitPage`` object returned by ``st.navigation``.
+    the ``Page`` object returned by ``st.navigation``.
 
     The set of available pages can be updated with each rerun for dynamic
     navigation. By default, ``st.navigation`` displays the available pages in
@@ -120,7 +120,7 @@ def navigation(
 
         To create a navigation menu with no sections or page groupings,
         ``pages`` must be a list of page-like objects. Page-like objects are
-        anything that can be passed to ``st.Page`` or a ``StreamlitPage``
+        anything that can be passed to ``st.Page`` or a ``Page``
         object returned by ``st.Page``.
 
         To create labeled sections or page groupings within the navigation
@@ -134,7 +134,7 @@ def navigation(
         ``title`` parameter of ``st.Page``.
 
         When you use a string or path as a page-like object, they are
-        internally passed to ``st.Page`` and converted to ``StreamlitPage``
+        internally passed to ``st.Page`` and converted to ``Page``
         objects. In this case, the page will have the default title, icon, and
         path inferred from its path or filename. To customize these attributes
         for your page, initialize your page with ``st.Page``.
@@ -178,7 +178,7 @@ def navigation(
 
     Returns
     -------
-    StreamlitPage
+    Page
         The current page selected by the user. To run the page, you must use
         the ``.run()`` method on it.
 
@@ -192,7 +192,7 @@ def navigation(
 
     You can declare pages from callables or file paths. If you pass callables
     or paths to ``st.navigation`` as a page-like objects, they are internally
-    converted to ``StreamlitPage`` objects using ``st.Page``. In this case, the
+    converted to ``Page`` objects using ``st.Page``. In this case, the
     page titles, icons, and paths are inferred from the file or callable names.
 
     ``page_1.py`` (in the same directory as your entrypoint file):
@@ -334,7 +334,7 @@ def _navigation(
     *,
     position: Literal["sidebar", "hidden", "top"],
     expanded: bool | int,
-) -> StreamlitPage:
+) -> Page:
     if isinstance(pages, Sequence):
         converted_pages = [convert_to_streamlit_page(p) for p in pages]
         nav_sections = {"": converted_pages}

@@ -53,7 +53,7 @@ query = st.text_input(
 
 ## HTML and iframes
 
-Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
+Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or deprecated `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
 
 Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` commands.
 
@@ -121,6 +121,7 @@ def render_page():
     st.title("Sales")
     st.line_chart(load_sales())
 
+
 render_page()
 ```
 
@@ -171,7 +172,7 @@ def load_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
 ```
 
-Render stable layout before slow calls. Streamlit emits UI updates top to bottom during each rerun, so slow code before downstream elements leaves faded stale content from the previous run on screen while it runs. Render fast UI first, reserve the slow result's position with `st.container()`, then fill that slot once the work completes — wrap the slow work in `with container.skeleton():` to show a loading placeholder, and write results explicitly to the container (e.g. `container.dataframe(...)`), since the block doesn't redirect bare `st.*` calls into it. Avoid standalone `st.empty()`/`st.skeleton()` placeholders that you fill after slow work: the delay unmounts the old element and resets stateful widgets (e.g. a dataframe's scroll, sort, and selection), whereas a reserved container keeps it mounted at a stable position. Give stateful elements a stable `key`.
+Render stable UI before slow calls. Streamlit emits UI updates top to bottom during each rerun, so slow code before downstream elements leaves faded stale content from the previous run on screen while it runs. Render fast UI first, reserve the slow result's position with `st.container()`, then fill that slot once the work completes — wrap the slow work in `with container.skeleton():` to show a loading placeholder, and write results explicitly to the container (e.g. `container.dataframe(...)`), since the block doesn't redirect bare `st.*` calls into it. Avoid standalone `st.empty()`/`st.skeleton()` placeholders that you fill after slow work: the delay unmounts the old element and resets stateful widgets (e.g. a dataframe's scroll, sort, and selection), whereas a reserved container keeps it mounted at a stable position. Give stateful elements a stable `key`.
 
 ```python
 # BAD: The whole page is stuck behind a slow load and greys out
@@ -255,10 +256,14 @@ st.bar_chart(df, x="category", y="orders")
 st.scatter_chart(df, x="revenue", y="margin", color="segment")
 
 # GOOD: Altair for complex charts
-chart = alt.Chart(df).mark_line().encode(
-    x=alt.X("date:T", title="Date"),
-    y=alt.Y("revenue:Q", title="Revenue"),
-    color="region:N",
+chart = (
+    alt.Chart(df)
+    .mark_line()
+    .encode(
+        x=alt.X("date:T", title="Date"),
+        y=alt.Y("revenue:Q", title="Revenue"),
+        color="region:N",
+    )
 )
 st.altair_chart(chart)
 ```

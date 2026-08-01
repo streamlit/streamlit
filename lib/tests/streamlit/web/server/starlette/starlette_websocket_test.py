@@ -30,6 +30,7 @@ from streamlit.web.server.starlette.starlette_websocket import (
     StarletteSessionClient,
     _gather_user_info,
     _get_signed_cookie_with_chunks,
+    _is_host_allowed,
     _is_origin_allowed,
     _parse_decoded_user_cookie,
     _parse_subprotocols,
@@ -362,8 +363,76 @@ class TestParseUserCookieSigned:
         assert result["is_logged_in"] is True
 
 
+class TestIsHostAllowed:
+    """Tests for _is_host_allowed function."""
+
+    @pytest.mark.parametrize(
+        ("host", "expected"),
+        [
+            ("app.example.com:8501", True),
+            ("APP.EXAMPLE.COM.", True),
+            ("sub.example.org:443", True),
+            ("example.org", False),
+            ("attacker.example.net:8501", False),
+            ("[::1]:8501", True),
+            ("app.example.com:not-a-port", False),
+            ("user:pass@app.example.com:8501", False),
+            ("app.example.com/evil", False),
+            (None, False),
+        ],
+        ids=[
+            "exact_host_with_port",
+            "host_case_and_trailing_dot",
+            "wildcard_subdomain",
+            "wildcard_excludes_base_domain",
+            "disallowed_host",
+            "ipv6_host",
+            "invalid_port",
+            "embedded_credentials",
+            "path_component",
+            "missing_host",
+        ],
+    )
+    @patch_config_options(
+        {
+            "server.allowedHosts": [
+                "app.example.com",
+                "*.example.org",
+                "::1",
+            ]
+        }
+    )
+    def test_host_allowlist(self, host: str | None, expected: bool) -> None:
+        """Test exact, wildcard, and IP Host allow-list entries."""
+        assert _is_host_allowed(host) is expected
+
+    @patch_config_options({"server.allowedHosts": []})
+    def test_empty_host_allowlist_preserves_existing_behavior(self) -> None:
+        """Test that Host validation remains opt-in for compatibility."""
+        assert _is_host_allowed("dynamic-proxy.example.com:8501") is True
+        assert _is_host_allowed(None) is True
+
+    @patch_config_options({"server.allowedHosts": ["*"]})
+    def test_global_host_wildcard_allows_any_valid_host(self) -> None:
+        """Test that the global wildcard accepts any valid Host header."""
+        assert _is_host_allowed("dynamic-proxy.example.com:8501") is True
+        assert _is_host_allowed("dynamic-proxy.example.com:not-a-port") is False
+        assert _is_host_allowed(None) is False
+
+
 class TestIsOriginAllowed:
     """Tests for _is_origin_allowed function (Origin validation for WebSocket)."""
+
+    @patch_config_options({"server.allowedHosts": ["app.example.com"]})
+    def test_rejects_same_origin_connection_with_disallowed_host(self) -> None:
+        """Test that same-origin comparison cannot bypass Host validation."""
+        assert (
+            _is_origin_allowed(
+                "http://rebind.attacker.example:8501",
+                "rebind.attacker.example:8501",
+            )
+            is False
+        )
 
     @pytest.mark.parametrize(
         ("origin", "host", "expected"),
@@ -745,7 +814,9 @@ class TestWebsocketHandlerMessageSize:
 
         mock_websocket.close.assert_called_once_with(code=1009)
         mock_runtime.handle_backmsg.assert_not_called()
-        mock_runtime.disconnect_session.assert_called_once_with("test-session-id")
+        mock_runtime.disconnect_session.assert_called_once_with(
+            "test-session-id", client=mock_client
+        )
 
 
 class TestGetSignedCookieWithChunks:

@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import errno
 import os
 import shutil
 import sys
@@ -34,6 +35,96 @@ _LOGGER: Final = get_logger(__name__)
 
 # Skill name installed in global mode
 _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
+
+# The full vocabulary of install-failure causes. Closed so the reason is safe to emit
+# as a telemetry label, and a Literal so mypy rejects a typo'd or ad-hoc reason at the
+# raise site rather than silently minting a label no query knows about.
+_InstallFailureReason = Literal[
+    "conflict",  # A pre-existing file or foreign symlink we won't overwrite.
+    "incomplete",  # Project symlinks failed and the global fallback was cancelled.
+    "no_skills",  # The bundled skills dir exists but contains nothing installable.
+    "non_interactive",  # No TTY to prompt on and --yes wasn't passed.
+    "source_missing",  # The bundled skills dir is absent from the installation.
+    "source_incomplete",  # The dir is present but a required file is missing.
+    "symlinks_unsupported",  # Project install needs symlinks; this OS won't make them.
+    "write_denied",  # Permissions, or a read-only filesystem.
+    "write_locked",  # Another process holds the path (antivirus, sync clients).
+    "write_name_too_long",  # The path exceeded the OS limit (Windows MAX_PATH).
+    "write_no_space",  # Out of disk, or over a quota.
+    "write_failed",  # A write failed for a reason none of the above cover.
+]
+
+# Why a project install was rerouted to a global copy. Split finely because most
+# Windows users take this path and then SUCCEED, so this - not the failure vocabulary
+# above - is where their diagnostic signal lives, and only the first is a cause a user
+# can fix themselves.
+_FallbackReason = Literal[
+    "symlinks_no_privilege",  # Windows Developer Mode off (ERROR_PRIVILEGE_NOT_HELD).
+    "symlinks_denied",  # Permissions on the project dir refused the probe.
+    "symlinks_unsupported",  # The filesystem/OS has no directory symlinks.
+    "symlink_failed",  # Pre-check passed, then an individual link would not lay.
+]
+
+# OSError.errno -> reason. Built by name so a platform missing one of these (they
+# are not all defined everywhere) simply omits it rather than failing at import.
+_ERRNO_GROUPS: Final[tuple[tuple[tuple[str, ...], _InstallFailureReason], ...]] = (
+    (("EACCES", "EPERM", "EROFS"), "write_denied"),
+    # EFBIG is deliberately absent: a file-size limit is not out of space.
+    (("ENOSPC", "EDQUOT"), "write_no_space"),
+    # EAGAIN belongs here on retry semantics rather than locking specifically.
+    (("EBUSY", "EAGAIN", "ETXTBSY"), "write_locked"),
+    (("ENAMETOOLONG",), "write_name_too_long"),
+)
+_WRITE_REASON_BY_ERRNO: Final[dict[int, _InstallFailureReason]] = {
+    code: reason
+    for names, reason in _ERRNO_GROUPS
+    for name in names
+    if (code := getattr(errno, name, None)) is not None
+}
+
+# Consulted BEFORE errno: CPython's mapping is lossy in the one direction that would
+# mislead us. A sharing violation (antivirus or a sync client holding the file) arrives
+# as EACCES, so trusting errno on Windows sends us after folder ACLs when the fix is to
+# retry.
+_WRITE_REASON_BY_WINERROR: Final[dict[int, _InstallFailureReason]] = {
+    5: "write_denied",  # ERROR_ACCESS_DENIED
+    19: "write_denied",  # ERROR_WRITE_PROTECT
+    32: "write_locked",  # ERROR_SHARING_VIOLATION
+    33: "write_locked",  # ERROR_LOCK_VIOLATION
+    39: "write_no_space",  # ERROR_HANDLE_DISK_FULL
+    112: "write_no_space",  # ERROR_DISK_FULL
+    206: "write_name_too_long",  # ERROR_FILENAME_EXCED_RANGE
+}
+
+
+def classify_write_error(error: OSError) -> _InstallFailureReason:
+    """Map a filesystem ``OSError`` to a bounded, actionable failure reason.
+
+    Only the error *class* is used, never the message, which can embed an absolute
+    server path - so the result stays safe to emit as a telemetry label. An
+    unrecognised code stays the generic ``"write_failed"`` rather than being guessed
+    into a specific bucket that would point at the wrong fix.
+    """
+    winerror = getattr(error, "winerror", None)
+    if isinstance(winerror, int) and winerror in _WRITE_REASON_BY_WINERROR:
+        return _WRITE_REASON_BY_WINERROR[winerror]
+    if error.errno is not None and error.errno in _WRITE_REASON_BY_ERRNO:
+        return _WRITE_REASON_BY_ERRNO[error.errno]
+    return "write_failed"
+
+
+class InstallError(click.ClickException):
+    """A skills-install failure carrying a stable machine-readable ``reason`` code.
+
+    The backend-operation handler forwards the ``reason`` to the client, which emits
+    it as a telemetry label suffix - hence the fixed :data:`_InstallFailureReason`
+    vocabulary, never user input. Behaves like a plain ``click.ClickException``
+    otherwise, so raising it changes nothing a user sees.
+    """
+
+    def __init__(self, message: str, *, reason: _InstallFailureReason) -> None:
+        super().__init__(message)
+        self.reason = reason
 
 
 def _generate_gitignore_snippet(
@@ -60,7 +151,20 @@ class _InstallResult:
 
     installed: list[str] = field(default_factory=list)
     up_to_date: list[str] = field(default_factory=list)
+    # Pre-existing files/symlinks we won't overwrite - a genuine "conflict".
     skipped: list[str] = field(default_factory=list)
+    # Filesystem failures during the global copy. Kept apart from ``skipped`` so a
+    # write failure is never misreported as a "conflict", in the CLI summary and in
+    # the nudge's telemetry reason. Only the copy path fills this.
+    errored: list[str] = field(default_factory=list)
+    # The distinct causes behind ``errored``. A set, not a per-entry list: the only
+    # consumer asks whether the failed targets agreed on one cause, never which
+    # target had which. Separate from the display strings above, which carry raw
+    # OSError text that must not reach the browser.
+    write_reasons: set[_InstallFailureReason] = field(default_factory=set)
+    # Set when a project install was rerouted to a global copy, naming why. Surfaced
+    # to telemetry so that cohort is countable - see InstallSkillsResponsePayload.
+    fallback_reason: _FallbackReason | None = None
 
 
 def _get_source_skills_dir() -> Path:
@@ -280,23 +384,47 @@ def _skill_copy_matches(source_path: Path, target_path: Path) -> bool:
 
 
 @lru_cache(maxsize=8)
-def _symlinks_supported(project_root: Path, source_path: Path) -> bool:
-    """Return whether project install can create directory symlinks."""
-    # Cached because the probe WRITES (a temp dir plus a symlink) into
-    # project_root, and the nudge show-gate calls this on every script rerun -
-    # uncached, a passive eligibility check would churn the user's project
-    # directory continuously. Symlink support is a property of the OS and
-    # filesystem rather than of a moment in time (enabling Windows Developer
-    # Mode needs a restart anyway), so a process-lifetime answer is accurate.
+def _symlink_blocker(project_root: Path, source_path: Path) -> _FallbackReason | None:
+    """Return why project install can't use symlinks here, or ``None`` if it can.
+
+    Probes by actually creating one in a temp dir, then classifies the failure rather
+    than collapsing it to "unsupported" - most Windows users land here and then
+    *succeed* via the global fallback, so this is what their success label carries,
+    and only ``symlinks_no_privilege`` (Developer Mode off) is a cause a user can fix.
+    """
+    # Cached: the probe WRITES (a temp dir plus a symlink) into project_root, and
+    # the nudge show-gate calls this on every script rerun - uncached, a passive
+    # eligibility check would churn the user's project directory continuously.
+    # Symlink support is a property of the OS and filesystem rather than of a
+    # moment in time (enabling Windows Developer Mode needs a restart anyway), so
+    # a process-lifetime answer is accurate.
     try:
         with tempfile.TemporaryDirectory(
             prefix=".streamlit-skills-", dir=project_root
         ) as temp_dir:
             link_path = Path(temp_dir) / "skill-link"
             link_path.symlink_to(source_path, target_is_directory=True)
-            return link_path.is_symlink()
-    except (OSError, NotImplementedError):
-        return False
+            if link_path.is_symlink():
+                return None
+            # Created without error yet isn't a symlink: treat as unsupported rather
+            # than claiming success we can't verify.
+            return "symlinks_unsupported"
+    except NotImplementedError:
+        return "symlinks_unsupported"
+    except OSError as e:
+        # ERROR_PRIVILEGE_NOT_HELD: the account lacks SeCreateSymbolicLinkPrivilege,
+        # which in practice means Windows Developer Mode is off. Distinguishing this
+        # is the point of the exercise - it is the one cause a user can simply fix.
+        if getattr(e, "winerror", None) == 1314:
+            return "symlinks_no_privilege"
+        # ``errno`` is Optional on OSError, and dict.get is typed to reject None, so
+        # the guard is for the type checker rather than for runtime behaviour.
+        if (
+            e.errno is not None
+            and _WRITE_REASON_BY_ERRNO.get(e.errno) == "write_denied"
+        ):
+            return "symlinks_denied"
+        return "symlinks_unsupported"
 
 
 def _get_display_path(
@@ -352,31 +480,37 @@ def _install_skill_symlink(
     target_path = target_dir / skill_name
     rel_target_path = _get_display_path(target_path, Path.cwd())
 
-    # Ensure parent directory exists
-    target_dir.mkdir(parents=True, exist_ok=True)
+    # Pre-symlink filesystem work runs under one guard: any OSError here means we
+    # can't lay the symlink, so return False and let the caller fall back to a global
+    # copy rather than letting it escape and be misbooked as a hard write failure.
+    try:
+        # Ensure parent directory exists
+        target_dir.mkdir(parents=True, exist_ok=True)
 
-    # A real (non-symlink) file or directory is a hard conflict - skip it.
-    if _symlink_target_would_conflict(target_path):
-        result.skipped.append(f"{rel_target_path} (existing file or directory)")
-        return True
-
-    # A symlink (valid or broken) at the target - replace it if it's ours.
-    if target_path.is_symlink():
-        try:
-            resolved = target_path.resolve()
-            if resolved == source_path.resolve():
-                result.up_to_date.append(str(rel_target_path))
-                return True
-        except (OSError, ValueError):
-            # Broken symlink or resolution error - check ownership pattern below
-            pass
-
-        # Check if it's a Streamlit-owned symlink we can replace
-        if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
-            target_path.unlink()
-        else:
-            result.skipped.append(f"{rel_target_path} (existing symlink)")
+        # A real (non-symlink) file or directory is a hard conflict - skip it.
+        if _symlink_target_would_conflict(target_path):
+            result.skipped.append(f"{rel_target_path} (existing file or directory)")
             return True
+
+        # A symlink (valid or broken) at the target - replace it if it's ours.
+        if target_path.is_symlink():
+            try:
+                resolved = target_path.resolve()
+                if resolved == source_path.resolve():
+                    result.up_to_date.append(str(rel_target_path))
+                    return True
+            except (OSError, ValueError):
+                # Broken symlink or resolution error - check ownership pattern below
+                pass
+
+            # Check if it's a Streamlit-owned symlink we can replace
+            if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
+                target_path.unlink()
+            else:
+                result.skipped.append(f"{rel_target_path} (existing symlink)")
+                return True
+    except (OSError, NotImplementedError):
+        return False
 
     # Compute the relative symlink target from the REAL (symlink-resolved) paths
     # of both ends. os.path.relpath counts ``..`` levels against the logical
@@ -418,34 +552,37 @@ def _install_skill_copy(
     target_path = target_dir / skill_name
     rel_target_path = _get_display_path(target_path, Path.home(), use_tilde=True)
 
-    # Ensure parent directory exists
-    target_dir.mkdir(parents=True, exist_ok=True)
-
-    old_target_to_remove: Path | None = None
-
-    # A real (non-symlink) file is a hard conflict - skip it.
-    if _copy_target_would_conflict(target_path):
-        result.skipped.append(f"{rel_target_path} (existing file)")
-        return
-
-    if target_path.is_symlink():
-        # A symlink (valid or broken) at the target - replace it if it's ours.
-        if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
-            target_path.unlink()
-        else:
-            result.skipped.append(f"{rel_target_path} (existing symlink)")
-            return
-    elif target_path.is_dir():
-        if _skill_copy_matches(source_path, target_path):
-            result.up_to_date.append(str(rel_target_path))
-            return
-        # Defer removal until after successful copy to ensure atomicity
-        old_target_to_remove = target_path
-
-    # Copy skill directory - use temp location first to ensure atomicity
+    # All filesystem work runs under one try so a failure at ANY step is recorded as
+    # a write failure classified by errno, instead of escaping as an uncaught OSError
+    # the caller can only classify as "unknown".
     try:
+        # Ensure parent directory exists
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        old_target_to_remove: Path | None = None
+
+        # A real (non-symlink) file is a hard conflict - skip it. Routed through the
+        # shared predicate so the nudge show-gate's preflight cannot drift from what
+        # this actually skips.
+        if _copy_target_would_conflict(target_path):
+            result.skipped.append(f"{rel_target_path} (existing file)")
+            return
+
+        if target_path.is_symlink():
+            if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
+                target_path.unlink()
+            else:
+                result.skipped.append(f"{rel_target_path} (existing symlink)")
+                return
+        elif target_path.is_dir():
+            if _skill_copy_matches(source_path, target_path):
+                result.up_to_date.append(str(rel_target_path))
+                return
+            old_target_to_remove = target_path
+
+        # Copy to a temp location and swap, so a failed copy leaves the working
+        # installation in place.
         if old_target_to_remove is not None:
-            # Copy to temp location, then swap
             temp_path = target_path.with_name(f".{skill_name}.tmp")
             if temp_path.exists():
                 shutil.rmtree(temp_path)
@@ -463,7 +600,11 @@ def _install_skill_copy(
         temp_path = target_path.with_name(f".{skill_name}.tmp")
         if temp_path.exists() and target_path.exists():
             shutil.rmtree(temp_path, ignore_errors=True)
-        result.skipped.append(f"{rel_target_path} (copy failed: {e})")
+        # A write failure, not a conflict - record it in ``errored`` so it is
+        # classified as such, not "conflict", and note the errno-derived cause so the
+        # telemetry reason names which write failed.
+        result.errored.append(f"{rel_target_path} (copy failed: {e})")
+        result.write_reasons.add(classify_write_error(e))
 
 
 def _print_result(result: _InstallResult) -> None:
@@ -486,6 +627,11 @@ def _print_result(result: _InstallResult) -> None:
         click.secho("\n⚠ Skipped due to conflicts:", fg="yellow", bold=True)
         for path in result.skipped:
             click.echo(f"  {click.style('→', fg='yellow')} {path}")
+
+    if result.errored:
+        click.secho("\n✗ Failed to write:", fg="red", bold=True)
+        for path in result.errored:
+            click.echo(f"  {click.style('→', fg='red')} {path}")
 
 
 def _prompt_install_mode() -> str:
@@ -584,7 +730,23 @@ def _confirm_global_installation(target_dirs: list[Path]) -> bool:
     return click.confirm("Proceed with installation?", default=True)
 
 
-def _conflict_error(skipped: list[str]) -> click.ClickException:
+def _concise_install_paths(entries: list[str]) -> list[str]:
+    """Collapse ``_InstallResult`` entries to short paths safe to show a user.
+
+    Entries look like ``"<path> (why)"``. Both failure messages built from them are
+    shown verbatim in the in-app nudge, so keep only the ``<harness>/skills/<skill>``
+    tail and drop the parenthetical: neither an absolute server path nor a raw
+    ``OSError`` string may reach the browser.
+    """
+    paths = []
+    for entry in entries:
+        raw = entry.split(" (", 1)[0]
+        parts = Path(raw).parts
+        paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
+    return paths
+
+
+def _conflict_error(skipped: list[str]) -> InstallError:
     """Build a specific "couldn't install" error that names the conflicting
     paths, rather than a vague "remove conflicting files".
 
@@ -596,16 +758,37 @@ def _conflict_error(skipped: list[str]) -> click.ClickException:
     stand on its own (the CLI's detailed ``_print_result`` output never reaches
     the browser).
     """
-    paths = []
-    for entry in skipped:
-        raw = entry.split(" (", 1)[0]
-        parts = Path(raw).parts
-        paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
+    paths = _concise_install_paths(skipped)
     joined = ", ".join(paths)
     plural = len(paths) != 1
-    return click.ClickException(
+    return InstallError(
         f"{joined} already exist{'' if plural else 's'}. "
-        f"Remove {'them' if plural else 'it'} and try again."
+        f"Remove {'them' if plural else 'it'} and try again.",
+        reason="conflict",
+    )
+
+
+def _write_error(result: _InstallResult) -> InstallError:
+    """Build a "couldn't write" error for filesystem failures during copy.
+
+    Distinct from :func:`_conflict_error`, which reports pre-existing files.
+
+    The reason follows what the failed targets agreed on:
+
+    - all agreed on one cause -> that cause
+    - they disagreed -> the generic ``write_failed``, because claiming "permission
+      denied" for a set that was half permissions and half disk-full would point
+      whoever reads the telemetry at the wrong fix
+    """
+    joined = ", ".join(_concise_install_paths(result.errored))
+    reasons = result.write_reasons
+    reason: _InstallFailureReason = (
+        next(iter(reasons)) if len(reasons) == 1 else "write_failed"
+    )
+    return InstallError(
+        f"Could not write {joined}. Check folder permissions and free disk "
+        "space, then try again.",
+        reason=reason,
     )
 
 
@@ -622,14 +805,17 @@ def _install_project_skills(
         # Keep the absolute path in the server log only - this message is shown
         # verbatim in the in-app nudge, so it must not leak a server path.
         _LOGGER.warning("Bundled skills directory not found at %s", source_skills_dir)
-        raise click.ClickException(
+        raise InstallError(
             "Bundled skills were not found in your Streamlit installation. "
-            "Reinstall Streamlit and try again."
+            "Reinstall Streamlit and try again.",
+            reason="source_missing",
         )
 
     skills = _discover_skills(source_skills_dir)
     if not skills:
-        raise click.ClickException("No installable skills found in Streamlit package.")
+        raise InstallError(
+            "No installable skills found in Streamlit package.", reason="no_skills"
+        )
 
     # Determine targets. The in-app installer passes ``app_dir`` so the project
     # root resolves from the running app's directory (matching the nudge's skill
@@ -637,7 +823,8 @@ def _install_project_skills(
     project_root = _find_project_root(Path(app_dir) if app_dir else None)
     target_dirs = _get_project_target_dirs(project_root)
 
-    if not _symlinks_supported(project_root, source_skills_dir / skills[0]):
+    symlink_blocker = _symlink_blocker(project_root, source_skills_dir / skills[0])
+    if symlink_blocker is not None:
         if fallback_to_global:
             click.secho(
                 "\n⚠ Symlinks not supported on this system.",
@@ -653,10 +840,13 @@ def _install_project_skills(
                 "Developer Mode to use project installs."
             )
             click.echo()
-            return _install_global_skills(yes=yes)
+            global_result = _install_global_skills(yes=yes)
+            global_result.fallback_reason = symlink_blocker
+            return global_result
 
-        raise click.ClickException(
-            "Symlinks not supported. Use --global for global installation."
+        raise InstallError(
+            "Symlinks not supported. Use --global for global installation.",
+            reason="symlinks_unsupported",
         )
 
     # Confirm installation
@@ -693,20 +883,26 @@ def _install_project_skills(
         click.echo("Falling back to global installation mode...")
         click.echo()
         try:
-            return _install_global_skills(yes=yes)
+            global_result = _install_global_skills(yes=yes)
+            # The pre-check said symlinks work here, yet laying one still failed -
+            # distinct from the categorical case above, and worth chasing separately.
+            global_result.fallback_reason = "symlink_failed"
+            return global_result
         except click.ClickException:
             # Global install failed - partial project symlinks remain as fallback
             raise
         except click.exceptions.Abort:
             # User cancelled global install - report that nothing was fully installed
-            raise click.ClickException(
+            raise InstallError(
                 "Installation incomplete. Project symlinks failed and global install "
-                "was cancelled."
+                "was cancelled.",
+                reason="incomplete",
             )
 
     if symlink_failed:
-        raise click.ClickException(
-            "Symlinks not supported. Use --global for global installation."
+        raise InstallError(
+            "Symlinks not supported. Use --global for global installation.",
+            reason="symlinks_unsupported",
         )
 
     # Report results
@@ -778,9 +974,13 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
             _GLOBAL_SKILL_NAME,
             meta_skill_dir,
         )
-        raise click.ClickException(
+        raise InstallError(
             f"The bundled '{_GLOBAL_SKILL_NAME}' meta-skill was not found in your "
-            "Streamlit installation. Reinstall Streamlit and try again."
+            "Streamlit installation. Reinstall Streamlit and try again.",
+            # Distinct from source_missing: the directory is there but a required
+            # file is not, which points at a too-narrow package-data glob rather
+            # than skills being absent from the wheel entirely.
+            reason="source_incomplete",
         )
 
     # Install to each target directory
@@ -798,6 +998,12 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
 
     # Report results
     _print_result(result)
+
+    # A write failure on ANY target is a hard failure, even if another target
+    # succeeded - otherwise a partial install (e.g. ~/.agents ok but ~/.claude
+    # denied) reports success and drops skillsNudgeInstallFailed:write_failed.
+    if result.errored:
+        raise _write_error(result)
 
     if result.installed or result.up_to_date:
         click.echo()
@@ -849,8 +1055,9 @@ def install_skills(
     """
     # Check if running interactively
     if not yes and not sys.stdin.isatty():
-        raise click.ClickException(
-            "Non-interactive terminal detected. Use --yes to skip prompts."
+        raise InstallError(
+            "Non-interactive terminal detected. Use --yes to skip prompts.",
+            reason="non_interactive",
         )
 
     # Interactive mode selection (when not using flags)
@@ -964,12 +1171,9 @@ _MAX_REPO_ROOT_WALK_DEPTH: Final = 20
 def _find_git_root(start: str) -> str | None:
     """Return the nearest ancestor of ``start`` containing a ``.git`` entry, or ``None``.
 
-    Uses a bounded stdlib ancestor walk rather than ``git.Repo(...)`` from
-    GitPython. GitPython's cold import adds ~170ms on first call, which shows
-    up on every hosted-app startup via the ``create_page_profile_message``
-    code path — for a signal that almost always resolves to ``None`` in those
-    environments. The stdlib walk is ~1ms cold and returns the same path we
-    need.
+    Uses a bounded stdlib ancestor walk instead of Git or a Git library. Hosted-app
+    startup hits this via ``create_page_profile_message``, and the walk stays ~1ms
+    cold for a signal that is usually ``None`` there.
     """
     current = os.path.abspath(start)
     for _ in range(_MAX_REPO_ROOT_WALK_DEPTH):
@@ -1153,8 +1357,9 @@ def _one_click_install_would_be_refused(app_dir: str | None) -> bool:
             return False
 
         # One mode is fully blocked, so only the mode the installer would actually
-        # use decides. Sole branch needing the (cached) symlink-support probe.
-        if _symlinks_supported(project_root, source_skills_dir / skill_names[0]):
+        # use decides. Sole branch needing the (cached) symlink probe; a ``None``
+        # blocker means symlinks work, so the project install is what runs.
+        if _symlink_blocker(project_root, source_skills_dir / skill_names[0]) is None:
             refused, pairs = project_all_blocked, project_pairs
         else:
             refused, pairs = global_all_blocked, global_pairs

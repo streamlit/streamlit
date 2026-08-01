@@ -42,7 +42,7 @@
   },
   "homepage": "https://github.com/streamlit/streamlit#readme",
   "dependencies": {
-    "apache-arrow": "^21.1.0",
+    "apache-arrow": "^21.2.0",
     "hoist-non-react-statics": "^3.3.2"
   },
   "peerDependencies": {

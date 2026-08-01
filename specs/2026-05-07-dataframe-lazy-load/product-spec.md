@@ -177,7 +177,9 @@ in-memory pandas and Polars dataframes.
 ```python
 df = pd.read_parquet("large_export.parquet")
 
-st.dataframe(df)  # uses lazy delivery when len(df) > 150_000 and lazy mode is compatible
+st.dataframe(
+    df
+)  # uses lazy delivery when len(df) > 150_000 and lazy mode is compatible
 ```
 
 For inputs already held in memory, this does not reduce server memory usage. If a non-pandas

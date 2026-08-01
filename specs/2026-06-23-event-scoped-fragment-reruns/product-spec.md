@@ -100,17 +100,20 @@ from the handler described above. The triggering widget can live anywhere, in th
 inside another fragment:
 
 ```python
-@st.fragment(key="charts")                # name the fragment (see "Addressing fragments")
+@st.fragment(key="charts")  # name the fragment (see "Addressing fragments")
 def charts():
-    df = load(st.session_state.region)    # read shared state, recompute
+    df = load(st.session_state.region)  # read shared state, recompute
     st.line_chart(df)
     st.dataframe(df)
+
 
 charts()
 
 st.selectbox(
-    "Region", REGIONS, key="region",
-    on_change=lambda: st.rerun("charts"),   # event → re-run only the charts
+    "Region",
+    REGIONS,
+    key="region",
+    on_change=lambda: st.rerun("charts"),  # event → re-run only the charts
 )
 ```
 
@@ -192,13 +195,14 @@ instead needs two independently-targetable regions, they define two fragment fun
 shared logic into a plain helper:
 
 ```python
-@st.fragment(key="charts")       # names the fragment function
+@st.fragment(key="charts")  # names the fragment function
 def charts():
-    df = load(st.session_state.region)   # shared logic lives in a cached helper
+    df = load(st.session_state.region)  # shared logic lives in a cached helper
     st.line_chart(df)
     st.dataframe(df)
 
-charts()                          # any number of call sites; all rerun together on target
+
+charts()  # any number of call sites; all rerun together on target
 st.button("Refresh", on_click=lambda: st.rerun("charts"))  # reruns every call site
 ```
 
@@ -241,11 +245,16 @@ the same function can back many independently-addressable fragments. Two variant
 # A1: opt in via a decorator flag, then pass key at the call site
 @st.fragment(addressable=True)
 def charts(): ...
+
+
 charts(key="charts")
+
 
 # A2: always reserve `key` at call time, no flag
 @st.fragment
 def charts(): ...
+
+
 charts(key="charts")
 ```
 
@@ -273,7 +282,7 @@ precedence") to refresh several dependents in one ordered pass:
 
 ```python
 def on_filter_change():
-    st.rerun(["charts", "table"])   # both rerun in a single ordered pass
+    st.rerun(["charts", "table"])  # both rerun in a single ordered pass
 ```
 
 Dependencies can also be *conditional*, because they're just code:

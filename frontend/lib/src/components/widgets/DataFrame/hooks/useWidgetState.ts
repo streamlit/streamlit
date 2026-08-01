@@ -186,6 +186,8 @@ interface UseWidgetStateReturn {
   updateNumRows: () => void
   // Debounced callback to sync editing state with widget manager
   syncEditState: () => void
+  // Immediately syncs a pending edit and cancels its debounce timeout
+  flushEditState: () => void
   // Creates a sync selection state callback for the given columns and getOriginalIndex
   // This needs to be called after useColumnSort since it needs the sorted columns and getOriginalIndex
   createSyncSelectionState: (
@@ -352,10 +354,8 @@ function useWidgetState({
   }, [originalColumns, element.id, element.formId, widgetMgr, fragmentId])
 
   // Debounced version of syncEditState to prevent rapid updates
-  const { debouncedCallback: syncEditState } = useDebouncedCallback(
-    innerSyncEditState,
-    DEBOUNCE_TIME_MS
-  )
+  const { debouncedCallback: syncEditState, flush: flushEditState } =
+    useDebouncedCallback(innerSyncEditState, DEBOUNCE_TIME_MS)
 
   /**
    * Creates a function to sync selection state with the widget manager.
@@ -664,6 +664,7 @@ function useWidgetState({
     resetEditingState,
     updateNumRows,
     syncEditState,
+    flushEditState,
     createSyncSelectionState,
     onFormCleared,
     loadInitialSelectionState,

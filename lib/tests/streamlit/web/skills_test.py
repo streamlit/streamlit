@@ -16,12 +16,13 @@
 
 from __future__ import annotations
 
+import errno
 import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 from unittest.mock import patch
 
 import click
@@ -1029,7 +1030,9 @@ class TestInstallSkillsCli:
             patch.object(
                 skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
-            patch.object(skills, "_symlinks_supported", return_value=False),
+            patch.object(
+                skills, "_symlink_blocker", return_value="symlinks_unsupported"
+            ),
             patch.object(skills, "_install_global_skills") as install_global_skills,
             patch("pathlib.Path.cwd", return_value=project_dir),
             patch("pathlib.Path.home", return_value=tmp_path / "home"),
@@ -1319,7 +1322,10 @@ class TestInstallSkillCopyEdgeCases:
                 {"developing-with-streamlit"},
             )
 
-        assert any("copy failed" in s for s in result.skipped)
+        assert any("copy failed" in s for s in result.errored)
+        # A write failure must land in ``errored``, never ``skipped`` - otherwise
+        # the caller labels it reason="conflict".
+        assert not result.skipped
 
     def test_preserves_existing_directory_on_copy_failure(
         self, tmp_path: Path, mock_source_skills_dir: Path
@@ -1348,7 +1354,39 @@ class TestInstallSkillCopyEdgeCases:
         # Original should be preserved with old content
         assert target.is_dir()
         assert (target / "SKILL.md").read_text() == "# Old version\n"
-        assert any("copy failed" in s for s in result.skipped)
+        assert any("copy failed" in s for s in result.errored)
+        assert not result.skipped
+
+    def test_reports_mkdir_failure_as_error(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A permission error creating the target dir is an error, not a skip.
+
+        Regression: the mkdir/existence checks ran outside the copy try/except,
+        so a permission-denied mkdir escaped as an uncaught OSError (which the
+        handler could only classify as 'unknown'). It must land in ``errored``
+        so it maps to reason='write_failed'.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        result = skills._InstallResult()
+
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            patch.object(
+                skills.Path, "mkdir", side_effect=OSError("Permission denied")
+            ),
+        ):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert result.errored
+        assert not result.skipped
+        assert not result.installed
 
 
 class TestInstallSkillSymlinkEdgeCases:
@@ -1406,6 +1444,37 @@ class TestInstallSkillSymlinkEdgeCases:
             )
 
         assert not success
+
+    def test_returns_false_when_prework_fails_for_fallback(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A filesystem error in the symlink PRE-work returns False (-> fallback).
+
+        The mkdir / existence-check / unlink steps used to run outside the guard, so
+        an OSError there escaped as a hard write_failed and bypassed the
+        symlink->global fallback. Whatever stops us laying the symlink, the caller
+        should get the chance to fall back to a global copy.
+        """
+        target_dir = tmp_path / "project" / ".agents" / "skills"
+        result = skills._InstallResult()
+
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            patch.object(
+                skills.Path, "mkdir", side_effect=OSError("Permission denied")
+            ),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert not success
+        assert not result.errored
+        assert not result.installed
 
 
 class TestPromptInstallModeRetry:
@@ -1470,6 +1539,127 @@ class TestGlobalInstallationConflicts:
         # The error names the specific conflicting path, not a vague "conflicts".
         assert ".agents/skills/developing-with-streamlit" in result.output
         assert "already exist" in result.output
+
+    def test_copy_failure_reports_write_failed_not_conflict(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """A filesystem copy failure raises reason='write_failed', not 'conflict'.
+
+        An ``OSError`` during the global copy (permissions, disk space, locked dir)
+        used to land in ``skipped`` and be labeled ``conflict``, so the nudge's
+        failure telemetry misclassified write failures - the dominant residual
+        Windows cause - as conflicts.
+        """
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            patch.object(
+                skills.shutil, "copytree", side_effect=OSError("Permission denied")
+            ),
+            pytest.raises(skills.InstallError) as exc,
+        ):
+            skills._install_global_skills(yes=True)
+
+        assert exc.value.reason == "write_failed"
+        # Must NOT be misclassified as a conflict.
+        assert "already exist" not in exc.value.format_message()
+
+    def test_reports_the_specific_write_cause_not_a_generic_failure(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """A permission error surfaces as write_denied, end to end.
+
+        The point of the whole exercise: "a write failed" does not say what to do,
+        while "permission denied" and "path too long" imply different fixes. The
+        errno has to survive from the copy site out to the raised reason.
+        """
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            patch.object(
+                skills.shutil,
+                "copytree",
+                side_effect=OSError(errno.EACCES, "Permission denied"),
+            ),
+            pytest.raises(skills.InstallError) as exc,
+        ):
+            skills._install_global_skills(yes=True)
+
+        assert exc.value.reason == "write_denied"
+
+    def test_generalises_when_targets_fail_for_different_reasons(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """Disagreeing targets report the generic write_failed, not a guess.
+
+        Claiming "permission denied" when one target was denied and the other was out
+        of disk would send whoever reads the telemetry after half the problem.
+        """
+        home = tmp_path / "home"
+        # ~/.claude present -> _get_global_target_dirs yields two targets.
+        (home / ".claude").mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            patch.object(
+                skills.shutil,
+                "copytree",
+                side_effect=[
+                    OSError(errno.EACCES, "Permission denied"),
+                    OSError(errno.ENOSPC, "No space left"),
+                ],
+            ),
+            pytest.raises(skills.InstallError) as exc,
+        ):
+            skills._install_global_skills(yes=True)
+
+        assert exc.value.reason == "write_failed"
+
+    def test_partial_write_failure_reports_write_failed_not_success(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """One target succeeds, another OSErrors -> hard write_failed, not success.
+
+        ``_get_global_target_dirs`` returns TWO targets when ``~/.claude`` exists. If
+        ``~/.agents`` copies OK (result.installed non-empty) but ``~/.claude`` raises
+        OSError (result.errored), the success branch used to win over the errored
+        branch - so a half-installed system reported success and emitted no
+        write_failed telemetry for exactly the locked-down cohort under study. Any
+        errored target must fail loud.
+        """
+        home = tmp_path / "home"
+        # ~/.claude present -> _get_global_target_dirs yields both targets.
+        (home / ".claude").mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            # First target (~/.agents) copies fine; second (~/.claude) fails.
+            patch.object(
+                skills.shutil,
+                "copytree",
+                side_effect=[None, OSError("Permission denied")],
+            ),
+            pytest.raises(skills.InstallError) as exc,
+        ):
+            skills._install_global_skills(yes=True)
+
+        assert exc.value.reason == "write_failed"
 
 
 class TestInteractiveModeSelection:
@@ -1811,6 +2001,15 @@ class TestConflictError:
         assert ".agents/skills/developing-with-streamlit already exists." in message
         assert "Remove it and try again." in message
 
+    def test_conflict_error_carries_conflict_reason(self) -> None:
+        """The conflict error is an ``InstallError`` tagged ``reason="conflict"`` so
+        the handler forwards it to install-failure telemetry."""
+        err = skills._conflict_error(
+            [".agents/skills/developing-with-streamlit (existing file or directory)"]
+        )
+        assert isinstance(err, skills.InstallError)
+        assert err.reason == "conflict"
+
 
 class TestInstallSkillsReturnsResult:
     """install_skills returns the structured result for callers (e.g. the nudge)."""
@@ -2059,7 +2258,9 @@ class TestOneClickInstallWouldBeRefused:
                 skills, "_get_global_target_dirs", return_value=global_target_dirs or []
             ),
             patch.object(
-                skills, "_symlinks_supported", return_value=symlinks_supported
+                skills,
+                "_symlink_blocker",
+                return_value=None if symlinks_supported else "symlinks_unsupported",
             ),
         ):
             return skills._one_click_install_would_be_refused(None)
@@ -2347,7 +2548,7 @@ class TestNudgeSuppressedWhenInstallWouldConflict:
         with (
             patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
             # Force the symlinks-unsupported path (both gate and install).
-            patch.object(skills, "_symlinks_supported", return_value=False),
+            patch.object(skills, "_symlink_blocker", return_value="symlinks_unsupported"),
             patch("streamlit.config.get_option", return_value=False),
         ):
             self._clear_caches()
@@ -2377,7 +2578,7 @@ class TestNudgeGateSideEffects:
         return source_dir, project
 
     def test_symlink_probe_runs_once_across_reruns(self, tmp_path: Path) -> None:
-        """_symlinks_supported writes a temp dir and symlink INTO project_root, so
+        """_symlink_blocker writes a temp dir and symlink INTO project_root, so
         it must be cached: uncached, every rerun of a suppressed app would churn
         the user's project directory for a read-only eligibility check."""
         _skip_if_symlinks_not_supported(tmp_path)
@@ -2403,7 +2604,7 @@ class TestNudgeGateSideEffects:
                 side_effect=tempfile.TemporaryDirectory,
             ) as mock_temp_dir,
         ):
-            skills._symlinks_supported.cache_clear()
+            skills._symlink_blocker.cache_clear()
             for _ in range(3):
                 assert skills._one_click_install_would_be_refused(None) is True
 
@@ -2589,21 +2790,26 @@ class TestInstallProjectSkillsNoFallback:
     """Tests for _install_project_skills with fallback_to_global=False."""
 
     @pytest.mark.parametrize(
-        ("symlinks_supported", "install_skill_symlink_return"),
+        ("precheck_blocker", "install_skill_symlink_return"),
         [
-            (False, True),
-            (True, False),
+            ("symlinks_unsupported", True),
+            (None, False),
         ],
         ids=["symlinks_unsupported_globally", "individual_symlink_failed"],
     )
-    def test_raises_clickexception_without_fallback(
+    def test_raises_symlinks_unsupported_without_fallback(
         self,
         tmp_path: Path,
         mock_source_skills_dir: Path,
-        symlinks_supported: bool,
+        precheck_blocker: str | None,
         install_skill_symlink_return: bool,
     ) -> None:
-        """Raises ClickException when symlinks are unavailable and fallback disabled."""
+        """Raises the symlinks_unsupported reason when fallback is disabled.
+
+        Both no-fallback raise sites carry ``reason="symlinks_unsupported"``. Pin the
+        reason, not just the parent ``ClickException``, so the telemetry vocabulary
+        stays covered here the way it is everywhere else in this file.
+        """
         project_dir = tmp_path / "project"
         project_dir.mkdir()
 
@@ -2611,9 +2817,7 @@ class TestInstallProjectSkillsNoFallback:
             patch.object(
                 skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
-            patch.object(
-                skills, "_symlinks_supported", return_value=symlinks_supported
-            ),
+            patch.object(skills, "_symlink_blocker", return_value=precheck_blocker),
             patch.object(
                 skills,
                 "_install_skill_symlink",
@@ -2622,8 +2826,12 @@ class TestInstallProjectSkillsNoFallback:
             patch("pathlib.Path.cwd", return_value=project_dir),
             patch("pathlib.Path.home", return_value=tmp_path / "home"),
         ):
-            with pytest.raises(click.ClickException, match="Symlinks not supported"):
+            with pytest.raises(
+                skills.InstallError, match="Symlinks not supported"
+            ) as exc:
                 skills._install_project_skills(yes=True, fallback_to_global=False)
+
+        assert exc.value.reason == "symlinks_unsupported"
 
 
 class TestInstallProjectSkillsFallbackErrors:
@@ -2652,7 +2860,7 @@ class TestInstallProjectSkillsFallbackErrors:
             patch.object(
                 skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
             ),
-            patch.object(skills, "_symlinks_supported", return_value=True),
+            patch.object(skills, "_symlink_blocker", return_value=None),
             patch.object(skills, "_install_skill_symlink", return_value=False),
             patch.object(
                 skills,
@@ -2666,42 +2874,304 @@ class TestInstallProjectSkillsFallbackErrors:
                 skills._install_project_skills(yes=True)
 
 
-class TestInstallSkillCopyTempCleanup:
-    """Tests for temp file cleanup paths in _install_skill_copy."""
+class TestInstallProjectSkillsFallbackSignal:
+    """fallback_reason names WHY an install took the symlink->global path."""
 
-    def test_removes_leftover_temp_before_copying(
+    @pytest.mark.parametrize(
+        ("precheck_blocker", "expected_reason"),
+        [
+            ("symlinks_no_privilege", "symlinks_no_privilege"),
+            ("symlinks_denied", "symlinks_denied"),
+            ("symlinks_unsupported", "symlinks_unsupported"),
+            (None, "symlink_failed"),
+        ],
+        ids=["dev_mode_off", "project_dir_denied", "no_symlink_support", "link_failed"],
+    )
+    def test_fallback_records_its_cause(
+        self,
+        tmp_path: Path,
+        mock_source_skills_dir: Path,
+        precheck_blocker: str | None,
+        expected_reason: str,
+    ) -> None:
+        """Each fallback route is recorded distinctly, not collapsed into one flag.
+
+        A project install that can't lay symlinks is silently rerouted to a global
+        copy, so it looks identical to a project install in the success telemetry.
+        Most Windows users land here and then succeed, which makes this the label
+        carrying their diagnostic signal — and Developer Mode being off is a
+        documentable user action, while the others are not.
+        """
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch.object(skills, "_symlink_blocker", return_value=precheck_blocker),
+            # Force the per-skill symlink to fail (only reached when the pre-check
+            # said symlinks work); harmless on the pre-check path.
+            patch.object(skills, "_install_skill_symlink", return_value=False),
+            patch.object(
+                skills,
+                "_install_global_skills",
+                return_value=skills._InstallResult(
+                    installed=["~/.agents/skills/developing-with-streamlit"]
+                ),
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            result = skills._install_project_skills(yes=True)
+
+        assert result.fallback_reason == expected_reason
+
+    def test_project_symlink_install_has_no_fallback_reason(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """Removes leftover temp directory from a previous failed copy."""
-        target_dir = tmp_path / "target" / "skills"
-        target_dir.mkdir(parents=True)
-        # Existing target directory with different content forces use of the
-        # temp-swap path.
-        target = target_dir / "developing-with-streamlit"
-        target.mkdir()
-        (target / "stale-file.txt").write_text("old", encoding="utf-8")
+        """A normal project (symlink) install records no fallback reason."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch.object(skills, "_symlink_blocker", return_value=None),
+            patch.object(skills, "_install_skill_symlink", return_value=True),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            result = skills._install_project_skills(yes=True)
 
-        # Leftover temp directory from a previous failed run.
-        leftover_temp = target_dir / ".developing-with-streamlit.tmp"
-        leftover_temp.mkdir()
-        (leftover_temp / "leftover.txt").write_text("leftover", encoding="utf-8")
+        assert result.fallback_reason is None
 
-        result = skills._InstallResult()
-        with patch("pathlib.Path.home", return_value=tmp_path):
-            skills._install_skill_copy(
-                "developing-with-streamlit",
-                mock_source_skills_dir,
-                target_dir,
-                result,
-                {"developing-with-streamlit"},
-            )
 
-        assert len(result.installed) == 1
-        # New target must replace the old one and contain only the source content.
-        assert (target / "SKILL.md").is_file()
-        assert not (target / "stale-file.txt").exists()
-        # Temp directory must be cleaned up after the swap.
-        assert not leftover_temp.exists()
+@pytest.mark.parametrize(
+    "reason",
+    sorted(
+        {*get_args(skills._InstallFailureReason), *get_args(skills._FallbackReason)}
+    ),
+)
+def test_every_reason_in_the_vocabulary_is_named_by_a_test(reason: str) -> None:
+    """Fail when a reason is added to either vocabulary and no test names it.
+
+    mypy constrains raise sites to the vocabulary but says nothing about the reverse
+    direction: a value can be added, shipped, and never exercised, so nobody notices
+    it is unreachable or mis-tagged until an analysis query returns an empty bucket.
+
+    This is a tripwire on that gap, not proof the covering assertion is a good one -
+    it only checks the literal appears somewhere in this file. The classes below are
+    where it should appear.
+    """
+    source = Path(__file__).read_text(encoding="utf-8")
+    assert f'"{reason}"' in source, (
+        f"{reason!r} is in the reason vocabulary but no test in this file names it. "
+        "Add one asserting the raise site or classification that produces it."
+    )
+
+
+class TestRaiseSiteReasons:
+    """Every raise site reports the reason the telemetry vocabulary expects.
+
+    mypy rejects an *invalid* reason but not a wrong *choice* among valid ones — so
+    tagging the meta-skill check ``source_missing`` instead of ``source_incomplete``
+    would type-check, ship, and quietly point a dashboard at the wrong packaging bug.
+    The existing tests for these paths assert on user-facing messages, which a
+    mis-tagged reason passes. These assert the reason itself.
+    """
+
+    def test_absent_skills_directory_is_source_missing(self, tmp_path: Path) -> None:
+        """Nothing installed in the wheel at all -> missing package data."""
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=tmp_path / "nope"
+            ),
+            pytest.raises(skills.InstallError) as exc,
+        ):
+            skills._install_project_skills(yes=True)
+
+        assert exc.value.reason == "source_missing"
+
+    def test_incomplete_meta_skill_is_source_incomplete(self, tmp_path: Path) -> None:
+        """Directory present but a required file missing -> too-narrow glob.
+
+        Distinct from source_missing on purpose: "the wheel has no skills" and "the
+        wheel has the folder but not scripts/discover.py" are different packaging
+        bugs with different fixes.
+        """
+        meta_dir = tmp_path / "meta"
+        skill_dir = meta_dir / "developing-with-streamlit"
+        skill_dir.mkdir(parents=True)
+        # SKILL.md present, scripts/discover.py absent - the router without its target.
+        (skill_dir / "SKILL.md").write_text("# Meta\n", encoding="utf-8")
+
+        with (
+            patch.object(skills, "_get_meta_skill_dir", return_value=meta_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+            pytest.raises(skills.InstallError) as exc,
+        ):
+            skills._install_global_skills(yes=True)
+
+        assert exc.value.reason == "source_incomplete"
+
+    def test_empty_skills_directory_is_no_skills(self, tmp_path: Path) -> None:
+        """The directory exists but discovery found nothing installable."""
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        with (
+            patch.object(skills, "_get_source_skills_dir", return_value=empty),
+            pytest.raises(skills.InstallError) as exc,
+        ):
+            skills._install_project_skills(yes=True)
+
+        assert exc.value.reason == "no_skills"
+
+    def test_no_tty_without_yes_is_non_interactive(
+        self, mock_source_skills_dir: Path
+    ) -> None:
+        """CLI-only: nothing to prompt on and --yes was not passed."""
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch("sys.stdin.isatty", return_value=False),
+            pytest.raises(skills.InstallError) as exc,
+        ):
+            skills.install_skills()
+
+        assert exc.value.reason == "non_interactive"
+
+    def test_cancelled_global_fallback_is_incomplete(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Project symlinks failed and the user declined the global fallback."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch.object(skills, "_symlink_blocker", return_value=None),
+            patch.object(skills, "_install_skill_symlink", return_value=False),
+            patch.object(
+                skills, "_install_global_skills", side_effect=click.exceptions.Abort()
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+            pytest.raises(skills.InstallError) as exc,
+        ):
+            skills._install_project_skills(yes=True)
+
+        assert exc.value.reason == "incomplete"
+
+
+class TestSymlinkBlocker:
+    """_symlink_blocker names WHY symlinks are unavailable, not just that they are."""
+
+    def test_returns_none_when_symlinks_work(self, tmp_path: Path) -> None:
+        """A successful probe reports no blocker."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        source = tmp_path / "source"
+        source.mkdir()
+        assert skills._symlink_blocker(tmp_path, source) is None
+
+    def test_identifies_windows_developer_mode_off(self, tmp_path: Path) -> None:
+        """ERROR_PRIVILEGE_NOT_HELD is reported as symlinks_no_privilege.
+
+        This is the single most useful value in the vocabulary: it means the account
+        lacks SeCreateSymbolicLinkPrivilege, i.e. Developer Mode is off — the one
+        cause of a global-fallback install that a user can simply fix. Collapsing it
+        into "unsupported" would hide a documentable action behind a dead end.
+        """
+        source = tmp_path / "source"
+        source.mkdir()
+        denied = OSError(errno.EPERM, "A required privilege is not held")
+        denied.winerror = 1314  # type: ignore[attr-defined]
+
+        with patch.object(skills.Path, "symlink_to", side_effect=denied):
+            assert skills._symlink_blocker(tmp_path, source) == "symlinks_no_privilege"
+
+    def test_distinguishes_a_denied_project_directory(self, tmp_path: Path) -> None:
+        """A plain permission denial is an environment problem, not a missing feature."""
+        source = tmp_path / "source"
+        source.mkdir()
+        with patch.object(
+            skills.Path, "symlink_to", side_effect=OSError(errno.EACCES, "denied")
+        ):
+            assert skills._symlink_blocker(tmp_path, source) == "symlinks_denied"
+
+    def test_reports_unsupported_for_a_filesystem_without_symlinks(
+        self, tmp_path: Path
+    ) -> None:
+        """NotImplementedError means the platform has no directory symlinks at all."""
+        source = tmp_path / "source"
+        source.mkdir()
+        with patch.object(skills.Path, "symlink_to", side_effect=NotImplementedError):
+            assert skills._symlink_blocker(tmp_path, source) == "symlinks_unsupported"
+
+    def test_reports_unsupported_when_the_link_silently_is_not_one(
+        self, tmp_path: Path
+    ) -> None:
+        """A probe that "succeeds" without producing a symlink is not support.
+
+        Some filesystems accept the call and create something else. Claiming support
+        we could not verify would route the install down the symlink path and fail
+        later, with a worse reason attached.
+        """
+        source = tmp_path / "source"
+        source.mkdir()
+        with (
+            patch.object(skills.Path, "symlink_to"),
+            patch.object(skills.Path, "is_symlink", return_value=False),
+        ):
+            assert skills._symlink_blocker(tmp_path, source) == "symlinks_unsupported"
+
+
+class TestClassifyWriteError:
+    """classify_write_error maps OSError codes to actionable reasons."""
+
+    @pytest.mark.parametrize(
+        ("errno_name", "expected"),
+        [
+            ("EACCES", "write_denied"),
+            ("EPERM", "write_denied"),
+            ("EROFS", "write_denied"),
+            ("ENOSPC", "write_no_space"),
+            ("EBUSY", "write_locked"),
+            ("ENAMETOOLONG", "write_name_too_long"),
+        ],
+    )
+    def test_maps_posix_errnos(self, errno_name: str, expected: str) -> None:
+        """Each POSIX code that implies a distinct fix gets its own reason."""
+        code = getattr(errno, errno_name)
+        assert skills.classify_write_error(OSError(code, "boom")) == expected
+
+    def test_unrecognised_errno_stays_generic(self) -> None:
+        """An unmapped code reports write_failed rather than being mis-bucketed.
+
+        Guessing would be worse than admitting ignorance: a wrong specific reason
+        sends whoever reads the telemetry after the wrong fix.
+        """
+        assert skills.classify_write_error(OSError(errno.EIO, "io")) == "write_failed"
+        assert skills.classify_write_error(OSError()) == "write_failed"
+
+    def test_winerror_takes_precedence_over_errno(self) -> None:
+        """A Windows sharing violation is a lock, not a permissions problem.
+
+        CPython maps ERROR_SHARING_VIOLATION (32) to EACCES, so trusting errno on
+        Windows would report write_denied and point at folder ACLs — when the real
+        cause is antivirus or a sync client holding the file, and the real fix is to
+        retry. winerror is therefore consulted first.
+        """
+        locked = OSError(errno.EACCES, "in use")
+        locked.winerror = 32  # type: ignore[attr-defined]
+        assert skills.classify_write_error(locked) == "write_locked"
+
+    def test_unrecognised_winerror_falls_back_to_errno(self) -> None:
+        """An unmapped Windows code still uses whatever errno CPython supplied."""
+        denied = OSError(errno.EACCES, "denied")
+        denied.winerror = 1_000_000  # type: ignore[attr-defined]
+        assert skills.classify_write_error(denied) == "write_denied"
 
 
 class TestGetMetaSkillDir:

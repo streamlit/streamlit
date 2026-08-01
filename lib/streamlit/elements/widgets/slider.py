@@ -1103,6 +1103,7 @@ class SliderMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="double_array_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             # Sliders always have a value (no empty/cleared state in the UI),

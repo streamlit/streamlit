@@ -1675,6 +1675,7 @@ class LayoutsMixin:
                 on_change_handler=on_change if callable(on_change) else None,
                 args=args if callable(on_change) else None,
                 kwargs=kwargs if callable(on_change) else None,
+                disabled=disabled,
             )
 
             current_open = popover_state.value

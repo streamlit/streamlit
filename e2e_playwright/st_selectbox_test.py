@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 29
+NUM_SELECTBOXES = 30
 
 
 def get_selectbox_input(
@@ -812,3 +812,45 @@ def test_selectbox_query_param_non_clearable_empty_value(page: Page, app_port: i
     # Non-clearable selectbox should reject empty value, show default "cat"
     expect_prefixed_markdown(page, "bound select value:", "cat")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_select="))
+
+
+def test_selectbox_in_sidebar_flips_up_within_viewport(app: Page):
+    """A selectbox near the bottom of the sidebar must flip its dropdown up and
+    stay within the viewport instead of opening downward and overflowing past
+    the bottom.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/16181,
+    where flip was disabled inside the sidebar so the dropdown always opened
+    downward and got clipped.
+    """
+    app.set_viewport_size({"width": 1280, "height": 720})
+
+    selectbox = get_element_by_key(app, "sidebar_bottom_select")
+    selectbox.scroll_into_view_if_needed()
+
+    trigger_box = selectbox.bounding_box()
+    assert trigger_box is not None, "selectbox trigger must have a bounding box"
+
+    selectbox.locator("input").click()
+
+    dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(dropdown).to_be_visible()
+    expect(dropdown.get_by_role("option")).to_have_count(7)
+
+    dropdown_box = dropdown.bounding_box()
+    assert dropdown_box is not None, "dropdown must have a bounding box"
+
+    viewport = app.viewport_size
+    assert viewport is not None
+
+    # Primary regression check: the dropdown must not overflow past the bottom
+    # of the viewport. A 1px epsilon guards against subpixel layout differences.
+    epsilon = 1
+    assert dropdown_box["y"] + dropdown_box["height"] <= viewport["height"] + epsilon, (
+        f"dropdown overflows the viewport bottom: {dropdown_box}, viewport={viewport}"
+    )
+
+    # The dropdown must open above the trigger (flip up), not below it.
+    assert dropdown_box["y"] < trigger_box["y"], (
+        f"dropdown did not flip up: dropdown={dropdown_box}, trigger={trigger_box}"
+    )

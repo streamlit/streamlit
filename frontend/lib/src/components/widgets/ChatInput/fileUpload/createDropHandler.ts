@@ -15,7 +15,7 @@
  */
 
 import { zip } from "lodash-es"
-import { ErrorCode as FileErrorCode, FileRejection } from "react-dropzone"
+import { ErrorCode as FileErrorCode } from "react-dropzone"
 
 import {
   ChatInput as ChatInputProto,
@@ -25,7 +25,7 @@ import {
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { FileUploadClient } from "~lib/FileUploadClient"
-import { getRejectedFileInfo } from "~lib/util/FileHelper"
+import { type FileRejection, getRejectedFileInfo } from "~lib/util/FileHelper"
 
 import { validateFileType } from "./fileUploadUtils"
 

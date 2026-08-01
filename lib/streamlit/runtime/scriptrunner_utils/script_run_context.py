@@ -393,11 +393,16 @@ def add_script_run_ctx(
         ):
             original_run = thread.run
 
-            def _run_with_thread_state(*args: object, **kwargs: object) -> None:
+            # Accept but ignore extra args: ``original_run`` is already bound and
+            # takes none. Some thread wrappers (e.g. Sentry's ThreadingIntegration)
+            # re-invoke our replacement ``run`` with the thread as a positional
+            # arg; forwarding it would raise "run() takes 1 positional argument
+            # but 2 were given" (GitHub issues #15374, #16139).
+            def _run_with_thread_state(*_args: object, **_kwargs: object) -> None:
                 fields = getattr(thread, _FRAGMENT_THREAD_STATE_FIELDS_ATTR, None)
                 if fields is not None:
                     ThreadState.initialize(**fields)
-                original_run(*args, **kwargs)
+                original_run()
 
             thread.run = _run_with_thread_state  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
             setattr(thread, _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR, True)

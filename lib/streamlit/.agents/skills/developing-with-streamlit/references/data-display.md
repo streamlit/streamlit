@@ -37,10 +37,14 @@ Use Altair when you need more control. Altair is bundled with Streamlit (no extr
 ```python
 import altair as alt
 
-chart = alt.Chart(df).mark_line().encode(
-    x=alt.X("date:T", title="Date"),
-    y=alt.Y("revenue:Q", title="Revenue ($)"),
-    color="region:N"
+chart = (
+    alt.Chart(df)
+    .mark_line()
+    .encode(
+        x=alt.X("date:T", title="Date"),
+        y=alt.Y("revenue:Q", title="Revenue ($)"),
+        color="region:N",
+    )
 )
 st.altair_chart(chart)
 ```
@@ -77,21 +81,13 @@ Use `column_config` where it adds value—formatting currencies, showing progres
 st.dataframe(
     df,
     column_config={
-        "revenue": st.column_config.NumberColumn(
-            "Revenue",
-            format="$%.2f"
-        ),
+        "revenue": st.column_config.NumberColumn("Revenue", format="$%.2f"),
         "completion": st.column_config.ProgressColumn(
-            "Progress",
-            min_value=0,
-            max_value=100
+            "Progress", min_value=0, max_value=100
         ),
         "url": st.column_config.LinkColumn("Website"),
         "logo": st.column_config.ImageColumn("Logo"),
-        "created_at": st.column_config.DatetimeColumn(
-            "Created",
-            format="MMM DD, YYYY"
-        ),
+        "created_at": st.column_config.DatetimeColumn("Created", format="MMM DD, YYYY"),
         "internal_id": None,  # Hide non-essential columns
     },
     hide_index=True,
@@ -135,17 +131,21 @@ st.dataframe(
 Use `ButtonColumn` for clickable, per-row actions in `st.dataframe` or `st.data_editor`. The cell value is the button label (supports `:material/...:` icons). A cell holding a **list** renders a dropdown menu of multiple actions.
 
 ```python
-df = pd.DataFrame({
-    "name": ["Alice", "Bob"],
-    "actions": [
-        [":material/edit: Edit", ":material/delete: Delete"],
-        [":material/edit: Edit"],
-    ],
-})
+df = pd.DataFrame(
+    {
+        "name": ["Alice", "Bob"],
+        "actions": [
+            [":material/edit: Edit", ":material/delete: Delete"],
+            [":material/edit: Edit"],
+        ],
+    }
+)
+
 
 def handle_action():
     click = st.session_state.row_action  # {"row": int, "label": str}
     st.toast(f"{click['label']} on row {click['row']}")
+
 
 st.dataframe(
     df,
@@ -184,17 +184,23 @@ styled = df.style.format({"revenue": "${:.2f}", "growth": "{:.1%}"})
 st.dataframe(styled)
 
 # GOOD: column_config for formatting
-st.dataframe(df, column_config={
-    "revenue": st.column_config.NumberColumn(format="$%.2f"),
-    "growth": st.column_config.NumberColumn(format="percent"),
-    "created": st.column_config.DatetimeColumn(format="MMM DD, YYYY"),
-})
+st.dataframe(
+    df,
+    column_config={
+        "revenue": st.column_config.NumberColumn(format="$%.2f"),
+        "growth": st.column_config.NumberColumn(format="percent"),
+        "created": st.column_config.DatetimeColumn(format="MMM DD, YYYY"),
+    },
+)
 
 # GOOD: Styler for colors only + column_config for formatting
 styled = df.style.background_gradient(subset=["revenue"], cmap="Greens")
-st.dataframe(styled, column_config={
-    "revenue": st.column_config.NumberColumn(format="$%.2f"),
-})
+st.dataframe(
+    styled,
+    column_config={
+        "revenue": st.column_config.NumberColumn(format="$%.2f"),
+    },
+)
 ```
 
 **Percentage formatting:** Use `NumberColumn(format="percent")` for 0-1 values, or `format="%.2f%%"` for already-multiplied values.
@@ -205,7 +211,7 @@ st.dataframe(styled, column_config={
 edited_df = st.data_editor(
     df,
     key="my_editor",
-    num_rows="dynamic",          # allow adding/deleting rows
+    num_rows="dynamic",  # allow adding/deleting rows
     disabled=["id", "created"],  # lock specific columns
 )
 ```
@@ -244,10 +250,12 @@ Selection modes: `"single-row"`, `"multi-row"`, `"single-column"`, `"multi-colum
 When creating an empty DataFrame for `st.data_editor`, set explicit dtypes to avoid type inference issues:
 
 ```python
-df = pd.DataFrame({
-    "label": pd.Series(dtype="string"),
-    "amount": pd.Series(dtype="float"),
-})
+df = pd.DataFrame(
+    {
+        "label": pd.Series(dtype="string"),
+        "amount": pd.Series(dtype="float"),
+    }
+)
 st.data_editor(df)
 ```
 
@@ -279,7 +287,7 @@ st.metric(
     delta="-7.42% (MoM)",
     delta_color="inverse",
     chart_data=values,
-    chart_type="line"  # or "bar"
+    chart_type="line",  # or "bar"
 )
 ```
 

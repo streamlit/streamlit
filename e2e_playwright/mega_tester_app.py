@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from streamlit.elements.widgets.chat import ChatInputValue
-    from streamlit.navigation.page import StreamlitPage
+    from streamlit.navigation.page import Page
 
 _DUMMY_PDF = (
     "%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n"
@@ -1100,7 +1100,7 @@ def _render_navigation(minor_version: int) -> None:
     many_pages = st.session_state.get("many_pages", False)
     nav_sections = st.session_state.get("nav_sections", True)
 
-    pages: dict[str, list[StreamlitPage]]
+    pages: dict[str, list[Page]]
     if many_pages:
         pages = {
             "General": [
@@ -1144,7 +1144,7 @@ def _render_navigation(minor_version: int) -> None:
             ],
         }
 
-    navigation_pages: list[StreamlitPage] | dict[str, list[StreamlitPage]]
+    navigation_pages: list[Page] | dict[str, list[Page]]
     if nav_sections:
         navigation_pages = pages
     else:

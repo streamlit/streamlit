@@ -41,7 +41,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -118,7 +118,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -132,10 +132,11 @@ jobs:
           # which might cause some unexpected issues with dependencies.
           use_cached_venv: false
       - name: Install integration dependencies
-        run: uv sync --python python --group integration
+        run: uv sync --python python --locked --no-default-groups --group integration
       - name: Run Python integration tests
         run: make python-integration-tests
         env:
+          UV_NO_SYNC: 1
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
       - name: Upload coverage data
@@ -162,7 +163,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -188,13 +189,58 @@ jobs:
             echo "min constraints file is up to date."
           fi
       - name: Install min dependencies (force reinstall)
-        run: uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
+        run: uv pip install --no-config -r scripts/assets/min-constraints-gen.txt --force-reinstall
       - name: Make local modules visible
         run: uv pip install --editable ./lib --no-deps
+      - name: Verify minimum dependency versions
+        env:
+          UV_NO_SYNC: 1
+        run: |
+          uv run python - <<'PY'
+          from importlib.metadata import version
+          from pathlib import Path
+
+          from packaging.requirements import Requirement
+          from packaging.version import Version
+
+          constraints = Path("scripts/assets/min-constraints-gen.txt")
+          for line in constraints.read_text().splitlines():
+              line = line.strip()
+              if not line or line.startswith("#"):
+                  continue
+
+              requirement = Requirement(line)
+              if requirement.marker and not requirement.marker.evaluate():
+                  continue
+
+              actual_version = Version(version(requirement.name))
+              assert actual_version in requirement.specifier, (
+                  f"{requirement.name}: expected {requirement.specifier}, "
+                  f"found {actual_version}"
+              )
+              print(f"{requirement.name}=={actual_version}")
+          PY
+      - name: Import standard-generated Python protobufs
+        env:
+          UV_NO_SYNC: 1
+        run: |
+          uv run python - <<'PY'
+          import importlib
+          from pathlib import Path
+
+          modules = sorted(Path("lib/streamlit/proto").glob("*_pb2.py"))
+          for module in modules:
+              importlib.import_module(f"streamlit.proto.{module.stem}")
+          print(f"Imported {len(modules)} generated protobuf modules")
+          PY
       - name: Run Python Tests
         run: make python-tests
+        env:
+          UV_NO_SYNC: 1
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
+        env:
+          UV_NO_SYNC: 1
       - name: Upload coverage data
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -217,14 +263,14 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: "recursive"
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
 

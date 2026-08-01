@@ -7401,6 +7401,100 @@ describe("Skills install nudge", () => {
     })
   })
 
+  it("appends the server failure reason to the install-failed label", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // The server classifies the failure (e.g. a filesystem write failure on a
+    // locked-down target dir) and the rejected error carries a machine-readable
+    // reason from the fixed vocabulary.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(
+      Object.assign(new Error("Could not write ~/.claude/skills/..."), {
+        reason: "write_failed",
+      })
+    )
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    // The reason is a label suffix (mirroring skillsNudgeSuppressedNonLocal:<locality>)
+    // so the funnel can break install failures down by cause.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed:write_failed",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+    })
+  })
+
+  it("tags a rerouted install with the server's fallback reason", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // Installs the server reroutes from project mode to a global copy carry WHY.
+    // Symlinks being unavailable machine-wide (Windows without Developer Mode) is a
+    // different problem from a single link failing, so the label keeps them apart.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockResolvedValue({
+      detail: "Installed to ~/.agents/skills",
+      fallbackReason: "symlinks_unsupported",
+    })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded:symlinks_unsupported",
+    })
+    // The plain success label must not also fire (it would double-count).
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded",
+    })
+  })
+
+  it("tracks a safety-gate refusal as Refused, not Failed", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // The server prefixes gate reasons with `refused:` — the install was declined
+    // before it was attempted, so it must not inflate the install-failure rate.
+    // Label construction is unit-tested in skillsNudge.test.ts; this asserts App
+    // routes a refusal to the distinct EVENT, which is the funnel discontinuity
+    // this PR introduces and the one thing a unit test cannot see.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(
+      Object.assign(
+        new Error("Skills install is not available in this environment."),
+        { reason: "refused:non_loopback" }
+      )
+    )
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    // The prefix is stripped, so the gate name stays readable in the label.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallRefused:non_loopback",
+    })
+    // A refusal is not a failure and must stay off the failure funnel.
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed:refused:non_loopback",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+    })
+  })
+
   it("counts a dropped-connection install separately from a failure", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     vi.spyOn(

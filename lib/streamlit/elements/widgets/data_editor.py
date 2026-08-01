@@ -493,10 +493,15 @@ def _apply_row_additions(
             # Add row using the user-provided index value.
             # This handles any type of index that cannot be auto incremented.
 
-            # Note: this just overwrites the row in case the index value
-            # already exists. In the future, it would be better to
-            # require users to provide unique non-None values for the index with
-            # some kind of visual indications.
+            # Widget state is client-controlled, so reject duplicate index values
+            # instead of letting an "added" row overwrite an existing row.
+            if index_value in df.index:
+                _LOGGER.warning(
+                    "Cannot add row because its index value already exists. "
+                    "Row addition skipped."
+                )
+                continue
+
             _assign_row_values(df, index_value, new_row)
             continue
 
@@ -1325,6 +1330,9 @@ class DataEditorMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            # `disabled` may be a list of column names for partial disabling;
+            # only enforce server-side when the entire editor is disabled.
+            disabled=disabled is True,
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)

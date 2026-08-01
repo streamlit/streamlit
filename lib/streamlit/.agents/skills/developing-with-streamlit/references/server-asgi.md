@@ -197,11 +197,12 @@ from contextlib import asynccontextmanager
 
 import streamlit as st
 
-from resources import get_database, load_reference_data
-
 
 @asynccontextmanager
 async def lifespan(app):
+    # Import cached functions after st.App has started the Streamlit runtime.
+    from resources import get_database, load_reference_data
+
     print("Starting Streamlit ASGI app...")
     get_database()  # Warm st.cache_resource.
     load_reference_data()  # Warm st.cache_data.
@@ -214,7 +215,100 @@ app = st.App("streamlit_app.py", lifespan=lifespan)
 
 Put cached functions in a shared module when both the Streamlit script and the ASGI wrapper need to call them. For per-user state inside the Streamlit script, use `st.session_state`.
 
+Import and call cached functions inside the lifespan hook rather than at launcher module
+scope. The launcher module is imported before Streamlit starts its runtime, so a module-scope
+`@st.cache_data` decoration is validated against a temporary in-memory storage manager and
+logs a `No runtime found` warning (`@st.cache_resource` doesn't use that decoration-time
+path). Either way, the real cache storage is only selected when a cached function is first
+called, so warming inside the lifespan—after the runtime has started—uses the real cache and
+avoids the warning.
+
 If ASGI routes or middleware need process-level state that is not a Streamlit resource, the lifespan context manager may yield a dictionary. Those values are stored on `app.state` (`app.state["ready"]` in the example above).
+
+### Scheduled background refresh for specific keys
+
+`refresh_mode="background"` is the simplest way to avoid blocking on expiration when
+slightly stale data is acceptable. It is access-driven, however: refresh starts only when a
+call observes an expired entry, and that call receives the stale value.
+
+For advanced cases that need the server to initiate refreshes even without user traffic, use
+a lifespan task to periodically call the cached function with the arguments for each key that
+should stay warm. Calls made while an entry is fresh are cheap cache hits. The first scheduled
+call after its `ttl` returns the stale value to the task and triggers a deduplicated background
+refresh for that specific key. Run synchronous cached functions in a worker thread (via
+`anyio`, already a Streamlit dependency) so they don't block the ASGI event loop.
+
+```python
+# resources.py
+import streamlit as st
+
+
+@st.cache_data(ttl="10m", refresh_mode="background")
+def load_metrics(dataset):
+    return fetch_metrics(dataset)
+```
+
+```python
+# asgi_app.py
+import logging
+from contextlib import asynccontextmanager
+
+import anyio
+import streamlit as st
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app):
+    # The Streamlit runtime is available when the user lifespan starts.
+    from resources import load_metrics
+
+    async def touch_periodically():
+        while True:
+            await anyio.sleep(60)
+            try:
+                # Only touch the cache entry for load_metrics("dashboard").
+                await anyio.to_thread.run_sync(load_metrics, "dashboard")
+            except Exception:
+                logger.exception("Scheduled cache refresh failed")
+
+    # Warm this specific key before serving requests. Unlike the periodic loop,
+    # this initial warm isn't wrapped in try/except, so a failure aborts startup.
+    await anyio.to_thread.run_sync(load_metrics, "dashboard")
+
+    async with anyio.create_task_group() as task_group:
+        task_group.start_soon(touch_periodically)
+        try:
+            yield
+        finally:
+            task_group.cancel_scope.cancel()
+
+
+app = st.App("streamlit_app.py", lifespan=lifespan)
+```
+
+This pattern works for global `st.cache_data` and `st.cache_resource` entries whose argument
+combinations are known to the scheduler. Each argument combination is a separate cache key,
+so touching `load_metrics("dashboard")` does not refresh or invalidate entries for other
+datasets.
+
+Keep these caveats in mind:
+
+- **This does not refresh before the TTL.** Calls made while the entry is fresh return the
+  current value without executing the cached function. Polling controls how soon the server
+  notices expiration and triggers background refresh.
+- **Poll comfortably below `ttl`.** Background refresh serves the stale value for only one
+  extra `ttl`; past `2 × ttl` the entry is hard-evicted and the next call (including a
+  scheduled touch) blocks on a foreground recompute. Keep the interval well under `ttl` (not
+  just under `2 × ttl`) so several touches land in the `[ttl, 2 × ttl)` grace window, giving
+  the scheduler multiple chances to trigger a refresh before hard eviction if a touch is
+  delayed or a refresh runs long.
+- **Stale values remain possible.** The scheduled touch preserves the last good value while
+  refreshing, but users can receive it until the refresh completes. If uninterrupted,
+  atomically replaced fresh reads are required, refresh a shared external store instead.
+- **Each worker warms independently.** Lifespan tasks run once per ASGI process, so a
+  multi-worker deployment runs and warms every process on its own schedule.
 
 ## Mount another ASGI app inside Streamlit
 

@@ -527,6 +527,19 @@ class AppSession:
         """Clear the user info for this session."""
         self._user_info.clear()
 
+    def matches_user_info(self, user_info: UserInfoType) -> bool:
+        """Return whether ``user_info`` matches this session's owner identity.
+
+        Used to bind a session to the identity of the connection that created
+        it. A reconnect (via ``existing_session_id``) may only reuse this
+        session when the reconnecting connection presents the same
+        ``user_info``; otherwise a different user could take over the session
+        merely by presenting its id. The comparison is intentionally strict
+        (full equality) so any identity difference fails closed to a fresh
+        session rather than allowing a takeover.
+        """
+        return self._user_info == user_info
+
     def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
         """Create and run a new ScriptRunner with the given RerunData."""
         self._scriptrunner = ScriptRunner(

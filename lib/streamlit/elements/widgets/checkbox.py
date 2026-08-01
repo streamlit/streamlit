@@ -472,6 +472,7 @@ class CheckboxMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="bool_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             # Checkbox/toggle is not clearable (always true or false)

@@ -39,6 +39,7 @@ The app features a bunch of examples of what you can do with Streamlit. Jump to 
 Create a new file named `streamlit_app.py` in your project directory with the following code:
 ```python
 import streamlit as st
+
 x = st.slider("Select a value")
 st.write(x, "squared is", x * x)
 ```
