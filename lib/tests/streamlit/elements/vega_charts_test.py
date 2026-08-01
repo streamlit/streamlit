@@ -540,6 +540,41 @@ class AltairChartTest(DeltaGeneratorTestCase):
             check_dtype=False,
         )
 
+    def test_layered_chart_from_json_keeps_its_inline_datasets(self):
+        """#6269 explicitly covers layered charts too.
+
+        A layered chart shares one named dataset across its layers, so the same
+        clobbering bug left every layer without data.
+        """
+        df = pd.DataFrame({"x": [0, 1, 2], "y": [0, 1, 2]})
+        base = alt.Chart(df)
+        layered = alt.layer(
+            base.mark_line().encode(x="x", y="y"),
+            base.mark_point().encode(x="x", y="y"),
+        )
+
+        st.altair_chart(alt.Chart.from_json(layered.to_json()))
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        sent_names = [dataset.name for dataset in proto.datasets]
+
+        # Collect every dataset name referenced anywhere in the spec (top level
+        # plus each layer), and require all of them to have been delivered.
+        referenced = set()
+        for view in [spec, *spec.get("layer", [])]:
+            data_spec = view.get("data")
+            if isinstance(data_spec, dict) and "name" in data_spec:
+                referenced.add(data_spec["name"])
+
+        assert referenced, "layered spec referenced no named data at all"
+        missing = referenced - set(sent_names)
+        assert not missing, f"spec references {missing} but only {sent_names} were sent"
+        for name in referenced:
+            assert proto.datasets[sent_names.index(name)].data.data, (
+                f"referenced dataset {name!r} was sent empty"
+            )
+
     def test_regular_chart_datasets_still_arrow_serialized(self):
         """The normal (non-from_json) path must be unchanged by the merge.
 
