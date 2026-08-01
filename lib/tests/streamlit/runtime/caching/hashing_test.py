@@ -45,8 +45,10 @@ from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import (
     _LOGGER,
+    _NP_SAMPLE_SIZE,
     _NP_SIZE_LARGE,
     _PANDAS_ROWS_LARGE,
+    _PANDAS_SAMPLE_SIZE,
     UserHashError,
     _CacheFuncHasher,
     _HashStack,
@@ -1049,3 +1051,108 @@ def test_PIL_pmode_palette_collision_prevention() -> None:
 
     # But the hashes should differ because we now include the palette
     assert get_hash(im1) != get_hash(im2)
+
+
+class TestSamplingCollisionPrevention:
+    """Regression tests for GitHub issue #14622: large objects that differ only
+    outside the fixed-seed sampled positions should NOT hash identically."""
+
+    def test_pandas_series_sampling_collision(self) -> None:
+        """Two large pandas Series differing only outside the sampled window
+        must produce different hashes."""
+        n = _PANDAS_ROWS_LARGE + 1000
+        s1 = pd.Series(range(n))
+        s2 = s1.copy()
+        # Mutate positions that a fixed seed=0 sample would NOT pick.
+        rng = np.random.RandomState(0)
+        sampled_indices = set(rng.choice(n, size=10000, replace=False))
+        unsampled = [i for i in range(n) if i not in sampled_indices]
+        for idx in unsampled[:100]:
+            s2.iloc[idx] = -999
+        assert get_hash(s1) != get_hash(s2)
+
+    def test_pandas_dataframe_sampling_collision(self) -> None:
+        """Two large pandas DataFrames differing only outside the sampled window
+        must produce different hashes."""
+        n = _PANDAS_ROWS_LARGE + 1000
+        df1 = pd.DataFrame({"a": range(n), "b": range(n, 2 * n)})
+        df2 = df1.copy()
+        rng = np.random.RandomState(0)
+        sampled_indices = set(rng.choice(n, size=10000, replace=False))
+        unsampled = [i for i in range(n) if i not in sampled_indices]
+        for idx in unsampled[:100]:
+            df2.iloc[idx, 0] = -999
+        assert get_hash(df1) != get_hash(df2)
+
+    @pytest.mark.require_integration
+    def test_polars_series_sampling_collision(self) -> None:
+        """Two large polars Series differing only outside the sampled window
+        must produce different hashes."""
+        import polars as pl
+
+        n = _PANDAS_ROWS_LARGE + 1000
+        data1 = list(range(n))
+        data2 = data1.copy()
+        rng = np.random.RandomState(0)
+        sampled_indices = set(rng.choice(n, size=10000, replace=False))
+        unsampled = [i for i in range(n) if i not in sampled_indices]
+        for idx in unsampled[:100]:
+            data2[idx] = -999
+        s1 = pl.Series("x", data1)
+        s2 = pl.Series("x", data2)
+        assert get_hash(s1) != get_hash(s2)
+
+    @pytest.mark.require_integration
+    def test_polars_dataframe_sampling_collision(self) -> None:
+        """Two large polars DataFrames differing only outside the sampled window
+        must produce different hashes."""
+        import polars as pl
+
+        n = _PANDAS_ROWS_LARGE + 1000
+        data1 = list(range(n))
+        data2 = data1.copy()
+        rng = np.random.RandomState(0)
+        sampled_indices = set(rng.choice(n, size=10000, replace=False))
+        unsampled = [i for i in range(n) if i not in sampled_indices]
+        for idx in unsampled[:100]:
+            data2[idx] = -999
+        df1 = pl.DataFrame({"a": data1})
+        df2 = pl.DataFrame({"a": data2})
+        assert get_hash(df1) != get_hash(df2)
+
+    def test_numpy_ndarray_sampling_collision(self) -> None:
+        """Two large numpy arrays differing only outside the sampled window
+        must produce different hashes."""
+        n = _NP_SIZE_LARGE + 1000
+        arr1 = np.arange(n, dtype=np.float64)
+        arr2 = arr1.copy()
+        state = np.random.RandomState(0)
+        sampled_indices = set(state.choice(n, size=100000, replace=False))
+        unsampled = [i for i in range(n) if i not in sampled_indices]
+        for idx in unsampled[:100]:
+            arr2[idx] = -999.0
+        assert get_hash(arr1) != get_hash(arr2)
+
+    def test_pandas_series_same_prefix_different_suffix(self) -> None:
+        """Two Series sharing the same first 1000 elements but differing in the
+        suffix region still produce different hashes — the sampled content itself
+        differs even though the seed is identical."""
+        n = _PANDAS_ROWS_LARGE + 1000
+        s1 = pd.Series(range(n))
+        s2 = s1.copy()
+        # Keep first 1000 elements identical (same seed) but change many
+        # elements in the suffix. With 10000 samples drawn from 51000 positions,
+        # roughly 20% of samples land in the suffix, capturing the difference.
+        for idx in range(1000, min(1000 + _PANDAS_SAMPLE_SIZE, n)):
+            s2.iloc[idx] = -999
+        assert get_hash(s1) != get_hash(s2)
+
+    def test_numpy_same_prefix_different_suffix(self) -> None:
+        """Two arrays sharing the same first 1000 elements but differing broadly
+        in the suffix still produce different hashes."""
+        n = _NP_SIZE_LARGE + 1000
+        arr1 = np.arange(n, dtype=np.float64)
+        arr2 = arr1.copy()
+        # Mutate a large swath after the prefix — samples will hit these
+        arr2[1000 : 1000 + _NP_SAMPLE_SIZE] = -999.0
+        assert get_hash(arr1) != get_hash(arr2)
