@@ -26,8 +26,8 @@ import {
   Suspense,
   useCallback,
   useContext,
-  useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -342,9 +342,12 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const [elementId, setElementId] = useState(propsAnchor)
   const nodeRef = useRef<HTMLElement | null>(null)
 
-  // Derive the anchor from the node and scroll to it if it matches the URL hash.
-  // Shared by the mount-time ref callback and the rerun effect below so the two
-  // paths cannot drift apart.
+  /**
+   * Set the heading id from `propsAnchor` or the node's textContent, then scroll
+   * the node into view if that id matches the current URL hash. Shared by the
+   * mount-time ref callback and the rerun effect below so the two paths cannot
+   * drift apart.
+   */
   const applyAnchor = useCallback(
     (node: HTMLElement) => {
       const anchor = propsAnchor || createAnchorFromText(node.textContent)
@@ -373,7 +376,10 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   // content changes, React reuses the DOM node and the callback never re-fires.
   // Skipped when propsAnchor is set, since an explicit anchor never depends on
   // the text.
-  useEffect(() => {
+  //
+  // useLayoutEffect (not useEffect) so the re-derived id is committed before
+  // paint; otherwise a frame can render with the previous hash link.
+  useLayoutEffect(() => {
     const node = nodeRef.current
     if (!node || propsAnchor) {
       return
