@@ -347,6 +347,7 @@ def validate_and_sync_value_with_options(
     default_index: int | None,
     key: str | int | None,
     format_func: Callable[[Any], str] = str,
+    reset_stale_none: bool = False,
 ) -> tuple[T | None, bool]:
     """Validate current value against options, resetting session state if invalid.
 
@@ -369,6 +370,13 @@ def validate_and_sync_value_with_options(
         string representation instead of using == directly. This is necessary because
         widget values are deepcopied, and for custom classes without __eq__, the
         deepcopied instances would fail identity comparison.
+    reset_stale_none
+        When True, a stored ``None`` is treated as stale and reset to the declared
+        default (see the ``current_value is None`` branch below). Only widgets whose
+        ``None`` means "no default was resolvable" should opt in. Widgets where
+        ``None`` is a meaningful user-facing state — ``st.pills`` and
+        ``st.segmented_control`` rely on it to render their ``required`` validation,
+        and ``st.select_slider`` never stores ``None`` — must leave this False.
 
     Returns
     -------
@@ -377,12 +385,12 @@ def validate_and_sync_value_with_options(
     """
     if current_value is None:
         # A stored None may be stale — left over from a run where options were
-        # empty (forcing None).  When options are now available and the developer
+        # empty (forcing None). When options are now available and the developer
         # declared a non-None default, reset to that default so the widget
         # reflects the developer's intent rather than an incidentally-stored None.
         # When default_index is None the developer explicitly opted into a
         # nullable widget (index=None), so None is valid and we keep it.
-        if default_index is not None and len(opt) > 0:
+        if reset_stale_none and default_index is not None and len(opt) > 0:
             reset_val = opt[default_index]
             if key is not None:
                 get_session_state().reset_state_value(str(key), reset_val)

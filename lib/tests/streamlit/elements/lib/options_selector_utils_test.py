@@ -549,29 +549,10 @@ class TestValidateAndSyncValueWithOptions(unittest.TestCase):
                 "banana",
                 False,
             ),
-            # A stored None is treated as stale when the developer declared a
-            # non-None default and options are available, so it resets to that
-            # default. See https://github.com/streamlit/streamlit/issues/10093.
-            (
-                "none_value_with_declared_default_resets",
-                None,
-                ["apple", "banana"],
-                0,
-                "apple",
-                True,
-            ),
-            # index=None is an explicit opt-in to a nullable widget, so None is
-            # a legitimate value and must be preserved.
-            (
-                "none_value_nullable_default_kept",
-                None,
-                ["apple", "banana"],
-                None,
-                None,
-                False,
-            ),
-            # With no options there is nothing to reset to, so None is kept.
-            ("none_value_empty_options_kept", None, [], 0, None, False),
+            # Default (opt-out) behavior: a stored None is left untouched, so
+            # widgets like st.pills / st.segmented_control keep their meaningful
+            # "nothing selected" state. Opting in is covered separately below.
+            ("none_value", None, ["apple", "banana"], 0, None, False),
             (
                 "value_not_in_options_resets_to_default",
                 "mango",
@@ -617,6 +598,47 @@ class TestValidateAndSyncValueWithOptions(unittest.TestCase):
         )
         assert value == expected_value
         assert needs_reset is expected_needs_reset
+
+    def test_reset_stale_none_resets_to_declared_default(self) -> None:
+        """With reset_stale_none=True, a stale stored None resets to the default.
+
+        This is the #10093 case: options were empty on a previous run (forcing
+        None), then became available with a declared index.
+        """
+        value, needs_reset = validate_and_sync_value_with_options(
+            None, ["apple", "banana"], 0, None, reset_stale_none=True
+        )
+        assert value == "apple"
+        assert needs_reset is True
+
+    def test_reset_stale_none_keeps_none_for_nullable_widget(self) -> None:
+        """index=None opts into a nullable widget, so None must be preserved."""
+        value, needs_reset = validate_and_sync_value_with_options(
+            None, ["apple", "banana"], None, None, reset_stale_none=True
+        )
+        assert value is None
+        assert needs_reset is False
+
+    def test_reset_stale_none_keeps_none_for_empty_options(self) -> None:
+        """With no options there is nothing to reset to, so None is kept."""
+        value, needs_reset = validate_and_sync_value_with_options(
+            None, [], 0, None, reset_stale_none=True
+        )
+        assert value is None
+        assert needs_reset is False
+
+    def test_default_leaves_stale_none_untouched(self) -> None:
+        """Without opting in, None is preserved.
+
+        st.pills and st.segmented_control depend on this to render their
+        ``required`` validation state, and st.select_slider relies on the
+        unchanged contract.
+        """
+        value, needs_reset = validate_and_sync_value_with_options(
+            None, ["apple", "banana"], 0, None
+        )
+        assert value is None
+        assert needs_reset is False
 
     def test_custom_objects_without_eq_using_format_func(self):
         """Test that custom objects without __eq__ work with format_func validation."""
