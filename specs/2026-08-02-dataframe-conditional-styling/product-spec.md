@@ -148,7 +148,7 @@ st.column_config.ColorRule(
         "is_null", "is_not_null",
     ] = "always",
     value: Scalar | Sequence[Scalar] | None = None,
-    color: PaintColor,  # the paint color applied when the rule matches (required)
+    color: PaintColor | None = None,  # paint color applied when the rule matches (required at runtime)
     target: Literal["background", "text"] = "background",  # what the color fills
 )
 ```
@@ -156,6 +156,9 @@ st.column_config.ColorRule(
 - `value` is a scalar for comparisons, a two-item `(low, high)` for `"between"`, and a
   sequence for `"in"` / `"not_in"`. It is omitted for `"always"`, `"is_null"`, and
   `"is_not_null"`.
+- `color` is required (a required argument can't precede the defaulted `operator`/`value`, so
+  it's typed as optional with a `None` default and enforced at runtime — omitting it raises a
+  clear `StreamlitAPIException`).
 - Comparisons use the cell's **raw** value (before `format`), so a `format="%+.1f%%"` delta
   still compares against `-2.5`, not `"-2.5%"`.
 - `target` chooses whether `color` fills the **background** (default) or the **text**. This is
@@ -294,7 +297,7 @@ st.column_config.DatetimeColumn(
     "Due",
     color=[
         st.column_config.ColorRule("is_null", color="gray"),
-        st.column_config.ColorRule("less_than", "2026-01-01", "red"),
+        st.column_config.ColorRule("less_than", datetime(2026, 1, 1), "red"),
     ],
 )
 ```
@@ -362,7 +365,8 @@ live, without a domain to recompute, and never changes the returned value or CSV
 - A **gradient** (`list[str]`) or **theme scale** (`"sequential"` / `"diverging"`) requires
   both `min_value` and `max_value` set with `min_value < max_value` (and, for a list, ≥ 2 valid
   colors); otherwise a clear `StreamlitAPIException` explains that a color scale needs explicit
-  bounds.
+  bounds. An empty list (`color=[]`) is rejected, and a single-color list (`color=["red"]`) is
+  rejected with a hint to use the scalar static form (`color="red"`) instead.
 - Each `ColorRule` validates that `value` matches its operator (scalar / 2-tuple / sequence /
   omitted), that `color` is set and is a valid concrete `PaintColor` — a single named theme
   color, hex, or `rgb()`/`rgba()` string — explicitly rejecting the column-level tokens
@@ -414,7 +418,7 @@ Overloaded-operator predicates like polars/pandas/SQLAlchemy.
 - **Pros:** Reads closest to `value > 10 → green`.
 - **Cons:** More machinery (a `cell` sentinel, guarded `__bool__`), and a new pattern in the
   `column_config` namespace. **Rejected** for v1 in favor of the explicit typed `ColorRule`,
-  which is simpler to implement and aligns 1:1 with the sibling spec. (`ColorRule` objects
+  which is simpler to implement and keeps a clear, typed rule model. (`ColorRule` objects
   could gain an expression-style constructor later without breaking.)
 
 ### D. String expression language (`{"> 10": "green"}` / `filter_query`)
