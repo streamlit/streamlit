@@ -364,9 +364,11 @@ live, without a domain to recompute, and never changes the returned value or CSV
   colors); otherwise a clear `StreamlitAPIException` explains that a color scale needs explicit
   bounds.
 - Each `ColorRule` validates that `value` matches its operator (scalar / 2-tuple / sequence /
-  omitted), that the color is set and valid (same check as `ChartColor`), and that `target` is
-  `"background"` or `"text"`. Ordering operators (`less_than`, `between`, …) require values
-  comparable to the column type.
+  omitted), that `color` is set and is a valid concrete `PaintColor` — a single named theme
+  color, hex, or `rgb()`/`rgba()` string — explicitly rejecting the column-level tokens
+  (`"auto"`, `"auto-inverse"`, `"sequential"`, `"diverging"`) and gradient lists, and that
+  `target` is `"background"` or `"text"`. Ordering operators (`less_than`, `between`, …) require
+  values comparable to the column type.
 
 ## Relationship to `pandas.Styler`
 
