@@ -79,7 +79,9 @@ that lock, so no new locking is required for the per-function cap.
 Parsing: add a `to_bytes(value: int | str | None) -> int | None` helper (new
 `lib/streamlit/byte_util.py`, mirroring `time_util.time_to_seconds`). It accepts an int
 (bytes) or a case-insensitive string with a unit suffix (`KB`/`MB`/`GB`/`TB`, and raw
-`B`), using base-1024 (`KiB`==`KB` accepted as aliases). Invalid unit or `<= 0` →
+`B`), using base-1024 (`KiB`==`KB` accepted as aliases). This uses the binary convention
+(1 KB = 1024 bytes), matching Docker, Kubernetes, and common developer usage, even though it
+technically inverts the IEC standard (`KB` = 1000, `KiB` = 1024). Invalid unit or `<= 0` →
 `StreamlitAPIException`.
 
 Plumbing path (all additive):
@@ -122,9 +124,13 @@ selection. Design:
   (recency bump), and deletions to it under its existing lock.
 - **Eviction**: on a write that pushes the global total over the budget, pop the
   globally-oldest `(storage, key)` (smallest access tick) and delete it from its owning
-  storage, repeating until under budget (always leaving ≥1 entry per non-empty storage is
-  *not* guaranteed globally — the global budget can shrink a cache to zero, which is
-  acceptable and identical to a normal miss on next access).
+  storage, repeating until under budget. The entry currently being inserted is never a
+  victim, so the loop stops when the total is under budget *or* when only that entry remains
+  — a lone entry larger than the whole budget is retained and the budget is temporarily
+  exceeded, matching the product spec's "oversized single entry" rule. Leaving ≥1 entry per
+  non-empty storage is *not* guaranteed globally: the budget can shrink some other
+  function's cache to zero, which is acceptable and identical to a normal miss on next
+  access.
 - **Ordering structure**: an `OrderedDict[(storage_id, key), size]` keyed by access order
   gives O(1) LRU bump (`move_to_end`) and O(1) oldest-pop, the same primitive `TTLCache`
   already uses.
@@ -134,6 +140,10 @@ selection. Design:
   *different* storage's public `delete`, which takes that storage's own lock — so the
   global lock must not be held while calling into a storage. Detailed lock ordering is the
   riskiest part of this change and gets dedicated tests.
+- **Cache clearing**: `st.cache_data.clear()` and per-function `.clear()` must also report to
+  the `GlobalCacheBudget` so the running total and LRU ordering are decremented for every
+  dropped entry; otherwise the budget would leak phantom bytes after a clear and evict live
+  entries prematurely.
 
 **Alternative considered — approximate/lazy global enforcement.** Instead of exact global
 LRU, periodically (e.g. every N writes or on a timer) sum per-cache `currsize` values and,
@@ -162,6 +172,16 @@ _create_option(
 
 Parsed once at startup via the same `to_bytes` helper.
 
+**Config type note:** `type_=str` is a deliberate departure from the existing size caps
+(`server.maxUploadSize`, `server.maxMessageSize`), which use `type_=int` in **megabytes**. A
+string is needed so the value carries an explicit unit (`"1gb"`, `"500mb"`) and stays
+consistent with the `max_size` parameter. The parser accepts either a unit string or a bare
+integer number of bytes, and `0` / `"0"` is a sentinel meaning "disabled" (handled before
+the `> 0` validation that `to_bytes` otherwise enforces). Because the option is `type_=str`,
+document that the disable value is written as a string in `config.toml`
+(`maxCachedDataSize = "0"`). This intentional inconsistency with the int-MB configs is called
+out in the option description.
+
 ## Testing
 
 - `ttl_cache_test.py`: size-mode eviction, running-total correctness across
@@ -174,6 +194,9 @@ Parsed once at startup via the same `to_bytes` helper.
 - Global budget: cross-cache eviction picks the global LRU victim; concurrency/lock-order
   stress test (many caches, concurrent read/write) with no deadlock; budget respected
   under churn.
+- Global-budget warning (Option D): the one-time warning emitted when the global budget
+  first starts evicting fires once per process (throttled), carries the expected copy, and
+  does not fire when the budget is disabled (`0`) or never exceeded.
 - Type tests in `lib/tests/streamlit/typing/` for the new `max_size` overloads.
 - E2E: a `cache_data` app with `max_size` that evicts under load (public-API coverage).
 

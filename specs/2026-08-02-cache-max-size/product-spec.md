@@ -152,15 +152,21 @@ and a recommendation are in
 
 ### Behavior
 
-- **No configuration → today's behavior**, except that the global default budget (if
-  non-zero) applies. Setting neither `max_size` nor a non-zero global budget preserves an
-  unbounded cache exactly as today.
+- **No explicit `max_size`** → the cache is bounded only by the global budget (and by
+  `max_entries`/`ttl` if set). Unbounded-by-anything behavior — exactly as today — requires
+  *both* `max_size=None` and a disabled global budget (`0`).
 - **Eviction order**: least-recently-used first, identical to `max_entries` (recency is
   refreshed on both read and write).
-- **A single entry larger than the limit**: The cache always keeps **at least one entry**,
-  even if that entry alone exceeds `max_size` (or the global budget). Streamlit logs a
+- **A single entry larger than the limit**: A write is never rejected. If the entry alone
+  exceeds `max_size` (or the global budget), it is still stored and the limit is temporarily
+  exceeded — eviction never drops the entry currently being written. Streamlit logs a
   warning once per cache when a stored entry exceeds the configured `max_size`, so the
   developer learns their cap is smaller than a single result.
+- **Global eviction can empty a function's cache**: The per-function `max_size` keeps at
+  least one entry per function, but the process-wide budget evicts the globally
+  least-recently-used entries across *all* functions and can therefore shrink an individual
+  function's cache to zero (each evicted entry is simply recomputed as a normal miss on the
+  next access). The only entry it never evicts is the one a write is currently inserting.
 - **`max_size` + `max_entries` together**: both are enforced; a write evicts until *both*
   constraints are satisfied.
 - **Interaction with `persist="disk"`**: `max_size` bounds the in-memory layer (the LRU
@@ -171,6 +177,12 @@ and a recommendation are in
   `2 × ttl`, see
   [background refresh spec](../2026-04-08-cache-background-refresh/product-spec.md)) count
   toward `max_size` like any other entry and participate in the same LRU eviction.
+- **Interaction with `scope="session"`**: The global budget is process-wide. Session-scoped
+  entries (`@st.cache_data(scope="session")`) live in the same process and compete in the
+  same global LRU as every other session's entries and all `scope="global"` caches. This is
+  intentional — the budget bounds *total* process memory, so under pressure a busy session
+  can evict another session's least-recently-used entries. The per-function `max_size` still
+  applies independently within each function's cache regardless of scope.
 - **Validation**: A `max_size` that parses to `<= 0`, or a string with an unrecognized
   unit, raises `StreamlitAPIException` at decoration time (fail fast, fail helpfully).
 
