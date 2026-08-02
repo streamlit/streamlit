@@ -113,12 +113,13 @@ represents this value." For a plain value cell, that representation is the cell 
 ### Sign-based `"auto"`
 
 `"auto"` colors by sign — green for non-negative, red for negative (`"auto-inverse"` flips) —
-the one-liner for red/green deltas. If the column also sets `min_value`/`max_value`, it
-upgrades to a **magnitude-scaled diverging gradient**: the fill intensity grows with the
-value's distance from 0 (toward `max_value` on the green side, `min_value` on the red side)
-and fades to nothing at 0. So `color="auto"` alone is a crisp two-color split; `color="auto"`
-plus bounds is a smooth red↔green heatmap centered at 0 that still degrades sensibly when the
-range doesn't straddle 0 (all-positive → white→green, all-negative → white→red).
+the one-liner for red/green deltas. If the column also sets **both** `min_value` and
+`max_value`, it upgrades to a **magnitude-scaled diverging gradient**: the fill intensity grows
+with the value's distance from 0 (toward `max_value` on the green side, `min_value` on the red
+side) and fades to nothing at 0. So `color="auto"` alone is a crisp two-color split;
+`color="auto"` plus bounds is a smooth red↔green heatmap centered at 0 that still degrades
+sensibly when the range doesn't straddle 0 (all-positive → neutral→green, all-negative →
+neutral→red, where *neutral* is the same zero-intensity fill, not a hard-coded white).
 
 Because `min_value`/`max_value` double as `st.data_editor` input bounds, adding them for
 validation also switches on this gradient. That's usually a welcome upgrade; if you want the
@@ -341,10 +342,10 @@ live, without a domain to recompute, and never changes the returned value or CSV
   `target="text"` instead colors the text and leaves the background untouched (no auto-contrast
   — you chose the text color). When a rule sets the background and another sets the text, both
   apply; a `target="text"` color always wins over auto-contrast.
-- **`"auto"` + bounds.** Setting `min_value`/`max_value` upgrades `color="auto"` from a binary
-  green/red split to a magnitude-scaled diverging gradient (see [Sign-based
+- **`"auto"` + bounds.** Setting **both** `min_value` and `max_value` upgrades `color="auto"`
+  from a binary green/red split to a magnitude-scaled diverging gradient (see [Sign-based
   `"auto"`](#sign-based-auto)), so adding bounds purely for input validation also changes the
-  coloring.
+  coloring. Setting only one bound leaves the binary split unchanged.
 - **No column scan.** Rules depend only on the cell's own value; gradients depend only on the
   cell's value plus the *explicit* `min_value`/`max_value`. Neither reads other rows, so both
   stay correct in `st.data_editor` (live edits, added rows) and lazy dataframes.
