@@ -233,9 +233,15 @@ def marshall(
     # rcParams["savefig.format"] = "svg" produces SVG that the kwarg alone would
     # not reveal. No raster format can collide with these prefixes (PNG starts
     # with b"\x89PNG", JPEG with b"\xff\xd8").
+    #
+    # An `<?xml` prolog alone is not enough: image_to_url only treats a string as
+    # SVG when a `<svg` tag is present too, so require that here as well. Otherwise
+    # a non-SVG XML payload would be decoded and then rejected downstream.
     payload = image.getvalue()
     stripped = payload.lstrip()
-    is_svg = stripped.startswith((b"<?xml", b"<svg"))
+    is_svg = stripped.startswith(b"<svg") or (
+        stripped.startswith(b"<?xml") and b"<svg" in stripped
+    )
     image_for_proto: str | io.BytesIO = payload.decode("utf-8") if is_svg else image
 
     marshall_images(
