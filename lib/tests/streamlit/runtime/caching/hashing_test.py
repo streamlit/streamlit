@@ -1062,31 +1062,32 @@ def test_PIL_pmode_palette_collision_prevention() -> None:
 class TestLargeObjectHashingIsExact:
     """Regression tests for GitHub issue #14622.
 
-    Large pandas/polars/numpy objects used to be hashed from a fixed-seed random
-    subsample, so two objects differing only outside the sampled positions hashed
-    identically and `@st.cache_data` returned the wrong cached value. Large
-    objects are now hashed over their full content, so ANY difference changes the
+    The invariant under test: hashing a large pandas/polars/numpy object must
+    reflect its **entire** content, so any single differing element changes the
     hash.
 
-    Each test mutates a single element at a position outside the indices a fixed
-    `seed=0` sample would have drawn, which is the class of case that used to
-    collide. The helper replays numpy's `RandomState(0).choice`, so for the pandas
-    and polars paths — which used their own `sample(..., seed/random_state=0)`
-    APIs — the position is representative rather than an exact replay. That is
-    sufficient here: the fix hashes full content, so any difference at all must
-    change the hash.
+    Previously these objects were hashed from a fixed-seed random subsample, so
+    two objects differing only outside the sampled positions hashed identically
+    and `@st.cache_data` returned the wrong cached value.
+
+    Each test mutates one element near the tail of the object — a region no
+    fixed-seed sample of a small fraction of the rows was likely to draw — which
+    is the class of case that used to collide. The definitive evidence is
+    empirical rather than analytical: restoring `develop`'s `hashing.py` makes
+    every test in this class fail.
     """
 
     @staticmethod
     def _unsampled_index(n: int, sample_size: int) -> int:
-        """Return an index outside the set numpy's fixed `seed=0` sample would pick.
+        """Return a tail index that a fixed `seed=0` subsample did not draw.
 
-        Replays `np.random.RandomState(0).choice` with `replace=False`, which yields
-        a superset of the indices the old samplers drew (numpy used the same call
-        with the default `replace=True`; pandas and polars used their own `sample()`
-        APIs). Any index this reports as unsampled is therefore also unsampled under
-        the historical calls, which is all these tests need — the fix hashes full
-        content, so any difference at all must change the hash.
+        Uses numpy's `RandomState(0).choice` purely as a representative sampler
+        to skip past drawn indices; it is *not* a replay of the historical calls
+        (numpy used `replace=True`, pandas and polars used their own `sample()`
+        APIs, and each consumes the RNG differently, so the index sets are
+        unrelated rather than nested). What makes the choice sound is that it
+        returns the highest undrawn index, landing at the tail that a sparse
+        sample almost never covers.
         """
         state = np.random.RandomState(0)
         sampled = set(state.choice(n, size=min(sample_size, n), replace=False))
