@@ -227,13 +227,16 @@ def marshall(
     # SVG output is text, not raster bytes. Decode to string so image_to_url
     # routes it through the existing SVG-string path (returns a base64 data URI)
     # rather than the PNG/PIL path, which cannot parse SVG and crashes.
-    # kwargs.update(options) above always sets "format", so index directly.
-    effective_format = kwargs["format"]
-    image_for_proto: str | io.BytesIO = (
-        image.getvalue().decode("utf-8")
-        if isinstance(effective_format, str) and effective_format.lower() == "svg"
-        else image
-    )
+    #
+    # Sniff the serialized bytes rather than reading kwargs["format"]: Matplotlib
+    # resolves the real format itself, so `format=None` with
+    # rcParams["savefig.format"] = "svg" produces SVG that the kwarg alone would
+    # not reveal. No raster format can collide with these prefixes (PNG starts
+    # with b"\x89PNG", JPEG with b"\xff\xd8").
+    payload = image.getvalue()
+    stripped = payload.lstrip()
+    is_svg = stripped.startswith((b"<?xml", b"<svg"))
+    image_for_proto: str | io.BytesIO = payload.decode("utf-8") if is_svg else image
 
     marshall_images(
         coordinates=coordinates,

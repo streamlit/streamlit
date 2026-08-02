@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import base64
 from unittest.mock import Mock, patch
 
 import matplotlib as mpl
@@ -197,7 +198,7 @@ class PyplotTest(DeltaGeneratorTestCase):
 
     @parameterized.expand([("lowercase", "svg"), ("uppercase", "SVG")])
     def test_st_pyplot_svg_format(self, _, fmt: str):
-        """st.pyplot with format="svg" (or "SVG") should render as SVG data URI, not crash. #11489"""
+        """format="svg"/"SVG" yields an SVG data URI instead of crashing (#11489)."""
         fig, ax = plt.subplots()
         ax.plot([1, 2, 3], [1, 2, 3])
 
@@ -205,7 +206,30 @@ class PyplotTest(DeltaGeneratorTestCase):
 
         # Assert SVG is served as a data URI (not routed through PIL).
         el = self.get_delta_from_queue().new_element
-        assert el.imgs.imgs[0].url.startswith("data:image/svg+xml;base64,")
+        url = el.imgs.imgs[0].url
+        assert url.startswith("data:image/svg+xml;base64,")
+        # Decode the payload so an empty or non-SVG body cannot pass on MIME alone.
+        decoded = base64.b64decode(url.split(",", 1)[1]).decode("utf-8")
+        assert "<svg" in decoded
+
+    def test_st_pyplot_svg_via_rcparams(self):
+        """SVG resolved from rcParams["savefig.format"] is also detected (#11489).
+
+        Matplotlib resolves the format itself, so `format=None` with an rcParams
+        default of "svg" produces SVG that the `format` kwarg alone would not
+        reveal. The SVG must still avoid the PIL path.
+        """
+        fig, ax = plt.subplots()
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        with mpl.rc_context({"savefig.format": "svg"}):
+            st.pyplot(fig, format=None)
+
+        el = self.get_delta_from_queue().new_element
+        url = el.imgs.imgs[0].url
+        assert url.startswith("data:image/svg+xml;base64,")
+        decoded = base64.b64decode(url.split(",", 1)[1]).decode("utf-8")
+        assert "<svg" in decoded
 
     @parameterized.expand(
         [
