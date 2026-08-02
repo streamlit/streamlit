@@ -647,6 +647,10 @@ describe("StreamlitMarkdown", () => {
     // useLayoutEffect commits the re-derived id before paint, so the assertion
     // can be direct -- no waitFor needed.
     expect(screen.getByRole("heading")).toHaveAttribute("id", "second-heading")
+    // #8793 was reported through the anchor link, so assert its href too.
+    expect(
+      screen.getByRole("link", { name: "Link to heading" })
+    ).toHaveAttribute("href", "#second-heading")
     // The stale anchor must be gone, not merely joined by the new one.
     expect(screen.getByRole("heading")).not.toHaveAttribute(
       "id",
