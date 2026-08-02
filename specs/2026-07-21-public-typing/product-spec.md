@@ -129,7 +129,7 @@ public contract.
 
 ### Initial exports
 
-The initial `streamlit.typing.__all__` contains these 9 names:
+The initial `streamlit.typing.__all__` contains these 7 names:
 
 | Export | Public API relationship | Why users need to name it |
 |---|---|---|
@@ -137,10 +137,8 @@ The initial `streamlit.typing.__all__` contains these 9 names:
 | `ChatInputValue` | `st.chat_input` when file or audio input is enabled | It has a documented dict-like and attribute-based schema that is lost with `Mapping[str, Any]`. |
 | `DataframeState` | `st.dataframe` with selection events | It is the documented event envelope returned to app code. |
 | `PlotlyState` | `st.plotly_chart` with selection events | It is the documented event envelope returned to app code. |
-| `PlotlySelectionState` | `PlotlyState["selection"]` | It describes Plotly point, index, box, and lasso selection data. |
 | `VegaLiteState` | `st.altair_chart` and `st.vega_lite_chart` with selection events | It is the documented event envelope; its selection keys and values depend on the user-authored Vega-Lite spec. |
 | `PydeckState` | `st.pydeck_chart` with selection events | It is the documented event envelope returned to app code. |
-| `PydeckSelectionState` | `PydeckState["selection"]` | It describes selected indices and objects grouped by PyDeck layer. |
 | `ButtonClickState` | `st.session_state[key]` for a keyed `st.column_config.ButtonColumn` | It is the documented row-and-label payload available to callbacks. |
 
 The module re-exports the existing objects rather than creating duplicate classes or
@@ -177,10 +175,11 @@ class PlotlyState(TypedDict):
     selection: PlotlySelectionState
 ```
 
-`DataframeSelectionState`, `PlotlySelectionState`, and `PydeckSelectionState`
-already name the nested `.selection` payloads. Renaming `DataframeState`,
-`PlotlyState`, or `PydeckState` to those names would collide with existing types and
-blur the distinction between the event envelope and its selection payload.
+The existing internal `DataframeSelectionState`, `PlotlySelectionState`, and
+`PydeckSelectionState` schemas already name the nested `.selection` payloads.
+Renaming `DataframeState`, `PlotlyState`, or `PydeckState` to those names would
+collide with existing types and blur the distinction between the event envelope and
+its selection payload.
 
 The generic outer `*State` names are also forward-compatible with additional event
 kinds. If hover, click, edit, or other events are added later, their payloads can be
@@ -194,9 +193,9 @@ that Streamlit cannot provide.
 | Candidate | Decision | Rationale |
 |---|---|---|
 | `UploadedFile`, `ChatInputValue` | Include | Concrete, Streamlit-owned values returned directly to users. |
-| `DataframeState`, `PlotlyState`, `PlotlySelectionState`, `VegaLiteState`, `PydeckState`, `PydeckSelectionState` | Include | Documented event return types and nested payloads that users may reasonably need to name. Keep their current names. |
+| `DataframeState`, `PlotlyState`, `VegaLiteState`, `PydeckState` | Include | Documented event return types that users may reasonably need to name. Keep their current names. |
 | `ButtonClickState` | Include | An additional user-facing value found by auditing public session-state contracts. |
-| `DataframeSelectionState` | Exclude | `DataframeState` already provides fully typed access to its nested selection payload. Programmatic selection through `selection_default` and Session State also uses the outer `DataframeState` schema, so users do not need to name the nested type. |
+| `DataframeSelectionState`, `PlotlySelectionState`, `PydeckSelectionState` | Exclude | The outer event states already provide fully typed access to their nested selection payloads. Plotly and PyDeck selections are not independently returned or accepted by public APIs, and programmatic dataframe selection uses the outer `DataframeState` schema. |
 | `Page` | Exclude | `st.Page` is a public class and can be used directly as a type annotation. |
 | `Data` | Defer | A very broad, generically named union of third-party inputs. It changes as dataframe support expands and is not a Streamlit-owned value. A future public alias should have a semantic name such as `DataframeData` and dedicated demand. |
 | `Width`, `WidthWithoutContent`, `Height`, `HeightWithoutContent` | Defer | Useful mainly to wrapper authors, and the negative `WithoutContent` names expose implementation constraints. Revisit with semantic names if input aliases are added. |
@@ -287,7 +286,7 @@ Add coverage for:
 ### Documentation
 
 - Add a `streamlit.typing` API-reference page that lists only `__all__` exports and
-  groups them into values, event states, and nested state payloads.
+  groups them into values and event states.
 - Update the relevant command return-value documentation to link to the public type,
   especially `st.file_uploader`, `st.chat_input`, dataframe/chart selection APIs, and
   `st.column_config.ButtonColumn`.
@@ -303,15 +302,15 @@ Add coverage for:
 
 - Users can replace an internal `UploadedFile` import with
   `from streamlit.typing import UploadedFile` without changing behavior.
-- All 9 initial exports are available through both `streamlit.typing` and
+- All 7 initial exports are available through both `streamlit.typing` and
   `st.typing` and are listed in `__all__`.
 - Public exports are the same runtime objects as their current definitions.
 - Type-checking examples for uploaded files, chat values, and all event-state
   schemas pass with the repository's supported type checkers.
 - Loading `streamlit.typing` does not import additional third-party packages beyond a
   normal `import streamlit`.
-- Documentation distinguishes the outer `*State` event envelope from nested
-  `*SelectionState` payloads.
+- Documentation describes nested selection payloads through their outer `*State`
+  event types without listing the inner schemas as public exports.
 - No existing import path or runtime API changes.
 
 ## Out of Scope (Future Work)
@@ -355,7 +354,7 @@ refactors and improvements unnecessarily breaking.
 For example, support `st.UploadedFile` and `st.DataframeState`.
 
 **Rejected because:** Streamlit's top-level namespace is optimized for commands and a
-small number of primary objects. Nine additional annotation-oriented names would add
+small number of primary objects. Seven additional annotation-oriented names would add
 noise, while `streamlit.typing` keeps the purpose clear and scales to future types.
 
 ### Use a stub-only `streamlit/typing.pyi`
