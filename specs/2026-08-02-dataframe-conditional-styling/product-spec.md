@@ -161,7 +161,7 @@ st.column_config.NumberColumn(
     "Score",
     min_value=0,
     max_value=100,
-    color=["#fee0d2", "#de2d26"],   # light → dark red across 0–100
+    color=["#fee0d2", "#de2d26"],  # light → dark red across 0–100
 )
 ```
 
@@ -203,12 +203,16 @@ default `diverging` palette is red↔blue, distinct from the green/red of `"auto
 import pandas as pd
 import streamlit as st
 
-df = pd.DataFrame({"metric": ["Revenue", "Costs", "Margin"], "delta": [12000, -3400, 8600]})
+df = pd.DataFrame(
+    {"metric": ["Revenue", "Costs", "Margin"], "delta": [12000, -3400, 8600]}
+)
 
 st.dataframe(
     df,
     column_config={
-        "delta": st.column_config.NumberColumn("Δ vs. last month", format="$%d", color="auto"),
+        "delta": st.column_config.NumberColumn(
+            "Δ vs. last month", format="$%d", color="auto"
+        ),
     },
     hide_index=True,
 )
@@ -237,8 +241,10 @@ st.dataframe(
             "Health score",
             color=[
                 st.column_config.ColorRule("less_than", 50, "red"),
-                st.column_config.ColorRule("less_than", 80, "orange"),   # 50–79 (first match wins)
-                st.column_config.ColorRule("always", color="green"),      # ≥ 80
+                st.column_config.ColorRule(
+                    "less_than", 80, "orange"
+                ),  # 50–79 (first match wins)
+                st.column_config.ColorRule("always", color="green"),  # ≥ 80
             ],
         ),
     },
@@ -278,7 +284,7 @@ st.column_config.DatetimeColumn(
     "Last seen",
     min_value=datetime(2026, 1, 1),
     max_value=datetime(2026, 8, 1),
-    color=["#deebf7", "#3182bd"],   # older → more recent
+    color=["#deebf7", "#3182bd"],  # older → more recent
 )
 ```
 
