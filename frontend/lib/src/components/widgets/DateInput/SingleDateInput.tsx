@@ -55,6 +55,7 @@ import { isNullOrUndefined } from "~lib/util/utils"
 
 import { CalendarPopoverHeader } from "./CalendarPopoverHeader"
 import {
+  datesEqual,
   isValidSegmentValue,
   parsePartialSegmentPaste,
   parsePastedDate,
@@ -225,14 +226,15 @@ function SingleDateInput({
         // buffered), making the parent's revert a no-op.
         setDisplayValue(value)
         onCloseRef.current(true)
-      } else if (pending !== value) {
+      } else if (!datesEqual(pending, value)) {
         // Valid completed date that differs from committed — commit it.
+        // Don't call onClose here: the commit itself updates parent state
+        // (including isEmpty), so calling handleClose with potentially stale
+        // closure values would risk reverting to default.
         onChangeRef.current(pending)
-        onCloseRef.current(false)
-      } else {
-        // No change — opened and closed without editing.
-        onCloseRef.current(false)
       }
+      // When dates are equal (no change, or calendar/paste already committed
+      // this value), no action needed — avoid double-committing.
     }
     wasOpenRef.current = isOpen
   }, [isOpen, value])

@@ -108,6 +108,16 @@ export function calendarDateToIso(value: CalendarDate): string {
   return value.toString()
 }
 
+/** Value-based equality for CalendarDate (avoids object-identity pitfalls). */
+export function datesEqual(
+  a: CalendarDate | null,
+  b: CalendarDate | null
+): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  return a.compare(b) === 0
+}
+
 /** Converts a native JS `Date` to a `CalendarDate`, discarding time-of-day. */
 export function dateToCalendarDate(date: Date): CalendarDate {
   return new CalendarDate(
