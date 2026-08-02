@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Type tests for st.dialog."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -34,6 +36,14 @@ if TYPE_CHECKING:
     def basic_dialog(item: str) -> None: ...
 
     assert_type(basic_dialog("A"), None)
+
+    # A non-``None`` return type is preserved. This guards against a regression
+    # that hard-codes the decorated function's return type to ``None`` instead
+    # of preserving the wrapped function's original return type.
+    @dialog("Returns int")
+    def int_return_dialog(item: str) -> int: ...
+
+    assert_type(int_return_dialog("A"), int)
 
     # width - each literal option.
     @dialog("Small", width="small")
@@ -106,3 +116,22 @@ if TYPE_CHECKING:
     def full_dialog(value: int) -> None: ...
 
     assert_type(full_dialog(1), None)
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+
+    # width only accepts "small", "medium", or "large".
+    dialog("Bad width", width="invalid")  # type: ignore[call-overload]
+
+    # dismissible must be a bool.
+    dialog("Bad dismissible", dismissible="yes")  # type: ignore[call-overload]
+
+    # icon must be a str or None.
+    dialog("Bad icon", icon=123)  # type: ignore[call-overload]
+
+    # on_dismiss only accepts "ignore", "rerun", or a callable.
+    dialog("Bad on_dismiss", on_dismiss="invalid")  # type: ignore[call-overload]
+
+    # Decorator options are keyword-only and can't be passed positionally.
+    dialog("Positional option", "small")  # type: ignore[call-overload]
