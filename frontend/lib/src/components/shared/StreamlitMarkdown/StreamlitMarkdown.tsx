@@ -31,43 +31,43 @@ import {
   useMemo,
   useRef,
   useState,
-} from "react"
+} from "react";
 
-import slugify from "@sindresorhus/slugify"
-import { parseToRgba } from "color2k"
-import { type Element, type Root as HastRoot } from "hast"
-import { omit, once } from "lodash-es"
-import type { Root as MdastRoot, Text } from "mdast"
-import { findAndReplace } from "mdast-util-find-and-replace"
-import { Link2 as LinkIcon } from "react-feather"
+import slugify from "@sindresorhus/slugify";
+import { parseToRgba } from "color2k";
+import { type Element, type Root as HastRoot } from "hast";
+import { omit, once } from "lodash-es";
+import type { Root as MdastRoot, Text } from "mdast";
+import { findAndReplace } from "mdast-util-find-and-replace";
+import { Link2 as LinkIcon } from "react-feather";
 import ReactMarkdown, {
   Components,
   Options as ReactMarkdownProps,
-} from "react-markdown"
-import remarkDirective from "remark-directive"
-import remarkGfm from "remark-gfm"
-import remarkMathPlugin from "remark-math"
-import remend, { type RemendHandler } from "remend"
-import { PluggableList } from "unified"
-import { visit } from "unist-util-visit"
-import xxhash from "xxhashjs"
+} from "react-markdown";
+import remarkDirective from "remark-directive";
+import remarkGfm from "remark-gfm";
+import remarkMathPlugin from "remark-math";
+import remend, { type RemendHandler } from "remend";
+import { PluggableList } from "unified";
+import { visit } from "unist-util-visit";
+import xxhash from "xxhashjs";
 
-import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
-import IsDialogContext from "~lib/components/core/IsDialogContext"
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
-import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
-import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
-import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
-import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg";
+import IsDialogContext from "~lib/components/core/IsDialogContext";
+import IsSidebarContext from "~lib/components/core/IsSidebarContext";
+import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components";
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components";
+import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary";
+import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon";
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute";
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme";
 import {
   getMarkdownTextColors,
   getThemeBackgroundColors,
-} from "~lib/theme/getColors"
-import type { EmotionTheme } from "~lib/theme/types"
-import { convertRemToPx } from "~lib/theme/utils"
-import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
+} from "~lib/theme/getColors";
+import type { EmotionTheme } from "~lib/theme/types";
+import { convertRemToPx } from "~lib/theme/utils";
+import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil";
 
 import {
   StyledHeadingActionElements,
@@ -76,7 +76,7 @@ import {
   StyledLinkIcon,
   StyledPreWrapper,
   StyledStreamlitMarkdown,
-} from "./styled-components"
+} from "./styled-components";
 import {
   type EmojiPlugin,
   isLoadedPlugin,
@@ -90,15 +90,18 @@ import {
   useLazyPlugin,
   wrapRehypePlugin,
   wrapRemarkPlugin,
-} from "./utils"
+} from "./utils";
 
 const StreamlitSyntaxHighlighter = lazy(
-  () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
-)
+  () =>
+    import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter"),
+);
 
 const MermaidChart = lazy(() =>
-  import("./MermaidChart").then(module => ({ default: module.MermaidChart }))
-)
+  import("./MermaidChart").then((module) => ({
+    default: module.MermaidChart,
+  })),
+);
 
 /**
  * Heuristic to determine if the markdown source contains emoji shortcodes that require remark-emoji.
@@ -110,7 +113,7 @@ const MermaidChart = lazy(() =>
  * @returns true if emoji shortcodes are detected, false otherwise
  */
 export function containsEmojiShortcodes(source: string): boolean {
-  return /:(?!material\/|streamlit:)[\w+-][\w_+-]*:/.test(source)
+  return /:(?!material\/|streamlit:)[\w+-][\w_+-]*:/.test(source);
 }
 
 /**
@@ -125,7 +128,7 @@ export function containsEmojiShortcodes(source: string): boolean {
 export function containsMathSyntax(source: string): boolean {
   // Detect display math: $$...$$ or inline math: $...$
   // Inline math requires non-whitespace after opening $ and before closing $
-  return /\$\$[\s\S]+?\$\$|\$(?!\s)[^$\n]+?(?<!\s)\$/.test(source)
+  return /\$\$[\s\S]+?\$\$|\$(?!\s)[^$\n]+?(?<!\s)\$/.test(source);
 }
 
 export enum Tags {
@@ -138,63 +141,63 @@ export interface Props {
   /**
    * The Markdown formatted text to render.
    */
-  source: string
+  source: string;
 
   /**
    * True if HTML is allowed in the source string. If this is false,
    * any HTML will be escaped in the output.
    */
-  allowHTML: boolean
-  style?: CSSProperties
-  isCaption?: boolean
+  allowHTML: boolean;
+  style?: CSSProperties;
+  isCaption?: boolean;
 
   /**
    * Indicates widget labels & restricts allowed elements
    */
-  isLabel?: boolean
+  isLabel?: boolean;
 
   /**
    * Make the label bold
    */
-  boldLabel?: boolean
+  boldLabel?: boolean;
 
   /**
    * Does not allow links
    */
-  disableLinks?: boolean
+  disableLinks?: boolean;
 
   /**
    * Toast has smaller font sizing & special CSS
    */
-  isToast?: boolean
+  isToast?: boolean;
 
   /**
    * Inherit font family, size, and weight from parent
    */
-  inheritFont?: boolean
+  inheritFont?: boolean;
 
   /**
    * Optional help text for inline help tooltips.
    * When present, :help[] markers in the source will use this text.
    */
-  helpText?: string
+  helpText?: string;
 
   /**
    * Truncate text with ellipsis when it overflows the container.
    * Useful for single-line text that should not wrap, such as metric labels.
    */
-  truncate?: boolean
+  truncate?: boolean;
 
   /**
    * Enables unterminated markdown completion (via remend) during streaming.
    */
-  unterminatedParsing?: boolean
+  unterminatedParsing?: boolean;
 
   /**
    * When true, headers (h1-h6) keep their `id` for deep linking but the
    * visible anchor link icon is not rendered.
    */
-  hideAnchors?: boolean
+  hideAnchors?: boolean;
 }
 
 /**
@@ -203,13 +206,13 @@ export interface Props {
  * @see https://github.com/syntax-tree/mdast-util-to-hast#fields-on-nodes
  */
 interface MdastTextWithHastData {
-  type: "text"
-  value: string
+  type: "text";
+  value: string;
   data: {
-    hName: string
-    hProperties: Record<string, string>
-    hChildren?: Array<{ type: string; value: string }>
-  }
+    hName: string;
+    hProperties: Record<string, string>;
+    hChildren?: Array<{ type: string; value: string }>;
+  };
 }
 
 /**
@@ -221,16 +224,16 @@ function rehypeSetCodeInlineProperty() {
   return (tree: HastRoot) => {
     visit(tree, "element", (node: Element, _index, parent) => {
       if (node.tagName !== "code") {
-        return
+        return;
       }
 
       if (parent?.type === "element" && parent.tagName === "pre") {
-        node.properties = { ...node.properties, inline: false }
+        node.properties = { ...node.properties, inline: false };
       } else {
-        node.properties = { ...node.properties, inline: true }
+        node.properties = { ...node.properties, inline: true };
       }
-    })
-  }
+    });
+  };
 }
 
 /**
@@ -249,21 +252,21 @@ function rehypeSetCodeInlineProperty() {
  */
 export function createAnchorFromText(text: string | null): string {
   if (!text) {
-    return ""
+    return "";
   }
 
   /**
    * @see https://www.npmjs.com/package/@sindresorhus/slugify
    * @see https://www.npmjs.com/package/@sindresorhus/transliterate
    */
-  const newAnchor = slugify(text)
+  const newAnchor = slugify(text);
 
   if (newAnchor.length > 0) {
-    return newAnchor
+    return newAnchor;
   }
 
   // If slugify is not able to create a slug, fallback to hash
-  return xxhash.h32(text, 0xabcd).toString(16)
+  return xxhash.h32(text, 0xabcd).toString(16);
 }
 
 /**
@@ -279,18 +282,18 @@ export function createAnchorFromText(text: string | null): string {
  * current page in a new tab.
  */
 function transformLinkUri(href: string): string {
-  return isDangerousLinkUri(href) ? BLOCKED_LINK_URI : href
+  return isDangerousLinkUri(href) ? BLOCKED_LINK_URI : href;
 }
 
 // wrapping in `once` ensures we only scroll once
 const scrollNodeIntoView = once((node: HTMLElement): void => {
-  node.scrollIntoView(true)
-})
+  node.scrollIntoView(true);
+});
 
 interface HeadingActionElements {
-  elementId?: string
-  help?: string
-  hideAnchor?: boolean
+  elementId?: string;
+  help?: string;
+  hideAnchor?: boolean;
 }
 
 const HeaderActionElements: FC<HeadingActionElements> = ({
@@ -298,9 +301,9 @@ const HeaderActionElements: FC<HeadingActionElements> = ({
   help,
   hideAnchor,
 }) => {
-  const theme = useEmotionTheme()
+  const theme = useEmotionTheme();
   if (!help && hideAnchor) {
-    return <></>
+    return <></>;
   }
 
   return (
@@ -317,16 +320,16 @@ const HeaderActionElements: FC<HeadingActionElements> = ({
         </StyledLinkIcon>
       )}
     </StyledHeadingActionElements>
-  )
-}
+  );
+};
 
 interface HeadingWithActionElementsProps {
-  tag: string
-  anchor?: string
-  hideAnchor?: boolean
-  children: ReactNode[] | ReactNode
-  tagProps?: HTMLProps<HTMLHeadingElement>
-  help?: string
+  tag: string;
+  anchor?: string;
+  hideAnchor?: boolean;
+  children: ReactNode[] | ReactNode;
+  tagProps?: HTMLProps<HTMLHeadingElement>;
+  help?: string;
 }
 
 export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
@@ -337,10 +340,10 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   children,
   tagProps,
 }) => {
-  const isInSidebar = useContext(IsSidebarContext)
-  const isInDialog = useContext(IsDialogContext)
-  const [elementId, setElementId] = useState(propsAnchor)
-  const nodeRef = useRef<HTMLElement | null>(null)
+  const isInSidebar = useContext(IsSidebarContext);
+  const isInDialog = useContext(IsDialogContext);
+  const [elementId, setElementId] = useState(propsAnchor);
+  const nodeRef = useRef<HTMLElement | null>(null);
 
   /**
    * Set the heading id from `propsAnchor` or the node's textContent, then scroll
@@ -349,27 +352,27 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
    * drift apart.
    */
   const applyAnchor = useCallback(
-    (node: HTMLElement) => {
-      const anchor = propsAnchor || createAnchorFromText(node.textContent)
-      setElementId(anchor)
-      const windowHash = window.location.hash.slice(1)
+    (node: HTMLElement): void => {
+      const anchor = propsAnchor || createAnchorFromText(node.textContent);
+      setElementId(anchor);
+      const windowHash = window.location.hash.slice(1);
       if (windowHash && windowHash === anchor) {
-        scrollNodeIntoView(node)
+        scrollNodeIntoView(node);
       }
     },
-    [propsAnchor]
-  )
+    [propsAnchor],
+  );
 
   const ref = useCallback(
     (node: HTMLElement | null) => {
-      nodeRef.current = node
+      nodeRef.current = node;
       if (node === null) {
-        return
+        return;
       }
-      applyAnchor(node)
+      applyAnchor(node);
     },
-    [applyAnchor]
-  )
+    [applyAnchor],
+  );
 
   // Re-derive the anchor when heading text changes across reruns. The ref
   // callback only fires on mount or when propsAnchor changes; when only the text
@@ -380,21 +383,21 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   // useLayoutEffect (not useEffect) so the re-derived id is committed before
   // paint; otherwise a frame can render with the previous hash link.
   useLayoutEffect(() => {
-    const node = nodeRef.current
+    const node = nodeRef.current;
     if (!node || propsAnchor) {
-      return
+      return;
     }
-    applyAnchor(node)
-  }, [children, propsAnchor, applyAnchor])
+    applyAnchor(node);
+  }, [children, propsAnchor, applyAnchor]);
 
-  const isInSidebarOrDialog = isInSidebar || isInDialog
+  const isInSidebarOrDialog = isInSidebar || isInDialog;
   const actionElements = (
     <HeaderActionElements
       elementId={elementId}
       help={help}
       hideAnchor={hideAnchor || isInSidebarOrDialog}
     />
-  )
+  );
 
   // Accessibility:
   // Headings can contain action elements (help tooltip icon, anchor link icon).
@@ -411,21 +414,21 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   // - help: tooltip icon can be present even in sidebar/dialog (where we don't
   //   set a heading id/anchor)
   // - anchor icon: only present when we have an elementId and it's not hidden
-  const rawHeadingTextId = useId()
+  const rawHeadingTextId = useId();
   const headingTextId =
     help || (elementId && !hideAnchor && !isInSidebarOrDialog)
       ? rawHeadingTextId
-      : undefined
+      : undefined;
 
-  const idAttribute = elementId ? { id: elementId } : {}
+  const idAttribute = elementId ? { id: elementId } : {};
   const ariaLabelledbyAttribute = headingTextId
     ? { "aria-labelledby": headingTextId }
-    : {}
+    : {};
   const mergedAttributes = {
     ...(isInSidebarOrDialog ? {} : { ref, ...idAttribute }),
     ...ariaLabelledbyAttribute,
-  }
-  const Tag = tag
+  };
+  const Tag = tag;
   // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
@@ -434,46 +437,46 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
       {headingTextId ? <span id={headingTextId}>{children}</span> : children}
       {actionElements}
     </Tag>
-  )
+  );
 
   // we don't want to apply styling, so return the "raw" header
   if (isInSidebarOrDialog) {
-    return headerElementWithActions
+    return headerElementWithActions;
   }
 
   return (
     <StyledHeadingWithActionElements data-testid="stHeadingWithActionElements">
       {headerElementWithActions}
     </StyledHeadingWithActionElements>
-  )
-}
+  );
+};
 
 type HeadingProps = JSX.IntrinsicElements["h1"] &
   ReactMarkdownProps & {
-    level: number
-    "data-anchor"?: string
-    node: Element
-  }
+    level: number;
+    "data-anchor"?: string;
+    node: Element;
+  };
 
 /**
  * Context to indicate if markdown is being streamed (unterminatedParsing mode).
  * When true, mermaid code blocks render as syntax-highlighted code instead of diagrams.
  * This prevents flickering and error states from partial/incomplete diagram source.
  */
-const StreamingContext = createContext<boolean>(false)
-StreamingContext.displayName = "StreamingContext"
+const StreamingContext = createContext<boolean>(false);
+StreamingContext.displayName = "StreamingContext";
 
 /**
  * Context that controls whether anchor link icons render next to markdown
  * headings. Heading `id` attributes are still set when this is true, so URL
  * fragment deep links keep working.
  */
-const HideAnchorsContext = createContext<boolean>(false)
-HideAnchorsContext.displayName = "HideAnchorsContext"
+const HideAnchorsContext = createContext<boolean>(false);
+HideAnchorsContext.displayName = "HideAnchorsContext";
 
 const CustomHeading: FC<HeadingProps> = ({ node, children, ...rest }) => {
-  const anchor = rest["data-anchor"]
-  const hideAnchor = useContext(HideAnchorsContext)
+  const anchor = rest["data-anchor"];
+  const hideAnchor = useContext(HideAnchorsContext);
   return (
     <HeadingWithActionElements
       tag={node.tagName}
@@ -483,52 +486,52 @@ const CustomHeading: FC<HeadingProps> = ({ node, children, ...rest }) => {
     >
       {children}
     </HeadingWithActionElements>
-  )
-}
+  );
+};
 interface RenderedMarkdownProps {
   /**
    * The Markdown formatted text to render.
    */
-  source: string
+  source: string;
 
   /**
    * True if HTML is allowed in the source string. If this is false,
    * any HTML will be escaped in the output.
    */
-  allowHTML: boolean
+  allowHTML: boolean;
 
-  overrideComponents?: Components
+  overrideComponents?: Components;
 
   /**
    * Indicates widget labels & restricts allowed elements
    */
-  isLabel?: boolean
+  isLabel?: boolean;
 
   /**
    * Does not allow links
    */
-  disableLinks?: boolean
+  disableLinks?: boolean;
 
   /**
    * Optional help text for inline help tooltips.
    * When present, :help[] markers in the source will use this text.
    */
-  helpText?: string
+  helpText?: string;
 
   /**
    * Enables unterminated markdown completion (via remend) during streaming.
    */
-  unterminatedParsing?: boolean
+  unterminatedParsing?: boolean;
 
   /**
    * When true, headers (h1-h6) keep their `id` for deep linking but the
    * visible anchor link icon is not rendered.
    */
-  hideAnchors?: boolean
+  hideAnchors?: boolean;
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
-  ReactMarkdownProps & { inline?: boolean }
+  ReactMarkdownProps & { inline?: boolean };
 
 /**
  * Renders code tag with highlighting based on requested language.
@@ -540,14 +543,14 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   children,
   ...props
 }) => {
-  const match = /language-(\w+)/.exec(className || "")
-  const isStreaming = useContext(StreamingContext)
+  const match = /language-(\w+)/.exec(className || "");
+  const isStreaming = useContext(StreamingContext);
 
   const codeText = String(children ?? "")
     .replace(/^\n/, "")
-    .replace(/\n$/, "")
+    .replace(/\n$/, "");
 
-  const language = match?.[1] || ""
+  const language = match?.[1] || "";
 
   // Handle mermaid code blocks: render as a diagram unless streaming
   // (see StreamingContext for rationale).
@@ -562,7 +565,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
           <MermaidChart source={codeText} />
         </Suspense>
       </ErrorBoundary>
-    )
+    );
   }
 
   return !inline ? (
@@ -584,8 +587,8 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
     <StyledInlineCode className={className} {...omit(props, "node")}>
       {children}
     </StyledInlineCode>
-  )
-}
+  );
+};
 
 /**
  * Renders pre tag with added margin.
@@ -593,28 +596,28 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 export const CustomPreTag: FC<ReactMarkdownProps> = ({ children }) => {
   return (
     <StyledPreWrapper data-testid="stMarkdownPre">{children}</StyledPreWrapper>
-  )
-}
+  );
+};
 
 export const CustomMediaTag: FC<
   JSX.IntrinsicElements["img" | "video" | "audio"] &
     ReactMarkdownProps & { node: Element }
 > = ({ node, ...props }) => {
-  const crossOrigin = useCrossOriginAttribute(props.src)
-  const Tag = node.tagName
+  const crossOrigin = useCrossOriginAttribute(props.src);
+  const Tag = node.tagName;
 
   const attributes = {
     ...props,
     crossOrigin,
-  }
-  return <Tag {...attributes} />
-}
+  };
+  return <Tag {...attributes} />;
+};
 
-const HelpTextContext = createContext<string | undefined>(undefined)
-HelpTextContext.displayName = "HelpTextContext"
+const HelpTextContext = createContext<string | undefined>(undefined);
+HelpTextContext.displayName = "HelpTextContext";
 
 interface CustomHelpIconProps {
-  children?: string
+  children?: string;
 }
 
 /**
@@ -633,16 +636,16 @@ interface CustomHelpIconProps {
  */
 const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
   // Prefer context (from help parameter) over children (from directive label)
-  const contextHelpText = useContext(HelpTextContext)
+  const contextHelpText = useContext(HelpTextContext);
   const tooltipContent =
-    contextHelpText || (typeof children === "string" ? children : "")
+    contextHelpText || (typeof children === "string" ? children : "");
 
   return (
     <StyledHelpIconWrapper>
       <InlineTooltipIcon content={tooltipContent} />
     </StyledHelpIconWrapper>
-  )
-}
+  );
+};
 
 // These are common renderers that don't depend on props or context
 const BASE_RENDERERS = {
@@ -658,7 +661,7 @@ const BASE_RENDERERS = {
   video: CustomMediaTag,
   audio: CustomMediaTag,
   "streamlit-help-icon": CustomHelpIcon,
-}
+};
 
 /**
  * Create a color mapping based on the theme.
@@ -666,7 +669,7 @@ const BASE_RENDERERS = {
  */
 function createColorMapping(theme: EmotionTheme): Map<string, string> {
   const { red, orange, yellow, green, blue, violet, purple, gray, primary } =
-    getMarkdownTextColors(theme)
+    getMarkdownTextColors(theme);
   const {
     redbg,
     orangebg,
@@ -677,7 +680,7 @@ function createColorMapping(theme: EmotionTheme): Map<string, string> {
     purplebg,
     graybg,
     primarybg,
-  }: Record<string, string> = getThemeBackgroundColors(theme)
+  }: Record<string, string> = getThemeBackgroundColors(theme);
 
   return new Map(
     Object.entries({
@@ -705,8 +708,8 @@ function createColorMapping(theme: EmotionTheme): Map<string, string> {
       // Gradient from red, orange, yellow, green, blue, violet, purple
       "rainbow-background": `background: linear-gradient(to right,
         ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg});`,
-    })
-  )
+    }),
+  );
 }
 
 /**
@@ -715,20 +718,20 @@ function createColorMapping(theme: EmotionTheme): Map<string, string> {
 function createRemarkHelpIcon() {
   return () => (tree: MdastRoot) => {
     visit(tree, "textDirective", (node, _index, _parent) => {
-      const nodeName = String(node.name)
+      const nodeName = String(node.name);
 
       // Handle help icon directive (:help[tooltip content])
       if (nodeName === "help") {
-        const data = node.data || (node.data = {})
-        data.hName = "streamlit-help-icon"
-        data.hProperties = data.hProperties || {}
+        const data = node.data || (node.data = {});
+        data.hName = "streamlit-help-icon";
+        data.hProperties = data.hProperties || {};
         // Pass the children through so CustomHelpIcon can extract the content
-        return
+        return;
       }
-    })
+    });
 
-    return tree
-  }
+    return tree;
+  };
 }
 
 /**
@@ -740,12 +743,12 @@ function createRemarkHelpIcon() {
  * @returns true if the color is valid, false otherwise
  */
 export function isValidCssColor(color: string): boolean {
-  if (!color) return false
+  if (!color) return false;
   try {
-    parseToRgba(color)
-    return true
+    parseToRgba(color);
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -754,69 +757,69 @@ export function isValidCssColor(color: string): boolean {
  */
 function createRemarkColoringAndSmall(
   theme: EmotionTheme,
-  colorMapping: Map<string, string>
+  colorMapping: Map<string, string>,
 ) {
   return () => (tree: MdastRoot) => {
     visit(tree, "textDirective", (node, _index, _parent) => {
-      const nodeName = String(node.name)
+      const nodeName = String(node.name);
 
       // Handle shimmer text directive (:shimmer[])
       if (nodeName === "shimmer") {
-        const data = node.data || (node.data = {})
-        data.hName = "span"
-        data.hProperties = data.hProperties || {}
-        data.hProperties.className = "stMarkdownShimmer"
-        return
+        const data = node.data || (node.data = {});
+        data.hName = "span";
+        data.hProperties = data.hProperties || {};
+        data.hProperties.className = "stMarkdownShimmer";
+        return;
       }
 
       // Handle small text directive (:small[])
       if (nodeName === "small") {
-        const data = node.data || (node.data = {})
-        data.hName = "span"
-        data.hProperties = data.hProperties || {}
-        data.hProperties.style = `font-size: ${theme.fontSizes.sm};`
-        return
+        const data = node.data || (node.data = {});
+        data.hName = "span";
+        data.hProperties = data.hProperties || {};
+        data.hProperties.style = `font-size: ${theme.fontSizes.sm};`;
+        return;
       }
 
       // Handle custom color directive (:color[text]{foreground="...", background="..."})
       if (nodeName === "color" && node.attributes) {
-        const { foreground, background } = node.attributes
-        const validForeground = foreground && isValidCssColor(foreground)
-        const validBackground = background && isValidCssColor(background)
+        const { foreground, background } = node.attributes;
+        const validForeground = foreground && isValidCssColor(foreground);
+        const validBackground = background && isValidCssColor(background);
 
-        const data = node.data || (node.data = {})
-        data.hName = "span"
-        data.hProperties = data.hProperties || {}
+        const data = node.data || (node.data = {});
+        data.hName = "span";
+        data.hProperties = data.hProperties || {};
 
         if (validForeground || validBackground) {
-          const styles: string[] = []
+          const styles: string[] = [];
 
           if (validForeground) {
-            styles.push(`color: ${foreground}`)
+            styles.push(`color: ${foreground}`);
           }
 
           if (validBackground) {
-            styles.push(`background-color: ${background}`)
+            styles.push(`background-color: ${background}`);
           }
 
           // Use background class when background is set (has more styling: padding, border-radius)
           const className = validBackground
             ? "stMarkdownColoredBackground"
-            : "stMarkdownColoredText"
+            : "stMarkdownColoredText";
 
-          data.hProperties.style = styles.join("; ")
-          data.hProperties.className = className
+          data.hProperties.style = styles.join("; ");
+          data.hProperties.className = className;
         }
         // When both colors are invalid, render as plain span (no style)
         // to preserve the content text rather than falling through to
         // unsupported directive cleanup which would lose the content
-        return
+        return;
       }
 
       // Handle badge directives (:color-badge[])
-      const badgeMatch = nodeName.match(/^(.+)-badge$/)
+      const badgeMatch = nodeName.match(/^(.+)-badge$/);
       if (badgeMatch && colorMapping.has(badgeMatch[1])) {
-        const color = badgeMatch[1]
+        const color = badgeMatch[1];
 
         // rainbow-badge is not supported because the rainbow text effect uses
         // background-clip: text with a transparent color, which conflicts with
@@ -826,44 +829,44 @@ function createRemarkColoringAndSmall(
         // We can support that in the future if we want to, but I think a
         // rainbow-colored badge shouldn't be a common use case anyway.
         if (color === "rainbow") {
-          return
+          return;
         }
 
-        const textColor = colorMapping.get(color)
-        const bgColor = colorMapping.get(`${color}-background`)
+        const textColor = colorMapping.get(color);
+        const bgColor = colorMapping.get(`${color}-background`);
 
         if (textColor && bgColor) {
-          const data = node.data || (node.data = {})
-          data.hName = "span"
-          data.hProperties = data.hProperties || {}
-          data.hProperties.className = "stMarkdownBadge"
-          data.hProperties.style = `${bgColor}; ${textColor}; font-size: ${theme.fontSizes.sm};`
-          return
+          const data = node.data || (node.data = {});
+          data.hName = "span";
+          data.hProperties = data.hProperties || {};
+          data.hProperties.className = "stMarkdownBadge";
+          data.hProperties.style = `${bgColor}; ${textColor}; font-size: ${theme.fontSizes.sm};`;
+          return;
         }
       }
 
       // Handle color directives (:color[] or :color-background[])
       if (colorMapping.has(nodeName)) {
-        const data = node.data || (node.data = {})
-        const style = colorMapping.get(nodeName)
-        data.hName = "span"
-        data.hProperties = data.hProperties || {}
-        data.hProperties.style = style
+        const data = node.data || (node.data = {});
+        const style = colorMapping.get(nodeName);
+        data.hName = "span";
+        data.hProperties = data.hProperties || {};
+        data.hProperties.style = style;
         // Add class name specific to colored text used for button hover selector
         // to override text color
-        data.hProperties.className = "stMarkdownColoredText"
+        data.hProperties.className = "stMarkdownColoredText";
         // Add class for background color for custom styling
         if (
           style &&
           (/background-color:/.test(style) || /background:/.test(style))
         ) {
-          data.hProperties.className = "stMarkdownColoredBackground"
+          data.hProperties.className = "stMarkdownColoredBackground";
         }
-        return
+        return;
       }
-    })
-    return tree
-  }
+    });
+    return tree;
+  };
 }
 
 /**
@@ -872,7 +875,7 @@ function createRemarkColoringAndSmall(
  * to plain text, ensuring they are rendered rather than ignored.
  */
 function createRemarkUnsupportedDirectivesCleanup(): () => (
-  tree: MdastRoot
+  tree: MdastRoot,
 ) => MdastRoot {
   return () => (tree: MdastRoot) => {
     visit(tree, "textDirective", (node, index, parent) => {
@@ -884,12 +887,12 @@ function createRemarkUnsupportedDirectivesCleanup(): () => (
         const textNode: Text = {
           type: "text",
           value: `:${node.name}`,
-        }
-        parent.children[index] = textNode
+        };
+        parent.children[index] = textNode;
       }
-    })
-    return tree
-  }
+    });
+    return tree;
+  };
 }
 
 /**
@@ -899,7 +902,7 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
   return () => (tree: MdastRoot) => {
     function replace(
       fullMatch: string,
-      iconName: string
+      iconName: string,
     ): MdastTextWithHastData {
       return {
         type: "text",
@@ -927,7 +930,7 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
           },
           hChildren: [{ type: "text", value: iconName }],
         },
-      }
+      };
     }
     // We replace all `:material/` occurrences with `:material_` to avoid
     // conflicts with the directive plugin.
@@ -939,9 +942,9 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
         /:material_(\w+):/g,
         replace as (fullMatch: string, iconName: string) => Text,
       ],
-    ])
-    return tree
-  }
+    ]);
+    return tree;
+  };
 }
 
 /**
@@ -965,11 +968,11 @@ function createRemarkStreamlitLogo() {
             style: `display: inline-block; user-select: none; height: 0.75em; vertical-align: baseline; margin-bottom: -0.05ex;`,
           },
         },
-      }
+      };
     }
-    findAndReplace(tree, [[/:streamlit:/g, replaceStreamlit as () => Text]])
-    return tree
-  }
+    findAndReplace(tree, [[/:streamlit:/g, replaceStreamlit as () => Text]]);
+    return tree;
+  };
 }
 
 /**
@@ -985,7 +988,7 @@ function createRemarkTypographicalSymbols() {
         // Don't replace symbols in links.
         // Note that remark extensions are not applied in code blocks and latex
         // formulas, so we don't need to worry about them here.
-        return
+        return;
       }
 
       if (node.type === "text" && node.value) {
@@ -999,21 +1002,21 @@ function createRemarkTypographicalSymbols() {
           [/(^|\s)>=(\s|$)/g, "$1≥$2"],
           [/(^|\s)<=(\s|$)/g, "$1≤$2"],
           [/(^|\s)~=(\s|$)/g, "$1≈$2"],
-        ]
+        ];
 
-        let newValue = node.value
+        let newValue = node.value;
         for (const [pattern, replacement] of replacements) {
-          newValue = newValue.replace(pattern, replacement as string)
+          newValue = newValue.replace(pattern, replacement as string);
         }
 
         if (newValue !== node.value) {
-          node.value = newValue
+          node.value = newValue;
         }
       }
-    })
+    });
 
-    return tree
-  }
+    return tree;
+  };
 }
 
 /**
@@ -1028,53 +1031,53 @@ const directiveCompletionHandler: RemendHandler = {
   priority: 10,
   handle: (text: string): string => {
     // Match directive patterns like :red[, :small[, :red-background[
-    const directivePattern = /:[a-z][a-z0-9-]*\[/
-    const firstMatch = directivePattern.exec(text)
+    const directivePattern = /:[a-z][a-z0-9-]*\[/;
+    const firstMatch = directivePattern.exec(text);
     if (!firstMatch) {
-      return text
+      return text;
     }
 
     // Track directive openings (:<name>[), nested brackets, and close with ']'.
     // We track all '[' inside directives to handle cases like `:red[text [link]`
     // where nested brackets need proper balancing.
-    let depth = 1
-    let i = firstMatch.index + firstMatch[0].length
+    let depth = 1;
+    let i = firstMatch.index + firstMatch[0].length;
 
     while (i < text.length) {
-      const char = text[i]
+      const char = text[i];
 
       if (char === "[" && depth > 0) {
-        depth += 1
-        i += 1
-        continue
+        depth += 1;
+        i += 1;
+        continue;
       }
 
       if (char === "]" && depth > 0) {
-        depth -= 1
-        i += 1
-        continue
+        depth -= 1;
+        i += 1;
+        continue;
       }
 
       if (char === ":") {
         // Attempt to match another directive starting at this position.
-        const remainingText = text.slice(i)
-        const nextMatch = directivePattern.exec(remainingText)
+        const remainingText = text.slice(i);
+        const nextMatch = directivePattern.exec(remainingText);
         if (nextMatch?.index === 0) {
-          depth += 1
-          i += nextMatch[0].length
-          continue
+          depth += 1;
+          i += nextMatch[0].length;
+          continue;
         }
       }
 
-      i += 1
+      i += 1;
     }
 
-    return depth > 0 ? text + "]".repeat(depth) : text
+    return depth > 0 ? text + "]".repeat(depth) : text;
   },
-}
+};
 
 // Options for remend to use the directive completion handler
-const REMEND_OPTIONS = { handlers: [directiveCompletionHandler] }
+const REMEND_OPTIONS = { handlers: [directiveCompletionHandler] };
 
 // Standard remark plugins that don't depend on theme or props
 // Note: remarkEmoji is lazy-loaded and added conditionally when emoji shortcodes are detected
@@ -1085,7 +1088,7 @@ const BASE_REMARK_PLUGINS = [
   createRemarkHelpIcon(),
   createRemarkStreamlitLogo(),
   createRemarkTypographicalSymbols(),
-]
+];
 
 // Sets disallowed markdown for widget labels
 const LABEL_DISALLOWED_ELEMENTS = [
@@ -1109,31 +1112,31 @@ const LABEL_DISALLOWED_ELEMENTS = [
   "input",
   "hr",
   "blockquote",
-]
+];
 
 // Add link disallowing to the base disallowed elements
-const LINKS_DISALLOWED_ELEMENTS = [...LABEL_DISALLOWED_ELEMENTS, "a"]
+const LINKS_DISALLOWED_ELEMENTS = [...LABEL_DISALLOWED_ELEMENTS, "a"];
 
 interface LinkProps {
-  node?: Element
-  children?: ReactNode
-  href?: string
-  title?: string
-  target?: string
-  rel?: string
+  node?: Element;
+  children?: ReactNode;
+  href?: string;
+  title?: string;
+  target?: string;
+  rel?: string;
 }
 
 // Using target="_blank" without rel="noopener noreferrer" is a security risk:
 // see https://mathiasbynens.github.io/rel-noopener
 export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   // if it's a #hash link, don't open in new tab
-  const { href } = props
+  const { href } = props;
   if (href?.startsWith("#")) {
-    const { children, ...rest } = props
-    return <a {...omit(rest, "node")}>{children}</a>
+    const { children, ...rest } = props;
+    return <a {...omit(rest, "node")}>{children}</a>;
   }
 
-  const { title, children, target, rel, ...rest } = props
+  const { title, children, target, rel, ...rest } = props;
   return (
     <a
       href={href}
@@ -1144,7 +1147,7 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
     >
       {children}
     </a>
-  )
+  );
 }
 
 export const RenderedMarkdown = memo(function RenderedMarkdown({
@@ -1157,10 +1160,10 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   unterminatedParsing,
   hideAnchors,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
-  const theme = useEmotionTheme()
+  const theme = useEmotionTheme();
 
-  const needsKatex = useMemo(() => containsMathSyntax(source), [source])
-  const needsEmoji = useMemo(() => containsEmojiShortcodes(source), [source])
+  const needsKatex = useMemo(() => containsMathSyntax(source), [source]);
+  const needsEmoji = useMemo(() => containsEmojiShortcodes(source), [source]);
 
   // Lazy load plugins only when needed
   const katexPlugin = useLazyPlugin<KatexPlugin>({
@@ -1169,23 +1172,23 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     load: loadKatexPlugin,
     pluginName: "rehype-katex",
     onBeforeLoad: loadKatexStyles,
-  })
+  });
 
   const rawPlugin = useLazyPlugin<RawPlugin>({
     key: "raw",
     needed: allowHTML,
     load: loadRehypeRaw,
     pluginName: "rehype-raw",
-  })
+  });
 
   const emojiPlugin = useLazyPlugin<EmojiPlugin>({
     key: "emoji",
     needed: needsEmoji,
     load: loadRemarkEmoji,
     pluginName: "remark-emoji",
-  })
+  });
 
-  const colorMapping = useMemo(() => createColorMapping(theme), [theme])
+  const colorMapping = useMemo(() => createColorMapping(theme), [theme]);
 
   // Wrap plugins once when they load, not on every render or when other deps change
   const wrappedKatexPlugin = useMemo(
@@ -1193,16 +1196,16 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       isLoadedPlugin(katexPlugin)
         ? wrapRehypePlugin(katexPlugin, "rehype-katex")
         : null,
-    [katexPlugin]
-  )
+    [katexPlugin],
+  );
 
   const wrappedRawPlugin = useMemo(
     () =>
       isLoadedPlugin(rawPlugin)
         ? wrapRehypePlugin(rawPlugin, "rehype-raw")
         : null,
-    [rawPlugin]
-  )
+    [rawPlugin],
+  );
 
   const wrappedEmojiPlugin = useMemo(
     () =>
@@ -1210,43 +1213,43 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
         ? // Cast needed: unified's Plugin type is more complex than our RemarkPluginFactory wrapper
           wrapRemarkPlugin(emojiPlugin as RemarkPluginFactory, "remark-emoji")
         : null,
-    [emojiPlugin]
-  )
+    [emojiPlugin],
+  );
 
   const remarkPlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = [
       ...BASE_REMARK_PLUGINS,
       createRemarkColoringAndSmall(theme, colorMapping),
       createRemarkMaterialIcons(theme),
-    ]
+    ];
 
     if (needsEmoji && wrappedEmojiPlugin) {
-      plugins.push(wrappedEmojiPlugin)
+      plugins.push(wrappedEmojiPlugin);
     }
 
     // This plugin must run last to clean up any unsupported directives
-    plugins.push(createRemarkUnsupportedDirectivesCleanup())
+    plugins.push(createRemarkUnsupportedDirectivesCleanup());
 
-    return plugins
-  }, [theme, colorMapping, needsEmoji, wrappedEmojiPlugin])
+    return plugins;
+  }, [theme, colorMapping, needsEmoji, wrappedEmojiPlugin]);
 
   const rehypePlugins = useMemo<PluggableList>(() => {
-    const plugins: PluggableList = []
+    const plugins: PluggableList = [];
 
     if (needsKatex && wrappedKatexPlugin) {
-      plugins.push(wrappedKatexPlugin)
+      plugins.push(wrappedKatexPlugin);
     }
 
     if (allowHTML && wrappedRawPlugin) {
-      plugins.push(wrappedRawPlugin)
+      plugins.push(wrappedRawPlugin);
     }
 
     // This plugin must run last to ensure the inline property is set correctly
     // and not overwritten by other plugins like rehypeRaw
-    plugins.push(rehypeSetCodeInlineProperty)
+    plugins.push(rehypeSetCodeInlineProperty);
 
-    return plugins
-  }, [allowHTML, needsKatex, wrappedKatexPlugin, wrappedRawPlugin])
+    return plugins;
+  }, [allowHTML, needsKatex, wrappedKatexPlugin, wrappedRawPlugin]);
 
   const renderers = useMemo(
     () =>
@@ -1255,13 +1258,13 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
         a: LinkWithTargetBlank,
         ...overrideComponents,
       }) as Components,
-    [overrideComponents]
-  )
+    [overrideComponents],
+  );
 
   const processedSource = useMemo(() => {
     // Replace :material/ with :material_ to avoid conflicts with the directive plugin.
     // The material icon regex in createMaterialIconPlugin uses :material_ to match.
-    let processed = source.replaceAll(":material/", ":material_")
+    let processed = source.replaceAll(":material/", ":material_");
 
     if (isLabel) {
       // Escape markdown syntax that would be stripped in labels, leaving empty content.
@@ -1274,40 +1277,42 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       // Note: > doesn't need lookahead (always a blockquote), others need (?=\s|$)
       processed = processed.replace(
         /^(\s*)((?:[+\-*]|#+)(?=\s|$)|>)/gm,
-        "$1\\$2"
-      )
+        "$1\\$2",
+      );
       // Ordered lists (1., 2., etc.): escape only the punctuation, not the digits
-      processed = processed.replace(/^(\s*)(\d+)([.)])(?=\s|$)/gm, "$1$2\\$3")
+      processed = processed.replace(/^(\s*)(\d+)([.)])(?=\s|$)/gm, "$1$2\\$3");
     }
 
     // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
     // Only apply when unterminatedParsing is enabled (during streaming).
     // Skip for labels (short, complete strings) and HTML content (may interfere).
     if (unterminatedParsing && !isLabel && !allowHTML) {
-      processed = remend(processed, REMEND_OPTIONS)
+      processed = remend(processed, REMEND_OPTIONS);
     }
 
-    return processed
-  }, [source, isLabel, allowHTML, unterminatedParsing])
+    return processed;
+  }, [source, isLabel, allowHTML, unterminatedParsing]);
 
   const disallowed = useMemo(() => {
-    if (!isLabel) return []
-    return disableLinks ? LINKS_DISALLOWED_ELEMENTS : LABEL_DISALLOWED_ELEMENTS
-  }, [isLabel, disableLinks])
+    if (!isLabel) return [];
+    return disableLinks
+      ? LINKS_DISALLOWED_ELEMENTS
+      : LABEL_DISALLOWED_ELEMENTS;
+  }, [isLabel, disableLinks]);
 
   // Show skeleton while required plugins are still loading
   // A plugin is "loading" if it's needed but state is still null (not loaded, not failed)
   const isLoadingPlugins =
     (needsKatex && katexPlugin === null) ||
     (allowHTML && rawPlugin === null) ||
-    (needsEmoji && emojiPlugin === null)
+    (needsEmoji && emojiPlugin === null);
 
   if (isLoadingPlugins) {
     return (
       <ErrorBoundary>
         <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
       </ErrorBoundary>
-    )
+    );
   }
 
   return (
@@ -1330,8 +1335,8 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
         </HideAnchorsContext.Provider>
       </HelpTextContext.Provider>
     </StreamingContext.Provider>
-  )
-})
+  );
+});
 
 /**
  * Wraps the <ReactMarkdown> component to include our standard
@@ -1352,7 +1357,7 @@ const StreamlitMarkdown: FC<Props> = ({
   unterminatedParsing,
   hideAnchors,
 }) => {
-  const isInDialog = useContext(IsDialogContext)
+  const isInDialog = useContext(IsDialogContext);
 
   return (
     <StyledStreamlitMarkdown
@@ -1376,7 +1381,7 @@ const StreamlitMarkdown: FC<Props> = ({
         hideAnchors={hideAnchors}
       />
     </StyledStreamlitMarkdown>
-  )
-}
+  );
+};
 
-export default memo(StreamlitMarkdown)
+export default memo(StreamlitMarkdown);
