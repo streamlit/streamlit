@@ -58,9 +58,10 @@ CSS, positioning, or element internals.
 
 ### Theme mapping
 
-Introduce public `ThemeConfig` and `ThemeVariantConfig` `TypedDict`s. Python keys use
-`snake_case`, consistent with Streamlit's Python API. Each visual key corresponds to an existing
-theme token.
+Introduce public `ThemeConfig` and `ThemeVariantConfig` `TypedDict`s, re-exported from the
+top-level `streamlit` namespace (for example, `from streamlit import ThemeConfig`) so IDEs can
+discover them when annotating theme mappings. Python keys use `snake_case`, consistent with
+Streamlit's Python API. Each visual key corresponds to an existing theme token.
 
 ```python
 class ThemeVariantConfig(TypedDict, total=False):
@@ -188,6 +189,10 @@ with st.container(theme={"primary_color": "green", "button_radius": "full"}):
         st.button("Orange pill", type="primary")  # Inherits button_radius.
 ```
 
+Inheritance from the nearest themed container applies only when the inner scope omits `base` (or
+uses `"inherit"`). Setting `base="light"` or `base="dark"` resets the starting point to the app's
+configured variant, so an outer scope's tokens (such as `primary_color`) no longer carry through.
+
 A scope can follow the app's light/dark mode:
 
 ```python
@@ -269,8 +274,13 @@ The runtime override is:
 
 This is a deliberate difference from `st.container`, where `theme=None` and `theme={}` both mean
 "no scoped override." On `st.set_page_config`, `None` preserves the current runtime override while
-`{}` clears it, because the page-level command is additive across reruns and navigation. The scope
-matrix below summarizes when to reach for each command.
+`{}` clears it, because the page-level command is additive across reruns and navigation:
+
+| `theme` value | `st.set_page_config` | `st.container` |
+|---|---|---|
+| `None` (default) | Keep the current runtime override | No scoped override |
+| `{}` (empty) | Clear the runtime override | No scoped override |
+| `{...}` (non-empty) | Replace the runtime override | Apply the scoped override |
 
 For page-specific themes, each page sets its mapping. A page that wants the normal app theme uses
 `theme={}` because page configuration otherwise inherits across navigation:
@@ -286,9 +296,9 @@ st.set_page_config(theme={"primary_color": "#DC2626"})
 st.set_page_config(theme={})
 ```
 
-`st.context.theme.type` reflects the effective page theme on the next rerun sent by the browser.
-It cannot reflect a theme command earlier in the same Python run because the new value does not
-exist in the browser until that run's forward message is processed.
+`st.context.theme.type` reflects the effective page theme on the next rerun the browser sends. It
+cannot reflect a theme command from the current Python run because the browser has not yet
+processed that run's forward message.
 
 ### Scope matrix
 
@@ -354,4 +364,4 @@ exist in the browser until that run's forward message is processed.
 | No new dependencies | ✅ |
 | Metrics collected | Record command/scope usage only; never collect theme values. |
 | Any security/legal impact? | No raw CSS or new remote resources; reuse existing value validation. |
-| Any docs changes needed? | Add `st.container` and `st.set_page_config` docs plus a theming guide section. |
+| Any docs changes needed? | Add `st.container` and `st.set_page_config` docs plus a theming guide section, including a note that apps are responsible for color contrast (for example `primary_color`/`background_color`/`text_color` pairs), since the feature does not enforce WCAG. |

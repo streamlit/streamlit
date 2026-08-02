@@ -93,6 +93,11 @@ Each layer is partial. Unspecified values come from the layer directly above it.
 explicit light/dark `base` first selects that app mode and then applies its values. Otherwise, its
 active `light` or `dark` section follows the effective mode of the layer above it.
 
+An explicit `base` also changes where unspecified tokens come from: it starts from the app's
+configured light/dark variant (falling back to the preset) instead of the nearest scoped
+container, so an outer scope's tokens do not inherit through it. Implementations must not merge the
+explicit-`base` path against `parentEmotion`.
+
 ### Protobuf
 
 Define a reusable wrapper next to `CustomThemeConfig` in `NewSession.proto`:
@@ -116,8 +121,9 @@ override tokens) as `optional`, so an explicit `false`/empty value is distinguis
 omitted field. `skipProtobufDefaults` therefore only guards against genuinely unset scalars and
 never erases a deliberate `false`.
 
-Importing `NewSession.proto` couples `Block`/`PageConfig` to the session-bootstrap schema. An
-alternative is a shared `Theme.proto` imported by all three messages, but relocating
+Importing `NewSession.proto` into `Block.proto` and `PageConfig.proto` creates a dependency on the
+session-initialization message definitions. An alternative is a shared `Theme.proto` imported by
+all three messages, but relocating
 `CustomThemeConfig` would move its wire location and break external `NewSession` consumers, so this
 proposal keeps the message in place and revisits extraction only if the coupling becomes a problem.
 
@@ -285,6 +291,8 @@ next client-originated rerun. Do not trigger a rerun automatically.
 
 - Scoped providers are pure render-tree data and require no frontend state store or cleanup.
 - A full or fragment rerun can replace a block's override at the same delta path.
+- A fragment rerun replaces only the fragment's delta subtree; an enclosing themed container's
+  provider stays mounted and keeps scoping its descendants.
 - Changing a theme does not change container or widget identity.
 - The session runtime layer lives for the websocket/app session and is discarded on disconnect.
 - Navigation inherits the previous page-config layer until another page replaces or clears it,
