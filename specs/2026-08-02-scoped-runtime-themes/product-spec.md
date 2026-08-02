@@ -126,9 +126,10 @@ the active variant immediately in the browser. It does not require a Python reru
 variant is provided, the other mode uses the shared values over its inherited base.
 
 Invalid keys and values raise a `StreamlitAPIException` with the invalid key/value and accepted
-alternatives. Colors accept hex, `rgb()`/`rgba()`, and CSS named colors (such as `"green"`), so the
-examples below are valid. Radii and chart palettes follow the same rules as their `config.toml`
-equivalents.
+alternatives. Colors accept hex, `rgb()`/`rgba()`, and W3C/CSS named colors (such as `"green"`), so
+the examples below are valid. These are standard CSS color names, not Streamlit's semantic palette
+names (the `red`/`orange`/`green` tokens used by markdown, badges, and dataframes). Radii and chart
+palettes follow the same rules as their `config.toml` equivalents.
 
 ### Scoped themes with `st.container`
 
@@ -142,6 +143,10 @@ def st.container(
 ) -> DeltaGenerator:
     ...
 ```
+
+This `theme` parameter is unrelated to the chart-level `theme` argument on `st.plotly_chart`,
+`st.altair_chart`, and similar commands, which is a `Literal["streamlit"] | None` toggle for
+Streamlit's chart styling. Container and page `theme=` always take a `ThemeConfig` mapping.
 
 The simplest use case remains a regular container around the target element:
 
@@ -359,6 +364,8 @@ processed that run's forward message.
 - Named theme registries or automatic account persistence.
 - New semantic widget variants such as `type="danger"`; scoped primary colors address some of
   the visual need but do not replace a dedicated semantic API.
+- Optional development-mode contrast warnings for low-contrast token combinations. Apps remain
+  responsible for WCAG contrast; automated warnings can be revisited during implementation.
 
 ## Checklist
 

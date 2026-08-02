@@ -94,10 +94,9 @@ explicit light/dark `base` first selects that app mode and then applies its valu
 active `light` or `dark` section follows the effective mode of the layer above it.
 
 An explicit `base` also changes where unspecified tokens come from: it starts from the app's
-configured light/dark variant (falling back to the preset) instead of the nearest scoped
-container, so an outer scope's tokens do not inherit through it. When `base` is explicit, the
-implementation must not inherit unspecified tokens from `parentEmotion`; it starts from the
-resolved app variant instead.
+configured light/dark variant (falling back to the preset), not the nearest scoped container, so an
+outer scope's tokens do not inherit through it. The implementation must therefore not inherit
+unspecified tokens from `parentEmotion` in the explicit-`base` path.
 
 ### Protobuf
 
@@ -123,10 +122,10 @@ omitted field. `skipProtobufDefaults` therefore only guards against genuinely un
 never erases a deliberate `false`.
 
 Importing `NewSession.proto` into `Block.proto` and `PageConfig.proto` creates a dependency on the
-session-initialization message definitions. An alternative is a shared `Theme.proto` imported by
-all three messages, but relocating
-`CustomThemeConfig` would move its wire location and break external `NewSession` consumers, so this
-proposal keeps the message in place and revisits extraction only if the coupling becomes a problem.
+session-initialization message definitions. A shared `Theme.proto` imported by all three messages
+is an alternative, but relocating `CustomThemeConfig` would change its wire location and break
+external `NewSession` consumers. Keep it in place for this iteration and revisit extraction if the
+coupling becomes costly.
 
 Import `NewSession.proto` from `Block.proto` and `PageConfig.proto`, then add:
 
@@ -164,9 +163,11 @@ The serializer is used by both public commands and must:
 3. Populate shared fields in `ThemeOverride.values` and populate the optional one-level
    `values.light`/`values.dark` messages with the same field schema.
 4. Reject `base`, `light`, or `dark` inside a variant mapping to prevent recursive sections.
-5. Validate colors against hex, `rgb()`/`rgba()`, and CSS named colors (matching the frontend
-   `isColor`), rejecting invalid values instead of copying the config path's warn-and-continue
-   behavior.
+5. Validate colors against an explicit allowlist — hex, `rgb()`/`rgba()`, and CSS named colors —
+   and reject anything else instead of copying the config path's warn-and-continue behavior. Do
+   not reuse the frontend `isColor` helper: it runs in the browser and also accepts `hsl()`,
+   `currentColor`, and `transparent`, which this API excludes. Mirror the same allowlist in the
+   frontend check.
 6. Validate radius literals/units and chart-palette lengths before enqueueing.
 7. Reject excluded fields rather than silently ignoring them.
 
