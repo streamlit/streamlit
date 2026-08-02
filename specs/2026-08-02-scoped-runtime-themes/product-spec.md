@@ -21,7 +21,7 @@ Streamlit themes are primarily deployment-level configuration. Users can define 
 logic. Common workarounds inject CSS against generated DOM selectors, which is global, brittle,
 and difficult to compose.
 
-The requests fall into two related scopes:
+The requests fall into several related use-case clusters:
 
 - [#10749](https://github.com/streamlit/streamlit/issues/10749) requests a stylable container
   so a theme value can affect only selected elements. A follow-up also asks for page-specific
@@ -200,8 +200,10 @@ Behavior:
 
 - The override applies to the container surface and all descendants, including columns, tabs,
   expanders, charts, and custom components created inside it.
-- The container paints its configured `background_color` and establishes its configured
-  `text_color`. Existing padding behavior is unchanged; use `border=True` for an inset card.
+- The container paints a surface only when the scope sets `background_color`, and applies a new
+  `text_color` only when the scope sets it. A primary-only override adds no opaque background, so
+  it preserves today's stacking behavior. Existing padding behavior is unchanged; use `border=True`
+  for an inset card.
 - Siblings and ancestors remain unchanged.
 - Portaled descendants such as select menus, tooltips, and popover bodies keep the scoped theme.
 - Light/dark sections follow the effective parent mode unless `base` forces a mode.
@@ -233,10 +235,13 @@ mode = st.segmented_control(
     label_visibility="collapsed",
 )
 
-st.set_page_config(
-    theme={**brand_theme, "base": mode}
-)
+st.set_page_config(theme={**brand_theme, "base": mode})
 ```
+
+Unlike most page settings, `theme` may be set after other commands have run, so the override can
+depend on widget values from the same run. On the first run of a new session the control returns
+its `default`, so the initial theme matches that default; persist the choice (for example in
+`st.session_state` or a user profile) to restore a returning user's selection.
 
 If the app should continue following the user's Streamlit/system theme selection, omit `base`:
 
@@ -261,6 +266,11 @@ The runtime override is:
   result deterministic when app state changes and removes omitted old tokens.
 - `theme={}` clears the runtime override and restores the configured/user-selected app theme.
 - If multiple calls provide `theme` in one run, the last mapping wins.
+
+This is a deliberate difference from `st.container`, where `theme=None` and `theme={}` both mean
+"no scoped override." On `st.set_page_config`, `None` preserves the current runtime override while
+`{}` clears it, because the page-level command is additive across reruns and navigation. The scope
+matrix below summarizes when to reach for each command.
 
 For page-specific themes, each page sets its mapping. A page that wants the normal app theme uses
 `theme={}` because page configuration otherwise inherits across navigation:

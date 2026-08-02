@@ -110,6 +110,17 @@ The wrapper is necessary because `CustomThemeConfig.base` is a non-optional prot
 unset value is indistinguishable from `LIGHT`. Do not change the existing field's presence or move
 `CustomThemeConfig` to another proto file because `NewSession` is consumed by external services.
 
+The wrapper is only needed for `base`. The scalar visual tokens already carry proto3 field
+presence: `CustomThemeConfig` declares `show_widget_border` and `link_underline` (and the other
+override tokens) as `optional`, so an explicit `false`/empty value is distinguishable from an
+omitted field. `skipProtobufDefaults` therefore only guards against genuinely unset scalars and
+never erases a deliberate `false`.
+
+Importing `NewSession.proto` couples `Block`/`PageConfig` to the session-bootstrap schema. An
+alternative is a shared `Theme.proto` imported by all three messages, but relocating
+`CustomThemeConfig` would move its wire location and break external `NewSession` consumers, so this
+proposal keeps the message in place and revisits extraction only if the coupling becomes a problem.
+
 Import `NewSession.proto` from `Block.proto` and `PageConfig.proto`, then add:
 
 ```protobuf
@@ -212,9 +223,12 @@ containerElement = node.deltaBlock.theme ? (
 ```
 
 The provider must wrap the `FlexBoxContainer`, not just `ChildRenderer`, so the container's border,
-radii, gap-related styles, and surface use the effective scope. When a theme is present, set
-`backgroundColor: theme.colors.bgColor` and `color: theme.colors.bodyText` on
-`StyledFlexContainerBlock`. Do not add padding or a border beyond the existing `border` behavior.
+radii, gap-related styles, and surface use the effective scope. Gate surface painting on the tokens
+the scope actually sets: apply `backgroundColor: theme.colors.bgColor` only when the override
+includes `background_color`, and `color: theme.colors.bodyText` only when it includes `text_color`.
+A primary-only scope therefore adds no opaque `StyledFlexContainerBlock` background and preserves
+today's stacking behavior, matching the product spec. Do not add padding or a border beyond the
+existing `border` behavior.
 
 This design also handles elements inserted later through `container.button(...)`: their render-tree
 nodes remain descendants of the same block.
@@ -309,6 +323,8 @@ same render cost as a user changing the theme in Streamlit's menu today.
 ### Frontend unit tests
 
 - A themed block updates its own surface and descendants but not siblings/ancestors.
+- A scope that sets `background_color`/`text_color` paints the container surface, while a
+  primary-only scope leaves `StyledFlexContainerBlock` without an opaque background.
 - Nested partial scopes inherit unspecified tokens and override specified tokens.
 - A scope with light/dark sections switches variants when its inherited mode changes; an explicit
   base stays fixed.
