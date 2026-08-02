@@ -108,13 +108,12 @@ independently, and whichever is hit first triggers eviction:
 ```python
 # Evict when older than 1 hour OR when the cache exceeds 1 GB, whichever comes first.
 @st.cache_data(ttl="1h", max_size="1GB")
-def fetch_report(report_id: str) -> pd.DataFrame:
-    ...
+def fetch_report(report_id: str) -> pd.DataFrame: ...
+
 
 # max_size and max_entries can both apply (belt and suspenders).
 @st.cache_data(max_entries=100, max_size="2GB")
-def transform(key: str) -> pd.DataFrame:
-    ...
+def transform(key: str) -> pd.DataFrame: ...
 ```
 
 **What "size" means:** For `st.cache_data`, entries are stored as **pickled bytes**, so

@@ -49,7 +49,7 @@ class TTLCache(MutableMapping[K, V]):
     ) -> None:
         ...
         self._getsizeof = getsizeof or (lambda _v: 1)
-        self._currsize = 0            # running sum of entry sizes
+        self._currsize = 0  # running sum of entry sizes
         self._sizes: dict[K, int] = {}  # per-key size, so removals adjust the total
 ```
 
