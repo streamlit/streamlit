@@ -38,6 +38,9 @@ thing developers actually care about — memory:
 
 - [#2911](https://github.com/streamlit/streamlit/issues/2911) — Add option to limit
   `st.cache` size by memory footprint rather than total number of entries.
+- [#6602](https://github.com/streamlit/streamlit/issues/6602) — Long-lived session support
+  (memory reduction): steadily increasing memory in long-running apps, which explicitly
+  lists #2911 among the issues a memory-bounded cache would help address.
 
 **Use cases:**
 
