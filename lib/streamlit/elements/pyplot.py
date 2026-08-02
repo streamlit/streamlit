@@ -236,11 +236,13 @@ def marshall(
     #
     # An `<?xml` prolog alone is not enough: image_to_url only treats a string as
     # SVG when a `<svg` tag is present too, so require that here as well. Otherwise
-    # a non-SVG XML payload would be decoded and then rejected downstream.
+    # a non-SVG XML payload would be decoded and then rejected downstream. The
+    # search is bounded because Matplotlib emits `<svg` within the first few
+    # hundred bytes, so an unbounded scan of a large payload would be wasted work.
     payload = image.getvalue()
     stripped = payload.lstrip()
     is_svg = stripped.startswith(b"<svg") or (
-        stripped.startswith(b"<?xml") and b"<svg" in stripped
+        stripped.startswith(b"<?xml") and b"<svg" in stripped[:2048]
     )
     image_for_proto: str | io.BytesIO = payload.decode("utf-8") if is_svg else image
 
