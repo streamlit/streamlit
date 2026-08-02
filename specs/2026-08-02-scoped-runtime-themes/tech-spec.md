@@ -95,8 +95,9 @@ active `light` or `dark` section follows the effective mode of the layer above i
 
 An explicit `base` also changes where unspecified tokens come from: it starts from the app's
 configured light/dark variant (falling back to the preset) instead of the nearest scoped
-container, so an outer scope's tokens do not inherit through it. Implementations must not merge the
-explicit-`base` path against `parentEmotion`.
+container, so an outer scope's tokens do not inherit through it. When `base` is explicit, the
+implementation must not inherit unspecified tokens from `parentEmotion`; it starts from the
+resolved app variant instead.
 
 ### Protobuf
 
@@ -163,7 +164,9 @@ The serializer is used by both public commands and must:
 3. Populate shared fields in `ThemeOverride.values` and populate the optional one-level
    `values.light`/`values.dark` messages with the same field schema.
 4. Reject `base`, `light`, or `dark` inside a variant mapping to prevent recursive sections.
-5. Validate CSS colors with the same parser used by config theming.
+5. Validate colors against hex, `rgb()`/`rgba()`, and CSS named colors (matching the frontend
+   `isColor`), rejecting invalid values instead of copying the config path's warn-and-continue
+   behavior.
 6. Validate radius literals/units and chart-palette lengths before enqueueing.
 7. Reject excluded fields rather than silently ignoring them.
 
@@ -212,8 +215,8 @@ the matching configured light/dark theme from `availableThemes`, falling back to
 Before calling `createTheme`, determine the mode from the explicit `base` or the inherited base
 theme, merge flat `values` with `values.light` or `values.dark`, and strip all section fields. Use
 the existing `mergeWith`/`skipProtobufDefaults` behavior so unset protobuf scalar defaults do not
-erase shared values. Select the variant before applying color overrides; this prevents a custom
-background color from making its own branch selection oscillate.
+erase shared values. Select the variant before applying color overrides; this prevents a
+mode-dependent color from causing the variant selection itself to flip back and forth.
 
 In `BlockNodeRenderer`, wrap the `FlexBoxContainer` for a block with `deltaBlock.theme`:
 

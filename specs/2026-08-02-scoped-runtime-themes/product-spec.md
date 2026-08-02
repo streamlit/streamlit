@@ -126,8 +126,9 @@ the active variant immediately in the browser. It does not require a Python reru
 variant is provided, the other mode uses the shared values over its inherited base.
 
 Invalid keys and values raise a `StreamlitAPIException` with the invalid key/value and accepted
-alternatives. The validation rules for colors, radii, and chart palettes match their existing
-`config.toml` equivalents.
+alternatives. Colors accept hex, `rgb()`/`rgba()`, and CSS named colors (such as `"green"`), so the
+examples below are valid. Radii and chart palettes follow the same rules as their `config.toml`
+equivalents.
 
 ### Scoped themes with `st.container`
 
@@ -246,7 +247,10 @@ st.set_page_config(theme={**brand_theme, "base": mode})
 Unlike most page settings, `theme` may be set after other commands have run, so the override can
 depend on widget values from the same run. On the first run of a new session the control returns
 its `default`, so the initial theme matches that default; persist the choice (for example in
-`st.session_state` or a user profile) to restore a returning user's selection.
+`st.session_state` or a user profile) to restore a returning user's selection. Because the override
+applies only when the browser processes that run's `PageConfig` message, a theme set later in a run
+can briefly show the configured theme on first paint (most noticeable on reconnect or slow
+networks).
 
 If the app should continue following the user's Streamlit/system theme selection, omit `base`:
 
@@ -267,8 +271,9 @@ The runtime override is:
 `st.set_page_config` remains additive at the parameter level:
 
 - `theme=None` does not change the previous runtime theme override.
-- A non-empty mapping replaces the previous runtime override mapping as a whole. This makes the
-  result deterministic when app state changes and removes omitted old tokens.
+- A non-empty mapping replaces the previous runtime override entirely, so tokens present in the old
+  override but absent from the new one are dropped. This keeps the result deterministic when app
+  state changes.
 - `theme={}` clears the runtime override and restores the configured/user-selected app theme.
 - If multiple calls provide `theme` in one run, the last mapping wins.
 
