@@ -24,11 +24,13 @@ through `pandas.Styler`.
 
 ## Problem
 
-Coloring a cell by its value is the single biggest gap for building dashboards with
-Streamlit tables. Today `column_config` can only set a **static** color
-(`LineChartColumn(color=...)`, `ProgressColumn(color=...)`), so there is no way to express
-"red if negative, green if positive," a health score that shifts color at thresholds, or a
-bad-value highlight.
+Coloring a cell by its value is an important gap for building dashboards with
+Streamlit tables. Today `column_config` supports value-based coloring only for a few
+chart-style columns via `color="auto"`/`"auto-inverse"` (e.g. `LineChartColumn`,
+`ProgressColumn`), and even there the logic is fixed (increasing/decreasing, above/below
+half). For a plain data column (number, date, time) `color` is at most a **static** color,
+so there is no way to express "red if negative, green if positive," a health score that
+shifts color at thresholds, or a bad-value highlight.
 
 The only existing option is `pandas.Styler`, and it has real limitations for this use case:
 
