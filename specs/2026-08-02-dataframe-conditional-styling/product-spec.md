@@ -8,8 +8,9 @@ created: 2026-08-02
 ## Summary
 
 Add a single `color` parameter to the **continuous** `column_config` column types —
-`NumberColumn`, `DateColumn`, `TimeColumn`, and `DatetimeColumn` — that sets each cell's
-**background** color based on its value, evaluated **client-side**. It supports two forms:
+`NumberColumn`, `DateColumn`, `TimeColumn`, and `DatetimeColumn` — that colors each cell from
+its value (the **background** by default, or the **text** via `ColorRule(target="text")`),
+evaluated **client-side**. It supports two forms:
 
 - **Rules** — a short list of declarative conditions (`value > 10 → green`, `value == 0 →
   gray`, …), each evaluated per-row against the cell's own value.
@@ -19,8 +20,8 @@ Add a single `color` parameter to the **continuous** `column_config` column type
 Both stay correct in `st.data_editor` and with lazy loading: rules are purely per-row, and the
 gradient's domain is the **explicit, user-set** `min_value`/`max_value` — never derived from a
 column scan, so it never goes stale as data is edited or streamed in. Anything more advanced
-(text color, categorical text, per-row highlighting, arbitrary Python logic) stays available
-through `pandas.Styler`.
+(categorical text, per-row highlighting, arbitrary Python logic) stays available through
+`pandas.Styler`.
 
 ## Problem
 
@@ -66,8 +67,26 @@ st.column_config.NumberColumn(
 )
 ```
 
-`color` sets the **cell background**, computed in the browser from the cell's raw value.
-The same parameter is added to `DateColumn`, `TimeColumn`, and `DatetimeColumn`. It accepts:
+where `ColorSpec` enumerates every accepted form:
+
+```python
+# A single paint color: a named theme color ("red", "primary"), a hex code,
+# or an rgb()/rgba() string.
+PaintColor = str
+
+ColorSpec = (
+    PaintColor  # one static fill color for every cell
+    | Literal["auto", "auto-inverse"]  # sign-based numeric shortcut
+    | Literal["sequential", "diverging"]  # theme color scale
+    | list[PaintColor]  # a custom gradient (2+ colors)
+    | ColorRule  # one value rule
+    | list[ColorRule]  # a set of value rules
+)
+```
+
+By default `color` sets the **cell background**, computed in the browser from the cell's raw
+value. The same parameter is added to `DateColumn`, `TimeColumn`, and `DatetimeColumn`. It
+accepts:
 
 | Form | Type | Meaning |
 |------|------|---------|
@@ -109,9 +128,11 @@ plain two-color split *and* validation bounds, that combination isn't expressibl
 `"auto"` is **numeric-only** — it's inherently sign/zero-based, and date/time/datetime columns
 have no natural zero (the epoch pivot is meaningless, and times are always non-negative), so
 `"auto"` on a temporal column raises a clear error. For the temporal equivalents, use an
-explicit rule with a cutoff you compute in Python (`ColorRule("less_than", datetime.now(),
-"red")` for "overdue" — stable and reproducible, unlike a moving "now" pivot) or a
-gradient/theme scale across the date `min_value`/`max_value` for a recency heatmap.
+explicit rule with a cutoff you compute in Python — e.g. `cutoff = datetime.now()` evaluated
+once per run, then `ColorRule("less_than", cutoff, "red")` for "overdue". That cutoff is fixed
+for the rerun (stable and reproducible), unlike a client-side "now" pivot that would drift as
+the clock ticks. Or use a gradient/theme scale across the date `min_value`/`max_value` for a
+recency heatmap.
 
 ### The `ColorRule` helper
 
@@ -127,8 +148,8 @@ st.column_config.ColorRule(
         "is_null", "is_not_null",
     ] = "always",
     value: Scalar | Sequence[Scalar] | None = None,
-    color: ColorSpec | None = None,             # color applied when the rule matches
-    target: Literal["background", "text"] = "background",   # what the color fills
+    color: PaintColor,  # the paint color applied when the rule matches (required)
+    target: Literal["background", "text"] = "background",  # what the color fills
 )
 ```
 
@@ -142,14 +163,15 @@ st.column_config.ColorRule(
   independently: within a `list`, the first matching `target="background"` rule sets the fill
   and the first matching `target="text"` rule sets the text color, so one list can drive both.
 - Rules are evaluated in order; the **first matching** rule (per target) wins. Cells matching
-  no rule are left as-is. Put general rules first and narrow exceptions last, or vice versa.
-- This matches the sibling spec's `StyleRule` (trimmed to `background`/`text` color), so the
-  two remain reconcilable.
+  no rule are left as-is. Place the most specific rules first and put a general fallback (e.g.
+  `"always"`) last.
+- `ColorRule` follows the standard conditional-formatting rule model, so it stays extensible to
+  future cell styles (e.g. bold or borders) without changing this operator set.
 
 This is the standard "conditional formatting rules" model (Excel / Google Sheets / Power BI
-/ AG Grid `cellClassRules`) rather than a string expression language (`"{x} > 10"`), which
-we avoid for the same reasons the sibling spec does: parsing, quoting, weak typing, and a
-larger security surface.
+/ AG Grid `cellClassRules`) rather than a string expression language (`"{x} > 10"`), which we
+avoid because of its parsing, quoting, weak-typing, and security-surface costs (see
+[Alternatives](#alternatives-considered)).
 
 ### Gradient (color scale)
 
@@ -251,7 +273,7 @@ st.dataframe(
 )
 ```
 
-**Arbitrary, non-contiguous conditions (your example):**
+**Arbitrary, non-contiguous conditions:**
 
 ```python
 st.column_config.NumberColumn(
@@ -316,6 +338,10 @@ live, without a domain to recompute, and never changes the returned value or CSV
   `target="text"` instead colors the text and leaves the background untouched (no auto-contrast
   — you chose the text color). When a rule sets the background and another sets the text, both
   apply; a `target="text"` color always wins over auto-contrast.
+- **`"auto"` + bounds.** Setting `min_value`/`max_value` upgrades `color="auto"` from a binary
+  green/red split to a magnitude-scaled diverging gradient (see [Sign-based
+  `"auto"`](#sign-based-auto)), so adding bounds purely for input validation also changes the
+  coloring.
 - **No column scan.** Rules depend only on the cell's own value; gradients depend only on the
   cell's value plus the *explicit* `min_value`/`max_value`. Neither reads other rows, so both
   stay correct in `st.data_editor` (live edits, added rows) and lazy dataframes.
