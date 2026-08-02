@@ -12,12 +12,11 @@ multi-item controls, and wrapping button-like commands. Setting `wrap=False` kee
 controlled content to one row: collections use local horizontal scrolling, while a button
 keeps its standard height and ellipsizes its label.
 
-This is an opt-in layout control. Existing apps keep their current responsive behavior,
-except `st.menu_button`, whose label changes from always ellipsized to wrapping by default
-for consistency with other buttons. The initial API covers `st.container`, `st.columns`,
-`st.multiselect`, `st.pills`, `st.segmented_control`, `st.button`,
-`st.download_button`, `st.link_button`, `st.form_submit_button`, `st.popover`,
-`st.menu_button`, `st.checkbox`, and `st.toggle`.
+This is an opt-in layout control. Existing apps keep their current responsive behavior.
+The initial API covers `st.container`, `st.columns`, `st.multiselect`, `st.pills`,
+`st.segmented_control`, `st.button`, `st.download_button`, `st.link_button`,
+`st.form_submit_button`, `st.popover`, `st.menu_button`, `st.checkbox`, and
+`st.toggle`.
 
 ## Problem
 
@@ -97,7 +96,7 @@ standard buttons.
 - Keep overflow local to the element so an app does not gain a page-level horizontal
   scrollbar.
 - Let app authors keep buttons at their standard height without hiding the entire action.
-- Use the same default behavior for all button-like controls.
+- Preserve current behavior by default.
 
 ### Non-goals
 
@@ -393,10 +392,11 @@ For labels with Markdown, ellipsis applies to the rendered inline label as a who
 Icons and shortcuts are not ellipsized. The button's return value, navigation or download
 behavior, callback, and form behavior are unchanged.
 
-`st.menu_button` currently behaves like `wrap=False`. This proposal intentionally changes
-its default visual behavior to match every other button-like command: labels wrap by
-default, and authors use `wrap=False` when fixed toolbar height is more important.
-This changes only the trigger label; menu option labels are unaffected.
+`st.menu_button` uses the same wrapping behavior as other buttons today. Its expansion
+icon leaves less horizontal space for the label, so an equally sized menu button can wrap
+sooner than a standard button. With `wrap=False`, the label ellipsizes while the expansion
+icon remains visible. This parameter controls only the trigger label; menu option labels
+are unaffected.
 
 `st.page_link` is not included because its navigation-row design already keeps labels to
 one line and is not intended to grow like a general-purpose button.
@@ -452,11 +452,10 @@ for text are separate behaviors, not additional values of this parameter.
 st.segmented_control("View", options, wrap=False)
 ```
 
-- **Pros:** Short, discoverable, and consistent; gives all button-like controls the same
-  default; maps directly to the user-visible one-row choice.
+- **Pros:** Short, discoverable, and consistent; preserves current behavior by default;
+  maps directly to the user-visible one-row choice.
 - **Cons:** The different overflow treatments must be documented; adding the parameter
-  to thirteen commands increases the API surface; `st.menu_button` has an intentional
-  visual default change.
+  to thirteen commands increases the API surface.
 
 ### Option B: `overflow: Literal["wrap", "scroll"]`
 
@@ -556,16 +555,14 @@ contract in a follow-up if demand warrants.
 - Test touch-style horizontal scrolling and keyboard navigation.
 - Verify light/dark themes, sidebar, dialog, form, popover, fragment, and embedded iframe
   contexts.
-- Verify old protobuf messages retain today's wrapping behavior, with the sole
-  exception of `st.menu_button`: a message without the `wrap` field falls back to the new
-  wrap-by-default behavior, matching the intentional change described above.
+- Verify old protobuf messages retain today's wrapping behavior.
 
 ## Checklist
 
 | Item | ✅ or comment |
 | --- | --- |
 | Works on SiS, Cloud, etc? | ✅ Frontend-only behavior; no platform-specific API |
-| No breaking API changes | ⚠️ No Python API break, but one intentional visual breaking change: `st.menu_button` labels wrap by default instead of ellipsizing, so constrained, long labels render differently. Must be called out as a breaking change in the implementation PR's release notes |
+| No breaking API changes | ✅ Additive, with current behavior as the default |
 | No new dependencies | ✅ Uses native flex and overflow behavior |
 | Metrics collected | ✅ Page profiling for explicit `wrap=False` |
 | Any security/legal impact? | ✅ None |
