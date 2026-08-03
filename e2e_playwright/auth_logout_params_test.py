@@ -163,7 +163,7 @@ def _click_and_wait_for_oauth_redirect(
 @pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
 def test_logout_applies_logout_params(
     app: Page, app_base_url: str, oidc_server_port: int
-):
+) -> None:
     """Test that auth.logout_params customizes the OIDC logout URL.
 
     Verifies that ``logout_params`` adds ``logout_hint`` (substituted from the

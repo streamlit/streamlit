@@ -245,9 +245,10 @@ def _resolve_logout_param_template(
 ) -> str | None:
     """Resolve ``{field}`` placeholders in a logout param value.
 
-    Returns the resolved string, or ``None`` if any referenced field is
-    missing or empty (signaling the whole param should be omitted). A value
-    without any ``{field}`` placeholder is returned unchanged.
+    Returns the resolved string, or ``None`` if any referenced field is missing,
+    empty, or a non-scalar (list/object) value (signaling the whole param should
+    be omitted). A value without any ``{field}`` placeholder is returned
+    unchanged.
     """
     if "{" not in value:
         return value
@@ -257,7 +258,10 @@ def _resolve_logout_param_template(
     def _replace(match: re.Match[str]) -> str:
         nonlocal missing
         resolved = namespace.get(match.group(1))
-        if resolved is None or resolved == "":
+        # Only scalar claims produce a meaningful query value. Missing, empty,
+        # or structured values (lists/objects) omit the whole param rather than
+        # emitting an empty string or a Python ``repr`` to the provider.
+        if not isinstance(resolved, (str, int, float)) or resolved == "":
             missing = True
             return ""
         return str(resolved)
@@ -293,7 +297,9 @@ def build_logout_url(
         ``id_token_hint``). A non-empty value adds or overrides a param and
         supports ``{field}`` template substitution; a value of ``""`` removes
         the param; params not listed keep their defaults. A param whose template
-        references a missing field is omitted silently.
+        references a missing, empty, or non-scalar field is skipped silently,
+        leaving any same-named default (or value baked into the endpoint) in
+        place rather than sending an empty value to the provider.
     user_claims
         Optional mapping of the current user's claims used to resolve ``{field}``
         placeholders in ``logout_params`` values. Standard computed values
@@ -314,9 +320,18 @@ def build_logout_url(
     if id_token:
         resolved_params["id_token_hint"] = id_token
 
-    # Namespace for {field} substitution: user claims first, standard computed
-    # values take precedence.
-    namespace: dict[str, Any] = {**(user_claims or {}), **resolved_params}
+    # Namespace for {field} substitution. User claims are shadowed by the
+    # standard computed values so that a template like {client_id} always
+    # resolves to Streamlit's value, never a same-named user claim. Standard
+    # values that are unavailable (e.g. id_token_hint without an ID token) map
+    # to "" so referencing them omits the param instead of leaking a same-named
+    # claim into the URL.
+    namespace: dict[str, Any] = {
+        **(user_claims or {}),
+        "client_id": client_id,
+        "post_logout_redirect_uri": post_logout_redirect_uri,
+        "id_token_hint": id_token or "",
+    }
 
     # Keys the user explicitly removes with an empty value. These are dropped
     # from the final URL even when the provider baked them into the
@@ -326,13 +341,15 @@ def build_logout_url(
     for key, raw_value in (logout_params or {}).items():
         resolved = _resolve_logout_param_template(str(raw_value), namespace)
         if resolved == "":
-            # An explicit empty value removes the param entirely.
+            # An explicit empty value removes the param entirely, including a
+            # default of the same name and any value baked into the endpoint.
             resolved_params.pop(key, None)
             removed_keys.add(key)
         elif resolved is None:
-            # A template whose referenced field is missing or empty is omitted
-            # silently, leaving any default value in place.
-            resolved_params.pop(key, None)
+            # A template whose referenced field is missing, empty, or non-scalar
+            # leaves the entry unapplied: a same-named default (or endpoint
+            # value) keeps its value, and any other param is simply not added.
+            continue
         else:
             resolved_params[key] = resolved
 

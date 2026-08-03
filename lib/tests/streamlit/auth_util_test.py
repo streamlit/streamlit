@@ -765,6 +765,9 @@ def test_get_logout_params_config_raises_on_non_table(
         ("{missing}", {}, None),
         ("{email}", {"email": ""}, None),
         ("{email}", {"email": None}, None),
+        ("{count}", {"count": 0}, "0"),
+        ("{roles}", {"roles": ["admin", "user"]}, None),
+        ("{address}", {"address": {"city": "NYC"}}, None),
         ("{weird-key}", {}, "{weird-key}"),
     ],
     ids=[
@@ -777,6 +780,9 @@ def test_get_logout_params_config_raises_on_non_table(
         "missing_field",
         "empty_field_value",
         "none_field_value",
+        "scalar_zero_value",
+        "structured_list_value",
+        "structured_dict_value",
         "non_matching_braces",
     ],
 )
@@ -853,6 +859,26 @@ def test_resolve_logout_param_template(
             ["client_id=test-client-id"],
             ["audience="],
         ),
+        # Omit-on-missing must not drop a default of the same name: an
+        # unresolvable {sub} template on ``client_id`` keeps the default value.
+        (
+            "https://provider.com/logout",
+            None,
+            {"client_id": "{sub}"},
+            {"email": "a@b.com"},
+            ["client_id=test-client-id"],
+            [],
+        ),
+        # {id_token_hint} without an ID token is treated as a missing standard
+        # value and omitted, even if a same-named user claim exists.
+        (
+            "https://provider.com/logout",
+            None,
+            {"logout_hint": "{id_token_hint}"},
+            {"id_token_hint": "leaked-claim"},
+            ["client_id=test-client-id"],
+            ["logout_hint=", "leaked-claim"],
+        ),
         # Existing endpoint query params are preserved alongside logout_params.
         (
             "https://provider.com/logout?existing=value",
@@ -879,6 +905,8 @@ def test_resolve_logout_param_template(
         "static_param",
         "remove_default",
         "omit_on_missing",
+        "omit_on_missing_keeps_default",
+        "omit_id_token_hint_without_token",
         "preserves_existing_query",
         "remove_preexisting_endpoint_param",
     ],
