@@ -100,6 +100,7 @@ describe("useVegaEmbed hook", () => {
       remove: vi.fn().mockReturnThis(),
       width: vi.fn().mockReturnThis(),
       height: vi.fn().mockReturnThis(),
+      toImageURL: vi.fn().mockResolvedValue("data:image/png;base64,mock"),
     } as unknown as Mocked<VegaView>
 
     // vega-embed returns { vgSpec, view, finalize }
@@ -172,7 +173,7 @@ describe("useVegaEmbed hook", () => {
         expr: expressionInterpreter,
         tooltip: { disableDefaultStyle: true },
         defaultStyle: false,
-        forceActionsMenu: true,
+        actions: false,
       }
     )
 
@@ -691,6 +692,103 @@ describe("useVegaEmbed hook", () => {
       rerender()
 
       expect(result.current.isViewReady).toBe(true)
+    })
+  })
+
+  describe("exportToPng", () => {
+    it("returns null if no vegaView is present", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+      await expect(result.current.exportToPng()).resolves.toBeNull()
+    })
+
+    it("exports the vega view as a PNG with at least 2x scale", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const originalDpr = window.devicePixelRatio
+      Object.defineProperty(window, "devicePixelRatio", {
+        value: 1,
+        configurable: true,
+      })
+
+      try {
+        const { result } = renderHook(() =>
+          useVegaEmbed(element, mockWidgetMgr)
+        )
+
+        const containerRef = { current: document.createElement("div") }
+        await act(async () => {
+          await result.current.createView(containerRef, {})
+        })
+
+        await expect(result.current.exportToPng()).resolves.toBe(
+          "data:image/png;base64,mock"
+        )
+        expect(mockVegaView.toImageURL).toHaveBeenCalledWith("png", 2)
+      } finally {
+        Object.defineProperty(window, "devicePixelRatio", {
+          value: originalDpr,
+          configurable: true,
+        })
+      }
+    })
+
+    it("uses window.devicePixelRatio when it exceeds 2x", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const originalDpr = window.devicePixelRatio
+      Object.defineProperty(window, "devicePixelRatio", {
+        value: 3,
+        configurable: true,
+      })
+
+      try {
+        const { result } = renderHook(() =>
+          useVegaEmbed(element, mockWidgetMgr)
+        )
+
+        const containerRef = { current: document.createElement("div") }
+        await act(async () => {
+          await result.current.createView(containerRef, {})
+        })
+
+        await result.current.exportToPng()
+        expect(mockVegaView.toImageURL).toHaveBeenCalledWith("png", 3)
+      } finally {
+        Object.defineProperty(window, "devicePixelRatio", {
+          value: originalDpr,
+          configurable: true,
+        })
+      }
     })
   })
 })

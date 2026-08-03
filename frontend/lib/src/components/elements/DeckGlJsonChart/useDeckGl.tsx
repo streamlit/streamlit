@@ -77,6 +77,30 @@ type UseDeckGlShape = {
   width: number | string
 }
 
+const HTML_ESCAPE_MAP: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#x27;",
+}
+
+/**
+ * Escapes HTML-significant characters in a value so it can be safely embedded
+ * as text content or a quoted attribute value in an HTML tooltip template.
+ *
+ * This prevents XSS from untrusted data values interpolated into `tooltip.html`.
+ * It is only safe for element content and quoted attribute contexts. Values must
+ * not be placed by the template into unquoted attributes, URL attributes such as
+ * `href`/`src` (where a `javascript:` scheme would survive escaping), or inside
+ * `<script>`/`<style>` blocks.
+ *
+ * @param {unknown} value - The value to coerce to a string and escape.
+ * @returns {string} - The HTML-escaped string.
+ */
+const escapeHtml = (value: unknown): string =>
+  String(value).replace(/[&<>"']/g, char => HTML_ESCAPE_MAP[char])
+
 export type UseDeckGlProps = Omit<DeckGLProps, "width"> & {
   isLightTheme: boolean
   theme: EmotionTheme
@@ -99,22 +123,37 @@ export const EMPTY_STATE: DeckGlElementState = {
  *
  * @param {PickingInfo} info - The object containing the data to interpolate into the string.
  * @param {string} body - The string containing placeholders in the format `{variable}`.
+ * @param {boolean} shouldEscapeHtml - Whether interpolated values should be HTML-escaped.
+ *   Enable this when `body` is rendered as HTML (see {@link escapeHtml} for the
+ *   contexts in which escaping is safe).
  * @returns {string} - The interpolated string with placeholders replaced by actual values.
  */
-const interpolate = (info: PickingInfo, body: string): string => {
+const interpolate = (
+  info: PickingInfo,
+  body: string,
+  shouldEscapeHtml = false
+): string => {
   const matchedVariables = body.match(/{(.*?)}/g)
   if (matchedVariables) {
     matchedVariables.forEach((match: string) => {
       const variable = match.substring(1, match.length - 1)
 
+      let rawValue: unknown
       if (Object.hasOwn(info.object, variable)) {
-        body = body.replace(match, info.object[variable])
+        rawValue = info.object[variable]
       } else if (
         Object.hasOwn(info.object, "properties") &&
         Object.hasOwn(info.object.properties, variable)
       ) {
-        body = body.replace(match, info.object.properties[variable])
+        rawValue = info.object.properties[variable]
+      } else {
+        return
       }
+
+      const value = shouldEscapeHtml ? escapeHtml(rawValue) : String(rawValue)
+      // Use a replacer function so `$` sequences in the value are inserted
+      // literally rather than treated as replacement patterns.
+      body = body.replace(match, () => value)
     })
   }
   return body
@@ -574,7 +613,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       const parsedTooltip = JSON5.parse(tooltip)
 
       if (parsedTooltip.html) {
-        parsedTooltip.html = interpolate(info, parsedTooltip.html)
+        parsedTooltip.html = interpolate(info, parsedTooltip.html, true)
       } else {
         parsedTooltip.text = interpolate(info, parsedTooltip.text)
       }

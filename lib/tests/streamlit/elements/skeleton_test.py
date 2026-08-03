@@ -23,6 +23,7 @@ import streamlit as st
 from streamlit.elements.lib.skeleton_placeholder import SkeletonPlaceholder
 from streamlit.errors import StreamlitInvalidHeightError, StreamlitInvalidWidthError
 from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
+from streamlit.runtime.scriptrunner_utils.exceptions import StopException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -191,6 +192,12 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
         with pytest.raises(ValueError, match="Test exception"):
             with st.skeleton():
                 raise ValueError("Test exception")
+
+    def test_context_manager_propagates_stop_exception(self) -> None:
+        """Test that st.stop() control flow is not suppressed."""
+        with pytest.raises(StopException):
+            with st.skeleton():
+                raise StopException()
 
     def test_context_manager_after_standalone_is_allowed(self) -> None:
         """Test that entering the context manager after standalone use does not

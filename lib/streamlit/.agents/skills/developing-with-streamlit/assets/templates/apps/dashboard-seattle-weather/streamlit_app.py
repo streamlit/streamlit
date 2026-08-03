@@ -29,7 +29,7 @@ st.set_page_config(
 )
 
 
-@st.cache_data
+@st.cache_data(show_spinner="Loading weather data...")
 def load_weather_data() -> pd.DataFrame:
     df: pd.DataFrame = vega_datasets.data("seattle_weather")
     return df

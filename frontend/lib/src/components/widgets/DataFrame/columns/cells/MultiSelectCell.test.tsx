@@ -778,3 +778,206 @@ describe("MultiSelectCell renderer", () => {
     expect(deleted.data.options).toHaveLength(2)
   })
 })
+
+describe("MultiSelectCell renderer draw", () => {
+  /** The draw-args object type expected by renderer.draw */
+  type DrawArgs = Parameters<NonNullable<typeof renderer.draw>>[0]
+
+  const drawTheme = {
+    cellHorizontalPadding: 8,
+    cellVerticalPadding: 4,
+    bubbleHeight: 20,
+    bubblePadding: 4,
+    bubbleMargin: 4,
+    roundingRadius: 4,
+    bgBubble: "#eeeeee",
+    bgBubbleSelected: "#cccccc",
+    textBubble: "#333333",
+    baseFontFull: "13px sans-serif",
+  }
+
+  // The mock records every `fillStyle` assignment so tests can assert which
+  // bubble background and text colors were used (the real canvas would only
+  // expose the last value).
+  const createDrawCtx = (): {
+    ctx: CanvasRenderingContext2D
+    fillStyleHistory: string[]
+  } => {
+    const fillStyleHistory: string[] = []
+    const ctx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      arcTo: vi.fn(),
+      fill: vi.fn(),
+      fillText: vi.fn(),
+      // Text metrics are needed to size bubbles and compute the vertical bias.
+      measureText: vi.fn((text: string) => ({
+        width: (text?.length ?? 0) * 8,
+        actualBoundingBoxAscent: 8,
+        actualBoundingBoxDescent: 2,
+      })),
+      textBaseline: "",
+      get fillStyle(): string {
+        return fillStyleHistory.at(-1) ?? ""
+      },
+      set fillStyle(value: string) {
+        fillStyleHistory.push(value)
+      },
+    }
+    return {
+      ctx: ctx as unknown as CanvasRenderingContext2D,
+      fillStyleHistory,
+    }
+  }
+
+  const createDrawCell = (
+    data: Partial<MultiSelectCell["data"]>
+  ): MultiSelectCell => ({
+    kind: GridCellKind.Custom,
+    allowOverlay: true,
+    copyData: "",
+    data: {
+      kind: "multi-select-cell",
+      values: [],
+      options: [],
+      ...data,
+    },
+  })
+
+  const callDraw = (
+    ctx: CanvasRenderingContext2D,
+    cell: MultiSelectCell,
+    rect: { x: number; y: number; width: number; height: number },
+    highlighted = false
+  ): boolean | void =>
+    renderer.draw?.(
+      { ctx, theme: drawTheme, rect, highlighted } as unknown as DrawArgs,
+      cell
+    )
+
+  it("skips drawing and returns true when values are null", () => {
+    const { ctx } = createDrawCtx()
+    const cell = createDrawCell({ values: null })
+
+    const result = callDraw(ctx, cell, { x: 0, y: 0, width: 400, height: 24 })
+
+    expect(result).toBe(true)
+    expect(ctx.fillText).not.toHaveBeenCalled()
+    expect(ctx.fill).not.toHaveBeenCalled()
+  })
+
+  it("draws a bubble with the option label for matched options", () => {
+    const { ctx } = createDrawCtx()
+    const cell = createDrawCell({
+      values: ["option1"],
+      options: [{ value: "option1", label: "Option 1" }],
+    })
+
+    const result = callDraw(ctx, cell, { x: 0, y: 0, width: 400, height: 24 })
+
+    expect(result).toBe(true)
+    // The option's label (not its raw value) is rendered.
+    expect(ctx.fillText).toHaveBeenCalledWith(
+      "Option 1",
+      expect.any(Number),
+      expect.any(Number)
+    )
+    // The raw value must not be drawn when a label is available.
+    expect(ctx.fillText).not.toHaveBeenCalledWith(
+      "option1",
+      expect.any(Number),
+      expect.any(Number)
+    )
+    expect(ctx.fill).toHaveBeenCalled()
+  })
+
+  it("falls back to the raw value and default background for unmatched options", () => {
+    const { ctx, fillStyleHistory } = createDrawCtx()
+    const cell = createDrawCell({ values: ["unmatched"], options: [] })
+
+    callDraw(ctx, cell, { x: 0, y: 0, width: 400, height: 24 })
+
+    expect(ctx.fillText).toHaveBeenCalledWith(
+      "unmatched",
+      expect.any(Number),
+      expect.any(Number)
+    )
+    // Non-highlighted unmatched bubbles use the default (not selected) background.
+    expect(fillStyleHistory).toContain(drawTheme.bgBubble)
+    expect(fillStyleHistory).not.toContain(drawTheme.bgBubbleSelected)
+    // Unmatched options (no per-option color) use the default bubble text color.
+    expect(fillStyleHistory).toContain(drawTheme.textBubble)
+  })
+
+  it("chooses a contrasting text color based on the bubble color luminance", () => {
+    const { ctx, fillStyleHistory } = createDrawCtx()
+    const cell = createDrawCell({
+      // Yellow is a light color (luminance > 0.5); blue is dark (< 0.5).
+      values: ["light", "dark"],
+      options: [
+        { value: "light", label: "Light", color: "#ffff00" },
+        { value: "dark", label: "Dark", color: "#0000ff" },
+      ],
+    })
+
+    const result = callDraw(ctx, cell, { x: 0, y: 0, width: 400, height: 24 })
+
+    expect(result).toBe(true)
+    expect(ctx.fillText).toHaveBeenCalledWith(
+      "Light",
+      expect.any(Number),
+      expect.any(Number)
+    )
+    expect(ctx.fillText).toHaveBeenCalledWith(
+      "Dark",
+      expect.any(Number),
+      expect.any(Number)
+    )
+    // Black text is used on the light (yellow) bubble...
+    expect(fillStyleHistory).toContain("#000000")
+    // ...and white text on the dark (blue) bubble.
+    expect(fillStyleHistory).toContain("#ffffff")
+    // The configured default text color is not used for colored bubbles.
+    expect(fillStyleHistory).not.toContain(drawTheme.textBubble)
+  })
+
+  it("uses the selected bubble background when the cell is highlighted", () => {
+    const { ctx, fillStyleHistory } = createDrawCtx()
+    const cell = createDrawCell({ values: ["unmatched"], options: [] })
+
+    const result = callDraw(
+      ctx,
+      cell,
+      { x: 0, y: 0, width: 400, height: 24 },
+      true
+    )
+
+    expect(result).toBe(true)
+    expect(ctx.fill).toHaveBeenCalled()
+    // The highlighted state switches the bubble background to the selected color.
+    expect(fillStyleHistory).toContain(drawTheme.bgBubbleSelected)
+    expect(fillStyleHistory).not.toContain(drawTheme.bgBubble)
+  })
+
+  it("wraps bubbles onto multiple rows for a tall, narrow cell", () => {
+    const { ctx } = createDrawCtx()
+    const cell = createDrawCell({
+      values: ["aaaa", "bbbb", "cccc", "dddd", "eeee", "ffff"],
+      options: [],
+    })
+
+    // A narrow, tall cell forces wrapping and eventually the early break.
+    const result = callDraw(ctx, cell, { x: 0, y: 0, width: 60, height: 60 })
+
+    expect(result).toBe(true)
+    // At least one bubble is drawn before the loop breaks.
+    expect(ctx.fillText).toHaveBeenCalled()
+    // Not every value fits, so fewer bubbles are drawn than provided.
+    expect(
+      (ctx.fillText as unknown as ReturnType<typeof vi.fn>).mock.calls.length
+    ).toBeLessThan(6)
+  })
+})

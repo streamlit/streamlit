@@ -542,6 +542,7 @@ class GenerateDefaultProviderSectionTest(unittest.TestCase):
     [
         (lambda: None, None),
         (lambda: AttrDict({}), None),
+        (lambda: AttrDict({"client_id": "abc"}), None),
         (
             lambda: AttrDict({"redirect_uri": "http://localhost:8501/callback"}),
             None,
@@ -551,7 +552,13 @@ class GenerateDefaultProviderSectionTest(unittest.TestCase):
             "http://localhost:8501/oauth2callback",
         ),
     ],
-    ids=["no_section", "no_redirect_uri", "wrong_suffix", "valid_callback"],
+    ids=[
+        "no_section",
+        "no_redirect_uri",
+        "section_without_redirect_uri",
+        "wrong_suffix",
+        "valid_callback",
+    ],
 )
 def test_get_validated_redirect_uri(
     get_section: Callable[[], AttrDict | None],
@@ -586,6 +593,7 @@ def test_get_validated_redirect_uri_substitutes_port_placeholder(
     [
         (lambda: None, None),
         (lambda: AttrDict({}), None),
+        (lambda: AttrDict({"client_id": "abc"}), None),
         (
             lambda: AttrDict({"redirect_uri": "https://example.com/oauth2callback"}),
             "https://example.com",
@@ -595,7 +603,13 @@ def test_get_validated_redirect_uri_substitutes_port_placeholder(
             "http://localhost:8501",
         ),
     ],
-    ids=["no_section", "no_redirect_uri", "https_host", "localhost_port"],
+    ids=[
+        "no_section",
+        "no_redirect_uri",
+        "section_without_redirect_uri",
+        "https_host",
+        "localhost_port",
+    ],
 )
 def test_get_origin_from_redirect_uri(
     get_section: Callable[[], AttrDict | None],
@@ -1160,3 +1174,17 @@ def test_validate_auth_credentials_provider_section_not_mapping() -> None:
         with pytest.raises(StreamlitAuthError) as exc_info:
             validate_auth_credentials("google")
     assert "must be valid TOML" in str(exc_info.value)
+
+
+def test_validate_provider_token_claims_rejects_non_string_provider() -> None:
+    """A non-string ``provider`` claim is rejected with ``TypeError``."""
+    with pytest.raises(TypeError, match="provider claim is invalid"):
+        auth_util._validate_provider_token_claims({"provider": 123, "exp": 9999999999})
+
+
+def test_validate_provider_token_claims_accepts_valid_claims() -> None:
+    """Valid claims are returned as a normalized payload with an integer ``exp``."""
+    result = auth_util._validate_provider_token_claims(
+        {"provider": "google", "exp": 9999999999.0}
+    )
+    assert result == {"provider": "google", "exp": 9999999999}

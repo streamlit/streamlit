@@ -16,7 +16,10 @@
 
 import { memo } from "react"
 
-import Dropzone, { FileRejection } from "react-dropzone"
+import Dropzone, {
+  type DropzoneInputProps,
+  FileRejection,
+} from "react-dropzone"
 
 import BaseButton, {
   BaseButtonKind,
@@ -67,13 +70,13 @@ const FileDropzone = ({
     useFsAccessApi={false}
   >
     {({ getRootProps, getInputProps, isDragActive }) => {
-      const inputProps = getInputProps({
+      const inputProps: DropzoneInputProps = getInputProps({
         multiple: multiple || !!acceptDirectory,
       })
 
       return (
         <StyledFileDropzoneSection
-          {...getRootProps()}
+          {...getRootProps({ tabIndex: -1 })}
           data-testid="stFileUploaderDropzone"
           isDisabled={disabled}
           isDragActive={isDragActive}
@@ -83,6 +86,14 @@ const FileDropzone = ({
           <input
             data-testid="stFileUploaderDropzoneInput"
             {...inputProps}
+            // react-dropzone >=19.0.1 hides the file input in-flow
+            // (display: block, zero size) instead of taking it out of flow.
+            // In our flex dropzone that turns the input into an extra flex
+            // item, which adds a spurious `gap` above the content. Pull it back
+            // out of flow so it has no layout impact. The input is tabIndex=-1
+            // and only opened programmatically, so the focus scroll-jump the
+            // upstream change guards against (their #1413) does not apply here.
+            style={{ ...inputProps.style, position: "absolute" }}
             {...(acceptDirectory && { webkitdirectory: "" })}
           />
           {isDragActive && (

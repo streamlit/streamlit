@@ -199,12 +199,12 @@ This orthogonality means both syntaxes can coexist without conflicts:
 
 ```python
 # Existing sprintf (continues to work unchanged)
-st.slider("Revenue", format="$%,d")        # → $1,234,567
-st.slider("Price", format="%.2f€")         # → 1234.56€
+st.slider("Revenue", format="$%,d")  # → $1,234,567
+st.slider("Price", format="%.2f€")  # → 1234.56€
 
 # New Python-style (would also work)
-st.slider("Revenue", format="${:,d}")      # → $1,234,567
-st.slider("Price", format="{:.2f}€")       # → 1234.56€
+st.slider("Revenue", format="${:,d}")  # → $1,234,567
+st.slider("Price", format="{:.2f}€")  # → 1234.56€
 ```
 
 **Edge cases and their handling:**

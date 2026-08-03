@@ -115,4 +115,4 @@ if TYPE_CHECKING:
     st_map(df, height=None)  # type: ignore[arg-type]
 
     # All parameters except data are keyword-only.
-    st_map(df, "lat")  # type: ignore[misc]
+    st_map(df, "lat")  # type: ignore[call-arg]

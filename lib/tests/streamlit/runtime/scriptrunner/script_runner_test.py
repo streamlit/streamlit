@@ -417,6 +417,48 @@ class ScriptRunnerTest(unittest.TestCase):
         assert not scriptrunner._fragment_storage.contains("inner")
         assert scriptrunner._fragment_storage.contains("outer")
 
+    def test_evicted_fragment_enqueues_stop_auto_rerun(self) -> None:
+        """Evicting a stale descendant enqueues a StopAutoRerun so the frontend
+        can cancel that fragment's auto-rerun timer."""
+        outer = MagicMock()
+        inner = MagicMock()
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        stop_messages = [
+            msg
+            for msg in scriptrunner.forward_msgs()
+            if msg.HasField("stop_auto_rerun")
+        ]
+        assert len(stop_messages) == 1
+        assert list(stop_messages[0].stop_auto_rerun.fragment_ids) == ["inner"]
+
+    def test_fragment_rerun_without_eviction_enqueues_no_stop_auto_rerun(self) -> None:
+        """A fragment rerun that evicts nothing must not enqueue a StopAutoRerun."""
+        fragment = MagicMock()
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("my_fragment", fragment)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        stop_messages = [
+            msg
+            for msg in scriptrunner.forward_msgs()
+            if msg.HasField("stop_auto_rerun")
+        ]
+        assert stop_messages == []
+
     def test_fragment_queue_preserves_fifo_for_unrelated_fragments(self):
         """Unrelated queued fragments keep FIFO ordering across fragment trees."""
         execution_order = []

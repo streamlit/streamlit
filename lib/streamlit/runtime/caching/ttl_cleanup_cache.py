@@ -17,13 +17,12 @@
 from collections.abc import Callable
 from typing import TypeVar
 
-from cachetools import TTLCache
-
 # override is in typing after Python 3.12 and can be imported from there after 3.11
 # support is retired.
 from typing_extensions import override
 
 from streamlit.runtime.caching.cache_utils import OnRelease
+from streamlit.runtime.caching.ttl_cache import TTLCache
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -68,8 +67,8 @@ class TTLCleanupCache(TTLCache[K, V]):
         return key, value
 
     @override
-    def expire(self, time: float | None = None) -> list[tuple[K, V]]:
-        items = super().expire(time)
+    def expire(self, at_time: float | None = None) -> list[tuple[K, V]]:
+        items = super().expire(at_time)
         for _, value in items:
             self._on_release(value)
 
@@ -77,8 +76,9 @@ class TTLCleanupCache(TTLCache[K, V]):
 
     @override
     def clear(self) -> None:
-        # cachetools 7.0.2 makes clear() O(1) and bypasses popitem(). We clear
-        # via popitem() to preserve the behavior seen in cachetools <= 7.0.1.
+        # The base TTLCache.clear() is O(1) and bypasses popitem(), so it would
+        # not invoke our release hooks. Clear via popitem() instead to ensure
+        # on_release is called for every entry.
         while True:
             try:
                 self.popitem()

@@ -44,6 +44,14 @@ describe("FileDropzone widget", () => {
     expect(screen.getByTestId("stFileUploaderDropzone")).toBeInTheDocument()
   })
 
+  it("removes the dropzone section from the keyboard tab order", () => {
+    const props = getProps()
+    render(<FileDropzone {...props} />)
+
+    const dropzone = screen.getByTestId("stFileUploaderDropzone")
+    expect(dropzone).toHaveAttribute("tabindex", "-1")
+  })
+
   it("renders dropzone without extensions", () => {
     const props = getProps({
       acceptedTypes: [],
@@ -113,6 +121,17 @@ describe("FileDropzone widget", () => {
 
     const input = screen.getByTestId("stFileUploaderDropzoneInput")
     expect(input).not.toHaveAttribute("webkitdirectory")
+  })
+
+  it("keeps the hidden input out of flow so it adds no layout gap", () => {
+    // react-dropzone renders the hidden input in-flow (display: block), which
+    // would make it an extra flex item in the dropzone and add a spurious gap
+    // above the content. We override it to position: absolute to avoid that.
+    const props = getProps()
+    render(<FileDropzone {...props} />)
+
+    const input = screen.getByTestId("stFileUploaderDropzoneInput")
+    expect(input).toHaveStyle({ position: "absolute" })
   })
 
   it("disables directory upload button when disabled", () => {

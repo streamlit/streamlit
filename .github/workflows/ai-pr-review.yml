@@ -20,8 +20,8 @@ on:
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
   MODEL_INPUT: ${{ github.event.inputs.model || '' }}
-  DEFAULT_AI_PR_REVIEW_MODELS: ${{ vars.AI_PR_REVIEW_MODELS || 'gpt-5.3-codex-high,claude-4.6-opus-high-thinking' }}
-  FINAL_AI_PR_REVIEW_MODELS: "gpt-5.4-xhigh,gemini-3.1-pro,claude-opus-4-8-thinking-xhigh"
+  DEFAULT_AI_PR_REVIEW_MODELS: ${{ vars.AI_PR_REVIEW_MODELS || 'gpt-5.3-codex-high,cursor-grok-4.5-high,claude-4.6-opus-high-thinking' }}
+  FINAL_AI_PR_REVIEW_MODELS: "gpt-5.4-xhigh,cursor-grok-4.5-high,claude-opus-4-8-thinking-xhigh"
 
 jobs:
   # Job 1: Parse model list and check for API key
@@ -149,7 +149,7 @@ jobs:
           echo "html_url=$(echo "$PR_DATA" | jq -r '.html_url')" >> "$GITHUB_OUTPUT"
 
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Use SHA instead of branch name to support fork PRs
           ref: ${{ steps.pr-info.outputs.head_sha }}
@@ -207,7 +207,7 @@ jobs:
 
           ## Goal
 
-          Review this branch (PR: $PR_HTML_URL) and ensure the changes are bug-free, backwards compatible, and ready for merge.
+          Review this branch (PR: $PR_HTML_URL) and ensure the changes are bug-free, backwards compatible, aligned with Streamlit's product and API principles, and ready for merge.
 
           $(cat scripts/assets/code-review-instructions.md)
 
@@ -228,7 +228,7 @@ jobs:
           fi
 
       - name: Upload review artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: review-output-${{ steps.sanitize.outputs.model_id }}
           path: |
@@ -254,12 +254,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Download all review artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: review-output-*
           path: reviews/
@@ -348,7 +348,7 @@ jobs:
           4. **Track missing reviews** - if any expected models are missing from the reviews above, note them as 'failed to complete review'
           5. **Determine final verdict**:
              - APPROVED: If the majority of available reviews approve AND there are no critical/merge-blocking issues raised by any reviewer. Minor suggestions or optional improvements should not block approval — those can be addressed in follow-up PRs.
-             - CHANGES_REQUESTED: If majority request changes OR any reviewer raised critical/merge-blocking issues (bugs, security vulnerabilities, breaking changes, missing required tests). Optional improvements, style preferences, and "nice to have" suggestions should NOT result in CHANGES_REQUESTED.
+             - CHANGES_REQUESTED: If majority request changes OR any reviewer raised critical/merge-blocking issues (bugs, security vulnerabilities, breaking changes, missing required tests, or clear material violations of documented Streamlit product/API principles and patterns). Optional improvements, style preferences, and "nice to have" suggestions should NOT result in CHANGES_REQUESTED.
 
           __CONSOLIDATION_INSTRUCTIONS__
 
@@ -386,7 +386,7 @@ jobs:
           fi
 
       - name: Upload consolidated artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: review-output-consolidated
           path: |
@@ -426,7 +426,7 @@ jobs:
       - name: Download consolidated review
         id: download-consolidated
         if: needs.consolidate-reviews.result == 'success'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           name: review-output-consolidated
@@ -436,7 +436,7 @@ jobs:
         # When consolidation fails or wasn't run, fall back to posting just the judge model's review.
         # This provides a deterministic fallback rather than randomly selecting from multiple reviews.
         if: steps.download-consolidated.outcome != 'success' && needs.parse-models.outputs.has_key == 'true'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           name: review-output-${{ needs.parse-models.outputs.judge_model_id }}

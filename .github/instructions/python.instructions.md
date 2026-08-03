@@ -42,7 +42,7 @@ applyTo: "**/*.py"
 - `streamlit/web`: Web server and CLI implementation
 - `streamlit/commands`: `st` commands that don't add UI elements.
 - `streamlit/components`: Backend-implementation of custom components.
-- `streamlit/connections`: `st.connection` backends (SQL, Snowflake, Snowpark, and callers-rights variants).
+- `streamlit/connections`: `st.connection` backends (SQL, Snowflake, and callers-rights variants).
 - `streamlit/hello`: `streamlit hello` app implementation.
 - `streamlit/navigation`: Multi-page app implementation.
 - `streamlit/proto`: Generated protobuf definitions for client-server communication.
@@ -52,6 +52,11 @@ applyTo: "**/*.py"
 - `streamlit/__init__.py`: Defines all commands in the `st` namespace.
 - `pyproject.toml`: Package configuration of the Streamlit library.
 - `tests`: Python unit tests (pytest).
+
+## Dependencies
+
+- Runtime dependencies of the published Streamlit library in `lib/pyproject.toml` must include a lower bound and an upper bound pinned to the next unreleased major version, for example `package>=1.2.3,<2`. These ranges are the published package's contract with users and feed the min-version CI job, so they minimize potential breaks from new major versions. Exemptions are allowed, but must include a clear comment explaining why the dependency should not be capped.
+- This bounded-range rule does NOT apply to the dev/CI-only `[dependency-groups]` in the root `pyproject.toml`. Those use bare package names because `uv.lock` owns the exact versions; add a constraint only when functionally required (an exact `==` pin for a deliberately held-back tool, or an upper cap `<` for a known-broken version, mirrored by an `ignore` entry in `.github/dependabot.yml`; a single-release `!=` exclusion needs no `ignore` entry), and do not add lower-bound floors.
 
 ## Typing
 

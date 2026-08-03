@@ -204,7 +204,7 @@ area_interval_selection = st.altair_chart(
 if len(area_interval_selection["selection"]) > 0:
     st.write(
         "Area chart with selection_interval:",
-        str(area_interval_selection.selection),  # type: ignore
+        str(area_interval_selection.selection),
     )
 
 # HISTOGRAM CHART

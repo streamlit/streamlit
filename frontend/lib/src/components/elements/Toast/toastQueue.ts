@@ -16,6 +16,7 @@
 
 import { UNSTABLE_ToastQueue as ToastQueue } from "react-aria-components/Toast"
 
+/** Content for a standard ``st.toast``: a markdown body and optional icon. */
 export interface StreamlitToastContent {
   body: string
   icon?: string

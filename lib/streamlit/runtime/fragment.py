@@ -130,12 +130,13 @@ class FragmentStorage(Protocol):
         self,
         root_fragment_id: str,
         newly_registered_ids: frozenset[str],
-    ) -> None:
+    ) -> list[str]:
         """Remove stored fragments that are strict descendants of ``root_fragment_id``
         but were not re-registered during the latest run of that root.
 
         Used after a fragment-only rerun so orphaned nested fragments (e.g. from a
-        removed ``run_every`` child) do not keep stale closures in storage.
+        removed ``run_every`` child) do not keep stale closures in storage. Returns
+        the list of removed fragment IDs.
         """
         raise NotImplementedError
 
@@ -293,8 +294,12 @@ class MemoryFragmentStorage(FragmentStorage):
         self,
         root_fragment_id: str,
         newly_registered_ids: frozenset[str],
-    ) -> None:
-        """Drop descendant fragments under ``root_fragment_id`` not seen this run."""
+    ) -> list[str]:
+        """Drop descendant fragments under ``root_fragment_id`` not seen this run.
+
+        Returns the list of fragment IDs that were removed so the caller can, for
+        example, tell the frontend to cancel their auto-rerun timers.
+        """
 
         with self._lock:
             to_remove = [
@@ -306,6 +311,7 @@ class MemoryFragmentStorage(FragmentStorage):
             ]
             for fragment_id in to_remove:
                 self._remove(fragment_id)
+            return to_remove
 
     def registration_sequence(self) -> int:
         with self._lock:
@@ -496,13 +502,35 @@ def _fragment(
             if ctx is None:  # pragma: no cover - defensive
                 raise RuntimeError("ctx is None. This should never happen.")
 
-            if ctx.fragment_ids_this_run:
-                # This script run is a run of one or more fragments. We restore the
-                # state of ctx.cursors and dg_stack to the snapshots we took when this
-                # fragment was declared.
+            # True only when the ScriptRunner invokes this fragment directly as a
+            # queued top-level rerun. ``fragment_id is None`` distinguishes that
+            # from an inline call via ``wrap`` from an enclosing fragment, which
+            # matters when a parent and its own descendant are both queued: the
+            # descendant's id is still in ``fragment_ids_this_run`` while the
+            # parent runs it inline, so queue membership alone is not enough.
+            is_queued_toplevel_rerun = bool(
+                ctx.fragment_ids_this_run
+                and fragment_id in ctx.fragment_ids_this_run
+                and ThreadState.get().fragment_id is None
+            )
+
+            if is_queued_toplevel_rerun:
+                # Restore ctx.cursors and dg_stack to the snapshots taken when
+                # this fragment was declared. Nested fragments called via ``wrap``
+                # from an already-rerunning parent must keep the parent's
+                # already-advanced cursor state instead; replacing the dg_stack
+                # with deep copies would sever their writes from the enclosing
+                # scope, making sibling nested fragments compute colliding
+                # fragment ids and overwrite each other's deltas (see #12514).
                 ctx.cursors = deepcopy(cursors_snapshot)
                 context_dg_stack.set(deepcopy(dg_stack_snapshot))
 
+            if ctx.fragment_ids_this_run:
+                # Wrapper bookkeeping runs for every fragment executing during a
+                # fragment rerun, including nested ones reached via ``wrap``:
+                # their outside-container wrappers still need their cursors reset
+                # so writes overwrite in place rather than accumulate.
+                #
                 # Evict wrappers whose outside containers will be rebuilt by this
                 # fragment, then re-emit and reset the surviving wrappers. Order
                 # matters: eviction must happen first so we don't re-emit a wrapper

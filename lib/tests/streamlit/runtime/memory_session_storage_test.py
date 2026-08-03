@@ -17,8 +17,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import MagicMock
 
-from cachetools import TTLCache
-
+from streamlit.runtime.caching.ttl_cache import TTLCache
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 
 
@@ -26,7 +25,7 @@ class MemorySessionStorageTest(unittest.TestCase):
     """Test MemorySessionStorage.
 
     These tests are intentionally extremely simple to ensure that we don't just end up
-    testing cachetools.TTLCache. We try to just verify that we've wrapped TTLCache
+    testing TTLCache. We try to just verify that we've wrapped TTLCache
     correctly, and in particular we avoid testing cache expiry functionality.
     """
 
@@ -34,7 +33,7 @@ class MemorySessionStorageTest(unittest.TestCase):
         """Verify that the backing cache of a MemorySessionStorage is a TTLCache.
 
         We do this because we're intentionally avoiding writing tests around cache
-        expiry because the cachetools library should do this for us. In the case
+        expiry because TTLCache should do this for us. In the case
         that the backing cache for a MemorySessionStorage ever changes, we'll likely be
         responsible for adding our own tests.
         """

@@ -476,7 +476,9 @@ describe("ButtonGroup widget", () => {
     expectHighlightStyle(buttons[3], false)
 
     // "Submit" the form
-    act(() => props.widgetMgr.submitForm("form", undefined))
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     buttons = getButtonGroupButtons()
     // default option selected

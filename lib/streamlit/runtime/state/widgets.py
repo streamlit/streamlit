@@ -16,12 +16,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidPersistStateError,
+)
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
 )
 from streamlit.runtime.state.common import (
     BindOption,
+    PersistStateOption,
     RegisterWidgetResult,
     T,
     ValueFieldName,
@@ -52,12 +57,14 @@ def register_widget(
     value_type: ValueFieldName,
     presenter: WidgetValuePresenter | None = None,
     bind: BindOption = None,
+    persist_state: PersistStateOption = None,
     # For selection widgets with bind="query-params": the valid option strings
     # used to validate and filter URL values during seeding.
     formatted_options: list[str] | None = None,
     clearable: bool | None = None,
     max_array_length: int | None = None,
     allow_url_duplicates: bool = False,
+    disabled: bool = False,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -96,6 +103,17 @@ def register_widget(
         Optional binding for the widget's value to external state.
         Currently only "query-params" is supported, which binds the widget
         value to a URL query parameter. Requires a user-provided key.
+    persist_state : "page", "session", or None
+        How long to preserve the widget's value when it isn't rendered. If
+        "page", the value is preserved only while the user stays on the page
+        where the widget is defined (for example, while it is conditionally
+        hidden); it is discarded on a page switch and not restored on return.
+        If "session", it is preserved for the whole session, including across
+        page switches, so it returns when the user navigates back. If None, it
+        is not preserved. Requires a user-provided key. If bind="query-params"
+        is also set, the binding takes precedence: the value is stored in the
+        URL and therefore persists across page switches regardless of the
+        persist_state scope.
     formatted_options : list[str] or None
         **Temporary** - will be removed once all selection widgets use string-based
         wire formats. Currently used for index-based widgets (pills, segmented_control,
@@ -106,6 +124,12 @@ def register_widget(
         behavior). When True, an empty URL param (e.g., ?foo=) will seed the widget
         with an empty value. When False, an empty URL param will be ignored.
         **Required when bind='query-params'**, otherwise defaults to False.
+    disabled : bool
+        Whether the widget is disabled. A disabled widget cannot be interacted
+        with in the browser, so Streamlit enforces this server-side: any incoming
+        value from the frontend is discarded (the widget keeps its default/previous
+        value) and its on-change callback is not invoked. This guards against
+        forged widget values from a manipulated BackMsg. Defaults to False.
 
     Returns
     -------
@@ -156,6 +180,17 @@ def register_widget(
                 "This is required for correct empty value handling."
             )
 
+    # Validate persist_state value and key requirement.
+    if persist_state is not None:
+        if persist_state not in {"page", "session"}:
+            raise StreamlitInvalidPersistStateError(persist_state)
+        if user_key_from_element_id(element_id) is None:
+            raise StreamlitAPIException(
+                "When using persist_state, the widget must have a unique 'key' "
+                "parameter specified so its value can be preserved across reruns "
+                "and page switches."
+            )
+
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
         element_id,
@@ -169,10 +204,12 @@ def register_widget(
         fragment_id=ThreadState.get().fragment_id if ctx else None,
         presenter=presenter,
         bind=bind,
+        persist_state=persist_state,
         formatted_options=formatted_options,
         clearable=clearable if clearable is not None else False,
         max_array_length=max_array_length,
         allow_url_duplicates=allow_url_duplicates,
+        disabled=disabled,
     )
     return register_widget_from_metadata(metadata, ctx)
 

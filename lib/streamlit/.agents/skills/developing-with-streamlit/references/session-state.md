@@ -37,6 +37,37 @@ name = st.text_input("Name", key="user_name")
 # st.session_state.user_name contains the same value as `name`
 ```
 
+## Widget input constraints are mostly client-side
+
+Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` (`st.text_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
+
+For any security-relevant or sensitive decision—authorization/role checks, database writes, file paths, spending or quota limits, or anything that must not exceed a declared bound—re-validate the value in your own script before acting on it:
+
+```python
+ALLOWED_ROLES = ["viewer", "editor"]
+role = st.selectbox("Role", ALLOWED_ROLES, key="role")
+
+# Don't rely on the widget's options as a security check.
+if role not in ALLOWED_ROLES:
+    st.error("Invalid role.")
+    st.stop()
+grant_access(role)
+```
+
+## Persisting widget values (`persist_state`)
+
+By default, a keyed widget's value is lost when the widget stops being rendered (for example, when it's conditionally hidden or the user switches pages). Set the keyword-only `persist_state` parameter to keep the value:
+
+- `None` (default): the value is dropped when the widget isn't rendered.
+- `"page"`: the value is preserved while the user stays on the page where the widget is defined (e.g., while it's conditionally hidden); it's discarded on a page switch.
+- `"session"`: the value is preserved for the whole session, including across page switches, so it returns when the user navigates back.
+
+```python
+st.text_input("Name", key="name", persist_state="session")
+```
+
+`persist_state` requires a `key` and is available on every widget that supports `bind="query-params"`. When both are set, `bind` takes precedence, so the value lives in the URL and persists across page switches regardless of the `persist_state` scope.
+
 ## Callbacks
 
 Callbacks execute **before** the script reruns, allowing immediate state changes. Use `on_change` or `on_click` with optional `args` and `kwargs`:
@@ -44,6 +75,7 @@ Callbacks execute **before** the script reruns, allowing immediate state changes
 ```python
 def increment(amount):
     st.session_state.count += amount
+
 
 st.button("Add 5", on_click=increment, args=(5,))
 ```
@@ -62,7 +94,7 @@ st.session_state.setdefault("filters", {})
 
 ## Multipage state
 
-Widgets are NOT stateful across pages. Their values reset when navigating between pages.
+By default, widgets are NOT stateful across pages—their values reset when navigating between pages. To keep a widget's value across page switches, set `persist_state="session"` (see [Persisting widget values](#persisting-widget-values-persist_state) above).
 
 ### Sharing state
 

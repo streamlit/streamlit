@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import random
-import time
 
 import numpy as np
 import pandas as pd
@@ -51,17 +50,6 @@ st.dataframe(
 )
 
 
-if st.button("Create some elements to unmount component"):
-    for _ in range(3):
-        # The sleep here is needed, because it won't unmount the
-        # component if this is too fast.
-        time.sleep(1)
-        st.write("Another element")
-
-
-st.data_editor(random_df, num_rows="dynamic", key="data_editor", width="content")
-
-
 cell_overlay_test_df = pd.DataFrame(
     {
         "big_numbers": [1231231.41, 12012],
@@ -92,17 +80,6 @@ st.dataframe(
     column_config=cell_overlay_test_column_config,
     width="content",
 )
-
-st.header("Test cell editor")
-
-result = st.data_editor(
-    cell_overlay_test_df,
-    hide_index=True,
-    column_config=cell_overlay_test_column_config,
-    width="content",
-)
-
-st.write("Edited DF:", str(result))
 
 st.dataframe(fullscreen_df, width="content")
 

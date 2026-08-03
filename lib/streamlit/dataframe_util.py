@@ -19,7 +19,6 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import inspect
-import math
 import re
 import warnings
 from collections import ChainMap, UserDict, UserList, deque
@@ -40,7 +39,7 @@ from typing import (
     runtime_checkable,
 )
 
-from streamlit import config, errors, logger, string_util
+from streamlit import errors, logger, string_util
 from streamlit.type_util import (
     CustomDict,
     dump_pydantic_sequence,
@@ -892,30 +891,7 @@ def _downcast_large_list_schema(schema: pa.Schema) -> pa.Schema:
 
 
 def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
-    """Serialize pyarrow.Table to Arrow IPC bytes.
-
-    Parameters
-    ----------
-    table : pyarrow.Table
-        A table to convert.
-
-    Returns
-    -------
-    bytes
-        The serialized Arrow IPC bytes.
-    """
-    try:
-        table = _maybe_truncate_table(table)
-    except RecursionError as err:  # pragma: no cover - defensive
-        # This is a very unlikely edge case, but we want to make sure that
-        # it doesn't lead to unexpected behavior.
-        # If there is a recursion error, we just return the table as-is
-        # which will lead to the normal message limit exceed error.
-        _LOGGER.warning(
-            "Recursion error while truncating Arrow table. This is not "
-            "supposed to happen.",
-            exc_info=err,
-        )
+    """Serialize pyarrow.Table to Arrow IPC bytes."""
 
     import pyarrow as pa
 
@@ -929,6 +905,48 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     writer.write_table(table)
     writer.close()
     return cast("bytes", sink.getvalue().to_pybytes())
+
+
+def convert_pandas_df_to_arrow_table(
+    df: DataFrame,
+    *,
+    preserve_index: bool | None = None,
+) -> pa.Table:
+    """Convert a pandas.DataFrame to a pyarrow.Table.
+
+    Applies automatic column-type fixes and retries the conversion if the
+    initial attempt fails (e.g. for mixed-type or otherwise Arrow-incompatible
+    columns).
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        A dataframe to convert.
+
+    preserve_index : bool or None
+        Passed through to ``pyarrow.Table.from_pandas``. ``None`` (default) lets
+        pyarrow decide: a non-default index is stored as a column, while a
+        default ``RangeIndex`` is stored only as schema metadata. Pass ``True``
+        to always materialize the index as a real column.
+
+    Returns
+    -------
+    pyarrow.Table
+        The converted table.
+    """
+    import pyarrow as pa
+
+    try:
+        return pa.Table.from_pandas(df, preserve_index=preserve_index)
+    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
+        _LOGGER.info(
+            "Serialization of dataframe to Arrow table was unsuccessful. "
+            "Applying automatic fixes for column types to make the dataframe "
+            "Arrow-compatible.",
+            exc_info=ex,
+        )
+        fixed_df = fix_arrow_incompatible_column_types(df)
+        return pa.Table.from_pandas(fixed_df, preserve_index=preserve_index)
 
 
 def convert_pandas_df_to_arrow_bytes(
@@ -955,19 +973,7 @@ def convert_pandas_df_to_arrow_bytes(
     bytes
         The serialized Arrow IPC bytes.
     """
-    import pyarrow as pa
-
-    try:
-        table = pa.Table.from_pandas(df)
-    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
-        _LOGGER.info(
-            "Serialization of dataframe to Arrow table was unsuccessful. "
-            "Applying automatic fixes for column types to make the dataframe "
-            "Arrow-compatible.",
-            exc_info=ex,
-        )
-        df = fix_arrow_incompatible_column_types(df)
-        table = pa.Table.from_pandas(df)
+    table = convert_pandas_df_to_arrow_table(df)
 
     if downcast_large_types:
         table = _downcast_large_arrow_types(table)
@@ -1148,81 +1154,6 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
     except errors.StreamlitAPIException:  # pragma: no cover - defensive
         # Defensive fallback: wrap the object into a list if conversion fails
         return [obj]  # type: ignore
-
-
-def _maybe_truncate_table(
-    table: pa.Table, truncated_rows: int | None = None
-) -> pa.Table:
-    """Experimental feature to automatically truncate tables that
-    are larger than the maximum allowed message size. It needs to be enabled
-    via the server.enableArrowTruncation config option.
-
-    Parameters
-    ----------
-    table : pyarrow.Table
-        A table to truncate.
-
-    truncated_rows : int or None
-        The number of rows that have been truncated so far. This is used by
-        the recursion logic to keep track of the total number of truncated
-        rows.
-
-    """
-
-    if config.get_option("server.enableArrowTruncation"):
-        # This is an optimization problem: We don't know at what row
-        # the perfect cut-off is to comply with the max size. But we want to figure
-        # it out in as few iterations as possible. We almost always will cut out
-        # more than required to keep the iterations low.
-
-        # The maximum size allowed for protobuf messages in bytes:
-        max_message_size = int(config.get_option("server.maxMessageSize") * 1e6)
-        # We add 1 MB for other overhead related to the protobuf message.
-        # This is a very conservative estimate, but it should be good enough.
-        table_size = int(table.nbytes + 1 * 1e6)
-        table_rows = table.num_rows
-
-        if table_rows > 1 and table_size > max_message_size:
-            # targeted rows == the number of rows the table should be truncated to.
-            # Calculate an approximation of how many rows we need to truncate to.
-            targeted_rows = math.ceil(table_rows * (max_message_size / table_size))
-            # Make sure to cut out at least a couple of rows to avoid running
-            # this logic too often since it is quite inefficient and could lead
-            # to infinity recursions without these precautions.
-            targeted_rows = math.floor(
-                max(
-                    min(
-                        # Cut out:
-                        # an additional 5% of the estimated num rows to cut out:
-                        targeted_rows - math.floor((table_rows - targeted_rows) * 0.05),
-                        # at least 1% of table size:
-                        table_rows - (table_rows * 0.01),
-                        # at least 5 rows:
-                        table_rows - 5,
-                    ),
-                    1,  # but it should always have at least 1 row
-                )
-            )
-            sliced_table = table.slice(0, targeted_rows)
-            return _maybe_truncate_table(
-                sliced_table, (truncated_rows or 0) + (table_rows - targeted_rows)
-            )
-
-        if truncated_rows:
-            displayed_rows = string_util.simplify_number(table.num_rows)
-            total_rows = string_util.simplify_number(table.num_rows + truncated_rows)
-
-            if displayed_rows == total_rows:  # pragma: no cover - defensive
-                # If the simplified numbers are the same,
-                # we just display the exact numbers.
-                displayed_rows = str(table.num_rows)
-                total_rows = str(table.num_rows + truncated_rows)
-            _show_data_information(
-                f"⚠️ Showing {displayed_rows} out of {total_rows} "
-                "rows due to data size limitations."
-            )
-
-    return table
 
 
 def determine_arrow_column_fix(
