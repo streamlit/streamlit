@@ -81,8 +81,15 @@ st.text_input("Name")  # Default: rerun on blur/enter only
 - Allows fine-grained control over debounce timing when needed
 
 **Cons:**
-- Term "debounce" may be unfamiliar to data scientists
+- Term "debounce" may be unfamiliar to data scientists. This is a deliberate trade-off against
+  API Principle 8 (semantic names over geeky names), accepted here for migration parity with
+  `streamlit-keyup`, which already popularized `debounce` among the exact users we are targeting.
 - Requires understanding milliseconds
+- The `int | bool` type overloads a single parameter as both an on/off switch (`True`/`False`) and
+  a numeric delay, which is in tension with API Principle 16 (prefer enums over booleans). Accepted
+  because it mirrors the existing `st.json(expanded=...)` and `st.navigation(expanded=...)` APIs,
+  which already use the `bool | int` "flag or number" shape — so the pattern is consistent with the
+  current API surface rather than novel.
 
 #### Option 2: Boolean flag (`keyup`, `live_update`, or `update_on`)
 
@@ -154,15 +161,25 @@ def text_input(
 | `> 0` | Rerun after N milliseconds of typing inactivity |
 | `< 0` | Raises `StreamlitAPIException` - negative values are invalid |
 
+**Rerun frequency (relation to API Principle 34):** Live updates intentionally relax Principle 34
+("one rerun per interaction") — a single typing session can trigger multiple reruns. This exception
+is acceptable because it is the explicit purpose of the feature and the rerun rate is *bounded* by
+the debounce delay: reruns fire at most once per period of typing inactivity (e.g., `debounce=300`
+triggers at most roughly once per 300ms pause, not once per keystroke). `debounce=0` is the only
+value that removes this bound (one rerun per keystroke) and therefore carries the performance
+warning above. The default (`False`) fully preserves one-rerun-per-interaction behavior, so existing
+apps are unaffected.
+
 ### Implementation Notes
 
 **Backend:**
 - Because Python's `bool` is a subclass of `int` (`False == 0` and `True == 1`), the backend must
-  resolve `debounce` using identity checks (`debounce is True`, `debounce is False`) *before* any
-  integer comparison. Resolve `True` to the 300ms default and `False` to blur/Enter-only first, then
-  treat the remaining values as integers (`0` → every keystroke, `> 0` → N ms, `< 0` →
-  `StreamlitAPIException`). A naive numeric or truthiness check would incorrectly treat `True` as
-  `1ms` and `False` as `0` (every keystroke) — the two most common values.
+  branch on `isinstance(debounce, bool)` *before* treating `debounce` as an integer — the same
+  pattern already used by `st.json(expanded=...)` and `st.navigation(expanded=...)`. Resolve the
+  `bool` case first (`True` → 300ms default, `False` → blur/Enter-only), then treat the remaining
+  values as integers (`0` → every keystroke, `> 0` → N ms, `< 0` → `StreamlitAPIException`). A naive
+  numeric or truthiness check (e.g. `if debounce:` or `if debounce > 0:`) would incorrectly treat
+  `True` as `1ms` and `False` as `0` (every keystroke) — the two most common values.
 
 **Frontend:**
 - When `debounce` is set, use a timer that resets on each keystroke
@@ -226,8 +243,10 @@ if email:
    rerun described in edge case 7. The widget value is still updated in frontend state and will be
    available on the next rerun triggered by another widget.
 
-3. **Interaction with `st.form`**: Inside forms, `debounce` is ignored since form widgets don't
-   trigger reruns until submission. A warning could be logged.
+3. **Interaction with `st.form`**: Inside a form, `debounce` has no effect — form widgets only
+   commit their value on form submission, never while typing. This is a deterministic, documented
+   no-op (no warning is logged), consistent with how `st.form` already overrides the
+   rerun-on-interaction behavior of every widget it contains.
 
 4. **Interaction with `max_chars`**: Both features work independently. `max_chars` is enforced
    by the browser via the HTML `maxlength` attribute, so users cannot type beyond the limit.
@@ -244,6 +263,12 @@ if email:
    occurs when the user leaves the field, providing consistent behavior with the non-debounced case.
    The one exception is `on_change="ignore"` (see edge case 2), which suppresses this blur-triggered
    rerun as well — the value is only synced to frontend state.
+
+8. **IME / composition input**: For input methods that build a character over multiple keystrokes
+   (e.g., CJK languages, or accented characters via dead keys), the debounce timer must not fire on
+   intermediate composition states. The frontend should suspend the timer during composition and
+   only (re)start it on the `compositionend` event, so live updates never flush partial/garbled
+   values mid-composition. Only completed characters trigger a rerun.
 
 ## Out of Scope (Future Work)
 
