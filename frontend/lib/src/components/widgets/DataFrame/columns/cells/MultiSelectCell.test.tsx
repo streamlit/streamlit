@@ -309,6 +309,7 @@ describe("onPaste", () => {
   })
 })
 
+/** Open the cell's dropdown and click the given option to select it. */
 async function selectOption(
   user: ReturnType<typeof userEvent.setup>,
   container: HTMLElement,
@@ -322,6 +323,11 @@ async function selectOption(
   await user.click(within(listBox).getByText(optionText))
 }
 
+/**
+ * Open the cell's dropdown and report whether the given option is offered. Note
+ * this performs user interactions (opens the menu) rather than being a pure
+ * predicate, so it must be awaited.
+ */
 async function hasOption(
   user: ReturnType<typeof userEvent.setup>,
   container: HTMLElement,

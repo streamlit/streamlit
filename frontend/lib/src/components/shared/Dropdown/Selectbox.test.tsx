@@ -48,6 +48,7 @@ async function openDropdown(
   await user.click(screen.getByRole("button", { name: "Open" }))
 }
 
+/** Place the caret after the committed label so the next keystroke appends instead of replacing. */
 function moveCaretToEnd(input: HTMLElement): void {
   if (!(input instanceof HTMLInputElement)) {
     throw new TypeError("Expected the combobox to be an input element")

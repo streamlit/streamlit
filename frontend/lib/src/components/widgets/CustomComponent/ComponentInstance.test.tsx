@@ -68,6 +68,7 @@ const MOCK_COMPONENT_URL = "http://a.mock.url"
 const MOCK_WIDGET_ID = "mock_widget_id"
 const MOCK_COMPONENT_NAME = "mock_component_name"
 
+/** Dispatch a window MessageEvent inside act() so ComponentInstance state updates flush. */
 const dispatchMessageEvent = (event: MessageEvent): void => {
   act(() => {
     window.dispatchEvent(event)

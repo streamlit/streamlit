@@ -482,10 +482,16 @@ describe("DataFrame ColumnMenu", () => {
       insideSubMenu.setAttribute("data-testid", "stDataFrameStatisticsMenu")
       insideSubMenu.tabIndex = -1
       document.body.appendChild(insideSubMenu)
-      insideSubMenu.focus()
 
-      expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
-      insideSubMenu.remove()
+      try {
+        insideSubMenu.focus()
+
+        expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+      } finally {
+        // Always remove the node so a failed assertion can't leak a
+        // testid-bearing element into subsequent tests.
+        insideSubMenu.remove()
+      }
     })
 
     it("closes the statistics sub-menu on keyboard-driven blur", async () => {
@@ -519,10 +525,16 @@ describe("DataFrame ColumnMenu", () => {
       )
       insideSubMenu.tabIndex = -1
       document.body.appendChild(insideSubMenu)
-      insideSubMenu.focus()
 
-      expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
-      insideSubMenu.remove()
+      try {
+        insideSubMenu.focus()
+
+        expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+      } finally {
+        // Always remove the node so a failed assertion can't leak a
+        // testid-bearing element into subsequent tests.
+        insideSubMenu.remove()
+      }
     })
   })
 

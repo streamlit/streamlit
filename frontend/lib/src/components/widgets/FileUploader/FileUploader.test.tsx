@@ -56,6 +56,12 @@ const createFile = (
   return file
 }
 
+/**
+ * Dispatch a drag-and-drop of `files` onto a dropzone container. `userEvent.upload`
+ * only targets `<input>` elements, so it cannot simulate drops on arbitrary dropzone
+ * containers or multi-file selection on a non-multiple input — this helper builds the
+ * drop event manually to exercise those paths.
+ */
 const dropFiles = (dropzone: HTMLElement, files: File[]): void => {
   const dropEvent = createEvent.drop(dropzone)
   Object.defineProperty(dropEvent, "dataTransfer", {
@@ -286,6 +292,8 @@ describe("FileUploader widget tests", () => {
       }),
     ]
 
+    // Drop multiple files onto a single-file dropzone; user.upload on a
+    // non-multiple input cannot exercise this rejection path.
     dropFiles(fileDropZone, filesToUpload)
 
     await waitFor(() =>
