@@ -111,10 +111,10 @@ class AttributeDictionary(dict[Any, Any]):  # noqa: FURB189
 
 
 _READ_ONLY_ERROR_MSG = (
-    "Widget state is read-only and cannot be modified in place; modifying "
-    "nested values has no effect on the app. For widget states that support "
-    "programmatic updates (e.g. st.dataframe selections), assign a new "
-    "dictionary to the Session State key instead, for example:\n"
+    "Widget state is read-only because modifying nested values has no effect "
+    "on the app. For widget states that support programmatic updates "
+    "(e.g. st.dataframe selections), assign a new dictionary to the Session "
+    "State key instead, for example:\n"
     "    st.session_state['my_key'] = {'selection': {'rows': [0]}}"
 )
 
@@ -126,8 +126,10 @@ class ReadOnlyAttributeDictionary(AttributeDictionary):
     Used for widget state return values (e.g., dataframe selections) to prevent
     users from modifying values in ways that don't trigger proper state updates.
 
-    Modifications should be done by assigning a new dictionary to the session
-    state key, e.g., ``st.session_state['key'] = {'selection': {'rows': [0]}}``.
+    For widget states that support programmatic updates (e.g. dataframe
+    selections), assign a new dictionary to the Session State key, e.g.
+    ``st.session_state['key'] = {'selection': {'rows': [0]}}``. Other widget
+    states (e.g. chart selections) cannot be updated programmatically.
     """
 
     def __getitem__(self, key: Any) -> Any:
