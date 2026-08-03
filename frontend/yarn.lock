@@ -2129,9 +2129,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@microlink/react-json-view@npm:^1.31.24":
-  version: 1.31.24
-  resolution: "@microlink/react-json-view@npm:1.31.24"
+"@microlink/react-json-view@npm:^1.31.25":
+  version: 1.31.25
+  resolution: "@microlink/react-json-view@npm:1.31.25"
   dependencies:
     react-base16-styling: "npm:~0.10.0"
     react-lifecycles-compat: "npm:~3.0.4"
@@ -2139,7 +2139,7 @@ __metadata:
   peerDependencies:
     react: ">= 15"
     react-dom: ">= 15"
-  checksum: 10c0/ec73f9522fb6316a767d85eb212255133aa1210ddad7f54dc4b9c5acd4af74e8f10cfdba162d41afd7efaa532ca36ebedfea226363348322a16bbf89e4c6a83f
+  checksum: 10c0/27fa08d48bd901ac947c85c8566893ed0f6ff8c4c9850f3126f41597f8eef18d6439760391f8b07820df77a91cbe60b7c5989e84e5a6166c0bd3326324d9b7db
   languageName: node
   linkType: hard
 
@@ -3466,7 +3466,7 @@ __metadata:
     "@loaders.gl/core": "npm:^4.4.3"
     "@loaders.gl/csv": "npm:^4.4.3"
     "@loaders.gl/gltf": "npm:^4.4.3"
-    "@microlink/react-json-view": "npm:^1.31.24"
+    "@microlink/react-json-view": "npm:^1.31.25"
     "@sindresorhus/slugify": "npm:^3.0.0"
     "@streamlit/component-v2-lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
@@ -10125,10 +10125,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"globals@npm:^17.7.0":
-  version: 17.7.0
-  resolution: "globals@npm:17.7.0"
-  checksum: 10c0/e83f791acf537b85fa1632ac48a45432a1999a61acd9f955b5c2145f66d6b5000a7945029874b6184fa2dfac8d33af03885a5a7ffa457866f1bcf0b40d0c1291
+"globals@npm:^17.8.0":
+  version: 17.8.0
+  resolution: "globals@npm:17.8.0"
+  checksum: 10c0/e31b36cef3befd446487674dc6ca7b8f8e62a3b76aadd975dbf80ffa732366b3ac58df8941999eb6b1406d97480103711db85d2a49c955da47ff5ec688bee9b5
   languageName: node
   linkType: hard
 
@@ -16593,7 +16593,7 @@ __metadata:
     eslint-plugin-react-hooks: "npm:^7.1.0"
     eslint-plugin-streamlit-custom: "workspace:^"
     eslint-plugin-testing-library: "npm:^7.16.2"
-    globals: "npm:^17.7.0"
+    globals: "npm:^17.8.0"
     jiti: "npm:^2.7.0"
     knip: "npm:^6.29.0"
     oxfmt: "npm:^0.61.0"
