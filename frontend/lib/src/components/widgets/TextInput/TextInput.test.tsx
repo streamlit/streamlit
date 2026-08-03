@@ -1264,6 +1264,100 @@ describe("TextInput server-side validation", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 
+  it("sets aria-busy on the input while validating", async () => {
+    const user = userEvent.setup()
+    let resolveValidation: (value: { isValid: boolean }) => void = () => {}
+    const requestWidgetValidation = vi.fn().mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveValidation = resolve
+        })
+    )
+    const props = getProps({ validateCallableId: "validator-1" })
+    renderWithContexts(<TextInput {...props} />, {
+      backendOperationContext: {
+        backendOperationClient: makeClient(requestWidgetValidation),
+      },
+    })
+
+    const textInput = screen.getByRole("textbox")
+    expect(textInput).not.toHaveAttribute("aria-busy")
+
+    await user.type(textInput, "alice")
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(textInput).toHaveAttribute("aria-busy", "true")
+    })
+
+    act(() => {
+      resolveValidation({ isValid: true })
+    })
+
+    await waitFor(() => {
+      expect(textInput).not.toHaveAttribute("aria-busy")
+    })
+  })
+
+  it("invalidates an in-flight response when the validator id changes on rerun", async () => {
+    const user = userEvent.setup()
+    let resolveValidation: (value: {
+      isValid: boolean
+      errorMessage?: string
+    }) => void = () => {}
+    const requestWidgetValidation = vi.fn().mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveValidation = resolve
+        })
+    )
+    const props = getProps({ validateCallableId: "validator-1" })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    const { rerenderWithContexts } = renderWithContexts(
+      <TextInput {...props} />,
+      {
+        backendOperationContext: {
+          backendOperationClient: makeClient(requestWidgetValidation),
+        },
+      }
+    )
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "alice")
+    await user.click(document.body)
+
+    expect(await screen.findByTestId("stTextInputSpinner")).toBeVisible()
+
+    // A rerun installs a fresh validator id while the request from the previous
+    // callable is still pending.
+    const rerunProps = getProps(
+      { validateCallableId: "validator-2" },
+      { widgetMgr: props.widgetMgr }
+    )
+    act(() => {
+      rerenderWithContexts(<TextInput {...rerunProps} />)
+    })
+
+    // The stale response from the obsolete callable is discarded: the value is
+    // not committed and no error is shown.
+    act(() => {
+      resolveValidation({ isValid: true })
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stTextInputSpinner")
+      ).not.toBeInTheDocument()
+    })
+    expect(setStringValueSpy).not.toHaveBeenCalledWith(
+      expect.anything(),
+      "alice",
+      { fromUi: true },
+      undefined
+    )
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
   it("blocks form submission until server validation passes", async () => {
     const user = userEvent.setup()
     const sendRerunBackMsg = vi.fn()

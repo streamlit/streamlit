@@ -339,20 +339,23 @@ class TextWidgetsMixin:
               the callable is executed there; a loading indicator is shown while
               waiting, and the value is only submitted if the callable returns
               ``True``. Use a callable when validation requires backend
-              resources (e.g., checking whether a username is available) or must
-              be secure. The callable runs on a server-side worker thread
-              without Streamlit's script-run context, so ``st.*`` commands and
-              ``st.session_state`` are not available inside it. If the callable
-              raises an exception or returns an unexpected type, the value is
-              rejected with a generic error message and the error is logged to
-              the server console. If it takes longer than 10 seconds, the value
-              is rejected with a message asking the user to try again.
+              resources (e.g., checking whether a username is available) or
+              logic you don't want to expose to the browser. The callable runs
+              on a server-side worker thread without Streamlit's script-run
+              context, so ``st.*`` commands and ``st.session_state`` are not
+              available inside it. If the callable raises an exception or
+              returns an unexpected type, the value is rejected with a generic
+              error message and the error is logged to the server console. If it
+              takes longer than 10 seconds, the value is rejected with a message
+              asking the user to try again.
 
             .. note::
-               Client-side regex validation runs in the user's browser and can
-               be bypassed. If the validation is security-relevant, use a
-               callable (server-side validation) or also validate the value in
-               your app code after it is submitted.
+               ``validate`` is not a security boundary. Client-side regex
+               validation runs in the user's browser, and server-side callable
+               validation only runs when the browser requests it, so a modified
+               client can submit a value without passing either check. If the
+               value is security-relevant, always re-validate it in your app
+               code after it is submitted.
 
             Inside a form with ``bind="query-params"``, keystrokes still stage
             the value into widget state (and therefore the URL) before

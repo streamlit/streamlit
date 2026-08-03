@@ -525,6 +525,17 @@ function TextInput({
     }
   }, [configError])
 
+  // Each rerun mints a fresh server-side validator id while the widget's
+  // identity stays stable. If a validation request is still in flight when the
+  // id changes, its response reflects the previous (now-obsolete) callable, so
+  // invalidate it: bumping the token discards the pending response and clearing
+  // the loading state removes the spinner. The user can re-trigger validation
+  // (e.g. by blurring again) against the new callable.
+  useEffect(() => {
+    latestValidationRef.current += 1
+    setIsValidating(false)
+  }, [element.validateCallableId])
+
   // Register the synchronous client-side (regex) form-submit gate.
   useEffect(() => {
     if (!inForm || !hasClientValidation) {
@@ -593,6 +604,7 @@ function TextInput({
             data-testid="stTextInputField"
             aria-label={element.label}
             aria-invalid={displayedError ? true : undefined}
+            aria-busy={isValidating || undefined}
             aria-describedby={displayedError ? errorId : undefined}
             value={uiValue ?? ""}
             placeholder={placeholder}
