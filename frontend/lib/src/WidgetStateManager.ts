@@ -468,15 +468,19 @@ export class WidgetStateManager {
     form.isSubmitting = true
 
     const validators = Array.from(form.asyncSubmitValidators.values())
-    Promise.all(validators.map(validator => validator()))
+    // Use `allSettled` (not `all`) so a rejected validator doesn't short-circuit
+    // the others: every field runs its validation and can surface its own error.
+    // A rejection is treated as a validation failure (fail-closed), so the submit
+    // is only finalized when every validator resolves to `true`. `allSettled`
+    // never rejects, so the chain is intentionally not awaited (`void`).
+    void Promise.allSettled(validators.map(validator => validator()))
       .then(results => {
-        if (results.every(Boolean)) {
+        const allValid = results.every(
+          result => result.status === "fulfilled" && result.value === true
+        )
+        if (allValid) {
           this.finalizeFormSubmit(form, formId, fragmentId, actualSubmitButton)
         }
-      })
-      .catch(() => {
-        // A rejected validator is treated as validation failure; the offending
-        // field surfaces its own error. Swallow here so the submit is aborted.
       })
       .finally(() => {
         form.isSubmitting = false

@@ -835,6 +835,30 @@ describe("Widget State Manager", () => {
       expect(sendBackMsg).not.toHaveBeenCalled()
     })
 
+    it("aborts submission when an async validator rejects without short-circuiting others", async () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      // A rejecting validator must not prevent the other validator from running
+      // (so every field can still surface its own error), and it must be treated
+      // as a validation failure so the submit is aborted (fail-closed).
+      const rejecting = vi.fn(() => Promise.reject(new Error("boom")))
+      const passing = vi.fn(() => Promise.resolve(true))
+      widgetMgr.addFormSubmitAsyncValidator(formId, "widget1", rejecting)
+      widgetMgr.addFormSubmitAsyncValidator(formId, "widget2", passing)
+
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(false)
+
+      await vi.waitFor(() => {
+        expect(rejecting).toHaveBeenCalledTimes(1)
+        expect(passing).toHaveBeenCalledTimes(1)
+      })
+      expect(sendBackMsg).not.toHaveBeenCalled()
+    })
+
     it("runs sync validators before async ones and skips async on sync failure", () => {
       const formId = "mockFormId"
       widgetMgr.addSubmitButton(
