@@ -355,6 +355,10 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
         redirect_uri = get_redirect_uri(auth_section) or "/"
         config = auth_section.to_dict()
         # logout_params is a reserved [auth] key, not an OAuth provider section.
+        # Without this pop, a logout_params table that happens to contain a
+        # provider-like key (e.g. client_id, used to override/remove the default
+        # logout param) would satisfy _looks_like_provider_section and be
+        # registered as an Authlib provider named "logout_params".
         config.pop("logout_params", None)
     else:
         config = {}

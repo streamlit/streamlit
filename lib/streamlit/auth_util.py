@@ -149,6 +149,11 @@ def get_logout_params_config() -> dict[str, str]:
 
     Returns a mapping of query parameters to merge into the OIDC logout URL.
     Returns an empty dict when not configured.
+
+    Raises
+    ------
+    StreamlitAuthError
+        If ``logout_params`` is set but is not a table of query parameters.
     """
     auth_section = get_secrets_auth_section()
     logout_params = auth_section.get("logout_params")
@@ -313,11 +318,20 @@ def build_logout_url(
     # values take precedence.
     namespace: dict[str, Any] = {**(user_claims or {}), **resolved_params}
 
+    # Keys the user explicitly removes with an empty value. These are dropped
+    # from the final URL even when the provider baked them into the
+    # end_session_endpoint query string.
+    removed_keys: set[str] = set()
+
     for key, raw_value in (logout_params or {}).items():
-        # An empty value resolves to "" and removes the param, matching the
-        # behavior of a template whose referenced field is missing or empty.
         resolved = _resolve_logout_param_template(str(raw_value), namespace)
-        if resolved is None or resolved == "":
+        if resolved == "":
+            # An explicit empty value removes the param entirely.
+            resolved_params.pop(key, None)
+            removed_keys.add(key)
+        elif resolved is None:
+            # A template whose referenced field is missing or empty is omitted
+            # silently, leaving any default value in place.
             resolved_params.pop(key, None)
         else:
             resolved_params[key] = resolved
@@ -325,7 +339,9 @@ def build_logout_url(
     # Per OIDC spec, end_session_endpoint should be a clean URL without query params,
     # but we handle existing params defensively for non-standard providers.
     parsed = urlparse(end_session_endpoint)
-    existing_params = dict(parse_qsl(parsed.query))
+    existing_params = {
+        key: value for key, value in parse_qsl(parsed.query) if key not in removed_keys
+    }
     merged_params = {**existing_params, **resolved_params}
     new_query = urlencode(merged_params)
     return parsed._replace(query=new_query).geturl()

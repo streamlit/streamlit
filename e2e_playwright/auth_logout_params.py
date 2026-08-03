@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import streamlit as st
 
-x = st.button("TEST LOGIN")
+login_clicked = st.button("TEST LOGIN")
 
-if x:
+if login_clicked:
     st.login("testprovider")
 
 

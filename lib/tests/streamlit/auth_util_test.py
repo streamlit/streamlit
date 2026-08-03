@@ -760,6 +760,8 @@ def test_get_logout_params_config_raises_on_non_table(
         ("https://x/y", {}, "https://x/y"),
         ("{email}", {"email": "a@b.com"}, "a@b.com"),
         ("prefix-{sub}", {"sub": "123"}, "prefix-123"),
+        ("{email}-{sub}", {"email": "a@b.com", "sub": "123"}, "a@b.com-123"),
+        ("{email}-{sub}", {"email": "a@b.com"}, None),
         ("{missing}", {}, None),
         ("{email}", {"email": ""}, None),
         ("{email}", {"email": None}, None),
@@ -770,6 +772,8 @@ def test_get_logout_params_config_raises_on_non_table(
         "no_placeholder_url",
         "single_field",
         "mixed_literal_and_field",
+        "multiple_fields",
+        "multiple_fields_one_missing",
         "missing_field",
         "empty_field_value",
         "none_field_value",
@@ -858,6 +862,16 @@ def test_resolve_logout_param_template(
             ["existing=value", "federated=true"],
             [],
         ),
+        # An empty-string value also drops a param baked into the endpoint URL,
+        # not just Streamlit's computed defaults.
+        (
+            "https://provider.com/logout?id_token_hint=stale",
+            "test-id-token",
+            {"id_token_hint": ""},
+            None,
+            ["client_id=test-client-id"],
+            ["id_token_hint="],
+        ),
     ],
     ids=[
         "rename_cognito",
@@ -866,6 +880,7 @@ def test_resolve_logout_param_template(
         "remove_default",
         "omit_on_missing",
         "preserves_existing_query",
+        "remove_preexisting_endpoint_param",
     ],
 )
 def test_build_logout_url_with_logout_params(

@@ -119,7 +119,9 @@ def fake_oidc_server(
 
 
 @pytest.fixture(scope="module")
-def prepare_secrets_file(app_base_url: str, oidc_server_port: int):
+def prepare_secrets_file(
+    app_base_url: str, oidc_server_port: int
+) -> Generator[str, None, None]:
     """Create a temporary auth secrets TOML with correct redirect/provider URLs."""
     redirect_uri = build_app_url(app_base_url, path="/oauth2callback")
     server_metadata_url = build_app_url(
