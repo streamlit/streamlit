@@ -163,7 +163,7 @@ import {
 } from "@streamlit/utils"
 
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
-// Used to import the bundled fonts
+// Import @font-face rules for app and icon fonts
 import "@streamlit/app/src/assets/css/theme.css"
 import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
 import {
