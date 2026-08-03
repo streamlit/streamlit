@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import math
 import numbers
 from dataclasses import dataclass
 from textwrap import dedent
@@ -48,6 +49,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -86,7 +88,11 @@ class NumberInputSerde:
             # a no-op for frontend values since the UI enforces bounds.
             # Returning the default triggers _seed_widget_from_url's
             # "deserialized == default" check, which clears the URL param.
-            if val < self.min_value or val > self.max_value:
+            if (
+                (self.data_type == NumberInputProto.FLOAT and not math.isfinite(val))
+                or val < self.min_value
+                or val > self.max_value
+            ):
                 return self.value
 
         return val
@@ -118,6 +124,7 @@ class NumberInputMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> int | IntOrNone: ...
 
     # If "max_value: int" is given and all other numerical inputs are
@@ -145,6 +152,7 @@ class NumberInputMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> int | IntOrNone: ...
 
     # If "value=int" is given and all other numerical inputs are "int"s
@@ -170,6 +178,7 @@ class NumberInputMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> int: ...
 
     # If "step=int" is given and all other numerical inputs are "int"s
@@ -197,6 +206,7 @@ class NumberInputMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> int | IntOrNone: ...
 
     # If all numerical inputs are floats (with value optionally being "min")
@@ -224,6 +234,7 @@ class NumberInputMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> float | FloatOrNone: ...
 
     @gather_metrics("number_input")
@@ -247,6 +258,7 @@ class NumberInputMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> Number | None:
         r"""Display a numeric input widget.
 
@@ -411,6 +423,21 @@ class NumberInputMixin:
             from the URL. If ``value`` is ``None``, an empty query
             parameter (e.g., ``?my_key=``) clears the widget.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         int or float or None
@@ -461,6 +488,7 @@ class NumberInputMixin:
             icon=icon,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -484,6 +512,7 @@ class NumberInputMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> Number | None:
         key = to_key(key)
@@ -591,6 +620,12 @@ class NumberInputMixin:
         if max_value is not None and value is not None and max_value < value:
             raise StreamlitValueAboveMaxError(value=value, max_value=max_value)
 
+        # Record whether the user explicitly provided bounds before we backfill
+        # unset bounds with JS safe-number sentinels below. The frontend uses
+        # these flags to decide which range-validation message to show.
+        has_user_min = min_value is not None
+        has_user_max = max_value is not None
+
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
         try:
@@ -647,13 +682,17 @@ class NumberInputMixin:
         if help is not None:
             number_input_proto.help = dedent(help)
 
+        # min_value/max_value are guaranteed to be non-None here (unset bounds
+        # were backfilled with JS sentinels above). We always send them as the
+        # input's min/max attributes, but has_min/has_max only reflect bounds
+        # the user actually set.
         if min_value is not None:
             number_input_proto.min = min_value
-            number_input_proto.has_min = True
+            number_input_proto.has_min = has_user_min
 
         if max_value is not None:
             number_input_proto.max = max_value
-            number_input_proto.has_max = True
+            number_input_proto.has_max = has_user_max
 
         if step is not None:
             number_input_proto.step = step
@@ -685,7 +724,9 @@ class NumberInputMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="double_value",
+            disabled=disabled,
             bind=bind,
+            persist_state=persist_state,
             # Clearable when value=None: the widget can be in an empty state,
             # so ?key= (empty URL param) should clear the widget to None.
             clearable=(value is None),
@@ -735,5 +776,5 @@ class NumberInputMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

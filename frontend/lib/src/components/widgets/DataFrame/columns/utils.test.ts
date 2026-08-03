@@ -18,8 +18,10 @@ import { Field, makeVector, Utf8 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
+import JsonColumn from "./JsonColumn"
 import {
   arrayToCopyValue,
+  arrayValuesEqual,
   BaseColumnProps,
   countDecimals,
   getEmptyCell,
@@ -41,9 +43,10 @@ import {
   toSafeNumber,
   toSafeString,
   truncateDecimals,
+  valuesEqual,
 } from "./utils"
 
-import { TextColumn } from "./index"
+import { DateTimeColumn, ListColumn, NumberColumn, TextColumn } from "./index"
 
 const MOCK_TEXT_COLUMN_PROPS = {
   id: "column_1",
@@ -97,6 +100,84 @@ describe("isErrorCell", () => {
   })
 })
 
+describe("valuesEqual", () => {
+  it("treats null and undefined as equal", () => {
+    const column = TextColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    expect(valuesEqual(null, undefined, column)).toBe(true)
+    expect(valuesEqual(null, "", column)).toBe(false)
+  })
+
+  it("uses Object.is for default comparisons", () => {
+    const column = TextColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    expect(valuesEqual("foo", "foo", column)).toBe(true)
+    expect(valuesEqual("foo", "bar", column)).toBe(false)
+    expect(valuesEqual(Number.NaN, Number.NaN, column)).toBe(true)
+  })
+
+  it("uses array equality for list columns", () => {
+    const column = ListColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    expect(valuesEqual(["foo", "bar"], ["foo", "bar"], column)).toBe(true)
+    expect(valuesEqual(["foo", "bar"], ["bar", "foo"], column)).toBe(false)
+  })
+
+  it("uses JSON string equality for JSON columns", () => {
+    const column = JsonColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    expect(valuesEqual({ foo: "bar" }, { foo: "bar" }, column)).toBe(true)
+    expect(valuesEqual({ foo: "bar" }, { foo: "baz" }, column)).toBe(false)
+  })
+
+  it("uses timestamp equality for datetime columns", () => {
+    const column = DateTimeColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    expect(
+      valuesEqual("2024-01-01T00:00:00.000Z", "2024-01-01T00:00:00Z", column)
+    ).toBe(true)
+    expect(
+      valuesEqual("2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z", column)
+    ).toBe(false)
+  })
+
+  it("uses numeric equality for number columns", () => {
+    const column = NumberColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    expect(valuesEqual("5", 5, column)).toBe(true)
+    expect(valuesEqual("5", 6, column)).toBe(false)
+  })
+
+  it("falls back to identity comparison when a comparator throws", () => {
+    // JSON columns serialize via JSON.stringify, which throws on circular
+    // structures. The central valuesEqual should catch that and fall back to
+    // an identity check instead of propagating the error.
+    const column = JsonColumn(MOCK_TEXT_COLUMN_PROPS)
+
+    const circular: Record<string, unknown> = { foo: "bar" }
+    circular.self = circular
+
+    expect(valuesEqual(circular, circular, column)).toBe(true)
+    expect(valuesEqual(circular, { foo: "bar" }, column)).toBe(false)
+  })
+})
+
+describe("arrayValuesEqual", () => {
+  it.each([
+    [["a", "b"], ["a", "b"], true],
+    [[], [], true],
+    [["a", "b"], ["a", "c"], false],
+    [["a"], ["a", "b"], false],
+    // Non-array inputs are never considered equal
+    ["not-an-array", ["a"], false],
+    [["a"], "not-an-array", false],
+    [null, ["a"], false],
+    [["a"], undefined, false],
+  ])("compares %s and %s and returns %s", (a, b, expected) => {
+    expect(arrayValuesEqual(a, b)).toBe(expected)
+  })
+})
+
 describe("getEmptyCell", () => {
   it("creates a valid empty cell", () => {
     const emptyCell = getEmptyCell()
@@ -136,6 +217,8 @@ describe("toSafeArray", () => {
     ["foo,bar,,", ["foo", "bar", "", ""]],
     // JSON Array syntax
     [`["foo","bar"]`, ["foo", "bar"]],
+    // Malformed JSON array falls back to the raw string
+    ["[foo]", ["[foo]"]],
     // non-string values
     [0, [0]],
     [1, [1]],
@@ -149,8 +232,17 @@ describe("toSafeArray", () => {
       [true, false],
       [true, false],
     ],
+    // Plain objects are serialized into a single stringified element
+    [{ foo: "bar" }, ["[object Object]"]],
   ])("converts %s to a valid array: %s", (input, expected) => {
     expect(toSafeArray(input)).toEqual(expected)
+  })
+
+  it("returns a stringified fallback when the value cannot be JSON serialized", () => {
+    const circular: Record<string, unknown> = {}
+    circular.self = circular
+
+    expect(toSafeArray(circular)).toEqual(["[object Object]"])
   })
 })
 
@@ -285,6 +377,8 @@ describe("toSafeNumber", () => {
     [".1312314", 0.1312314],
     [true, 1],
     [false, 0],
+    // Int32Array values are read from the first element
+    [Int32Array.from([42, 7]), 42],
   ])("converts %s to a valid number: %s", (input, expected) => {
     expect(toSafeNumber(input)).toEqual(expected)
   })
@@ -361,6 +455,8 @@ describe("toSafeDate", () => {
   it.each([
     // valid date object
     [new Date("2023-04-25"), new Date("2023-04-25")],
+    // invalid date object
+    [new Date("not-a-real-date"), undefined],
     // undefined value
     [undefined, null],
     // null value
@@ -459,12 +555,19 @@ describe("truncateDecimals", () => {
     [0.1 + 0.2, 2, 0.3],
     [4.52, 2, 4.52],
     [0.0099999, 2, 0.0],
+    // Non-finite values are returned unchanged
+    [Infinity, 2, Infinity],
+    [-Infinity, 2, -Infinity],
   ])(
     "truncates value %f to %i decimal places, resulting in %f",
     (value, decimals, expected) => {
       expect(truncateDecimals(value, decimals)).toBe(expected)
     }
   )
+
+  it("returns NaN unchanged", () => {
+    expect(truncateDecimals(NaN, 2)).toBeNaN()
+  })
 })
 
 it("removeLineBreaks should remove line breaks", () => {

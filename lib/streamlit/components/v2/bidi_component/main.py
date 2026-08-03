@@ -293,7 +293,7 @@ class BidiComponentMixin:
             If this is omitted, a key will be generated based on the
             component's execution sequence.
         isolate_styles
-            Whether to sandbox the component's styles in a shadow root.
+            Whether to isolate the component's styles in a shadow root.
             Defaults to True.
         data
             Data to pass to the component. This can be any JSON-serializable
@@ -505,9 +505,9 @@ class BidiComponentMixin:
         event_to_value: dict[str, Any] = {}
         for payload in payloads:
             if isinstance(payload, dict):
-                ev = payload.get("event")  # ty: ignore[invalid-argument-type]
+                ev = payload.get("event")
                 if isinstance(ev, str):
-                    event_to_value[ev] = payload.get("value")  # ty: ignore[invalid-argument-type]
+                    event_to_value[ev] = payload.get("value")
 
         for evt_name in callbacks_by_event:
             trigger_vals[evt_name] = event_to_value.get(evt_name)
@@ -533,5 +533,5 @@ class BidiComponentMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type * as Plotly from "plotly.js"
+
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
 import type { EmotionTheme } from "~lib/theme/types"
@@ -48,6 +50,11 @@ interface PlotlySelectionShape extends Record<string, unknown> {
   xref: string
   yref: string
   path?: string
+}
+
+interface PlotlySelectionEventWithSelections
+  extends Plotly.PlotSelectionEvent {
+  selections?: PlotlySelectionShape[]
 }
 
 /**
@@ -230,9 +237,8 @@ export function handleSelection(
   const selectedLassos: PlotlySelection[] = []
   const selectedPoints: Array<Record<string, unknown>> = []
 
-  // event.selections doesn't show up in the PlotSelectionEvent
-  // @ts-expect-error
-  const { selections, points } = event
+  const { selections, points } =
+    event as Readonly<PlotlySelectionEventWithSelections>
 
   if (points) {
     points.forEach(function (point: PlotlySelectionPoint) {

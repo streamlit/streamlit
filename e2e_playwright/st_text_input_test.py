@@ -36,7 +36,7 @@ from e2e_playwright.shared.input_utils import (
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 24
+TEXT_INPUT_ELEMENTS = 28
 
 
 def test_text_input_widget_rendering(
@@ -128,7 +128,13 @@ def test_text_input_has_correct_initial_values(app: Page):
     expect_markdown(app, "value 11: my password")
     expect_markdown(app, "text input 12 (value from state) - value: xyz")
     expect_markdown(app, "text input 13 (value from form) - value:")
-    expect_markdown(app, "Rerun counter: 1")
+    expect(app.get_by_text("Rerun counter: 1", exact=True)).to_be_visible()
+    expect_markdown(app, "validated regex value: ")
+    expect_markdown(app, "validated custom value: ")
+    expect_markdown(app, "invalid regex value: ")
+    expect_markdown(app, "validated form submitted: False")
+    expect_markdown(app, "validated form value: ")
+    expect_markdown(app, "Validation rerun counter: 1")
 
 
 def test_text_input_typing_common_characters_does_not_trigger_global_hotkeys(
@@ -228,12 +234,122 @@ def test_text_input_has_correct_value_on_click_outside(app: Page):
     expect_markdown(app, "value 1: hello world")
 
 
+def test_text_input_validation_blocks_invalid_commits_and_recovers(app: Page):
+    """Client-side validation blocks invalid commits and allows valid ones."""
+    validated_input = (
+        get_element_by_key(app, "validated_regex_input").locator("input").first
+    )
+
+    validated_input.fill("123")
+    validated_input.blur()
+
+    expect_markdown(app, "validated regex value: ")
+    expect_markdown(app, "Validation rerun counter: 1")
+
+    error_icon = get_element_by_key(app, "validated_regex_input").get_by_test_id(
+        "stTooltipErrorHoverTarget"
+    )
+    expect(error_icon).to_be_visible()
+
+    validated_input.fill("abc")
+    validated_input.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "validated regex value: abc")
+    expect_markdown(app, "Validation rerun counter: 2")
+    expect(error_icon).not_to_be_visible()
+
+
+def test_text_input_validation_custom_and_invalid_regex_messages(app: Page):
+    """Custom validation and invalid regex config surface the right tooltip text."""
+    custom_input = (
+        get_element_by_key(app, "validated_custom_input").locator("input").first
+    )
+    custom_input.fill("123")
+    custom_input.blur()
+
+    custom_error_icon = get_element_by_key(
+        app, "validated_custom_input"
+    ).get_by_test_id("stTooltipErrorHoverTarget")
+    expect(custom_error_icon).to_be_visible()
+    custom_error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_contain_text(
+        "Lowercase only"
+    )
+
+    invalid_regex_widget = get_element_by_key(app, "invalid_validate_regex_input")
+    invalid_regex_error_icon = invalid_regex_widget.get_by_test_id(
+        "stTooltipErrorHoverTarget"
+    )
+    # The invalid-regex config error is surfaced immediately, even before any
+    # user interaction.
+    expect(invalid_regex_error_icon).to_be_visible()
+    invalid_regex_error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_contain_text(
+        "Invalid validate regex: [. Error:"
+    )
+
+    # An invalid validation regex must block commits rather than silently
+    # accepting the value.
+    invalid_regex_widget.locator("input").first.fill("anything")
+    invalid_regex_widget.locator("input").first.press("Enter")
+    expect_markdown(app, "invalid regex value: ")
+
+
+def test_text_input_validation_error_state_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the validation error state is rendered correctly via screenshot."""
+    validated_widget = get_element_by_key(themed_app, "validated_regex_input")
+    validated_input = validated_widget.locator("input").first
+
+    validated_input.fill("123")
+    validated_input.blur()
+
+    error_icon = validated_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+
+    assert_snapshot(validated_widget, name="st_text_input-validation_error")
+
+
+def test_text_input_validation_blocks_form_submit_and_recovers(app: Page):
+    """Form submission is blocked when validation fails and succeeds after correction."""
+    form_input = get_element_by_key(app, "validated_form_input").locator("input").first
+    submit_button = app.get_by_role(
+        "button", name="Submit validated text input form", exact=True
+    )
+
+    form_input.fill("12")
+    submit_button.click()
+
+    expect_markdown(app, "validated form value: ")
+    expect_markdown(app, "Validation rerun counter: 1")
+
+    form_error_icon = get_element_by_key(app, "validated_form_input").get_by_test_id(
+        "stTooltipErrorHoverTarget"
+    )
+    expect(form_error_icon).to_be_visible()
+    form_error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_contain_text(
+        "Enter exactly four digits."
+    )
+
+    form_input.fill("1234")
+    submit_button.click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "validated form value: 1234")
+    expect_markdown(app, "validated form submitted: True")
+    expect_markdown(app, "Validation rerun counter: 2")
+    expect(form_error_icon).not_to_be_visible()
+
+
 def test_text_input_does_not_trigger_rerun_when_value_does_not_change_and_click_outside(
     app: Page,
 ):
     """Test that st.text_input has the correct value on click outside."""
 
-    expect_markdown(app, "Rerun counter: 1")
+    expect(app.get_by_text("Rerun counter: 1", exact=True)).to_be_visible()
 
     first_text_input_field = (
         get_text_input(app, "text input 1 (default)").locator("input").first
@@ -243,11 +359,11 @@ def test_text_input_does_not_trigger_rerun_when_value_does_not_change_and_click_
     app.get_by_test_id("stMarkdown").first.click()
 
     expect_markdown(app, "value 1: hello world")
-    expect_markdown(app, "Rerun counter: 2")
+    expect(app.get_by_text("Rerun counter: 2", exact=True)).to_be_visible()
 
     first_text_input_field.focus()
     app.get_by_test_id("stMarkdown").first.click()
-    expect_markdown(app, "Rerun counter: 2")
+    expect(app.get_by_text("Rerun counter: 2", exact=True)).to_be_visible()
 
 
 def test_empty_text_input_behaves_correctly(app: Page):

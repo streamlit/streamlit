@@ -28,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     get_button,
     get_element_by_key,
     get_expander,
+    reset_hovering,
 )
 
 TOTAL_BUTTONS = 32
@@ -224,6 +225,8 @@ def test_colored_text_hover(app: Page):
 def test_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
     help_button_container = get_element_by_key(themed_app, "help_button_container")
     help_button = get_element_by_key(help_button_container, "help_button_key")
+    # Prime the interaction modality to 'pointer' before hovering.
+    reset_hovering(themed_app)
     help_button.hover()
     expect(themed_app.get_by_text("help text")).to_be_visible()
     assert_snapshot(help_button_container, name="st_button-help_button")

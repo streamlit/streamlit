@@ -16,16 +16,21 @@
 
 import { memo, ReactElement, useCallback, useEffect, useState } from "react"
 
-import { ALIGN, RadioGroup, Radio as UIRadio } from "baseui/radio"
-
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import type { EmotionTheme } from "~lib/theme/types"
-import { addCssUnit, convertRemToPx } from "~lib/theme/utils"
 import { LabelVisibilityOptions } from "~lib/util/utils"
+
+import {
+  StyledRadioCaption,
+  StyledRadioContent,
+  StyledRadioGroup,
+  StyledRadioInner,
+  StyledRadioItem,
+  StyledRadioOuter,
+  StyledRadioRow,
+} from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -37,30 +42,6 @@ export interface Props {
   label?: string
   labelVisibility?: LabelVisibilityOptions
   help?: string
-}
-
-function getRadioInnerSizes(theme: EmotionTheme): [string, string] {
-  // If checked, the radio inner circle should fill 37.5% of the total radio size.
-  // If not checked, it should show a border of spacing.threeXS.
-
-  // However, fractional pixels could cause the radio border to look uneven. This happens
-  // when (checkbox - threeXS) in rem is not an integer number of pixels. To avoid this,
-  // we round the number converted from rem to pixels then add back the unit.
-  const checkboxSize = parseFloat(theme.sizes.checkbox)
-  const threeXSSpacing = parseFloat(theme.spacing.threeXS)
-
-  const outerSize = convertRemToPx(checkboxSize.toString())
-  const checkedInnerSize = Math.round(outerSize * 0.375)
-
-  let innerSize = Math.round(
-    convertRemToPx((checkboxSize - threeXSSpacing).toString())
-  )
-  // If rounding makes the inner size larger than the checkbox, reduce it by 1px
-  if (innerSize >= outerSize) {
-    innerSize -= 1
-  }
-
-  return [addCssUnit(checkedInnerSize, "px"), addCssUnit(innerSize, "px")]
 }
 
 function Radio({
@@ -87,16 +68,15 @@ function Radio({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [defaultValue])
 
-  const onChangeCallback = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>): void => {
-      const selectedIndex = parseInt(e.target.value, 10)
+  const handleChange = useCallback(
+    (selectedValue: string): void => {
+      const selectedIndex = parseInt(selectedValue, 10)
       setValue(selectedIndex)
-      onChange(selectedIndex) // Needs to happen later, no?
+      onChange(selectedIndex)
     },
     [onChange]
   )
 
-  const theme = useEmotionTheme()
   const hasCaptions = captions.length > 0
   const hasOptions = options.length > 0
   const cleanedOptions = hasOptions ? options : ["No options to select."]
@@ -105,13 +85,11 @@ function Radio({
   const shouldDisable = disabled || !hasOptions
 
   const spacerNeeded = (caption: string): string => {
-    // When captions are provided for only some options in horizontal
-    // layout we need to add a spacer for the options without captions
-    const spacer = caption == "" && horizontal && hasCaptions
+    // When captions are provided for only some options in horizontal layout
+    // we need to add a spacer for the options without captions
+    const spacer = caption === "" && horizontal && hasCaptions
     return spacer ? "&nbsp;" : caption
   }
-
-  const [checkedRadioInnerSize, radioInnerSize] = getRadioInnerSizes(theme)
 
   return (
     <div className="stRadio" data-testid="stRadio">
@@ -128,97 +106,53 @@ function Radio({
           />
         )}
       </WidgetLabel>
-      <RadioGroup
-        onChange={onChangeCallback}
-        value={value !== null ? value.toString() : undefined}
-        disabled={shouldDisable}
-        align={horizontal ? ALIGN.horizontal : ALIGN.vertical}
+      <StyledRadioGroup
+        onChange={handleChange}
+        value={value !== null ? value.toString() : null}
+        isDisabled={shouldDisable}
+        orientation={horizontal ? "horizontal" : "vertical"}
         aria-label={label}
         data-testid="stRadioGroup"
-        overrides={{
-          RadioGroupRoot: {
-            style: {
-              gap: hasCaptions ? theme.spacing.sm : theme.spacing.none,
-              minHeight: theme.sizes.minElementHeight,
-            },
-          },
-        }}
+        $horizontal={horizontal}
+        $hasCaptions={hasCaptions}
       >
         {cleanedOptions.map((option: string, index: number) => (
-          <UIRadio
-            // TODO: Update to match React best practices
+          <StyledRadioItem
             // eslint-disable-next-line @eslint-react/no-array-index-key
             key={index}
             value={index.toString()}
-            overrides={{
-              Root: {
-                style: ({
-                  $isFocusVisible,
-                }: {
-                  $isFocusVisible: boolean
-                }) => ({
-                  marginBottom: theme.spacing.none,
-                  marginTop: theme.spacing.none,
-                  marginRight: hasCaptions
-                    ? theme.spacing.sm
-                    : theme.spacing.lg,
-                  // Make left and right padding look the same visually.
-                  paddingLeft: theme.spacing.none,
-                  alignItems: "start",
-                  paddingRight: theme.spacing.threeXS,
-                  backgroundColor: $isFocusVisible
-                    ? theme.colors.darkenedBgMix25
-                    : "",
-                }),
-              },
-              RadioMarkOuter: {
-                style: ({ $checked }: { $checked: boolean }) => ({
-                  width: theme.sizes.checkbox,
-                  height: theme.sizes.checkbox,
-                  // The margin top is needed to align the radio buttons
-                  // with the text label baseline.
-                  // The text label has a line-height of 1.6
-                  // making the font height around 1.6rem
-                  // while the radio icon has a height of 1rem.
-                  //eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-                  marginTop: "0.35rem",
-                  marginRight: theme.spacing.none,
-                  marginLeft: theme.spacing.none,
-                  backgroundColor:
-                    $checked && !shouldDisable
-                      ? theme.colors.primary
-                      : theme.colors.borderColor,
-                }),
-              },
-              RadioMarkInner: {
-                style: ({ $checked }: { $checked: boolean }) => ({
-                  height: $checked ? checkedRadioInnerSize : radioInnerSize,
-                  width: $checked ? checkedRadioInnerSize : radioInnerSize,
-                }),
-              },
-              Label: {
-                style: {
-                  color: shouldDisable
-                    ? theme.colors.fadedText40
-                    : theme.colors.bodyText,
-                  position: "relative",
-                  top: theme.spacing.px,
-                },
-              },
-            }}
+            data-testid="stRadioOption"
           >
-            <StreamlitMarkdown source={option} allowHTML={false} isLabel />
-            {hasCaptions && (
-              <StreamlitMarkdown
-                source={spacerNeeded(captions[index])}
-                allowHTML={false}
-                isCaption
-                isLabel
-              />
+            {({ isSelected, isDisabled }) => (
+              <StyledRadioContent $isDisabled={isDisabled}>
+                <StyledRadioRow>
+                  <StyledRadioOuter
+                    $isSelected={isSelected}
+                    $isDisabled={isDisabled}
+                  >
+                    <StyledRadioInner $isSelected={isSelected} />
+                  </StyledRadioOuter>
+                  <StreamlitMarkdown
+                    source={option}
+                    allowHTML={false}
+                    isLabel
+                  />
+                </StyledRadioRow>
+                {hasCaptions && (
+                  <StyledRadioCaption>
+                    <StreamlitMarkdown
+                      source={spacerNeeded(captions[index])}
+                      allowHTML={false}
+                      isCaption
+                      isLabel
+                    />
+                  </StyledRadioCaption>
+                )}
+              </StyledRadioContent>
             )}
-          </UIRadio>
+          </StyledRadioItem>
         ))}
-      </RadioGroup>
+      </StyledRadioGroup>
     </div>
   )
 }

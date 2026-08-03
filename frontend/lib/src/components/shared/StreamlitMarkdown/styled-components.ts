@@ -537,3 +537,41 @@ export const StyledHelpIconWrapper = styled.span({
   verticalAlign: "middle",
   transform: "translateY(-0.1em)",
 })
+
+export const StyledMermaidContainer = styled.div<{
+  hasError: boolean
+  isFullScreen: boolean
+}>(({ theme, hasError, isFullScreen }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: hasError ? "flex-start" : "center",
+  justifyContent: isFullScreen ? "center" : "flex-start",
+  minHeight: "2rem",
+  padding: theme.spacing.md,
+  height: isFullScreen ? "100%" : "auto",
+  width: "100%",
+  "& img": {
+    // Render the diagram at its natural size, scaled down to fit the container
+    // width. We intentionally do not clamp the height inline: a fixed max-height
+    // combined with a preserved aspect ratio shrinks tall/narrow diagrams into an
+    // unreadable sliver. Tall diagrams stay readable and can use fullscreen.
+    width: isFullScreen ? "100%" : "auto",
+    maxWidth: "100%",
+    height: isFullScreen ? "100%" : "auto",
+    maxHeight: isFullScreen ? "100%" : "none",
+    objectFit: "contain",
+    borderRadius: theme.radii.default,
+  },
+}))
+
+export const StyledMermaidErrorMessage = styled.div(({ theme }) => ({
+  color: theme.colors.redTextColor,
+  backgroundColor: theme.colors.redBackgroundColor,
+  padding: theme.spacing.sm,
+  borderRadius: theme.radii.default,
+  fontSize: theme.fontSizes.sm,
+  fontFamily: theme.genericFonts.codeFont,
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+  width: "100%",
+}))

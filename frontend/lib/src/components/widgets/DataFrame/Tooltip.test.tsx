@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, waitFor } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
@@ -28,19 +28,16 @@ describe("Dataframe Tooltip", () => {
     clearTooltip: vi.fn(),
   }
 
-  it("renders the tooltip with provided content", async () => {
+  it("renders the tooltip with provided content", () => {
     render(<Tooltip {...defaultProps} />)
 
-    // Use waitFor to ensure all async state updates from the Popover are processed
-    await waitFor(() => {
-      const tooltipContent = screen.getByText("This is a tooltip.")
-      expect(tooltipContent).toBeInTheDocument()
-      // Uses markdown to render the content:
-      expect(tooltipContent).toHaveStyle("font-weight: 600")
-    })
+    const tooltipContent = screen.getByText("This is a tooltip.")
+    expect(tooltipContent).toBeVisible()
+    // Uses markdown to render the content:
+    expect(tooltipContent).toHaveStyle("font-weight: 600")
   })
 
-  it("renders the tooltip at the correct position", async () => {
+  it("renders the tooltip at the correct position", () => {
     const customPositionProps: TooltipProps = {
       top: 200,
       left: 300,
@@ -50,16 +47,56 @@ describe("Dataframe Tooltip", () => {
 
     render(<Tooltip {...customPositionProps} />)
 
-    // Use waitFor to ensure all async state updates from the Popover are processed
-    await waitFor(() => {
-      const tooltipContent = screen.getByText("Positioned tooltip.")
-      expect(tooltipContent).toBeInTheDocument()
+    expect(screen.getByText("Positioned tooltip.")).toBeVisible()
 
-      const invisibleDiv = screen.getByTestId("stDataFrameTooltipTarget")
+    const invisibleDiv = screen.getByTestId("stDataFrameTooltipTarget")
+    expect(invisibleDiv).toHaveStyle("position: fixed")
+    expect(invisibleDiv).toHaveStyle("top: 200px")
+    expect(invisibleDiv).toHaveStyle("left: 300px")
+  })
 
-      expect(invisibleDiv).toHaveStyle("position: fixed")
-      expect(invisibleDiv).toHaveStyle("top: 200px")
-      expect(invisibleDiv).toHaveStyle("left: 300px")
-    })
+  it("calls clearTooltip when Escape is pressed", () => {
+    const clearTooltip = vi.fn()
+    render(<Tooltip {...defaultProps} clearTooltip={clearTooltip} />)
+
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    )
+
+    expect(clearTooltip).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not call clearTooltip for non-Escape keys", () => {
+    const clearTooltip = vi.fn()
+    render(<Tooltip {...defaultProps} clearTooltip={clearTooltip} />)
+
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+    )
+
+    expect(clearTooltip).not.toHaveBeenCalled()
+  })
+
+  it("calls clearTooltip when a pointer-down occurs outside the tooltip", () => {
+    const clearTooltip = vi.fn()
+    render(<Tooltip {...defaultProps} clearTooltip={clearTooltip} />)
+
+    // jsdom doesn't implement PointerEvent; MouseEvent works since the
+    // listener only checks the event name, not the event type.
+    document.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }))
+
+    expect(clearTooltip).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not call clearTooltip when a pointer-down occurs inside the tooltip", () => {
+    const clearTooltip = vi.fn()
+    render(<Tooltip {...defaultProps} clearTooltip={clearTooltip} />)
+
+    const tooltipContent = screen.getByTestId("stDataFrameTooltipContent")
+    tooltipContent.dispatchEvent(
+      new MouseEvent("pointerdown", { bubbles: true })
+    )
+
+    expect(clearTooltip).not.toHaveBeenCalled()
   })
 })

@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 
 from streamlit.elements.lib.shortcut_utils import normalize_shortcut
@@ -154,3 +156,81 @@ def test_normalize_shortcut_rejects_reserved_keys(shortcut: str) -> None:
     """Test that normalize_shortcut raises StreamlitAPIException for reserved keys."""
     with pytest.raises(StreamlitAPIException):
         normalize_shortcut(shortcut)
+
+
+@pytest.fixture(autouse=True)
+def _reset_browser_reserved_warning_cache() -> None:
+    """Clear the per-process dedup cache so each test starts clean."""
+    from streamlit.elements.lib import shortcut_utils
+
+    shortcut_utils._warned_browser_reserved_shortcuts.clear()
+
+
+@pytest.mark.parametrize(
+    "shortcut",
+    [
+        "Ctrl+T",
+        "Cmd+T",
+        "Ctrl+W",
+        "Cmd+W",
+        "Ctrl+N",
+        "Cmd+N",
+        "Ctrl+Shift+T",
+        "Cmd+Shift+T",
+        "Ctrl+Shift+N",
+        "Cmd+Shift+N",
+        "Ctrl+Shift+W",
+        "Cmd+Shift+W",
+        "Ctrl+Tab",
+        "Ctrl+Shift+Tab",
+        "Cmd+Tab",
+        "Cmd+Shift+Tab",
+        "Ctrl+PageUp",
+        "Ctrl+PageDown",
+        "Cmd+PageUp",
+        "Cmd+PageDown",
+        "Ctrl+L",
+        "Cmd+L",
+        "Alt+F4",
+        "F11",
+        "Mod+T",
+        "Mod+PageDown",
+    ],
+)
+def test_normalize_shortcut_warns_for_browser_reserved(shortcut: str) -> None:
+    """Browser-reserved combos produce a logger warning but still normalize."""
+    with patch("streamlit.elements.lib.shortcut_utils._LOGGER") as mock_logger:
+        result = normalize_shortcut(shortcut)
+    assert result
+    mock_logger.warning.assert_called_once()
+    warning_message = mock_logger.warning.call_args.args[0]
+    assert "reserved by the browser" in warning_message
+
+
+@pytest.mark.parametrize("shortcut", ["Ctrl+K", "Alt+S", "Cmd+Shift+P", "Enter", "F1"])
+def test_normalize_shortcut_does_not_warn_for_safe(shortcut: str) -> None:
+    """Non-reserved combos must not emit the browser-reserved warning."""
+    with patch("streamlit.elements.lib.shortcut_utils._LOGGER") as mock_logger:
+        normalize_shortcut(shortcut)
+    mock_logger.warning.assert_not_called()
+
+
+def test_normalize_shortcut_warns_only_once_per_process_for_same_combo() -> None:
+    """Repeated calls with the same reserved combo must only warn once.
+
+    Streamlit calls ``normalize_shortcut`` on every script rerun for every
+    button, so emitting the warning each time would spam the developer log.
+    """
+    with patch("streamlit.elements.lib.shortcut_utils._LOGGER") as mock_logger:
+        normalize_shortcut("Ctrl+PageDown")
+        normalize_shortcut("Ctrl+PageDown")
+        normalize_shortcut("Mod+PageDown")  # Aliases to ctrl+pagedown.
+    mock_logger.warning.assert_called_once()
+
+
+def test_normalize_shortcut_warns_per_distinct_reserved_combo() -> None:
+    """Distinct reserved combos each warn once, independently of one another."""
+    with patch("streamlit.elements.lib.shortcut_utils._LOGGER") as mock_logger:
+        normalize_shortcut("Ctrl+PageDown")
+        normalize_shortcut("Ctrl+T")
+    assert mock_logger.warning.call_count == 2

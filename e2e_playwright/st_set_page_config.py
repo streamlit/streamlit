@@ -51,6 +51,13 @@ def expanded_sidebar():
 st.button("Expanded Sidebar", on_click=expanded_sidebar)
 
 
+def locked_sidebar():
+    st.set_page_config(page_title="Locked Sidebar", initial_sidebar_state="locked")
+
+
+st.button("Locked Sidebar", on_click=locked_sidebar)
+
+
 def wide_layout():
     st.set_page_config(page_title="Wide Layout", layout="wide")
 

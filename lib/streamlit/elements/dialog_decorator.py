@@ -23,7 +23,7 @@ from streamlit.delta_generator_singletons import (
     get_last_dg_added_to_context_stack,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.fragment import _fragment
+from streamlit.runtime.fragment import _check_not_parallel_worker, _fragment
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import get_object_name
 
@@ -76,6 +76,7 @@ def _dialog_decorator(
 
     @wraps(non_optional_func)
     def wrap(*args: Any, **kwargs: Any) -> None:
+        _check_not_parallel_worker("@st.dialog")
         _assert_no_nested_dialogs()
         # Call the Dialog on the event_dg because it lives outside of the normal
         # Streamlit UI flow. For example, if it is called from the sidebar, it should

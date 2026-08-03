@@ -1,7 +1,7 @@
 
 # Using Markdown in Streamlit
 
-Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labels, help tooltips, metrics, `st.table()` cells, and more. Beyond standard GitHub-flavored Markdown, Streamlit adds colored text, badges, icons, and LaTeX.
+Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labels, help tooltips, metrics, `st.table()` cells, and more. Beyond standard GitHub-flavored Markdown, Streamlit adds colored text, badges, icons, shimmer text, and LaTeX.
 
 ## Quick reference
 
@@ -12,6 +12,7 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 | Strikethrough | `~text~` | `~Strikethrough~` | ✓ |
 | Inline code | `` `code` `` | `` `variable` `` | ✓ |
 | Code block | ` ```lang...``` ` | ` ```python...``` ` | ✗ |
+| Mermaid diagram | ` ```mermaid...``` ` | ` ```mermaid graph TD; A-->B``` ` | ✗ |
 | Link | `[text](url)` | `[Streamlit](https://streamlit.io)` | ✓ |
 | Image | `![alt](path)` | `![Logo](logo.png)` | ✓ |
 | Heading | `# ` to `###### ` | `## Section` | ✗ |
@@ -27,6 +28,7 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 | Colored text | `:color[text]` | `:red[Error]` | ✓ |
 | Colored background | `:color-background[text]` | `:blue-background[Info]` | ✓ |
 | Badge | `:color-badge[text]` | `:green-badge[Success]` | ✓ |
+| Shimmer animation | `:shimmer[text]` | `:shimmer[Loading...]` | ✓ |
 | Small text | `:small[text]` | `:small[footnote]` | ✓ |
 | LaTeX (inline) | `$formula$` | `$ax^2 + bx + c$` | ✓ |
 | LaTeX (block) | `$$formula$$` | `$$\int_0^1 x^2 dx$$` | ✗ |
@@ -43,6 +45,8 @@ Markdown is supported in most places where text is rendered. Streamlit has three
 
 **No Markdown** — Text displays literally:
 - `st.text()`, `st.json()`, `st.dataframe()` / `st.data_editor()` cells, `st.selectbox` / `st.multiselect` options, input placeholders, `st.Page` titles, chart/map labels
+
+**Exception:** `st.dataframe()` / `st.data_editor()` cells configured with `st.column_config.MarkdownColumn` show plain text in the cell, but render Markdown in an overlay when the cell is clicked (raw HTML disabled, links sanitized).
 
 ## GitHub-flavored Markdown
 
@@ -69,11 +73,40 @@ code_block = "with syntax highlighting"
 """)
 ~~~
 
+## Mermaid diagrams
+
+Fenced code blocks tagged `mermaid` render as [Mermaid](https://mermaid.js.org/) diagrams (flowcharts, sequence diagrams, class diagrams, state diagrams, Gantt charts, pie charts, mind maps, and more). This works anywhere full Markdown is rendered, such as `st.markdown()` and `st.write()`.
+
+~~~python
+st.markdown("""
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[OK]
+    B -->|No| D[Cancel]
+```
+""")
+~~~
+
+For a dedicated command that takes the diagram definition directly (no code fence needed), use `st.mermaid_chart()`:
+
+```python
+st.mermaid_chart(
+    """
+    graph LR
+        A[Start] --> B{Decision}
+        B -->|Yes| C[OK]
+        B -->|No| D[Cancel]
+""",
+    width="stretch",
+)  # "stretch" (default), "content", or a pixel value
+```
+
 ## Colored text, backgrounds, and badges
 
 ```python
 st.markdown(":red[Error] and :green[Success]")  # Colored text
-st.markdown(":blue-background[Highlighted]")     # Colored background
+st.markdown(":blue-background[Highlighted]")  # Colored background
 st.markdown(":green-badge[Active] :red-badge[Inactive]")  # Inline badges
 ```
 
@@ -131,9 +164,16 @@ In labels, images display as icons with max height equal to font height.
 Widgets, containers, and other elements support Markdown in their labels (using the label subset).
 
 ```python
-st.radio(":material/palette: Choose **color**", [":red-background[Red]", ":blue-background[Blue]", ":green-background[Green]"])
+st.radio(
+    ":material/palette: Choose **color**",
+    [":red-background[Red]", ":blue-background[Blue]", ":green-background[Green]"],
+)
 tab1, tab2 = st.tabs([":material/home: Home", ":material/settings: Settings"])
-st.metric(label=":material/attach_money: Revenue", value=":green[$1.2M]", delta=":material/trending_up: 12%")
+st.metric(
+    label=":material/attach_money: Revenue",
+    value=":green[$1.2M]",
+    delta=":material/trending_up: 12%",
+)
 ```
 
 ## Escaping special characters
@@ -150,11 +190,13 @@ st.button("1\\. Not a list")
 `st.table()` renders Markdown in cells and headers.
 
 ```python
-st.table({
-    "**Name**": "Alice",
-    "**Status**": ":green-badge[Active]",
-    "**Role**": ":material/shield: Admin"
-})
+st.table(
+    {
+        "**Name**": "Alice",
+        "**Status**": ":green-badge[Active]",
+        "**Role**": ":material/shield: Admin",
+    }
+)
 ```
 
 ## Combining features
@@ -181,7 +223,9 @@ Control layout with `text_alignment` and `width` parameters.
 
 ```python
 st.markdown("Centered heading", text_alignment="center")  # left, center, right, justify
-st.markdown("Content width only", width="content")  # stretch, content, or pixels (e.g. 400)
+st.markdown(
+    "Content width only", width="content"
+)  # stretch, content, or pixels (e.g. 400)
 ```
 
 ## HTML (use very sparingly!)
@@ -189,7 +233,10 @@ st.markdown("Content width only", width="content")  # stretch, content, or pixel
 Mix Markdown with HTML using `unsafe_allow_html=True`. For pure HTML without markdown processing, use `st.html()` instead.
 
 ```python
-st.markdown("**Status:** <span style='color: coral'>Custom styled</span>", unsafe_allow_html=True)
+st.markdown(
+    "**Status:** <span style='color: coral'>Custom styled</span>",
+    unsafe_allow_html=True,
+)
 st.html("<div class='custom'>Pure HTML content</div>")
 ```
 

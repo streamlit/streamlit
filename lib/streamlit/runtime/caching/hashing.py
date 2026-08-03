@@ -255,10 +255,9 @@ def _key(obj: Any | None) -> Any:
         return None
 
     def is_simple(obj: Any) -> bool:
-        return (
-            isinstance(obj, (bytes, bytearray, str, float, int, bool, uuid.UUID))
-            or obj is None
-        )
+        # Note: bytearray is excluded because it's unhashable and cannot be
+        # used as a dictionary key for memoization
+        return isinstance(obj, (bytes, str, float, int, bool, uuid.UUID)) or obj is None
 
     if is_simple(obj):
         return obj
@@ -360,8 +359,11 @@ class _CacheFuncHasher:
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
 
-        if isinstance(obj, (bytes, bytearray)):
+        if isinstance(obj, bytes):
             return obj
+
+        if isinstance(obj, bytearray):
+            return bytes(obj)
 
         if type_util.get_fqn_type(obj) in self._hash_funcs:
             # Escape hatch for unsupported objects
@@ -409,7 +411,9 @@ class _CacheFuncHasher:
             return b"0"
 
         if not isinstance(obj, type) and dataclasses.is_dataclass(obj):
-            return self.to_bytes(dataclasses.asdict(obj))
+            # mypy 2.x narrows to DataclassInstance | type[DataclassInstance]
+            # which doesn't satisfy asdict's expected DataclassInstance type.
+            return self.to_bytes(dataclasses.asdict(cast("Any", obj)))
 
         if isinstance(obj, Enum):
             return str(obj).encode()
@@ -428,10 +432,11 @@ class _CacheFuncHasher:
             try:
                 self.update(h, hash_pandas_object(series_obj).to_numpy().tobytes())
                 return h.digest()
-            except TypeError:
+            except TypeError as ex:
                 _LOGGER.warning(
-                    "Pandas Series hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Streamlit's default hashing method failed for a pandas Series, "
+                    "so it is falling back to pickling the object. Original error: %s",
+                    ex,
                 )
 
                 # Use pickle if pandas cannot hash the object for example if
@@ -454,10 +459,11 @@ class _CacheFuncHasher:
                 self.update(h, values_hash_bytes)
                 return h.digest()
 
-            except TypeError:
+            except TypeError as ex:
                 _LOGGER.warning(
-                    "Pandas DataFrame hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Streamlit's default hashing method failed for a pandas DataFrame, "
+                    "so it is falling back to pickling the object. Original error: %s",
+                    ex,
                 )
 
                 # Use pickle if pandas cannot hash the object for example if
@@ -478,10 +484,11 @@ class _CacheFuncHasher:
                 self.update(h, obj.hash(seed=0).to_arrow().to_string().encode())
                 return h.digest()
 
-            except TypeError:
+            except TypeError as ex:
                 _LOGGER.warning(
-                    "Polars Series hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Streamlit's default hashing method failed for a polars Series, "
+                    "so it is falling back to pickling the object. Original error: %s",
+                    ex,
                 )
 
                 # Use pickle if polars cannot hash the object for example if
@@ -508,10 +515,11 @@ class _CacheFuncHasher:
                 self.update(h, values_hash_bytes)
                 return h.digest()
 
-            except TypeError:
+            except TypeError as ex:
                 _LOGGER.warning(
-                    "Polars DataFrame hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Streamlit's default hashing method failed for a polars DataFrame, "
+                    "so it is falling back to pickling the object. Original error: %s",
+                    ex,
                 )
 
                 # Use pickle if polars cannot hash the object for example if
@@ -537,9 +545,18 @@ class _CacheFuncHasher:
 
             pil_obj: Image = cast("Image", obj)
 
-            # we don't just hash the results of obj.tobytes() because we want to use
-            # the sampling logic for numpy data
-            np_array = np.frombuffer(pil_obj.tobytes(), dtype="uint8")
+            # We don't just hash the results of obj.tobytes() because we want to use
+            # the sampling logic for numpy data.
+            pixel_bytes = pil_obj.tobytes()
+
+            # P-mode (palette-indexed) images need the palette included in the hash,
+            # since tobytes() only returns palette indices, not the color table.
+            if pil_obj.mode == "P":
+                palette_data = pil_obj.getpalette()
+                if palette_data is not None:
+                    pixel_bytes = bytes(palette_data) + pixel_bytes
+
+            np_array = np.frombuffer(pixel_bytes, dtype="uint8")
             return self.to_bytes(np_array)
 
         elif inspect.isbuiltin(obj):

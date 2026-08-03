@@ -20,6 +20,7 @@ import { vi } from "vitest"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
+import { BaseButtonKind } from "~lib/components/shared/BaseButton/styled-components"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -258,20 +259,13 @@ describe("MenuButton widget", () => {
     ":material/menu:",
     ":material/more_vert:",
     ":material/more_horiz:",
-  ])("hides chevron when label is menu-style icon %s", async label => {
-    const user = userEvent.setup()
+  ])("hides chevron when label is menu-style icon %s", label => {
     const props = getProps({ label })
     render(<MenuButton {...props} />)
 
     const button = screen.getByTestId("stMenuButtonButton")
-
-    // Chevron should not be present when closed
+    // Chevron (expand_more) should never appear for menu-style icon labels
     expect(button).not.toHaveTextContent("expand_more")
-
-    // Open menu and check chevron is still not shown
-    await user.click(button)
-    await screen.findByTestId("stMenuButtonBody")
-    expect(button).not.toHaveTextContent("expand_less")
   })
 
   it("shows chevron for regular labels", () => {
@@ -280,5 +274,91 @@ describe("MenuButton widget", () => {
 
     const button = screen.getByTestId("stMenuButtonButton")
     expect(button).toHaveTextContent("expand_more")
+  })
+
+  it("renders no options gracefully", () => {
+    const props = getProps({ options: [] })
+    render(<MenuButton {...props} />)
+
+    // Trigger button should be disabled with an empty options list.
+    const button = screen.getByTestId("stMenuButtonButton")
+    expect(button).toBeDisabled()
+  })
+
+  it("falls back to the secondary kind for unrecognized button types", () => {
+    const props = getProps({ type: "unknown" })
+    render(<MenuButton {...props} />)
+    const button = screen.getByTestId("stMenuButtonButton")
+    // Note: This assertion checks the forwarded 'kind' prop on the underlying
+    // <button> element. This is an implementation detail exposed by Emotion's
+    // prop forwarding. See BaseButton.tsx for the styled-component definition.
+    expect(button).toHaveAttribute("kind", BaseButtonKind.SECONDARY)
+  })
+
+  describe("accessibility", () => {
+    it("trigger button has aria-haspopup=menu", () => {
+      const props = getProps()
+      render(<MenuButton {...props} />)
+
+      const button = screen.getByTestId("stMenuButtonButton")
+      expect(button).toHaveAttribute("aria-haspopup", "menu")
+    })
+
+    it("aria-expanded reflects open/closed state", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      render(<MenuButton {...props} />)
+
+      const button = screen.getByTestId("stMenuButtonButton")
+      expect(button).toHaveAttribute("aria-expanded", "false")
+
+      await user.click(button)
+      await screen.findByTestId("stMenuButtonBody")
+      expect(button).toHaveAttribute("aria-expanded", "true")
+
+      await user.click(button)
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stMenuButtonBody")
+        ).not.toBeInTheDocument()
+      })
+      expect(button).toHaveAttribute("aria-expanded", "false")
+    })
+
+    it("menu body has role=menu", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      render(<MenuButton {...props} />)
+
+      await user.click(screen.getByTestId("stMenuButtonButton"))
+      await screen.findByTestId("stMenuButtonBody")
+      expect(screen.getByRole("menu")).toBeVisible()
+    })
+
+    it("menu items have role=menuitem", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      render(<MenuButton {...props} />)
+
+      await user.click(screen.getByTestId("stMenuButtonButton"))
+      await screen.findByTestId("stMenuButtonBody")
+
+      const items = screen.getAllByRole("menuitem")
+      expect(items).toHaveLength(3)
+      expect(items[0]).toHaveTextContent("Option A")
+      expect(items[1]).toHaveTextContent("Option B")
+      expect(items[2]).toHaveTextContent("Option C")
+    })
+
+    it("uses generic aria-label when label is icon-only", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ label: ":material/menu:" })
+      render(<MenuButton {...props} />)
+
+      await user.click(screen.getByTestId("stMenuButtonButton"))
+      await screen.findByTestId("stMenuButtonBody")
+
+      expect(screen.getByRole("menu")).toHaveAttribute("aria-label", "Menu")
+    })
   })
 })

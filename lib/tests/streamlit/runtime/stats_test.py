@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import unittest
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 from parameterized import parameterized
 
@@ -38,6 +39,7 @@ from streamlit.runtime.stats import (
     StatsProvider,
     group_cache_stats,
     metric_type_string_to_proto,
+    safe_sizeof,
 )
 
 if TYPE_CHECKING:
@@ -355,6 +357,51 @@ class CounterStatTest(unittest.TestCase):
         expected = "simple_counter_total 7"
         assert stat.to_metric_str() == expected
 
+    def test_counter_stat_to_metric_str_combined_type_and_identity_labels(self) -> None:
+        """CounterStat with combined type + identity labels serializes with sorted labels."""
+        stat = CounterStat(
+            family_name="user_session_events",
+            value=3,
+            labels={"type": "connect", "email": "alice@example.com"},
+            help="Total count of session events by type and user.",
+        )
+        # Labels are sorted (email before type) and the family gets a _total suffix.
+        expected = (
+            'user_session_events_total{email="alice@example.com",type="connect"} 3'
+        )
+        assert stat.to_metric_str() == expected
+
+    def test_counter_stat_to_metric_str_escapes_label_values(self) -> None:
+        """User-controlled label values with special chars are OpenMetrics-escaped."""
+        stat = CounterStat(
+            family_name="user_session_events",
+            value=1,
+            labels={"type": "connect", "email": 'a"b\\c\nd'},
+        )
+        # Double-quote, backslash, and newline are escaped so the line stays valid.
+        expected = 'user_session_events_total{email="a\\"b\\\\c\\nd",type="connect"} 1'
+        assert stat.to_metric_str() == expected
+
+    def test_counter_stat_marshall_metric_proto_combined_labels(self) -> None:
+        """marshall_metric_proto should add sorted labels and a counter point."""
+        from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
+
+        stat = CounterStat(
+            family_name="user_session_events",
+            value=3,
+            labels={"type": "connect", "email": "alice@example.com"},
+        )
+        metric = MetricProto()
+        stat.marshall_metric_proto(metric)
+
+        # Labels are serialized in sorted order (email before type).
+        assert [(label.name, label.value) for label in metric.labels] == [
+            ("email", "alice@example.com"),
+            ("type", "connect"),
+        ]
+        assert len(metric.metric_points) == 1
+        assert metric.metric_points[0].counter_value.int_value == 3
+
 
 class GaugeStatTest(unittest.TestCase):
     def test_gauge_stat_implements_stat_protocol(self) -> None:
@@ -412,3 +459,34 @@ class MetricTypeStringToProtoTest(unittest.TestCase):
         """Test that unknown type strings return the UNKNOWN enum value."""
         assert metric_type_string_to_proto("not_a_real_type") == UNKNOWN
         assert metric_type_string_to_proto("") == UNKNOWN
+
+
+class SafeSizeofTest(unittest.TestCase):
+    @parameterized.expand(
+        [
+            ("list", [1, 2, 3]),
+            ("string", "hello world"),
+            ("dict", {"key": "value"}),
+        ]
+    )
+    def test_returns_positive_size_for_normal_objects(
+        self, _name: str, obj: object
+    ) -> None:
+        """safe_sizeof returns a positive size for normal Python objects."""
+        assert safe_sizeof(obj) > 0
+
+    def test_returns_zero_on_type_error(self) -> None:
+        """safe_sizeof returns 0 when TypeError is raised (e.g., weak reference issue)."""
+        with patch(
+            "streamlit.vendor.pympler.asizeof.asizeof",
+            side_effect=TypeError("cannot create weak reference"),
+        ):
+            assert safe_sizeof(object()) == 0
+
+    def test_returns_zero_on_reference_error(self) -> None:
+        """safe_sizeof returns 0 when ReferenceError is raised (e.g., dead weak ref)."""
+        with patch(
+            "streamlit.vendor.pympler.asizeof.asizeof",
+            side_effect=ReferenceError("weakly-referenced object no longer exists"),
+        ):
+            assert safe_sizeof(object()) == 0

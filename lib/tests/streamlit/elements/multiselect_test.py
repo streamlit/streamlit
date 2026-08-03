@@ -688,6 +688,28 @@ class TestMultiSelectSerde:
         res = serde.serialize(["A", "Option C"])
         assert res == ["Format: A", "Format: Option C"]
 
+    def test_serialize_falls_back_to_str_when_format_func_raises(self):
+        """When format_func raises, serialize falls back to str(value)."""
+        options = [{"id": "a"}, {"id": "b"}]
+
+        def format_func(x):
+            return x["id"]
+
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            options, format_func
+        )
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
+        )
+
+        # A bare string value makes format_func raise a TypeError, triggering the
+        # str(value) fallback path.
+        res = serde.serialize(["free text"])
+        assert res == ["free text"]
+
     def test_deserialize(self):
         options = ["Option A", "Option B", "Option C"]
         formatted_options, formatted_option_to_option_index = create_mappings(options)

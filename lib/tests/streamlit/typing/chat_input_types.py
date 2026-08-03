@@ -24,6 +24,7 @@ from typing_extensions import assert_type
 # - accept_file=True/multiple/directory OR accept_audio=True -> returns ChatInputValue | None
 if TYPE_CHECKING:
     from streamlit.elements.widgets.chat import ChatInputValue, ChatMixin
+    from streamlit.runtime.uploaded_file_manager import UploadedFile
 
     chat_input = ChatMixin().chat_input
 
@@ -63,6 +64,15 @@ if TYPE_CHECKING:
         chat_input("Message", accept_file="multiple", accept_audio=True),
         ChatInputValue | None,
     )
+
+    chat_value = chat_input("Message", accept_file=True, accept_audio=True)
+    if chat_value is not None:
+        assert_type(chat_value.text, str)
+        assert_type(chat_value["text"], str)
+        assert_type(chat_value.files, list[UploadedFile])
+        assert_type(chat_value["files"], list[UploadedFile])
+        assert_type(chat_value.audio, UploadedFile | None)
+        assert_type(chat_value["audio"], UploadedFile | None)
 
     # =====================================================================
     # Test key parameter (str or int)
@@ -282,5 +292,24 @@ if TYPE_CHECKING:
             width=800,
             height="content",
         ),
+        ChatInputValue | None,
+    )
+
+    # =====================================================================
+    # Test submit_mode parameter
+    # =====================================================================
+
+    # submit_mode does not affect return type - it's always based on accept_file/accept_audio
+    assert_type(chat_input("Message", submit_mode="submit"), str | None)
+    assert_type(chat_input("Message", submit_mode="disable"), str | None)
+    assert_type(chat_input("Message", submit_mode="stop"), str | None)
+
+    # submit_mode with accept_file still returns ChatInputValue
+    assert_type(
+        chat_input("Message", accept_file=True, submit_mode="stop"),
+        ChatInputValue | None,
+    )
+    assert_type(
+        chat_input("Message", accept_audio=True, submit_mode="disable"),
         ChatInputValue | None,
     )

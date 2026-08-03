@@ -23,6 +23,7 @@ import {
 } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import moment from "moment"
+import { setInteractionModality } from "react-aria/private/interactions/useFocusVisible"
 import { MockInstance } from "vitest"
 
 import {
@@ -195,6 +196,7 @@ describe("DateInput widget", () => {
     expect(errorIcon).toBeVisible()
 
     // Hover over the error icon to trigger the tooltip
+    act(() => setInteractionModality("pointer"))
     await user.hover(errorIcon)
 
     const tooltip = await screen.findByTestId("stTooltipErrorContent")
@@ -222,6 +224,7 @@ describe("DateInput widget", () => {
     expect(errorIcon).toBeVisible()
 
     // Hover over the error icon to trigger the tooltip
+    act(() => setInteractionModality("pointer"))
     await user.hover(errorIcon)
 
     const tooltip = await screen.findByTestId("stTooltipErrorContent")
@@ -249,6 +252,7 @@ describe("DateInput widget", () => {
     expect(errorIcon).toBeVisible()
 
     // Hover over the error icon to trigger the tooltip
+    act(() => setInteractionModality("pointer"))
     await user.hover(errorIcon)
 
     const tooltip = await screen.findByTestId("stTooltipErrorContent")

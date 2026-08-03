@@ -39,7 +39,7 @@ This means you should always have logs, warnings, errors, and notices end up in
 
 ## JavaScript / TypeScript
 
-- We use the [AirBNB style](https://github.com/airbnb/javascript) for JavaScript and TypeScript.
+- We use [oxlint](https://oxc.rs/docs/guide/usage/linter) and [ESLint](https://eslint.org/) for linting, and [oxfmt](https://oxc.rs/docs/guide/usage/formatter) for formatting. See [`frontend/AGENTS.md`](../frontend/AGENTS.md) for the full set of TypeScript, React, and styling conventions.
 
 - Before adding a new JS dependency, check that the license is compatible with Apache 2.0.
 

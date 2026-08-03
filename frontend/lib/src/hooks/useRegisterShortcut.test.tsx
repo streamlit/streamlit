@@ -128,6 +128,36 @@ describe("isKeyboardEventFromEditableTarget", () => {
     expect(isKeyboardEventFromEditableTarget(event)).toBe(false)
   })
 
+  it("returns false when composedPath contains only non-editable elements", () => {
+    const div = document.createElement("div")
+    const span = document.createElement("span")
+
+    const event = createKeyboardEvent({
+      target: div,
+    }) as KeyboardEvent & { composedPath?: () => EventTarget[] }
+    event.composedPath = () => [span, div, document.body]
+
+    expect(isKeyboardEventFromEditableTarget(event)).toBe(false)
+  })
+
+  it("detects contentEditable elements via the isContentEditable property", () => {
+    const div = document.createElement("div")
+    Object.defineProperty(div, "isContentEditable", {
+      value: true,
+      configurable: true,
+    })
+
+    const event = createKeyboardEvent({ target: div })
+    expect(isKeyboardEventFromEditableTarget(event)).toBe(true)
+  })
+
+  it("falls back to event.target when composedPath is not provided", () => {
+    const input = document.createElement("input")
+    const event = createKeyboardEvent({ target: input })
+    delete (event as { composedPath?: unknown }).composedPath
+    expect(isKeyboardEventFromEditableTarget(event)).toBe(true)
+  })
+
   it.each(["input", "textarea", "select"])(
     "returns true for events targeting %s elements",
     tagName => {
@@ -398,6 +428,112 @@ describe("useRegisterShortcut", () => {
     expect(commandHandler).toBeUndefined()
     expect(ctrlHandler).toBeDefined()
   })
+
+  it("does not register any handler when no shortcut is provided", () => {
+    const onActivate = vi.fn()
+    render(<TestComponent disabled={false} onActivate={onActivate} />)
+    expect(hotkeysWithHandlers.__handlers.size).toBe(0)
+  })
+
+  it("does not register a handler when the shortcut string is empty", () => {
+    const onActivate = vi.fn()
+    render(
+      <TestComponent
+        shortcut="   +   "
+        disabled={false}
+        onActivate={onActivate}
+      />
+    )
+    expect(hotkeysWithHandlers.__handlers.size).toBe(0)
+  })
+
+  it("blocks modifier-only shortcuts when typing in an input", () => {
+    const shortcut = "shift"
+    const onActivate = vi.fn()
+
+    render(
+      <TestComponent
+        shortcut={shortcut}
+        disabled={false}
+        onActivate={onActivate}
+      />
+    )
+
+    const input = document.createElement("input")
+    const handler = hotkeysWithHandlers.__handlers.get("shift")
+    expect(handler).toBeDefined()
+
+    act(() => {
+      handler?.(createKeyboardEvent({ target: input, shiftKey: true }), {})
+    })
+
+    expect(onActivate).not.toHaveBeenCalled()
+  })
+
+  it("does not call onActivate after the component unmounts", () => {
+    const shortcut = "ctrl+k"
+    const onActivate = vi.fn()
+
+    const { unmount } = render(
+      <TestComponent
+        shortcut={shortcut}
+        disabled={false}
+        onActivate={onActivate}
+      />
+    )
+
+    expect(hotkeysWithHandlers.__handlers.get("ctrl+k")).toBeDefined()
+    unmount()
+    expect(hotkeysWithHandlers.__handlers.get("ctrl+k")).toBeUndefined()
+  })
+})
+
+describe("ensureHotkeysFilterConfigured filter behavior", () => {
+  const hotkeys = hotkeysModule.default as typeof hotkeysModule.default & {
+    filter: (event: KeyboardEvent) => boolean
+  }
+
+  beforeAll(() => {
+    ensureHotkeysFilterConfigured()
+  })
+
+  it("allows shortcuts when the event originates outside an editable element", () => {
+    const div = document.createElement("div")
+    const event = createKeyboardEvent({ target: div })
+    expect(hotkeys.filter(event)).toBe(true)
+  })
+
+  it("allows Escape inside editable elements", () => {
+    const input = document.createElement("input")
+    const event = createKeyboardEvent({ target: input, key: "Escape" })
+    expect(hotkeys.filter(event)).toBe(true)
+  })
+
+  it("allows non-alphanumeric shift combinations inside editable elements", () => {
+    const input = document.createElement("input")
+    const event = createKeyboardEvent({
+      target: input,
+      key: "ArrowDown",
+      shiftKey: true,
+    })
+    expect(hotkeys.filter(event)).toBe(true)
+  })
+
+  it("blocks shift+letter combinations inside editable elements", () => {
+    const input = document.createElement("input")
+    const event = createKeyboardEvent({
+      target: input,
+      key: "A",
+      shiftKey: true,
+    })
+    expect(hotkeys.filter(event)).toBe(false)
+  })
+
+  it("does not reconfigure the filter on subsequent calls", () => {
+    const before = hotkeys.filter
+    ensureHotkeysFilterConfigured()
+    expect(hotkeys.filter).toBe(before)
+  })
 })
 
 describe("formatShortcutForDisplay", () => {
@@ -423,5 +559,28 @@ describe("formatShortcutForDisplay", () => {
     expect(formatShortcutForDisplay("  cTrL  +   alt +   n  ")).toBe(
       "Ctrl + Alt + N"
     )
+  })
+
+  it("returns undefined for missing or empty shortcuts", () => {
+    expect(formatShortcutForDisplay(undefined)).toBeUndefined()
+    expect(formatShortcutForDisplay(null)).toBeUndefined()
+    expect(formatShortcutForDisplay("")).toBeUndefined()
+    expect(formatShortcutForDisplay("   +   ")).toBeUndefined()
+  })
+
+  it("renders friendly labels for special navigation keys", () => {
+    expect(formatShortcutForDisplay("ctrl+left")).toBe("Ctrl + ←")
+    expect(formatShortcutForDisplay("ctrl+down")).toBe("Ctrl + ↓")
+    expect(formatShortcutForDisplay("escape")).toBe("Esc")
+    expect(formatShortcutForDisplay("pageup")).toBe("PageUp")
+  })
+
+  it("renders function keys in upper case", () => {
+    expect(formatShortcutForDisplay("f5")).toBe("F5")
+    expect(formatShortcutForDisplay("ctrl+f12")).toBe("Ctrl + F12")
+  })
+
+  it("renders multi-character keys (without a special label) in upper case", () => {
+    expect(formatShortcutForDisplay("ctrl+plus")).toBe("Ctrl + PLUS")
   })
 })

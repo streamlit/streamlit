@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import io
+import mimetypes
 import os
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -48,7 +49,7 @@ from streamlit.errors import (
     StreamlitPageNotFoundError,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import Page, _validate_registered_page
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
@@ -108,7 +109,7 @@ def _normalize_icon_position(
             f'The argument passed was "{icon_position}".'
         )
 
-    return cast("IconPosition", icon_position)  # type: ignore[redundant-cast]
+    return icon_position
 
 
 def _icon_position_to_proto(
@@ -283,7 +284,10 @@ class ButtonMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             The following special keys are supported: Backspace, Delete, Down,
             End, Enter, Esc, Home, Left, PageDown, PageUp, Right, Space, Tab,
@@ -477,6 +481,10 @@ class ButtonMixin:
             The MIME type of the data. If this is ``None`` (default), Streamlit
             sets the MIME type depending on the value of ``data`` as follows:
 
+            - If ``data`` is a file object with a string ``name`` attribute
+              (e.g. a file opened with ``open()``), Streamlit first tries to
+              guess the MIME type from the file name (``file_name`` if
+              specified, otherwise ``data.name``).
             - If ``data`` is a string or textual file (i.e. ``str`` or
               ``io.TextIOWrapper`` object), Streamlit uses the "text/plain"
               MIME type.
@@ -610,7 +618,10 @@ class ButtonMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             For a list of supported keys and modifiers, see the documentation
             for |st.button|_.
@@ -1020,7 +1031,10 @@ class ButtonMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             For a list of supported keys and modifiers, see the documentation
             for |st.button|_.
@@ -1081,7 +1095,7 @@ class ButtonMixin:
     @gather_metrics("page_link")
     def page_link(
         self,
-        page: str | Path | StreamlitPage,
+        page: str | Path | Page,
         *,
         label: str | None = None,
         icon: str | None = None,
@@ -1104,7 +1118,7 @@ class ButtonMixin:
 
         Parameters
         ----------
-        page : str, Path, or StreamlitPage
+        page : str, Path, or Page
             The page to switch to on user click. This can be one of the
             following values:
 
@@ -1117,9 +1131,9 @@ class ButtonMixin:
               ``st.navigation``, the Python file must be your entrypoint file
               or a file in the ``pages/`` directory.
 
-            - ``StreamlitPage``: The source of the ``StreamlitPage`` and its
+            - ``Page``: The source of the ``Page`` and its
               ``url_path`` must match a page defined in ``st.navigation``.
-              Use ``st.Page`` to create a ``StreamlitPage`` object.
+              Use ``st.Page`` to create a ``Page`` object.
 
             - URL: The URL must contain an HTTP or HTTPS scheme, like
               ``"https://docs.streamlit.io"``. When a user clicks a
@@ -1128,7 +1142,7 @@ class ButtonMixin:
               ``label`` parameter is required.
 
             To link to a page defined by a ``callable``, you must use a
-            ``StreamlitPage`` object.
+            ``Page`` object.
 
         label : str
             The label for the page link. Labels are required for external pages.
@@ -1151,7 +1165,7 @@ class ButtonMixin:
         icon : str or None
             An optional emoji or icon to display next to the link label. If
             ``icon`` is ``None`` (default), the icon is inferred from the
-            ``StreamlitPage`` object or no icon is displayed. If ``icon`` is a
+            ``Page`` object or no icon is displayed. If ``icon`` is a
             string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
@@ -1393,7 +1407,11 @@ class ButtonMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="trigger_value",
+            disabled=disabled,
         )
+
+        if ctx:
+            save_for_app_testing(ctx, element_id, button_state.value)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
         self.dg._enqueue(
@@ -1490,6 +1508,7 @@ class ButtonMixin:
                 serializer=serde.serialize,
                 ctx=ctx,
                 value_type="trigger_value",
+                disabled=disabled,
             )
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
@@ -1503,7 +1522,7 @@ class ButtonMixin:
 
     def _page_link(
         self,
-        page: str | Path | StreamlitPage,
+        page: str | Path | Page,
         *,  # keyword-only arguments:
         label: str | None = None,
         icon: str | None = None,
@@ -1539,12 +1558,12 @@ class ButtonMixin:
         if help is not None:
             page_link_proto.help = dedent(help)
 
-        if isinstance(page, StreamlitPage):
+        if isinstance(page, Page):
             if label is None:
                 page_link_proto.label = page.title
             if icon is None:
                 page_link_proto.icon = page.icon
-                # Here the StreamlitPage's icon is already validated
+                # Here the Page's icon is already validated
                 # (using validate_icon_or_emoji) during its initialization
 
             if page.is_external:
@@ -1554,6 +1573,7 @@ class ButtonMixin:
                     "page_link", page_link_proto, layout_config=layout_config
                 )
 
+            _validate_registered_page(page)
             page_link_proto.page_script_hash = page._script_hash
             page_link_proto.page = page.url_path
         else:
@@ -1662,7 +1682,9 @@ class ButtonMixin:
         if runtime.exists():
             if is_in_form(self.dg) and not is_form_submitter:
                 raise StreamlitAPIException(
-                    f"`st.button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
+                    "`st.button()` can't be used in an `st.form()`. Use "
+                    "`st.form_submit_button()` instead to submit the form."
+                    f"{FORM_DOCS_INFO}"
                 )
             if not is_in_form(self.dg) and is_form_submitter:
                 raise StreamlitAPIException(
@@ -1699,6 +1721,7 @@ class ButtonMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="trigger_value",
+            disabled=disabled,
         )
 
         if ctx:
@@ -1711,8 +1734,35 @@ class ButtonMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _maybe_infer_file_info(
+    data: DownloadButtonDataType,
+    file_name: str | None,
+    mimetype: str | None,
+) -> tuple[str | None, str | None]:
+    """Infer a missing ``file_name``/``mime`` from ``data.name`` when it is a
+    non-empty string, as on a file object opened from disk (e.g. ``io.FileIO``).
+
+    Explicit user-provided values always take precedence; when nothing can be
+    inferred, the values are returned unchanged.
+    """
+    # `data.name` may be a property that raises (e.g. on a detached
+    # TextIOWrapper), so getattr's default alone isn't enough.
+    try:
+        name = getattr(data, "name", None)
+    except (AttributeError, ValueError, OSError):
+        return file_name, mimetype
+    # FileIO.name is an int when the object was created from a file descriptor.
+    if not isinstance(name, str) or not name:
+        return file_name, mimetype
+    if file_name is None:
+        file_name = os.path.basename(name)
+    if mimetype is None:
+        mimetype = mimetypes.guess_type(file_name)[0]
+    return file_name, mimetype
 
 
 def marshall_file(
@@ -1739,6 +1789,10 @@ def marshall_file(
         proto_download_button.deferred_file_id = file_id
         proto_download_button.url = ""  # No URL yet, will be generated on click
         return
+
+    # A file object opened from disk carries a usable path in `name`: use it
+    # to fill in a missing file_name/mime. See issue #14159.
+    file_name, mimetype = _maybe_infer_file_info(data, file_name, mimetype)
 
     # Existing logic for non-callable data
     data_as_bytes, inferred_mime_type = convert_data_to_bytes_and_infer_mime(

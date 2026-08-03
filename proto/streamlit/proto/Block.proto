@@ -33,6 +33,7 @@ message Block {
     Popover popover = 10;
     Dialog dialog = 11;
     FlexContainer flex_container = 13;
+    Transparent transparent = 17;
   }
 
   bool allow_empty = 8;
@@ -183,5 +184,9 @@ message Block {
     AvatarType avatar_type = 3;
   }
 
-  // Next ID: 17
+  // A layout-transparent wrapper block. Produces no DOM node — children
+  // render directly in the parent container's flex context.
+  message Transparent {}
+
+  // Next ID: 18
 }

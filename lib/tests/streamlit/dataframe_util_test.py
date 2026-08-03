@@ -31,12 +31,9 @@ import pytest
 from pandas.api.types import infer_dtype
 from parameterized import parameterized
 
-import streamlit as st
 from streamlit import dataframe_util
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.type_util import get_fqn_type
-from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.data_mocks.snowpandas_mocks import Index as SnowpandasIndex
 from tests.streamlit.data_mocks.snowpandas_mocks import Series as SnowpandasSeries
@@ -47,7 +44,7 @@ from tests.streamlit.data_test_cases import (
     CaseMetadata,
     TestObject,
 )
-from tests.testutil import create_snowpark_session, patch_config_options
+from tests.testutil import create_snowpark_session
 
 
 class DataframeUtilTest(unittest.TestCase):
@@ -86,6 +83,34 @@ class DataframeUtilTest(unittest.TestCase):
         # pandas >= 3.0. Without downcasting the type should be preserved.
         col_type = result_table.schema.field("col").type
         assert col_type in {pa.string(), pa.large_string()}
+
+    def test_convert_pandas_df_to_arrow_table_preserve_index(self):
+        """preserve_index=True materializes a default RangeIndex as a column."""
+        import pyarrow as pa
+
+        df = pd.DataFrame({"col": [1, 2, 3]})
+
+        with_index = dataframe_util.convert_pandas_df_to_arrow_table(
+            df, preserve_index=True
+        )
+        without_index = dataframe_util.convert_pandas_df_to_arrow_table(df)
+
+        assert isinstance(with_index, pa.Table)
+        # With preserve_index=True the RangeIndex becomes a physical column; the
+        # default keeps it as schema metadata only.
+        assert without_index.num_columns == 1
+        assert with_index.num_columns == 2
+
+    def test_convert_pandas_df_to_arrow_table_applies_column_fixes(self):
+        """Arrow-incompatible columns are fixed and the conversion still succeeds."""
+        import pyarrow as pa
+
+        # A dataframe of dtypes is not natively Arrow-serializable and exercises
+        # the fix-and-retry fallback.
+        df = pd.DataFrame(pd.DataFrame(["foo", "bar"]).dtypes)
+
+        table = dataframe_util.convert_pandas_df_to_arrow_table(df)
+        assert isinstance(table, pa.Table)
 
     def test_convert_arrow_table_to_arrow_bytes_downcasts_large_list(self):
         """Test that convert_arrow_table_to_arrow_bytes downcasts large_list to list."""
@@ -1317,114 +1342,6 @@ def test_convert_pandas_df_to_polars_and_xarray_formats() -> None:
     assert isinstance(da, xr.DataArray)
 
 
-class TestArrowTruncation(DeltaGeneratorTestCase):
-    """Test class for the automatic arrow truncation feature."""
-
-    @patch_config_options(
-        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
-    )
-    def test_truncate_larger_table(self):
-        """Test that `_maybe_truncate_table` correctly truncates a table that is
-        larger than the max message size.
-        """
-        col_data = list(range(200000))
-        original_df = pd.DataFrame(
-            {
-                "col 1": col_data,
-                "col 2": col_data,
-                "col 3": col_data,
-            }
-        )
-
-        original_table = pa.Table.from_pandas(original_df)
-        truncated_table = dataframe_util._maybe_truncate_table(
-            pa.Table.from_pandas(original_df)
-        )
-        # Should be under the configured 3MB limit:
-        assert truncated_table.nbytes < 3 * int(1000000.0)
-
-        # Test that the table should have been truncated
-        assert truncated_table.nbytes < original_table.nbytes
-        assert truncated_table.num_rows < original_table.num_rows
-
-        # Test that it prints out a caption test:
-        el = self.get_delta_from_queue().new_element
-        assert "due to data size limitations" in el.markdown.body
-        assert el.markdown.element_type == MarkdownProto.Type.CAPTION
-
-    @patch_config_options(
-        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
-    )
-    def test_dont_truncate_smaller_table(self):
-        """Test that `_maybe_truncate_table` doesn't truncate smaller tables."""
-        col_data = list(range(100))
-        original_df = pd.DataFrame(
-            {
-                "col 1": col_data,
-                "col 2": col_data,
-                "col 3": col_data,
-            }
-        )
-
-        original_table = pa.Table.from_pandas(original_df)
-        truncated_table = dataframe_util._maybe_truncate_table(
-            pa.Table.from_pandas(original_df)
-        )
-
-        # Test that the tables are the same:
-        assert truncated_table.nbytes == original_table.nbytes
-        assert truncated_table.num_rows == original_table.num_rows
-
-    @patch_config_options({"server.enableArrowTruncation": False})
-    def test_dont_truncate_if_deactivated(self):
-        """Test that `_maybe_truncate_table` doesn't do anything
-        when server.enableArrowTruncation is decatived
-        """
-        col_data = list(range(200000))
-        original_df = pd.DataFrame(
-            {
-                "col 1": col_data,
-                "col 2": col_data,
-                "col 3": col_data,
-            }
-        )
-
-        original_table = pa.Table.from_pandas(original_df)
-        truncated_table = dataframe_util._maybe_truncate_table(
-            pa.Table.from_pandas(original_df)
-        )
-
-        # Test that the tables are the same:
-        assert truncated_table.nbytes == original_table.nbytes
-        assert truncated_table.num_rows == original_table.num_rows
-
-    @patch_config_options(
-        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
-    )
-    def test_st_dataframe_truncates_data(self):
-        """Test that `st.dataframe` truncates the data if server.enableArrowTruncation==True."""
-        col_data = list(range(200000))
-        original_df = pd.DataFrame(
-            {
-                "col 1": col_data,
-                "col 2": col_data,
-                "col 3": col_data,
-            }
-        )
-        original_table = pa.Table.from_pandas(original_df)
-        st.dataframe(original_df)
-        el = self.get_delta_from_queue().new_element
-        # Test that table bytes should be smaller than the full table
-        assert len(el.dataframe.arrow_data.data) < original_table.nbytes
-        # Should be under the configured 3MB limit:
-        assert len(el.dataframe.arrow_data.data) < 3 * int(1000000.0)
-
-        # Test that it prints out a caption test:
-        el = self.get_delta_from_queue(-2).new_element
-        assert "due to data size limitations" in el.markdown.body
-        assert el.markdown.element_type == MarkdownProto.Type.CAPTION
-
-
 @pytest.mark.require_integration
 def test_direct_polars_to_arrow_bytes_dataframe() -> None:
     """Direct Polars DataFrame to Arrow IPC produces valid bytes with correct schema."""
@@ -1638,3 +1555,78 @@ def test_direct_polars_to_arrow_bytes_fallback_on_error() -> None:
     reader = pa.RecordBatchStreamReader(result)
     table = reader.read_all()
     assert table.num_rows == 3
+
+
+@pytest.mark.parametrize(
+    ("input_type", "expected"),
+    [
+        (pa.int32(), pa.int32()),
+        (pa.large_string(), pa.string()),
+        (pa.large_binary(), pa.binary()),
+        (pa.large_list(pa.large_string()), pa.list_(pa.string())),
+    ],
+    ids=["int32", "large_string", "large_binary", "nested_large_list"],
+)
+def test_downcast_large_type(input_type: pa.DataType, expected: pa.DataType) -> None:
+    """``_downcast_large_type`` maps large types to their regular counterparts."""
+    assert dataframe_util._downcast_large_type(input_type) == expected
+
+
+def test_downcast_large_arrow_types_no_op_when_no_large_types() -> None:
+    """A table without large types is returned unchanged (same instance)."""
+    table = pa.table({"a": pa.array([1, 2, 3], type=pa.int32())})
+    assert dataframe_util._downcast_large_arrow_types(table) is table
+
+
+def test_downcast_large_arrow_types_casts_large_columns() -> None:
+    """Tables with large_string columns are cast to plain string and keep their values."""
+    table = pa.table({"text": pa.array(["a", "b", "c"], type=pa.large_string())})
+    result = dataframe_util._downcast_large_arrow_types(table)
+    assert result.schema.field("text").type == pa.string()
+    assert result.column("text").to_pylist() == ["a", "b", "c"]
+
+
+@pytest.mark.parametrize(
+    ("schema", "expected"),
+    [
+        (pa.schema([pa.field("col", pa.large_list(pa.int32()))]), True),
+        (
+            pa.schema([pa.field("a", pa.int64()), pa.field("b", pa.string())]),
+            False,
+        ),
+    ],
+    ids=["with_large_list", "plain_schema"],
+)
+def test_has_large_list_type(schema: pa.Schema, expected: bool) -> None:
+    """``_has_large_list_type`` detects LargeListType anywhere in the schema."""
+    assert dataframe_util._has_large_list_type(schema) is expected
+
+
+def test_downcast_large_list_schema_replaces_large_list() -> None:
+    """LargeList fields become regular list fields with downcast value types."""
+    schema = pa.schema([pa.field("nums", pa.large_list(pa.int32()))])
+    result = dataframe_util._downcast_large_list_schema(schema)
+    assert result.field("nums").type == pa.list_(pa.int32())
+
+
+def test_pandas_df_to_series_raises_on_multi_column() -> None:
+    """``_pandas_df_to_series`` raises ValueError on multi-column inputs."""
+    df = pd.DataFrame({"a": [1], "b": [2]})
+    with pytest.raises(ValueError, match="single column"):
+        dataframe_util._pandas_df_to_series(df)
+
+
+def test_pandas_df_to_series_returns_first_column() -> None:
+    """``_pandas_df_to_series`` returns the single column as a Series."""
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    assert list(dataframe_util._pandas_df_to_series(df)) == [1, 2, 3]
+
+
+def test_unify_missing_values_replaces_nan_with_none() -> None:
+    """``_unify_missing_values`` replaces NaN with None and preserves other values."""
+    # Use an object-dtype column so the None replacement is stable across all
+    # supported pandas versions. For pure-float columns, pandas < 3.0 coerces
+    # None back to NaN via infer_objects(), which is the documented behavior.
+    df = pd.DataFrame({"a": ["x", np.nan, "y"]})
+    result = dataframe_util._unify_missing_values(df)
+    assert result["a"].tolist() == ["x", None, "y"]

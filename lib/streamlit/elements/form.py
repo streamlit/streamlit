@@ -96,7 +96,10 @@ class FormMixin:
 
         Forms have a few constraints:
 
-        - Every form must contain a ``st.form_submit_button``.
+        - Every form must contain at least one ``st.form_submit_button``.
+          Without a submit button, there is no way to submit the form, so the
+          values of the widgets inside it are never sent to your app and the
+          form is non-functional.
         - ``st.button`` and ``st.download_button`` cannot be added to a form.
         - Forms can appear anywhere in your app (sidebar, columns, etc),
           but they cannot be embedded inside other forms.
@@ -220,7 +223,7 @@ class FormMixin:
         form_id = key
 
         ctx = get_script_run_ctx()
-        if ctx is not None and not ctx.form_ids_this_run.check_and_add(form_id):
+        if ctx is not None and not ctx.shared.form_ids_this_run.check_and_add(form_id):
             raise StreamlitAPIException(_build_duplicate_form_message(key))
 
         block_proto = Block_pb2.Block()
@@ -262,7 +265,9 @@ class FormMixin:
         When this button is clicked, all widget values inside the form will be
         sent from the user's browser to your Streamlit server in a batch.
 
-        Every form must have at least one ``st.form_submit_button``. An
+        Every form must have at least one ``st.form_submit_button``. It is the
+        only way to submit a form: without it, the widget values inside the
+        form are never sent to your app, so the form is non-functional. An
         ``st.form_submit_button`` cannot exist outside of a form.
 
         For more information about forms, check out our `docs
@@ -405,7 +410,10 @@ class FormMixin:
             .. important::
                 The keys ``"C"`` and ``"R"`` are reserved and can't be used,
                 even with modifiers. Punctuation keys like ``"."`` and ``","``
-                aren't currently supported.
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
 
             For a list of supported keys and modifiers, see the documentation
             for |st.button|_.
@@ -488,5 +496,5 @@ class FormMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

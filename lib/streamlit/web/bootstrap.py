@@ -19,7 +19,7 @@ import mimetypes
 import os
 import signal
 import sys
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
 from streamlit.logger import get_logger
@@ -39,8 +39,19 @@ def _set_up_signal_handler(server: Server) -> None:
     _LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number: int, stack_frame: Any) -> None:  # noqa: ARG001
-        # The server will shut down its threads and exit its loop.
-        server.stop()
+        # This handler can interrupt the event loop in the middle of a
+        # buffered console write, in which case the console output triggered
+        # by `Server.stop` raises "RuntimeError: reentrant call inside
+        # <_io.BufferedWriter>" (mainly on Windows). Defer the stop to the
+        # event loop instead of running it inline whenever possible.
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running event loop; the server will shut down its threads
+            # and exit its loop.
+            server.stop()
+        else:
+            loop.call_soon_threadsafe(server.stop)
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -94,6 +105,7 @@ def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
 def _on_server_start(server: Server) -> None:
     prepare_streamlit_environment(server.main_script_path)
     _print_url(server.is_running_hello)
+    _maybe_print_skills_recommendation()
     report_watchdog_availability()
 
     def maybe_open_browser() -> None:
@@ -265,6 +277,35 @@ def _print_url(is_running_hello: bool) -> None:
         cli_util.print_to_cli("")
 
 
+def _maybe_print_skills_recommendation() -> None:
+    """Recommend installing Streamlit agent skills when starting an app.
+
+    The message is only shown for interactive (non-headless) sessions where the
+    skills are not already installed. It points users to ``streamlit skills`` so
+    AI coding assistants can build and debug their apps more effectively.
+    """
+    if config.get_option("server.headless"):
+        # Don't advertise in headless mode (e.g. deployments, CI).
+        return
+
+    if config.get_option("logger.hideWelcomeMessage"):
+        return
+
+    from streamlit.web import skills
+
+    if skills.are_skills_installed():
+        # Skills are already installed - nothing to recommend.
+        return
+
+    skills_command = cli_util.style_for_cli("streamlit skills", fg="cyan", bold=True)
+    cli_util.print_to_cli("  Help agents write better Streamlit apps?", bold=True)
+    cli_util.print_to_cli(
+        f"  Install the official Streamlit skills by running {skills_command} "
+        "in your terminal."
+    )
+    cli_util.print_to_cli("")
+
+
 def load_config_options(flag_options: dict[str, Any]) -> None:
     """Load config options from config.toml files, then overlay the ones set by
     flag_options.
@@ -312,6 +353,23 @@ def _install_config_watchers(flag_options: dict[str, Any]) -> None:
         )
 
 
+def _prepare_asgi_app_run_context(
+    main_script_path: str,
+    args: list[str],
+    flag_options: dict[str, Any],
+    *,
+    server_mode: Literal["starlette-app", "starlette-app-direct"] = "starlette-app",
+) -> None:
+    """Apply process-level setup shared by st.App launch modes."""
+    _fix_sys_path(main_script_path)
+    _fix_sys_argv(main_script_path, args)
+    _install_config_watchers(flag_options)
+
+    config._server_mode = server_mode
+
+    report_watchdog_availability()
+
+
 def run_asgi_app(
     main_script_path: str,
     app_import_string: str,
@@ -340,16 +398,7 @@ def run_asgi_app(
     """
     from streamlit.web.server.starlette.starlette_server import UvicornRunner
 
-    # Process-level setup (CLI responsibility)
-    _fix_sys_path(main_script_path)
-    _fix_sys_argv(main_script_path, args)
-    _install_config_watchers(flag_options)
-
-    # Set server mode for metrics tracking (CLI-managed st.App)
-    config._server_mode = "starlette-app"
-
-    # Report watchdog availability for file watching
-    report_watchdog_availability()
+    _prepare_asgi_app_run_context(main_script_path, args, flag_options)
 
     # Run the ASGI app using UvicornRunner
     # UvicornRunner handles: port retry, SSL, WebSocket config, signal handling

@@ -22,6 +22,7 @@ import { AcceptFileValue } from "~lib/util/utils"
 
 import {
   configureFileInputProps,
+  getPastedFiles,
   getUploadDescription,
   validateFileType,
 } from "./fileUploadUtils"
@@ -188,6 +189,55 @@ describe("fileUploadUtils", () => {
     })
   })
 
+  describe("getPastedFiles", () => {
+    it("returns files from clipboard data", () => {
+      const file = createTestFile("pasted.txt")
+      const clipboardData = {
+        files: [file],
+        items: [],
+      } as unknown as DataTransfer
+
+      expect(getPastedFiles(clipboardData)).toEqual([file])
+    })
+
+    it("falls back to file items when files are unavailable", () => {
+      const file = createTestFile("clipboard.png")
+      const clipboardData = {
+        files: [],
+        items: [
+          {
+            kind: "string",
+            getAsFile: vi.fn(),
+          },
+          {
+            kind: "file",
+            getAsFile: vi.fn(() => file),
+          },
+        ],
+      } as unknown as DataTransfer
+
+      expect(getPastedFiles(clipboardData)).toEqual([file])
+    })
+
+    it("ignores clipboard items without files", () => {
+      const clipboardData = {
+        files: [],
+        items: [
+          {
+            kind: "string",
+            getAsFile: vi.fn(),
+          },
+          {
+            kind: "file",
+            getAsFile: vi.fn(() => null),
+          },
+        ],
+      } as unknown as DataTransfer
+
+      expect(getPastedFiles(clipboardData)).toEqual([])
+    })
+  })
+
   describe("configureFileInputProps", () => {
     it("adds webkitdirectory for directory uploads", () => {
       const inputProps = { accept: ".txt" }
@@ -206,7 +256,8 @@ describe("fileUploadUtils", () => {
         inputProps,
         AcceptFileValue.Single
       )
-      expect(result).toEqual(inputProps)
+      expect(result.accept).toBe(".pdf")
+      expect(result.multiple).toBe(false)
       expect(result.webkitdirectory).toBeUndefined()
     })
 
@@ -216,8 +267,28 @@ describe("fileUploadUtils", () => {
         inputProps,
         AcceptFileValue.Multiple
       )
-      expect(result).toEqual(inputProps)
+      expect(result.accept).toBe(".jpg,.png")
+      expect(result.multiple).toBe(true)
       expect(result.webkitdirectory).toBeUndefined()
     })
+
+    it.each([
+      AcceptFileValue.None,
+      AcceptFileValue.Single,
+      AcceptFileValue.Multiple,
+      AcceptFileValue.Directory,
+    ])(
+      "keeps the hidden input out of flow via position: absolute for %s",
+      acceptFile => {
+        // react-dropzone renders the hidden input in-flow (display: block),
+        // which would shift the chat input controls. We override it to
+        // position: absolute so it has no layout impact.
+        const result = configureFileInputProps(
+          { style: { display: "block" } },
+          acceptFile
+        )
+        expect(result.style).toMatchObject({ position: "absolute" })
+      }
+    )
   })
 })

@@ -19,6 +19,7 @@ from __future__ import annotations
 import itertools
 import json
 import re
+import warnings
 from unittest import mock
 
 import numpy as np
@@ -278,6 +279,33 @@ class StMapTest(DeltaGeneratorTestCase):
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
         assert len(c.get("layers")[0].get("data")[0]) == 2
         assert len(df.columns) == 3
+
+    def test_no_setting_with_copy_warning_for_color_column(self):
+        """Test that no SettingWithCopyWarning is emitted when using a color column.
+
+        This is a regression test for the fix that ensures the internal DataFrame
+        subset is copied before mutating the color column.
+        """
+        df = pd.DataFrame(
+            {
+                "lat": [38.8762997, 38.8742997, 38.9025842],
+                "lon": [-77.0037, -77.0057, -77.0556545],
+                "color": ["#ff0000", "#00ff00", "#0000ff"],
+            }
+        )
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            st.map(df, color="color")
+            # Filter for SettingWithCopyWarning specifically
+            setting_warnings = [
+                warning
+                for warning in w
+                if "SettingWithCopyWarning" in str(warning.category.__name__)
+            ]
+            assert len(setting_warnings) == 0, (
+                f"Expected no SettingWithCopyWarning but got: {setting_warnings}"
+            )
 
     def test_default_map_copy(self):
         """Test that _DEFAULT_MAP is not modified as other work occurs."""

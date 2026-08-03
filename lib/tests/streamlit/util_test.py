@@ -194,3 +194,40 @@ class TestReadOnlyAttributeDictionary:
         serialized = json.dumps(d)
         deserialized = json.loads(serialized)
         assert deserialized == {"selection": {"rows": [1, 2], "columns": ["a"]}}
+
+    def test_attribute_access_raises_attribute_error_for_missing_key(self) -> None:
+        """Attribute-style access to a missing key raises a helpful AttributeError."""
+        d = ReadOnlyAttributeDictionary({"a": 1})
+        with pytest.raises(
+            AttributeError,
+            match=r"'ReadOnlyAttributeDictionary' object has no attribute 'missing'",
+        ):
+            _ = d.missing
+
+
+class TestAttributeDictionary:
+    """Test AttributeDictionary class."""
+
+    def test_setattr_updates_dict_value(self) -> None:
+        """Assigning a new attribute mutates the underlying dict storage."""
+        d = AttributeDictionary({"a": 1})
+        d.b = 2
+
+        assert d["b"] == 2
+        assert d.b == 2
+
+    def test_setattr_overwrites_existing_value(self) -> None:
+        """Setting an existing attribute updates the value rather than shadowing it."""
+        d = AttributeDictionary({"a": 1})
+        d.a = 99
+
+        assert d["a"] == 99
+
+    def test_attribute_access_raises_attribute_error_for_missing_key(self) -> None:
+        """Accessing a missing attribute raises AttributeError instead of KeyError."""
+        d = AttributeDictionary({"a": 1})
+        with pytest.raises(
+            AttributeError,
+            match=r"'AttributeDictionary' object has no attribute 'missing'",
+        ):
+            _ = d.missing

@@ -330,6 +330,7 @@ class AudioInputMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="file_uploader_state_value",
+            disabled=disabled,
         )
 
         self.dg._enqueue("audio_input", audio_input_proto, layout_config=layout_config)
@@ -340,5 +341,5 @@ class AudioInputMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

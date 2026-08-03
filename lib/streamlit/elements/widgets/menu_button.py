@@ -394,6 +394,7 @@ class MenuButtonMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_trigger_value",
+            disabled=disabled,
         )
 
         if ctx:
@@ -415,5 +416,5 @@ class MenuButtonMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

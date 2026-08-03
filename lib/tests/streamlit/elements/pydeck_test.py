@@ -27,7 +27,11 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements import deck_gl_json_chart
 from streamlit.elements.deck_gl_json_chart import (
+    PydeckMixin,
     PydeckSelectionSerde,
+    PydeckSelectionState,
+    PydeckState,
+    _get_pydeck_width,
     parse_selection_mode,
 )
 from streamlit.errors import StreamlitAPIException
@@ -671,7 +675,12 @@ class PydeckSelectionSerdeTest(DeltaGeneratorTestCase):
         result = serde.deserialize(json_str)
 
         # Should support both dict and attribute access
+        assert isinstance(result, PydeckState)
+        assert isinstance(result.selection, PydeckSelectionState)
         assert result.selection.indices["layer1"] == [0]
+        # Nested selection must be a stable stored instance (not a per-access copy).
+        assert result["selection"] is result["selection"]
+        assert result.selection is result["selection"]
 
 
 class ParseSelectionModeTest(DeltaGeneratorTestCase):
@@ -706,6 +715,66 @@ class ParseSelectionModeTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as e:
             parse_selection_mode(["single-object"])
         assert "Selection mode must be a single value" in str(e.value)
+
+
+def test_get_pydeck_width_returns_none_for_none_input() -> None:
+    """`None` pydeck object returns `None`."""
+    assert _get_pydeck_width(None) is None
+
+
+def test_get_pydeck_width_returns_none_when_width_not_set() -> None:
+    """Object without a `width` attribute returns `None`."""
+
+    class _NoWidth:
+        pass
+
+    assert _get_pydeck_width(_NoWidth()) is None
+
+
+def test_get_pydeck_width_returns_none_when_width_is_none() -> None:
+    """`width=None` returns `None`."""
+
+    class _HasWidth:
+        width = None
+
+    assert _get_pydeck_width(_HasWidth()) is None
+
+
+def test_get_pydeck_width_returns_none_when_width_is_invalid_type() -> None:
+    """Non-numeric width values are ignored."""
+
+    class _StringWidth:
+        width = "not_a_number"
+
+    assert _get_pydeck_width(_StringWidth()) is None
+
+
+def test_get_pydeck_width_returns_int_when_width_is_int() -> None:
+    """Integer widths are returned as-is."""
+
+    class _IntWidth:
+        width = 600
+
+    assert _get_pydeck_width(_IntWidth()) == 600
+
+
+def test_get_pydeck_width_returns_int_when_width_is_float() -> None:
+    """Float widths are truncated to int."""
+
+    class _FloatWidth:
+        width = 600.7
+
+    assert _get_pydeck_width(_FloatWidth()) == 600
+
+
+def test_pydeck_mixin_dg_returns_self() -> None:
+    """``PydeckMixin.dg`` returns the mixin instance."""
+
+    class _OnlyPydeck(PydeckMixin):
+        pass
+
+    pydeck_mixin = _OnlyPydeck()
+    assert pydeck_mixin.dg is pydeck_mixin
 
 
 class PydeckCallbackTest(DeltaGeneratorTestCase):

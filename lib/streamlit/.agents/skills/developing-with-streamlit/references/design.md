@@ -103,10 +103,10 @@ st.header("Section 2")
 
 If you genuinely need spacing:
 ```python
-st.space("small")   # Small gap
+st.space("small")  # Small gap
 st.space("medium")  # Medium gap
-st.space("large")   # Large gap
-st.space(50)        # Custom pixels for fine-tuning
+st.space("large")  # Large gap
+st.space(50)  # Custom pixels for fine-tuning
 ```
 
 **Don't** systematically replace dividers with `st.space()`—it can look weird too.

@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_until
-from e2e_playwright.shared.app_utils import get_checkbox
+from e2e_playwright.shared.app_utils import get_checkbox, reset_hovering
 from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
 
@@ -26,6 +26,11 @@ def test_tooltip_does_not_overflow_on_the_left_side(app: Page):
         .locator("button")
         .first
     )
+    # Prime the interaction modality to 'pointer' before hovering.
+    # React Aria requires a document-level pointermove before pointerenter to
+    # register hover intent; Playwright teleports the cursor when starting
+    # from "off-page" state.
+    reset_hovering(app)
     sidebar_button.hover()
     tooltip = app.get_by_test_id("stTooltipContent")
     expect(tooltip).to_be_visible()
@@ -70,7 +75,9 @@ def test_tooltip_does_not_overflow_on_the_right_side(app: Page):
     # Ensure UI is stable before hovering
     wait_for_react_stability(app)
 
-    # Hover over the tooltip target
+    # Hover over the tooltip target.
+    # reset_hovering ensures the pointer modality is primed for React Aria.
+    reset_hovering(app)
     hover_target.hover()
 
     # Wait for tooltip to appear and stabilize
@@ -96,7 +103,8 @@ def test_tooltip_with_code(app: Page):
     """Test that a help tooltip with code displays correctly."""
     # Get the number input widget
     number_input = app.get_by_test_id("stNumberInput")
-    # Hover over the tooltip target (?) to display the tooltip
+    # Prime the interaction modality to 'pointer' before hovering.
+    reset_hovering(app)
     hover_target = number_input.get_by_test_id("stTooltipHoverTarget")
     hover_target.hover()
 

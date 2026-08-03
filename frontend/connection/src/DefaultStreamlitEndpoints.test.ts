@@ -106,6 +106,32 @@ describe("DefaultStreamlitEndpoints", () => {
     })
   })
 
+  describe("buildBidiComponentURL()", () => {
+    it("builds the URL using the bidi-components endpoint", () => {
+      const endpoint = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: false,
+        sendClientError: vi.fn(),
+      })
+      expect(
+        endpoint.buildBidiComponentURL("my_component", "index.html")
+      ).toBe(
+        "http://streamlit.mock:80/mock/base/path/_stcore/bidi-components/my_component/index.html"
+      )
+    })
+
+    it("throws if no serverURI is available", () => {
+      const endpoint = new DefaultStreamlitEndpoints({
+        getServerUri: () => undefined,
+        csrfEnabled: false,
+        sendClientError: vi.fn(),
+      })
+      expect(() =>
+        endpoint.buildBidiComponentURL("my_component", "index.html")
+      ).toThrow("not connected to a server!")
+    })
+  })
+
   describe("buildMediaURL", () => {
     const endpoints = new DefaultStreamlitEndpoints({
       getServerUri: () => MOCK_SERVER_URI,

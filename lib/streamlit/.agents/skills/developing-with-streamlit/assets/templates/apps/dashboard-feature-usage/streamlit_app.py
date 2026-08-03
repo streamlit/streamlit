@@ -21,6 +21,9 @@ Demonstrates:
 - Time series visualization with normalization
 - Metric cards with 28-day deltas
 - Rolling average options
+- ``@st.cache_data(ttl=...)`` loader to keep data fresh and bounded
+- Conditional rendering: the collapsed "Raw data" expander only computes and
+  sends its dataframe to the browser when it is open (``on_change="rerun"``)
 
 This template uses synthetic data. Replace ``generate_api_data()`` with your
 actual data source (e.g., Snowflake queries, APIs, etc.).
@@ -131,9 +134,9 @@ def generate_api_data(
     return pd.DataFrame(records)
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl="1h", show_spinner="Loading API usage data...")
 def load_api_data() -> pd.DataFrame:
-    """Load all API usage data."""
+    """Load all API usage data (cached). Replace with your data source."""
     end_date = date.today() - timedelta(days=1)
     start_date = end_date - timedelta(days=365)
 
@@ -338,16 +341,22 @@ with chart_col:
 
         st.altair_chart(chart)
 
-# Raw data section
-with st.expander("Raw data", expanded=False, icon=":material/table:"):
-    display_df = filtered_data.copy()
-    column_config = {}
-    if normalize:
-        column_config["request_count"] = st.column_config.NumberColumn(
-            "Requests", format="percent"
+# Raw data section. The expander is collapsed by default, so guard the
+# dataframe behind `.open` (enabled by `on_change="rerun"`) to avoid building
+# and sending it to the browser until the user actually opens the section.
+raw_data_section = st.expander(
+    "Raw data", expanded=False, icon=":material/table:", on_change="rerun"
+)
+if raw_data_section.open:
+    with raw_data_section:
+        display_df = filtered_data.copy()
+        column_config = {}
+        if normalize:
+            column_config["request_count"] = st.column_config.NumberColumn(
+                "Requests", format="percent"
+            )
+        st.dataframe(
+            display_df,
+            hide_index=True,
+            column_config=column_config or None,
         )
-    st.dataframe(
-        display_df,
-        hide_index=True,
-        column_config=column_config or None,
-    )

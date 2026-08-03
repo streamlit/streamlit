@@ -595,6 +595,7 @@ class FileUploaderMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="file_uploader_state_value",
+            disabled=disabled,
         )
 
         layout_config = create_layout_config(width=width)
@@ -612,5 +613,5 @@ class FileUploaderMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

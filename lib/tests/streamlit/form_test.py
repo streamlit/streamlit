@@ -280,6 +280,8 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
                 st.button("foo")
 
         assert "`st.button()` can't be used in an `st.form()`" in str(ctx.value)
+        # The error should point users to the correct alternative.
+        assert "`st.form_submit_button()`" in str(ctx.value)
 
     def test_form_block_data(self):
         """Test that a form creates a block element with correct data."""

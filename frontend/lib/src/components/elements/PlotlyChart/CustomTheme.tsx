@@ -410,6 +410,11 @@ export function applyStreamlitTheme(
       template.layout as Record<string, unknown>,
       theme
     )
+    // Ensure user-provided `layout.font` overrides Streamlit's trace-level
+    // `textfont` defaults (e.g. Sankey, icicle); otherwise those template
+    // defaults shadow user settings.
+    // See https://github.com/streamlit/streamlit/issues/11031.
+    respectUserFontOnTemplateTraces(spec, theme)
   } catch (e) {
     const err = ensureError(e)
     LOG.error(err)
@@ -420,6 +425,66 @@ export function applyStreamlitTheme(
     layout.title = merge(title, {
       text: `<b>${String(title.text)}</b>`,
     })
+  }
+}
+
+/**
+ * Trace-level `textfont.color` values injected by the Streamlit Plotly theme.
+ * These shadow the user's `layout.font.color` and are scrubbed only when their
+ * current value matches the Streamlit-injected default — so a user-owned
+ * custom template that sets a different `textfont.color` on the same trace
+ * type is preserved. Keep in sync with the `textfont=` entries in
+ * `lib/streamlit/elements/lib/streamlit_plotly_theme.py`. Trace types not in
+ * this map are treated as user-owned. `family` is not injected by the
+ * Streamlit theme on any trace type, so `layout.font.family` inherits via
+ * Plotly's normal cascade with no frontend intervention.
+ */
+function getStreamlitInjectedTextfontColors(
+  theme: EmotionTheme
+): ReadonlyMap<string, string> {
+  return new Map([
+    ["icicle", "white"],
+    ["sankey", getGray70(theme)],
+  ])
+}
+
+/**
+ * Drops `textfont.color` from Streamlit-owned template traces when the user
+ * provided `layout.font.color`. Plotly prefers template `textfont` over
+ * `layout.font`, so removing Streamlit's trace-level defaults (e.g. Sankey
+ * `textfont.color`) lets the user's layout font be inherited. User-owned
+ * custom traces — including custom `sankey`/`icicle` templates whose
+ * `textfont.color` does not match the Streamlit-injected value — are left
+ * untouched.
+ */
+function respectUserFontOnTemplateTraces(
+  spec: Record<string, unknown>,
+  theme: EmotionTheme
+): void {
+  const layout = spec.layout as Record<string, unknown> | undefined
+  const userFont = layout?.font as Record<string, unknown> | undefined
+  if (userFont?.color === undefined) {
+    return
+  }
+  const template = layout?.template as Record<string, unknown> | undefined
+  const templateData = template?.data as Record<string, unknown[]> | undefined
+  if (!templateData) {
+    return
+  }
+  const injectedColors = getStreamlitInjectedTextfontColors(theme)
+  for (const [traceType, traces] of Object.entries(templateData)) {
+    const injectedColor = injectedColors.get(traceType)
+    if (injectedColor === undefined || !Array.isArray(traces)) {
+      continue
+    }
+    for (const trace of traces) {
+      const textfont = (trace as Record<string, unknown>)?.textfont as
+        | Record<string, unknown>
+        | undefined
+      if (textfont?.color === injectedColor) {
+        delete textfont.color
+      }
+    }
   }
 }
 

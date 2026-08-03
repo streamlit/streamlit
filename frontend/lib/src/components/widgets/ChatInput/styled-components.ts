@@ -251,3 +251,33 @@ export const StyledChatAudioWave = styled.div(({ theme }) => ({
     inset: 0,
   },
 }))
+
+export const StyledChatInputTextArea = styled.textarea<{
+  $height: string
+  $maxHeight: string
+  $minHeight: string
+}>(({ theme, $height, $maxHeight, $minHeight }) => ({
+  fontWeight: theme.fontWeights.normal,
+  lineHeight: theme.lineHeights.inputWidget,
+  height: $height,
+  maxHeight: $maxHeight,
+  minHeight: $minHeight,
+  overflowY: "auto",
+  padding: `${theme.spacing.twoXS} 0`,
+  width: "100%",
+  border: "none",
+  outline: "none",
+  backgroundColor: "transparent",
+  fontFamily: "inherit",
+  fontSize: theme.fontSizes.sm,
+  color: "inherit",
+  boxSizing: "border-box",
+  resize: "none",
+  display: "block",
+  "&::placeholder": { color: theme.colors.fadedText60 },
+  "&:disabled": {
+    color: theme.colors.fadedText40,
+    WebkitTextFillColor: theme.colors.fadedText40,
+    cursor: "not-allowed",
+  },
+}))

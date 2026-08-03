@@ -58,7 +58,11 @@ import {
   StyledSidebarHeaderContainer,
   StyledSidebarUserContent,
 } from "./styled-components"
-import { clampSidebarWidth, DEFAULT_WIDTH } from "./utils"
+import {
+  calculateMaxBreakpoint,
+  clampSidebarWidth,
+  DEFAULT_WIDTH,
+} from "./utils"
 
 export interface SidebarProps {
   endpoints: StreamlitEndpoints
@@ -67,11 +71,6 @@ export interface SidebarProps {
   isCollapsed: boolean
   onToggleCollapse: (collapsed: boolean, shouldPersist?: boolean) => void
   widgetsDisabled: boolean
-}
-
-function calculateMaxBreakpoint(value: string): number {
-  // We subtract a margin of 0.02 to use as a max-width
-  return parseInt(value, 10) - 0.02
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -88,8 +87,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const { appPages } = useContext(NavigationContext)
 
-  const { hideSidebarNav, appLogo, initialSidebarWidth, appRootRef } =
-    useContext(SidebarConfigContext)
+  const {
+    hideSidebarNav,
+    appLogo,
+    initialSidebarWidth,
+    appRootRef,
+    isSidebarLocked,
+  } = useContext(SidebarConfigContext)
+
+  const isMobileViewport = innerWidth > 0 && innerWidth <= mediumBreakpointPx
 
   const scrollbarGutterSize = useScrollbarGutterSize()
 
@@ -293,21 +299,23 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
           {renderLogoContent()}
-          <StyledCollapseSidebarButton
-            showSidebarCollapse={showSidebarCollapse}
-            data-testid="stSidebarCollapseButton"
-          >
-            <BaseButton
-              kind={BaseButtonKind.HEADER_NO_PADDING}
-              onClick={toggleCollapse}
+          {(!isSidebarLocked || isMobileViewport) && (
+            <StyledCollapseSidebarButton
+              showSidebarCollapse={showSidebarCollapse}
+              data-testid="stSidebarCollapseButton"
             >
-              <DynamicIcon
-                size="xl"
-                iconValue=":material/keyboard_double_arrow_left:"
-                color={theme.colors.fadedText60}
-              />
-            </BaseButton>
-          </StyledCollapseSidebarButton>
+              <BaseButton
+                kind={BaseButtonKind.HEADER_NO_PADDING}
+                onClick={toggleCollapse}
+              >
+                <DynamicIcon
+                  size="xl"
+                  iconValue=":material/keyboard_double_arrow_left:"
+                  color={theme.colors.fadedText60}
+                />
+              </BaseButton>
+            </StyledCollapseSidebarButton>
+          )}
         </StyledSidebarHeaderContainer>
         {hasPageNavAbove && (
           <SidebarNav

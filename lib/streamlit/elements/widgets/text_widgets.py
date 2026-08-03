@@ -42,6 +42,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -49,7 +50,6 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.string_util import validate_icon_or_emoji
-from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -86,6 +86,28 @@ class TextAreaSerde:
         return v
 
 
+def _parse_text_input_validate(
+    validate: str | tuple[str, str] | None,
+) -> tuple[str | None, str | None]:
+    if validate is None:
+        return None, None
+
+    if isinstance(validate, str):
+        return validate, None
+
+    if (
+        isinstance(validate, tuple)
+        and len(validate) == 2
+        and all(isinstance(item, str) for item in validate)
+    ):
+        return validate
+
+    raise StreamlitAPIException(
+        "The `validate` parameter must be `None`, a regex string, or a "
+        "`(regex, message)` tuple of strings."
+    )
+
+
 class TextWidgetsMixin:
     @overload
     def text_input(
@@ -105,8 +127,10 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
+        validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str:
         pass
 
@@ -128,8 +152,10 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
+        validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str | None:
         pass
 
@@ -151,8 +177,10 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
+        validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str | None:
         r"""Display a single-line text input widget.
 
@@ -197,8 +225,8 @@ class TextWidgetsMixin:
             state across reruns even when other parameters change.
 
             .. note::
-               Changing ``max_chars`` resets the widget even when a key
-               is provided.
+               Changing ``max_chars`` or the validation regex resets the
+               widget even when a key is provided.
 
             A key lets you read or update the widget's value via
             ``st.session_state[key]``. For more details, see `Widget
@@ -269,6 +297,39 @@ class TextWidgetsMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        validate : str, tuple[str, str], or None
+            An optional client-side validation rule for the input. If this is
+            ``None`` (default), no validation is performed. If this is a
+            string, it is treated as a JavaScript-flavored regular expression
+            that the input must match before it can be submitted, and a generic
+            error message is shown when validation fails. If this is a
+            ``(regex, message)`` tuple, the regex is used for client-side
+            validation and the custom ``message`` is shown when validation
+            fails. Providing a custom message is recommended, since generic
+            validation messages are less helpful to users.
+
+            For example, pass ``r"^[^@\s]+@[^@\s]+\.[^@\s]+$"`` to require an
+            email-like value, or
+            ``(r"^\d{3}-\d{3}-\d{4}$", "Use the format 555-123-4567.")`` to
+            require a phone number and show a custom error message. Patterns are
+            not implicitly anchored; use ``^`` / ``$`` when the whole value must
+            match (same semantics as ``st.column_config.TextColumn``).
+
+            Validation runs when the user tries to submit a value: on blur or
+            Enter outside a form, and on form submission inside a form. Invalid
+            values are not submitted, and empty inputs bypass validation.
+
+            Inside a form with ``bind="query-params"``, keystrokes still stage
+            the value into widget state (and therefore the URL) before
+            submit-time validation runs. Form submission itself still blocks
+            invalid values from reaching the server.
+
+            .. note::
+               This validation runs in the user's browser and can be bypassed.
+               If the validation is security-relevant, you must also validate
+               the value on the server (in your app code) after it is
+               submitted.
+
         width : "stretch" or int
             The width of the text input widget. This can be one of the
             following:
@@ -297,6 +358,24 @@ class TextWidgetsMixin:
 
             This can't be used with ``type="password"``. An empty
             query parameter (e.g., ``?my_key=``) clears the widget.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope. For example,
+            ``st.text_input("Name", key="name", persist_state="session")`` keeps
+            the entered text when the widget is hidden and shown again, or when
+            the user navigates to another page and back.
 
         Returns
         -------
@@ -332,8 +411,10 @@ class TextWidgetsMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             icon=icon,
+            validate=validate,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -354,8 +435,10 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
+        validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
@@ -370,13 +453,28 @@ class TextWidgetsMixin:
 
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
+        validate_regex, validate_message = _parse_text_input_validate(validate)
+
+        # Only contribute the validation regex to the element identity when
+        # validation is actually configured. This keeps element IDs (and thus
+        # widget state) stable across upgrades for the common case of inputs
+        # without validation, instead of hashing a `validate=None` placeholder
+        # that would reset every pre-existing text input on the first run after
+        # upgrade. A falsy regex (`None` or `""`) is identity-neutral, matching
+        # the frontend, which treats an empty regex as "no validation". When a
+        # regex is set, it still affects identity so that changing the regex
+        # resets the widget (its value may no longer be valid). The message is
+        # intentionally excluded since it is cosmetic.
+        validate_identity_kwarg = {"validate": validate_regex} if validate_regex else {}
 
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
-            # Explicitly whitelist max_chars to make sure the ID changes when it changes
-            # since the widget value might become invalid based on a different max_chars
-            key_as_main_identity={"max_chars"},
+            # Explicitly whitelist max_chars and validate so the ID changes when
+            # they change, since the widget value might become invalid based on a
+            # different max_chars or validation regex. Only the regex (not the
+            # message) is used for identity, since the message is purely cosmetic.
+            key_as_main_identity={"max_chars", "validate"},
             dg=self.dg,
             label=label,
             value=value,
@@ -387,6 +485,7 @@ class TextWidgetsMixin:
             placeholder=str(placeholder),
             icon=icon,
             width=width,
+            **validate_identity_kwarg,
         )
 
         session_state = get_session_state().filtered_state
@@ -415,6 +514,12 @@ class TextWidgetsMixin:
 
         if icon is not None:
             text_input_proto.icon = validate_icon_or_emoji(icon)
+
+        if validate_regex is not None:
+            text_input_proto.validate_regex = validate_regex
+
+        if validate_message is not None:
+            text_input_proto.validate_message = validate_message
 
         if type == "default":
             text_input_proto.type = TextInputProto.DEFAULT
@@ -453,7 +558,9 @@ class TextWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
             bind=bind,
+            persist_state=persist_state,
             # Text input is clearable (empty string is a valid value)
             clearable=True,
         )
@@ -491,6 +598,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str:
         pass
 
@@ -512,6 +620,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str | None:
         pass
 
@@ -533,6 +642,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str | None:
         r"""Display a multi-line text input widget.
 
@@ -667,6 +777,21 @@ class TextWidgetsMixin:
             An empty query parameter (e.g., ``?my_key=``) clears the
             widget.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         str or None
@@ -709,6 +834,7 @@ class TextWidgetsMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -729,6 +855,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
@@ -797,7 +924,9 @@ class TextWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
             bind=bind,
+            persist_state=persist_state,
             # Text area is clearable (empty string is a valid value)
             clearable=True,
         )
@@ -828,5 +957,5 @@ class TextWidgetsMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

@@ -401,7 +401,7 @@ class SQLConnection(BaseConnection["Engine"]):
 
     @property
     def session(self) -> Session:
-        """Return a SQLAlchemy Session.
+        """A SQLAlchemy Session.
 
         Users of this connection should use the contextmanager pattern for writes,
         transactions, and anything more complex than simple read queries.

@@ -14,195 +14,47 @@
  * limitations under the License.
  */
 
-import {
-  memo,
-  ReactElement,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
-
-import { toaster, type ToastOverrides } from "baseui/toast"
+import { memo, ReactElement, useEffect } from "react"
 
 import { Toast as ToastProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
 import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
-import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme/getColors"
-import type { EmotionTheme } from "~lib/theme/types"
 
-import {
-  StyledMessageWrapper,
-  StyledToastWrapper,
-  StyledViewButton,
-} from "./styled-components"
+import { toastQueue } from "./toastQueue"
 
 export interface ToastProps {
   element: ToastProto
 }
 
-function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
-  const lightBackground = hasLightBackgroundColor(theme)
-  return {
-    Body: {
-      props: {
-        "data-testid": "stToast",
-        className: "stToast",
-      },
-      style: {
-        display: "flex",
-        flexDirection: "row",
-        gap: theme.spacing.md,
-        width: theme.sizes.toastWidth,
-        marginTop: theme.spacing.sm,
-        // Warnings logged if you use shorthand property here:
-        borderTopLeftRadius: theme.radii.default,
-        borderTopRightRadius: theme.radii.default,
-        borderBottomLeftRadius: theme.radii.default,
-        borderBottomRightRadius: theme.radii.default,
-        paddingTop: theme.spacing.lg,
-        paddingBottom: theme.spacing.lg,
-        paddingLeft: theme.spacing.twoXL,
-        paddingRight: theme.spacing.twoXL,
-        backgroundColor: theme.colors.bgColor,
-        filter: lightBackground ? "brightness(0.98)" : "brightness(1.2)",
-        color: theme.colors.bodyText,
-        // Take standard BaseWeb shadow and adjust for dark backgrounds
-        boxShadow: theme.shadows.popover,
-      },
-    },
-    CloseIcon: {
-      style: {
-        color: theme.colors.fadedText40,
-        width: theme.fontSizes.lg,
-        height: theme.fontSizes.lg,
-        marginRight: `calc(-1 * ${theme.spacing.lg} / 2)`,
-        ":hover": {
-          color: theme.colors.bodyText,
-        },
-      },
-    },
-  }
-}
-
-// Function used to truncate toast messages that are longer than three lines.
-export function shortenMessage(fullMessage: string): string {
-  const characterLimit = 104
-
-  if (fullMessage.length > characterLimit) {
-    let message = fullMessage.replace(/^(.{104}[^\s]*).*/, "$1")
-
-    if (message.length > characterLimit) {
-      message = message
-        .substring(0, characterLimit)
-        .split(" ")
-        .slice(0, -1)
-        .join(" ")
-    }
-
-    return message.trim()
-  }
-
-  return fullMessage
-}
-
 function Toast({ element }: Readonly<ToastProps>): ReactElement {
   const { body, icon, duration } = element
   const theme = useEmotionTheme()
-  const displayMessage = shortenMessage(body)
-  const shortened = body !== displayMessage
-
-  const [expanded, setExpanded] = useState(!shortened)
-  const toastKeyRef = useRef<React.Key | null>(null)
-
-  const handleClick = useCallback((): void => {
-    setExpanded(value => !value)
-  }, [])
-
-  const styleOverrides = useMemo(() => generateToastOverrides(theme), [theme])
-
-  const toastContent = useMemo(
-    () => (
-      <StyledToastWrapper expanded={expanded}>
-        {icon && (
-          <DynamicIcon
-            iconValue={icon}
-            size="xl"
-            testid="stToastDynamicIcon"
-          />
-        )}
-        <StyledMessageWrapper>
-          <StreamlitMarkdown
-            source={expanded ? body : displayMessage}
-            allowHTML={false}
-            isToast
-          />
-          {shortened && (
-            <StyledViewButton
-              data-testid="stToastViewButton"
-              onClick={handleClick}
-            >
-              {expanded ? "view less" : "view more"}
-            </StyledViewButton>
-          )}
-        </StyledMessageWrapper>
-      </StyledToastWrapper>
-    ),
-    [shortened, expanded, body, icon, displayMessage, handleClick]
-  )
 
   useEffect(() => {
-    // Handles the error case where st.sidebar.toast is called since
-    // baseweb would throw error anyway (no toast container in sidebar)
     if (theme.inSidebar) {
       return
     }
 
-    // Uses toaster utility to create toast on mount and generate unique key
-    // to reference that toast for update/removal
-    const autoHideDurationMs = notNullOrUndefined(duration)
+    // duration=null/undefined → 4s default; duration=0 → undefined (persistent); duration>0 → ms
+    const timeout = notNullOrUndefined(duration)
       ? duration === 0
-        ? 0 // Explicitly disable auto-hide when duration is 0
-        : duration * 1000
-      : 4000 // Use default duration of 4 seconds
+        ? undefined
+        : duration * 1_000
+      : 4_000
 
-    const newKey = toaster.info(toastContent, {
-      overrides: { ...styleOverrides },
-      autoHideDuration: autoHideDurationMs,
-    })
-    toastKeyRef.current = newKey
+    const key = toastQueue.add({ body, icon: icon || undefined }, { timeout })
 
     return () => {
-      // Disable transition so toast doesn't flicker on removal
-      toaster.update(newKey, {
-        overrides: { Body: { style: { display: "none" } } },
-      })
-      // Remove toast on unmount
-      toaster.clear(newKey)
-      toastKeyRef.current = null
+      toastQueue.close(key)
     }
 
-    // Array must be empty to run as mount/cleanup
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+    // Mount/unmount only — Streamlit creates a new Toast element per st.toast() call;
+    // the component never receives updated props for the same toast instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  useEffect(() => {
-    if (toastKeyRef.current === null) {
-      return
-    }
-
-    // Handles expand/collapse button behavior for long toast messages
-    toaster.update(toastKeyRef.current, {
-      children: toastContent,
-      overrides: { ...styleOverrides },
-    })
-  }, [toastContent, styleOverrides])
 
   const sidebarErrorMessage = (
     <AlertElement
@@ -211,10 +63,8 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
         See our `st.toast` API [docs](https://docs.streamlit.io/develop/api-reference/status/st.toast) for more information."
     />
   )
-  return (
-    // Shows error if toast is called on st.sidebar
-    <>{theme.inSidebar && sidebarErrorMessage}</>
-  )
+
+  return <>{theme.inSidebar && sidebarErrorMessage}</>
 }
 
 export default memo(Toast)

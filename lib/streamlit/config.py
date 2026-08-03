@@ -20,6 +20,7 @@ import copy
 import json
 import logging
 import os
+import re
 import secrets
 import threading
 from collections import OrderedDict
@@ -66,10 +67,18 @@ _main_script_path: str | None = None
 # Possible values:
 # - "starlette-managed": Starlette server managed by Streamlit (streamlit run CLI)
 # - "starlette-app": st.App started via streamlit run
+# - "starlette-app-direct": st.App started via App.run()
 # - "asgi-server": st.App with external ASGI server (uvicorn, gunicorn, etc.)
 # - "asgi-mounted": st.App mounted on another ASGI framework (FastAPI, Starlette)
 _server_mode: (
-    Literal["starlette-managed", "starlette-app", "asgi-server", "asgi-mounted"] | None
+    Literal[
+        "starlette-managed",
+        "starlette-app",
+        "starlette-app-direct",
+        "asgi-server",
+        "asgi-mounted",
+    ]
+    | None
 ) = None
 
 # Indicates that a config option was defined by the user.
@@ -150,6 +159,7 @@ def set_user_option(key: str, value: Any) -> None:
     script itself:
 
         - ``client.showErrorDetails``
+        - ``client.disableDataExport``
         - ``client.showSidebarNavigation``
         - ``client.toolbarMode``
 
@@ -622,6 +632,27 @@ _create_option(
 )
 
 _create_option(
+    "client.disableDataExport",
+    description="""
+        When true, hides the built-in controls for exporting data from
+        components that support it:
+
+        - Hides the CSV download button for st.dataframe, st.data_editor,
+          and chart table views.
+        - Disables clipboard copy for read-only tables (st.dataframe and
+          chart table views), while keeping st.data_editor copy/paste enabled.
+
+        This only hides the built-in export and copy controls. It does not
+        prevent users from otherwise accessing the underlying data (e.g. via
+        screenshots, browser developer tools, or network inspection), so it
+        should not be relied upon as a security or data-protection control.
+    """,
+    default_val=False,
+    type_=bool,
+    scriptable=True,
+)
+
+_create_option(
     "client.showSidebarNavigation",
     description="""
         Controls whether to display the default sidebar page navigation in a
@@ -765,6 +796,34 @@ _create_option(
     type_=str,
 )
 
+_create_option(
+    "runner.parallelMaxWorkers",
+    description="""
+        Maximum number of parallel fragment worker threads per script run.
+        Sizes the per-run thread pool. Defaults to Python's
+        ThreadPoolExecutor default (min(32, os.cpu_count() + 4)).
+    """,
+    default_val=None,
+    type_=int,
+)
+
+_create_option(
+    "runner.cacheBackgroundRefreshMaxWorkers",
+    description="""
+        Maximum number of concurrent background refreshes for cached functions
+        that use refresh_mode="background" (@st.cache_data / @st.cache_resource).
+        Sizes a single, process-wide thread pool shared by all such functions;
+        when it is saturated, extra refreshes are skipped (the stale value is
+        still served) rather than queued.
+
+        Set to 0 to disable background refresh entirely: stale entries are then
+        recomputed by a blocking foreground call at hard expiry (2 x ttl).
+    """,
+    visibility="hidden",
+    default_val=4,
+    type_=int,
+)
+
 # Config Section: Server #
 
 _create_section("server", "Settings for the Streamlit server")
@@ -806,14 +865,32 @@ _create_option(
         completely.
 
         Allowed values:
-        - "auto"     : Streamlit will attempt to use the watchdog module, and
-                       falls back to polling if watchdog isn't available.
+        - "auto"     : Streamlit will attempt to use the watchdog module and
+                       falls back to polling if watchdog isn't available. In WSL
+                       environments, polling is always used for compatibility.
         - "watchdog" : Force Streamlit to use the watchdog module.
         - "poll"     : Force Streamlit to always use polling.
         - "none"     : Streamlit will not watch files.
     """,
     default_val="auto",
     type_=str,
+)
+
+_create_option(
+    "server.enableExpensiveMemoryStats",
+    description="""
+        If True, Streamlit will use a recursive object graph traversal to
+        calculate memory usage statistics for the /_stcore/metrics endpoint.
+
+        This can be slow for large session state or cached resource objects. If
+        False (the default), Streamlit reports fast proxy values for those
+        objects: item counts (the number of cached entries or session-state
+        keys) rather than byte sizes. The cache_memory_bytes metric will
+        therefore reflect entry counts, not memory consumption, for those
+        objects.
+    """,
+    default_val=False,
+    type_=bool,
 )
 
 
@@ -967,6 +1044,26 @@ _create_option(
 )
 
 _create_option(
+    "server.allowedHosts",
+    description="""
+        Allow-list of hostnames for incoming WebSocket connections.
+
+        Use this option to protect against DNS rebinding attacks when the
+        hostnames used to access the app are known. Ports in the Host header are
+        ignored. Wildcard subdomains are supported with a leading `*.`. Use `*`
+        to accept any valid Host header.
+
+        If this list is empty (the default), Streamlit accepts any Host header
+        to preserve compatibility with dynamically configured reverse proxies
+        and custom domains.
+
+        Example: ['localhost', 'app.example.com', '*.example.com']
+    """,
+    default_val=[],
+    multiple=True,
+)
+
+_create_option(
     "server.enableXsrfProtection",
     description="""
         Enables support for Cross-Site Request Forgery (XSRF) protection, for
@@ -977,6 +1074,39 @@ _create_option(
     """,
     default_val=True,
     type_=bool,
+)
+
+_create_option(
+    "server.xsrfCookieSameSite",
+    description="""
+        Controls the SameSite attribute of the cookie Streamlit uses for
+        Cross-Site Request Forgery (XSRF) protection. This only has an effect
+        when XSRF protection is enabled (via ``server.enableXsrfProtection`` or
+        an ``[auth]`` section in your secrets); otherwise no XSRF cookie is set.
+        It does not affect authentication cookies, which always use
+        SameSite=Lax.
+
+        Allowed values:
+        - "lax" (default): The XSRF cookie is sent on same-site requests and
+          top-level cross-site navigations. This is the recommended, secure
+          default.
+        - "strict": The XSRF cookie is only sent on same-site requests.
+        - "none": The XSRF cookie is sent on all requests, including cross-site
+          requests. This is required when embedding a Streamlit app in an
+          iframe hosted on a different origin (for example, to make
+          ``st.file_uploader`` work inside a cross-origin iframe). Browsers
+          only accept ``SameSite=None`` cookies that also have the ``Secure``
+          attribute, so Streamlit sets ``Secure`` automatically in this case.
+          This means your app must be served over HTTPS (either directly or via
+          a TLS-terminating proxy), otherwise browsers will drop the cookie.
+
+        Note: Setting this to "none" relaxes the browser's SameSite-based CSRF
+        mitigation, so protection then relies on Streamlit's XSRF token
+        validation together with the CORS origin allowlist. Only use "none" if
+        you understand this tradeoff.
+    """,
+    default_val="lax",
+    type_=str,
 )
 
 _create_option(
@@ -1001,16 +1131,14 @@ _create_option(
 )
 
 _create_option(
-    "server.enableArrowTruncation",
+    "server.maxWidgetStateSize",
     description="""
-        Enable automatically truncating all data structures that get serialized
-        into Arrow (e.g. DataFrames) to ensure that the size is under
-        `server.maxMessageSize`.
+        Max size, in megabytes, of client-sent WebSocket messages and aggregate
+        widget state accepted for a single script rerun.
     """,
     visibility="hidden",
-    default_val=False,
-    scriptable=True,
-    type_=bool,
+    default_val=25,
+    type_=int,
 )
 
 _create_option(
@@ -1086,6 +1214,33 @@ _create_option(
     # This is used by click. We accept a JSON string, so this is a str.
     type_=str,
     # Hide until API is finalized.
+    visibility="hidden",
+)
+
+_create_option(
+    "server.unsafeMetricsUserAttributes",
+    description="""
+        Attributes from st.user to expose as labels on per-user analytics metrics
+        published at the /_stcore/metrics endpoint.
+
+        Each entry is a key in st.user (typically populated via
+        server.trustedUserHeaders). When this list is non-empty, Streamlit emits a
+        ``user_session_events`` metric family labeled with these attributes, enabling
+        per-user app analytics (opens, unique visitors) for host platforms that scrape
+        the metrics endpoint.
+
+        When empty (default), no per-user metrics are emitted and the metrics endpoint
+        output is unchanged.
+
+        Warning: configured attribute values (e.g. email) are exposed in plaintext on
+        the unauthenticated metrics endpoint and retained in process memory for each
+        distinct label set seen by the process. Only enable this in trusted,
+        access-controlled environments. The ``unsafe`` prefix is intentional.
+
+        Example: ['email', 'user_name']
+    """,
+    default_val=[],
+    multiple=True,
     visibility="hidden",
 )
 
@@ -2866,6 +3021,45 @@ If cross origin resource sharing is required, please disable server.enableXsrfPr
             """
         )
 
+    # Validate the XSRF cookie SameSite value. We explicitly require a string
+    # so that a non-string value (e.g. a None from TOML "null") is rejected
+    # instead of being coerced via str() into a valid-looking "none".
+    xsrf_cookie_same_site = get_option("server.xsrfCookieSameSite")
+    if not isinstance(
+        xsrf_cookie_same_site, str
+    ) or xsrf_cookie_same_site.lower() not in {"lax", "strict", "none"}:
+        raise RuntimeError(
+            "Invalid value for config option server.xsrfCookieSameSite: "
+            f'"{xsrf_cookie_same_site}". '
+            'Valid values are "lax", "strict", and "none".'
+        )
+
+    # Warn about combinations where SameSite="none" silently has no effect or
+    # requires additional setup, to avoid hard-to-debug misconfigurations.
+    if xsrf_cookie_same_site.lower() == "none":
+        # XSRF protection can also be enabled implicitly by an [auth] section
+        # in secrets, not just server.enableXsrfProtection — use
+        # is_xsrf_enabled() to check both paths. Imported locally to avoid
+        # a circular import.
+        from streamlit.web.server.server_util import is_xsrf_enabled
+
+        if not is_xsrf_enabled():
+            logger.warning(
+                "The config option 'server.xsrfCookieSameSite=\"none\"' has no "
+                "effect because XSRF protection is disabled, so no XSRF cookie "
+                "is set. Enable it via 'server.enableXsrfProtection' or an "
+                "[auth] section in your secrets."
+            )
+        elif not get_option("server.sslCertFile"):
+            logger.warning(
+                "The config option 'server.xsrfCookieSameSite=\"none\"' marks "
+                "the XSRF cookie as 'Secure', so your app must be served over "
+                "HTTPS (either directly via 'server.sslCertFile' or through a "
+                "TLS-terminating proxy). Otherwise, browsers will drop the "
+                "cookie and cross-origin embedding (e.g. st.file_uploader in an "
+                "iframe) will not work."
+            )
+
 
 def _set_development_mode() -> None:
     development.is_development_mode = get_option("global.developmentMode")
@@ -2918,6 +3112,45 @@ def _parse_trusted_user_headers() -> None:
     if bad_keys:
         raise RuntimeError(
             f"server.trustedUserHeaders had multiple mappings for user key(s) {bad_keys}"
+        )
+
+
+_RESERVED_METRICS_USER_ATTRIBUTES: Final = frozenset({"type"})
+# Valid OpenMetrics label name: ASCII letter/underscore followed by letters,
+# digits, or underscores. Attribute names become metric label names, so an
+# invalid name would emit malformed metrics.
+_METRICS_LABEL_NAME_RE: Final = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+
+def _check_metrics_user_attributes() -> None:
+    """Validate server.unsafeMetricsUserAttributes at config-load time.
+
+    Rejects non-string entries, the reserved label name ``type`` (the event-type
+    discriminator on the user_session_events family, which a user attribute must
+    not shadow) and any name that is not a valid OpenMetrics label name (which
+    would otherwise produce malformed metrics on the endpoint).
+    """
+    attrs = get_option("server.unsafeMetricsUserAttributes")
+    if not attrs:
+        return
+    non_strings = [name for name in attrs if not isinstance(name, str)]
+    if non_strings:
+        raise RuntimeError(
+            "server.unsafeMetricsUserAttributes must contain only strings; got "
+            f"invalid entries {non_strings}."
+        )
+    reserved = sorted(set(attrs) & _RESERVED_METRICS_USER_ATTRIBUTES)
+    if reserved:
+        raise RuntimeError(
+            "server.unsafeMetricsUserAttributes may not include the reserved label "
+            f"name(s) {reserved}; 'type' is used as the event-type discriminator."
+        )
+    invalid = [name for name in attrs if not _METRICS_LABEL_NAME_RE.match(name)]
+    if invalid:
+        raise RuntimeError(
+            "server.unsafeMetricsUserAttributes contains invalid label name(s) "
+            f"{invalid}; names must match [a-zA-Z_][a-zA-Z0-9_]* to be valid "
+            "OpenMetrics labels."
         )
 
 
@@ -2983,3 +3216,6 @@ on_config_parsed(_set_development_mode)
 # Update server.trustedUserHeaders from any JSON string that was set. Take out the
 # lock, since this is mutating the config.
 on_config_parsed(_parse_trusted_user_headers, lock=True)
+# Reject reserved label names in server.unsafeMetricsUserAttributes. No lock needed
+# since this only reads the config, it does not mutate it.
+on_config_parsed(_check_metrics_user_attributes)

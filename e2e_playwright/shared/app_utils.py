@@ -99,6 +99,46 @@ def get_time_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
     return element
 
 
+def type_time(
+    time_display: Locator, hour: str, minute: str, second: str | None = None
+) -> None:
+    """Type a time into a TimeInput's spinbutton segments.
+
+    Uses press_sequentially (key events per character) rather than fill() to
+    exercise the real keystroke handling path through React Aria's digit
+    buffering logic.
+
+    After typing, blurs the last segment so the widget commits the value
+    to the backend (commit is deferred to blur, matching st.number_input
+    semantics).
+
+    Parameters
+    ----------
+    time_display : Locator
+        The stTimeInputTimeDisplay locator containing the spinbuttons.
+
+    hour : str
+        Two-digit hour string (e.g. "08").
+
+    minute : str
+        Two-digit minute string (e.g. "45").
+
+    second : str or None
+        Two-digit second string (e.g. "30"). Only applicable when the widget
+        has sub-minute step (seconds granularity). If None, the seconds segment
+        is not interacted with.
+    """
+    spinbuttons = time_display.get_by_role("spinbutton")
+    spinbuttons.first.press_sequentially(hour)
+    spinbuttons.nth(1).press_sequentially(minute)
+    if second is not None:
+        spinbuttons.nth(2).press_sequentially(second)
+        spinbuttons.nth(2).blur()
+    else:
+        spinbuttons.nth(1).blur()
+    # Blur triggers the deferred commit to the backend.
+
+
 def get_datetime_input(
     locator: Locator | Page, label: str | re.Pattern[str]
 ) -> Locator:
@@ -254,7 +294,14 @@ def select_selectbox_option(
     # Type to filter the dropdown (handles virtualized lists where options
     # may not be rendered until scrolled into view)
     selectbox_input = selectbox.locator("input")
+
+    # Wait for the React component to be fully initialized before interacting
+    selectbox_input.wait_for(state="visible")
     selectbox_input.click()
+    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
+    # Note: this shifts focus to the first option, so the initially-selected item
+    # will not be highlighted when the dropdown first opens.
+    selectbox_input.press("ArrowDown")
 
     # Wait for dropdown to be visible before typing
     dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
@@ -268,8 +315,8 @@ def select_selectbox_option(
 
     wait_for_app_run(page)
 
-    # Verify the selection was applied
-    expect(selectbox).to_contain_text(option)
+    # Verify the selection was applied (value is in the input's value attribute)
+    expect(selectbox.locator("input")).to_have_value(option)
 
 
 def get_multiselect(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
@@ -417,7 +464,7 @@ def get_radio_option(locator: Locator | Page, label: str | re.Pattern[str]) -> L
     Locator
         The element.
     """
-    element = locator.locator('[data-baseweb="radio"]').filter(has_text=label)
+    element = locator.get_by_test_id("stRadioOption").filter(has_text=label)
     expect(element).to_be_visible()
     return element
 
@@ -860,9 +907,11 @@ def click_checkbox(
         The label of the button to click.
     """
     checkbox_element = get_checkbox(page, label)
-    # Click the checkbox label to be more reliable:
-    checkbox_element.locator('label[data-baseweb="checkbox"]').first.click()
+    checkbox_element.locator("label").first.click()
     wait_for_app_run(page)
+    # Blur the active element after the app run so that focus rings from this
+    # interaction don't bleed into subsequent snapshot assertions.
+    page.evaluate("document.activeElement?.blur()")
 
 
 def click_toggle(
@@ -1457,9 +1506,9 @@ def get_segment_button(locator: Locator, text: str) -> Locator:
     Locator
         The segment button.
     """
-    return locator.get_by_test_id(
-        re.compile(r"stBaseButton-segmented_control(Active)?")
-    ).filter(has_text=text)
+    return locator.locator("button[data-variant='segmented_control']").filter(
+        has_text=text
+    )
 
 
 def goto_app(page: Page, url: str) -> None:

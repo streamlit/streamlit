@@ -165,6 +165,55 @@ def test_code_blocks_render_correctly_layout(
     assert_snapshot(code_blocks.nth(25), name="st_code-long-single-word-string-wrap")
 
 
+def test_right_padding_preserved_on_horizontal_scroll(app: Page):
+    """Regression test for #8206: right-side padding should stay visible
+    when scrolling a wide code block all the way to the right, so the last
+    characters don't touch the container edge.
+    """
+    code_blocks = app.get_by_test_id("stCode")
+    # Index 15 is the first `wrap_lines=False` block in st_code.py; its
+    # content overflows horizontally so it must scroll to the right.
+    wide_block = code_blocks.nth(15)
+    wide_block.scroll_into_view_if_needed()
+
+    pre = wide_block.locator("pre")
+    expect(pre).to_be_visible()
+
+    # Wait for the block to actually have overflow content before measuring,
+    # otherwise `scrollWidth` / `clientWidth` may not be stable yet.
+    app.wait_for_function(
+        """(el) => el && el.scrollWidth > el.clientWidth""",
+        arg=pre.element_handle(),
+    )
+
+    # Scroll the inner <pre> to its rightmost position, then measure the gap
+    # between the last text glyph and the pre's right edge.
+    gap_px = pre.evaluate(
+        """(el) => {
+            el.scrollLeft = el.scrollWidth - el.clientWidth;
+            const preRight = el.getBoundingClientRect().right;
+            const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT);
+            let rightmost = 0;
+            let node = walker.nextNode();
+            while (node) {
+                if (node.children.length === 0 && (node.textContent ?? "").trim()) {
+                    rightmost = Math.max(
+                        rightmost, node.getBoundingClientRect().right,
+                    );
+                }
+                node = walker.nextNode();
+            }
+            return preRight - rightmost;
+        }"""
+    )
+
+    # We expect roughly a `theme.spacing.lg` (16px) gap between the last
+    # character and the container's right edge. Allow small subpixel slack.
+    assert gap_px >= 12, (
+        f"Expected right padding gap of ~16px at max scroll, got {gap_px}px"
+    )
+
+
 def test_correct_bottom_spacing_for_code_blocks(app: Page):
     """Test that the code blocks have the correct bottom spacing."""
 

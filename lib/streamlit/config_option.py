@@ -234,7 +234,7 @@ class ConfigOption:
 
     @property
     def value(self) -> Any:
-        """Get the value of this config option."""
+        """The value of this config option."""
         if self._get_val_func is None:
             return None
         return self._get_val_func()
@@ -307,7 +307,7 @@ class ConfigOption:
 
     @property
     def env_var(self) -> str:
-        """Get the name of the environment variable that can be used to set the option."""
+        """The name of the environment variable that can be used to set the option."""
         name = self.key.replace(".", "_")
         return f"STREAMLIT_{to_snake_case(name).upper()}"
 

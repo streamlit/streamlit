@@ -14,18 +14,32 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useId, useState } from "react"
+import {
+  FocusEvent,
+  memo,
+  MouseEvent,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
-import { Input as UIInput } from "baseui/input"
+import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { getLogger } from "loglevel"
+import { TextField } from "react-aria-components"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import {
   DynamicIcon,
   isMaterialIcon,
 } from "~lib/components/shared/Icon/DynamicIcon"
+import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
@@ -35,13 +49,29 @@ import {
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useOnInputChange from "~lib/hooks/useOnInputChange"
-import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
 import { convertRemToPx } from "~lib/theme/utils"
+import { isEnterKeyPressed } from "~lib/util/inputUtils"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { StyledTextInput } from "./styled-components"
+import {
+  StyledEndEnhancers,
+  StyledErrorEnhancer,
+  StyledInputElement,
+  StyledInputInstructionsContainer,
+  StyledInputRoot,
+  StyledPasswordToggle,
+  StyledStartEnhancer,
+  StyledTextInput,
+  StyledVisuallyHidden,
+} from "./styled-components"
+import {
+  compileTextInputValidationRegex,
+  getInvalidTextInputMessage,
+  INVALID_TEXT_INPUT_MESSAGE,
+  passesTextInputValidation,
+} from "./validation"
 
 export interface Props {
   disabled: boolean
@@ -49,6 +79,8 @@ export interface Props {
   widgetMgr: WidgetStateManager
   fragmentId?: string
 }
+
+const LOG = getLogger("TextInput")
 
 function TextInput({
   disabled,
@@ -71,9 +103,20 @@ function TextInput({
    */
   const [dirty, setDirty] = useState(false)
 
+  /** Controls visibility of the password plain-text toggle. */
+  const [showPassword, setShowPassword] = useState(false)
+
+  // Tracks whether the user's current value failed validation. We store a
+  // boolean rather than the message string so the displayed message always
+  // reflects the latest `element.validateMessage`: the message can change on
+  // rerun while the widget identity stays stable (only the regex is part of
+  // the widget ID), and a stored string would otherwise go stale.
+  const [hasUserError, setHasUserError] = useState(false)
+
   const onFormCleared = useCallback(() => {
     setUiValue(element.default ?? null)
     setDirty(true)
+    setHasUserError(false)
   }, [element.default])
 
   const queryParamBinding = element.queryParamKey
@@ -110,31 +153,148 @@ function TextInput({
 
   const theme = useEmotionTheme()
   const id = useId()
+  const errorId = `${id}-error`
   const { placeholder, formId, icon, maxChars } = element
+  const inForm = isInForm({ formId })
+
+  const isPassword = element.type === TextInputProto.Type.PASSWORD
+
+  const compiledValidationResult = useMemo(
+    () => compileTextInputValidationRegex(element.validateRegex),
+    [element.validateRegex]
+  )
+  const validateRegex =
+    compiledValidationResult instanceof RegExp
+      ? compiledValidationResult
+      : undefined
+  const configError =
+    typeof compiledValidationResult === "string"
+      ? compiledValidationResult
+      : null
+  const hasValidationConfig = Boolean(element.validateRegex)
+  // The user error is only ever set while validation is configured, but derive
+  // the displayed error defensively so it's never shown without an active
+  // config. The user-error message is derived from the current
+  // `element.validateMessage` so it stays in sync when only the message changes.
+  const userError = hasUserError
+    ? element.validateMessage ||
+      (validateRegex
+        ? getInvalidTextInputMessage(validateRegex)
+        : INVALID_TEXT_INPUT_MESSAGE)
+    : null
+  const displayedError = hasValidationConfig
+    ? (configError ?? userError)
+    : null
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
     setValueWithSource({ value: uiValue, fromUi: true })
   }, [uiValue, setValueWithSource])
 
+  const clearUserValidationError = useCallback((): void => {
+    setHasUserError(false)
+  }, [])
+
+  const isUserValueInvalid = useCallback(
+    (nextValue: string | null): boolean => {
+      if (!validateRegex) {
+        return false
+      }
+
+      return !passesTextInputValidation(nextValue, validateRegex)
+    },
+    [validateRegex]
+  )
+
+  // Runs validation for the current value, updates the displayed user error,
+  // and returns whether the value may be committed.
+  const validateBeforeCommit = useCallback((): boolean => {
+    // Empty values always bypass validation — including when the regex config
+    // itself is broken — so users can still clear the field or submit an empty
+    // form input. The config error remains visible via `displayedError`.
+    if (uiValue === null || uiValue === "") {
+      setHasUserError(false)
+      return true
+    }
+
+    if (configError) {
+      return false
+    }
+
+    const invalid = isUserValueInvalid(uiValue)
+    setHasUserError(invalid)
+    return !invalid
+  }, [configError, isUserValueInvalid, uiValue])
+
+  const tryCommitOutsideForm = useCallback((): boolean => {
+    if (!dirty) {
+      return true
+    }
+
+    if (!validateBeforeCommit()) {
+      return false
+    }
+
+    commitWidgetValue()
+    return true
+  }, [commitWidgetValue, dirty, validateBeforeCommit])
+
+  const formSubmitValidatorRef = useRef<() => boolean>(() => true)
+  formSubmitValidatorRef.current = () => {
+    if (!validateBeforeCommit()) {
+      return false
+    }
+
+    if (dirty) {
+      widgetMgr.setStringValue(element, uiValue, { fromUi: true }, fragmentId)
+      setDirty(false)
+    }
+
+    return true
+  }
+
   // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
-  const allowEnterToSubmit = isInForm({ formId })
+  const allowEnterToSubmit = inForm
     ? widgetMgr.allowFormEnterToSubmit(formId)
     : dirty
 
-  // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
     focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
 
-  const onBlur = useCallback((): void => {
-    if (dirty) {
-      commitWidgetValue()
-    }
-    setFocused(false)
-  }, [dirty, commitWidgetValue])
-
-  const onFocus = useCallback((): void => {
+  const handleFocus = useCallback((): void => {
     setFocused(true)
+  }, [])
+
+  const handleBlur = useCallback(
+    (e: FocusEvent<HTMLInputElement>): void => {
+      // When keyboard Tab moves focus to the password toggle, focus stays
+      // within the widget — don't commit yet, the user is still composing.
+      if (elementRef.current?.contains(e.relatedTarget)) {
+        setFocused(false)
+        return
+      }
+
+      if (inForm) {
+        // Inside a form, intermediate commits (blur, or Enter without submit)
+        // intentionally skip validation: the value only stages into the form's
+        // pending state and isn't sent to the server until submit, where the
+        // registered form submit validator gates the entire form. Deferring
+        // field-level errors to submit time is the intended form UX, so don't
+        // run the regex check here.
+        if (dirty) {
+          commitWidgetValue()
+        }
+      } else {
+        tryCommitOutsideForm()
+      }
+
+      setFocused(false)
+    },
+    [commitWidgetValue, dirty, elementRef, inForm, tryCommitOutsideForm]
+  )
+
+  const handleToggleShowPassword = useCallback((): void => {
+    setShowPassword(prev => !prev)
   }, [])
 
   const onChange = useOnInputChange({
@@ -143,15 +303,75 @@ function TextInput({
     setDirty,
     setUiValue,
     setValueWithSource,
+    additionalAction: clearUserValidationError,
   })
 
-  const onKeyPress = useSubmitFormViaEnterKey(
-    formId,
-    commitWidgetValue,
-    dirty,
-    widgetMgr,
-    fragmentId
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>): void => {
+      if (!isEnterKeyPressed(event)) {
+        return
+      }
+
+      event.preventDefault()
+
+      if (inForm) {
+        if (allowEnterToSubmit) {
+          // No explicit commit is needed here: `useOnInputChange` already
+          // pushes the latest value to the form's widget state on every
+          // keystroke, and the registered form submit validator commits the
+          // final value when validation is configured. Clear dirty only when
+          // submit succeeds so `useUpdateUiValue` can sync post-submit
+          // script-driven value changes (e.g. session_state updates in a
+          // callback). On validation failure, dirty stays true.
+          if (widgetMgr.submitForm(formId, fragmentId)) {
+            setDirty(false)
+          }
+          return
+        }
+
+        // See `handleBlur`: in-form commits intentionally defer validation to
+        // form submit, so the staged value is committed without the regex check.
+        if (dirty) {
+          commitWidgetValue()
+        }
+        return
+      }
+
+      tryCommitOutsideForm()
+    },
+    [
+      allowEnterToSubmit,
+      commitWidgetValue,
+      dirty,
+      formId,
+      fragmentId,
+      inForm,
+      tryCommitOutsideForm,
+      widgetMgr,
+    ]
   )
+
+  // Surface an invalid `validate` regex to the developer via the console. A
+  // given regex is fixed for a widget's identity, so this logs once per distinct
+  // config error.
+  useEffect(() => {
+    if (configError) {
+      LOG.error(configError)
+    }
+  }, [configError])
+
+  useEffect(() => {
+    if (!inForm || !hasValidationConfig) {
+      return undefined
+    }
+
+    const validator = (): boolean => formSubmitValidatorRef.current()
+    widgetMgr.addFormSubmitValidator(formId, element.id, validator)
+
+    return () => {
+      widgetMgr.removeFormSubmitValidator(formId, element.id)
+    }
+  }, [element.id, formId, hasValidationConfig, inForm, widgetMgr])
 
   return (
     <StyledTextInput
@@ -171,92 +391,92 @@ function TextInput({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <UIInput
-        value={uiValue ?? ""}
-        placeholder={placeholder}
-        onBlur={onBlur}
-        onFocus={onFocus}
-        onChange={onChange}
-        onKeyPress={onKeyPress}
-        aria-label={element.label}
-        disabled={disabled}
-        id={id}
-        type={getTypeString(element)}
-        autoComplete={element.autocomplete}
-        startEnhancer={
-          icon && (
-            <DynamicIcon
-              data-testid="stTextInputIcon"
-              iconValue={icon}
-              size="base"
-            />
-          )
-        }
-        overrides={{
-          Input: {
-            style: {
-              fontWeight: theme.fontWeights.normal,
-              // Issue: https://github.com/streamlit/streamlit/issues/2495
-              // The input won't shrink in Firefox,
-              // unless the line below is provided.
-              // See https://stackoverflow.com/a/33811151
-              minWidth: 0,
-              lineHeight: theme.lineHeights.inputWidget,
-              // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              paddingRight: theme.spacing.sm,
-              paddingLeft: theme.spacing.md,
-              paddingBottom: theme.spacing.sm,
-              paddingTop: theme.spacing.sm,
-              "::placeholder": {
-                color: theme.colors.fadedText60,
-              },
-            },
-          },
-          Root: {
-            props: {
-              "data-testid": "stTextInputRootElement",
-            },
-            style: ({ $isFocused }: { $isFocused: boolean }) => {
-              const borderColor = getBorderColor(theme.colors, $isFocused)
-              return {
-                height: theme.sizes.minElementHeight,
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: theme.sizes.borderWidth,
-                borderRightWidth: theme.sizes.borderWidth,
-                borderTopWidth: theme.sizes.borderWidth,
-                borderBottomWidth: theme.sizes.borderWidth,
-
-                borderTopColor: borderColor,
-                borderRightColor: borderColor,
-                borderBottomColor: borderColor,
-                borderLeftColor: borderColor,
-
-                paddingLeft: icon ? theme.spacing.sm : 0,
-              }
-            },
-          },
-          StartEnhancer: {
-            style: {
-              paddingLeft: 0,
-              paddingRight: 0,
-              // Keeps emoji icons from being cut off on the right
-              minWidth: theme.iconSizes.base,
-              // Material icons color changed as inactionable
-              color: isMaterialIcon(icon)
-                ? theme.colors.fadedText60
-                : "inherit",
-            },
-          },
-        }}
-      />
+      <TextField isDisabled={disabled}>
+        <StyledInputRoot
+          data-testid="stTextInputRootElement"
+          $isFocused={focused}
+          $hasIcon={!!icon}
+          $hasError={Boolean(displayedError)}
+        >
+          {icon && (
+            <StyledStartEnhancer $isMaterialIcon={isMaterialIcon(icon)}>
+              <DynamicIcon
+                data-testid="stTextInputIcon"
+                iconValue={icon}
+                size="base"
+              />
+            </StyledStartEnhancer>
+          )}
+          <StyledInputElement
+            id={id}
+            data-testid="stTextInputField"
+            aria-label={element.label}
+            aria-invalid={displayedError ? true : undefined}
+            aria-describedby={displayedError ? errorId : undefined}
+            value={uiValue ?? ""}
+            placeholder={placeholder}
+            type={showPassword ? "text" : getTypeString(element)}
+            autoComplete={element.autocomplete}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onChange={onChange}
+            onKeyDown={handleKeyDown}
+          />
+          <StyledEndEnhancers>
+            {displayedError && (
+              <StyledErrorEnhancer data-testid="stTextInputErrorIcon">
+                <Tooltip
+                  content={displayedError}
+                  placement={Placement.TOP_RIGHT}
+                  error
+                >
+                  <Icon content={ErrorOutline} size="base" />
+                </Tooltip>
+              </StyledErrorEnhancer>
+            )}
+            {isPassword && (
+              <StyledPasswordToggle
+                type="button"
+                onMouseDown={preventFocusLoss}
+                onClick={handleToggleShowPassword}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                disabled={disabled}
+              >
+                <DynamicIcon
+                  iconValue={
+                    showPassword
+                      ? ":material/visibility_off:"
+                      : ":material/visibility:"
+                  }
+                  size="base"
+                />
+              </StyledPasswordToggle>
+            )}
+          </StyledEndEnhancers>
+        </StyledInputRoot>
+      </TextField>
+      {displayedError && (
+        // The error message is shown visually in a tooltip on hover. The tooltip
+        // trigger isn't focusable, so we also expose the message to assistive
+        // tech via a visually hidden, aria-describedby-linked alert.
+        <StyledVisuallyHidden id={errorId} role="alert">
+          {displayedError}
+        </StyledVisuallyHidden>
+      )}
       {shouldShowInstructions && (
-        <InputInstructions
-          dirty={dirty}
-          value={uiValue ?? ""}
-          maxLength={maxChars}
-          inForm={isInForm({ formId })}
-          allowEnterToSubmit={allowEnterToSubmit}
-        />
+        <StyledInputInstructionsContainer
+          $hasErrorIcon={Boolean(displayedError)}
+          $hasPasswordToggle={isPassword}
+        >
+          <InputInstructions
+            dirty={dirty}
+            value={uiValue ?? ""}
+            maxLength={maxChars}
+            inForm={inForm}
+            allowEnterToSubmit={allowEnterToSubmit}
+          />
+        </StyledInputInstructionsContainer>
       )}
     </StyledTextInput>
   )
@@ -293,6 +513,13 @@ function updateWidgetMgrState(
 
 function getTypeString(element: TextInputProto): string {
   return element.type === TextInputProto.Type.PASSWORD ? "password" : "text"
+}
+
+// Prevents the toggle button from stealing focus from the input on mousedown,
+// avoiding a premature dirty-value commit via handleBlur. Extracted at module
+// level so the reference is stable across renders.
+function preventFocusLoss(e: MouseEvent): void {
+  e.preventDefault()
 }
 
 export default memo(TextInput)

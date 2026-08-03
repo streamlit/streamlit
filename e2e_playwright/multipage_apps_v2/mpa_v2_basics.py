@@ -77,13 +77,21 @@ def page_14() -> None:
     fragment_number_input()
 
 
+def unicode_page() -> None:
+    st.header("Págé_Wíth_Spêcîãl_Chäracters")
+
+
 page7 = st.Page(page_7, default=set_default)
 page8 = st.Page(page_8, url_path="my_url_path")
 page9 = st.Page(page_9)
 page10 = st.Page(page_10)
 page11 = st.Page(page_8, title="page `11`", url_path="page_11")
 page12 = st.Page(page_9, title=":blue[page] 12", url_path="page_12")
-page13 = st.Page(page_8, title="page 13", url_path="page_13")
+page13 = st.Page(
+    unicode_page,
+    title="Págé_Wíth_Spêcîãl_Chäracters",
+    url_path="Págé_Wíth_Spêcîãl_Chäracters",
+)
 page14 = st.Page(page_14, title="page 14")
 
 hide_sidebar = st.checkbox("Hide sidebar")
