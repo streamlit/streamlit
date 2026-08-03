@@ -380,8 +380,9 @@ def test_single_date_input_error_state(
     first_date_input = get_date_input(themed_app, "Single date")
     first_date_field = first_date_input.get_by_test_id("stDateInputField")
 
-    # Set date to 1960/01/01, which is outside of the allowed min date
-    type_date(first_date_field, "1960", "01", "01")
+    # Set date to 1960/01/01, which is outside of the allowed min date.
+    # commit=False: keep popover open so we can check real-time error feedback.
+    type_date(first_date_field, "1960", "01", "01", commit=False)
 
     # Check that the value update is not committed
     expect_markdown(themed_app, "Value 1: 1970-01-01")
@@ -500,7 +501,6 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # Type something and submit (select same date via typing)
     date_field = dynamic_date_input.get_by_test_id("stDateInputField")
     type_date(date_field, "2020", "01", "02")
-    app.keyboard.press("Escape")
     wait_for_app_run(app)
     expect(app.get_by_test_id("stDateInputCalendar")).not_to_be_visible()
 
@@ -529,7 +529,6 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
 
     # Type something different and submit
     type_date(date_field, "2020", "01", "03")
-    app.keyboard.press("Escape")
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Updated date input value:", "2020-01-03")
@@ -541,7 +540,6 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
 
     # Set value to 2028/01/01 which is valid in initial bounds (2010-2030)
     type_date(date_field, "2028", "01", "01")
-    app.keyboard.press("Escape")
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Initial date input value:", "2028-01-01")
 
@@ -595,7 +593,6 @@ def test_date_input_query_param_default_cleared_from_url(page: Page, app_base_ur
     date_input = get_element_by_key(page, "bound_date")
     date_field = date_input.get_by_test_id("stDateInputField")
     type_date(date_field, "2025", "01", "15")
-    page.keyboard.press("Escape")
     wait_for_app_run(page)
 
     # Default value should be removed from the URL

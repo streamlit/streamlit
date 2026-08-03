@@ -18,6 +18,7 @@ import {
   ClipboardEvent,
   KeyboardEvent,
   memo,
+  MouseEvent,
   ReactElement,
   useCallback,
   useContext,
@@ -160,6 +161,7 @@ function SingleDateInput({
   const id = useId()
   const errorId = `${id}-error`
   const triggerRef = useRef<HTMLDivElement | null>(null)
+  const clearButtonRef = useRef<HTMLButtonElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
   // Guards against `handleFocus` reopening the popover it's in the middle
   // of closing — see `focusLastFieldSegment` below.
@@ -326,12 +328,22 @@ function SingleDateInput({
     [onChange, focusLastFieldSegment]
   )
 
-  // Wired to onClickCapture: clicking an already-focused segment doesn't
-  // re-fire onFocus. Capture phase needed because RAC stops propagation.
+  // Wired to onFocus and onClickCapture: clicking an already-focused segment
+  // doesn't re-fire onFocus. Capture phase needed because RAC stops propagation.
   const handleFocus = useCallback((): void => {
     if (isRestoringFocusRef.current) return
     if (!disabled) setIsOpen(true)
   }, [disabled])
+
+  // Capture-phase fires before the clear button's own handler; without this
+  // gate, clearing a value would immediately reopen the popover.
+  const handleClickCapture = useCallback(
+    (e: MouseEvent<HTMLDivElement>): void => {
+      if (clearButtonRef.current?.contains(e.target as Node)) return
+      handleFocus()
+    },
+    [handleFocus]
+  )
 
   const handleClear = useCallback((): void => {
     setDisplayValue(null)
@@ -413,7 +425,7 @@ function SingleDateInput({
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
         onFocus={handleFocus}
-        onClickCapture={handleFocus}
+        onClickCapture={handleClickCapture}
         onPaste={handlePaste}
         onKeyDown={handleFieldKeyDown}
       >
@@ -447,6 +459,7 @@ function SingleDateInput({
         )}
         {clearable && !isNullOrUndefined(displayValue) && (
           <StyledClearButton
+            ref={clearButtonRef}
             type="button"
             onClick={handleClear}
             aria-label="Clear date"
