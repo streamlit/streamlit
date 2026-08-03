@@ -322,6 +322,17 @@ class AsyncSubprocess:
 
     def terminate(self) -> str | None:
         """Terminate the process and return its stdout/stderr in a string."""
+        if self._proc is not None:
+            returncode = self._proc.poll()
+            if returncode is not None:
+                signal = -returncode if returncode < 0 else None
+                print(
+                    f"Process exited before teardown: pid={self._proc.pid} "
+                    f"returncode={returncode} signal={signal} "
+                    f"command={shlex.join(self.args)}",
+                    flush=True,
+                )
+
         self._stop_process()
 
         # Read the stdout file and close it

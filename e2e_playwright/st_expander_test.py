@@ -17,7 +17,7 @@ from typing import Final
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -480,3 +480,41 @@ def test_programmatic_close_does_not_reopen_other_expander(app: Page):
 
     # Expander A must NOT have reopened (the bug from #14943)
     expect(exp_a.get_by_text("Expander A content")).not_to_be_visible()
+
+
+def test_rapid_toggle_does_not_clip_content(app: Page):
+    """Rapid open/close should not leave inline height/overflow locks on the
+    <details> element that clip content.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/16027.
+    """
+    expander = get_expander(app, "Long expanded")
+    details = expander.locator("details")
+    summary = details.locator(EXPANDER_HEADER_IDENTIFIER)
+
+    # Rapid toggle sequence: close → open → close → open, without waiting
+    # for the ~500ms height animation to settle between clicks. Each click
+    # interrupts the previous animation via cancelAnimation.
+    for _ in range(4):
+        summary.click(no_wait_after=True)
+
+    # Content must be visible (final state is open) and NOT clipped by a
+    # stale inline height / overflow lock left behind by an interrupted
+    # animation. Poll until the animation settles instead of a fixed sleep so
+    # the test tolerates slow CI runners.
+    body_text = expander.get_by_text("Integer et justo orci", exact=False)
+    expect(body_text).to_be_visible()
+
+    def styles_cleared() -> bool:
+        return bool(
+            details.evaluate("el => el.style.height === '' && el.style.overflow === ''")
+        )
+
+    wait_until(app, styles_cleared, timeout=3000)
+
+    # After the ~1.5s stall-guard window, a superseded close animation must not
+    # have force-finished and slammed the expander shut. The <details> must
+    # still be open and the body text still visible.
+    app.wait_for_timeout(1600)
+    expect(details).to_have_attribute("open", "")
+    expect(body_text).to_be_visible()

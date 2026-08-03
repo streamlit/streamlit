@@ -194,6 +194,13 @@ class WidgetMetadata(Generic[T]):
     # zero-width range).
     allow_url_duplicates: bool = False
 
+    # Whether the widget is disabled. A disabled widget cannot be interacted with
+    # in the browser, so it must never accept a value coming from the frontend.
+    # This is enforced server-side (see SessionState.register_widget): any incoming
+    # value for a disabled widget is discarded and its on-change callback is
+    # suppressed, guarding against forged BackMsg/WidgetState values.
+    disabled: bool = False
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -224,11 +231,20 @@ class RegisterWidgetResult(Generic[T_co]):
         wire form (not re-derived from the deserialized ``value``), callers can
         reconcile a stored value against freshly computed state even when the
         deserialized value is stale.
+    incoming_serialized_values : list of str or None
+        The array-widget counterpart of ``incoming_serialized_value``: the
+        stored serialized (wire) values as they entered this run, captured
+        before this run's serializer was applied. ``None`` for non-array
+        widgets or when no value is stored yet. Because these are the raw wire
+        labels (not re-derived from the deserialized ``value``), callers can
+        detect that a stored selection's formatted label changed between runs
+        even when the deserialized value is unchanged.
     """
 
     value: T_co
     value_changed: bool
     incoming_serialized_value: str | None = None
+    incoming_serialized_values: list[str] | None = None
 
     @classmethod
     def failure(

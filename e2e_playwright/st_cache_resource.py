@@ -56,3 +56,41 @@ def replay_element() -> int:
 
 if st.button("Cached function with element replay"):
     st.write("Cache return", replay_element())
+
+
+# Keep the background-refresh scenario opt-in so its warning and display output don't
+# interfere with the other cache_resource tests in this app.
+_BACKGROUND_REFRESH_TTL_SECONDS = 8
+
+
+@st.cache_resource(show_spinner=False)
+def background_refresh_execution_counter() -> dict[str, int]:
+    return {"count": 0}
+
+
+@st.cache_resource(
+    ttl=_BACKGROUND_REFRESH_TTL_SECONDS,
+    refresh_mode="background",
+    show_spinner=False,
+)
+def background_refresh_value() -> int:
+    counter = background_refresh_execution_counter()
+    counter["count"] += 1
+    return counter["count"]
+
+
+@st.cache_resource(
+    ttl=_BACKGROUND_REFRESH_TTL_SECONDS,
+    refresh_mode="background",
+    show_spinner=False,
+)
+def background_refresh_with_display() -> None:
+    st.markdown("Inside background cache_resource function")
+
+
+if st.button("Run cache_resource background refresh test"):
+    st.session_state.run_cache_resource_background_refresh_test = True
+
+if st.session_state.get("run_cache_resource_background_refresh_test", False):
+    st.markdown(f"Background refresh value: {background_refresh_value()}")
+    background_refresh_with_display()

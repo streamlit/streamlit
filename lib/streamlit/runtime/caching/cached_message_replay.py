@@ -84,6 +84,11 @@ class CachedResult(Generic[R]):
     messages: list[MsgData]
     main_id: str
     sidebar_id: str
+    # The monotonic time (via cache_utils.TTLCACHE_TIMER) at which this entry was
+    # written. Only used by refresh_mode="background" to distinguish a fresh entry
+    # ([0, ttl)) from a stale one ([ttl, 2*ttl)). ``None`` means "freshness not
+    # tracked" (foreground mode), in which case the entry is always treated as fresh.
+    stored_at: float | None = None
 
 
 """

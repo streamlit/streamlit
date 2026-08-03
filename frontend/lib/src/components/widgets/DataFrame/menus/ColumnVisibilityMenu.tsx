@@ -16,9 +16,10 @@
 
 import { memo, ReactElement, useEffect, useRef } from "react"
 
-import { FloatingFocusManager, FloatingPortal } from "@floating-ui/react"
+import { FloatingFocusManager } from "@floating-ui/react"
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
@@ -191,7 +192,7 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
     <div ref={setReferenceRef}>
       {children}
       {isOpen && (
-        <FloatingPortal>
+        <DataFrameOverlayPortal>
           <FloatingFocusManager context={context} initialFocus={panelRef}>
             <StyledColumnVisibilityMenuPanel
               ref={setFloatingRef}
@@ -255,7 +256,7 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
               </StyledColumnVisibilityMenuContent>
             </StyledColumnVisibilityMenuPanel>
           </FloatingFocusManager>
-        </FloatingPortal>
+        </DataFrameOverlayPortal>
       )}
     </div>
   )

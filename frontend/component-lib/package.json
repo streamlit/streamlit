@@ -42,7 +42,7 @@
   },
   "homepage": "https://github.com/streamlit/streamlit#readme",
   "dependencies": {
-    "apache-arrow": "^21.1.0",
+    "apache-arrow": "^21.2.0",
     "hoist-non-react-statics": "^3.3.2"
   },
   "peerDependencies": {
@@ -60,9 +60,9 @@
     "react-dom": "^18.2.0",
     "typescript": "^6.0.3",
     "typesync": "^0.14.3",
-    "vite": "^8.1.2",
+    "vite": "^8.1.5",
     "vite-plugin-dts": "^5.0.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   },
   "resolutions": {
     "@types/react": "^18.2.0",

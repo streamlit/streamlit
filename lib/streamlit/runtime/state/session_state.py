@@ -850,6 +850,17 @@ class SessionState:
         """Call callbacks for widgets whose value changed or whose trigger fired."""
         from streamlit.runtime.scriptrunner import RerunException
 
+        # Skip callbacks for disabled widgets: a reported change can only come
+        # from a stale UI or a forged message. Callbacks run before widgets
+        # re-register, so the metadata read here is from the previous run. That
+        # is safe regardless of whether `disabled` is part of the widget id:
+        # for most widgets the id excludes `disabled` (so the id is stable and
+        # only the enabled<->disabled edges are ambiguous, an intentional
+        # trade-off), while for widgets that encode `disabled` in the id (e.g.
+        # st.popover) each id has a fixed `disabled` and is thus stable by
+        # construction. Either way, a disabled widget's forged change is
+        # suppressed.
+
         # Path 1: single callback.
         changed_widget_ids_for_single_callback = [
             wid
@@ -858,6 +869,7 @@ class SessionState:
             and (metadata := self._new_widget_state.widget_metadata.get(wid))
             is not None
             and metadata.callback is not None
+            and not metadata.disabled
         ]
 
         for wid in changed_widget_ids_for_single_callback:
@@ -873,7 +885,7 @@ class SessionState:
 
         for wid in widget_ids_to_process:
             metadata = self._new_widget_state.widget_metadata.get(wid)
-            if not metadata or metadata.callbacks is None:
+            if not metadata or metadata.callbacks is None or metadata.disabled:
                 continue
 
             args = metadata.callback_args or ()
@@ -1260,10 +1272,11 @@ class SessionState:
 
         # Capture the stored wire value *before* swapping in this run's
         # serializer, so it reflects the value as it was actually stored (using
-        # the serializer it was stored with). For string widgets we expose this
-        # so callers can reconcile a stored value against freshly computed state
-        # without re-deriving it from the deserialized value.
+        # the serializer it was stored with). For string and string-array widgets
+        # we expose this so callers can reconcile a stored value against freshly
+        # computed state without re-deriving it from the deserialized value.
         incoming_serialized_value: str | None = None
+        incoming_serialized_values: list[str] | None = None
         if metadata.value_type == "string_value":
             stored_proto = self._new_widget_state.get_serialized(widget_id)
             if (
@@ -1271,6 +1284,13 @@ class SessionState:
                 and stored_proto.WhichOneof("value") == "string_value"
             ):
                 incoming_serialized_value = stored_proto.string_value
+        elif metadata.value_type == "string_array_value":
+            stored_proto = self._new_widget_state.get_serialized(widget_id)
+            if (
+                stored_proto is not None
+                and stored_proto.WhichOneof("value") == "string_array_value"
+            ):
+                incoming_serialized_values = list(stored_proto.string_array_value.data)
 
         self._set_widget_metadata(metadata)
         if user_key is not None:
@@ -1308,6 +1328,33 @@ class SessionState:
         elif metadata.persist_state is None and user_key is not None:
             # Widget stopped persisting — drop any stale tracking.
             self._persist_tracker.untrack(widget_id, user_key)
+
+        # Enforce `disabled` server-side. A disabled widget cannot be interacted
+        # with in the browser, so any value in widget state is a stale/forged
+        # frontend value and must be dropped, so resolution falls back to the
+        # widget's previous value (or its default on first registration).
+        # URL-seeded values are exempt: they populate widget state legitimately
+        # for bound widgets (url_value_seeded). A programmatic st.session_state
+        # assignment lives in _new_session_state and still wins during
+        # resolution, so dropping the forged widget-state entry never affects it
+        # while preventing the forged value from lingering there until compaction.
+        disabled_value_discarded = False
+        if (
+            metadata.disabled
+            and widget_id in self._new_widget_state
+            and not url_value_seeded
+        ):
+            del self._new_widget_state[widget_id]
+            # The captured wire label belongs to the dropped frontend value, so
+            # it must not leak to callers. Otherwise a caller like st.selectbox
+            # could reconcile options against this attacker-controlled label (see
+            # resolve_value_against_options) and hand back an option that differs
+            # from the value we resolve below.
+            incoming_serialized_value = None
+            if user_key is None or user_key not in self._new_session_state:
+                # No programmatic value is taking over resolution, so the discard
+                # itself changes the resolved value; flag the frontend to re-sync.
+                disabled_value_discarded = True
 
         if (
             widget_id not in self
@@ -1413,12 +1460,14 @@ class SessionState:
             or restored_bound_value
             or restored_persisted_value
             or dropped_page_scoped_value
+            or disabled_value_discarded
         )
 
         return RegisterWidgetResult(
             widget_value,
             widget_value_changed,
             incoming_serialized_value=incoming_serialized_value,
+            incoming_serialized_values=incoming_serialized_values,
         )
 
     def _handle_query_param_binding(
@@ -1445,8 +1494,11 @@ class SessionState:
             script_hash=script_hash,
         )
 
-        # Check priority rules - skip seeding if user/code has already set a value
-        if widget_id in self._new_widget_state:  # User interacted with widget
+        # Check priority rules - skip seeding if user/code has already set a value.
+        # A disabled widget is exempt: it cannot be interacted with, so any value in
+        # _new_widget_state is a stale/forged frontend value. Let URL seeding proceed;
+        # disabled enforcement in register_widget then discards the forged value.
+        if widget_id in self._new_widget_state and not metadata.disabled:
             return False
         is_initial_load = widget_id not in self._old_state
         if not is_initial_load and user_key in self._new_session_state:

@@ -139,17 +139,12 @@ export function useVegaEmbed(
           // usermeta.embedOptions (see useVegaElementPreprocessor), this prevents
           // a chart spec from using these actions to open same-origin pages with
           // serialized spec contents. We expose our own toolbar actions instead.
-          // We pass an object of disabled actions rather than `actions: false` so
-          // vega-embed still renders the chart inside a `.chart-wrapper` element,
-          // preserving the DOM structure, sizing, and ARIA that our styles and
-          // e2e tests rely on. Because `defaultStyle` is false and
-          // `forceActionsMenu` is unset, no actions menu button is rendered.
-          actions: {
-            export: false,
-            source: false,
-            compiled: false,
-            editor: false,
-          },
+          // Note: `actions: false` also changes vega-embed's DOM output: it no
+          // longer wraps the chart in a `.chart-wrapper`/`.vega-actions`
+          // structure and instead applies `role="graphics-document"` and the
+          // `fit-x`/`fit-y` sizing classes directly to this container element
+          // (which our styles and e2e locators rely on).
+          actions: false,
         }
 
         const { vgSpec, view, finalize } = await embed(
@@ -316,7 +311,13 @@ export function useVegaEmbed(
     }
 
     try {
-      return await vegaViewRef.current.toImageURL("png")
+      // Vega's default PNG export is at 1x, which produces a blurry image on
+      // HiDPI/retina displays where the on-screen canvas is rendered at
+      // `window.devicePixelRatio`. We upscale the PNG to at least 2x so the
+      // exported file matches (or exceeds) the perceived on-screen fidelity.
+      // See https://github.com/streamlit/streamlit/issues/8177.
+      const scaleFactor = Math.max(2, window.devicePixelRatio || 1)
+      return await vegaViewRef.current.toImageURL("png", scaleFactor)
     } catch (error) {
       LOG.warn("Failed to export Vega view as PNG:", error)
       return null

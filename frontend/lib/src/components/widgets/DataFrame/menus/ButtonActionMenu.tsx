@@ -16,13 +16,12 @@
 
 import { memo, ReactElement, useCallback, useEffect } from "react"
 
-import { FloatingPortal } from "@floating-ui/react"
-
 import {
   DynamicIcon,
   extractLeadingMaterialIcon,
 } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 
@@ -72,9 +71,9 @@ function ButtonActionMenu({
   })
 
   // Close menu on any scroll in the document (fixed positioning would misalign
-  // with cell). The menu is rendered via FloatingPortal outside the dataframe's
-  // DOM tree, so we cannot rely on ancestor containment checks — we must close
-  // on any scroll except within the menu itself.
+  // with cell). The menu is rendered via DataFrameOverlayPortal outside the
+  // dataframe's DOM tree, so we cannot rely on ancestor containment checks —
+  // we must close on any scroll except within the menu itself.
   useEffect(() => {
     function handleScroll(event: Event): void {
       // Ignore if the scroll is on the menu itself
@@ -134,7 +133,7 @@ function ButtonActionMenu({
           pointerEvents: "none",
         }}
       />
-      <FloatingPortal>
+      <DataFrameOverlayPortal>
         <StyledButtonActionMenuPanel
           ref={setFloatingRef}
           style={floatingStyles}
@@ -171,7 +170,7 @@ function ButtonActionMenu({
             })}
           </StyledMenuList>
         </StyledButtonActionMenuPanel>
-      </FloatingPortal>
+      </DataFrameOverlayPortal>
     </>
   )
 }

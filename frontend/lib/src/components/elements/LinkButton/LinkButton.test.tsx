@@ -88,6 +88,49 @@ describe("LinkButton widget", () => {
     expect(linkButton).toBeInTheDocument()
   })
 
+  it("uses the provided URL for safe links", () => {
+    const props = getProps({ url: "https://streamlit.io/gallery" })
+    render(<LinkButton {...props} />)
+
+    const linkButton = screen.getByRole("link")
+    expect(linkButton).toHaveAttribute("href", "https://streamlit.io/gallery")
+    expect(linkButton).toHaveAttribute("target", "_blank")
+    expect(linkButton).toHaveAttribute("rel", "noreferrer")
+  })
+
+  it.each([
+    "javascript:alert(1)",
+    "JAVASCRIPT:alert(1)",
+    "java\nscript:alert(1)",
+    "vbscript:msgbox(1)",
+  ])("blocks dangerous URL: %s", url => {
+    const props = getProps({ url })
+    render(<LinkButton {...props} />)
+
+    const linkButton = screen.getByRole("link")
+    expect(linkButton).toHaveAttribute("href", "#")
+    expect(linkButton).toHaveAttribute("target", "_self")
+    expect(linkButton).toHaveAttribute("rel", "noreferrer")
+  })
+
+  it("does not trigger blocked links from shortcuts", () => {
+    const props = getProps({
+      shortcut: "Ctrl+Enter",
+      url: "javascript:alert(1)",
+    })
+    const useRegisterShortcutMock = vi.mocked(useRegisterShortcut)
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click")
+
+    render(<LinkButton {...props} />)
+
+    const { onActivate } = useRegisterShortcutMock.mock.calls[0][0]
+    onActivate()
+
+    expect(clickSpy).not.toHaveBeenCalled()
+
+    clickSpy.mockRestore()
+  })
+
   it("renders with help properly", async () => {
     const user = userEvent.setup()
     render(<LinkButton {...getProps({ help: "mockHelpText" })} />)
@@ -176,6 +219,20 @@ describe("LinkButton widget", () => {
       id: "link-id",
       ignoreRerun: false,
       disabled: true,
+    })
+    render(<LinkButton {...props} />)
+
+    await user.click(screen.getByRole("link"))
+
+    expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
+  })
+
+  it("does not trigger rerun when clicking a blocked URL", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      id: "link-id",
+      ignoreRerun: false,
+      url: "javascript:alert(1)",
     })
     render(<LinkButton {...props} />)
 

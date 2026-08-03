@@ -96,6 +96,12 @@ class GraphvizTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.graphviz_chart
         assert "grenade" in c.spec
 
+    def test_unhandled_type_raises(self):
+        """Test that an unsupported figure type raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.graphviz_chart(123)  # type: ignore[arg-type]
+        assert "Unhandled type for graphviz chart" in str(e.value)
+
     @parameterized.expand(
         [
             ("content", "use_content", True),

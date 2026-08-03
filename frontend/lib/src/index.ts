@@ -109,6 +109,7 @@ export { FileUploadClient } from "./FileUploadClient"
 export {
   BackendOperationClient,
   CONNECTION_CLOSED_MESSAGE,
+  getBackendOperationReason,
   REQUEST_TIMED_OUT_MESSAGE,
 } from "./BackendOperationClient"
 export type { BackendOperationClientProps } from "./BackendOperationClient"

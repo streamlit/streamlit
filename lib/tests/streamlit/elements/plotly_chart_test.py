@@ -23,6 +23,8 @@ import streamlit as st
 from streamlit.elements.plotly_chart import (
     PlotlyChartSelectionSerde,
     PlotlyMixin,
+    PlotlySelectionState,
+    PlotlyState,
     _resolve_content_height,
     _resolve_content_width,
 )
@@ -717,3 +719,16 @@ def test_plotly_serde_serialize_returns_json_string() -> None:
 
     assert isinstance(payload, str)
     assert "selection" in payload
+
+
+def test_plotly_serde_returns_typed_state_classes() -> None:
+    """The Plotly serde returns typed classes for both state levels."""
+    result = PlotlyChartSelectionSerde().deserialize(None)
+
+    assert isinstance(result, PlotlyState)
+    assert isinstance(result.selection, PlotlySelectionState)
+    assert result.selection.points == []
+    assert result["selection"]["point_indices"] == []
+    # Nested selection must be a stable stored instance (not a per-access copy).
+    assert result["selection"] is result["selection"]
+    assert result.selection is result["selection"]

@@ -225,4 +225,97 @@ describe("WaveSurferRecordBackend", () => {
     expect(onRecordProgress).toHaveBeenCalledTimes(1)
     expect(onRecordProgress).toHaveBeenCalledWith(1234)
   })
+
+  it("forwards record-start events to the controller", () => {
+    const onRecordStart = vi.fn()
+    backend.setEventHandlers({ onRecordStart })
+    backend.initialize(
+      mockWaveSurfer as unknown as WaveSurfer,
+      MockRecordPluginClass as unknown as typeof RecordPlugin
+    )
+
+    mockEventHandlers.get("record-start")?.[0]()
+
+    expect(onRecordStart).toHaveBeenCalledTimes(1)
+  })
+
+  const startAndActivateRecording = async (): Promise<void> => {
+    backend.initialize(
+      mockWaveSurfer as unknown as WaveSurfer,
+      MockRecordPluginClass as unknown as typeof RecordPlugin
+    )
+    await backend.startRecording()
+    mockEventHandlers.get("record-start")?.[0]()
+  }
+
+  it("resolves stopRecording with the recorded blob", async () => {
+    const onRecordEnd = vi.fn()
+    backend.setEventHandlers({ onRecordEnd })
+    await startAndActivateRecording()
+
+    const recordedBlob = new Blob(["audio-data"], { type: "audio/webm" })
+    const stopPromise = backend.stopRecording()
+    mockEventHandlers.get("record-end")?.[0](recordedBlob)
+
+    await expect(stopPromise).resolves.toBe(recordedBlob)
+    expect(mockRecordPlugin.stopRecording).toHaveBeenCalledTimes(1)
+    expect(onRecordEnd).toHaveBeenCalledWith(recordedBlob)
+  })
+
+  it("rejects stopRecording and emits onError when the recording is empty", async () => {
+    const onError = vi.fn()
+    backend.setEventHandlers({ onError })
+    await startAndActivateRecording()
+
+    const emptyBlob = new Blob([])
+    const stopPromise = backend.stopRecording()
+    mockEventHandlers.get("record-end")?.[0](emptyBlob)
+
+    await expect(stopPromise).rejects.toThrow("Invalid or empty recording")
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError.mock.calls[0][0].message).toBe("Invalid or empty recording")
+  })
+
+  it("throws when stopping while not recording", async () => {
+    backend.initialize(
+      mockWaveSurfer as unknown as WaveSurfer,
+      MockRecordPluginClass as unknown as typeof RecordPlugin
+    )
+
+    await expect(backend.stopRecording()).rejects.toThrow(
+      "Not currently recording"
+    )
+  })
+
+  it("throws when starting before initialization", async () => {
+    const uninitialized = new WaveSurferRecordBackend()
+
+    await expect(uninitialized.startRecording()).rejects.toThrow(
+      "Record plugin not initialized"
+    )
+  })
+
+  it("ignores startRecording when already recording", async () => {
+    await startAndActivateRecording()
+    mockRecordPlugin.startRecording.mockClear()
+
+    await expect(backend.startRecording()).resolves.toBeUndefined()
+    expect(mockRecordPlugin.startRecording).not.toHaveBeenCalled()
+  })
+
+  it("handles record-end without a pending stop request", () => {
+    const onRecordEnd = vi.fn()
+    backend.setEventHandlers({ onRecordEnd })
+    backend.initialize(
+      mockWaveSurfer as unknown as WaveSurfer,
+      MockRecordPluginClass as unknown as typeof RecordPlugin
+    )
+    mockEventHandlers.get("record-start")?.[0]()
+
+    const recordedBlob = new Blob(["audio-data"])
+    expect(() =>
+      mockEventHandlers.get("record-end")?.[0](recordedBlob)
+    ).not.toThrow()
+    expect(onRecordEnd).toHaveBeenCalledWith(recordedBlob)
+  })
 })

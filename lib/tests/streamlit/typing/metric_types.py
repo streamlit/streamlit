@@ -118,6 +118,12 @@ if TYPE_CHECKING:
     )
     assert_type(metric("Metric", 100, delta=5, delta_description=None), DeltaGenerator)
 
+    # Metric with icon parameter
+    assert_type(metric("Metric", 100, icon=":material/thermostat:"), DeltaGenerator)
+    assert_type(metric("Metric", 100, icon="🔥"), DeltaGenerator)
+    assert_type(metric("Metric", 100, icon="spinner"), DeltaGenerator)
+    assert_type(metric("Metric", 100, icon=None), DeltaGenerator)
+
     # Metric with all parameters combined
     assert_type(
         metric(
@@ -126,6 +132,7 @@ if TYPE_CHECKING:
             delta=5,
             delta_color="normal",
             help="Full help text",
+            icon=":material/thermostat:",
             label_visibility="visible",
             border=True,
             width="stretch",

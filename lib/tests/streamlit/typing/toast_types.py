@@ -80,4 +80,4 @@ if TYPE_CHECKING:
     toast("Message", icon=123)  # type: ignore[arg-type]
 
     # Passing icon as positional argument (should be keyword-only)
-    toast("Message", "icon")  # type: ignore[misc]
+    toast("Message", "icon")  # type: ignore[call-arg]

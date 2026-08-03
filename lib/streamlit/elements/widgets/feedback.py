@@ -314,6 +314,7 @@ class FeedbackMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
         )
 
         if widget_state.value_changed:

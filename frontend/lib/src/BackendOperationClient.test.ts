@@ -19,7 +19,10 @@ import {
   BackendOperationResponse,
 } from "@streamlit/protobuf"
 
-import { BackendOperationClient } from "./BackendOperationClient"
+import {
+  BackendOperationClient,
+  getBackendOperationReason,
+} from "./BackendOperationClient"
 
 function createClient(
   sendRequest = vi.fn(),
@@ -57,6 +60,60 @@ describe("BackendOperationClient", () => {
     )
 
     await expect(promise).resolves.toEqual({ url: "/media/generated" })
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("sends dataframe chunk requests with the chunk payload", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestDataframeChunk({
+      sourceId: "source-1",
+      offset: 500,
+      limit: 500,
+    })
+
+    expect(sendRequest).toHaveBeenCalledTimes(1)
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+    expect(request.requestId).toBeTruthy()
+    expect(request.sessionId).toBe("session-id")
+    expect(request.dataframeChunk?.sourceId).toBe("source-1")
+    expect(Number(request.dataframeChunk?.offset)).toBe(500)
+    expect(request.dataframeChunk?.limit).toBe(500)
+    expect(client.pendingCount).toBe(1)
+
+    const arrowData = { data: new Uint8Array([1, 2, 3]) }
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        dataframeChunk: {
+          sourceId: "source-1",
+          offset: 500,
+          arrowData,
+        },
+      })
+    )
+
+    const resolved = await promise
+    expect(resolved.sourceId).toBe("source-1")
+    expect(Number(resolved.offset)).toBe(500)
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("allows two minutes for dataframe chunk requests", async () => {
+    vi.useFakeTimers()
+    const client = createClient()
+
+    const promise = client.requestDataframeChunk({
+      sourceId: "source-1",
+      offset: 500,
+      limit: 500,
+    })
+    vi.advanceTimersByTime(119_999)
+    expect(client.pendingCount).toBe(1)
+
+    vi.advanceTimersByTime(1)
+    await expect(promise).rejects.toThrow("Request timed out")
     expect(client.pendingCount).toBe(0)
   })
 
@@ -196,6 +253,93 @@ describe("BackendOperationClient", () => {
     )
 
     await expect(promise).rejects.toThrow("No skills found")
+  })
+
+  it("attaches the server's error_reason to the rejected install error", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        errorMsg: "developing-with-streamlit already exists.",
+        errorReason: "conflict",
+      })
+    )
+
+    // The rejection carries both the human message and the machine-readable
+    // reason (so App can route it to install-failure telemetry by cause).
+    await expect(promise).rejects.toMatchObject({
+      message: "developing-with-streamlit already exists.",
+      reason: "conflict",
+    })
+  })
+
+  it("leaves reason undefined when the server omits error_reason", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        errorMsg: "Failed to install skills.",
+      })
+    )
+
+    await expect(promise).rejects.toSatisfy(
+      (error: unknown) => getBackendOperationReason(error) === undefined
+    )
+  })
+
+  it("preserves the server's fallback_reason on a successful install", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        installSkills: {
+          detail: "Installed to ~/.agents/skills",
+          fallbackReason: "symlinks_no_privilege",
+        },
+      })
+    )
+
+    // A project install rerouted to a global copy still SUCCEEDS, so this cohort's
+    // only diagnostic signal is the fallback reason riding the success payload
+    // through to skillsNudgeInstallSucceeded:<fallback_reason>.
+    await expect(promise).resolves.toEqual({
+      detail: "Installed to ~/.agents/skills",
+      fallbackReason: "symlinks_no_privilege",
+    })
+  })
+
+  it("leaves fallbackReason empty for a normal project install", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        installSkills: { detail: "Installed", fallbackReason: "" },
+      })
+    )
+
+    const payload = await promise
+    // Must stay falsy, or App would tag an ordinary symlink install as a fallback.
+    expect(payload.fallbackReason).toBeFalsy()
   })
 
   it("sends dismiss skills nudge requests and resolves on the ack", async () => {

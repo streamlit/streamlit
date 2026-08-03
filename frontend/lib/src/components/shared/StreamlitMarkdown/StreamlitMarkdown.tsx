@@ -27,7 +27,9 @@ import {
   useCallback,
   useContext,
   useId,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -95,7 +97,9 @@ const StreamlitSyntaxHighlighter = lazy(
 )
 
 const MermaidChart = lazy(() =>
-  import("./MermaidChart").then(module => ({ default: module.MermaidChart }))
+  import("./MermaidChart").then(module => ({
+    default: module.MermaidChart,
+  }))
 )
 
 /**
@@ -338,13 +342,16 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
   const [elementId, setElementId] = useState(propsAnchor)
+  const nodeRef = useRef<HTMLElement | null>(null)
 
-  const ref = useCallback(
-    (node: HTMLElement | null) => {
-      if (node === null) {
-        return
-      }
-
+  /**
+   * Set the heading id from `propsAnchor` or the node's textContent, then scroll
+   * the node into view if that id matches the current URL hash. Shared by the
+   * mount-time ref callback and the rerun effect below so the two paths cannot
+   * drift apart.
+   */
+  const applyAnchor = useCallback(
+    (node: HTMLElement): void => {
       const anchor = propsAnchor || createAnchorFromText(node.textContent)
       setElementId(anchor)
       const windowHash = window.location.hash.slice(1)
@@ -354,6 +361,33 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     },
     [propsAnchor]
   )
+
+  const ref = useCallback(
+    (node: HTMLElement | null) => {
+      nodeRef.current = node
+      if (node === null) {
+        return
+      }
+      applyAnchor(node)
+    },
+    [applyAnchor]
+  )
+
+  // Re-derive the anchor when heading text changes across reruns. The ref
+  // callback only fires on mount or when propsAnchor changes; when only the text
+  // content changes, React reuses the DOM node and the callback never re-fires.
+  // Skipped when propsAnchor is set, since an explicit anchor never depends on
+  // the text.
+  //
+  // useLayoutEffect (not useEffect) so the re-derived id is committed before
+  // paint; otherwise a frame can render with the previous hash link.
+  useLayoutEffect(() => {
+    const node = nodeRef.current
+    if (!node || propsAnchor) {
+      return
+    }
+    applyAnchor(node)
+  }, [children, propsAnchor, applyAnchor])
 
   const isInSidebarOrDialog = isInSidebar || isInDialog
   const actionElements = (

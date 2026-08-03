@@ -30,25 +30,31 @@ interface UseDebouncedCallbackReturn<A extends unknown[]> {
    * A function to cancel any pending invocation of the debounced callback.
    */
   cancel: () => void
+  /**
+   * Immediately invokes a pending callback and cancels its timeout.
+   * Does nothing when no callback is pending.
+   */
+  flush: () => void
 }
 
 /**
- * A custom hook that provides a debounced callback function and a cancel function.
+ * A custom hook that provides a debounced callback function and functions to
+ * cancel or flush it.
  *
  * The debounced callback will only execute after a specified delay has passed
  * since the last time it was invoked. This can be useful for preventing
  * expensive operations from being called too frequently, such as API calls
  * triggered by user input.
  *
- * The cancel function can be used to cancel any pending invocation of the
- * debounced callback.
+ * The cancel function cancels a pending invocation. The flush function invokes
+ * a pending callback immediately and cancels its timeout.
  *
  * @param {function} callback - The function to be debounced.
  * @param {number} delay - The delay in milliseconds.
- * @returns {UseDebouncedCallbackReturn<A>} An object containing the debounced callback function and the cancel function.
+ * @returns {UseDebouncedCallbackReturn<A>} An object containing the debounced callback function and controls to cancel or flush it.
  *
  * @example
- * const { debouncedCallback, cancel } = useDebouncedCallback(
+ * const { debouncedCallback, cancel, flush } = useDebouncedCallback(
  *   (value) => console.log('Debounced value:', value),
  *   500
  * );
@@ -58,6 +64,9 @@ interface UseDebouncedCallbackReturn<A extends unknown[]> {
  *
  * // Cancel any pending invocation:
  * cancel();
+ *
+ * // Or invoke it immediately:
+ * flush();
  */
 export function useDebouncedCallback<A extends unknown[]>(
   callback: (...args: A) => void,
@@ -74,21 +83,26 @@ export function useDebouncedCallback<A extends unknown[]>(
     callbackRef.current = callback
   }, [callback])
 
-  const { clear, restart } = useTimeout(
-    () => {
-      if (argsRef.current) {
-        callbackRef.current(...argsRef.current)
-        argsRef.current = undefined
-      }
-    },
-    delay,
-    { autoStart: false }
-  )
+  const invokePending = useCallback((): void => {
+    if (argsRef.current) {
+      callbackRef.current(...argsRef.current)
+      argsRef.current = undefined
+    }
+  }, [])
+
+  const { clear, restart } = useTimeout(invokePending, delay, {
+    autoStart: false,
+  })
 
   const cancel = useCallback((): void => {
     clear()
     argsRef.current = undefined
   }, [clear])
+
+  const flush = useCallback((): void => {
+    clear()
+    invokePending()
+  }, [clear, invokePending])
 
   const debouncedCallback = useCallback(
     (...args: A) => {
@@ -101,5 +115,6 @@ export function useDebouncedCallback<A extends unknown[]>(
   return {
     debouncedCallback,
     cancel,
+    flush,
   }
 }
