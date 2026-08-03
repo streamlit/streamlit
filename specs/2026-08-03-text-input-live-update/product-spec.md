@@ -69,9 +69,9 @@ We considered several parameter names for this feature:
 #### Option 1: `debounce` (bool or integer in milliseconds) - PREFERRED
 
 ```python
-st.text_input("Search", debounce=True)   # Rerun with sensible default (300ms)
-st.text_input("Search", debounce=300)    # Rerun after 300ms of inactivity
-st.text_input("Name")                    # Default: rerun on blur/enter only
+st.text_input("Search", debounce=True)  # Rerun with sensible default (300ms)
+st.text_input("Search", debounce=300)  # Rerun after 300ms of inactivity
+st.text_input("Name")  # Default: rerun on blur/enter only
 ```
 
 **Pros:**
@@ -114,7 +114,7 @@ These would use a sensible default debounce (e.g., 200-300ms) without exposing c
 
 ```python
 st.text_input("Search", on_input=handle_typing)  # Called per keystroke
-st.text_input("Search", on_change=handle_submit) # Called on blur/enter
+st.text_input("Search", on_change=handle_submit)  # Called on blur/enter
 ```
 
 **Pros:**
@@ -155,6 +155,14 @@ def text_input(
 | `< 0` | Raises `StreamlitAPIException` - negative values are invalid |
 
 ### Implementation Notes
+
+**Backend:**
+- Because Python's `bool` is a subclass of `int` (`False == 0` and `True == 1`), the backend must
+  resolve `debounce` using identity checks (`debounce is True`, `debounce is False`) *before* any
+  integer comparison. Resolve `True` to the 300ms default and `False` to blur/Enter-only first, then
+  treat the remaining values as integers (`0` → every keystroke, `> 0` → N ms, `< 0` →
+  `StreamlitAPIException`). A naive numeric or truthiness check would incorrectly treat `True` as
+  `1ms` and `False` as `0` (every keystroke) — the two most common values.
 
 **Frontend:**
 - When `debounce` is set, use a timer that resets on each keystroke
@@ -214,8 +222,9 @@ if email:
 
 2. **Interaction with `on_change="ignore"`**: If the proposed `on_change="ignore"` mode (from
    `specs/2026-04-14-on-change-modes/`) is combined with `debounce`, `on_change="ignore"` takes
-   precedence and prevents any reruns. The widget value is still updated in frontend state and
-   will be available on the next rerun triggered by another widget.
+   precedence and prevents any reruns — including the debounce timer firing *and* the blur-triggered
+   rerun described in edge case 7. The widget value is still updated in frontend state and will be
+   available on the next rerun triggered by another widget.
 
 3. **Interaction with `st.form`**: Inside forms, `debounce` is ignored since form widgets don't
    trigger reruns until submission. A warning could be logged.
@@ -233,6 +242,8 @@ if email:
 7. **Blur while debounce is pending**: If the user stops typing and blurs the field before the
    debounce timer fires, the debounce should fire immediately on blur. This ensures a rerun always
    occurs when the user leaves the field, providing consistent behavior with the non-debounced case.
+   The one exception is `on_change="ignore"` (see edge case 2), which suppresses this blur-triggered
+   rerun as well — the value is only synced to frontend state.
 
 ## Out of Scope (Future Work)
 
