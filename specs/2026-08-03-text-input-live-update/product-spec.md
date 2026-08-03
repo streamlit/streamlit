@@ -249,9 +249,10 @@ if email:
    rerun-on-interaction behavior of every widget it contains.
 
 4. **Interaction with `max_chars`**: Both features work independently. `max_chars` is enforced
-   by the browser via the HTML `maxlength` attribute, so users cannot type beyond the limit.
-   The debounce fires normally within the character limit - no special client-side validation
-   is needed to gate the debounce.
+   on the frontend — the native `maxlength` attribute prevents typing past the limit, and the
+   input's change handler also drops any value longer than `max_chars` before the widget is
+   marked dirty. The debounce runs off that same change handler, so it only ever fires with
+   within-limit values and needs no extra client-side validation to gate it.
 
 5. **Password inputs**: `debounce` works with `type="password"` - no special handling needed.
 
