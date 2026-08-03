@@ -342,6 +342,73 @@ describe("BackendOperationClient", () => {
     expect(payload.fallbackReason).toBeFalsy()
   })
 
+  it("sends widget validation requests with the validator id and value", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestWidgetValidation({
+      validatorId: "validator-1",
+      value: "candidate",
+    })
+
+    expect(sendRequest).toHaveBeenCalledTimes(1)
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+    expect(request.widgetValidation?.validatorId).toBe("validator-1")
+    expect(request.widgetValidation?.value).toBe("candidate")
+    expect(client.pendingCount).toBe(1)
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        widgetValidation: { isValid: false, errorMessage: "Username taken." },
+      })
+    )
+
+    await expect(promise).resolves.toEqual({
+      isValid: false,
+      errorMessage: "Username taken.",
+    })
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("resolves widget validation with isValid=true and no message", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestWidgetValidation({
+      validatorId: "validator-1",
+      value: "ok",
+    })
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        widgetValidation: { isValid: true },
+      })
+    )
+
+    const resolved = await promise
+    expect(resolved.isValid).toBe(true)
+    expect(resolved.errorMessage).toBeFalsy()
+  })
+
+  it("times out widget validation after 15 seconds", async () => {
+    vi.useFakeTimers()
+    const client = createClient()
+
+    const promise = client.requestWidgetValidation({
+      validatorId: "validator-1",
+      value: "x",
+    })
+    vi.advanceTimersByTime(14_999)
+    expect(client.pendingCount).toBe(1)
+
+    vi.advanceTimersByTime(1)
+    await expect(promise).rejects.toThrow("Request timed out")
+    expect(client.pendingCount).toBe(0)
+  })
+
   it("sends dismiss skills nudge requests and resolves on the ack", async () => {
     const sendRequest = vi.fn()
     const client = createClient(sendRequest)

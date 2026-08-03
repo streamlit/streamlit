@@ -20,6 +20,7 @@ import {
   MouseEvent,
   ReactElement,
   useCallback,
+  useContext,
   useEffect,
   useId,
   useMemo,
@@ -33,6 +34,7 @@ import { TextField } from "react-aria-components"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
+import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
 import {
   DynamicIcon,
   isMaterialIcon,
@@ -61,6 +63,7 @@ import {
   StyledInputElement,
   StyledInputInstructionsContainer,
   StyledInputRoot,
+  StyledLoadingEnhancer,
   StyledPasswordToggle,
   StyledStartEnhancer,
   StyledTextInput,
@@ -113,10 +116,32 @@ function TextInput({
   // the widget ID), and a stored string would otherwise go stale.
   const [hasUserError, setHasUserError] = useState(false)
 
+  // True while a server-side validation request is in flight. Shows a spinner
+  // and blocks committing/submitting until the response arrives.
+  const [isValidating, setIsValidating] = useState(false)
+
+  // The error message returned by the most recent failed server-side
+  // validation. Cleared when the user edits or validation passes. Unlike the
+  // client-side regex message, this is dynamic (returned by the callable), so
+  // it must be stored rather than derived from the proto.
+  const [serverErrorMessage, setServerErrorMessage] = useState<string | null>(
+    null
+  )
+
+  // Monotonic token used to ignore stale server-validation responses. It is
+  // bumped whenever the user edits (or a new validation starts), so a response
+  // that arrives after the value changed is discarded.
+  const latestValidationRef = useRef(0)
+
+  const { backendOperationClient } = useContext(BackendOperationContext)
+
   const onFormCleared = useCallback(() => {
     setUiValue(element.default ?? null)
     setDirty(true)
     setHasUserError(false)
+    setServerErrorMessage(null)
+    setIsValidating(false)
+    latestValidationRef.current += 1
   }, [element.default])
 
   const queryParamBinding = element.queryParamKey
@@ -171,17 +196,27 @@ function TextInput({
     typeof compiledValidationResult === "string"
       ? compiledValidationResult
       : null
-  const hasValidationConfig = Boolean(element.validateRegex)
+  // Client-side (regex) and server-side (callable) validation are mutually
+  // exclusive: the backend sets at most one of `validateRegex` /
+  // `validateCallableId`.
+  const hasClientValidation = Boolean(element.validateRegex)
+  const hasServerValidation = Boolean(element.validateCallableId)
+  const hasValidationConfig = hasClientValidation || hasServerValidation
   // The user error is only ever set while validation is configured, but derive
   // the displayed error defensively so it's never shown without an active
-  // config. The user-error message is derived from the current
-  // `element.validateMessage` so it stays in sync when only the message changes.
-  const userError = hasUserError
-    ? element.validateMessage ||
-      (validateRegex
-        ? getInvalidTextInputMessage(validateRegex)
-        : INVALID_TEXT_INPUT_MESSAGE)
-    : null
+  // config. For server-side validation the message comes from the callable's
+  // response (`serverErrorMessage`); for client-side regex it is derived from
+  // the current `element.validateMessage` so it stays in sync when only the
+  // message changes. Both fall back to a generic message.
+  const clientValidationError =
+    element.validateMessage ||
+    (validateRegex
+      ? getInvalidTextInputMessage(validateRegex)
+      : INVALID_TEXT_INPUT_MESSAGE)
+  const activeValidationError = hasServerValidation
+    ? serverErrorMessage || INVALID_TEXT_INPUT_MESSAGE
+    : clientValidationError
+  const userError = hasUserError ? activeValidationError : null
   const displayedError = hasValidationConfig
     ? (configError ?? userError)
     : null
@@ -192,8 +227,41 @@ function TextInput({
   }, [uiValue, setValueWithSource])
 
   const clearUserValidationError = useCallback((): void => {
+    // Invalidate any in-flight server validation so a late response can't
+    // resurrect an error (or commit) for a value the user has since changed.
+    latestValidationRef.current += 1
     setHasUserError(false)
+    setServerErrorMessage(null)
+    setIsValidating(false)
   }, [])
+
+  // Runs the server-side validation callable for `valueToValidate` via the
+  // backend operation client, without triggering a script rerun. Any failure
+  // (misconfiguration, timeout, connection error) "fails closed" as invalid
+  // with a generic message so an unvalidated value is never committed.
+  const runServerValidation = useCallback(
+    async (
+      valueToValidate: string
+    ): Promise<{ valid: boolean; message: string | null }> => {
+      if (!backendOperationClient || !element.validateCallableId) {
+        return { valid: false, message: null }
+      }
+
+      try {
+        const response = await backendOperationClient.requestWidgetValidation({
+          validatorId: element.validateCallableId,
+          value: valueToValidate,
+        })
+        if (response.isValid) {
+          return { valid: true, message: null }
+        }
+        return { valid: false, message: response.errorMessage || null }
+      } catch {
+        return { valid: false, message: null }
+      }
+    },
+    [backendOperationClient, element.validateCallableId]
+  )
 
   const isUserValueInvalid = useCallback(
     (nextValue: string | null): boolean => {
@@ -226,18 +294,72 @@ function TextInput({
     return !invalid
   }, [configError, isUserValueInvalid, uiValue])
 
-  const tryCommitOutsideForm = useCallback((): boolean => {
+  // Server-side commit path (outside a form): validate the value on the backend
+  // and only commit (triggering the normal rerun + on_change) if it passes.
+  const tryCommitOutsideFormWithServer =
+    useCallback(async (): Promise<void> => {
+      // Guard against re-entry while a validation request is already in flight so
+      // a second blur/Enter doesn't fire duplicate requests.
+      if (!dirty || isValidating) {
+        return
+      }
+
+      // Empty/None values bypass validation and commit immediately.
+      if (uiValue === null || uiValue === "") {
+        setHasUserError(false)
+        setServerErrorMessage(null)
+        commitWidgetValue()
+        return
+      }
+
+      const token = ++latestValidationRef.current
+      // Clear any prior error while re-validating so the spinner and the error
+      // icon are never shown at the same time (a re-blur without editing keeps
+      // `dirty` true and would otherwise leave the old error visible).
+      setHasUserError(false)
+      setServerErrorMessage(null)
+      setIsValidating(true)
+      const { valid, message } = await runServerValidation(uiValue)
+
+      // Ignore the response if the user has edited (or a newer validation
+      // started) since this request was sent.
+      if (token !== latestValidationRef.current) {
+        return
+      }
+      setIsValidating(false)
+
+      if (valid) {
+        setHasUserError(false)
+        setServerErrorMessage(null)
+        commitWidgetValue()
+      } else {
+        setHasUserError(true)
+        setServerErrorMessage(message)
+      }
+    }, [commitWidgetValue, dirty, isValidating, runServerValidation, uiValue])
+
+  const tryCommitOutsideForm = useCallback((): void => {
+    if (hasServerValidation) {
+      void tryCommitOutsideFormWithServer()
+      return
+    }
+
     if (!dirty) {
-      return true
+      return
     }
 
     if (!validateBeforeCommit()) {
-      return false
+      return
     }
 
     commitWidgetValue()
-    return true
-  }, [commitWidgetValue, dirty, validateBeforeCommit])
+  }, [
+    commitWidgetValue,
+    dirty,
+    hasServerValidation,
+    tryCommitOutsideFormWithServer,
+    validateBeforeCommit,
+  ])
 
   const formSubmitValidatorRef = useRef<() => boolean>(() => true)
   formSubmitValidatorRef.current = () => {
@@ -251,6 +373,49 @@ function TextInput({
     }
 
     return true
+  }
+
+  // Async form-submit gate for server-side validation. On submit, the form
+  // awaits this before committing; the value is already staged into the form's
+  // pending state on every keystroke (via `useOnInputChange`), so — unlike the
+  // synchronous client-side gate above — this only validates and does not
+  // re-stage the value.
+  const serverFormSubmitValidatorRef = useRef<() => Promise<boolean>>(() =>
+    Promise.resolve(true)
+  )
+  serverFormSubmitValidatorRef.current = async () => {
+    // Empty/None values bypass validation.
+    if (uiValue === null || uiValue === "") {
+      setHasUserError(false)
+      setServerErrorMessage(null)
+      return true
+    }
+
+    const token = ++latestValidationRef.current
+    // Clear any prior error while re-validating so the spinner and error icon
+    // are never shown simultaneously.
+    setHasUserError(false)
+    setServerErrorMessage(null)
+    setIsValidating(true)
+    const { valid, message } = await runServerValidation(uiValue)
+
+    // If the user edited during validation, treat this submit as failed for
+    // this field so a value that was never validated isn't submitted.
+    if (token !== latestValidationRef.current) {
+      return false
+    }
+    setIsValidating(false)
+
+    if (valid) {
+      setHasUserError(false)
+      setServerErrorMessage(null)
+      setDirty(false)
+      return true
+    }
+
+    setHasUserError(true)
+    setServerErrorMessage(message)
+    return false
   }
 
   // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
@@ -360,8 +525,9 @@ function TextInput({
     }
   }, [configError])
 
+  // Register the synchronous client-side (regex) form-submit gate.
   useEffect(() => {
-    if (!inForm || !hasValidationConfig) {
+    if (!inForm || !hasClientValidation) {
       return undefined
     }
 
@@ -371,7 +537,22 @@ function TextInput({
     return () => {
       widgetMgr.removeFormSubmitValidator(formId, element.id)
     }
-  }, [element.id, formId, hasValidationConfig, inForm, widgetMgr])
+  }, [element.id, formId, hasClientValidation, inForm, widgetMgr])
+
+  // Register the asynchronous server-side (callable) form-submit gate.
+  useEffect(() => {
+    if (!inForm || !hasServerValidation) {
+      return undefined
+    }
+
+    const validator = (): Promise<boolean> =>
+      serverFormSubmitValidatorRef.current()
+    widgetMgr.addFormSubmitAsyncValidator(formId, element.id, validator)
+
+    return () => {
+      widgetMgr.removeFormSubmitAsyncValidator(formId, element.id)
+    }
+  }, [element.id, formId, hasServerValidation, inForm, widgetMgr])
 
   return (
     <StyledTextInput
@@ -423,6 +604,20 @@ function TextInput({
             onKeyDown={handleKeyDown}
           />
           <StyledEndEnhancers>
+            {isValidating && (
+              <StyledLoadingEnhancer data-testid="stTextInputLoadingIcon">
+                {/* The spinner icon is aria-hidden, so announce the in-progress
+                    validation to assistive tech via a polite status region. */}
+                <StyledVisuallyHidden role="status">
+                  Validating
+                </StyledVisuallyHidden>
+                <DynamicIcon
+                  iconValue="spinner"
+                  size="base"
+                  testid="stTextInputSpinner"
+                />
+              </StyledLoadingEnhancer>
+            )}
             {displayedError && (
               <StyledErrorEnhancer data-testid="stTextInputErrorIcon">
                 <Tooltip
@@ -466,7 +661,7 @@ function TextInput({
       )}
       {shouldShowInstructions && (
         <StyledInputInstructionsContainer
-          $hasErrorIcon={Boolean(displayedError)}
+          $hasErrorIcon={Boolean(displayedError) || isValidating}
           $hasPasswordToggle={isPassword}
         >
           <InputInstructions

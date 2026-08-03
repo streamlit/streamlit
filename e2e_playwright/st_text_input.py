@@ -142,6 +142,40 @@ st.write("validated form submitted:", validated_form_submitted)
 st.write("validated form value:", st.session_state.get("validated_form_input", ""))
 st.write("Validation rerun counter:", st.session_state.validation_rerun_counter)
 
+st.markdown("Server-side validation text inputs:")
+
+
+def _validate_username(value: str) -> bool | str:
+    if value == "taken":
+        return "Username already taken. Try another one."
+    if value == "boom":
+        raise ValueError("intentional validator failure for testing")
+    return True
+
+
+server_validated_value = st.text_input(
+    "text input 23 (server validate)",
+    key="server_validated_input",
+    validate=_validate_username,
+)
+st.write("server-side value:", server_validated_value)
+
+with st.form("server_validated_text_input_form"):
+    st.text_input(
+        "text input 24 (server validate in form)",
+        key="server_validated_form_input",
+        validate=_validate_username,
+    )
+    server_validated_form_submitted = st.form_submit_button(
+        "Submit server validated form"
+    )
+
+st.write("server-side form submitted:", server_validated_form_submitted)
+st.write(
+    "server-side form value:",
+    st.session_state.get("server_validated_form_input", ""),
+)
+
 st.markdown("Dynamic text input:")
 
 if st.toggle("Update text input props"):

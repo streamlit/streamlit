@@ -556,12 +556,17 @@ class ScriptRunner:
                 # Same reasoning for lazy dataframe sources: on a fragment rerun
                 # we keep references so sources outside the fragment stay valid.
                 runtime.get_instance().dataframe_source_mgr.clear_session_refs()
+                # Same reasoning for server-side widget validators.
+                runtime.get_instance().widget_validator_mgr.clear_session_refs()
             else:
                 # Fragment reruns redraw only the queued fragments. Drop refs
                 # owned by those fragments before they run so removed lazy
                 # dataframes are pruned, while sources in untouched fragments
                 # and the app body remain available.
                 runtime.get_instance().dataframe_source_mgr.clear_session_refs(
+                    fragment_ids=rerun_data.fragment_id_queue
+                )
+                runtime.get_instance().widget_validator_mgr.clear_session_refs(
                     fragment_ids=rerun_data.fragment_id_queue
                 )
 
@@ -907,6 +912,9 @@ class ScriptRunner:
 
         # Prune lazy dataframe sources that were not re-registered this run.
         runtime.get_instance().dataframe_source_mgr.remove_orphaned_sources()
+
+        # Prune server-side widget validators that were not re-registered.
+        runtime.get_instance().widget_validator_mgr.remove_orphaned_validators()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and

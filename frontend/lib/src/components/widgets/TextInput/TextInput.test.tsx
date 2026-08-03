@@ -23,8 +23,9 @@ import {
   TextInput as TextInputProto,
 } from "@streamlit/protobuf"
 
+import { BackendOperationClient } from "~lib/BackendOperationClient"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import TextInput, { Props } from "./TextInput"
@@ -974,6 +975,356 @@ describe("TextInput widget", () => {
     expect(
       screen.queryByTestId("stTextInputErrorIcon")
     ).not.toBeInTheDocument()
+  })
+})
+
+describe("TextInput server-side validation", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [190],
+    })
+  })
+
+  const makeClient = (
+    requestWidgetValidation: ReturnType<typeof vi.fn>
+  ): BackendOperationClient =>
+    ({ requestWidgetValidation }) as unknown as BackendOperationClient
+
+  it("does not validate on initial render", () => {
+    const requestWidgetValidation = vi.fn()
+    const props = getProps({ validateCallableId: "validator-1" })
+    renderWithContexts(<TextInput {...props} />, {
+      backendOperationContext: {
+        backendOperationClient: makeClient(requestWidgetValidation),
+      },
+    })
+
+    expect(requestWidgetValidation).not.toHaveBeenCalled()
+    expect(
+      screen.queryByTestId("stTextInputErrorIcon")
+    ).not.toBeInTheDocument()
+  })
+
+  it("commits the value when server validation passes (outside a form)", async () => {
+    const user = userEvent.setup()
+    const requestWidgetValidation = vi
+      .fn()
+      .mockResolvedValue({ isValid: true })
+    const props = getProps({ validateCallableId: "validator-1" })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    renderWithContexts(<TextInput {...props} />, {
+      backendOperationContext: {
+        backendOperationClient: makeClient(requestWidgetValidation),
+      },
+    })
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "alice")
+    await user.click(document.body)
+
+    expect(requestWidgetValidation).toHaveBeenCalledWith({
+      validatorId: "validator-1",
+      value: "alice",
+    })
+    await waitFor(() => {
+      expect(setStringValueSpy).toHaveBeenLastCalledWith(
+        props.element,
+        "alice",
+        { fromUi: true },
+        undefined
+      )
+    })
+    expect(
+      screen.queryByTestId("stTextInputErrorIcon")
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows a custom error and blocks the commit when validation fails", async () => {
+    const user = userEvent.setup()
+    const requestWidgetValidation = vi.fn().mockResolvedValue({
+      isValid: false,
+      errorMessage: "Username taken.",
+    })
+    const props = getProps({ validateCallableId: "validator-1" })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    renderWithContexts(<TextInput {...props} />, {
+      backendOperationContext: {
+        backendOperationClient: makeClient(requestWidgetValidation),
+      },
+    })
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "admin")
+    await user.click(document.body)
+
+    expect(await screen.findByTestId("stTextInputErrorIcon")).toBeVisible()
+    expect(textInput).toHaveAttribute("aria-invalid", "true")
+    expect(screen.getByRole("alert")).toHaveTextContent("Username taken.")
+    // The user's value is never committed (fromUi) when validation fails; only
+    // the initial mount registration (fromUi: false) may have run.
+    expect(setStringValueSpy).not.toHaveBeenCalledWith(
+      props.element,
+      "admin",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("shows the generic message when the server returns no message", async () => {
+    const user = userEvent.setup()
+    const requestWidgetValidation = vi
+      .fn()
+      .mockResolvedValue({ isValid: false, errorMessage: "" })
+    const props = getProps({ validateCallableId: "validator-1" })
+    renderWithContexts(<TextInput {...props} />, {
+      backendOperationContext: {
+        backendOperationClient: makeClient(requestWidgetValidation),
+      },
+    })
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "admin")
+    await user.click(document.body)
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Invalid input."
+    )
+  })
+
+  it("fails closed (invalid, generic) when the request rejects", async () => {
+    const user = userEvent.setup()
+    const requestWidgetValidation = vi
+      .fn()
+      .mockRejectedValue(new Error("Request timed out"))
+    const props = getProps({ validateCallableId: "validator-1" })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    renderWithContexts(<TextInput {...props} />, {
+      backendOperationContext: {
+        backendOperationClient: makeClient(requestWidgetValidation),
+      },
+    })
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "admin")
+    await user.click(document.body)
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Invalid input."
+    )
+    expect(setStringValueSpy).not.toHaveBeenCalledWith(
+      props.element,
+      "admin",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("bypasses server validation for empty values", async () => {
+    const user = userEvent.setup()
+    const requestWidgetValidation = vi.fn()
+    const props = getProps({
+      default: "abc",
+      validateCallableId: "validator-1",
+    })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    renderWithContexts(<TextInput {...props} />, {
+      backendOperationContext: {
+        backendOperationClient: makeClient(requestWidgetValidation),
+      },
+    })
+
+    const textInput = screen.getByRole("textbox")
+    await user.clear(textInput)
+    await user.click(document.body)
+
+    expect(requestWidgetValidation).not.toHaveBeenCalled()
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(
+      props.element,
+      "",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("shows a spinner while validating and hides it afterwards", async () => {
+    const user = userEvent.setup()
+    let resolveValidation: (value: { isValid: boolean }) => void = () => {}
+    const requestWidgetValidation = vi.fn().mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveValidation = resolve
+        })
+    )
+    const props = getProps({ validateCallableId: "validator-1" })
+    renderWithContexts(<TextInput {...props} />, {
+      backendOperationContext: {
+        backendOperationClient: makeClient(requestWidgetValidation),
+      },
+    })
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "alice")
+    await user.click(document.body)
+
+    expect(await screen.findByTestId("stTextInputSpinner")).toBeVisible()
+
+    act(() => {
+      resolveValidation({ isValid: true })
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stTextInputSpinner")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("hides the error while re-validating so the spinner and error icon are not shown together", async () => {
+    const user = userEvent.setup()
+    let resolveSecond: (value: {
+      isValid: boolean
+      errorMessage?: string
+    }) => void = () => {}
+    const requestWidgetValidation = vi
+      .fn()
+      .mockResolvedValueOnce({ isValid: false, errorMessage: "Nope" })
+      .mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            resolveSecond = resolve
+          })
+      )
+    const props = getProps({ validateCallableId: "validator-1" })
+    renderWithContexts(<TextInput {...props} />, {
+      backendOperationContext: {
+        backendOperationClient: makeClient(requestWidgetValidation),
+      },
+    })
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "admin")
+    await user.click(document.body)
+
+    // First validation fails and shows the error.
+    expect(await screen.findByTestId("stTextInputErrorIcon")).toBeVisible()
+
+    // Re-committing the same (still-dirty) value re-triggers validation.
+    await user.click(textInput)
+    await user.click(document.body)
+
+    // While re-validating, the spinner shows and the stale error is cleared.
+    expect(await screen.findByTestId("stTextInputSpinner")).toBeVisible()
+    expect(
+      screen.queryByTestId("stTextInputErrorIcon")
+    ).not.toBeInTheDocument()
+
+    act(() => {
+      resolveSecond({ isValid: false, errorMessage: "Nope" })
+    })
+    // The error returns once validation resolves.
+    expect(await screen.findByTestId("stTextInputErrorIcon")).toBeVisible()
+  })
+
+  it("ignores a stale response when the user edits during validation", async () => {
+    const user = userEvent.setup()
+    let resolveValidation: (value: {
+      isValid: boolean
+      errorMessage?: string
+    }) => void = () => {}
+    const requestWidgetValidation = vi.fn().mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveValidation = resolve
+        })
+    )
+    const props = getProps({ validateCallableId: "validator-1" })
+    renderWithContexts(<TextInput {...props} />, {
+      backendOperationContext: {
+        backendOperationClient: makeClient(requestWidgetValidation),
+      },
+    })
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "admin")
+    await user.click(document.body)
+
+    // User edits while validation is in flight, then the stale response arrives.
+    await user.type(textInput, "!")
+    act(() => {
+      resolveValidation({ isValid: false, errorMessage: "Stale error" })
+    })
+
+    // The stale error must not be shown for the value the user has moved past.
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stTextInputSpinner")
+      ).not.toBeInTheDocument()
+    })
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("blocks form submission until server validation passes", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const requestWidgetValidation = vi.fn().mockResolvedValue({
+      isValid: false,
+      errorMessage: "Username taken.",
+    })
+    const props = getProps(
+      { formId: "form", validateCallableId: "validator-1" },
+      { widgetMgr }
+    )
+    renderWithContexts(<TextInput {...props} />, {
+      backendOperationContext: {
+        backendOperationClient: makeClient(requestWidgetValidation),
+      },
+    })
+
+    await user.type(screen.getByRole("textbox"), "admin")
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Username taken."
+    )
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("submits the form once server validation passes", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const requestWidgetValidation = vi
+      .fn()
+      .mockResolvedValue({ isValid: true })
+    const props = getProps(
+      { formId: "form", validateCallableId: "validator-1" },
+      { widgetMgr }
+    )
+    renderWithContexts(<TextInput {...props} />, {
+      backendOperationContext: {
+        backendOperationClient: makeClient(requestWidgetValidation),
+      },
+    })
+
+    await user.type(screen.getByRole("textbox"), "alice")
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    await waitFor(() => {
+      expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    })
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 })
 

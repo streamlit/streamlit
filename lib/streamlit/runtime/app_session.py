@@ -54,6 +54,7 @@ from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunner
 from streamlit.runtime.secrets import secrets_singleton
 from streamlit.runtime.state.query_params import sanitize_query_string
 from streamlit.runtime.theme_util import parse_fonts_with_source
+from streamlit.runtime.widget_validation_handler import WidgetValidationHandler
 from streamlit.string_util import to_snake_case
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
@@ -234,6 +235,13 @@ class AppSession:
             DataframeChunkHandler(lambda: runtime.get_instance().dataframe_source_mgr),
         )
 
+        dispatcher.register(
+            "widget_validation",
+            WidgetValidationHandler(
+                lambda: runtime.get_instance().widget_validator_mgr
+            ),
+        )
+
         # Bind the app dir via the ScriptData (not ``self``) so the handler's
         # closure does not capture the AppSession, which would create a
         # reference cycle the disconnect ref-leak test guards against.
@@ -327,6 +335,7 @@ class AppSession:
                 rt.media_file_mgr.clear_session_refs(self.id)
                 rt.media_file_mgr.remove_orphaned_files()
                 rt.dataframe_source_mgr.clear_all_for_session(self.id)
+                rt.widget_validator_mgr.clear_all_for_session(self.id)
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -789,6 +798,9 @@ class AppSession:
                 # running AND the session is actually shutting down.
                 runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
                 runtime.get_instance().dataframe_source_mgr.clear_all_for_session(
+                    self.id
+                )
+                runtime.get_instance().widget_validator_mgr.clear_all_for_session(
                     self.id
                 )
                 self.clear_session_caches()

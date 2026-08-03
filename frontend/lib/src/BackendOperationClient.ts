@@ -23,6 +23,8 @@ import {
   IBackendOperationResponse,
   IDataframeChunkRequestPayload,
   IDataframeChunkResponsePayload,
+  IWidgetValidationRequestPayload,
+  IWidgetValidationResponsePayload,
 } from "@streamlit/protobuf"
 
 const LOG = getLogger("BackendOperationClient")
@@ -35,6 +37,17 @@ const DEFERRED_FILE_REQUEST_TIMEOUT_MS = 180_000
 
 /** Timeout for lazy dataframe chunk requests (2 minutes). */
 const DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS = 120_000
+
+/**
+ * Timeout for server-side widget validation requests (15 seconds).
+ *
+ * The backend enforces its own 10s validation timeout and returns a timeout
+ * error message as a normal response. This client-side budget is deliberately
+ * a little longer so that the server's specific timeout message wins the race
+ * over the client's generic "Request timed out" rejection; the client timeout
+ * is only a backstop for an unresponsive connection.
+ */
+const WIDGET_VALIDATION_REQUEST_TIMEOUT_MS = 15_000
 
 /**
  * Timeout for skills-install requests (3 minutes).
@@ -148,6 +161,7 @@ export class BackendOperationClient {
       | "dataframeChunk"
       | "installSkills"
       | "dismissSkillsNudge"
+      | "widgetValidation"
     >,
     payload: IBackendOperationRequest[typeof payloadField],
     timeoutMs?: number
@@ -227,6 +241,26 @@ export class BackendOperationClient {
       "dataframeChunk",
       payload,
       timeoutMs ?? DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS
+    )
+  }
+
+  /**
+   * Request server-side validation of a widget value.
+   *
+   * @param payload - The validation request (validator id and candidate value)
+   * @param timeoutMs - Optional timeout override
+   * @returns A promise that resolves with the validation response payload
+   * (`isValid` plus an optional `errorMessage`), or rejects on
+   * timeout/connection failure.
+   */
+  public requestWidgetValidation(
+    payload: IWidgetValidationRequestPayload,
+    timeoutMs?: number
+  ): Promise<IWidgetValidationResponsePayload> {
+    return this.request<IWidgetValidationResponsePayload>(
+      "widgetValidation",
+      payload,
+      timeoutMs ?? WIDGET_VALIDATION_REQUEST_TIMEOUT_MS
     )
   }
 
@@ -333,6 +367,7 @@ export class BackendOperationClient {
     if (response.dataframeChunk) return response.dataframeChunk
     if (response.installSkills) return response.installSkills
     if (response.dismissSkillsNudge) return response.dismissSkillsNudge
+    if (response.widgetValidation) return response.widgetValidation
 
     LOG.warn("Response contained no recognized payload", response)
     throw new Error("Response contained no recognized payload")

@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, Literal, cast, overload
 
+from streamlit import runtime
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -52,6 +53,8 @@ from streamlit.runtime.state import (
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.type_util import SupportsStr
 
@@ -87,24 +90,32 @@ class TextAreaSerde:
 
 
 def _parse_text_input_validate(
-    validate: str | tuple[str, str] | None,
-) -> tuple[str | None, str | None]:
+    validate: str | tuple[str, str] | Callable[[str], bool | str] | None,
+) -> tuple[str | None, str | None, Callable[[str], bool | str] | None]:
+    """Split ``validate`` into its client-side and server-side components.
+
+    Returns a ``(validate_regex, validate_message, validate_callable)`` tuple
+    where at most one of the regex or callable is set.
+    """
     if validate is None:
-        return None, None
+        return None, None, None
 
     if isinstance(validate, str):
-        return validate, None
+        return validate, None, None
 
-    if (
-        isinstance(validate, tuple)
-        and len(validate) == 2
-        and all(isinstance(item, str) for item in validate)
-    ):
-        return validate
+    if isinstance(validate, tuple):
+        if len(validate) == 2 and all(isinstance(item, str) for item in validate):
+            regex, message = validate
+            # ty doesn't narrow the tuple element types through the isinstance
+            # check above (mypy does), so it sees them as `object`.
+            return regex, message, None  # ty: ignore[invalid-return-type]
+    elif callable(validate):
+        return None, None, validate
 
     raise StreamlitAPIException(
-        "The `validate` parameter must be `None`, a regex string, or a "
-        "`(regex, message)` tuple of strings."
+        "The `validate` parameter must be `None`, a regex string, a "
+        "`(regex, message)` tuple of strings, or a callable that takes the "
+        "input value and returns `True`, `False`, or an error message string."
     )
 
 
@@ -127,7 +138,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
-        validate: str | tuple[str, str] | None = None,
+        validate: str | tuple[str, str] | Callable[[str], bool | str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -152,7 +163,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
-        validate: str | tuple[str, str] | None = None,
+        validate: str | tuple[str, str] | Callable[[str], bool | str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -177,7 +188,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
-        validate: str | tuple[str, str] | None = None,
+        validate: str | tuple[str, str] | Callable[[str], bool | str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -297,38 +308,53 @@ class TextWidgetsMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
-        validate : str, tuple[str, str], or None
-            An optional client-side validation rule for the input. If this is
-            ``None`` (default), no validation is performed. If this is a
-            string, it is treated as a JavaScript-flavored regular expression
-            that the input must match before it can be submitted, and a generic
-            error message is shown when validation fails. If this is a
-            ``(regex, message)`` tuple, the regex is used for client-side
-            validation and the custom ``message`` is shown when validation
-            fails. Providing a custom message is recommended, since generic
-            validation messages are less helpful to users.
+        validate : str, tuple[str, str], callable, or None
+            An optional validation rule for the input. If this is ``None``
+            (default), no validation is performed. The input is validated when
+            the user tries to submit a value: on blur or Enter outside a form,
+            and on form submission inside a form. Invalid values are not
+            submitted, and empty inputs bypass validation. ``validate`` accepts
+            the following:
 
-            For example, pass ``r"^[^@\s]+@[^@\s]+\.[^@\s]+$"`` to require an
-            email-like value, or
-            ``(r"^\d{3}-\d{3}-\d{4}$", "Use the format 555-123-4567.")`` to
-            require a phone number and show a custom error message. Patterns are
-            not implicitly anchored; use ``^`` / ``$`` when the whole value must
-            match (same semantics as ``st.column_config.TextColumn``).
+            - A **regex string** for client-side validation. It is treated as a
+              JavaScript-flavored regular expression that the input must match
+              before it can be submitted, and a generic error message is shown
+              when validation fails. For example, pass
+              ``r"^[^@\s]+@[^@\s]+\.[^@\s]+$"`` to require an email-like value.
+              Patterns are not implicitly anchored; use ``^`` / ``$`` when the
+              whole value must match (same semantics as
+              ``st.column_config.TextColumn``).
 
-            Validation runs when the user tries to submit a value: on blur or
-            Enter outside a form, and on form submission inside a form. Invalid
-            values are not submitted, and empty inputs bypass validation.
+            - A **(regex, message) tuple** for client-side validation with a
+              custom error message. For example,
+              ``(r"^\d{3}-\d{3}-\d{4}$", "Use the format 555-123-4567.")``.
+              Providing a custom message is recommended, since generic
+              validation messages are less helpful to users.
+
+            - A **callable** for server-side validation. The callable receives
+              the current value (a string) and must return one of: ``True`` if
+              the value is valid, ``False`` to reject it with a generic error
+              message, or a string to reject it with that string as the error
+              message. When validation runs, the value is sent to the server and
+              the callable is executed there; a loading indicator is shown while
+              waiting, and the value is only submitted if the callable returns
+              ``True``. Use a callable when validation requires backend
+              resources (e.g., checking whether a username is available) or must
+              be secure. If the callable raises an exception, returns an
+              unexpected type, or takes longer than 10 seconds, the value is
+              rejected with a generic error message and the error is logged to
+              the server console.
+
+            .. note::
+               Client-side regex validation runs in the user's browser and can
+               be bypassed. If the validation is security-relevant, use a
+               callable (server-side validation) or also validate the value in
+               your app code after it is submitted.
 
             Inside a form with ``bind="query-params"``, keystrokes still stage
             the value into widget state (and therefore the URL) before
             submit-time validation runs. Form submission itself still blocks
             invalid values from reaching the server.
-
-            .. note::
-               This validation runs in the user's browser and can be bypassed.
-               If the validation is security-relevant, you must also validate
-               the value on the server (in your app code) after it is
-               submitted.
 
         width : "stretch" or int
             The width of the text input widget. This can be one of the
@@ -435,7 +461,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
-        validate: str | tuple[str, str] | None = None,
+        validate: str | tuple[str, str] | Callable[[str], bool | str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -453,7 +479,9 @@ class TextWidgetsMixin:
 
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
-        validate_regex, validate_message = _parse_text_input_validate(validate)
+        validate_regex, validate_message, validate_callable = (
+            _parse_text_input_validate(validate)
+        )
 
         # Only contribute the validation regex to the element identity when
         # validation is actually configured. This keeps element IDs (and thus
@@ -464,7 +492,10 @@ class TextWidgetsMixin:
         # the frontend, which treats an empty regex as "no validation". When a
         # regex is set, it still affects identity so that changing the regex
         # resets the widget (its value may no longer be valid). The message is
-        # intentionally excluded since it is cosmetic.
+        # intentionally excluded since it is cosmetic. A server-side callable is
+        # never part of the identity: it can't be evaluated at render time (so a
+        # stored value can't be proven invalid up front), and callables are
+        # often fresh objects each run, which would thrash the widget identity.
         validate_identity_kwarg = {"validate": validate_regex} if validate_regex else {}
 
         element_id = compute_and_register_element_id(
@@ -520,6 +551,23 @@ class TextWidgetsMixin:
 
         if validate_message is not None:
             text_input_proto.validate_message = validate_message
+
+        # Register the server-side validation callable so the frontend can
+        # request validation without a script rerun. When running in "raw mode"
+        # (``python myscript.py``) there is no runtime to serve the request, so
+        # we skip registration and no server-side validation is performed.
+        #
+        # A fresh, unguessable id is minted on every run (like the download
+        # button's deferred_file_id), so the proto's validate_callable_id changes
+        # each rerun and this element's ForwardMsg is not cache-deduped. That's
+        # an accepted trade-off for keeping the id out of the widget identity (a
+        # new lambda each run must not reset the widget's value).
+        if validate_callable is not None and runtime.exists():
+            text_input_proto.validate_callable_id = (
+                runtime.get_instance().widget_validator_mgr.register_validator(
+                    validate_callable, self.dg._get_delta_path_str()
+                )
+            )
 
         if type == "default":
             text_input_proto.type = TextInputProto.DEFAULT
