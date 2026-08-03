@@ -111,12 +111,11 @@ class AttributeDictionary(dict[Any, Any]):  # noqa: FURB189
 
 
 _READ_ONLY_ERROR_MSG = (
-    "Widget state is read-only. To programmatically update widget state, "
-    "assign a new dictionary to the session state key instead of modifying "
-    "nested values. For example, use:\n"
-    "    st.session_state['my_key'] = {'selection': {'rows': [0]}}\n"
-    "Instead of:\n"
-    "    st.session_state.my_key.selection = {'rows': [0]}"
+    "Widget state is read-only and cannot be modified in place; modifying "
+    "nested values has no effect on the app. For widget states that support "
+    "programmatic updates (e.g. st.dataframe selections), assign a new "
+    "dictionary to the Session State key instead, for example:\n"
+    "    st.session_state['my_key'] = {'selection': {'rows': [0]}}"
 )
 
 

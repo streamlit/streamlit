@@ -31,7 +31,7 @@ if TYPE_CHECKING:
         UploadedFile,
         VegaLiteState,
     )
-    from streamlit.util import AttributeDictionary
+    from streamlit.util import ReadOnlyAttributeDictionary
 
     # =====================================================================
     # UploadedFile: documented file metadata on a BytesIO subclass
@@ -91,11 +91,11 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Selection names/values come from the user's Vega-Lite spec, so the outer
-    # state exposes the payload as a dynamic AttributeDictionary rather than a
-    # fixed schema, while still supporting attribute and item access.
+    # state exposes the payload as a dynamic (read-only) dictionary rather than
+    # a fixed schema, while still supporting attribute and item access.
     vega_lite_state = cast("VegaLiteState", object())
-    assert_type(vega_lite_state.selection, AttributeDictionary)
-    assert_type(vega_lite_state["selection"], AttributeDictionary)
+    assert_type(vega_lite_state.selection, ReadOnlyAttributeDictionary)
+    assert_type(vega_lite_state["selection"], ReadOnlyAttributeDictionary)
 
     # =====================================================================
     # ButtonColumnClickState: documented row/label click payload
