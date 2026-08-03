@@ -1,6 +1,6 @@
 ---
 author: lukasmasuch
-created: 2026-04-23
+created: 2026-08-03
 ---
 
 # Live update mode for `st.text_input`
