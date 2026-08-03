@@ -64,8 +64,6 @@ deferred naming and scope decisions explicitly.
 - Replace Python's `typing` module or third-party typing packages.
 - Move type implementations into the new module.
 - Make every internal annotation part of Streamlit's public compatibility contract.
-- Fix the existing static-typing limitation where event-state `TypedDict` types
-  describe item access but not the runtime objects' optional attribute notation.
 
 ## Proposal
 
@@ -84,9 +82,10 @@ different intent:
 | Mixed precedent | [`torch.types`](https://github.com/pytorch/pytorch/blob/main/torch/types.py), [`fastapi.types`](https://github.com/fastapi/fastapi/blob/master/fastapi/types.py) | Convenience or internal aliases, with varying public-API status |
 
 `streamlit.typing` is preferred because the namespace's purpose is explicitly to
-support annotations. Some exports are concrete runtime classes, but that is also true
-of `pandas.api.typing`, whose stated purpose is to expose public API classes useful for
-type hinting. The name also matches the direction already discussed by maintainers in
+support annotations. All initial exports are concrete runtime classes, but that is
+also true of `pandas.api.typing`, whose stated purpose is to expose public API classes
+useful for type hinting. The name also matches the direction already discussed by
+maintainers in
 [`#7801`](https://github.com/streamlit/streamlit/issues/7801#issuecomment-3494342153).
 
 Do not add `streamlit.types` as an alias. There is no existing public path to preserve,
@@ -105,9 +104,9 @@ assert st.typing is stt
 ```
 
 `streamlit.typing` is a regular runtime Python module, not a stub-only `.pyi` module.
-This ensures imports work when annotations are evaluated at runtime and lets concrete
-class exports such as `UploadedFile` preserve normal `isinstance` behavior.
-`TypedDict` exports remain annotation-only and must not be used with `isinstance`.
+This ensures imports work when annotations are evaluated at runtime and preserves
+normal `isinstance` behavior for all initial exports. The state classes are
+dictionary-like runtime values with statically typed attribute and item access.
 
 ### Inclusion rule
 
@@ -139,7 +138,7 @@ The initial `streamlit.typing.__all__` contains these 7 names:
 | `PlotlyState` | `st.plotly_chart` with selection events | It is the documented event envelope returned to app code. |
 | `VegaLiteState` | `st.altair_chart` and `st.vega_lite_chart` with selection events | It is the documented event envelope; its selection keys and values depend on the user-authored Vega-Lite spec. |
 | `PydeckState` | `st.pydeck_chart` with selection events | It is the documented event envelope returned to app code. |
-| `ButtonClickState` | `st.session_state[key]` for a keyed `st.column_config.ButtonColumn` | It is the documented row-and-label payload available to callbacks. |
+| `ButtonColumnClickState` | `st.session_state[key]` for a keyed `st.column_config.ButtonColumn` | It is the documented row-and-label payload available to callbacks. |
 
 The module re-exports the existing objects rather than creating duplicate classes or
 schemas. For example:
@@ -162,17 +161,19 @@ if upload is not None:
     assert isinstance(upload, UploadedFile)
 ```
 
-Concrete classes in this namespace are returned by Streamlit APIs. Their presence in
-`streamlit.typing` does not make their constructors part of the supported public API;
-users should continue to create them through the corresponding `st.*` command.
+Classes in this namespace are returned by Streamlit APIs or stored in Session State.
+Their presence in `streamlit.typing` does not make their constructors part of the
+supported public API; users should continue to obtain values through the corresponding
+`st.*` command or Session State entry.
 
 ### Keep the existing event-state names
 
 Do not rename the outer event states to `*SelectionState`.
 
 ```python
-class PlotlyState(TypedDict):
-    selection: PlotlySelectionState
+class PlotlyState(AttributeDictionary):
+    @property
+    def selection(self) -> PlotlySelectionState: ...
 ```
 
 The existing internal `DataframeSelectionState`, `PlotlySelectionState`, and
@@ -194,8 +195,9 @@ that Streamlit cannot provide.
 |---|---|---|
 | `UploadedFile`, `ChatInputValue` | Include | Concrete, Streamlit-owned values returned directly to users. |
 | `DataframeState`, `PlotlyState`, `VegaLiteState`, `PydeckState` | Include | Documented event return types that users may reasonably need to name. Keep their current names. |
-| `ButtonClickState` | Include | An additional user-facing value found by auditing public session-state contracts. |
-| `DataframeSelectionState`, `PlotlySelectionState`, `PydeckSelectionState` | Exclude | The outer event states already provide fully typed access to their nested selection payloads. Plotly and PyDeck selections are not independently returned or accepted by public APIs, and programmatic dataframe selection uses the outer `DataframeState` schema. |
+| `ButtonColumnClickState` | Include | An additional user-facing value found by auditing public session-state contracts. |
+| `DataframeSelectionState`, `PlotlySelectionState`, `PydeckSelectionState` | Exclude | The outer event states already provide fully typed access to their nested selection payloads. Plotly and PyDeck selections are not independently returned or accepted by public APIs, and programmatic dataframe selection uses separate input schemas. |
+| `DataframeStateInput`, `DataframeSelectionStateInput` | Defer | These input-only `TypedDict` schemas allow plain dictionaries for `selection_default` and programmatic Session State assignment. Keep them out of the initial output-first namespace and revisit if wrapper authors demonstrate a need to name them. |
 | `Page` | Exclude | `st.Page` is a public class and can be used directly as a type annotation. |
 | `Data` | Defer | A very broad, generically named union of third-party inputs. It changes as dataframe support expands and is not a Streamlit-owned value. A future public alias should have a semantic name such as `DataframeData` and dedicated demand. |
 | `Width`, `WidthWithoutContent`, `Height`, `HeightWithoutContent` | Defer | Useful mainly to wrapper authors, and the negative `WithoutContent` names expose implementation constraints. Revisit with semantic names if input aliases are added. |
@@ -236,8 +238,8 @@ import streamlit.typing as stt
 
 
 def selected_rows(event: stt.DataframeState) -> list[int]:
-    # Item notation is fully described by the TypedDict schema.
-    return event["selection"]["rows"]
+    # Attribute and item notation are both fully typed.
+    return event.selection.rows
 
 
 event = st.dataframe(
@@ -255,8 +257,8 @@ st.write(selected_rows(event))
   other Streamlit namespaces such as `st.column_config`.
 - Keep all underlying definitions in their current modules. Existing internal imports
   continue to work, and the new path becomes the supported public path.
-- Preserve object identity for concrete classes and `TypedDict` definitions. Do not
-  create wrapper subclasses solely for the public namespace.
+- Preserve object identity for every re-exported class. Do not create wrapper
+  subclasses solely for the public namespace.
 - Avoid importing optional visualization or dataframe packages beyond those loaded by
   a normal `import streamlit`. The selected existing types already use forward
   references or Streamlit-owned definitions where needed.
@@ -275,11 +277,12 @@ Add coverage for:
 - `import streamlit.typing`, `from streamlit import typing`, and `st.typing`.
 - Exact `__all__` contents so accidental internal exports are caught.
 - Identity between every public export and its underlying implementation object.
-- `isinstance` for concrete return values such as `UploadedFile` and
-  `ChatInputValue`.
+- `isinstance` for user-facing values such as `UploadedFile`, `ChatInputValue`, and
+  the event-state classes.
 - Mypy and ty/Pyright-style assertions that public imports match the return types of
   their corresponding `st.*` APIs.
-- Typed item access for every exported state `TypedDict`.
+- Typed attribute and item access for every exported state class, including their
+  nested selection payloads.
 - A wheel-level smoke test confirming `streamlit.typing` is packaged with the existing
   `py.typed` marker.
 
@@ -292,9 +295,8 @@ Add coverage for:
   `st.column_config.ButtonColumn`.
 - State that concrete classes are normally obtained from Streamlit commands rather
   than constructed directly.
-- State that event-state `TypedDict` types support statically checked item notation.
-  Runtime attribute notation remains supported but is not represented by `TypedDict`;
-  improving that typing is future work.
+- State that event-state classes support statically checked attribute and item
+  notation, including for nested selection payloads.
 - Do not describe the namespace as containing “all Streamlit types.” It is a curated
   public typing surface.
 
@@ -305,8 +307,8 @@ Add coverage for:
 - All 7 initial exports are available through both `streamlit.typing` and
   `st.typing` and are listed in `__all__`.
 - Public exports are the same runtime objects as their current definitions.
-- Type-checking examples for uploaded files, chat values, and all event-state
-  schemas pass with the repository's supported type checkers.
+- Type-checking examples for uploaded files, chat values, and both access styles on
+  all event-state classes pass with the repository's supported type checkers.
 - Loading `streamlit.typing` does not import additional third-party packages beyond a
   normal `import streamlit`.
 - Documentation describes nested selection payloads through their outer `*State`
@@ -319,8 +321,6 @@ Add coverage for:
   callback parameters.
 - A redesigned public `ColumnConfig` type.
 - Public presentation/container handle types or `DeltaGenerator`.
-- Protocol-based event-state types that statically support both item and attribute
-  notation.
 - Third-party stub packages or a mypy plugin.
 
 ## Alternatives Considered
