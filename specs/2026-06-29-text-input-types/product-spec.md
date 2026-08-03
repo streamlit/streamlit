@@ -107,8 +107,7 @@ contentious decision in the spec, and it's a genuine toss-up — whichever we pi
 - Pros: Matches the HTML standard exactly (principle 5, "Consistency Over Novelty"); mirrors
   `"email"`/`"url"`/`"search"`, which all match HTML 1:1 — using one "friendly" name among four
   standard ones is itself inconsistent. Notably, the API-design guide's own example for this exact
-  pattern reaches for `st.text_input("Phone", type="tel")` (principle 16), a small signal that
-  maintainers find `tel` natural here.
+  pattern reaches for `st.text_input("Phone", type="tel")` (principle 16).
 - Cons: A mild abbreviation; less obvious to non-web developers (principle 8 favors semantic names).
 
 **Option B — `"phone"`** ✅ PREFERRED
@@ -117,8 +116,7 @@ contentious decision in the spec, and it's a genuine toss-up — whichever we pi
   recommends.
 - Cons: Diverges from the underlying HTML attribute and from the other three values.
 
-**Decision: `"phone"`.** Maintainer review ([@sfc-gh-jrieke](https://github.com/sfc-gh-jrieke)) chose
-`"phone"` over `"tel"`: `tel` reads poorly and Streamlit deliberately avoids terse HTML-derived
+**Decision: `"phone"`.** `tel` reads poorly and Streamlit deliberately avoids terse HTML-derived
 names elsewhere, and few users know the raw HTML values. (`"telephone"` was floated as a compromise,
 but `"phone"` is the common term.) Either way we render `<input type="tel">`; only the public value
 name changes.
@@ -302,17 +300,15 @@ distinguishing (1) from (3), since neither is a "real" value. Three ways to enco
 - Simplest, but you can't remove a type's icon or auto-validation. Rejected — don't ship
   type-derived defaults users can't turn off.
 
-**Decision: Option B** (maintainer sign-off, [@sfc-gh-jrieke](https://github.com/sfc-gh-jrieke) —
-"agree with Option B… there should be a way to turn the defaults off", ruling out Option C). It
+**Decision: Option B** (ruling out Option C — there must be a way to turn the defaults off). It
 extends the rule `text_input` *already* uses for `autocomplete` (`None` = derive, `""` = off) to the
 other type-derived params instead of inventing a new mechanism, and it avoids the surprising
 "omission ≠ `None`" behavior of the sentinel. The one rough edge to settle during implementation is
 `validate`: the now-merged `validate` feature already defines `validate=None` as "no validation" (and
 treats `validate=""` the same way), so Option B has to flip `None` to "use the type default" — a
 redefinition of shipped behavior. If that proves too disruptive, **Option A (sentinel)** is the clean
-fallback (the maintainer had no strong opinion on the exact opt-out values), and it keeps
-`validate=None` meaning "off", consistent with the shipped `validate` feature, at the cost of the
-omit-vs-`None` subtlety.
+fallback, and it keeps `validate=None` meaning "off", consistent with the shipped `validate` feature,
+at the cost of the omit-vs-`None` subtlety.
 
 Either way, the **guiding principle holds**: never ship a type-derived default that users can't turn
 off. If neither opt-out mechanism is in scope for the MVP, ship only the non-visual defaults (native
@@ -421,8 +417,8 @@ email = st.text_input(
 
 ## Open questions
 
-1. **`tel` vs `phone`** for the public value name — **Resolved: `"phone"`** (maintainer sign-off,
-   [@sfc-gh-jrieke](https://github.com/sfc-gh-jrieke)); see [naming](#naming-tel-vs-phone).
+1. **`tel` vs `phone`** for the public value name — **Resolved: `"phone"`**; see
+   [naming](#naming-tel-vs-phone).
 2. **Validation source** for `email`/`url`: Streamlit-maintained regex (single channel, overridable)
    vs. browser-native validity (no regex maintenance, but lenient and a second channel). Recommended:
    regex — and since the now-merged `validate` is already a regex channel, this drops in with no new
@@ -430,9 +426,9 @@ email = st.text_input(
 3. **Opt-out encoding** for type-derived defaults (see
    [the decision section](#decision-use-the-type-default-vs-no-value)): `None` = derive + `""` = off
    (Option B, generalizes today's `autocomplete` behavior) vs. an internal sentinel (Option A).
-   **Resolved: Option B** (maintainer sign-off, [@sfc-gh-jrieke](https://github.com/sfc-gh-jrieke));
-   Option C (no opt-out) is rejected — there must be a way to turn defaults off. The exact opt-out
-   values still need finalizing against the shipped `validate=None` semantics (see decision section).
+   **Resolved: Option B**; Option C (no opt-out) is rejected — there must be a way to turn defaults
+   off. The exact opt-out values still need finalizing against the shipped `validate=None` semantics
+   (see decision section).
 4. **`email` strictness**: accept lenient browser-style addresses (e.g. intranet `user@host`), or a
    stricter dotted-domain regex? Either way, custom `validate` covers app-specific rules.
 
