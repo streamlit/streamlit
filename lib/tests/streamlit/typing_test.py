@@ -18,8 +18,6 @@ from __future__ import annotations
 
 import importlib.resources
 import importlib.util
-import subprocess
-import sys
 
 import streamlit as st
 import streamlit.typing
@@ -110,42 +108,28 @@ def test_state_classes_isinstance() -> None:
     )
 
 
-def test_import_pulls_in_no_new_third_party_modules() -> None:
-    """Importing ``streamlit.typing`` adds no third-party top-level module.
+def test_exports_are_first_party_types() -> None:
+    """Every re-exported type is defined in a first-party ``streamlit`` module.
 
-    Guards the spec's "no new dependencies" requirement: loading the public
-    typing namespace must not import any package beyond what a bare
-    ``import streamlit`` already loads.
+    Guards the spec's "no new dependencies" intent: the namespace only surfaces
+    Streamlit-owned types, so importing it introduces no third-party dependency.
+    A runtime ``sys.modules`` probe is not meaningful here because
+    ``streamlit/__init__.py`` already imports ``streamlit.typing`` at package
+    init, so any module it pulls in is loaded by a bare ``import streamlit``.
     """
-    script = """
-import sys
-import streamlit
-
-baseline = set(sys.modules)
-import streamlit.typing
-
-new = {
-    module.split(".")[0]
-    for module in set(sys.modules) - baseline
-    if not module.startswith("streamlit")
-}
-assert not new, new
-"""
-    result = subprocess.run(
-        [sys.executable, "-c", script],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
+    for name in streamlit.typing.__all__:
+        module = getattr(streamlit.typing, name).__module__
+        assert module.startswith("streamlit."), (name, module)
 
 
 def test_namespace_is_packaged_with_py_typed_marker() -> None:
     """``streamlit.typing`` is an importable module and ships the ``py.typed`` marker.
 
-    A wheel-level smoke test from the spec: the module must be packaged (so the
-    public path resolves) and Streamlit must expose ``py.typed`` so type checkers
-    treat the re-exports as typed.
+    A source-level smoke test for the spec's packaging requirement: the module
+    must resolve (so the public path is importable) and Streamlit must expose
+    ``py.typed`` so type checkers treat the re-exports as typed. This inspects the
+    source/editable checkout rather than a built wheel; verifying the wheel's
+    contents is left to the packaging/CI build.
     """
     assert importlib.util.find_spec("streamlit.typing") is not None
     assert importlib.resources.files("streamlit").joinpath("py.typed").is_file()
