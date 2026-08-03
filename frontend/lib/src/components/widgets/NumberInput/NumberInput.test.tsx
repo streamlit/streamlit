@@ -291,6 +291,7 @@ describe("NumberInput widget", () => {
       let valueAtSubmit: number | undefined
       vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => {
         valueAtSubmit = props.widgetMgr.getIntValue(props.element)
+        return true
       })
 
       render(<NumberInput {...props} />)
@@ -320,6 +321,7 @@ describe("NumberInput widget", () => {
       let valueAtSubmit: number | undefined
       vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => {
         valueAtSubmit = props.widgetMgr.getDoubleValue(props.element)
+        return true
       })
 
       render(<NumberInput {...props} />)
