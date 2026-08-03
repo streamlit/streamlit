@@ -18,7 +18,7 @@ import contextlib
 import inspect
 import threading
 from abc import abstractmethod
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Container, Iterator
 from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
@@ -153,6 +153,11 @@ class FragmentStorage(Protocol):
     @abstractmethod
     def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
         """Return a stable ordering that keeps queued ancestors before descendants."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def has_ancestor_in(self, fragment_id: str, candidate_ids: Container[str]) -> bool:
+        """Return whether any ancestor of ``fragment_id`` is in ``candidate_ids``."""
         raise NotImplementedError
 
     @abstractmethod
@@ -356,6 +361,13 @@ class MemoryFragmentStorage(FragmentStorage):
                     break
 
             return ordered_fragment_ids
+
+    def has_ancestor_in(self, fragment_id: str, candidate_ids: Container[str]) -> bool:
+        with self._lock:
+            return any(
+                ancestor_id in candidate_ids
+                for ancestor_id in self._iter_ancestor_ids(fragment_id)
+            )
 
     def delete(self, key: str) -> None:
         with self._lock:
