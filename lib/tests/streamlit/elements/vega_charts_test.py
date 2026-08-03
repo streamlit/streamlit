@@ -39,6 +39,8 @@ from streamlit.elements.lib.built_in_chart_utils import (
     StreamlitColumnNotFoundError,
 )
 from streamlit.elements.vega_charts import (
+    VegaLiteState,
+    VegaLiteStateSerde,
     _extract_selection_parameters,
     _parse_selection_mode,
     _reset_counter_pattern,
@@ -55,6 +57,18 @@ if TYPE_CHECKING:
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
 autosize_spec = {"autosize": {"type": "fit", "contains": "padding"}}
+
+
+def test_vega_lite_serde_returns_typed_state() -> None:
+    """The Vega-Lite serde returns a typed event state."""
+    result = VegaLiteStateSerde(["brush"]).deserialize(None)
+
+    assert isinstance(result, VegaLiteState)
+    assert result.selection.brush == {}
+    assert result["selection"]["brush"] == {}
+    # Nested selection must be a stable stored instance (not a per-access copy).
+    assert result["selection"] is result["selection"]
+    assert result.selection is result["selection"]
 
 
 def merge_dicts(x, y):

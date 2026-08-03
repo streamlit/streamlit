@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from typing_extensions import assert_type
 
@@ -29,7 +29,11 @@ if TYPE_CHECKING:
     from pydeck import Deck
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.deck_gl_json_chart import PydeckMixin, PydeckState
+    from streamlit.elements.deck_gl_json_chart import (
+        PydeckMixin,
+        PydeckSelectionState,
+        PydeckState,
+    )
 
     pydeck_chart = PydeckMixin().pydeck_chart
 
@@ -43,6 +47,14 @@ if TYPE_CHECKING:
     assert_type(pydeck_chart(deck), PydeckState)
     assert_type(pydeck_chart(None), PydeckState)
     assert_type(pydeck_chart(), PydeckState)
+
+    pydeck_state = pydeck_chart(deck)
+    assert_type(pydeck_state.selection, PydeckSelectionState)
+    assert_type(pydeck_state["selection"], PydeckSelectionState)
+    assert_type(pydeck_state.selection.indices, dict[str, list[int]])
+    assert_type(pydeck_state.selection["indices"], dict[str, list[int]])
+    assert_type(pydeck_state.selection.objects, dict[str, list[dict[str, Any]]])
+    assert_type(pydeck_state.selection["objects"], dict[str, list[dict[str, Any]]])
 
     # =====================================================================
     # Return type tests with on_select="ignore" -> DeltaGenerator
