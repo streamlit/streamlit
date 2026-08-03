@@ -25,7 +25,7 @@ import {
 } from "react"
 
 import { ErrorOutline } from "@emotion-icons/material-outlined"
-import { CalendarDate, getLocalTimeZone } from "@internationalized/date"
+import { CalendarDate, getLocalTimeZone, today } from "@internationalized/date"
 import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
 
@@ -366,10 +366,16 @@ function DateInput({
   // During segment typing, SingleDateInput drives focusedValue directly
   // via its onFocusChange prop without waiting for a commit.
   useEffect(() => {
-    if (!element.isRange && singleValue) {
+    if (element.isRange) return
+    if (singleValue) {
       setFocusedValue(singleValue)
+    } else {
+      // After clear: reset to today (clamped to minDate) so the calendar
+      // shows a sensible month instead of the stale previous value.
+      const now = today(getLocalTimeZone())
+      setFocusedValue(now.compare(minDateCalendar) < 0 ? minDateCalendar : now)
     }
-  }, [element.isRange, singleValue])
+  }, [element.isRange, singleValue, minDateCalendar])
 
   if (!element.isRange) {
     return (

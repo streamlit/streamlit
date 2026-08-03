@@ -56,13 +56,9 @@ const getProps = (
 
 /**
  * Single mode's `SingleDateInput` renders the date as three focusable
- * `role="spinbutton"` segments (React Aria's `DateField`) instead of
- * BaseWeb's single masked-text `<input>` — there's no `stDateInputField`
- * testid/value to assert on directly. These helpers interact with segments
- * the way a real user would (click a segment, type/backspace digits) so
- * single-mode tests exercise the same behavior the old tests did, just
- * through the new DOM shape. Range mode is untouched (still BaseWeb) and
- * its tests still use `stDateInputField` directly.
+ * `role="spinbutton"` segments. These helpers interact with segments
+ * the way a real user would (click a segment, type/backspace digits).
+ * Range mode is untouched and its tests still use `stDateInputField` directly.
  */
 const getSingleDateSegments = (
   region: HTMLElement
@@ -396,10 +392,8 @@ describe("DateInput widget", () => {
     const { year } = getSingleDateSegments(region)
     await user.click(year)
 
-    // React Aria's `Calendar` marks out-of-range cells `aria-disabled`
-    // rather than BaseWeb's "Not available."/"It's available." label
-    // prefixes; the day before `min` should be disabled, `min` itself
-    // shouldn't be.
+    // React Aria's `Calendar` marks out-of-range cells `aria-disabled`;
+    // the day before `min` should be disabled, `min` itself shouldn't be.
     expect(
       await screen.findByLabelText("Monday, January 19, 1970")
     ).toHaveAttribute("aria-disabled", "true")
@@ -710,7 +704,7 @@ describe("DateInput widget", () => {
 
       beforeEach(() => {
         const STATIC_NOW = 1732112581000
-        // Freeze both Date and moment.now so BaseWeb quick select and our code
+        // Freeze both Date and moment.now so quick select and our code
         // agree on "now"
         const MockDate = class extends RealDate {
           constructor(...args: unknown[]) {
@@ -1033,6 +1027,51 @@ describe("DateInput keyboard navigation and focus management", () => {
     await user.keyboard("{ArrowLeft}")
     const jan27 = screen.getByRole("button", { name: /January 27, 1970/ })
     expect(jan27).toHaveFocus()
+  })
+
+  it("calendar shows current month (not stale previous date) after clear", async () => {
+    const user = userEvent.setup()
+    // Make widget clearable
+    const props = getProps({
+      default: [],
+      value: ["1970-01-20"],
+      setValue: true,
+      min: "1970-01-01",
+    })
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+
+    // Open calendar — should show January 1970 initially.
+    await user.click(year)
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    expect(
+      within(calendar).getByRole("button", { name: /January 20, 1970/ })
+    ).toBeInTheDocument()
+
+    // Close calendar and clear the date via the clear button.
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+
+    const clearButton = screen.getByTestId("stDateInputClearButton")
+    await user.click(clearButton)
+
+    // Reopen the calendar by clicking the (now placeholder) segment.
+    const region2 = screen.getByTestId("stDateInput")
+    const segments2 = getSingleDateSegments(region2)
+    await user.click(segments2.year)
+    const calendar2 = await screen.findByTestId("stDateInputCalendar")
+
+    // The calendar should NOT show January 1970 anymore — it should have
+    // reset to today's month
+    expect(
+      within(calendar2).queryByRole("button", { name: /January 20, 1970/ })
+    ).not.toBeInTheDocument()
   })
 })
 
