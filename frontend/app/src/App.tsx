@@ -163,8 +163,8 @@ import {
 } from "@streamlit/utils"
 
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
-// Used to import fonts + responsive reboot items
-import "@streamlit/app/src/assets/css/theme.scss"
+// Used to import the bundled fonts
+import "@streamlit/app/src/assets/css/theme.css"
 import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
 import {
   includeIfDefined,
