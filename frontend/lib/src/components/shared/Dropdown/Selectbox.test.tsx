@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  act,
-  createEvent,
-  fireEvent,
-  screen,
-  waitFor,
-} from "@testing-library/react"
+import { act, createEvent, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { streamlit } from "@streamlit/protobuf"
@@ -52,6 +46,13 @@ async function openDropdown(
   user: ReturnType<typeof userEvent.setup>
 ): Promise<void> {
   await user.click(screen.getByRole("button", { name: "Open" }))
+}
+
+function moveCaretToEnd(input: HTMLElement): void {
+  if (!(input instanceof HTMLInputElement)) {
+    throw new TypeError("Expected the combobox to be an input element")
+  }
+  input.setSelectionRange(input.value.length, input.value.length)
 }
 
 /** Force a non-zero viewport so the virtualizer renders a window of rows. */
@@ -479,7 +480,9 @@ describe("Selectbox widget", () => {
       data: "n",
     })
     const preventDefaultSpy = vi.spyOn(compositionEvent, "preventDefault")
-    fireEvent(selectboxInput, compositionEvent)
+    act(() => {
+      selectboxInput.dispatchEvent(compositionEvent)
+    })
     expect(preventDefaultSpy).toHaveBeenCalled()
     expect(selectboxInput).toHaveValue("")
     expect(screen.queryAllByRole("option")).toHaveLength(3)
@@ -524,10 +527,8 @@ describe("Selectbox widget", () => {
 
     await user.click(input)
     // Simulate the browser appending "c" behind the committed "Banana".
-    act(() => {
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.change(input, { target: { value: "Bananac" } })
-    })
+    moveCaretToEnd(input)
+    await user.keyboard("c")
 
     expect(input).toHaveValue("c")
     await waitFor(() => {
@@ -550,10 +551,8 @@ describe("Selectbox widget", () => {
 
     await user.click(input)
     // Simulate the browser appending "a" behind the committed "a".
-    act(() => {
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.change(input, { target: { value: "aa" } })
-    })
+    moveCaretToEnd(input)
+    await user.keyboard("a")
 
     expect(input).toHaveValue("a")
     // Filtering is active: "a"/"ab" match the query, "b" is filtered out.
@@ -579,11 +578,9 @@ describe("Selectbox widget", () => {
     expect(input).toHaveValue("foo")
 
     await user.click(input)
-    act(() => {
-      // Simulate the browser appending the keystrokes behind the committed label.
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.change(input, { target: { value: "foobar" } })
-    })
+    // Simulate the browser appending the keystrokes behind the committed label.
+    moveCaretToEnd(input)
+    await user.keyboard("bar")
 
     expect(input).toHaveValue("bar")
     await waitFor(() => {
@@ -770,13 +767,9 @@ describe("Selectbox widget", () => {
     const selectboxInput = screen.getByRole("combobox")
 
     // user.click focuses the input AND opens the dropdown (via RAC's press handler).
-    // Then fireEvent.change sets the input value without triggering a blur/focus
-    // cycle (which would close the dropdown via RAC's shouldCloseOnBlur path).
+    // keyboard enters text without another click or blur/focus cycle.
     await user.click(selectboxInput)
-    act(() => {
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.change(selectboxInput, { target: { value: "hello world!" } })
-    })
+    await user.keyboard("hello world!")
 
     await waitFor(() => {
       expect(
