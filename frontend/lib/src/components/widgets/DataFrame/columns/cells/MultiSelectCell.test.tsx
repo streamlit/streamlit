@@ -310,10 +310,10 @@ describe("onPaste", () => {
 })
 
 async function selectOption(
+  user: ReturnType<typeof userEvent.setup>,
   container: HTMLElement,
   optionText: string
 ): Promise<void> {
-  const user = userEvent.setup()
   const inputElement = within(container).getByRole("combobox")
   await user.click(inputElement)
   await user.keyboard("{ArrowDown}")
@@ -323,10 +323,10 @@ async function selectOption(
 }
 
 async function hasOption(
+  user: ReturnType<typeof userEvent.setup>,
   container: HTMLElement,
   optionText: string
 ): Promise<boolean> {
-  const user = userEvent.setup()
   const inputElement = within(container).getByRole("combobox")
   await user.click(inputElement)
   await user.keyboard("{ArrowDown}")
@@ -394,6 +394,7 @@ describe("Multi Select Editor", () => {
   })
 
   it("allows to select values", async () => {
+    const user = userEvent.setup()
     const mockCell = getMockCell()
     const Editor = getEditor(mockCell)
 
@@ -409,16 +410,16 @@ describe("Multi Select Editor", () => {
     const cellEditor = screen.getByTestId("multi-select-cell")
     expect(cellEditor).toBeDefined()
 
-    await selectOption(cellEditor, "Option 1")
+    await selectOption(user, cellEditor, "Option 1")
     expect(mockCellOnChange).toHaveBeenCalledTimes(1)
     expect(mockCellOnChange).toBeCalledWith({
       ...mockCell,
       data: { ...mockCell.data, values: ["option1"] },
     })
 
-    expect(await hasOption(cellEditor, "Option 2")).toBeTruthy()
+    expect(await hasOption(user, cellEditor, "Option 2")).toBeTruthy()
 
-    await selectOption(cellEditor, "Option 2")
+    await selectOption(user, cellEditor, "Option 2")
     expect(mockCellOnChange).toHaveBeenCalledTimes(2)
     expect(mockCellOnChange).toBeCalledWith({
       ...mockCell,
@@ -426,8 +427,8 @@ describe("Multi Select Editor", () => {
     })
 
     // Option 1 and 2 should not be available anymore
-    expect(await hasOption(cellEditor, "Option 1")).toBeFalsy()
-    expect(await hasOption(cellEditor, "Option 2")).toBeFalsy()
+    expect(await hasOption(user, cellEditor, "Option 1")).toBeFalsy()
+    expect(await hasOption(user, cellEditor, "Option 2")).toBeFalsy()
   })
 
   it("is disabled if readonly", () => {
@@ -450,6 +451,7 @@ describe("Multi Select Editor", () => {
   })
 
   it("allowDuplicates allows to select values multiple times", async () => {
+    const user = userEvent.setup()
     const mockCell = getMockCell({ data: { allowDuplicates: true } })
     const Editor = getEditor(mockCell)
 
@@ -465,21 +467,21 @@ describe("Multi Select Editor", () => {
     const cellEditor = screen.getByTestId("multi-select-cell")
     expect(cellEditor).toBeDefined()
 
-    await selectOption(cellEditor, "Option 1")
+    await selectOption(user, cellEditor, "Option 1")
     expect(mockCellOnChange).toHaveBeenCalledTimes(1)
     expect(mockCellOnChange).toBeCalledWith({
       ...mockCell,
       data: { ...mockCell.data, values: ["option1"] },
     })
 
-    await selectOption(cellEditor, "Option 2")
+    await selectOption(user, cellEditor, "Option 2")
     expect(mockCellOnChange).toHaveBeenCalledTimes(2)
     expect(mockCellOnChange).toBeCalledWith({
       ...mockCell,
       data: { ...mockCell.data, values: ["option1", "option2"] },
     })
 
-    await selectOption(cellEditor, "Option 1")
+    await selectOption(user, cellEditor, "Option 1")
     expect(mockCellOnChange).toHaveBeenCalledTimes(3)
     expect(mockCellOnChange).toBeCalledWith({
       ...mockCell,

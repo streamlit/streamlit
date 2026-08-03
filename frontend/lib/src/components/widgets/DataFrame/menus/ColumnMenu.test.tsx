@@ -33,12 +33,32 @@ import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
 describe("DataFrame ColumnMenu", () => {
   const mockWriteText = vi.fn()
 
+  // Capture the original clipboard descriptor (if any) so the mock installed
+  // below can be fully restored in afterEach and does not leak across tests.
+  const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    "clipboard"
+  )
+
   beforeEach(() => {
     mockWriteText.mockReset()
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText: mockWriteText },
     })
+  })
+
+  afterEach(() => {
+    if (originalClipboardDescriptor) {
+      Object.defineProperty(
+        navigator,
+        "clipboard",
+        originalClipboardDescriptor
+      )
+    } else {
+      // jsdom has no native clipboard, so remove the mock we installed.
+      Reflect.deleteProperty(navigator, "clipboard")
+    }
   })
 
   const defaultProps: ColumnMenuProps = {
@@ -206,7 +226,7 @@ describe("DataFrame ColumnMenu", () => {
         name: /Format/,
       })
 
-      // Focus the Format item to open the sub-menu
+      // Click the Format item to open the sub-menu
       await user.click(formatMenuItem)
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
 
@@ -230,7 +250,7 @@ describe("DataFrame ColumnMenu", () => {
         name: /Format/,
       })
 
-      // Focus to open
+      // Click to open
       await user.click(formatMenuItem)
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
 
@@ -411,7 +431,7 @@ describe("DataFrame ColumnMenu", () => {
       expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
     })
 
-    it("opens the statistics sub-menu on focus and closes the format sub-menu", async () => {
+    it("opens the statistics sub-menu on click and closes the format sub-menu", async () => {
       const user = userEvent.setup()
       render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
 
@@ -424,7 +444,7 @@ describe("DataFrame ColumnMenu", () => {
       await user.click(formatMenuItem)
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
 
-      // ...then focusing statistics should open it and close the format one.
+      // ...then clicking statistics should open it and close the format one.
       await user.click(statsMenuItem)
       expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "false")

@@ -471,6 +471,10 @@ async function openCacheModal(): Promise<void> {
   })
 }
 
+/**
+ * Advances fake timers when active so userEvent delays don't hang under
+ * vi.useFakeTimers(). Passed as userEvent.setup({ advanceTimers }).
+ */
 function advanceUserEventTimers(delay: number): void {
   if (vi.isFakeTimers()) {
     vi.advanceTimersByTime(delay)
