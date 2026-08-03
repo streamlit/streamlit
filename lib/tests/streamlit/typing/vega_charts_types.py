@@ -31,7 +31,8 @@ if TYPE_CHECKING:
     import altair as alt
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.vega_charts import VegaChartsMixin, VegaLiteState
+    from streamlit.elements.vega_charts import VegaChartsMixin
+    from streamlit.typing import VegaLiteState
     from streamlit.util import AttributeDictionary
 
     line_chart = VegaChartsMixin().line_chart

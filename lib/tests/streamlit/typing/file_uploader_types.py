@@ -24,7 +24,7 @@ from typing_extensions import assert_type
 # - accept_multiple_files=True or "directory" -> returns list[UploadedFile]
 if TYPE_CHECKING:
     from streamlit.elements.widgets.file_uploader import FileUploaderMixin
-    from streamlit.runtime.uploaded_file_manager import UploadedFile
+    from streamlit.typing import UploadedFile
 
     file_uploader = FileUploaderMixin().file_uploader
 
