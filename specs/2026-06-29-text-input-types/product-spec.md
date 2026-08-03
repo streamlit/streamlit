@@ -311,8 +311,10 @@ fallback, and it keeps `validate=None` meaning "off", consistent with the shippe
 at the cost of the omit-vs-`None` subtlety.
 
 Either way, the **guiding principle holds**: never ship a type-derived default that users can't turn
-off. If neither opt-out mechanism is in scope for the MVP, ship only the non-visual defaults (native
-type, `autocomplete`, validation) first and add `icon`/`placeholder` defaults once opt-out exists.
+off. If no opt-out mechanism is in scope for the MVP, ship only the defaults that need none — the
+native `type` and `autocomplete` (which already carries its own `""` opt-out) — and add every
+opt-out-requiring default (`icon`, `placeholder`, and the email/url `validate` default) once an
+opt-out mechanism exists.
 
 ### Examples
 
@@ -390,8 +392,9 @@ email = st.text_input(
   validation can be implemented today as a regex default value — there is no longer any need to stage
   it behind a future `validate` release. The remaining gate is the
   [opt-out decision](#decision-use-the-type-default-vs-no-value) (how a user turns a type's default
-  validation *off*): the non-visual defaults (native type, `autocomplete`) plus icon/placeholder can
-  ship first, and the default email/url validation follows once an opt-out mechanism is chosen.
+  validation *off*): native `type` and `autocomplete` can ship first, while the opt-out-requiring
+  defaults (`icon`, `placeholder`, and the email/url validation) all follow once an opt-out mechanism
+  is chosen.
 
 ### Out of scope (future work)
 
