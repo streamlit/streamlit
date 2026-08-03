@@ -229,10 +229,6 @@ function SingleDateInput({
         setDisplayValue(value)
         onCloseRef.current(true)
       } else if (!datesEqual(pending, value)) {
-        // Valid completed date that differs from committed — commit it.
-        // Don't call onClose here: the commit itself updates parent state
-        // (including isEmpty), so calling handleClose with potentially stale
-        // closure values would risk reverting to default.
         onChangeRef.current(pending)
       }
       // When dates are equal (no change, or calendar/paste already committed

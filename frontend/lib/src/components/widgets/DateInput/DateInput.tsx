@@ -305,6 +305,7 @@ function DateInput({
       const errorType = validateDate(date, minDateCalendar, maxDateCalendar)
       if (errorType) {
         setError(buildErrorMessage(errorType))
+        return
       }
       setValueWithSource({ value: [calendarDateToIso(date)], fromUi: true })
       setIsEmpty(false)
