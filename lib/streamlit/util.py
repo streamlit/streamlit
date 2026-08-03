@@ -173,12 +173,15 @@ class ReadOnlyAttributeDictionary(AttributeDictionary):
         raise TypeError(_READ_ONLY_ERROR_MSG)
 
     def __copy__(self) -> ReadOnlyAttributeDictionary:
-        return ReadOnlyAttributeDictionary(dict.copy(self))
+        # Reconstruct via the concrete subclass (e.g. DataframeState) so copies
+        # preserve their type. Hardcoding the base class would collapse typed
+        # widget states to a plain ReadOnlyAttributeDictionary.
+        return type(self)(dict.copy(self))
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> ReadOnlyAttributeDictionary:
         import copy
 
-        return ReadOnlyAttributeDictionary(
+        return type(self)(
             {copy.deepcopy(k, memo): copy.deepcopy(v, memo) for k, v in self.items()}
         )
 

@@ -185,6 +185,27 @@ class TestReadOnlyAttributeDictionary:
         # Shallow copy shares nested mutable objects
         assert copied["b"] is original["b"]
 
+    def test_copy_preserves_subclass(self) -> None:
+        """Copies of a subclass keep the subclass, not the base class.
+
+        Typed widget states (e.g. DataframeState) subclass
+        ReadOnlyAttributeDictionary. Session State deep-copies widget values, so
+        collapsing to the base class here would strip their type and break
+        ``isinstance`` checks on ``st.session_state[key]``.
+        """
+
+        class _TypedState(ReadOnlyAttributeDictionary):
+            pass
+
+        original = _TypedState({"a": 1, "b": {"c": [1, 2, 3]}})
+
+        assert isinstance(copy.copy(original), _TypedState)
+
+        deep_copied = copy.deepcopy(original)
+        assert isinstance(deep_copied, _TypedState)
+        assert deep_copied == original
+        assert deep_copied["b"] is not original["b"]
+
     def test_json_serialization(self) -> None:
         """Test that JSON serialization works correctly."""
 
