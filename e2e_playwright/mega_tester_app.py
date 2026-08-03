@@ -435,7 +435,7 @@ def _render_charts(minor_version: int) -> None:
         st.altair_chart(
             alt.Chart(chart_data)
             .mark_circle()
-            .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"]),
+            .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"]),  # ty: ignore[unresolved-attribute]
             use_container_width=True,
         )
 

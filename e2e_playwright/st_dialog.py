@@ -241,12 +241,12 @@ def dialog_with_layered_chart() -> None:
     chart1 = (
         alt.Chart(df)
         .mark_area()
-        .encode(x="x", y="y2", color="kpi", tooltip=["x", "y2"])
+        .encode(x="x", y="y2", color="kpi", tooltip=["x", "y2"])  # ty: ignore[unresolved-attribute]
     )
     chart2 = (
         alt.Chart(df)
         .mark_line(point=alt.OverlayMarkDef(size=80))
-        .encode(x="x", y="y", color="kpi", tooltip=["x", "y"])
+        .encode(x="x", y="y", color="kpi", tooltip=["x", "y"])  # ty: ignore[unresolved-attribute]
     )
     st.altair_chart(alt.layer(chart1, chart2).interactive())
 

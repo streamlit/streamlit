@@ -163,7 +163,7 @@ def run_chart_colors_test_app():
         diverging_chart = (
             alt.Chart(diverging_data)
             .mark_bar()
-            .encode(
+            .encode(  # ty: ignore[unresolved-attribute]
                 x="x:O",
                 y="value:Q",
                 color=alt.Color(

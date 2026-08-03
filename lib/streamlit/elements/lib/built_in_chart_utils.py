@@ -314,12 +314,12 @@ def _add_improved_hover_tooltips(
 
     # Detection layer: Invisible points for detecting the nearest point.
     # This layer is needed because selections must be attached to a mark.
-    detection_points = chart.mark_point(opacity=0).add_params(nearest)
+    detection_points = chart.mark_point(opacity=0).add_params(nearest)  # ty: ignore[unresolved-attribute]
 
     # Highlight layer: Only renders the selected point(s) using transform_filter.
     # This is more efficient than conditional opacity because it only renders
     # the filtered data (typically 1-2 points) rather than all points.
-    highlighted_points = chart.mark_point(filled=True, size=65).transform_filter(
+    highlighted_points = chart.mark_point(filled=True, size=65).transform_filter(  # ty: ignore[unresolved-attribute]
         nearest
     )
 

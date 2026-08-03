@@ -49,7 +49,7 @@ if st.button("Create some elements to unmount component"):
 base = (
     alt.Chart(cars)
     .mark_point()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="Horsepower:Q",
         y="Miles_per_Gallon:Q",
         color=alt.condition(point, "Origin:N", alt.value("lightgray")),
@@ -72,7 +72,7 @@ st.subheader("Scatter chart with selection_interval")
 base = (
     alt.Chart(cars)
     .mark_point()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="Horsepower:Q",
         y="Miles_per_Gallon:Q",
         color=alt.condition(interval, "Origin:N", alt.value("lightgray")),
@@ -94,7 +94,7 @@ st.subheader("Scatter chart with selection_interval & tooltip")
 base = (
     alt.Chart(cars)
     .mark_point()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="Horsepower:Q",
         y="Miles_per_Gallon:Q",
         color=alt.condition(interval, "Origin:N", alt.value("lightgray")),
@@ -131,7 +131,7 @@ source = pd.DataFrame(
 bar_graph_point = (
     alt.Chart(source)
     .mark_bar()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="a",
         y="b",
         fillOpacity=alt.condition(point, alt.value(1), alt.value(0.3)),
@@ -147,7 +147,7 @@ if "bar_point" in st.session_state and len(st.session_state.bar_point.selection)
 bar_graph_interval = (
     alt.Chart(source)
     .mark_bar()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="a",
         y="b",
         fillOpacity=alt.condition(interval, alt.value(1), alt.value(0.3)),
@@ -172,7 +172,7 @@ source = data.iowa_electricity()
 base = (
     alt.Chart(source)
     .mark_area()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="year:T",
         y="net_generation:Q",
         color=alt.condition(point, "source:N", alt.value("lightgray")),
@@ -189,7 +189,7 @@ if len(selection["selection"]) > 0:
 base = (
     alt.Chart(source)
     .mark_area()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="year:T",
         y="net_generation:Q",
         color=alt.condition(interval, "source:N", alt.value("lightgray")),
@@ -213,7 +213,7 @@ source = data.movies()
 base = (
     alt.Chart(source)
     .mark_bar()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         alt.X("IMDB_Rating:Q", bin=True),
         y="count()",
         color=alt.condition(point, "IMDB_Rating:Q", alt.value("lightgray")),
@@ -236,7 +236,7 @@ if (
 base = (
     alt.Chart(source)
     .mark_bar()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         alt.X("IMDB_Rating:Q", bin=True),
         y="count()",
         color=alt.condition(interval, "IMDB_Rating:Q", alt.value("lightgray")),
@@ -347,7 +347,7 @@ point_persistent = alt.selection_point(name="persistent_selection")
 persistent_chart = (
     alt.Chart(persistent_df)
     .mark_bar()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x=alt.X("category:N"),
         y=alt.Y("value:Q"),
         fillOpacity=alt.condition(point_persistent, alt.value(1), alt.value(0.3)),

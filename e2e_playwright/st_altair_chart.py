@@ -32,7 +32,7 @@ if not (major == "4" and minor < "2"):
     chart = (
         alt.Chart(source)
         .mark_arc(innerRadius=50)
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             theta=alt.Theta(field="value", type="quantitative"),
             color=alt.Color(field="category", type="nominal"),
         )
@@ -43,7 +43,7 @@ if not (major == "4" and minor < "2"):
 
 
 df1 = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
-chart = alt.Chart(df1).mark_circle().encode(x="a", y="b", size="c", color="c")
+chart = alt.Chart(df1).mark_circle().encode(x="a", y="b", size="c", color="c")  # ty: ignore[unresolved-attribute]
 
 st.write("Show default vega lite theme:")
 st.altair_chart(chart, theme=None)
@@ -55,7 +55,7 @@ st.write("Overwrite theme config:")
 chart = (
     alt.Chart(df1, usermeta={"embedOptions": {"theme": None}})
     .mark_circle()
-    .encode(x="a", y="b", size="c", color="c")
+    .encode(x="a", y="b", size="c", color="c")  # ty: ignore[unresolved-attribute]
 )
 st.altair_chart(chart, theme="streamlit")
 
@@ -66,7 +66,7 @@ df2 = pd.DataFrame(
     }
 )
 
-chart = alt.Chart(df2).mark_bar().encode(x="a", y="b")
+chart = alt.Chart(df2).mark_bar().encode(x="a", y="b")  # ty: ignore[unresolved-attribute]
 
 st.write("Bar chart with overwritten theme props:")
 st.altair_chart(chart.configure_mark(color="black"), theme="streamlit")
@@ -79,7 +79,7 @@ barley = alt.UrlData(
 barley_chart = (
     alt.Chart(barley)
     .mark_bar()
-    .encode(x="year:O", y="sum(yield):Q", color="year:N", column="site:N")
+    .encode(x="year:O", y="sum(yield):Q", color="year:N", column="site:N")  # ty: ignore[unresolved-attribute]
 )
 
 # TODO(lukasmasuch): This chart causes some flickering in webkit & chromium.
@@ -105,7 +105,7 @@ base = (
     .transform_filter(alt.datum.symbol == "GOOG")
 )
 
-new_base_chart = base.mark_line() + base.mark_point()
+new_base_chart = base.mark_line() + base.mark_point()  # ty: ignore[unsupported-operator]
 st.altair_chart(new_base_chart)
 
 x = np.linspace(10, 100, 10)
@@ -114,9 +114,9 @@ y2 = 1 / x
 
 df3 = pd.DataFrame.from_dict({"x": x, "y1": y1, "y2": y2})
 
-c1 = alt.Chart(df3).mark_line().encode(alt.X("x"), alt.Y("y1"))
+c1 = alt.Chart(df3).mark_line().encode(alt.X("x"), alt.Y("y1"))  # ty: ignore[unresolved-attribute]
 
-c2 = alt.Chart(df3).mark_line().encode(alt.X("x"), alt.Y("y2"))
+c2 = alt.Chart(df3).mark_line().encode(alt.X("x"), alt.Y("y2"))  # ty: ignore[unresolved-attribute]
 
 st.altair_chart(c1 & c2)
 
@@ -132,7 +132,7 @@ df_cut_off_issue = pd.DataFrame(
 cut_off_chart = (
     alt.Chart(df_cut_off_issue)
     .mark_line(point=True)
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x=alt.X("x", title="Date"),
         y=alt.Y("y:Q", title="Value"),
         color=alt.Color("category:N").legend(orient="bottom", title=None),
@@ -155,15 +155,15 @@ yscale = alt.Scale(domain=(1.9, 4.55))
 
 bar_args = {"opacity": 0.3, "binSpacing": 0}
 
-points = base.mark_circle().encode(
+points = base.mark_circle().encode(  # ty: ignore[unresolved-attribute]
     alt.X("sepalLength", scale=xscale),
     alt.Y("sepalWidth", scale=yscale),
     color="species",
 )
 
 top_hist = (
-    base.mark_bar(**bar_args)  # type: ignore[arg-type]
-    .encode(
+    base.mark_bar(**bar_args)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    .encode(  # ty: ignore[unresolved-attribute]
         alt.X(
             "sepalLength:Q",
             bin=alt.Bin(maxbins=20, extent=xscale.domain),
@@ -177,8 +177,8 @@ top_hist = (
 )
 
 right_hist = (
-    base.mark_bar(**bar_args)  # type: ignore[arg-type]
-    .encode(
+    base.mark_bar(**bar_args)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    .encode(  # ty: ignore[unresolved-attribute]
         alt.Y(
             "sepalWidth:Q",
             bin=alt.Bin(maxbins=20, extent=yscale.domain),
@@ -203,7 +203,7 @@ df_regression = pd.DataFrame(
 base_regression = (
     alt.Chart(df_regression)
     .mark_circle()
-    .encode(x="a", y="b")
+    .encode(x="a", y="b")  # ty: ignore[unresolved-attribute]
     .properties(width=400, height=200)
 )
 text_regression = base_regression.mark_text(dy=-10).encode(
@@ -232,7 +232,7 @@ def _faceted_layer(metric: str, title: str) -> alt.FacetChart:
     base_layer = (
         alt.Chart(df_issue_14050)
         .mark_line(point=True)
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             x=alt.X("xval:Q", axis=alt.Axis(title="xval")),
             y=alt.Y(f"{metric}:Q", axis=alt.Axis(title=title)),
             color=alt.Color("group:N", legend=alt.Legend(title="Group")),
@@ -242,7 +242,7 @@ def _faceted_layer(metric: str, title: str) -> alt.FacetChart:
     selected_layer = (
         alt.Chart(df_issue_14050)
         .mark_point(shape="diamond", color="purple", filled=True, size=90)
-        .encode(x=alt.X("xval:Q"), y=alt.Y(f"{metric}:Q"))
+        .encode(x=alt.X("xval:Q"), y=alt.Y(f"{metric}:Q"))  # ty: ignore[unresolved-attribute]
         .transform_filter(alt.datum.selected)
     )
     return alt.layer(base_layer, selected_layer).facet(column=alt.Column("bin:O"))

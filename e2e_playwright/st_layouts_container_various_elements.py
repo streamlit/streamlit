@@ -203,7 +203,7 @@ elif selected_case == "layout-horizontal-tabs":
                 border=False,
                 horizontal=False,
             ):
-                st.altair_chart(alt.Chart(small_data).mark_bar().encode(x="x", y="y"))
+                st.altair_chart(alt.Chart(small_data).mark_bar().encode(x="x", y="y"))  # ty: ignore[unresolved-attribute]
                 st.warning("This is a warning")
 
 elif selected_case == "layout-horizontal-map":

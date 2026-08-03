@@ -195,7 +195,7 @@ def render_line_chart(
     chart: alt.Chart = (
         alt.Chart(melted)
         .mark_line()
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             x=alt.X(f"{x_col}:T", title=None),
             y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
             color=alt.Color("series:N", title=None, legend=alt.Legend(orient="bottom")),
@@ -224,7 +224,7 @@ def render_area_chart(
     chart: alt.Chart = (
         alt.Chart(melted)
         .mark_area(opacity=0.6, line=True)
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             x=alt.X(f"{x_col}:T", title=None),
             y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
             color=alt.Color("series:N", title=None, legend=alt.Legend(orient="bottom")),
@@ -253,7 +253,7 @@ def render_bar_chart(
     chart: alt.Chart = (
         alt.Chart(melted)
         .mark_bar(opacity=0.8)
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             x=alt.X("week:T", title=None),
             y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
             color=alt.Color("series:N", title=None, legend=alt.Legend(orient="bottom")),
@@ -278,7 +278,7 @@ def render_point_chart(
     points = (
         alt.Chart(melted)
         .mark_point(opacity=0.5, size=20)
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             x=alt.X(f"{x_col}:T", title=None),
             y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
             color=alt.Color("series:N", title=None, legend=alt.Legend(orient="bottom")),
@@ -289,7 +289,7 @@ def render_point_chart(
     trend = (
         alt.Chart(melted[melted["series"] == "7-day MA"])
         .mark_line(strokeDash=[5, 5], strokeWidth=2)
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             x=alt.X(f"{x_col}:T"),
             y=alt.Y("value:Q"),
             color=alt.Color("series:N"),

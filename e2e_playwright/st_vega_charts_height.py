@@ -91,7 +91,7 @@ st.write("Altair chart with height=250:")
 chart = (
     alt.Chart(simple_df)
     .mark_bar()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x=alt.X("a:O"),
         y=alt.Y("b:Q"),
     )
@@ -102,7 +102,7 @@ st.write("Altair chart with height in spec (180) and height='content' parameter:
 content_chart = (
     alt.Chart(simple_df)
     .mark_circle(size=100)
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x=alt.X("a:O"),
         y=alt.Y("b:Q"),
     )
@@ -115,7 +115,7 @@ with st.container(border=True, key="test_altair_height_stretch", height=500):
     stretch_chart = (
         alt.Chart(simple_df)
         .mark_area()
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             x=alt.X("a:O"),
             y=alt.Y("b:Q"),
         )

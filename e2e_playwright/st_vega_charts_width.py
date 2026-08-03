@@ -171,7 +171,7 @@ st.write("Altair chart with width=350:")
 altair_chart = (
     alt.Chart(simple_df)
     .mark_bar()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x=alt.X("a:O"),
         y=alt.Y("b:Q"),
     )

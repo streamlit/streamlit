@@ -206,7 +206,7 @@ def create_line_chart(
     chart: alt.Chart = (
         alt.Chart(df)
         .mark_line()
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             x=alt.X(f"{x_col}:T", title=None),
             y=alt.Y(f"{y_col}:Q", title="Credits", axis=alt.Axis(format=y_format)),
             color=alt.Color(f"{color_col}:N", legend=alt.Legend(orient="bottom")),
@@ -238,7 +238,7 @@ def create_bar_chart(
     chart: alt.Chart = (
         alt.Chart(df)
         .mark_bar()
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             x=alt.X(f"{x_col}:T", title=None),
             y=alt.Y(
                 f"{y_col}:Q",

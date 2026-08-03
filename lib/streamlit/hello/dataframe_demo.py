@@ -48,7 +48,7 @@ def data_frame_demo() -> None:
             chart = (
                 alt.Chart(data)
                 .mark_area(opacity=0.3)
-                .encode(
+                .encode(  # ty: ignore[unresolved-attribute]
                     x="year:T",
                     y=alt.Y("Gross Agricultural Product ($B):Q", stack=None),
                     color="Region:N",

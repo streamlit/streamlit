@@ -268,7 +268,7 @@ with right_cell:
             )
         )
         .mark_line()
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             alt.X("Date:T"),
             alt.Y("Normalized price:Q").scale(zero=False),
             alt.Color("Stock:N"),
@@ -310,7 +310,7 @@ for i, ticker in enumerate(tickers):
     chart = (
         alt.Chart(plot_data)
         .mark_line()
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             alt.X("Date:T"),
             alt.Y("Price:Q").scale(zero=False),
             alt.Color(
@@ -337,7 +337,7 @@ for i, ticker in enumerate(tickers):
     chart = (
         alt.Chart(plot_data)
         .mark_area()
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             alt.X("Date:T"),
             alt.Y("Delta:Q").scale(zero=False),
         )

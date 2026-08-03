@@ -25,7 +25,7 @@ chart = (
         title="Lorem ipsum dolor sit amet, consectetur adipiscing elit. " * 5,
     )
     .mark_line()
-    .encode(x="x", y="y")
+    .encode(x="x", y="y")  # ty: ignore[unresolved-attribute]
 )
 
 st.altair_chart(chart)

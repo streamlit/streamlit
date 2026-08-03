@@ -182,7 +182,7 @@ with cols[0].container(border=True, height="stretch"):
     st.altair_chart(
         alt.Chart(df)
         .mark_bar(width=1)
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             alt.X("monthdate(date):T").title("date"),
             alt.Y("temp_max:Q").title("temperature range (C)"),
             alt.Y2("temp_min:Q"),
@@ -204,7 +204,7 @@ with cols[1].container(border=True, height="stretch"):
     st.altair_chart(
         alt.Chart(df)
         .mark_arc()
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             alt.Theta("count()"),
             alt.Color("weather:N"),
         )
@@ -235,7 +235,7 @@ with cols[1].container(border=True, height="stretch"):
     st.altair_chart(
         alt.Chart(df)
         .mark_bar()
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             alt.X("month(date):O").title("month"),
             alt.Y("sum(precipitation):Q").title("precipitation (mm)"),
             alt.Color("year(date):N").title("year"),
@@ -256,7 +256,7 @@ with cols[0].container(border=True, height="stretch"):
     st.altair_chart(
         alt.Chart(df)
         .mark_bar()
-        .encode(
+        .encode(  # ty: ignore[unresolved-attribute]
             alt.X("month(date):O", title="month"),
             alt.Y("count():Q", title="days", stack="normalize"),
             alt.Color("weather:N"),

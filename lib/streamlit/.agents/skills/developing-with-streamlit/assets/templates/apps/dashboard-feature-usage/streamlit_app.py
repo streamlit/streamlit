@@ -321,7 +321,7 @@ with chart_col:
         chart = (
             alt.Chart(filtered_data)
             .mark_line()
-            .encode(
+            .encode(  # ty: ignore[unresolved-attribute]
                 x=alt.X("date:T", title="Date"),
                 y=alt.Y(
                     "request_count:Q", title=y_title, axis=alt.Axis(format=y_format)

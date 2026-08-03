@@ -45,10 +45,10 @@ layer_point = alt.selection_point(
     name="layer_selection", fields=["Origin", "Horsepower", "Miles_per_Gallon"]
 )
 layer_chart = alt.layer(
-    alt.Chart(cars).mark_line().encode(x="Horsepower:Q", y="Miles_per_Gallon:Q"),
+    alt.Chart(cars).mark_line().encode(x="Horsepower:Q", y="Miles_per_Gallon:Q"),  # ty: ignore[unresolved-attribute]
     alt.Chart(cars)
     .mark_circle(size=60)
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="Horsepower:Q",
         y="Miles_per_Gallon:Q",
         color=alt.condition(layer_point, "Origin:N", alt.value("lightgray")),
@@ -69,7 +69,7 @@ hconcat_interval = alt.selection_interval(name="hconcat_selection")
 hconcat_chart = alt.hconcat(
     alt.Chart(cars)
     .mark_circle()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="Horsepower:Q",
         y="Miles_per_Gallon:Q",
         color=alt.condition(hconcat_interval, "Origin:N", alt.value("lightgray")),
@@ -79,7 +79,7 @@ hconcat_chart = alt.hconcat(
     .properties(width=250, height=200),
     alt.Chart(cars)
     .mark_bar()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="Origin:N",
         y="count():Q",
         color=alt.condition(hconcat_interval, "Origin:N", alt.value("lightgray")),
@@ -100,7 +100,7 @@ vconcat_point = alt.selection_point(name="vconcat_selection", fields=["Origin"])
 vconcat_chart = alt.vconcat(
     alt.Chart(cars)
     .mark_circle()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="Horsepower:Q",
         y="Miles_per_Gallon:Q",
         color=alt.condition(vconcat_point, "Origin:N", alt.value("lightgray")),
@@ -110,7 +110,7 @@ vconcat_chart = alt.vconcat(
     .properties(width=400, height=150),
     alt.Chart(cars)
     .mark_bar()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="Origin:N",
         y="count():Q",
         color=alt.condition(vconcat_point, "Origin:N", alt.value("lightgray")),
@@ -134,7 +134,7 @@ hconcat_right_sel = alt.selection_interval(name="right_interval")
 hconcat_multi_chart = alt.hconcat(
     alt.Chart(cars)
     .mark_circle()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="Horsepower:Q",
         y="Miles_per_Gallon:Q",
         color=alt.condition(hconcat_left_sel, "Origin:N", alt.value("lightgray")),
@@ -144,7 +144,7 @@ hconcat_multi_chart = alt.hconcat(
     .properties(width=250, height=200),
     alt.Chart(cars)
     .mark_circle()
-    .encode(
+    .encode(  # ty: ignore[unresolved-attribute]
         x="Acceleration:Q",
         y="Displacement:Q",
         color=alt.condition(hconcat_right_sel, "Origin:N", alt.value("lightgray")),

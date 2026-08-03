@@ -28,7 +28,7 @@ np.random.seed(0)
 st.subheader("st.write(altair)")
 
 df = pd.DataFrame(np.random.randn(50, 3), columns=["a", "b", "c"])
-chart = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c")
+chart = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c")  # ty: ignore[unresolved-attribute]
 st.write(chart)
 
 st.subheader("st.write(plotly)")
