@@ -147,15 +147,14 @@ class Dialog(DeltaGenerator):
                 value_type="trigger_value",
             )
 
-        # We store the delta path here, because in _update we enqueue a new proto
-        # message to update the open status. Without this, the dialog content is gone
-        # when the _update message is sent
-        delta_path: list[int] = (
-            parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
-        )
         dialog = cast("Dialog", parent._block(block_proto=block_proto, dg_type=Dialog))
 
-        dialog._delta_path = delta_path
+        # `_update` re-sends the block proto at this path. Use the path `_block()` wrote
+        # to, not the parent cursor, so the update targets the block even if a wrapper
+        # sits between them. Dialogs land top level in the event container, which never
+        # gets a wrapper, so this is a no-op today and stays correct if that changes.
+        # Same idiom as StatusContainer. See issue #16281.
+        dialog._delta_path = dialog._block_delta_path
         dialog._current_proto = block_proto
 
         return dialog
