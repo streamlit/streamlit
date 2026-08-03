@@ -83,6 +83,7 @@ function HeaderPickerSelect({
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen,
     onClose: () => setIsOpen(false),
+    // No floating-ui positioning needed — the picker uses CSS absolute positioning.
     floatingSetFn: noop,
   })
 

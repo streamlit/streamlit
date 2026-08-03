@@ -354,6 +354,10 @@ describe("DateInput widget", () => {
     expect(day).toHaveTextContent("15")
     await screen.findByTestId("stTooltipErrorHoverTarget")
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+
+    // Close the popover — commit-on-close should also reject the invalid date.
+    await user.keyboard("{Escape}")
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
   })
 
   it("resets its value to default when it's closed with empty input", async () => {

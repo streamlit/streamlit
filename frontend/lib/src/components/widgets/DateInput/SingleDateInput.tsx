@@ -100,10 +100,8 @@ interface SingleDateInputProps {
    * committing the value to widget state. Used for real-time error
    * feedback during segment editing. */
   onValidate: (date: CalendarDate | null) => void
-  /** Called when popover closes (outside click, Escape, or date selection).
-   * Parent uses this to revert to default if the field was left empty or
-   * partially cleared. The boolean argument indicates whether any segment
-   * was in placeholder state at the time of close. */
+  /** Called when close requires parent-level revert logic (segments left in
+   * placeholder state after an edit). Parent resets to default value. */
   onClose: (hasPlaceholderSegments: boolean) => void
   /** Incremented when the parent form is cleared. Signals this component to
    * reset its local displayValue to the parent's value prop (which may not
@@ -200,17 +198,11 @@ function SingleDateInput({
   const displayValueRef = useRef(displayValue)
   displayValueRef.current = displayValue
 
-  // Stable ref for onClose so the close-detection effect doesn't re-run
-  // every time the parent's handleClose callback identity changes.
   const onCloseRef = useRef(onClose)
-  useEffect(() => {
-    onCloseRef.current = onClose
-  })
+  onCloseRef.current = onClose
 
   const onChangeRef = useRef(onChange)
-  useEffect(() => {
-    onChangeRef.current = onChange
-  })
+  onChangeRef.current = onChange
 
   const [isOpen, setIsOpen] = useState(false)
 
@@ -221,13 +213,13 @@ function SingleDateInput({
       const hasPlaceholders =
         triggerRef.current?.querySelector('[data-placeholder="true"]') !== null
 
-      if (hasPlaceholders) {
+      if (hasPlaceholders && !datesEqual(pending, value)) {
         // User left segments incomplete — revert display to the committed
         // value directly. We can't go through the parent round-trip because
         // the widget state might already be at default (segment edits were
         // buffered), making the parent's revert a no-op.
         setDisplayValue(value)
-        onCloseRef.current(true)
+        onCloseRef.current(true /* hasPlaceholderSegments */)
       } else if (!datesEqual(pending, value)) {
         onChangeRef.current(pending)
       }

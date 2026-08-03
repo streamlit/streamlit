@@ -28,8 +28,8 @@ import { getWeekInfoForLocale } from "./weekInfo"
  * This is used as a stop-gap solution since date-fns is a large library and we
  * don't want to include all locales in the wheel file.
  *
- * Note: this hook is consumed by `DateTimeInput.tsx` (range mode) only —
- * the single-date calendar determines week start internally via bundled CLDR data.
+ * Note: this hook is consumed by `DateInput.tsx` range mode only —
+ * the single-date calendar uses React Aria CLDR data.
  *
  * @param locale  The locale for which to retrieve week information.
  * @returns The augmented locale, or en-US if the week information could not be

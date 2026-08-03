@@ -380,9 +380,9 @@ def get_date_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
 def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> None:
     """Type digits into a DateInput's segments and optionally commit.
 
-    `st.date_input` renders its typed field(s) as a sequence of
-    `role="spinbutton"` segments (React Aria `DateField`) rather than a
-    single free-text `<input>`, so values must be typed segment-by-segment.
+    For single-date mode, `st.date_input` renders its typed field as a
+    sequence of `role="spinbutton"` segments (React Aria `DateField`) rather
+    than a single free-text `<input>`, so values must be typed segment-by-segment.
 
     Segment edits are buffered locally until the popover closes (the
     commit-on-close pattern). By default this helper closes the popover via
@@ -390,20 +390,19 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
     ``type_time``'s blur-to-commit behavior. Pass ``commit=False`` to keep
     the popover open (e.g. for error-state tests that inspect UI before commit).
 
+    Note: Range mode still uses BaseWeb's free-text input and is not yet
+    migrated to React Aria segments.
+
     Parameters
     ----------
     date_input_field : Locator
-        The `stDateInputField` locator (the segmented field container). For
-        a single-date `date_input` this contains one `DateField`'s segments;
-        for a range `date_input` it contains both the start and end
-        `DateField`s' segments concatenated in DOM order (start first).
+        The `stDateInputField` locator (the segmented field container) for a
+        single-date `date_input`.
 
     *parts : str
         Digit strings for each segment, in the same left-to-right order the
         segments are rendered in (which follows the widget's `format`), e.g.
-        ``type_date(field, "1970", "01", "02")`` for a `YYYY/MM/DD` field, or
-        ``type_date(field, "2019", "07", "06", "2019", "07", "08")`` to type
-        both the start and end dates of a `YYYY/MM/DD` range field in one call.
+        ``type_date(field, "1970", "01", "02")`` for a `YYYY/MM/DD` field.
 
     commit : bool
         If True (default), press Escape after typing to close the popover and
