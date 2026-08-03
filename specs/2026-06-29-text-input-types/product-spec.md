@@ -417,6 +417,11 @@ email = st.text_input(
 - **Locale-aware phone validation/formatting**, plus `required`, `multiple`, and raw HTML attributes
   (`pattern`, `minlength`): out of scope. Empty values keep bypassing validation (per the `validate`
   spec); all types continue to return `str | None`.
+- **Server-side enforcement of the default validation:** the type-derived email/url validation is
+  client-side only (like the underlying `validate` feature) and can be bypassed. Enforcing it — and
+  other client-side widget constraints — on the server is tracked separately in
+  [#16203](https://github.com/streamlit/streamlit/issues/16203); until it lands, security-relevant
+  checks must live in the user's own app code.
 
 ## Open questions
 
@@ -441,6 +446,9 @@ email = st.text_input(
 - [Text input validation spec](../2025-12-03-text-input-validation/product-spec.md) — the `validate`
   feature this builds on. Its client-side regex half shipped in
   [#15714](https://github.com/streamlit/streamlit/pull/15714) (server-side callables deferred).
+- [Issue #16203](https://github.com/streamlit/streamlit/issues/16203) — server-side validation of
+  client-side widget constraints; the tracking issue for enforcing the default email/url validation
+  (and other client-side constraints) on the server.
 - [MDN: HTML5 input types](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/HTML5_input_types)
   and the [WHATWG `input` element](https://html.spec.whatwg.org/multipage/input.html).
 - [React Aria `TextField`](https://react-aria.adobe.com/TextField) — the underlying component; its
@@ -456,5 +464,5 @@ email = st.text_input(
 | No breaking API changes      | ✅ Additive `type` values; existing values unchanged |
 | No new dependencies          | ✅                      |
 | Metrics collected            | `gather_metrics("text_input")` records that `type` is passed but not its literal value (string args log only `len:`); capturing per-type adoption needs explicit value tracking added during implementation |
-| Any security/legal impact?   | The default email/url validation is **client-side regex** (via the now-merged `validate` feature, [#15714](https://github.com/streamlit/streamlit/pull/15714)) and can be bypassed. Server-side callable validation from the `validate` spec is a deferred follow-up, so no default should be treated as a security boundary — security-relevant checks must be performed in the user's own app code on the server after submit (matching the `validate` docstring's own note) |
+| Any security/legal impact?   | The default email/url validation is **client-side regex** (via the now-merged `validate` feature, [#15714](https://github.com/streamlit/streamlit/pull/15714)) and can be bypassed. Server-side enforcement of client-side constraints (including this validation) is a deferred follow-up tracked in [#16203](https://github.com/streamlit/streamlit/issues/16203), so no default should be treated as a security boundary — security-relevant checks must be performed in the user's own app code on the server after submit (matching the `validate` docstring's own note) |
 | Any docs changes needed?     | Yes — document the new `type` values and their smart defaults in the `st.text_input` reference |
