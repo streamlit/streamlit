@@ -78,7 +78,8 @@ describe("useIsTruncated", () => {
   it("reports no truncation but keeps the label text when the content fits", () => {
     mockWidths(100, 100)
     render(createElement(TestComponent, { enabled: true }))
-    expect(screen.getByTestId("result")).toHaveTextContent(
+    // Exact check: labelText is still captured even though it isn't truncated.
+    expect(screen.getByTestId("result").textContent).toBe(
       "false|Full label text"
     )
   })
@@ -86,7 +87,8 @@ describe("useIsTruncated", () => {
   it("stays disabled and does not measure when enabled is false", () => {
     mockWidths(200, 100)
     render(createElement(TestComponent, { enabled: false }))
-    expect(screen.getByTestId("result")).toHaveTextContent("false|")
+    // Exact check so a stray labelText when disabled would fail the test.
+    expect(screen.getByTestId("result").textContent).toBe("false|")
   })
 
   it("re-measures via the ResizeObserver when the container resizes", () => {

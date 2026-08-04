@@ -224,6 +224,22 @@ describe("Button widget", () => {
       expect(tooltipContent).toHaveTextContent("A very long label")
     })
 
+    it("reveals the plain-text accessible name for a Markdown label", async () => {
+      mockOverflow(true)
+      const user = userEvent.setup()
+      render(
+        <Button {...getProps({ wrap: false, label: "**Submit** report" })} />
+      )
+
+      const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+      await user.hover(tooltipTarget)
+
+      const tooltipContent = await screen.findByTestId("stTooltipContent")
+      // The tooltip shows the stripped plain text, not the raw Markdown source.
+      expect(tooltipContent).toHaveTextContent("Submit report")
+      expect(tooltipContent).not.toHaveTextContent("**Submit**")
+    })
+
     it("does not show a label tooltip when the label is not truncated", () => {
       mockOverflow(false)
       render(

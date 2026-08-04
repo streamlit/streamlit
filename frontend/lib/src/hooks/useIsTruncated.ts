@@ -59,21 +59,28 @@ export function useIsTruncated(
       return undefined
     }
 
-    const measure = (): void => {
+    const findVisibleLabel = (): HTMLElement | null => {
       const labels = container.querySelectorAll<HTMLElement>(
         '[data-testid="stMarkdownContainer"]'
       )
       // The label may be duplicated for the desktop/mobile tooltip split; the
       // hidden copy has no offsetParent, so measure the visible one.
-      let label: HTMLElement | null = null
       for (const candidate of labels) {
         // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- truncation detection
         if (candidate.offsetParent !== null) {
-          label = candidate
-          break
+          return candidate
         }
       }
-      label = label ?? labels[0] ?? null
+      return labels[0] ?? null
+    }
+
+    // StreamlitMarkdown applies the ellipsis to the inner <p>, so that is the
+    // element whose content overflows; fall back to the label otherwise.
+    const getClip = (label: HTMLElement): HTMLElement =>
+      label.querySelector<HTMLElement>("p") ?? label
+
+    const measure = (): void => {
+      const label = findVisibleLabel()
       if (!label) {
         // No label is rendered (e.g. an icon-only control, or the label was
         // cleared on a rerun). Clear any stale truncation state so a previously
@@ -86,9 +93,7 @@ export function useIsTruncated(
         return
       }
 
-      // StreamlitMarkdown applies the ellipsis to the inner <p>, so that is the
-      // element whose content overflows; fall back to the container otherwise.
-      const clip = label.querySelector<HTMLElement>("p") ?? label
+      const clip = getClip(label)
       // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- truncation detection
       const scrollWidth = clip.scrollWidth
       // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- truncation detection
@@ -106,22 +111,25 @@ export function useIsTruncated(
 
     const resizeObserver = new ResizeObserver(() => measure())
     resizeObserver.observe(container)
-
-    // A web font or icon glyph can finish loading after the first measurement
-    // and change the label's intrinsic width without resizing the container, so
-    // re-measure once any pending fonts are ready.
-    let cancelled = false
-    const fontSet: FontFaceSet | undefined = document.fonts
-    if (fontSet) {
-      void fontSet.ready.then(() => {
-        if (!cancelled) {
-          measure()
-        }
-      })
+    // Also observe the inner label node. Inside a fixed-width control, sibling
+    // size changes (e.g. an icon swapping for a loading spinner) redistribute
+    // flex space and change the label width without resizing the container, so
+    // the container observer alone would miss them.
+    const initialLabel = findVisibleLabel()
+    if (initialLabel) {
+      resizeObserver.observe(getClip(initialLabel))
     }
 
+    // A web font or icon glyph can finish loading after the first measurement
+    // and change the label's intrinsic width without resizing it, so re-measure
+    // whenever fonts finish loading. Using the `loadingdone` event (rather than
+    // the one-shot `fonts.ready`) also covers fonts injected by a later rerun.
+    const handleFontsLoaded = (): void => measure()
+    const fontSet: FontFaceSet | undefined = document.fonts
+    fontSet?.addEventListener("loadingdone", handleFontsLoaded)
+
     return () => {
-      cancelled = true
+      fontSet?.removeEventListener("loadingdone", handleFontsLoaded)
       resizeObserver.disconnect()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deps are caller-provided re-measure triggers

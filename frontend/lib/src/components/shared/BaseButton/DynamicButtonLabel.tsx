@@ -53,7 +53,7 @@ export const DynamicButtonLabel = ({
     return formatShortcutForDisplay(shortcut, { isMac: isFromMac() })
   }, [shortcut])
 
-  const truncate = wrap === false
+  const truncate = !wrap
 
   return (
     <StyledButtonLabel $truncate={truncate}>
