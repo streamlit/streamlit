@@ -827,8 +827,8 @@ _create_option(
 _create_option(
     "runner.cacheHashSeed",
     description="""
-        Seed used when @st.cache_data / @st.cache_resource hash large pandas,
-        polars, and numpy objects.
+        Escape hatch for an app whose @st.cache_data / @st.cache_resource cache
+        returns the wrong value for a large pandas, polars, or numpy object.
 
         Large objects are hashed from a fixed random sample rather than in full,
         which keeps cache lookups fast. Because the sample positions are derived
@@ -840,9 +840,9 @@ _create_option(
         the historical sample positions.
 
         Changing this seed moves which positions are sampled. It does not
-        eliminate collisions -- it selects a different set of them -- so it is an
-        escape hatch for an app that has hit a specific collision, not a
-        guarantee of uniqueness. Because the value is hashed rather than used
+        eliminate collisions -- it selects a different set of them -- so it
+        resolves a collision an app has actually hit rather than guaranteeing
+        uniqueness. Because the value is hashed rather than used
         directly, it can be set to a deployment secret to make the sampled
         positions unpredictable to someone trying to construct a collision.
 

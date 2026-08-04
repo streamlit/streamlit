@@ -1105,6 +1105,20 @@ def test_cache_hash_seed_is_derived_by_hashing_so_any_string_works() -> None:
     assert seed != 0
 
 
+def test_cache_hash_seed_accepts_a_non_string_config_value() -> None:
+    """An unquoted ``cacheHashSeed = 5`` in config.toml parses as an int.
+
+    ``config.get_option`` returns the raw parsed value rather than coercing it to
+    the declared type, so the seed derivation must tolerate a non-string here or
+    it raises ``AttributeError`` at hash time.
+    """
+    with patch_config_options({"runner.cacheHashSeed": 5}):
+        seed = _sample_seed()
+
+    assert 0 <= seed < 2**32
+    assert seed != 0
+
+
 @pytest.mark.parametrize(
     "make_obj",
     [
@@ -1173,7 +1187,9 @@ def test_cache_hash_seed_moves_off_a_real_collision() -> None:
     length = _NP_SIZE_LARGE + 100_000
     base = np.arange(length)
 
-    # ``value == index`` for arange, so the drawn values are the drawn indices.
+    # Replay seed 0 -- the historical default, not ``_sample_seed()`` -- to find the
+    # indices that sampler never draws. ``value == index`` for arange, so the drawn
+    # values are the drawn indices.
     drawn = np.random.RandomState(0).choice(base.flat, size=_NP_SAMPLE_SIZE)
     never_drawn = np.setdiff1d(np.arange(length), np.unique(drawn))
     assert never_drawn.size > 0, (
