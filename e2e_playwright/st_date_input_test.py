@@ -236,10 +236,8 @@ def test_handles_range_start_end_date_changes(app: Page):
 
     calendar = app.get_by_test_id("stDateInputCalendar")
 
-    # Select start date: '2019/07/10' (a fresh range selection, replacing
-    # the default two-date value — see AnchorDateWatcher in
-    # RangeDateInput.tsx: clicking any date when a complete range is
-    # already selected starts a brand-new range rather than editing it)
+    # Select start date: '2019/07/10' — clicking any date when a complete
+    # range is already selected starts a new range rather than editing it
     calendar.get_by_label("Wednesday, July 10, 2019").click()
 
     expect_markdown(app, "Value 5: (datetime.date(2019, 7, 10),)")

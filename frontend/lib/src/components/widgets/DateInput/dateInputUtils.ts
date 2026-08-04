@@ -118,15 +118,6 @@ export function datesEqual(
   return a.compare(b) === 0
 }
 
-/** Converts a native JS `Date` to a `CalendarDate`, discarding time-of-day. */
-export function dateToCalendarDate(date: Date): CalendarDate {
-  return new CalendarDate(
-    date.getFullYear(),
-    date.getMonth() + 1,
-    date.getDate()
-  )
-}
-
 /**
  * `element.min` is always populated by the backend (`time_widgets.py` always
  * sends a value for it), so the `?? today(...)` fallback is defensive only.

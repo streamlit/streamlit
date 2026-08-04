@@ -195,11 +195,9 @@ function RangeDateInput({
   // Guards against `handleFocus` reopening the popover during programmatic
   // focus restoration (see `focusLastFieldSegment` below).
   const isRestoringFocusRef = useRef(false)
-  // Tracks the anchor date when transitioning from a complete range to a new
-  // selection. RAC's controlled RangeCalendar doesn't natively support this
-  // transition — after calendarValue goes null, the next click fires onChange
-  // with start===end. This ref lets us detect "second click" and complete the
-  // range with the original anchor.
+  // Enables "click to start new range" on an existing complete range. RAC
+  // fires onChange with start===end after clearing — this ref detects
+  // "second click" and completes the range using the stored anchor.
   const pendingAnchorRef = useRef<CalendarDate | null>(null)
 
   // --- Two-layer state (matches SingleDateInput pattern) ---
@@ -256,10 +254,8 @@ function RangeDateInput({
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
       } else {
-        // Range mode does NOT revert to default on close with placeholders
-        // (unlike single mode). BaseWeb's original range picker committed
-        // the current state on close regardless of placeholder segments.
-        // A null displayStart means "cleared" → commit [].
+        // Range mode commits current state on close (never reverts to
+        // default, unlike single mode). Null displayStart = cleared → [].
         const pending = compact([
           displayStartRef.current,
           displayEndRef.current,
@@ -397,17 +393,9 @@ function RangeDateInput({
     [displayStart, displayEnd]
   )
 
-  // RangeCalendar fires onChange when a range is completed. When a controlled
-  // value is already a complete range and the user clicks a single date, RAC
-  // fires onChange with start === end (same-day range) — treat this as the
-  // first click of a new selection (anchor) rather than a completed range.
-  //
-  // Flow for "click new date within existing complete range":
-  // 1. First click: displayEnd is set → enter anchor mode, store anchor in
-  //    pendingAnchorRef, commit [start] (partial range).
-  // 2. Second click: displayEnd is null, pendingAnchorRef is set → the
-  //    same-day range.start is the end date. Complete the range using
-  //    pendingAnchorRef as start.
+  // When start===end, treat it as "first click of a new range" (anchor mode)
+  // if a complete range was showing, or "second click" (complete the range
+  // using pendingAnchorRef) if we're already in anchor mode.
   const handleCalendarChange = useCallback(
     (range: { start: CalendarDate; end: CalendarDate }): void => {
       // Guard: once we've committed and initiated a close, ignore any
@@ -489,8 +477,7 @@ function RangeDateInput({
     [focusLastFieldSegment]
   )
 
-  // First click of a new range selection (fired by AnchorDateWatcher when
-  // starting from empty/partial state — no prior complete range)
+  // First click of a new range (from empty/partial state)
   const handleAnchorSelect = useCallback(
     (date: CalendarDate): void => {
       pendingAnchorRef.current = date
@@ -549,14 +536,12 @@ function RangeDateInput({
         if (fullDate) {
           e.preventDefault()
           setDisplay(fullDate)
+          const isStart = datesEqual(currentValue, displayStartRef.current)
+          const isEnd = datesEqual(currentValue, displayEndRef.current)
           onChange(
             compact([
-              currentValue === displayStartRef.current
-                ? fullDate
-                : displayStartRef.current,
-              currentValue === displayEndRef.current
-                ? fullDate
-                : displayEndRef.current,
+              isStart ? fullDate : displayStartRef.current,
+              isEnd ? fullDate : displayEndRef.current,
             ])
           )
           return
@@ -576,14 +561,12 @@ function RangeDateInput({
         const newDate = base.set({ [partial.segmentType]: partial.value })
         if (newDate[partial.segmentType] !== partial.value) return
         setDisplay(newDate)
+        const isStart = datesEqual(currentValue, displayStartRef.current)
+        const isEnd = datesEqual(currentValue, displayEndRef.current)
         onChange(
           compact([
-            currentValue === displayStartRef.current
-              ? newDate
-              : displayStartRef.current,
-            currentValue === displayEndRef.current
-              ? newDate
-              : displayEndRef.current,
+            isStart ? newDate : displayStartRef.current,
+            isEnd ? newDate : displayEndRef.current,
           ])
         )
       },

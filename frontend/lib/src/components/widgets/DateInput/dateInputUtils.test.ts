@@ -22,7 +22,6 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
 import {
   calendarDateToIso,
   createDateErrorMessage,
-  dateToCalendarDate,
   formatCalendarDate,
   getInitialFocusedDate,
   getMaxDate,
@@ -137,17 +136,6 @@ describe("isoToCalendarDate / calendarDateToIso", () => {
   })
 })
 
-describe("dateToCalendarDate", () => {
-  it("extracts local Y/M/D and discards time-of-day", () => {
-    // BaseWeb's quick select historically emitted noon (not midnight) for
-    // its native Date objects — see streamlit/streamlit#12293. Using a
-    // non-midnight time here confirms that's structurally impossible to
-    // reproduce with CalendarDate, which has no time component at all.
-    const date = new Date(2024, 2, 15, 12, 0, 0)
-    expect(dateToCalendarDate(date)).toEqual(new CalendarDate(2024, 3, 15))
-  })
-})
-
 describe("getMinDate / getMaxDate", () => {
   it("parses element.min", () => {
     const element = DateInputProto.create({ min: "2020-01-01" })
@@ -206,9 +194,13 @@ describe("isOlderThanTwoYears", () => {
   })
 
   it("returns false for a date within the last 2 years", () => {
-    const oneYearAgo = new Date()
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
-    expect(isOlderThanTwoYears(dateToCalendarDate(oneYearAgo))).toBe(false)
+    const now = new Date()
+    const oneYearAgo = new CalendarDate(
+      now.getFullYear() - 1,
+      now.getMonth() + 1,
+      now.getDate()
+    )
+    expect(isOlderThanTwoYears(oneYearAgo)).toBe(false)
   })
 })
 

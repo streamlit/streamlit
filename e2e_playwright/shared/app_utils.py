@@ -390,9 +390,6 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
     ``type_time``'s blur-to-commit behavior. Pass ``commit=False`` to keep
     the popover open (e.g. for error-state tests that inspect UI before commit).
 
-    Note: Range mode still uses BaseWeb's free-text input and is not yet
-    migrated to React Aria segments.
-
     Parameters
     ----------
     date_input_field : Locator

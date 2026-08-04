@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-/** Locale helpers: validate BCP-47 tags for the calendar and read week-start
- *  info for the date-fns-backed range path. */
+/** Locale helpers: validate BCP-47 tags for the calendar and provide
+ *  week-start info for the legacy `useIntlLocale` hook (DateTimeInput). */
 
 export interface IntlWeekInfo {
   firstDay: number

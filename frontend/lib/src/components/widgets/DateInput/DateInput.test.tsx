@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
+import { CalendarDate } from "@internationalized/date"
 import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import moment from "moment"
 import { setInteractionModality } from "react-aria/private/interactions/useFocusVisible"
-import { MockInstance } from "vitest"
 
 import {
   DateInput as DateInputProto,
@@ -691,14 +690,12 @@ describe("DateInput widget", () => {
   describe("quick select feature", () => {
     it("hides quick select for range date inputs if minDate is within 2 years", async () => {
       const user = userEvent.setup()
-      const recentMinDate = moment().subtract(1, "year").format("YYYY-MM-DD")
+      const recentMin = new CalendarDate(2024, 1, 1)
+      const recentMinDate = recentMin.toString()
       const props = getProps({
         isRange: true,
         min: recentMinDate,
-        default: [
-          recentMinDate,
-          moment(recentMinDate).add(1, "day").format("YYYY-MM-DD"),
-        ],
+        default: [recentMinDate, recentMin.add({ days: 1 }).toString()],
       })
 
       render(<DateInput {...props} />)
@@ -729,10 +726,7 @@ describe("DateInput widget", () => {
       const props = getProps({
         isRange: true,
         min: oldMinDate,
-        default: [
-          oldMinDate,
-          moment(oldMinDate).add(1, "day").format("YYYY-MM-DD"),
-        ],
+        default: [oldMinDate, "2020-01-02"],
       })
 
       render(<DateInput {...props} />)
@@ -790,17 +784,18 @@ describe("DateInput widget", () => {
     })
 
     describe("quick select range", () => {
-      let spy: MockInstance
       const RealDate = Date
+      // 2024-11-20 frozen for deterministic quick-select assertions
+      const STATIC_NOW = 1732112581000
+      const frozenToday = "2024-11-20"
+      const frozen800DaysAgo = new CalendarDate(2024, 11, 20)
+        .subtract({ days: 800 })
+        .toString()
 
       beforeEach(() => {
-        const STATIC_NOW = 1732112581000
-        // Freeze both Date and moment.now so quick select and our code
-        // agree on "now"
         const MockDate = class extends RealDate {
           constructor(...args: unknown[]) {
             super()
-            // If no args, return fixed date instance
             if (args.length === 0) {
               return new RealDate(STATIC_NOW)
             }
@@ -816,19 +811,17 @@ describe("DateInput widget", () => {
         }
 
         globalThis.Date = MockDate as never
-        spy = vi.spyOn(moment, "now").mockReturnValue(STATIC_NOW)
       })
 
       afterEach(() => {
-        spy.mockRestore()
         globalThis.Date = RealDate
       })
 
       it("commits quick select range ending today within max without error", async () => {
         const user = userEvent.setup()
 
-        const today = moment().format("YYYY-MM-DD")
-        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
+        const today = frozenToday
+        const minDate = frozen800DaysAgo
 
         const props = getProps({
           isRange: true,
@@ -871,8 +864,8 @@ describe("DateInput widget", () => {
 
       it("selecting a preset keeps the calendar popover open", async () => {
         const user = userEvent.setup()
-        const today = moment().format("YYYY-MM-DD")
-        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
+        const today = frozenToday
+        const minDate = frozen800DaysAgo
 
         const props = getProps({
           isRange: true,
@@ -901,8 +894,8 @@ describe("DateInput widget", () => {
 
       it("re-clicking the active preset deselects it and clears the range", async () => {
         const user = userEvent.setup()
-        const today = moment().format("YYYY-MM-DD")
-        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
+        const today = frozenToday
+        const minDate = frozen800DaysAgo
 
         const props = getProps({
           isRange: true,
@@ -949,8 +942,8 @@ describe("DateInput widget", () => {
 
       it("trigger displays preset label when range matches, 'Select...' otherwise", async () => {
         const user = userEvent.setup()
-        const today = moment().format("YYYY-MM-DD")
-        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
+        const today = frozenToday
+        const minDate = frozen800DaysAgo
 
         const props = getProps({
           isRange: true,
@@ -981,8 +974,8 @@ describe("DateInput widget", () => {
 
       it("Escape in the quick-select dropdown closes only the dropdown, not the calendar", async () => {
         const user = userEvent.setup()
-        const today = moment().format("YYYY-MM-DD")
-        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
+        const today = frozenToday
+        const minDate = frozen800DaysAgo
 
         const props = getProps({
           isRange: true,
@@ -1019,8 +1012,8 @@ describe("DateInput widget", () => {
 
       it("clicking outside the quick-select dropdown closes it", async () => {
         const user = userEvent.setup()
-        const today = moment().format("YYYY-MM-DD")
-        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
+        const today = frozenToday
+        const minDate = frozen800DaysAgo
 
         const props = getProps({
           isRange: true,
@@ -1057,8 +1050,8 @@ describe("DateInput widget", () => {
 
       it("dropdown opens with all 6 preset options", async () => {
         const user = userEvent.setup()
-        const today = moment().format("YYYY-MM-DD")
-        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
+        const today = frozenToday
+        const minDate = frozen800DaysAgo
 
         const props = getProps({
           isRange: true,
