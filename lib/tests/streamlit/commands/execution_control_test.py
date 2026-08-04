@@ -24,7 +24,7 @@ from streamlit.commands.execution_control import (
     switch_page,
 )
 from streamlit.errors import NoSessionContext, StreamlitAPIException
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import Page
 from streamlit.runtime.scriptrunner import RerunData
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -139,8 +139,8 @@ def test_st_switch_page_context_info(patched_get_script_run_ctx):
 
     patched_get_script_run_ctx.return_value = ctx
 
-    # Mock the StreamlitPage object and its _script_hash attribute
-    mock_page = MagicMock(spec=StreamlitPage)
+    # Mock the Page object and its _script_hash attribute
+    mock_page = MagicMock(spec=Page)
     mock_page._script_hash = "target_page_hash"
     mock_page.is_external = False
 
@@ -181,7 +181,7 @@ def test_st_switch_page_applies_query_params(patched_get_script_run_ctx):
 
     mock_query_params.from_dict.side_effect = _from_dict_side_effect
 
-    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
     mocked_page.is_external = False
 
@@ -226,7 +226,7 @@ def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx
 
     mock_query_params.from_dict.side_effect = _from_dict_side_effect
 
-    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
     mocked_page.is_external = False
 
@@ -262,7 +262,7 @@ def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx)
 
     patched_get_script_run_ctx.return_value = ctx
 
-    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
     mocked_page.is_external = False
 
@@ -281,7 +281,7 @@ def test_st_switch_page_raises_for_external_page(patched_get_script_run_ctx):
     ctx.script_requests = MagicMock()
     patched_get_script_run_ctx.return_value = ctx
 
-    mock_page = MagicMock(spec=StreamlitPage)
+    mock_page = MagicMock(spec=Page)
     mock_page.is_external = True
 
     with pytest.raises(
@@ -412,16 +412,16 @@ def test_st_switch_page_string_path_unknown_page_raises(
 
 
 @patch("pathlib.Path.is_file", MagicMock(return_value=True))
-class SwitchPageStreamlitPageValidationTest(DeltaGeneratorTestCase):
-    """Test that ``st.switch_page`` validates a passed ``StreamlitPage`` against
+class SwitchPagePageValidationTest(DeltaGeneratorTestCase):
+    """Test that ``st.switch_page`` validates a passed ``Page`` against
     pages registered with ``st.navigation`` and raises when the source does not
     match the registered page sharing the same URL pathname.
 
     Regression coverage for https://github.com/streamlit/streamlit/issues/10572.
     """
 
-    def test_streamlit_page_with_mismatched_file_path_raises(self) -> None:
-        """Switching to a ``StreamlitPage`` whose file path does not match the
+    def test_page_with_mismatched_file_path_raises(self) -> None:
+        """Switching to a ``Page`` whose file path does not match the
         page registered under the same ``url_path`` raises."""
         import streamlit as st
 
@@ -431,7 +431,7 @@ class SwitchPageStreamlitPageValidationTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException, match=r"different page is "):
             st.switch_page(bad_page)
 
-    def test_streamlit_page_with_inferred_url_path_mismatch_raises(self) -> None:
+    def test_page_with_inferred_url_path_mismatch_raises(self) -> None:
         """Switching to ``st.Page("foo.py")`` (url_path inferred as ``foo``)
         raises when a different file is registered under ``url_path="foo"``."""
         import streamlit as st
@@ -441,8 +441,8 @@ class SwitchPageStreamlitPageValidationTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException, match=r"different page is "):
             st.switch_page(st.Page("foo.py"))
 
-    def test_streamlit_page_callable_with_file_registered_raises(self) -> None:
-        """Switching to a callable-based ``StreamlitPage`` raises when the
+    def test_page_callable_with_file_registered_raises(self) -> None:
+        """Switching to a callable-based ``Page`` raises when the
         registered page sharing its ``url_path`` is file-based."""
         import streamlit as st
 
@@ -454,8 +454,8 @@ class SwitchPageStreamlitPageValidationTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException, match=r"is a callable"):
             st.switch_page(st.Page(some_callable, url_path="foo"))
 
-    def test_streamlit_page_matching_source_does_not_raise(self) -> None:
-        """A ``StreamlitPage`` whose source matches the registered page is
+    def test_page_matching_source_does_not_raise(self) -> None:
+        """A ``Page`` whose source matches the registered page is
         accepted by validation (no ``StreamlitAPIException`` raised)."""
         import streamlit as st
 
@@ -465,7 +465,7 @@ class SwitchPageStreamlitPageValidationTest(DeltaGeneratorTestCase):
         # Validation passes — the rerun side effect is harmless for this test.
         st.switch_page(matching)
 
-    def test_streamlit_page_unregistered_url_path_does_not_raise(self) -> None:
+    def test_page_unregistered_url_path_does_not_raise(self) -> None:
         """If no page with the given ``url_path`` is registered (no hash
         collision), validation is skipped — preserving previous behavior for
         apps that don't use ``st.navigation``."""

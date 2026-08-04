@@ -19,7 +19,6 @@ from __future__ import annotations
 import inspect
 import sys
 import unittest
-from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -37,21 +36,13 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
-def patch_varname_getter():
-    """Patches streamlit.elements.help so _get_variable_name() works outside ScriptRunner."""
-    parent_frame_filename = inspect.getouterframes(inspect.currentframe())[2].filename
-
-    return patch("streamlit.elements.help.SCRIPTRUNNER_FILENAME", parent_frame_filename)
-
-
 class StHelpTest(DeltaGeneratorTestCase):
     """Test st.help."""
 
     def test_no_arg(self):
         """When st.help is called with no arguments, show Streamlit docs."""
 
-        with patch_varname_getter():
-            st.help()
+        st.help()
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == ""
@@ -62,8 +53,7 @@ class StHelpTest(DeltaGeneratorTestCase):
     def test_none_arg(self):
         """When st.help is called with None as an argument, don't show Streamlit docs."""
 
-        with patch_varname_getter():
-            st.help(None)
+        st.help(None)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == ""
@@ -81,8 +71,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         def my_func(some_param, another_param=123):
             """This is the doc"""
 
-        with patch_varname_getter():
-            st.help(my_func)
+        st.help(my_func)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "my_func"
@@ -99,8 +88,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         def my_func(some_param, another_param=123):
             pass
 
-        with patch_varname_getter():
-            st.help(my_func)
+        st.help(my_func)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "my_func"
@@ -111,11 +99,31 @@ class StHelpTest(DeltaGeneratorTestCase):
         assert ds.type == "function"
         assert ds.doc_string == ""
 
+    def test_st_help_inside_nested_function(self):
+        """Regression test for GH #11430.
+
+        When ``st.help`` is called inside a nested function (as happens in
+        multipage apps where the page function calls ``st.help(...)`` and is
+        invoked via ``page.run()``), the header/name must come from the frame
+        that literally contains the ``st.help(...)`` call — not from an outer
+        frame whose source line is ``page.run()`` or the function name.
+        """
+
+        def page_function():
+            st.help(st.write)
+
+        page_function()
+
+        ds = self.get_delta_from_queue().new_element.help_info
+        assert ds.name == "st.write"
+        assert ds.type == "method"
+        assert ds.name != "page_function()"
+        assert ds.name != "page.run()"
+
     def test_deltagenerator_func(self):
         """Test Streamlit DeltaGenerator function."""
 
-        with patch_varname_getter():
-            st.help(st.audio)
+        st.help(st.audio)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "st.audio"
@@ -133,8 +141,7 @@ class StHelpTest(DeltaGeneratorTestCase):
     def test_builtin_func(self):
         """Test a built-in function."""
 
-        with patch_varname_getter():
-            st.help(dir)
+        st.help(dir)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "dir"
@@ -146,8 +153,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         """Test a named variable."""
 
         myvar = 123
-        with patch_varname_getter():
-            st.help(myvar)
+        st.help(myvar)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "myvar"
@@ -158,8 +164,7 @@ class StHelpTest(DeltaGeneratorTestCase):
     def test_walrus(self):
         """Test a named variable using walrus operator."""
 
-        with patch_varname_getter():
-            st.help(myvar := 123)  # noqa: F841
+        st.help(myvar := 123)  # noqa: F841
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "myvar"
@@ -172,8 +177,7 @@ class StHelpTest(DeltaGeneratorTestCase):
 
         myvar = {"foo": [None, {"bar": "baz"}]}
 
-        with patch_varname_getter():
-            st.help(myvar["foo"][1]["bar"].strip)
+        st.help(myvar["foo"][1]["bar"].strip)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == 'myvar["foo"][1]["bar"].strip'
@@ -184,8 +188,7 @@ class StHelpTest(DeltaGeneratorTestCase):
     def test_builtin_obj(self):
         """Test a built-in function."""
 
-        with patch_varname_getter():
-            st.help(123)
+        st.help(123)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == ""
@@ -201,8 +204,7 @@ class StHelpTest(DeltaGeneratorTestCase):
 
         array = np.arange(1)
 
-        with patch_varname_getter():
-            st.help(array)
+        st.help(array)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "array"
@@ -217,8 +219,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         class MyClass:
             pass
 
-        with patch_varname_getter():
-            st.help(MyClass)
+        st.help(MyClass)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert type(MyClass) is type
@@ -237,8 +238,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         class MyClass:
             pass
 
-        with patch_varname_getter():
-            st.help(MyClass)
+        st.help(MyClass)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert type(MyClass) is type
@@ -272,8 +272,7 @@ class StHelpTest(DeltaGeneratorTestCase):
             def classmethod1(cls, y=20):
                 "Class method 1"
 
-        with patch_varname_getter():
-            st.help(MyClass)
+        st.help(MyClass)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert len(ds.members) == 5
@@ -316,8 +315,7 @@ class StHelpTest(DeltaGeneratorTestCase):
 
         my_instance = MyClass()
 
-        with patch_varname_getter():
-            st.help(my_instance)
+        st.help(my_instance)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert len(ds.members) == 7

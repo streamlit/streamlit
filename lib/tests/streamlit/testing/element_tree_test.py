@@ -23,6 +23,7 @@ import pandas as pd
 import pytest
 
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
+from streamlit.dataframe import lazy_df_source as dataframe_source
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import _format_value_for_widget
@@ -287,6 +288,40 @@ def test_dataframe():
     )
 
     repr(at.dataframe[0])
+
+
+def test_dataframe_value_keeps_auto_lazy_candidates_eager_in_app_test(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(dataframe_source, "AUTO_LAZY_ROW_THRESHOLD", 3)
+
+    def script():
+        import pandas as pd
+
+        import streamlit as st
+
+        st.dataframe(pd.DataFrame({"a": [1, 2, 3, 4]}))
+
+    at = AppTest.from_function(script).run()
+    dataframe = at.dataframe[0]
+
+    assert not dataframe.proto.HasField("lazy_data")
+    assert dataframe.value["a"].tolist() == [1, 2, 3, 4]
+
+
+def test_dataframe_value_keeps_explicit_lazy_data_complete():
+    def script():
+        import pandas as pd
+
+        import streamlit as st
+
+        st.dataframe(pd.DataFrame({"a": range(1001)}), lazy=True)
+
+    at = AppTest.from_function(script).run()
+    dataframe = at.dataframe[0]
+
+    assert not dataframe.proto.HasField("lazy_data")
+    assert dataframe.value["a"].tolist() == list(range(1001))
 
 
 def test_date_input():
@@ -877,7 +912,12 @@ def test_format_func_accepts_formatted_labels():
 
     at = AppTest.from_function(script).run()
 
-    at.multiselect("multi_inventory").set_value(["Inventory 1"])
+    # The "Run multi" button is disabled until an item is selected, so it must
+    # re-register as enabled in a separate run before it can be clicked: disabled-
+    # widget callbacks are suppressed server-side, and callbacks run against the
+    # previous run's metadata. This mirrors the browser, where a disabled button
+    # cannot be clicked until a rerun enables it.
+    at = at.multiselect("multi_inventory").set_value(["Inventory 1"]).run()
     at = at.button("multi_button").click().run()
 
     assert at.session_state.multi_clicked

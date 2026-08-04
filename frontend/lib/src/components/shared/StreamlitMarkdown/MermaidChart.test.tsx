@@ -64,6 +64,47 @@ describe("MermaidChart", () => {
     vi.doUnmock("mermaid")
   })
 
+  it("locks security-sensitive config keys against %%{init}%% directive overrides", async () => {
+    const initialize = vi.fn()
+
+    vi.doMock("mermaid", () => ({
+      default: {
+        initialize,
+        render: vi.fn().mockResolvedValue({ svg: "<svg></svg>" }),
+      },
+    }))
+
+    render(<MermaidChart source="graph TD\nA-->B" />)
+
+    await waitFor(
+      () => {
+        expect(initialize).toHaveBeenCalled()
+      },
+      { timeout: 5000 }
+    )
+
+    const config = initialize.mock.calls[0][0]
+    expect(config.securityLevel).toBe("strict")
+    // Locked set must include Mermaid defaults plus Streamlit hardening keys.
+    expect(config.secure).toEqual([
+      // Mermaid defaults
+      "secure",
+      "securityLevel",
+      "startOnLoad",
+      "maxTextSize",
+      "suppressErrorRendering",
+      "maxEdges",
+      // Streamlit hardening
+      "htmlLabels",
+      "themeCSS",
+      "fontFamily",
+      "altFontFamily",
+      "dompurifyConfig",
+    ])
+
+    vi.doUnmock("mermaid")
+  })
+
   // Note: Full rendering tests with mermaid SVG output are covered by E2E tests
   // because mocking dynamic imports is complex and the real mermaid rendering
   // is best tested in a browser environment.

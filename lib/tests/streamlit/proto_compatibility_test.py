@@ -84,7 +84,7 @@ pytestmark = pytest.mark.filterwarnings(
                 ("is_hello", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("recommend_skills_install", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 (
-                    "skills_nudge_suppressed_locality",
+                    "skills_nudge_suppressed_reason",
                     FD.LABEL_OPTIONAL,
                     FD.TYPE_STRING,
                 ),
@@ -100,6 +100,7 @@ pytestmark = pytest.mark.filterwarnings(
                 ("hide_sidebar_nav", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("toolbar_mode", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
                 ("show_error_links", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
+                ("disable_data_export", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
             },
         ),
         (

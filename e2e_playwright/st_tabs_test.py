@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
 
 def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFunction):
     st_tabs = themed_app.get_by_test_id("stTabs")
-    expect(st_tabs).to_have_count(17)
+    expect(st_tabs).to_have_count(19)
 
     assert_snapshot(st_tabs.nth(0), name="st_tabs-sidebar")
     assert_snapshot(st_tabs.nth(1), name="st_tabs-text_input")
@@ -69,7 +69,7 @@ def test_tabs_with_html(app: Page):
 
 def test_tabs_with_code_layouts(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that tabs with code blocks and different height configurations render correctly."""
-    tabs_with_code = app.get_by_test_id("stTabs").nth(6)
+    tabs_with_code = app.get_by_test_id("stTabs").nth(8)
 
     # Test Tab 1 with container and stretched code
     tabs_with_code.scroll_into_view_if_needed()
@@ -496,3 +496,41 @@ def test_nested_tabs_stay_collapsed_after_rerun(app: Page):
     expect(nested_tabs.get_by_text("Inner 2 marker")).not_to_be_visible()
     expect(nested_tabs.get_by_text("Outer B marker")).not_to_be_visible()
     wait_until(app, lambda: _count_visible_tab_panels(nested_tabs) == 2)
+
+
+def test_tabs_fixed_height_scrolls_active_panel(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """A pixel height sizes the tab container and scrolls the active panel."""
+    fixed_height_tabs = get_element_by_key(
+        app, "tabs_fixed_height_container"
+    ).get_by_test_id("stTabs")
+
+    # The container itself should have the pixel height applied inline.
+    expect(fixed_height_tabs).to_have_css("height", "200px")
+
+    # Fixed-height tabs must not be interpreted as a "content" height container;
+    # the tab list stays inside the fixed frame instead of expanding beyond it.
+    box = fixed_height_tabs.bounding_box()
+    assert box is not None
+    assert 195 <= box["height"] <= 205
+
+    fixed_height_tabs.scroll_into_view_if_needed()
+    assert_snapshot(fixed_height_tabs, name="st_tabs-fixed_pixel_height")
+
+
+def test_tabs_stretch_height_fills_parent(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """height='stretch' fills a fixed-height parent container."""
+    stretch_container = get_element_by_key(themed_app, "tabs_stretch_height_container")
+    stretch_tabs = stretch_container.get_by_test_id("stTabs")
+
+    # The parent has height=300; stretch tabs should size to fill it (minus padding).
+    box = stretch_tabs.bounding_box()
+    assert box is not None
+    # Allow padding tolerance from the surrounding container.
+    assert box["height"] >= 240
+
+    stretch_tabs.scroll_into_view_if_needed()
+    assert_snapshot(stretch_tabs, name="st_tabs-stretch_height_in_container")

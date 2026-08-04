@@ -44,7 +44,10 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import {
+  SHIFT_VIEWPORT_PADDING,
+  useFloatingOverlay,
+} from "~lib/hooks/useFloatingOverlay"
 import { convertRemToPx } from "~lib/theme/utils"
 import {
   filterSelectOptions,
@@ -59,6 +62,7 @@ import {
 
 import {
   StyledClearButton,
+  StyledEmptyState,
   StyledGroup,
   StyledInput,
   StyledItemHighlight,
@@ -90,6 +94,49 @@ type ComboOption = {
 }
 
 const CREATABLE_ID = "__creatable__"
+
+/**
+ * Pass-through filter for RAC's <ComboBox defaultFilter>. Streamlit's own
+ * `filterSelectOptions` runs upstream and produces `displayOptions`, so RAC
+ * must not re-filter — otherwise its built-in "contains" strategy would drop
+ * fuzzy matches like "ape" -> "Apple". See issue #16003.
+ *
+ * Defined at module scope so the prop is referentially stable across renders.
+ */
+const PASS_THROUGH_FILTER = (): boolean => true
+
+/**
+ * If `after` is `before` with extra characters inserted (at any position),
+ * return just those inserted characters; otherwise return null.
+ *
+ * Used to detect the user typing over an untouched committed label so the
+ * first keystroke starts a fresh search instead of appending behind the
+ * committed label. Works from the reported input text alone, so it is
+ * independent of caret position and browser-specific focus/selection behavior.
+ */
+export const getInsertedText = (
+  before: string,
+  after: string
+): string | null => {
+  const maxPrefix = Math.min(before.length, after.length)
+  let prefix = 0
+  while (prefix < maxPrefix && before[prefix] === after[prefix]) {
+    prefix++
+  }
+  const maxSuffix = Math.min(before.length - prefix, after.length - prefix)
+  let suffix = 0
+  while (
+    suffix < maxSuffix &&
+    before[before.length - 1 - suffix] === after[after.length - 1 - suffix]
+  ) {
+    suffix++
+  }
+  // A pure insertion removes none of `before`'s characters.
+  if (before.slice(prefix, before.length - suffix) !== "") {
+    return null
+  }
+  return after.slice(prefix, after.length - suffix)
+}
 
 /**
  * Null-render component mounted inside <ComboBox> to expose RAC's internal
@@ -137,6 +184,17 @@ const renderOption = (item: unknown): ReactElement => {
   )
 }
 
+/**
+ * Swallow paste and IME composition events so FILTER_MODE_NONE inputs stay
+ * non-editable, mirroring the character blocking in onKeyDownCapture. Paste
+ * cancellation is honored by browsers; compositionstart cancellation is
+ * best-effort (some browsers ignore preventDefault on it), so IME text may
+ * still slip in — but it is never committed as a selection.
+ */
+const preventInputEvent = (e: React.SyntheticEvent): void => {
+  e.preventDefault()
+}
+
 const Selectbox: FC<Props> = ({
   disabled,
   value: propValue,
@@ -164,13 +222,40 @@ const Selectbox: FC<Props> = ({
   // on both refs being mounted — the actual ComboBox open state is irrelevant
   // here since the floating element only exists in the DOM when RAC's Popover
   // renders it (i.e. when the dropdown is open).
-  const { refs, floatingStyles } = useFloatingOverlay({
-    open: true,
-    placement: "bottom-start",
-    offsetPx: convertRemToPx(theme.spacing.twoXS),
-    flipOptions: isInSidebar ? false : undefined,
-    matchTriggerWidth: true,
-  })
+  //
+  // In the sidebar, flip/shift are bounded by the viewport
+  // (document.documentElement) rather than the sidebar's `overflow: auto`
+  // clipping rect. Otherwise the dropdown cannot flip up when the trigger sits
+  // near the bottom of the sidebar and it overflows the viewport instead (issue
+  // #16181). This mirrors the sidebar handling in elements/Popover/Popover.tsx.
+  // `document.documentElement` is used rather than `document.body` because
+  // Streamlit's `.stApp` uses `position: absolute; inset: 0`, leaving
+  // document.body sized 0x0, so a body boundary would always report overflow
+  // and re-introduce the same clipping.
+  //
+  // Unlike Popover.tsx, no `size` middleware is needed here: the option list is
+  // already height-capped by CSS (`min(maxDropdownHeight, 70vh)` with internal
+  // scroll in Selectbox.styled.ts), so the dropdown cannot overflow the way
+  // arbitrary Popover content can.
+  const overlayOptions = useMemo(() => {
+    const base = {
+      open: true,
+      placement: "bottom-start" as const,
+      offsetPx: convertRemToPx(theme.spacing.twoXS),
+      matchTriggerWidth: true,
+    }
+    if (!isInSidebar || typeof document === "undefined") {
+      return base
+    }
+    const boundary = document.documentElement
+    return {
+      ...base,
+      flipOptions: { boundary },
+      shiftOptions: { boundary, padding: SHIFT_VIEWPORT_PADDING },
+    }
+  }, [theme.spacing.twoXS, isInSidebar])
+
+  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
   // Locally committed value (last value sent to Streamlit). Re-synced from
   // propValue when the backend pushes an update (form-clear, session state, etc.).
@@ -282,9 +367,11 @@ const Selectbox: FC<Props> = ({
 
   const isFilterNone =
     filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
-  // Don't use `readOnly` for FILTER_MODE_NONE: it disables RAC's internal
-  // keyboard navigation (Arrow keys, Enter). Block character input via
-  // onKeyDown/onPaste instead.
+  // Don't use `readOnly` for FILTER_MODE_NONE: it disables React Aria's internal
+  // keyboard navigation (Arrow keys, Enter) and makes Chromium close the
+  // ComboBox during the pointer-event lifecycle. Instead, suppress the mobile
+  // software keyboard with inputMode="none" (see the input below) and block
+  // character input via onKeyDown/onPaste.
   const inputReadOnly =
     isMobile() && options.length <= 10 && !acceptNewOptions && !isFilterNone
 
@@ -356,14 +443,39 @@ const Selectbox: FC<Props> = ({
   }, [])
 
   const handleInputChange = useCallback((text: string): void => {
-    setInputValue(text)
-    // RAC calls onInputChange(committedLabel) when the dropdown closes to
-    // revert the input — don't treat that automatic revert as user filtering.
-    if (text !== (valueRef.current ?? "")) {
-      setFilterActive(true)
+    const committed = valueRef.current ?? ""
+
+    // Typing over an untouched committed label starts a fresh search: replace
+    // the label with just the newly typed characters instead of editing it in
+    // place. The ComboBox keeps the committed label in the input with the caret
+    // at the end, so without this the first keystroke would append behind it
+    // (e.g. "Banana" + "c" -> "Bananac") and match nothing.
+    let nextText = text
+    if (!filterActiveRef.current && committed !== "") {
+      const inserted = getInsertedText(committed, text)
+      // An empty insertion means no new characters were typed (e.g. RAC
+      // reporting the unchanged committed label on close/revert), which must
+      // not clear the input.
+      if (inserted !== null && inserted !== "") {
+        nextText = inserted
+      }
+    }
+
+    setInputValue(nextText)
+    // Decide filtering from the raw reported text, not from nextText: when the
+    // fresh-search diff yields a query equal to the committed label (e.g.
+    // committed "a", typing "a"), filtering must still activate. RAC reports
+    // text === committed when it reverts the input on close — that is the only
+    // case treated as a non-edit.
+    const isEdit = text !== committed
+    setFilterActive(isEdit)
+    // Update the ref synchronously, not just via setFilterActive, which
+    // refreshes it only on the next render. Otherwise a second keystroke before
+    // that render reads a stale `false` and re-strips the growing query (e.g.
+    // "ab" back to "b").
+    filterActiveRef.current = isEdit
+    if (isEdit) {
       openDropdownRef.current?.()
-    } else {
-      setFilterActive(false)
     }
   }, [])
 
@@ -391,7 +503,9 @@ const Selectbox: FC<Props> = ({
    *   whether the dropdown was open before RAC may have closed it.
    * - Opens the dropdown on ArrowUp/Down when closed.
    * - Blocks character input for FILTER_MODE_NONE (can't use readOnly — see above).
-   * - Clears the value on Escape when clearable.
+   * - On Escape while filtering, discards the typed query and restores the
+   *   committed label.
+   * - On Escape when not filtering and clearable, clears the committed value.
    */
   const handleInputKeyDownCapture = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -415,13 +529,28 @@ const Selectbox: FC<Props> = ({
       ) {
         openDropdownRef.current?.()
       }
-      if (
-        e.key === "Escape" &&
-        clearable &&
-        !isNullOrUndefined(valueRef.current)
-      ) {
-        e.preventDefault()
-        commitSelection(null)
+      if (e.key === "Escape") {
+        // While the user is actively filtering (typed query diverges from the
+        // committed value), Escape discards the query and restores the input
+        // to the committed label — matching pre-1.59 BaseWeb behavior and
+        // React Aria's own ComboBox contract. See #16004. This must run
+        // BEFORE the clear-on-Escape branch below, otherwise typing then
+        // pressing Escape on a clearable selectbox would wipe the committed
+        // value instead of just the typed query.
+        if (filterActiveRef.current) {
+          e.preventDefault()
+          const committed = valueRef.current ?? ""
+          setInputValue(committed)
+          inputValueRef.current = committed
+          setFilterActive(false)
+          filterActiveRef.current = false
+          closeDropdownRef.current?.()
+          return
+        }
+        if (clearable && !isNullOrUndefined(valueRef.current)) {
+          e.preventDefault()
+          commitSelection(null)
+        }
       }
     },
     [clearable, commitSelection, isFilterNone, selectDisabled]
@@ -495,6 +624,12 @@ const Selectbox: FC<Props> = ({
           onBlur={handleBlur}
           menuTrigger="manual"
           aria-label={label ?? "Selectbox"}
+          // Streamlit owns the filtering (fuzzy / contains / prefix / none),
+          // and passes the already-filtered list to <StyledListBox items=...>.
+          // Without this pass-through, RAC applies its own "contains" filter on
+          // top, dropping fuzzy matches whose query is not a contiguous
+          // substring (e.g. "ape" would not match "Apple"). See issue #16003.
+          defaultFilter={PASS_THROUGH_FILTER}
         >
           <DropdownController
             openRef={openDropdownRef}
@@ -504,13 +639,16 @@ const Selectbox: FC<Props> = ({
             <StyledInput
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}
+              // inputMode="none" suppresses the mobile software keyboard while
+              // keeping the input focusable (unlike readOnly — see above).
+              // $typingDisabled hides the caret and shows a pointer cursor.
+              inputMode={isFilterNone ? "none" : undefined}
+              $typingDisabled={isFilterNone}
               onPointerDown={handleInputPointerDown}
               onKeyDownCapture={handleInputKeyDownCapture}
               onKeyDown={handleInputKeyDown}
-              onPaste={isFilterNone ? e => e.preventDefault() : undefined}
-              onCompositionStart={
-                isFilterNone ? e => e.preventDefault() : undefined
-              }
+              onPaste={isFilterNone ? preventInputEvent : undefined}
+              onCompositionStart={isFilterNone ? preventInputEvent : undefined}
               $placeholderColor={
                 selectDisabled ? theme.colors.fadedText40 : undefined
               }
@@ -547,7 +685,9 @@ const Selectbox: FC<Props> = ({
               <StyledListBox
                 aria-label={label ?? "Selectbox options"}
                 items={displayOptions}
-                renderEmptyState={() => <span>No results</span>}
+                renderEmptyState={() => (
+                  <StyledEmptyState>No results</StyledEmptyState>
+                )}
               >
                 {renderOption}
               </StyledListBox>

@@ -78,17 +78,14 @@ class StatusContainer(DeltaGenerator):
         validate_width(width=width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        delta_path: list[int] = (
-            parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
-        )
-
         status_container = cast(
             "StatusContainer",
             parent._block(block_proto=block_proto, dg_type=StatusContainer),
         )
 
-        # Apply initial configuration
-        status_container._delta_path = delta_path
+        # `update()` re-sends the block proto at this path. Use the path `_block()` wrote
+        # to, which can be deeper than the parent cursor points to. See issue #16281.
+        status_container._delta_path = status_container._block_delta_path
         status_container._current_proto = block_proto
         status_container._current_state = state
 

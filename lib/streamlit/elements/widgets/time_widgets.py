@@ -92,25 +92,22 @@ _DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
 
 def _convert_timelike_to_time(value: TimeValue) -> time:
     if value == "now":
-        # Set value default.
-        return datetime.now().time().replace(second=0, microsecond=0)
+        # Preserve seconds but strip microseconds. Callers strip seconds
+        # for minute-granular steps before ID computation and serialization.
+        return datetime.now().time().replace(microsecond=0)
 
     if isinstance(value, str):
         try:
-            return time.fromisoformat(value)
+            return time.fromisoformat(value).replace(microsecond=0)
         except ValueError:
             try:
-                return (
-                    datetime.fromisoformat(value)
-                    .time()
-                    .replace(second=0, microsecond=0)
-                )
+                return datetime.fromisoformat(value).time().replace(microsecond=0)
             except ValueError:
                 # We throw an error below.
                 pass
 
     if isinstance(value, datetime):
-        return value.time().replace(second=0, microsecond=0)
+        return value.time().replace(microsecond=0, tzinfo=None)
 
     if isinstance(value, time):
         return value
@@ -466,25 +463,40 @@ class TimeInputSerde:
     value: time | None
     step: int = 900
 
+    @property
+    def _wire_fmt(self) -> str:
+        return "%H:%M:%S" if self.step % 60 != 0 else "%H:%M"
+
     def deserialize(self, ui_value: str | None) -> time | None:
         if ui_value is None:
             return self.value
+        # Try HH:MM:SS first (sub-minute step), fall back to HH:MM for backward compat.
+        # TODO(query-params): URL values that don't align to the step
+        # (e.g., ?time=14:37 with step=900) are accepted as-is.
+        # Consider snapping to the nearest valid step for consistency
+        # with the UI. See also SliderSerde.deserialize.
+        parsed: time | None = None
         try:
-            # TODO(query-params): URL values that don't align to the step
-            # (e.g., ?time=14:37 with step=900) are accepted as-is.
-            # Consider snapping to the nearest valid step for consistency
-            # with the UI. See also SliderSerde.deserialize.
-            return datetime.strptime(ui_value, "%H:%M").time()
+            parsed = datetime.strptime(ui_value, "%H:%M:%S").time()
         except ValueError:
-            # Unparseable URL query param value — revert to default.
+            try:
+                parsed = datetime.strptime(ui_value, "%H:%M").time()
+            except ValueError:
+                pass  # Neither format matched; handled below.
+        if parsed is None:
             return self.value
+        # Strip seconds when step is minute-granular so the returned value is
+        # consistent regardless of how the value arrived (query-param, session state).
+        if self.step % 60 == 0:
+            parsed = parsed.replace(second=0, microsecond=0)
+        return parsed
 
     def serialize(self, v: datetime | time | None) -> str | None:
         if v is None:
             return None
         if isinstance(v, datetime):
             v = v.time()
-        return time.strftime(v, "%H:%M")
+        return time.strftime(v, self._wire_fmt)
 
 
 def _to_date(v: date) -> date:
@@ -671,6 +683,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        format: Literal["12h", "24h", "localized"] = "24h",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -691,6 +704,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        format: Literal["12h", "24h", "localized"] = "24h",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -711,6 +725,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        format: Literal["12h", "24h", "localized"] = "24h",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -748,11 +763,16 @@ class TimeWidgetsMixin:
             - ``"now"`` (default): The widget initializes with the current time.
             - A ``datetime.time`` or ``datetime.datetime`` object: The widget
               initializes with the given time, ignoring any date if included.
-            - An ISO-formatted time (hh:mm[:ss.sss]) or datetime
+            - An ISO-formatted time (hh:mm[:ss[.ffffff]]) or datetime
               (YYYY-MM-DD hh:mm[:ss]) string: The widget initializes with the
               given time, ignoring any date if included.
             - ``None``: The widget initializes with no time and returns
               ``None`` until the user selects a time.
+
+            Any seconds in the initial value are only preserved in the returned
+            ``datetime.time`` when ``step`` is not a whole number of minutes
+            (``step % 60 != 0``). With the default step, seconds are stripped
+            from the initial value.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
@@ -802,9 +822,36 @@ class TimeWidgetsMixin:
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         step : int or timedelta
-            The stepping interval in seconds. This defaults to ``900`` (15
-            minutes). You can also pass a ``datetime.timedelta`` object. The
-            value must be between 60 seconds and 23 hours.
+            Controls which time components are displayed in the widget. This
+            defaults to ``900`` (15 minutes). You can also pass a
+            ``datetime.timedelta`` object. The value must be between 1
+            second and 23 hours.
+
+            - If ``step`` is divisible by 60: hour and minute components
+              are shown. Arrow keys snap to the nearest step boundary.
+            - Otherwise (``step`` is not a whole number of minutes,
+              i.e. ``step % 60 != 0``): hour, minute, and second
+              components are shown, and the returned ``datetime.time``
+              includes seconds. Arrow keys snap to the nearest step
+              boundary across the full time value.
+
+            Any valid time may be entered regardless of the step value. Step
+            does not restrict or snap the entered value.
+
+        format : "12h", "24h", or "localized"
+            Controls whether the hour is displayed in 12-hour or 24-hour
+            format. Defaults to ``"24h"``.
+
+            - ``"24h"`` (default): hours are displayed from 0 to 23.
+            - ``"12h"``: hours are displayed from 1 to 12 with an AM/PM
+              indicator.
+            - ``"localized"``: the format is determined by the user's
+              browser locale (may be 12-hour or 24-hour depending on
+              the locale).
+
+            The ``format`` setting is a display preference only and does
+            not affect the returned ``datetime.time`` value, which always
+            uses 24-hour representation.
 
         width : "stretch" or int
             The width of the time input widget. This can be one of the following:
@@ -831,8 +878,9 @@ class TimeWidgetsMixin:
             ``st.query_params``; it can only be programmatically changed
             through ``st.session_state``.
 
-            Times use HH:MM format in the URL. Invalid query parameter
-            values are ignored and removed from the URL. If ``value``
+            Times use HH:MM format in the URL (HH:MM:SS when ``step`` has
+            a sub-minute component). Invalid query parameter values are
+            ignored and removed from the URL. If ``value``
             is ``None``, an empty query parameter (e.g., ``?my_key=``)
             clears the widget.
 
@@ -898,6 +946,7 @@ class TimeWidgetsMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             step=step,
+            format=format,
             width=width,
             bind=bind,
             persist_state=persist_state,
@@ -917,6 +966,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        format: Literal["12h", "24h", "localized"] = "24h",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -934,6 +984,20 @@ class TimeWidgetsMixin:
 
         parsed_time: time | None
         parsed_time = None if value is None else _convert_timelike_to_time(value)
+
+        # Strip seconds for minute-granular steps before ID computation so
+        # the widget identity stays stable when value carries live seconds
+        # (e.g. value=datetime.now()). For sub-minute steps, seconds are
+        # meaningful and a stable key should be provided for dynamic values.
+        _step_secs = (
+            int(step.total_seconds())
+            if isinstance(step, timedelta)
+            else step
+            if isinstance(step, int)
+            else 0  # Invalid type; validation raises below.
+        )
+        if parsed_time is not None and _step_secs > 0 and _step_secs % 60 == 0:
+            parsed_time = parsed_time.replace(second=0, microsecond=0)
 
         element_id = compute_and_register_element_id(
             "time_input",
@@ -957,19 +1021,21 @@ class TimeWidgetsMixin:
         time_input_proto = TimeInputProto()
         time_input_proto.id = element_id
         time_input_proto.label = label
-        if parsed_time is not None:
-            time_input_proto.default = time.strftime(parsed_time, "%H:%M")
-        time_input_proto.form_id = current_form_id(self.dg)
-        if not isinstance(step, (int, timedelta)):
+        if isinstance(step, bool) or not isinstance(step, (int, timedelta)):
             raise StreamlitAPIException(
                 f"`step` can only be `int` or `timedelta` but {type(step)} is provided."
             )
         if isinstance(step, timedelta):
-            step = step.seconds
-        if step < 60 or step > timedelta(hours=23).seconds:
+            step = int(step.total_seconds())
+        if step < 1 or step > timedelta(hours=23).seconds:
             raise StreamlitAPIException(
-                f"`step` must be between 60 seconds and 23 hours but is currently set to {step} seconds."
+                f"`step` must be between 1 second and 23 hours but is currently set to {step} seconds."
             )
+
+        serde = TimeInputSerde(parsed_time, step=step)
+        if parsed_time is not None:
+            time_input_proto.default = parsed_time.strftime(serde._wire_fmt)
+        time_input_proto.form_id = current_form_id(self.dg)
         time_input_proto.step = step
         time_input_proto.disabled = disabled
         time_input_proto.label_visibility.value = get_label_visibility_proto_value(
@@ -982,7 +1048,12 @@ class TimeWidgetsMixin:
         if bind == "query-params" and key is not None:
             time_input_proto.query_param_key = str(key)
 
-        serde = TimeInputSerde(parsed_time, step=step)
+        if format not in {"12h", "24h", "localized"}:
+            raise StreamlitAPIException(
+                f"`format` must be '12h', '24h', or 'localized' but got {format!r}."
+            )
+        time_input_proto.format = format
+
         widget_state = register_widget(
             time_input_proto.id,
             on_change_handler=on_change,
@@ -992,6 +1063,7 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             clearable=(parsed_time is None),
@@ -1429,6 +1501,7 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             clearable=(default_value is None),
@@ -1941,6 +2014,7 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             clearable=(parsed_values.value is None),

@@ -41,7 +41,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -100,7 +100,7 @@ jobs:
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
       - name: Upload coverage data
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage_data_${{ matrix.python_version }}
           path: ${{ env.COVERAGE_FILE }}
@@ -118,7 +118,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -132,14 +132,15 @@ jobs:
           # which might cause some unexpected issues with dependencies.
           use_cached_venv: false
       - name: Install integration dependencies
-        run: uv sync --python python --group integration
+        run: uv sync --python python --locked --no-default-groups --group integration
       - name: Run Python integration tests
         run: make python-integration-tests
         env:
+          UV_NO_SYNC: 1
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
       - name: Upload coverage data
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage_data_integration
           path: ${{ env.COVERAGE_FILE }}
@@ -162,7 +163,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -188,15 +189,60 @@ jobs:
             echo "min constraints file is up to date."
           fi
       - name: Install min dependencies (force reinstall)
-        run: uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
+        run: uv pip install --no-config -r scripts/assets/min-constraints-gen.txt --force-reinstall
       - name: Make local modules visible
         run: uv pip install --editable ./lib --no-deps
+      - name: Verify minimum dependency versions
+        env:
+          UV_NO_SYNC: 1
+        run: |
+          uv run python - <<'PY'
+          from importlib.metadata import version
+          from pathlib import Path
+
+          from packaging.requirements import Requirement
+          from packaging.version import Version
+
+          constraints = Path("scripts/assets/min-constraints-gen.txt")
+          for line in constraints.read_text().splitlines():
+              line = line.strip()
+              if not line or line.startswith("#"):
+                  continue
+
+              requirement = Requirement(line)
+              if requirement.marker and not requirement.marker.evaluate():
+                  continue
+
+              actual_version = Version(version(requirement.name))
+              assert actual_version in requirement.specifier, (
+                  f"{requirement.name}: expected {requirement.specifier}, "
+                  f"found {actual_version}"
+              )
+              print(f"{requirement.name}=={actual_version}")
+          PY
+      - name: Import standard-generated Python protobufs
+        env:
+          UV_NO_SYNC: 1
+        run: |
+          uv run python - <<'PY'
+          import importlib
+          from pathlib import Path
+
+          modules = sorted(Path("lib/streamlit/proto").glob("*_pb2.py"))
+          for module in modules:
+              importlib.import_module(f"streamlit.proto.{module.stem}")
+          print(f"Imported {len(modules)} generated protobuf modules")
+          PY
       - name: Run Python Tests
         run: make python-tests
+        env:
+          UV_NO_SYNC: 1
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
+        env:
+          UV_NO_SYNC: 1
       - name: Upload coverage data
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage_data_min_deps
           path: ${{ env.COVERAGE_FILE }}
@@ -217,19 +263,19 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: "recursive"
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
 
       - name: Download all coverage files
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: coverage_data_*
           merge-multiple: true
@@ -261,18 +307,18 @@ jobs:
         working-directory: lib
 
       - name: Upload combined coverage data
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: combined_coverage_data
           path: lib/.coverage
           include-hidden-files: true
       - name: Upload combined coverage JSON
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: combined_coverage_json
           path: lib/coverage.json
       - name: Upload combined coverage HTML report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: combined_coverage_report
           path: lib/htmlcov
@@ -281,7 +327,7 @@ jobs:
       - name: Get latest develop run ID
         if: github.event_name == 'pull_request'
         id: get-latest-run
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const { data: runs } = await github.rest.actions.listWorkflowRuns({
@@ -301,7 +347,7 @@ jobs:
 
       - name: Download develop coverage
         if: github.event_name == 'pull_request'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           repository: streamlit/streamlit
           run-id: ${{ steps.get-latest-run.outputs.run_id }}
@@ -313,7 +359,7 @@ jobs:
 
       - name: Check coverage changes and comment
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const COVERAGE_CHANGE_THRESHOLD = 0.05; // 0.05%

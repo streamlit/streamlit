@@ -58,6 +58,23 @@ fixed_width_tabs = st.tabs(["width_test_1", "width_test_2", "width_test_3"], wid
 for i, tab in enumerate(fixed_width_tabs):
     tab.write(f"Hello {i}")
 
+# Fixed pixel height — active tab panel scrolls when content overflows.
+with st.container(key="tabs_fixed_height_container"):
+    fixed_height_tabs = st.tabs(["height_pixel_1", "height_pixel_2"], height=200)
+    with fixed_height_tabs[0]:
+        st.write("First fixed-height tab")
+        st.write("More content " * 60)
+    with fixed_height_tabs[1]:
+        st.write("Second fixed-height tab")
+
+# Stretch height — expands to fill a fixed-height parent container.
+with st.container(height=300, key="tabs_stretch_height_container"):
+    stretch_tabs = st.tabs(["stretch_1", "stretch_2"], height="stretch")
+    with stretch_tabs[0]:
+        st.write("Stretched tab content")
+    with stretch_tabs[1]:
+        st.write("Second stretched tab content")
+
 # Tabs layout tests.
 tab_with_code_1, tab_with_code_2 = st.tabs(["Tab 1", "Tab 2"])
 

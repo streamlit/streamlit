@@ -24,7 +24,9 @@ from e2e_playwright.shared.app_utils import (
     expect_no_exception,
     get_button,
     get_element_by_key,
+    get_expander,
     select_selectbox_option,
+    type_time,
 )
 
 
@@ -151,7 +153,7 @@ def test_multiselect_in_fragment(app: Page):
     multiselect = app.get_by_test_id("stMultiSelect").locator("input")
     multiselect.evaluate("el => el.scrollIntoView({ block: 'center' })")
     multiselect.click()
-    app.locator("li").first.click()
+    app.get_by_role("option").first.click()
     app.keyboard.press("Escape")
     wait_for_app_run(app)
 
@@ -244,9 +246,10 @@ def test_text_input_in_fragment(app: Page):
 def test_time_input_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    time_input_field = app.get_by_test_id("stTimeInput").locator("input")
-    time_input_field.type("00:15")
-    time_input_field.press("Enter")
+    time_display = app.get_by_test_id("stTimeInput").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    type_time(time_display, "00", "15")
     wait_for_app_run(app)
 
     expect_only_fragment_uuid_changed(
@@ -680,3 +683,36 @@ def test_widget_in_outside_container_triggers_fragment_rerun(app: Page):
     expect(markdowns.last).to_have_text("widget-outside footer")
 
     expect_no_exception(app)
+
+
+def _expect_status_outside_intact(app: Page) -> None:
+    """Assert the outside container holds all of its expected contents.
+
+    Checks the header, the footer, a single status expander, and both status writes.
+    """
+    container = get_element_by_key(app, "status_container_outside")
+    markdowns = container.get_by_test_id("stMarkdown")
+    status_markdowns = get_expander(app, "status outside").get_by_test_id("stMarkdown")
+
+    expect(markdowns.first).to_have_text("status-outside header")
+    expect(markdowns.last).to_have_text("status-outside footer")
+    expect(container.get_by_test_id("stExpander")).to_have_count(1)
+    for text in ("status first write", "status second write"):
+        expect(status_markdowns.filter(has_text=text)).to_have_count(1)
+    expect_no_exception(app)
+
+
+def test_status_in_outside_container_keeps_contents(app: Page):
+    """A fragment's st.status on an outside container keeps its contents.
+
+    The status re-sends its own block proto when the first `with` block exits. Before
+    the fix for issue #16281 that message landed on the fragment's transparent wrapper,
+    which dropped the whole subtree and blanked the app.
+    """
+    _expect_status_outside_intact(app)
+
+    _click_button_centered(app, "rerun status outside")
+
+    # The fragment rerun re-creates the wrapper at its stored slot, so the layout must
+    # look the same as before the rerun.
+    _expect_status_outside_intact(app)

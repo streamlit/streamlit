@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "streamlit"
-version = "1.58.0"
+version = "1.60.0"
 description = "A faster way to build and share data apps"
 # Note: README.md is in the repo root. The build process copies it to lib/
 # before building. See .github/workflows/release.yml.
@@ -56,11 +56,12 @@ dependencies = [
   # Altair 5.4.0 and 5.4.1 have compatibility issues with narwhals library
   # that cause st.line_chart and other built-in charts to fail rendering.
   # See: https://github.com/streamlit/streamlit/issues/12064
-  "altair>=4.0,<7,!=5.4.0,!=5.4.1",
+  # 5.0.0 is the first version exposing the offset encoding channels
+  # (alt.XOffset/alt.YOffset) and the alt.selection_point/selection_interval
+  # API that our built-in charts rely on.
+  "altair>=5.0.0,<7,!=5.4.0,!=5.4.1",
   "blinker>=1.5.0,<2",
-  "cachetools>=5.5,<8",
   "click>=7.0,<9",
-  "gitpython>=3.0.7,<4,!=3.1.19",
   "numpy>=1.23,<3",
   # The "packaging" package isn't version-capped because they use calendar-based
   # versioning, i.e. "major" version increase != breaking changes
@@ -70,8 +71,9 @@ dependencies = [
   "pandas>=1.4.0,<4",
   "pillow>=7.1.0,<13",
   "pydeck>=0.8.0b4,<1",
-  # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
-  "protobuf>=3.20,<8",
+  # Release builds generate Python protobuf code with protoc 26.1, whose
+  # corresponding minimum runtime version is protobuf 5.26.1.
+  "protobuf>=5.26.1,<8",
   # PyArrow 25.0.0 can segfault when first imported from a short-lived worker thread.
   # See https://github.com/apache/arrow/issues/50471.
   "pyarrow>=7.0,<25",
@@ -82,20 +84,22 @@ dependencies = [
   "toml>=0.10.1,<2",
   # Starlette requires typing-extensions >= 4.10.
   "typing-extensions>=4.10.0,<5",
-  # ASGI web-framework:
-  "starlette>=0.40.0",
+  # ASGI web-framework. 0.46.0 is the first version exposing
+  # `DEFAULT_EXCLUDED_CONTENT_TYPES` from `starlette.middleware.gzip`, which our
+  # gzip middleware imports.
+  "starlette>=0.46.0,<2",
   # ASGI server:
-  "uvicorn>=0.30.0",
+  "uvicorn>=0.30.0,<1",
   # Faster http parsing for Starlette server:
-  "httptools>=0.6.3",
+  "httptools>=0.6.3,<1",
   # Required by starlette:
-  "anyio>=4.0.0",
+  "anyio>=4.0.0,<5",
   # Required for file-upload support:
-  "python-multipart>=0.0.10",
+  "python-multipart>=0.0.10,<1",
   # Required for websocket support:
-  "websockets>=12.0.0",
+  "websockets>=12.0.0,<17",
   # Required for cookie signing:
-  "itsdangerous>=2.1.2",
+  "itsdangerous>=2.1.2,<3",
   # Don't require watchdog on MacOS, since it'll fail without xcode tools.
   # Without watchdog, we fallback to a polling file watcher to check for app changes.
   "watchdog>=2.1.5,<7; platform_system != 'Darwin'",
@@ -164,6 +168,7 @@ streamlit = [
     ".agents/**/*.md",
     ".agents/skills/**/assets/templates/**/*.py",
     ".agents/skills/**/assets/templates/**/*.toml",
+    ".agents/meta-skill/**/*.py",
     "hello/**/*.py",
 ]
 

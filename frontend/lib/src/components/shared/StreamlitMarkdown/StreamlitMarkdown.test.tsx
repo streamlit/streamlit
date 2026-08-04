@@ -620,6 +620,72 @@ describe("StreamlitMarkdown", () => {
     expect(heading).not.toHaveAttribute("aria-labelledby")
   })
 
+  it("updates heading anchor when text changes across reruns (no explicit anchor)", () => {
+    const { rerender } = render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2">
+            First Heading
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading")
+    expect(heading).toHaveAttribute("id", "first-heading")
+
+    rerender(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2">
+            Second Heading
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    // useLayoutEffect commits the re-derived id before paint, so the assertion
+    // can be direct -- no waitFor needed.
+    expect(screen.getByRole("heading")).toHaveAttribute("id", "second-heading")
+    // #8793 was reported through the anchor link, so assert its href too.
+    expect(
+      screen.getByRole("link", { name: "Link to heading" })
+    ).toHaveAttribute("href", "#second-heading")
+    // The stale anchor must be gone, not merely joined by the new one.
+    expect(screen.getByRole("heading")).not.toHaveAttribute(
+      "id",
+      "first-heading"
+    )
+  })
+
+  it("keeps an explicit anchor when heading text changes across reruns", () => {
+    const { rerender } = render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor">
+            First Heading
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    expect(screen.getByRole("heading")).toHaveAttribute("id", "my-anchor")
+
+    rerender(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor">
+            Second Heading
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    // A developer-supplied anchor is never re-derived from the text.
+    expect(screen.getByRole("heading")).toHaveTextContent("Second Heading")
+    expect(screen.getByRole("heading")).toHaveAttribute("id", "my-anchor")
+  })
+
   it("propagates header attributes to custom header", async () => {
     const source = '<h1 data-test="lol">alsdkjhflaf</h1>'
     render(<StreamlitMarkdown source={source} allowHTML />)

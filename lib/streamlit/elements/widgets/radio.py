@@ -554,6 +554,7 @@ class RadioMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             # Clearable when index=None: the widget can be in an empty state,

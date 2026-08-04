@@ -24,6 +24,8 @@ import asyncio
 from ipaddress import ip_address
 from typing import TYPE_CHECKING, Final, Protocol
 
+import click
+
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import (
     BackendOperationResponse,
@@ -39,6 +41,13 @@ if TYPE_CHECKING:
     from streamlit.runtime.media_file_manager import MediaFileManager
 
 _LOGGER: Final = get_logger(__name__)
+
+# Prefix marking an ``error_reason`` as a refusal: the operation was declined by a
+# safety gate before it ran, rather than attempted and failed. The client strips the
+# prefix and counts refusals under their own telemetry event, so they never inflate
+# the genuine failure rate. Mirrored by REFUSED_REASON_PREFIX in the frontend's
+# components/SkillsNudgeToast/skillsNudge.ts.
+_REFUSED_REASON_PREFIX: Final[str] = "refused:"
 
 
 def connection_locality(session_id: str) -> str:
@@ -210,7 +219,7 @@ class InstallSkillsHandler(BackendOperationHandler):
         # predicate. Three conditions make a request anomalous and unsafe to honor:
         #   - headless mode (deployments / CI / SiS): the nudge is never shown
         #     there, so the request is a replayed/spoofed BackMsg; refuse the
-        #     filesystem writes (and the GitHub download in the global fallback).
+        #     filesystem writes.
         #   - no agent harness present: nothing would consume the skills.
         #   - the browser is not on a direct-loopback connection: the same
         #     conservative eligibility rule the nudge display uses, so a
@@ -222,31 +231,67 @@ class InstallSkillsHandler(BackendOperationHandler):
         # after a dropped connection whose first attempt already completed
         # server-side — surfacing a success as an unrecoverable error and
         # logging it as a failed install. Idempotent retry is the correct path.
-        if (
-            config.get_option("server.headless")
-            or not skills.detect_installed_agents()
-            or connection_locality(session_id) != "loopback"
-        ):
+        #
+        # Check the conditions in order; the first that trips names the telemetry
+        # reason. This short-circuits, so e.g. detect_installed_agents() (which
+        # touches the filesystem) isn't called in headless mode.
+        if config.get_option("server.headless"):
+            gate_reason = "headless"
+        elif not skills.detect_installed_agents():
+            gate_reason = "no_agent"
+        elif connection_locality(session_id) != "loopback":
+            gate_reason = "non_loopback"
+        else:
+            gate_reason = None
+
+        if gate_reason is not None:
             return BackendOperationResponse(
                 request_id=request.request_id,
                 error_msg="Skills install is not available in this environment.",
+                # The ``refused:`` prefix tells the client this install was declined
+                # before it ran, so it counts separately from installs that ran and
+                # failed. Namespacing it server-side keeps that distinction in one
+                # place: a gate added here is classified correctly without the
+                # frontend having to mirror the list of gate names.
+                error_reason=f"{_REFUSED_REASON_PREFIX}{gate_reason}",
             )
 
         try:
-            # Run off the event loop: installing does filesystem I/O (and, in
-            # the global fallback, a network download). Resolve the install root
+            # Run off the event loop: installing does filesystem I/O (copying
+            # the bundled skill from the local package). Resolve the install root
             # from the app dir so it lands in the tree the nudge detection scans.
             result = await asyncio.to_thread(
                 skills.install_skills, global_mode=False, yes=True, app_dir=app_dir
             )
         except Exception as ex:
             _LOGGER.warning("One-click skills install failed", exc_info=ex)
-            # click.ClickException carries a clean, user-facing message.
-            format_message = getattr(ex, "format_message", None)
-            detail = format_message() if callable(format_message) else str(ex)
+            # Only ``click.ClickException`` messages are safe to show verbatim in
+            # the browser toast — they are developer-authored, never a raw OS
+            # string. For any other exception (e.g. an unexpected OSError whose
+            # message embeds an absolute path) use a generic message so a server
+            # path can't leak into the nudge.
+            detail = (
+                ex.format_message()
+                if isinstance(ex, click.ClickException)
+                else "Failed to install skills."
+            )
+            # Read the reason ONLY from the known type - never getattr-duck-type, or
+            # an unrelated exception that happens to expose a str ``.reason`` (e.g.
+            # UnicodeDecodeError.reason) would emit an unbounded label and break the
+            # fixed vocabulary. A bare ``OSError`` that escaped the installer gets the
+            # same errno classification, so it lands in a specific write_* bucket
+            # rather than being flattened to "unknown".
+            reason: str
+            if isinstance(ex, skills.InstallError):
+                reason = ex.reason
+            elif isinstance(ex, OSError):
+                reason = skills.classify_write_error(ex)
+            else:
+                reason = "unknown"
             return BackendOperationResponse(
                 request_id=request.request_id,
                 error_msg=detail or "Failed to install skills.",
+                error_reason=reason,
             )
 
         # Invalidate the cached "skills installed" detection so a later session
@@ -256,7 +301,8 @@ class InstallSkillsHandler(BackendOperationHandler):
         return BackendOperationResponse(
             request_id=request.request_id,
             install_skills=InstallSkillsResponsePayload(
-                detail=skills.summarize_install(result)
+                detail=skills.summarize_install(result),
+                fallback_reason=result.fallback_reason or "",
             ),
         )
 

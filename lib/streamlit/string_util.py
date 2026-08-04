@@ -222,12 +222,15 @@ def simplify_number(num: int) -> str:
     """Simplifies number into Human readable format, returns str."""
     num_converted = float(f"{num:.2g}")
     magnitude = 0
-    while abs(num_converted) >= 1000:
+    suffixes = ["", "k", "m", "b", "t"]
+    # Stop at the largest available suffix so numbers beyond a trillion stay in
+    # trillions (e.g. "1000t") rather than raising an IndexError.
+    while abs(num_converted) >= 1000 and magnitude < len(suffixes) - 1:
         magnitude += 1
         num_converted /= 1000.0
     return "{}{}".format(
         f"{num_converted:f}".rstrip("0").rstrip("."),
-        ["", "k", "m", "b", "t"][magnitude],
+        suffixes[magnitude],
     )
 
 

@@ -11,7 +11,7 @@ Prepares the current branch for merge by running quality checks, simplifying cod
 
 ## Workflow
 
-Follow these steps in order. **Run all subagents in foreground** (not background) unless otherwise specified—wait for each to complete before proceeding.
+Follow these steps in order. **Run all subagents in foreground** (not background) unless otherwise specified—wait for each to complete before proceeding. **Subagent model**: use the same model as this session on every launch (`model: inherit` / omit any model override). Do not switch to a different or faster model unless the user explicitly requests it.
 
 > **Note:** For small changes (documentation tweaks, test-only tweaks, one-liners, or other mini-changes), you can skip steps 1, 2, 3, 6, 7, and 8.
 
@@ -68,7 +68,7 @@ Check if a PR exists for the current branch:
 gh pr view --json number,title,url
 ```
 
-**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md` (please read!). Add appropriate labels and fill in the body based on `.github/pull_request_template.md` (skip the video/screenshot section).
+**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md` (please read!) and the title/description guidance in the `/reviewing-pr-description` skill. Add appropriate labels and fill in the body based on `.github/pull_request_template.md`.
 
 **Link related issues:** Add `- Closes #12345` to the PR description for any known GitHub issues this PR resolves.
 

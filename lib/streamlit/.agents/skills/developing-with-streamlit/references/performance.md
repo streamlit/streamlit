@@ -13,6 +13,7 @@ Use for any function that loads or computes data.
 def load_data(path):
     return pd.read_csv(path)
 
+
 # GOOD: Cached
 @st.cache_data
 def load_data(path):
@@ -28,6 +29,7 @@ Use for connections, API clients, ML models—objects that can't be serialized.
 def get_client():
     return OpenAI(api_key=st.secrets["openai_key"])
 
+
 @st.cache_resource
 def load_model():
     return torch.load("model.pt")
@@ -42,6 +44,7 @@ Note: `st.connection()` already handles caching internally — don't wrap it in 
 def get_metrics():
     return api.fetch()
 
+
 @st.cache_data(ttl="1h")  # 1 hour
 def load_reference_data():
     return pd.read_csv("large_reference.csv")
@@ -54,6 +57,31 @@ def load_reference_data():
 - Reference data → `ttl="1h"` or more
 - Static data → No TTL
 
+### Background refresh (serve stale while updating)
+
+By default, when a cached entry's `ttl` expires, the next call blocks while the function
+recomputes. Use `refresh_mode="background"` to instead return the expired value immediately
+and recompute in the background—ideal when slightly stale data is acceptable but latency
+isn't.
+
+```python
+@st.cache_data(ttl="5m", refresh_mode="background")
+def get_metrics():
+    return api.fetch()
+```
+
+Requirements and caveats: a `ttl` is required, and `refresh_mode="background"` can't be
+combined with `persist`. The function can't use session-specific features (e.g.
+`st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works
+with both `st.cache_data` and `st.cache_resource`.
+
+Background refresh is access-driven: it starts only after a call observes an expired entry,
+so the caller may briefly receive stale data. For advanced cases that need the server to
+initiate background refreshes for specific global cache keys even without user traffic, use
+an `st.App` lifespan task to periodically call the cached function with those arguments. See
+[Scheduled background refresh for specific
+keys](server-asgi.md#scheduled-background-refresh-for-specific-keys).
+
 ### Prevent unbounded cache growth
 
 **Important:** Caches without `ttl` or `max_entries` can grow indefinitely and cause memory issues. For any cached function that stores changing objects (user-specific data, parameterized queries), set limits:
@@ -64,10 +92,12 @@ def load_reference_data():
 def get_user_data(user_id):
     return fetch_user(user_id)
 
+
 # GOOD: Bounded cache with TTL
 @st.cache_data(ttl="1h")
 def get_user_data(user_id):
     return fetch_user(user_id)
+
 
 # GOOD: Bounded cache with max entries
 @st.cache_data(max_entries=100)
@@ -87,11 +117,13 @@ st.metric("Users", get_count())
 if st.button("Refresh"):
     st.rerun()
 
+
 # GOOD: Only fragment reruns
 @st.fragment
 def live_metrics():
     st.metric("Users", get_count())
     st.button("Refresh")
+
 
 live_metrics()
 ```
@@ -102,6 +134,7 @@ For auto-refreshing metrics, use `run_every`:
 @st.fragment(run_every="30s")
 def auto_refresh_metrics():
     st.metric("Users", get_count())
+
 
 auto_refresh_metrics()
 ```
@@ -118,30 +151,37 @@ Use `parallel=True` to run independent fragments concurrently during full app re
 def revenue():
     st.metric("Revenue", query_revenue())  # ~3s
 
+
 @st.fragment
 def users():
     st.metric("Users", query_users())  # ~3s
+
 
 @st.fragment
 def orders():
     st.metric("Orders", query_orders())  # ~3s
 
+
 revenue()
 users()
 orders()
+
 
 # GOOD: Three slow queries run concurrently (~3s total)
 @st.fragment(parallel=True)
 def revenue():
     st.metric("Revenue", query_revenue())
 
+
 @st.fragment(parallel=True)
 def users():
     st.metric("Users", query_users())
 
+
 @st.fragment(parallel=True)
 def orders():
     st.metric("Orders", query_orders())
+
 
 revenue()
 users()
@@ -311,7 +351,9 @@ st.dataframe(report.transactions)  # Depends on report
 with st.sidebar:  # Independent of the report, but stuck behind it
     st.date_input("Date range")
     st.multiselect("Regions", regions)
-st.caption("Data refreshes hourly. Email support@example.com for access.")  # Independent
+st.caption(
+    "Data refreshes hourly. Email support@example.com for access."
+)  # Independent
 ```
 
 ```python
@@ -341,7 +383,7 @@ For independent slow sections, prefer `@st.fragment(parallel=True)` so each fill
 
 ## Perceived performance (loading states)
 
-The techniques above reduce _actual_ work and keep the UI fresh. When a wait is unavoidable, give immediate loading feedback so the app _feels_ responsive instead of showing greyed, stale content. These don't speed up computation — pair them with caching and fragments. See `layouts.md` for details:
+The techniques above keep the UI fresh and responsive during slow work. When a wait is unavoidable, give immediate loading feedback so the app _feels_ responsive instead of showing greyed, stale content. These don't speed up computation — pair them with caching and fragments to cut the _actual_ work. See `layouts.md` for details:
 
 - `st.spinner` — lightweight indicator wrapped around a block of slow work.
 - `st.skeleton` — animated placeholder that reserves layout space while content loads.

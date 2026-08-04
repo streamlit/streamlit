@@ -24,6 +24,7 @@ from watchdog import events
 
 from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.watcher import event_based_path_watcher
+from streamlit.watcher import util as watcher_util
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -48,6 +49,10 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         )
         self.MockObserverClass = self.observer_class_patcher.start()
         self.mock_util = self.util_patcher.start()
+        self.mock_util.paths_are_same.side_effect = watcher_util.paths_are_same
+        self.mock_util.path_is_in_directory.side_effect = (
+            watcher_util.path_is_in_directory
+        )
 
     def tearDown(self):
         # The test suite patches MultiPathWatcher. We need to close
@@ -114,6 +119,36 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb.assert_called_once()
 
+        ro.close()
+
+    def test_equivalent_path_spelling_matches_watched_file(self):
+        """Test that canonically equivalent paths match the same watched file."""
+        cb = mock.Mock()
+        watched_path = "/this/is/my/file.py"
+        equivalent_path = "/equivalent/spelling/file.py"
+
+        self.mock_util.path_modification_time = lambda *args: 101.0
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
+        ro = event_based_path_watcher.EventBasedPathWatcher(watched_path, cb)
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        folder_handler = fo._observer.schedule.call_args[0][0]
+        self.mock_util.paths_are_same.side_effect = None
+        self.mock_util.paths_are_same.return_value = True
+        self.mock_util.path_modification_time = lambda *args: 102.0
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "2"
+
+        ev = events.FileSystemEvent(equivalent_path)
+        ev.event_type = events.EVENT_TYPE_MODIFIED
+        # The normalized-spelling fallback only runs on Windows, where the same
+        # path can be reported with an extended-length prefix.
+        with mock.patch.object(event_based_path_watcher.env_util, "IS_WINDOWS", True):
+            folder_handler.on_modified(ev)
+
+        cb.assert_called_once_with(equivalent_path)
+        self.mock_util.paths_are_same.assert_called_once_with(
+            watched_path, equivalent_path
+        )
         ro.close()
 
     def test_works_with_directories(self):
@@ -510,9 +545,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         folder_handler = fo._observer.schedule.call_args[0][0]
 
         # Simulate an event on a different "drive" by making commonpath raise
-        with mock.patch(
-            "streamlit.watcher.event_based_path_watcher.os.path.commonpath",
-            side_effect=ValueError,
+        with mock.patch.object(
+            watcher_util.os.path, "commonpath", side_effect=ValueError
         ):
             ev = events.FileSystemEvent("/other_drive/some_file.py")
             ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -814,6 +848,8 @@ def ebpw_mocks() -> Generator[tuple[mock.MagicMock, mock.MagicMock], None, None]
         ) as mock_observer_class,
         mock.patch("streamlit.watcher.event_based_path_watcher.util") as mock_util,
     ):
+        mock_util.paths_are_same.side_effect = watcher_util.paths_are_same
+        mock_util.path_is_in_directory.side_effect = watcher_util.path_is_in_directory
         yield mock_observer_class, mock_util
 
         if event_based_path_watcher._MultiPathWatcher._singleton is not None:

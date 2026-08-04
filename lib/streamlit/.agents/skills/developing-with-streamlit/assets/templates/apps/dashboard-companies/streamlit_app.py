@@ -397,8 +397,8 @@ with st.container(border=True):
     )
 
 # Company drill-down via dialog when Company column cell is clicked
-if selection.selection.cells:  # type: ignore[attr-defined]
-    cell = selection.selection.cells[0]  # type: ignore[attr-defined]  # tuple: (row_index, column_name)
+if selection.selection.cells:
+    cell = selection.selection.cells[0]  # tuple: (row_index, column_name)
     row_idx, col_name = cell
     # Check if the clicked cell is in the company_name column
     if col_name == "company_name":

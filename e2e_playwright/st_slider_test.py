@@ -28,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
     click_toggle,
+    expect_font,
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
@@ -278,6 +279,11 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     # Wait for the tick bar (min/max labels) to fully fade out (transition: 300ms + 200ms delay)
     # so the snapshot is stable and not captured mid-transition.
     expect(slider.get_by_test_id("stSliderTickBar")).to_have_css("opacity", "0")
+    # The "0.8%" thumb value label only renders after this interaction, so on a
+    # cold page load it can be captured before the "Source Sans" web font finishes
+    # loading (flash-of-fallback-text). Wait for the font to avoid a snapshot flake
+    # where only the value label differs.
+    expect_font(app, "Source Sans")
     assert_snapshot(slider, name="st_slider-float_formatting")
 
 

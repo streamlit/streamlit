@@ -115,7 +115,7 @@ app = st.App(
             "host": os.environ["DB_HOST"],
             "password": os.environ["DB_PASSWORD"],
         }
-    }
+    },
 )
 ```
 
@@ -126,10 +126,12 @@ import boto3
 import json
 import streamlit as st
 
+
 def load_secrets():
     client = boto3.client("secretsmanager")
     response = client.get_secret_value(SecretId="my-streamlit-app")
     return json.loads(response["SecretString"])
+
 
 app = st.App("main.py", secrets=load_secrets())
 ```
@@ -153,7 +155,7 @@ app = st.App(
             "client_id": os.environ["OAUTH_CLIENT_ID"],
             "client_secret": os.environ["OAUTH_CLIENT_SECRET"],
         }
-    }
+    },
 )
 
 # In the Streamlit script:

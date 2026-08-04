@@ -325,6 +325,7 @@ class CameraInputMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="file_uploader_state_value",
+            disabled=disabled,
         )
 
         self.dg._enqueue(

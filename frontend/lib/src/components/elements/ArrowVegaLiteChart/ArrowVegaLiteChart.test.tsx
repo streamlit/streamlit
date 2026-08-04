@@ -45,7 +45,7 @@ vi.mock("./useVegaEmbed", () => ({
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
-import { mockWindowLocation, render } from "~lib/test_util"
+import { mockWindowLocation, render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ArrowVegaLiteChart, {
@@ -224,6 +224,35 @@ describe("ArrowVegaLiteChart", () => {
       downloadButton.compareDocumentPosition(copyButton) &
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy()
+  })
+
+  it("hides CSV export in table view when data export is disabled, but keeps PNG download", async () => {
+    const user = userEvent.setup()
+    vegaEmbedMock.isViewReady = true
+
+    renderWithContexts(
+      <ArrowVegaLiteChart
+        {...getProps({ data: { data: UNICODE }, datasets: [] })}
+      />,
+      {
+        libConfigContext: { disableDataExport: true },
+      }
+    )
+
+    // The toolbar is only shown (opacity > 0) on hover, so assert presence in
+    // the DOM rather than visibility here.
+    expect(
+      screen.getByRole("button", { name: "Download as PNG" })
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Show data" }))
+
+    expect(
+      await screen.findByRole("button", { name: "Show chart" })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Download as CSV" })
+    ).not.toBeInTheDocument()
   })
 
   it("downloads the chart as a PNG when the toolbar action is clicked", async () => {

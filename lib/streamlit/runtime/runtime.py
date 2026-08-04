@@ -34,6 +34,7 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
+from streamlit.runtime.dataframe_source_manager import DataframeSourceManager
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
@@ -217,6 +218,7 @@ class Runtime:
         self._bidi_component_registry = config.bidi_component_registry
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
+        self._dataframe_source_mgr = DataframeSourceManager()
         self._cache_storage_manager = config.cache_storage_manager
         self._script_cache = ScriptCache()
 
@@ -274,6 +276,10 @@ class Runtime:
     @property
     def media_file_mgr(self) -> MediaFileManager:
         return self._media_file_mgr
+
+    @property
+    def dataframe_source_mgr(self) -> DataframeSourceManager:
+        return self._dataframe_source_mgr
 
     @property
     def stats_mgr(self) -> StatsManager:
@@ -482,7 +488,9 @@ class Runtime:
             self._session_mgr.close_session(session_id)
         self._on_session_disconnected()
 
-    def disconnect_session(self, session_id: str) -> None:
+    def disconnect_session(
+        self, session_id: str, *, client: SessionClient | None = None
+    ) -> None:
         """Disconnect a session. It will stop producing ForwardMsgs.
 
         Differs from close_session because disconnected sessions can be reconnected to
@@ -496,17 +504,21 @@ class Runtime:
         ----------
         session_id
             The session's unique ID.
+        client
+            If set, only disconnect the session if it is still connected to this client.
 
         Notes
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         session_info = self._session_mgr.get_active_session_info(session_id)
-        if session_info:
+        if session_info and (client is None or session_info.client is client):
             self._session_mgr.disconnect_session(session_id)
         self._on_session_disconnected()
 
-    def handle_backmsg(self, session_id: str, msg: BackMsg) -> None:
+    def handle_backmsg(
+        self, session_id: str, msg: BackMsg, *, client: SessionClient | None = None
+    ) -> None:
         """Send a BackMsg to an active session.
 
         Parameters
@@ -515,6 +527,9 @@ class Runtime:
             The session's unique ID.
         msg
             The BackMsg to deliver to the session.
+        client
+            If set, only handle the message if the session is still connected to this
+            client.
 
         Notes
         -----
@@ -530,10 +545,20 @@ class Runtime:
             )
             return
 
+        if client is not None and session_info.client is not client:
+            _LOGGER.debug(
+                "Discarding BackMsg for session with stale client (id=%s)", session_id
+            )
+            return
+
         session_info.session.handle_backmsg(msg)
 
     def handle_backmsg_deserialization_exception(
-        self, session_id: str, exc: BaseException
+        self,
+        session_id: str,
+        exc: BaseException,
+        *,
+        client: SessionClient | None = None,
     ) -> None:
         """Handle an Exception raised during deserialization of a BackMsg.
 
@@ -543,6 +568,9 @@ class Runtime:
             The session's unique ID.
         exc
             The Exception.
+        client
+            If set, only handle the exception if the session is still connected to this
+            client.
 
         Notes
         -----
@@ -557,6 +585,13 @@ class Runtime:
         if session_info is None:
             _LOGGER.debug(
                 "Discarding BackMsg Exception for disconnected session (id=%s)",
+                session_id,
+            )
+            return
+
+        if client is not None and session_info.client is not client:
+            _LOGGER.debug(
+                "Discarding BackMsg Exception for session with stale client (id=%s)",
                 session_id,
             )
             return
@@ -675,8 +710,14 @@ class Runtime:
                             try:
                                 self._send_message(active_session_info, msg)
                             except SessionClientDisconnectedError:
-                                self._session_mgr.disconnect_session(
-                                    active_session_info.session.id
+                                # Only disconnect if the session is still bound to
+                                # this (now-disconnected) client. A reconnect during
+                                # the flush loop can swap in a new client for the same
+                                # session id, and we must not tear that freshly
+                                # reconnected session down.
+                                self.disconnect_session(
+                                    active_session_info.session.id,
+                                    client=active_session_info.client,
                                 )
 
                             # Yield for a tick after sending a message.

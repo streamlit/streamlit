@@ -323,6 +323,7 @@ class PaginationMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="int_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             # Pagination always has a valid page (1 to num_pages), never empty
