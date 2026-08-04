@@ -852,6 +852,7 @@ _create_option(
     """,
     default_val="",
     type_=str,
+    sensitive=True,
 )
 
 # Config Section: Server #
