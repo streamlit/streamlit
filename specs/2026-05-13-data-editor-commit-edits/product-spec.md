@@ -64,8 +64,7 @@ def commit_edits(
     source_df: pd.DataFrame,
     edited_df: pd.DataFrame,
     edits: DataEditorEditState,
-) -> pd.DataFrame:
-    ...
+) -> pd.DataFrame: ...
 ```
 
 - `source_df` is the normalized dataframe passed to `st.data_editor` before pending edits.
@@ -116,22 +115,29 @@ from streamlit.errors import DataEditorValidationError
 if "orders" not in st.session_state:
     st.session_state.orders = load_orders()
 
+
 def persist_orders(source_df, edited_df, edits):
     if (edited_df["amount"] < 0).any():
         raise DataEditorValidationError("Amounts must be positive.")
 
-    for row_position in edits["deleted_rows"]:
-        delete_order(source_df.iloc[row_position]["id"])
+    # Commit the whole batch in one transaction. Streamlit preserves the full
+    # edit batch when the callback raises, so the writes must be atomic: a
+    # mid-batch failure must roll back completely, otherwise a later retry would
+    # replay already-committed operations (duplicate inserts, repeated updates).
+    with begin_transaction():
+        for row_position in edits["deleted_rows"]:
+            delete_order(source_df.iloc[row_position]["id"])
 
-    for row_position, changes in edits["edited_rows"].items():
-        update_order(source_df.iloc[row_position]["id"], changes)
+        for row_position, changes in edits["edited_rows"].items():
+            update_order(source_df.iloc[row_position]["id"], changes)
 
-    for row in edits["added_rows"]:
-        insert_order(row)
+        for row in edits["added_rows"]:
+            insert_order(row)
 
     refreshed_df = load_orders()
     st.session_state.orders = refreshed_df
     return refreshed_df
+
 
 st.data_editor(
     st.session_state.orders,
@@ -156,7 +162,7 @@ in the same render that accepts the edit.
 | `pandas.Styler` | Not supported because styles are derived before the callback may replace rows. |
 | Callback result | Must be a pandas dataframe with an editing-compatible schema. |
 | Async callbacks | Not supported. |
-| Commit granularity | All pending edits are delivered as one batch; success is all-or-nothing. |
+| Commit granularity | All pending edits are delivered as one batch; success is all-or-nothing. Streamlit keeps the full batch on failure, so the callback must commit it atomically (e.g. one transaction) to keep retries safe. |
 
 An editing-compatible result may change values, row count, and index values, but must preserve the
 column order, index structure, Arrow field types/nullability, and parsing data kinds used by the
