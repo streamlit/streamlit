@@ -229,18 +229,24 @@ export default class HostCommunicationManager {
       this.allowedOrigins.some(allowed => isValidOrigin(allowed, event.origin))
 
     if (!isTrustedMessage || !isHostMessage || !isAllowedOrigin) {
-      // Only log when the payload looks like a genuine host message so we
-      // don't spam logs for the many unrelated postMessages this global
-      // handler receives. This helps diagnose cases where a legitimate host's
-      // messages are unexpectedly dropped (e.g. an intermediate iframe wrapper
-      // posting from a non-direct-parent window). Skip self-posts to avoid
-      // per-load noise from the app's own GUEST_READY self-post (whose origin
-      // may not be allow-listed).
-      if (isHostMessage && !isSelfPost) {
+      // The app posts a GUEST_READY message to its own window on load (see
+      // openHostCommunication). That self-post is expected to be dropped here
+      // (it uses window.location.origin, which need not be allow-listed), so we
+      // skip logging it to avoid per-load noise.
+      const isSelfPostGuestReady =
+        isSelfPost && (message?.type as string) === "GUEST_READY"
+      // Only log when the payload looks like a genuine host message so we don't
+      // spam logs for the many unrelated postMessages this global handler
+      // receives. This helps diagnose cases where a legitimate host's messages
+      // are unexpectedly dropped -- including a dropped same-window self-post
+      // from an in-iframe embed preamble (e.g. a SET_AUTH_TOKEN whose origin is
+      // not allow-listed), which the earlier blanket self-post skip hid.
+      if (isHostMessage && !isSelfPostGuestReady) {
         LOG.debug(
-          "Ignoring host message: isTrusted=%s, sourceIsParent=%s, allowedOrigin=%s, origin=%s",
+          "Ignoring host message: isTrusted=%s, sourceIsParent=%s, selfPost=%s, allowedOrigin=%s, origin=%s",
           event.isTrusted,
           isFromParent,
+          isSelfPost,
           isAllowedOrigin,
           event.origin
         )
