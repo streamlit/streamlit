@@ -60,7 +60,7 @@ _NP_SAMPLE_SIZE: Final = 100_000
 
 
 def _sample_seed() -> int:
-    """Seed for the sampling of large objects.
+    """Return the RNG seed used when sampling large objects for cache hashing.
 
     Derived from ``runner.cacheHashSeed`` by hashing, so the option can hold any
     string -- including a deployment secret, which keeps the sampled positions
@@ -74,9 +74,14 @@ def _sample_seed() -> int:
     from streamlit import config
 
     configured = config.get_option("runner.cacheHashSeed")
-    if not configured:
+    # Normalize before the emptiness test rather than after. ``get_option`` returns
+    # the raw parsed value, so an unquoted ``cacheHashSeed = 0`` arrives as int 0 --
+    # testing truthiness first would collapse that to the default while the quoted
+    # ``"0"`` hashed to something else, making the seed depend on TOML quoting.
+    text = "" if configured is None else str(configured)
+    if not text:
         return 0
-    digest = hashlib.sha256(str(configured).encode("utf-8")).digest()[:4]
+    digest = hashlib.sha256(text.encode("utf-8")).digest()[:4]
     return int.from_bytes(digest, "big")
 
 

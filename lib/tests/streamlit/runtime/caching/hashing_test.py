@@ -1119,6 +1119,21 @@ def test_cache_hash_seed_accepts_a_non_string_config_value() -> None:
     assert seed != 0
 
 
+@pytest.mark.parametrize("value", [0, 5], ids=["zero", "nonzero"])
+def test_cache_hash_seed_does_not_depend_on_toml_quoting(value: int) -> None:
+    """``cacheHashSeed = 0`` and ``cacheHashSeed = "0"`` must mean the same thing.
+
+    The unquoted form parses as an int, so an emptiness test applied before
+    normalizing would treat ``0`` as unset while ``"0"`` hashed to a real seed.
+    """
+    with patch_config_options({"runner.cacheHashSeed": value}):
+        from_int = _sample_seed()
+    with patch_config_options({"runner.cacheHashSeed": str(value)}):
+        from_str = _sample_seed()
+
+    assert from_int == from_str
+
+
 @pytest.mark.parametrize(
     "make_obj",
     [
@@ -1155,7 +1170,7 @@ def test_cache_hash_seed_reaches_every_sampling_path(
     assert hash_default != hash_other
 
 
-def test_cache_hash_seed_is_deterministic() -> None:
+def test_cache_hash_seed_is_deterministic_for_pandas_dataframe() -> None:
     """A given seed must produce a stable cache key across calls."""
     with patch_config_options({"runner.cacheHashSeed": "stable-secret"}):
         first = get_hash(_large_pandas_dataframe())
