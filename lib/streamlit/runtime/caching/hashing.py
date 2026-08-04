@@ -21,6 +21,7 @@ import collections.abc
 import dataclasses
 import datetime
 import functools
+import hashlib
 import inspect
 import io
 import os
@@ -61,12 +62,22 @@ _NP_SAMPLE_SIZE: Final = 100_000
 def _sample_seed() -> int:
     """Seed for the sampling of large objects.
 
+    Derived from ``runner.cacheHashSeed`` by hashing, so the option can hold any
+    string -- including a deployment secret, which keeps the sampled positions
+    unpredictable to someone trying to construct a collision. An unset option
+    yields ``0``, the seed used before the option existed, so cache keys are
+    unchanged by default.
+
     Read per call rather than cached at import so the value stays correct after
     ``config`` is (re)parsed, and so tests can vary it.
     """
     from streamlit import config
 
-    return int(config.get_option("runner.cacheHashSeed"))
+    configured = config.get_option("runner.cacheHashSeed")
+    if not configured:
+        return 0
+    digest = hashlib.sha256(str(configured).encode("utf-8")).digest()[:4]
+    return int.from_bytes(digest, "big")
 
 
 HashFuncsDict: TypeAlias = dict[str | type[Any], Callable[[Any], Any]]

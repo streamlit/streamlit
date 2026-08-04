@@ -836,16 +836,22 @@ _create_option(
         positions produce the same cache key, and the cached value of one is
         returned for the other.
 
+        Accepts any string; a numeric seed is derived from it. Leave unset to keep
+        the historical sample positions.
+
         Changing this seed moves which positions are sampled. It does not
         eliminate collisions -- it selects a different set of them -- so it is an
         escape hatch for an app that has hit a specific collision, not a
-        guarantee of uniqueness.
+        guarantee of uniqueness. Because the value is hashed rather than used
+        directly, it can be set to a deployment secret to make the sampled
+        positions unpredictable to someone trying to construct a collision.
 
         Changing this value changes the cache key of every large object and so
-        invalidates existing cached entries.
+        invalidates existing cached entries. Keep it stable across restarts and
+        across replicas, or a shared/persisted cache will miss.
     """,
-    default_val=0,
-    type_=int,
+    default_val="",
+    type_=str,
 )
 
 # Config Section: Server #

@@ -52,6 +52,7 @@ from streamlit.runtime.caching.hashing import (
     _CacheFuncHasher,
     _HashStack,
     _HashStacks,
+    _sample_seed,
     update_hash,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
@@ -1062,49 +1063,51 @@ class TestCacheHashSeedConfig:
     hit such a collision move off it. It does not make hashing exact.
     """
 
-    def _large_pandas_pair(self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Two large frames differing in exactly one cell."""
-        df1 = pd.DataFrame({"a": np.arange(_PANDAS_ROWS_LARGE)})
-        df2 = df1.copy()
-        df2.iloc[-1, 0] = -12345
-        return df1, df2
+    def test_default_is_unset(self) -> None:
+        """An unset option must keep the historical sample positions."""
+        assert config.get_option("runner.cacheHashSeed") == ""
+        assert _sample_seed() == 0
 
-    def test_default_seed_is_zero(self) -> None:
-        """The default preserves the historical sampling behaviour."""
-        assert config.get_option("runner.cacheHashSeed") == 0
+    def test_seed_is_derived_by_hashing_so_any_string_works(self) -> None:
+        """Arbitrary strings, including secrets, map to a usable numeric seed."""
+        with patch_config_options({"runner.cacheHashSeed": "a-deployment-secret"}):
+            seed = _sample_seed()
+
+        assert isinstance(seed, int)
+        assert seed != 0
 
     def test_seed_changes_hash_of_large_pandas_dataframe(self) -> None:
         """The configured seed reaches the pandas DataFrame sampling path."""
         df = pd.DataFrame({"a": np.arange(_PANDAS_ROWS_LARGE)})
 
-        with patch_config_options({"runner.cacheHashSeed": 0}):
-            hash_seed_0 = get_hash(df)
-        with patch_config_options({"runner.cacheHashSeed": 1}):
-            hash_seed_1 = get_hash(df)
+        with patch_config_options({"runner.cacheHashSeed": ""}):
+            hash_default = get_hash(df)
+        with patch_config_options({"runner.cacheHashSeed": "other"}):
+            hash_other = get_hash(df)
 
-        assert hash_seed_0 != hash_seed_1
+        assert hash_default != hash_other
 
     def test_seed_changes_hash_of_large_pandas_series(self) -> None:
         """The configured seed reaches the pandas Series sampling path."""
         series = pd.Series(np.arange(_PANDAS_ROWS_LARGE))
 
-        with patch_config_options({"runner.cacheHashSeed": 0}):
-            hash_seed_0 = get_hash(series)
-        with patch_config_options({"runner.cacheHashSeed": 1}):
-            hash_seed_1 = get_hash(series)
+        with patch_config_options({"runner.cacheHashSeed": ""}):
+            hash_default = get_hash(series)
+        with patch_config_options({"runner.cacheHashSeed": "other"}):
+            hash_other = get_hash(series)
 
-        assert hash_seed_0 != hash_seed_1
+        assert hash_default != hash_other
 
     def test_seed_changes_hash_of_large_numpy_array(self) -> None:
         """The configured seed reaches the numpy sampling path."""
         array = np.arange(_NP_SIZE_LARGE)
 
-        with patch_config_options({"runner.cacheHashSeed": 0}):
-            hash_seed_0 = get_hash(array)
-        with patch_config_options({"runner.cacheHashSeed": 1}):
-            hash_seed_1 = get_hash(array)
+        with patch_config_options({"runner.cacheHashSeed": ""}):
+            hash_default = get_hash(array)
+        with patch_config_options({"runner.cacheHashSeed": "other"}):
+            hash_other = get_hash(array)
 
-        assert hash_seed_0 != hash_seed_1
+        assert hash_default != hash_other
 
     @pytest.mark.require_integration
     def test_seed_changes_hash_of_large_polars_dataframe(self) -> None:
@@ -1113,12 +1116,12 @@ class TestCacheHashSeedConfig:
 
         df = pl.DataFrame({"a": range(_PANDAS_ROWS_LARGE)})
 
-        with patch_config_options({"runner.cacheHashSeed": 0}):
-            hash_seed_0 = get_hash(df)
-        with patch_config_options({"runner.cacheHashSeed": 1}):
-            hash_seed_1 = get_hash(df)
+        with patch_config_options({"runner.cacheHashSeed": ""}):
+            hash_default = get_hash(df)
+        with patch_config_options({"runner.cacheHashSeed": "other"}):
+            hash_other = get_hash(df)
 
-        assert hash_seed_0 != hash_seed_1
+        assert hash_default != hash_other
 
     @pytest.mark.require_integration
     def test_seed_changes_hash_of_large_polars_series(self) -> None:
@@ -1127,18 +1130,18 @@ class TestCacheHashSeedConfig:
 
         series = pl.Series(range(_PANDAS_ROWS_LARGE))
 
-        with patch_config_options({"runner.cacheHashSeed": 0}):
-            hash_seed_0 = get_hash(series)
-        with patch_config_options({"runner.cacheHashSeed": 1}):
-            hash_seed_1 = get_hash(series)
+        with patch_config_options({"runner.cacheHashSeed": ""}):
+            hash_default = get_hash(series)
+        with patch_config_options({"runner.cacheHashSeed": "other"}):
+            hash_other = get_hash(series)
 
-        assert hash_seed_0 != hash_seed_1
+        assert hash_default != hash_other
 
     def test_same_seed_is_deterministic(self) -> None:
         """A given seed must produce a stable cache key across calls."""
         df = pd.DataFrame({"a": np.arange(_PANDAS_ROWS_LARGE)})
 
-        with patch_config_options({"runner.cacheHashSeed": 7}):
+        with patch_config_options({"runner.cacheHashSeed": "stable-secret"}):
             first = get_hash(df)
             second = get_hash(pd.DataFrame({"a": np.arange(_PANDAS_ROWS_LARGE)}))
 
@@ -1148,34 +1151,9 @@ class TestCacheHashSeedConfig:
         """Objects below the sampling threshold are hashed in full either way."""
         small = pd.DataFrame({"a": np.arange(10)})
 
-        with patch_config_options({"runner.cacheHashSeed": 0}):
-            hash_seed_0 = get_hash(small)
-        with patch_config_options({"runner.cacheHashSeed": 99}):
-            hash_seed_99 = get_hash(small)
+        with patch_config_options({"runner.cacheHashSeed": ""}):
+            hash_default = get_hash(small)
+        with patch_config_options({"runner.cacheHashSeed": "another"}):
+            hash_other = get_hash(small)
 
-        assert hash_seed_0 == hash_seed_99
-
-    def test_changing_the_seed_can_resolve_a_specific_collision(self) -> None:
-        """The escape-hatch property the option exists to provide.
-
-        Sampling is not exact, so some pair of large objects always collides. What
-        the option guarantees is that a collision under one seed is not
-        necessarily a collision under another, which is what lets an affected app
-        move off it.
-        """
-        df1, df2 = self._large_pandas_pair()
-
-        seeds_that_distinguish = [
-            seed for seed in range(8) if _hash_pair_differs(df1, df2, seed)
-        ]
-
-        # Not a claim that every seed distinguishes them -- only that the choice
-        # of seed determines whether this pair collides.
-        assert seeds_that_distinguish, (
-            "no seed in range distinguished the pair; sampling may not be seeded"
-        )
-
-
-def _hash_pair_differs(obj1: Any, obj2: Any, seed: int) -> bool:
-    with patch_config_options({"runner.cacheHashSeed": seed}):
-        return get_hash(obj1) != get_hash(obj2)
+        assert hash_default == hash_other
