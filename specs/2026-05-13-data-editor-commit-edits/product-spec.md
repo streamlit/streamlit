@@ -54,8 +54,7 @@ def data_editor(
 ```
 
 Unlike `on_change`, `commit_edits` is a transformation/commit hook: Streamlit supplies arguments,
-consumes the returned dataframe, and clears edit state on success. The name should be confirmed in
-API review.
+consumes the returned dataframe, and clears edit state on success.
 
 ### Callback contract
 
@@ -80,6 +79,16 @@ def commit_edits(
 
 - The callback returns the new source dataframe for the current render.
 
+Expose `DataEditorEditState` through the curated public typing namespace so users can annotate
+callbacks and reusable helpers without importing from an internal implementation module:
+
+```python
+from streamlit.typing import DataEditorEditState
+```
+
+Keep the definition in the owning data-editor module and re-export the same object from
+`streamlit.typing`, including it in `streamlit.typing.__all__`.
+
 `source_df` comes first because `edited_rows` and `deleted_rows` contain positions in the original
 source. For example, a database callback needs `source_df.iloc[row_position]` to recover a primary
 key for a deleted row.
@@ -98,6 +107,21 @@ This keeps the callback contract uniform at the cost of a conversion when edits 
 | Callback raises `DataEditorValidationError` | Display the safe error message inline, preserve edits for correction, and return `edited_df` |
 | Callback raises any other exception | Preserve edit state and use Streamlit's normal exception handling |
 | Callback calls `st.rerun()` or `st.stop()` | Preserve normal Streamlit control-flow behavior |
+
+### Slow callbacks and in-flight edits
+
+When `commit_edits` is configured, the editor becomes temporarily disabled as soon as it submits
+an edit batch and remains disabled until the matching full-script or fragment rerun finishes. This
+follows `st.chat_input(submit_mode="disable")`, including closing the brief window before the server
+reports that the run has started. While disabled, the editor does not accept or queue additional
+cell edits or row operations.
+
+After the run, success clears the committed edits, while validation and other failures preserve
+them for correction before the editor is re-enabled. This prevents overlapping user-driven
+commits, but does not provide an exactly-once guarantee against unrelated reruns or concurrent
+external writers; callbacks should still use atomic writes and conflict detection where needed.
+
+### Persisting the callback result
 
 The callback result is the baseline for the **current render only**. The app remains responsible for
 persisting it to session state, a database, or an updated/invalidated cache. A later rerun with no
@@ -180,16 +204,6 @@ version in the baseline and reject conflicts from `commit_edits`.
 - Schema-changing callback results
 - Partial per-row success and per-cell error UI
 - Native async callbacks or automatic retries
-
-## Open API decisions
-
-1. Confirm the `commit_edits` name in API review.
-2. Confirm whether the normalized edit-state type needs a public import path or can remain a
-   documented structural type.
-3. Confirm the three-argument callback rather than introducing a `DataEditorEditEvent` object.
-
-The recommended initial choices are `commit_edits`, the three explicit arguments shown above, and a
-documented `DataEditorEditState` type in the owning data-editor module.
 
 ## Checklist
 
