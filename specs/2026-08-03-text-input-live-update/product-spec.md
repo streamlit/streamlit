@@ -25,7 +25,7 @@ Enter or leaves the field (blur). This limitation prevents several common use ca
    instantly without requiring Enter or Tab.
 
    ```python
-   # Desired behavior: Filter updates with each keystroke
+   # Desired behavior: Filter updates as the user types (after a short debounce)
    query = st.text_input("Search products")
    filtered = [p for p in products if query.lower() in p.lower()]
    st.write(filtered)
@@ -41,7 +41,7 @@ Enter or leaves the field (blur). This limitation prevents several common use ca
 
 | Workaround                 | Limitation                                           |
 | -------------------------- | ---------------------------------------------------- |
-| `streamlit-keyup` component | Third-party dependency, limited styling, no password type |
+| `streamlit-keyup` component | Third-party dependency to install and trust, not built into Streamlit, doesn't automatically follow theming/styling of the native widget |
 | Custom component           | Significant development overhead, maintenance burden |
 | Press Enter to search      | Poor UX, not intuitive for search interfaces         |
 
@@ -90,30 +90,47 @@ st.text_input("Name")  # Default: rerun on blur/enter only
   because it mirrors the existing `st.json(expanded=...)` and `st.navigation(expanded=...)` APIs,
   which already use the `bool | int` "flag or number" shape — so the pattern is consistent with the
   current API surface rather than novel.
+- **`debounce=0` vs `debounce=False` collision:** because `0 == False` in Python, the two ends of
+  the range look identical to a casual reader even though they mean the *opposite* thing — `False`
+  turns live updates off, while `0` is the *most* aggressive setting (rerun on every keystroke).
+  This is a discoverability footgun (Principle 35): a user writing `debounce=0` expecting "off" gets
+  a rerun per keystroke. Note this differs from the cited `st.json(expanded=...)` /
+  `st.navigation(expanded=...)` precedent, where `0` ≈ `False` (both collapsed) so the collision is
+  harmless. We keep `debounce=0` (rather than disallowing it) because it is a legitimate
+  "every keystroke" request, but mitigate the footgun by (a) branching on `isinstance(debounce, bool)`
+  first so the two are never conflated internally (see Implementation Notes) and (b) attaching the
+  performance warning below to `debounce=0`. The docstring should steer users toward `False` for
+  "off" and a positive delay (or `True`) for live updates.
 
-#### Option 2: Boolean flag (`keyup`, `live_update`, or `update_on`)
+#### Option 2: Dedicated on/off parameter (`keyup`/`live_update` boolean, or `update_on` string enum)
 
 ```python
-# Using keyup=True
+# Using keyup=True (boolean)
 st.text_input("Search", keyup=True)
 
-# Using live_update=True
+# Using live_update=True (boolean)
 st.text_input("Search", live_update=True)
 
-# Using update_on="input"
+# Using update_on="input" (string enum)
 st.text_input("Search", update_on="input")
 ```
 
 These would use a sensible default debounce (e.g., 200-300ms) without exposing configuration.
+Note that `keyup` and `live_update` are booleans, whereas `update_on` is a **string enum** — not a
+boolean — so it is grouped here as the "on/off" alternative but sits closest to Principle 16 (prefer
+enums over booleans) and Principle 9 (matches the existing `on_change` / `on_click` vocabulary), and
+could later grow to carry timing/mode values (e.g. `update_on="blur"` vs `"input"`).
 
 **Pros:**
 - `keyup` mirrors the `streamlit-keyup` component name, familiar to existing users
 - `live_update` is self-documenting, clear intent
-- `update_on` follows existing `on_change`, `on_click` naming patterns
+- `update_on` follows existing `on_change`, `on_click` naming patterns and, as a string enum, is the
+  most future-proof of the three (can add new modes without adding more booleans)
 - Simpler API - no need to understand milliseconds
 
 **Cons:**
-- No control over debounce timing (may not suit all use cases)
+- No control over debounce timing (may not suit all use cases), which is the main reason we prefer
+  `debounce` — several `streamlit-keyup` use cases rely on tuning the delay
 - `keyup` is a technical DOM event name, less semantic
 - `update_on="input"` vs `"change"` distinction may be confusing (HTML semantics)
 
@@ -182,8 +199,11 @@ apps are unaffected.
   `True` as `1ms` and `False` as `0` (every keystroke) — the two most common values.
 
 **Frontend:**
-- When `debounce` is set, use a timer that resets on each keystroke
-- After the debounce period with no input, call `commitWidgetValue()` to trigger rerun
+- When live updates are enabled (`debounce` is not `False`), use a timer that resets on each
+  keystroke. The default `debounce=False` starts no timer and keeps the current blur/Enter-only
+  behavior.
+- After the debounce period with no input, call `commitWidgetValue()` to trigger rerun (with
+  `debounce=0` the timer is effectively zero-length, so it commits on every keystroke)
 
 **Recommended usage:**
 - `debounce=True` is the simplest option for most live search/validation use cases
@@ -256,13 +276,18 @@ if email:
 
 5. **Password inputs**: `debounce` works with `type="password"` - no special handling needed.
 
-6. **Very fast typing**: The debounce timer resets on each keystroke, so only the final value
-   (after the user pauses) triggers a rerun.
+6. **Very fast typing**: For `debounce=True` or `debounce > 0`, the debounce timer resets on each
+   keystroke, so only the final value (after the user pauses) triggers a rerun. `debounce=0` is the
+   exception: there is no debounce window, so every keystroke triggers a rerun (see the behavior
+   table and its performance warning).
 
-7. **Blur while debounce is pending**: If the user stops typing and blurs the field before the
-   debounce timer fires, the debounce should fire immediately on blur. This ensures a rerun always
-   occurs when the user leaves the field, providing consistent behavior with the non-debounced case.
-   The one exception is `on_change="ignore"` (see edge case 2), which suppresses this blur-triggered
+7. **Blur or Enter while debounce is pending**: If the user stops typing and either blurs the field
+   or presses Enter before the debounce timer fires, the pending debounce should be flushed
+   immediately (commit + rerun) instead of waiting out the remaining delay. Blur and Enter are the
+   two existing commit paths for `st.text_input`, so both must flush the timer — otherwise Enter
+   would appear to "hang" until the timer elapses. This ensures a rerun always occurs when the user
+   leaves or submits the field, providing consistent behavior with the non-debounced case. The one
+   exception is `on_change="ignore"` (see edge case 2), which suppresses this blur/Enter-triggered
    rerun as well — the value is only synced to frontend state.
 
 8. **IME / composition input**: For input methods that build a character over multiple keystrokes
@@ -270,6 +295,33 @@ if email:
    intermediate composition states. The frontend should suspend the timer during composition and
    only (re)start it on the `compositionend` event, so live updates never flush partial/garbled
    values mid-composition. Only completed characters trigger a rerun.
+
+9. **Interaction with `validate`**: The proposed `validate` parameter (from
+   `specs/2025-12-03-text-input-validation/`) gates *commits* — a value is only sent to the backend
+   (and a rerun triggered) once validation passes on blur/Enter/form submit. `debounce` only changes
+   *when* a commit is attempted, so the two compose cleanly: each debounced pause becomes an
+   additional commit attempt that runs validation exactly like a blur/Enter commit would.
+   - **Client-side regex**: validated instantly in the browser on each debounced pause. If the value
+     matches, the commit + rerun proceed; if it doesn't, the input shows its error state and no
+     rerun occurs — the user keeps typing until the value is valid. This makes debounced live
+     validation feedback (a headline use case) work without any extra machinery.
+   - **Server-side callable**: each debounced pause that produces a *valid-so-far* value fires a
+     validation request. This inherits the same frequency caveat as `on_change` (edge case 1): a
+     debounced server-side validator can run many times per typing session, so validators should be
+     cheap/idempotent. In-flight validations are cancelled and superseded when the user types again
+     (matching the validation spec's "concurrent validation" edge case).
+   - Empty strings still bypass validation (per the validation spec), so an empty debounced value
+     commits normally.
+
+10. **Interaction with `bind="query-params"`**: The proposed `bind="query-params"` (from
+    `specs/2026-01-06-query-param-binding-state-persistence/`) syncs a widget's *committed* value
+    into the URL. Because `debounce` moves commits from blur/Enter to debounced pauses, a bound
+    widget's query param updates after each typing pause rather than only when the field is left.
+    To avoid polluting browser history with every intermediate value, these debounced URL updates
+    should use history *replacement* (like `history.replaceState`, the same mechanism query-param
+    binding already uses for widget updates) rather than pushing a new history entry per pause — so
+    the Back button doesn't step through every partial query the user typed. A shared/reloaded URL
+    therefore reflects the value as of the last debounced commit.
 
 ## Out of Scope (Future Work)
 
