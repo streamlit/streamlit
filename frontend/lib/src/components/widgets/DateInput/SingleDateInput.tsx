@@ -16,6 +16,7 @@
 
 import {
   ClipboardEvent,
+  FocusEvent,
   KeyboardEvent,
   memo,
   MouseEvent,
@@ -103,6 +104,10 @@ interface SingleDateInputProps {
   /** Called when close requires parent-level revert logic (segments left in
    * placeholder state after an edit). Parent resets to default value. */
   onClose: (hasPlaceholderSegments: boolean) => void
+  /** When inside a form, writes the pending value to WidgetStateManager
+   * synchronously on blur so a concurrent form submit reads the correct
+   * value. Undefined when not in a form. */
+  formCommit?: (value: CalendarDate | null) => void
   /** Incremented when the parent form is cleared. Signals this component to
    * reset its local displayValue to the parent's value prop (which may not
    * have changed if segment edits were never committed). */
@@ -153,6 +158,7 @@ function SingleDateInput({
   onFocusChange,
   onValidate,
   onClose,
+  formCommit,
   formResetKey,
 }: SingleDateInputProps): ReactElement {
   const theme = useEmotionTheme()
@@ -365,6 +371,7 @@ function SingleDateInput({
 
       const base = displayValue ?? minDate
       const newDate = base.set({ [partial.segmentType]: partial.value })
+      if (newDate[partial.segmentType] !== partial.value) return
       setDisplayValue(newDate)
       onChange(newDate)
     },
@@ -405,6 +412,21 @@ function SingleDateInput({
     [focusLastFieldSegment]
   )
 
+  // Synchronous commit on blur for form-submit races: clicking a form's
+  // Submit button causes blur before effects fire, so the pending value
+  // must be written to WidgetStateManager synchronously.
+  const handleBlur = useCallback(
+    (e: FocusEvent<HTMLDivElement>): void => {
+      if (e.currentTarget.contains(e.relatedTarget)) return
+      if (!formCommit) return
+      const pending = displayValueRef.current
+      if (!datesEqual(pending, value)) {
+        formCommit(pending)
+      }
+    },
+    [formCommit, value]
+  )
+
   return (
     <StyledDateFieldContainer>
       <StyledDateInputWrapper
@@ -413,6 +435,7 @@ function SingleDateInput({
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
         onFocus={handleFocus}
+        onBlur={handleBlur}
         onClickCapture={handleClickCapture}
         onPaste={handlePaste}
         onKeyDown={handleFieldKeyDown}

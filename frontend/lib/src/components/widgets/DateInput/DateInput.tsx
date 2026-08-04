@@ -50,6 +50,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { convertRemToPx } from "~lib/theme/utils"
 import {
+  isInForm,
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
@@ -357,6 +358,24 @@ function DateInput({
     [isEmpty, element.default, setValueWithSource, resetError]
   )
 
+  // Synchronous commit for form-submit races: when inside a form, clicking
+  // Submit causes blur before effects fire, so widget state must be written
+  // synchronously. Matches TimeInput's handleBlur dual-write pattern.
+  const inForm = isInForm({ formId: element.formId })
+  const handleFormCommit = useCallback(
+    (date: CalendarDate | null): void => {
+      if (!inForm) return
+      const isoValue = date ? [calendarDateToIso(date)] : []
+      updateWidgetMgrState(
+        element,
+        widgetMgr,
+        { value: isoValue, fromUi: true },
+        fragmentId
+      )
+    },
+    [inForm, element, widgetMgr, fragmentId]
+  )
+
   const singleValue = useMemo(
     () => isoToCalendarDate(value[0] ?? "") ?? null,
     [value]
@@ -411,6 +430,7 @@ function DateInput({
           onFocusChange={setFocusedValue}
           onValidate={handleValidate}
           onClose={handleClose}
+          formCommit={inForm ? handleFormCommit : undefined}
           formResetKey={formResetKey}
         />
       </div>

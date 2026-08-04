@@ -90,6 +90,6 @@ export const sizes = {
   // CSS outline width for focus-visible on selected/active elements
   focusOutlineWidth: "0.125rem",
   fileChipNameMinWidth: "4.875rem",
-  // Date input calendar sizing so changing months doesnt impact display width
+  // Date input calendar sizing so changing months doesn't impact display width
   dateInputMinWidth: "14rem",
 }

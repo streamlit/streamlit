@@ -534,6 +534,36 @@ describe("DateInput widget", () => {
     expect(day).toHaveTextContent("15")
   })
 
+  it("commits pending value on blur when inside a form (form-submit race fix)", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+
+    // Before blur: segment edits are buffered locally — no widget write yet.
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+
+    // Blur (simulates clicking a form Submit button) writes the pending
+    // value synchronously so form submit reads the correct state.
+    await user.tab()
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [newDateWire],
+      { fromUi: true },
+      undefined
+    )
+  })
+
   describe("localization", () => {
     const getCalendarHeader = async (): Promise<HTMLElement> => {
       const calendar = await screen.findByTestId("stDateInputCalendar")
@@ -961,7 +991,7 @@ describe("DateInput keyboard navigation and focus management", () => {
     })
   })
 
-  it("partially cleared segments revert to default on blur (non-clearable)", async () => {
+  it("partially cleared segments revert to default on popover close (non-clearable)", async () => {
     const user = userEvent.setup()
     const props = getProps()
     render(<DateInput {...props} />)
