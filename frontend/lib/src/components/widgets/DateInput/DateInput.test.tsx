@@ -564,6 +564,27 @@ describe("DateInput widget", () => {
     )
   })
 
+  it("does not commit placeholder state on blur in a form (non-clearable)", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+
+    // Partially clear the year segment (leaves placeholders)
+    await clearSegment(user, year)
+
+    // Blur should NOT commit the placeholder state — form submit should
+    // read the original committed value, not an empty/cleared date.
+    await user.tab()
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+  })
+
   describe("localization", () => {
     const getCalendarHeader = async (): Promise<HTMLElement> => {
       const calendar = await screen.findByTestId("stDateInputCalendar")

@@ -419,6 +419,9 @@ function SingleDateInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (!formCommit) return
+      const hasPlaceholders =
+        triggerRef.current?.querySelector('[data-placeholder="true"]') !== null
+      if (hasPlaceholders) return
       const pending = displayValueRef.current
       if (!datesEqual(pending, value)) {
         formCommit(pending)
