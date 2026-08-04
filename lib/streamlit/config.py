@@ -849,6 +849,10 @@ _create_option(
         Changing this value changes the cache key of every large object and so
         invalidates existing cached entries. Keep it stable across restarts and
         across replicas, or a shared/persisted cache will miss.
+
+        If you need hashing to be exact rather than a different sample, pass your
+        own function for the type via the ``hash_funcs`` argument of
+        @st.cache_data / @st.cache_resource, which bypasses sampling entirely.
     """,
     default_val="",
     type_=str,
